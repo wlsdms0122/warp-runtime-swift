@@ -12,9 +12,9 @@ import Foundation
 //
 // `floored` and `rounded` answer an int whatever they were sent, which is how a
 // quotient becomes a whole number again — `dividedBy` always answers a double,
-// and this is the other half of writing a whole division. A double with no whole
-// answer refuses rather than traps: infinity and anything past what an int holds
-// arrive at run time, and taking the process with them is not an answer.
+// and this is the other half of writing a whole division. `int` is the machine
+// word, so a fraction whose whole part is past it has no int to answer — that
+// stops the run the way arithmetic off the word's edge does.
 public struct NumberQuery: Query {
     public enum Reading: Sendable {
         case absolute
@@ -34,13 +34,12 @@ public struct NumberQuery: Query {
     public func evaluate(_ question: Question) throws -> Value? {
         switch (reading, question.receiver) {
         case let (.absolute, .int(number)):
-            let answered = number.magnitude
-
-            guard let held = Int(exactly: answered) else {
-                throw ExecutionError("\(number) without its sign is past what an int holds")
+            // The one magnitude the word does not hold is its own minimum.
+            guard let answered = Int(exactly: number.magnitude) else {
+                throw ExecutionError("absolute of \(number) overflows int")
             }
 
-            return .int(held)
+            return .int(answered)
 
         case let (.absolute, .double(real)):
             return .double(abs(real))
@@ -60,11 +59,24 @@ public struct NumberQuery: Query {
     }
 
     // MARK: - Private
+    // The reasons rounding can fail are different facts, and the refusal
+    // names the one that happened — through the one reading every judge of a
+    // fraction shares.
     private func whole(_ rounded: Double, from asked: Double) throws -> Int {
-        guard let answered = Int(exactly: rounded) else {
-            throw ExecutionError("\(asked) has no whole answer an int can hold")
-        }
+        switch Int.reading(rounded) {
+        case let .word(answered):
+            return answered
 
-        return answered
+        case .notANumber:
+            throw ExecutionError("\(asked) has no whole answer")
+
+        case .pastTheWord:
+            throw ExecutionError("\(reading) of \(asked) overflows int")
+
+        // The input already went through `rounded(_:)`, so digits after the
+        // point cannot survive to here.
+        case .fractional:
+            preconditionFailure("a rounded fraction still had digits")
+        }
     }
 }

@@ -210,16 +210,17 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
+                        // Nameless on both sides. `helper` declares no answer
+                        // and its body never finishes, so the link reads the
+                        // call as `never` too — and a statement that never
+                        // finishes takes no name, so the place is its position.
                         Statement(
-                            id: "said",
                             expression: .dispatch(Dispatch(selector: "helper"))
                         )
                     ]
                 ),
                 "helper": Procedure(
                     body: [
-                        // Nameless — a statement that never finishes takes no
-                        // name, so the place is its position.
                         Statement(
                             expression: refusing(literal("no"))
                         )
@@ -239,8 +240,8 @@ struct ObservationTests {
         do {
             _ = try await language.makeExecutor().run(image)
         } catch let error as Aborted {
-            #expect(error.trace?.rendered == "said.helper.[0]")
-            #expect("\(error)" == "said.helper.[0]: no")
+            #expect(error.trace?.rendered == "[0].helper.[0]")
+            #expect("\(error)" == "[0].helper.[0]: no")
         }
     }
 

@@ -18,6 +18,11 @@ public struct JoinedQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
+        // The `.array` case and not the elements projection, because this word
+        // declares `array<string>` and bytes cross an `array<…>` slot whole
+        // only where the element declaration leaves every byte alone. `string`
+        // does not, so a bytes receiver is read out and refused element by
+        // element at the boundary — before here.
         guard case let .array(elements) = question.receiver else {
             throw ExecutionError(
                 "joined asks \(question.receiver?.type.description ?? "nothing"), expected array"

@@ -106,8 +106,8 @@ struct ReceiverTests {
         let image = try language.link([written] + Module.standard, entry: entryName)
 
         // Then — one table, and what separates them is only how each is written
-        let shout = try #require(image.derivations["shout"])
-        let count = try #require(image.derivations["count"])
+        let shout = try #require(image.words["shout"])
+        let count = try #require(image.words["count"])
 
         #expect(shout.signature.receiver == "of")
         #expect(count.signature.receiver == "of")
@@ -231,7 +231,7 @@ struct ReceiverTests {
 
         // Then
         #expect(image.pure.contains("label"))
-        #expect(image.derivations["label"] != nil)
+        #expect(image.words["label"] != nil)
     }
 
     @Test("a procedure someone wrote is reachable from a path")
@@ -335,7 +335,7 @@ struct ReceiverTests {
 
         // Then
         #expect(!image.pure.contains("summarize"))
-        #expect(image.derivations["summarize"] == nil)
+        #expect(image.words["summarize"] == nil)
     }
 
     @Test("a path to a body that reaches an effect is refused before any run")
@@ -383,7 +383,47 @@ struct ReceiverTests {
 
     @Test("a word reached from a path is checked against the receiver it declared")
     func aPathChecksTheReceiver() async throws {
-        // Given
+        // Given — the receiver's declared type is what makes the dot a send:
+        // the link reads `array<any>`, finds no field there, and judges the
+        // word against the receiver it declared
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "subject": Parameter(type: .array(.any))
+                        ]
+                    ),
+                    body: [],
+                    result: .reference([.key("subject"), .key("size")])
+                ),
+                "size": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: [
+                            "of": Parameter(type: .array(.any))
+                        ],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("of"), .key("count")])
+                )
+            ]
+        )
+
+        // When
+        let answered = try await run(sut, arguments: ["subject": .array([.string("a")])])
+
+        // Then
+        #expect(answered == .int(1))
+    }
+
+    @Test("a dot on an undeclared shape reads data alone")
+    func aDotOnAnyDoesNotReachAWord() async throws {
+        // Given — nothing is known about `any`, so nothing is rewritten: the
+        // dot stays a read, and a value without fields refuses it at run even
+        // though a word by that name exists. A word on an undeclared value is
+        // reached by declaring the value.
         let sut = Module(
             procedures: [
                 "entry": Procedure(
@@ -409,16 +449,9 @@ struct ReceiverTests {
             ]
         )
 
-        // When
-        let answered = try await run(sut, arguments: ["subject": .array([.string("a")])])
-
-        // Then
-        #expect(answered == .int(1))
-
-        // A string is not an array. Counting its characters would be an answer
-        // the declaration says this word does not give.
+        // When / Then
         await #expect(throws: (any Error).self) {
-            try await run(sut, arguments: ["subject": .string("ab")])
+            try await run(sut, arguments: ["subject": .array([.string("a")])])
         }
     }
 
@@ -472,8 +505,9 @@ struct ReceiverTests {
 
     @Test("a word that refuses mid-path says why, rather than reading as absence")
     func aRefusalInAPathIsNotAbsence() async throws {
-        // Given — `floored` takes a double and then finds no whole answer. That
-        // is not the word declining the shape, so reporting nothing was there
+        // Given — `floored` takes a double and then finds no whole answer in
+        // it: a fraction that is not a number has nothing to floor. That is
+        // not the word declining the shape, so reporting nothing was there
         // would report the one thing known to be false.
         let sut = reference("x", "floored")
 
@@ -482,7 +516,7 @@ struct ReceiverTests {
             try await answer(
                 of: [Statement(id: "probe", expression: sut)],
                 result: reference("probe"),
-                arguments: ["x": .double(1e30)],
+                arguments: ["x": .double(.nan)],
                 signature: Signature(parameters: ["x": Parameter(type: .double)])
             )
         } throws: { error in
@@ -497,6 +531,6 @@ struct ReceiverTests {
         let sut = Module.control.procedures["abort"]
 
         // When / Then
-        #expect(sut?.signature.isDerivable == false)
+        #expect(sut?.signature.isDerivable(in: TypeTable()) == false)
     }
 }

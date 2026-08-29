@@ -8,8 +8,8 @@
 import Foundation
 import Testing
 import Warp
-import WarpBinary
-import WarpDocument
+import WarpSerialization
+import WarpSyntax
 
 // The README's examples, run — the page claims its examples are executed by
 // test suites rather than transcribed into them, and this target is where that
@@ -26,6 +26,7 @@ struct ReadmeTests {
         let sent = try BinaryEncoding.data(
             from: try Writer().value(
                 of: try Loader().load([
+                    "warp": 1,
                     "procedures": [
                         "entry": [
                             "body": [

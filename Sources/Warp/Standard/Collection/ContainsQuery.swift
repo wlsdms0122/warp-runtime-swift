@@ -30,13 +30,17 @@ public struct ContainsQuery: Query {
 
             return .bool(text.contains(part))
 
-        case let .array(elements):
-            return .bool(elements.contains { element in element.matches(operand) })
-
+        // The receiver is declared `any` for the string case, so what is
+        // indexed — an array, or bytes through the one projection that owns
+        // the equation — is read here rather than settled at the boundary.
         default:
-            throw ExecutionError(
-                "contains asks \(receiver.type), expected string or array"
-            )
+            guard let elements = receiver.elements else {
+                throw ExecutionError(
+                    "contains asks \(receiver.type), expected string or array"
+                )
+            }
+
+            return .bool(elements.contains { element in element.matches(operand) })
         }
     }
 

@@ -19,22 +19,20 @@ public struct CountQuery: Query {
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
         switch question.receiver {
-        case let .array(elements):
-            return .int(elements.count)
-
         case let .string(text):
             return .int(text.count)
 
         case let .object(fields):
             return .int(fields.count)
 
-        // Bytes have a length the way text has a count — and unlike text, no
-        // Unicode question about what "one" means.
-        case let .bytes(bytes):
-            return .int(bytes.count)
-
+        // What is indexed — an array, or bytes through the one projection
+        // that owns the equation — is counted the same way. Bytes have a
+        // length the way text has a count, and unlike text, no Unicode
+        // question about what "one" means.
         default:
-            return nil
+            guard let elements = question.receiver?.elements else { return nil }
+
+            return .int(elements.count)
         }
     }
 

@@ -12,6 +12,38 @@ public extension Module {
         name: "std.text",
         description: "Words about strings.",
         procedures: [
+            "decoded": Procedure(
+                description: "The bytes read as text in a named encoding.",
+                signature: Signature(
+                    receiver: "of",
+                    parameters: [
+                        "of": Parameter(type: .bytes),
+                        "encoding": Parameter(
+                            type: .string,
+                            oneOf: ["utf8"],
+                            default: .string("utf8")
+                        )
+                    ],
+                    returns: .string
+                ),
+                implementation: .query(CodecQuery(.decoded))
+            ),
+            "encoded": Procedure(
+                description: "The text written out as bytes in a named encoding.",
+                signature: Signature(
+                    receiver: "of",
+                    parameters: [
+                        "of": Parameter(type: .string),
+                        "encoding": Parameter(
+                            type: .string,
+                            oneOf: ["utf8"],
+                            default: .string("utf8")
+                        )
+                    ],
+                    returns: .bytes
+                ),
+                implementation: .query(CodecQuery(.encoded))
+            ),
             "text": Procedure(
                 description: "How a value reads as text.",
                 signature: Signature(

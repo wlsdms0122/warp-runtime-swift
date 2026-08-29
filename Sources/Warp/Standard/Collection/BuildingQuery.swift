@@ -33,78 +33,72 @@ public struct BuildingQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
-        guard case let .array(elements) = question.receiver else { return nil }
+        // Through the one projection that owns the `bytes = array<byte>`
+        // equation, and answered in the spelling the receiver arrived in: each
+        // of these is the receiver's own elements, so a compact one stays
+        // compact — until an element that is not a byte is put among them,
+        // which `respelled` reads for itself.
+        guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
         switch building {
+        // Only the arriving element decides the answer's spelling, so only it
+        // is looked at — the ones already there are what the receiver spells
+        // them as.
         case .appending:
-            return .array(elements + [question["value"]])
+            return receiver.adding(question["value"], atFront: false)
 
         case .prepending:
-            return .array([question["value"]] + elements)
+            return receiver.adding(question["value"], atFront: true)
 
         // Dropping from an array that has nothing left answers the empty array
-        // rather than failing: taking none of nothing is nothing.
+        // rather than failing: taking none of nothing is nothing. Said by
+        // position, because neither of these has to look at an element — so a
+        // compact spelling is trimmed as what it holds.
         case .dropFirst:
-            return .array(Array(elements.dropFirst()))
+            return receiver.elements(at: (0 ..< elements.count).dropFirst())
 
         case .dropLast:
-            return .array(Array(elements.dropLast()))
+            return receiver.elements(at: (0 ..< elements.count).dropLast())
 
         case .sorted:
-            return .array(try sorted(elements))
+            return receiver.respelled(try sorted(elements))
         }
     }
 
     // MARK: - Private
     // Numbers order among themselves and strings among themselves. A mixed array
     // has no order this could answer with, so it says so rather than picking one.
-    private func sorted(_ elements: [Value]) throws -> [Value] {
-        if let numbers = elements.map(number).allSatisfying() {
-            return zip(numbers, elements)
-                .sorted { left, right in left.0 < right.0 }
-                .map(\.1)
-        }
+    // One order for everything that has one — `Value.order`, so a whole
+    // beside a fraction sorts by worth exactly at every size. An element that
+    // orders with nothing (a fraction that is not a number, a kind that does
+    // not order, a mixed array) is refused rather than placed: any placement
+    // would be an order this could not answer for.
+    //
+    // The elements are read out once and the three passes below run on that,
+    // because what arrives is a projection that makes each element as it is
+    // asked for — walking it four times would make a compact spelling's every
+    // byte four times over.
+    private func sorted(_ projected: some Collection<Value>) throws -> [Value] {
+        let elements = Array(projected)
 
-        if let strings = elements.map(string).allSatisfying() {
-            return zip(strings, elements)
-                .sorted { left, right in left.0 < right.0 }
-                .map(\.1)
-        }
-
-        guard elements.isEmpty else {
+        // Every element must order with itself — which refuses the kinds that
+        // do not order and the fraction that is not a number — and with its
+        // neighbour, which refuses a mixed array: ordering is transitive
+        // inside a kind and never crosses one, so the chain reaches every
+        // pair the sort will ask about.
+        guard
+            elements.allSatisfy({ element in Value.order(element, element) != nil }),
+            zip(elements, elements.dropFirst())
+                .allSatisfy({ pair in Value.order(pair.0, pair.1) != nil })
+        else {
             throw ExecutionError(
-                "sorted asks an array of numbers or an array of strings"
+                "sorted asks an array of numbers or an array of strings,"
+                    + " every element ordering with the rest"
             )
         }
 
-        return elements
-    }
-
-    private func number(_ value: Value) -> Double? {
-        switch value {
-        case let .int(whole):
-            return Double(whole)
-
-        case let .double(real):
-            return real
-
-        default:
-            return nil
+        return elements.sorted { left, right in
+            Value.order(left, right) == .orderedAscending
         }
-    }
-
-    private func string(_ value: Value) -> String? {
-        guard case let .string(text) = value else { return nil }
-
-        return text
-    }
-}
-
-private extension Array {
-    // The whole list, or nothing, where every element is present.
-    func allSatisfying<Wrapped>() -> [Wrapped]? where Element == Wrapped? {
-        let present = compactMap { $0 }
-
-        return present.count == count && !isEmpty ? present : nil
     }
 }

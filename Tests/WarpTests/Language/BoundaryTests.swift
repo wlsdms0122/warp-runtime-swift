@@ -127,7 +127,7 @@ struct BoundaryTests {
         #expect(sut.accepts(.any))
     }
 
-    @Test("a hole read two ways that do not fit is a refusal, not a shrug")
+    @Test("a type parameter read two ways that do not fit is a refusal, not a shrug")
     func aDisagreeingHoleIsRefused() {
         // Given — appending a whole number to a list of text. The hole is read
         // as text by the list and as a number by what is being appended, and
@@ -159,7 +159,7 @@ struct BoundaryTests {
         }
     }
 
-    @Test("a hole read as anything is anything")
+    @Test("a type parameter read as anything is anything")
     func anyIsTheLoosestReading() throws {
         // Given — a list of anything, added to twice with two kinds of value.
         // `accepts` cannot order `any` against a shape, since everything takes
@@ -202,7 +202,7 @@ struct BoundaryTests {
 
     @Test("a name a module declared and the shape it stands for are one reading")
     func aDeclaredNameIsNotADisagreement() throws {
-        // Given — the hole is read as `Tree` by the list and as the record the
+        // Given — the parameter is read as `Tree` by the list and as the record the
         // call wrote. They are the same type, and calling them a disagreement
         // was asking the question without the table that answers it — the same
         // table the rest of the link uses.
@@ -231,7 +231,7 @@ struct BoundaryTests {
         }
     }
 
-    @Test("a hole read loosely and tightly holds the loose reading")
+    @Test("a type parameter read loosely and tightly holds the loose reading")
     func aWiderReadingHolds() throws {
         // Given — a list of numbers and a whole number are not a disagreement.
         // One reading takes the other, so the one that holds both is the answer,
@@ -258,11 +258,11 @@ struct BoundaryTests {
         }
     }
 
-    @Test("whole-number arithmetic with no whole answer refuses")
-    func wholeArithmeticRefusesRatherThanWraps() async throws {
-        // Given — wrapping would answer, and answering wrongly is worse than
-        // not answering. Widening silently would be worse still: the declared
-        // type says whole, and a fraction is not one.
+    @Test("whole-number arithmetic faults at the word's edge")
+    func wholeArithmeticFaultsPastTheWord() async throws {
+        // Given — `int` is the machine word: a sum past its edge has no int to
+        // answer, and the language stops rather than wrapping or answering a
+        // silent fraction.
         for (word, left, right) in [
             ("plus", Int.max, 1),
             ("minus", Int.min, 1),
@@ -272,7 +272,7 @@ struct BoundaryTests {
             await #expect {
                 try await answering(word, .int(left), .int(right))
             } throws: { error in
-                "\(error)".contains("no whole answer")
+                "\(error)".contains("overflows int")
             }
         }
     }

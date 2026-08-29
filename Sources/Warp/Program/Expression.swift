@@ -35,7 +35,7 @@ import Foundation
 // computes. A connective declines to ask its later sides by taking procedures
 // rather than values, which is a thing a declaration can say.
 //
-// How a document writes any of this is `WarpDocument`.
+// How a document writes any of this is `WarpSyntax`.
 public indirect enum Expression: Sendable {
     case literal(Value)
     case reference([PathSegment])
@@ -53,8 +53,23 @@ public indirect enum Expression: Sendable {
     // stand in for a linked one, and linking would stop being a promise.
     case invoke(Expression, arguments: [String: Expression])
 
+    // Reading a value as a shape the text names. `any` declares nothing, so a
+    // dot on one is refused at the link — this is the door: the author says
+    // what they expect, the link judges every dot after it against that, and
+    // the run asks the arriving value the one question the link could not.
+    //
+    // The `?` axis is `?.`'s, on a cast: a plain one refuses at the run what
+    // did not arrive as the named shape, and an optional one reads that
+    // mismatch as null the way `?.` reads an absence — so the reading is `T?`
+    // and the author says which of the two they meant.
+    case cast(Expression, as: TypeExpression, optional: Bool)
+
     case block(Block)
-    case conditional(Expression, then: Block, else: Block?)
+    // A branch is a statement: it answers nothing, so its arms are statements
+    // alone, the way a walk's body is. What an arm keeps it writes to an outer
+    // variable, and a value leaves through `return` — a condition chooses a
+    // way through the body, not a value.
+    case conditional(Expression, then: [Statement], else: [Statement]?)
     // Repetition carries no budget of its own. Bounding a loop is the author's
     // to write — a counter and `std.control.abort` say it exactly — and
     // stopping one is the receiver's cancellation; a kernel budget would
@@ -103,6 +118,103 @@ public indirect enum Expression: Sendable {
 
         default:
             return nil
+        }
+    }
+
+    // Whether this is a branch, which takes no name at all — it answers
+    // nothing and binds nothing inside, so its name could never bind. The
+    // reader, the validator and the writer each refuse a named branch by
+    // asking this; the other nameless family — what never finishes — is
+    // `alwaysLeaves`'s to say, and stays its own question because the two
+    // facts are refused with two different sentences.
+    public var takesNoName: Bool {
+        if case .conditional = self { return true }
+
+        return false
+    }
+
+    // Whether this construct answers nothing by its own grammar — a branch,
+    // or a walk. Wider than `takesNoName`, because a walk does take a name:
+    // the element's. What asks this is the slot that exists to hold an
+    // answer, which has nothing to take from either.
+    public var answersNothing: Bool {
+        switch self {
+        case .conditional, .iteration:
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // The sentences the construct rule refuses with, stated once beside the
+    // predicate that decides them — the check wraps them as validation
+    // refusals and the link as link refusals, so the two stages cannot say
+    // different things.
+    public static let constructInOperand =
+        "a construct runs a body, and a call's operand is data"
+            + " — a body a word is to run travels as a closure"
+    public static let constructInCondition =
+        "a construct runs a body, and a condition is data"
+            + " — what a body decides reaches a condition through a word"
+
+    // Whether a construct — a shape that runs a body, or leaves — sits
+    // anywhere in this expression read as data. A call's operand is data the
+    // pure half reads, so the check and the link both refuse one by asking
+    // this; a closure is data (the body it carries is its own), so the walk
+    // does not enter it.
+    public var holdsConstruct: Bool {
+        switch self {
+        case .literal, .reference, .closure:
+            return false
+
+        case let .array(array):
+            return array.contains { element in element.holdsConstruct }
+
+        case let .record(record):
+            return record.values.contains { field in field.holdsConstruct }
+
+        case let .invoke(callee, arguments):
+            return callee.holdsConstruct
+                || arguments.values.contains { argument in argument.holdsConstruct }
+
+        case let .dispatch(dispatch):
+            return dispatch.receiver?.holdsConstruct ?? false
+                || dispatch.arguments.values.contains { argument in argument.holdsConstruct }
+
+        // A cast runs no body — it names a shape and judges what arrives
+        // against it — so it holds a construct only where the value it reads
+        // does.
+        case let .cast(value, _, _):
+            return value.holdsConstruct
+
+        case .block, .conditional, .loop, .iteration, .attempt, .leave:
+            return true
+        }
+    }
+
+    // Whether every way through this expression leaves. Structural and
+    // conservative: a loop may run no round and an attempt's rescue may finish
+    // normally, so neither counts; a call is judged at the link, where its
+    // signature is known. The link's type walk reads the same fact over the
+    // full program, symbols included — this is the symbol-free half of that
+    // judgment, and what it buys is the stage: a document is refused before
+    // anything is linked.
+    public var alwaysLeaves: Bool {
+        switch self {
+        case .leave:
+            return true
+
+        case let .conditional(_, then, otherwise):
+            guard let otherwise else { return false }
+
+            return then.alwaysLeaves && otherwise.alwaysLeaves
+
+        case let .block(block):
+            return block.alwaysLeaves
+
+        default:
+            return false
         }
     }
 

@@ -25,7 +25,7 @@ public struct AbortQuery: Query {
             throw ExecutionError("abort refuses with a message, and none arrived")
         }
 
-        throw Aborted(Rendering(message).text)
+        throw Aborted(Rendering(message).text())
     }
 
     // MARK: - Private

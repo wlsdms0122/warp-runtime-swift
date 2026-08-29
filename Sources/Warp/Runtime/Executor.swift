@@ -18,6 +18,7 @@ public struct Executor: Sendable {
 
     // What a path segment may reach, worked out by the link.
     let derivations: [String: Procedure]
+    let words: [String: Procedure]
 
     // The shapes the link declared. A named type is answered here rather than
     // expanded at link, so every boundary that settles arguments needs it.
@@ -32,12 +33,14 @@ public struct Executor: Sendable {
         environment: (any Environment)?,
         procedures: [String: Procedure] = [:],
         derivations: [String: Procedure] = [:],
+        words: [String: Procedure] = [:],
         types: TypeTable = TypeTable()
     ) {
         self.observer = observer
         self.environment = environment
         self.procedures = procedures
         self.derivations = derivations
+        self.words = words
         self.types = types
     }
 
@@ -53,6 +56,7 @@ public struct Executor: Sendable {
             environment: environment,
             procedures: image.procedures,
             derivations: image.derivations,
+            words: image.words,
             types: image.types
         )
         .run(image.entry, arguments: arguments)
@@ -192,6 +196,21 @@ public struct Executor: Sendable {
         case let .invoke(callee, arguments):
             return try await invoke(callee, arguments: arguments, in: scope, at: trace)
 
+        // The run's whole share of a cast: the link already decided what every
+        // dot after this means, and the one thing it could not know is what
+        // actually arrived. That question is the boundary's, and the boundary's
+        // judge answers it — the same `settling` a parameter takes its argument
+        // through, so "is this value that shape" is answered in one place for
+        // both doors. A plain cast lets the refusal out as a failure like any
+        // other; an optional one reads the mismatch as null, which is the
+        // author saying they expected it.
+        case let .cast(value, type, optional):
+            return try type.reading(
+                await evaluate(value, in: scope, at: trace),
+                optional: optional,
+                in: types
+            )
+
         case let .array(array):
             var values: [Value] = []
 
@@ -201,10 +220,13 @@ public struct Executor: Sendable {
 
             return .array(values)
 
+        // In name order, the same order arguments evaluate in — the one order
+        // a program could observe (which field's write or refusal lands last)
+        // is the text's fact rather than a hash table's.
         case let .record(record):
             var values: [String: Value] = [:]
 
-            for (name, field) in record {
+            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
                 values[name] = try await evaluate(field, in: scope, at: trace)
             }
 
@@ -213,12 +235,16 @@ public struct Executor: Sendable {
         case let .block(block):
             return try await run(block, in: scope, at: trace)
 
+        // A branch answers nothing — the condition chooses a way through the
+        // body, and what an arm keeps it writes to an outer variable.
         case let .conditional(condition, then, otherwise):
             let take = try resolver(in: scope).evaluate(condition)
 
-            guard let taken = take ? then : otherwise else { return .null }
+            if let taken = take ? then : otherwise {
+                _ = try await run(taken, in: scope, at: trace)
+            }
 
-            return try await run(taken, in: scope, at: trace)
+            return .null
 
         case let .loop(condition, body, round):
             return try await loop(
@@ -267,6 +293,7 @@ public struct Executor: Sendable {
             return try Resolver(
                 scope: scope,
                 derivations: derivations.merging([dispatch.selector: procedure]) { _, new in new },
+                words: words,
                 types: types
             )
             .resolve(.dispatch(dispatch))
@@ -427,7 +454,7 @@ public struct Executor: Sendable {
 
     // MARK: - Private
     private func resolver(in scope: Scope) -> Resolver {
-        Resolver(scope: scope, derivations: derivations, types: types)
+        Resolver(scope: scope, derivations: derivations, words: words, types: types)
     }
 
     private func run(
@@ -576,10 +603,15 @@ public struct Executor: Sendable {
         naming element: String,
         in scope: Scope,
         at trace: Trace
-    ) async throws -> [Value] {
+    ) async throws -> AnyRandomAccessCollection<Value> {
         let resolved = try await evaluate(material, in: scope, at: trace)
 
-        guard case let .array(elements) = resolved else {
+        // What is iterated is whatever has elements — the one projection that
+        // owns the bytes equation, so `each` walks bytes the way an index
+        // reads them. The projection is left as it is rather than copied out:
+        // a round reads one element, and a compact spelling should not have to
+        // become a million boxed ints before the first round runs.
+        guard let elements = resolved.elements else {
             // A plain reference names its own locus; any other expression shape
             // has no path to point at, so the message carries the blame instead
             // of an empty `{ ref: }` rendering.
@@ -618,7 +650,10 @@ public struct Executor: Sendable {
             await observer?.failureRescued(name: name, error: error)
 
             // While the rescue runs, the failure is a value under the declared
-            // name — readable, and gone the moment the rescue answers.
+            // name — readable, and gone the moment the rescue answers. Its
+            // shape needs no check here: `RecoverableFailure` assembles the
+            // payload itself, so `type` and `message` are there by
+            // construction rather than by inspection.
             return try await run(
                 rescue,
                 in: scope.binding(name, to: recoverable.payload),

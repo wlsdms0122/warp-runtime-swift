@@ -79,31 +79,45 @@ struct ControlFlowTests {
         #expect(!validates(body: sut))
     }
 
-    @Test("a conditional answers with the arm it took")
-    func conditionalAnswersWithTakenArm() async throws {
-        // Given
+    @Test("a branch answers nothing, and what an arm keeps it writes outward")
+    func aBranchAnswersNothingAndWritesOutward() async throws {
+        // Given — the condition chooses a way through the body, not a value:
+        // either arm writes the enclosing variable, and that write is the
+        // whole of what the branch leaves behind
         let sut = { (take: Bool) in
             Warp.Expression.conditional(
                 .literal(.bool(take)),
-                then: Block(
-                    body: [Statement(id: "yes", expression: .literal(.string("then")))],
-                    result: .reference([.key("yes")])
-                ),
-                else: Block(
-                    body: [Statement(id: "no", expression: .literal(.string("else")))],
-                    result: .reference([.key("no")])
-                )
+                then: [
+                    Statement(
+                        id: "kept",
+                        binding: .assignment,
+                        expression: .literal(.string("then"))
+                    )
+                ],
+                else: [
+                    Statement(
+                        id: "kept",
+                        binding: .assignment,
+                        expression: .literal(.string("else"))
+                    )
+                ]
             )
         }
 
         // When
         let taken = try await answer(
-            of: [Statement(id: "probe", expression: sut(true))],
-            result: reference("probe")
+            of: [
+                Statement(id: "kept", binding: .variable, expression: .literal(.string(""))),
+                Statement(expression: sut(true))
+            ],
+            result: reference("kept")
         )
         let untaken = try await answer(
-            of: [Statement(id: "probe", expression: sut(false))],
-            result: reference("probe")
+            of: [
+                Statement(id: "kept", binding: .variable, expression: .literal(.string(""))),
+                Statement(expression: sut(false))
+            ],
+            result: reference("kept")
         )
 
         // Then
@@ -111,24 +125,49 @@ struct ControlFlowTests {
         #expect(untaken == .string("else"))
     }
 
-    @Test("a declining conditional without an else answers null")
-    func decliningConditionalAnswersNull() async throws {
-        // Given — a skipped statement binds null, which is absence as a value
-        // rather than a name that does not exist
+    @Test("a declining branch leaves the enclosing names as they were")
+    func aDecliningBranchWritesNothing() async throws {
+        // Given — with no other arm, a condition that declines runs nothing:
+        // the variable holds what it held, which is the null it started with
         let sut = Warp.Expression.conditional(
             .literal(.bool(false)),
-            then: Block(body: [Statement(id: "yes", expression: .literal(.string("then")))]),
+            then: [
+                Statement(id: "kept", binding: .assignment, expression: .literal(.string("then")))
+            ],
             else: nil
         )
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
-            result: reference("probe")
+            of: [
+                Statement(id: "kept", binding: .variable, expression: .literal(.null)),
+                Statement(expression: sut)
+            ],
+            result: reference("kept")
         )
 
         // Then
         #expect(answer == .null)
+    }
+
+    @Test("a name on a branch is refused")
+    func aNameOnABranchIsRefused() {
+        // Given — a branch answers nothing, so its name could never bind
+        let sut = Warp.Expression.conditional(
+            .literal(.bool(true)),
+            then: [Statement(expression: .literal(.int(1)))],
+            else: nil
+        )
+
+        // When / Then — under any of the three spellings
+        #expect(!validates(body: [Statement(id: "probe", expression: sut)]))
+        #expect(!validates(body: [Statement(id: "probe", binding: .variable, expression: sut)]))
+        #expect(
+            !validates(body: [
+                Statement(id: "probe", binding: .variable, expression: .literal(.int(0))),
+                Statement(id: "probe", binding: .assignment, expression: sut)
+            ])
+        )
     }
 
     @Test("a loop reads how many rounds have passed")
@@ -182,7 +221,7 @@ struct ControlFlowTests {
                                 arguments: ["value": .literal(.int(2))]
                             )
                         ),
-                        then: Block(body: [
+                        then: [
                             Statement(
                                 expression: .dispatch(
                                     Dispatch(
@@ -191,7 +230,7 @@ struct ControlFlowTests {
                                     )
                                 )
                             )
-                        ]),
+                        ],
                         else: nil
                     )
                 )

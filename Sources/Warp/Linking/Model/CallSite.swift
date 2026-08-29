@@ -15,20 +15,24 @@ struct CallSite: Sendable {
     let dispatch: Dispatch
     let location: String
 
-    // What each name in scope held where this was written. A call's arguments
-    // are mostly references, so without this the types a declaration carries
-    // would only ever be checked against literals.
-    let environment: [String: TypeExpression]
+    // What each operand held where this was written — the walk's own answers,
+    // carried so the check never walks a body a second time for them. A
+    // call's arguments are mostly references, so without these the types a
+    // declaration carries would only ever be checked against literals.
+    let readings: [String: TypeExpression]
+    let received: TypeExpression?
 
     // MARK: - Initializer
     init(
         dispatch: Dispatch,
         location: String,
-        environment: [String: TypeExpression] = [:]
+        readings: [String: TypeExpression],
+        received: TypeExpression?
     ) {
         self.dispatch = dispatch
         self.location = location
-        self.environment = environment
+        self.readings = readings
+        self.received = received
     }
 
     // MARK: - Public

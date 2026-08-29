@@ -17,6 +17,103 @@ struct ValidationTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
+    @Test("a construct in a call's operand is refused at the check")
+    func aConstructInACallOperandIsRefused() {
+        // Given — a document cannot even write one there, and the run would
+        // refuse it; a program assembled directly meets the same rule before
+        // anything runs. The body a word is to run travels as a closure.
+        let arm = [Statement(id: "kept", expression: .literal(.int(1)))]
+        let sut = [
+            Statement(
+                id: "said",
+                expression: .dispatch(
+                    Dispatch(selector: "shout", arguments: [
+                        "text": .conditional(.literal(.bool(true)), then: arm, else: nil)
+                    ])
+                )
+            )
+        ]
+
+        // When / Then — bare, and buried inside a value shape alike
+        #expect(!validates(body: sut))
+        #expect(
+            !validates(body: [
+                Statement(
+                    id: "said",
+                    expression: .invoke(
+                        .closure(Procedure(body: [])),
+                        arguments: [
+                            "value": .array([
+                                .conditional(.literal(.bool(true)), then: arm, else: nil)
+                            ])
+                        ]
+                    )
+                )
+            ])
+        )
+    }
+
+    @Test("a construct in a condition is refused at the check")
+    func aConstructInAConditionIsRefused() {
+        // Given — the run asks a condition purely, the same fact an operand
+        // has, so the same rule refuses a construct there
+        let construct = Warp.Expression.block(Block(body: [], result: .literal(.bool(true))))
+
+        // When / Then — a branch's condition, and a loop's
+        #expect(
+            !validates(body: [
+                Statement(expression: .conditional(construct, then: [], else: nil))
+            ])
+        )
+        #expect(
+            !validates(body: [
+                Statement(
+                    expression: .loop(
+                        while: construct,
+                        body: Block(body: [], result: nil),
+                        round: "round"
+                    )
+                )
+            ])
+        )
+    }
+
+    @Test("a branch where a value is wanted is refused at the check")
+    func aBranchWhereAValueIsWantedIsRefused() {
+        // Given — a branch answers nothing, so a slot that exists to hold an
+        // answer has nothing to take from one; refused for that reason
+        // rather than as a null that fails to fit downstream
+        let branch = Warp.Expression.conditional(
+            .literal(.bool(true)),
+            then: [Statement(id: "kept", expression: .literal(.int(1)))],
+            else: nil
+        )
+
+        // When / Then — a result slot, an array element, a record field
+        #expect(
+            !validates(
+                body: [Statement(id: "grouped", expression: .block(Block(body: [], result: branch)))]
+            )
+        )
+        #expect(!validates(body: [Statement(id: "list", expression: .array([branch]))]))
+        #expect(!validates(body: [Statement(id: "pair", expression: .record(["a": branch]))]))
+    }
+
+    @Test("a walk where a value is wanted is refused at the check")
+    func aWalkWhereAValueIsWantedIsRefused() {
+        // Given — a walk answers nothing, the same fact a branch has, so the
+        // same slots refuse it
+        let walk = Warp.Expression.iteration(
+            over: .array([.literal(.int(1))]),
+            body: [],
+            element: "walk"
+        )
+
+        // When / Then
+        #expect(!validates(body: [Statement(id: "list", expression: .array([walk]))]))
+        #expect(!validates(body: [Statement(id: "pair", expression: .record(["a": walk]))]))
+    }
+
     @Test("a name is visible only after the statement that introduced it")
     func namesAreVisibleAfterTheirStatement() {
         // Given

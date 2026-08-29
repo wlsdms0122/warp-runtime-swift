@@ -19,9 +19,7 @@ struct TestRecoverableFailure: RecoverableFailure {
     // MARK: - Property
     let message = "the world did not cooperate"
 
-    var payload: Value {
-        .object(["type": .string("test"), "message": .string(message)])
-    }
+    let type = "test"
 
     // MARK: - Initializer
     // MARK: - Public

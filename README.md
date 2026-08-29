@@ -56,21 +56,20 @@ let value = try await language.makeExecutor().run(
 | product | what | depends on |
 |---|---|---|
 | `Warp` | the shapes, checking, linking, running, and the standard vocabulary | nothing |
-| `WarpDocument` | a document read into shapes, and shapes written back out | `Warp` |
-| `WarpBinary` | the carrying encoding — Warp's own bytes | `Warp` |
-| `WarpText` | the readable encoding — the same document laid out for eyes | `Warp` |
+| `WarpSyntax` | a document read into shapes, and shapes written back out | `Warp` |
+| `WarpSerialization` | a document written down — Warp's own bytes to carry it, text to read it | `Warp` |
 
-The arrows are the architecture. An encoding carries a tree of data and never
-learns what the tree means, so both see `Warp`'s `Value` and nothing of
-`WarpDocument`. `WarpDocument` is optional in the honest sense: a program that
+The arrows are the architecture. A serialization carries a tree of data and
+never learns what the tree means, so it sees `Warp`'s `Value` and nothing of
+`WarpSyntax`. `WarpSyntax` is optional in the honest sense: a program that
 never travels never links it.
 
 ## An arriving program
 
 ```swift
 import Warp
-import WarpDocument
-import WarpBinary
+import WarpSyntax
+import WarpSerialization
 
 let document = try BinaryEncoding.value(from: bytes)   // bytes → tree, or refused
 let module = try Loader().load(document)               // tree → module, or refused

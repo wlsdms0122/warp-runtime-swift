@@ -29,7 +29,7 @@ public struct SpellingQuery: Query {
             throw ExecutionError("text asks nothing, and nothing has no spelling")
         }
 
-        return .string(Rendering(value).text)
+        return .string(Rendering(value).text())
     }
 
     // MARK: - Private

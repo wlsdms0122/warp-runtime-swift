@@ -33,11 +33,16 @@ public struct WalkingQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
-        guard case let .array(elements) = question.receiver else { return nil }
+        // Through the one projection that owns the `bytes = array<byte>`
+        // equation, so a walk reads bytes the way `each` does.
+        guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
         let body = question["value"]
 
         switch walk {
+        // What the procedure answered is its own value, whatever it was reached
+        // from — which is why the declaration names a second parameter for it
+        // and why the receiver's spelling has nothing to say here.
         case .map:
             return .array(
                 try elements.map { element in
@@ -45,8 +50,9 @@ public struct WalkingQuery: Query {
                 }
             )
 
+        // The receiver's own elements, fewer of them — so the spelling stands.
         case .filter:
-            return .array(
+            return receiver.respelled(
                 try elements.filter { element in
                     let verdict = try question.call(body, with: ["item": element])
 

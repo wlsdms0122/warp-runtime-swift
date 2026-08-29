@@ -48,3 +48,13 @@ public struct Statement: Sendable {
     // MARK: - Public
     // MARK: - Private
 }
+
+extension [Statement] {
+    // Whether every way through this body leaves — true of the body alone,
+    // validated or not: nothing after a leaving statement runs, so one
+    // anywhere is enough. (That anything *follows* one is separately refused
+    // where the body is read and where it is validated.)
+    public var alwaysLeaves: Bool {
+        contains { statement in statement.expression.alwaysLeaves }
+    }
+}

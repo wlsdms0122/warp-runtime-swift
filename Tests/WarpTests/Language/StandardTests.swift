@@ -41,11 +41,11 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut, .math, .text], entry: entryName)
+            try language.link([sut, .math, .text, .foundation], entry: entryName)
         }
 
         #expect(throws: Never.self) {
-            try language.link([sut, .collection], entry: entryName)
+            try language.link([sut, .collection, .foundation], entry: entryName)
         }
     }
 
@@ -258,16 +258,13 @@ struct StandardTests {
         }
     }
 
-    @Test("whole arithmetic with no answer refuses rather than taking the process")
-    func wholeArithmeticRefusesWhatItCannotAnswer() async throws {
-        // Given — every one of these is a Swift trap if the answer is taken
-        // rather than judged, and each arrives at run time
+    @Test("a divisor of zero refuses rather than taking the process")
+    func divisionByZeroRefuses() async throws {
+        // Given — both are Swift traps if the answer is taken rather than
+        // judged, and each arrives at run time
         let asks: [(String, Value, Value)] = [
             ("remainder", .int(5), .int(0)),
-            ("dividedBy", .int(5), .int(0)),
-            ("times", .int(Int.max), .int(2)),
-            ("plus", .int(Int.max), .int(1)),
-            ("minus", .int(Int.min), .int(1))
+            ("dividedBy", .int(5), .int(0))
         ]
 
         for (word, receiver, operand) in asks {
@@ -291,9 +288,136 @@ struct StandardTests {
         }
     }
 
-    @Test("a double with no whole answer refuses rather than taking the process")
-    func roundingRefusesWhatAnIntCannotHold() async throws {
-        // Given
+    @Test("arithmetic off the word's edge is a fault, not a wrap")
+    func wholeArithmeticOverflowFaults() async throws {
+        // Given — each of these falls off the edge of the machine word, and
+        // the language stops rather than answering a number the digits do not
+        // say
+        let asks: [(String, Value, Value)] = [
+            ("times", .int(Int.max), .int(2)),
+            ("plus", .int(Int.max), .int(1)),
+            ("minus", .int(Int.min), .int(1))
+        ]
+
+        func asking(_ word: String, _ receiver: Value, _ operand: Value) -> Module {
+            Module(
+                procedures: [
+                    entryName: Procedure(
+                        body: [],
+                        result: .dispatch(Dispatch(
+                            receiver: .literal(receiver),
+                            selector: word,
+                            arguments: ["value": .literal(operand)]
+                        ))
+                    )
+                ]
+            )
+        }
+
+        for (word, receiver, operand) in asks {
+            // When / Then
+            await #expect(throws: ExecutionError.self, "\(word) answered") {
+                try await run(asking(word, receiver, operand))
+            }
+        }
+
+        // `Int.min remainder -1` trips the hardware's division, but the
+        // remainder itself is 0 — an answer the word holds, so it answers.
+        #expect(try await run(asking("remainder", .int(Int.min), .int(-1))) == .int(0))
+    }
+
+    @Test("a quotient is a fraction even between wholes")
+    func aQuotientIsAFraction() async throws {
+        // Given — dividedBy never answers an int; `floored` is where a whole
+        // division's whole half is read back
+        func divided(_ left: Int, _ right: Int) -> Module {
+            Module(
+                procedures: [
+                    entryName: Procedure(
+                        body: [],
+                        result: .dispatch(Dispatch(
+                            receiver: .literal(.int(left)),
+                            selector: "dividedBy",
+                            arguments: ["value": .literal(.int(right))]
+                        ))
+                    )
+                ]
+            )
+        }
+
+        // When / Then
+        #expect(try await run(divided(6, 2)) == .double(3.0))
+        #expect(try await run(divided(7, 2)) == .double(3.5))
+        #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
+
+        // The quotient is binary64's own: each whole operand widens first —
+        // the same widening every mixed operation performs — and the division
+        // rounds once more. 2^53 + 1 widens to 2^53, and the answer is the
+        // widened pair's, bit for bit.
+        #expect(
+            try await run(divided(9_007_199_254_740_993, 3))
+                == .double(9_007_199_254_740_992.0 / 3.0)
+        )
+    }
+
+    @Test("a codec keeps its own contract on the encoding name")
+    func aCodecReadsItsEncodingArgument() throws {
+        // Given — the declaration's oneOf says the same names early; this is
+        // the implementation refusing a name it has no mapping for, so a
+        // drifted declaration cannot make it answer in the wrong encoding
+        let sut = CodecQuery(.decoded)
+
+        // When / Then
+        #expect(
+            try sut.evaluate(Question(
+                receiver: .bytes([104]),
+                arguments: ["encoding": .string("utf8")]
+            )) == .string("h")
+        )
+
+        #expect {
+            try sut.evaluate(Question(
+                receiver: .bytes([104]),
+                arguments: ["encoding": .string("utf16")]
+            ))
+        } throws: { error in
+            "\(error)".contains("no encoding named 'utf16'")
+        }
+    }
+
+    @Test("text spells a whole number the same way at every size and depth")
+    func textSpellsWholeNumbersUniformly() async throws {
+        // Given — the quotes must not change with the value's size: a number
+        // is a number wherever it sits, and only text wears quotes
+        let sut = Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [],
+                    result: .dispatch(Dispatch(
+                        receiver: .literal(.array([
+                            .int(1),
+                            .int(Int.max),
+                            .string("9223372036854775807")
+                        ])),
+                        selector: "text"
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(
+            try await run(sut)
+                == .string("[1,9223372036854775807,\"9223372036854775807\"]")
+        )
+    }
+
+    @Test("rounding and magnitude stop at the word's edge")
+    func roundingPastTheWordFaults() async throws {
+        // Given — a fraction whose whole part is past the machine word has no
+        // int to answer, and the word's own minimum has no magnitude the word
+        // holds. The refusal names the overflow, not a missing whole answer —
+        // the two reasons are different facts.
         let asks: [(String, Value)] = [
             ("floored", .double(1e30)),
             ("rounded", .double(1e30)),
@@ -314,8 +438,10 @@ struct StandardTests {
             )
 
             // When / Then
-            await #expect(throws: ExecutionError.self, "\(word) took the process") {
+            await #expect {
                 try await run(sut)
+            } throws: { error in
+                "\(error)".contains("overflows int")
             }
         }
     }
@@ -590,19 +716,25 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "verdict",
+                            binding: .variable,
+                            expression: .literal(.string(""))
+                        ),
+                        Statement(
                             expression: .conditional(.dispatch(Dispatch(receiver: .reference([.key("n")]), selector: "lessThan", arguments: [
                                             "value": .literal(.int(10))
-                                        ])), then: Block(body: [
+                                        ])), then: [
                                         Statement(
-                                            id: "small",
+                                            id: "verdict",
+                                            binding: .assignment,
                                             expression: .literal(.string("small"))
                                         )
-                                    ], result: .reference([.key("small")])), else: Block(body: [
+                                    ], else: [
                                         Statement(
-                                            id: "large",
+                                            id: "verdict",
+                                            binding: .assignment,
                                             expression: .literal(.string("large"))
                                         )
-                                    ], result: .reference([.key("large")])))
+                                    ])
                         )
                     ],
                     result: .record([
@@ -747,8 +879,8 @@ struct StandardTests {
     @Test("bytes do not order")
     func bytesDoNotOrder() async throws {
         // Given — bytes are an opaque value: equal or not, counted, and
-        // nothing else. An order would imply a reading, and bytes are the kind
-        // that has none.
+        // nothing else. `Comparable` does not admit them, and a literal is a
+        // reading the link can judge, so the refusal lands before the run.
         let sut = Warp.Expression.dispatch(
             Dispatch(
                 receiver: .literal(.bytes([0x01])),
@@ -761,7 +893,7 @@ struct StandardTests {
         await #expect {
             try await answer(of: [Statement(id: "probe", expression: sut)], result: reference("probe"))
         } throws: { error in
-            "\(error)".contains("two numbers or two strings")
+            error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
         }
     }
 
@@ -821,6 +953,47 @@ struct StandardTests {
         #expect(answer == .bool(true))
     }
 
+    @Test("a whole and a fraction meet exactly at every size")
+    func wholeAndFractionMeetExactly() throws {
+        // Given — 2^53 + 1 rounds to 2^53 in binary64, so a judgment that
+        // converts would call two different worths the same. Worth does not
+        // follow the rounding, in any consumer of the one order.
+        let above = Value.int(9007199254740993)
+        let below = Value.double(9007199254740992.0)
+
+        // When / Then
+        #expect(!above.matches(below))
+        #expect(Value.int(9007199254740992).matches(below))
+        #expect(Value.order(above, below) == .orderedDescending)
+        #expect(Value.order(below, above) == .orderedAscending)
+        #expect(Value.order(.int(-2), .double(-2.5)) == .orderedDescending)
+        #expect(Value.order(.int(.max), .double(0x1p63)) == .orderedAscending)
+        #expect(Value.order(.int(.min), .double(-0x1p63)) == .orderedSame)
+        #expect(Value.order(.int(0), .double(.nan)) == nil)
+
+        // min and max pick between the values as they arrived — the int wins
+        // here, and no conversion flattens it into a tie.
+        let picked = try ComparisonQuery(.max).evaluate(
+            Question(receiver: above, arguments: ["value": below])
+        )
+
+        #expect(picked == above)
+    }
+
+    @Test("what orders with nothing is not sorted around")
+    func aFractionThatIsNotANumberRefusesToSort() {
+        // Given — NaN answers no comparison, so any placement of it would be
+        // an order sorted could not answer for; refused, the way a mixed
+        // array is, rather than placed arbitrarily
+        #expect {
+            try BuildingQuery(.sorted).evaluate(
+                Question(receiver: .array([.double(1.5), .double(.nan)]))
+            )
+        } throws: { error in
+            "\(error)".contains("ordering with the rest")
+        }
+    }
+
     // MARK: - Control
 
     @Test("abort refuses carrying its rendered message")
@@ -875,10 +1048,20 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "either",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
                             expression: .conditional(
                                 reference("ok"),
-                                then: Block(body: [], result: .literal(.string("here"))),
-                                else: Block(body: [], result: refusing(literal("gone")))
+                                then: [
+                                    Statement(
+                                        id: "either",
+                                        binding: .assignment,
+                                        expression: .literal(.string("here"))
+                                    )
+                                ],
+                                else: [Statement(expression: refusing(literal("gone")))]
                             )
                         ),
                         Statement(

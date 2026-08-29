@@ -11,9 +11,7 @@ public struct Aborted: RecoverableFailure {
     // MARK: - Property
     public let message: String
 
-    public var payload: Value {
-        .object(["type": .string("aborted"), "message": .string(message)])
-    }
+    public let type = "aborted"
 
     public let trace: Trace?
 

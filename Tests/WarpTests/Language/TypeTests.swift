@@ -178,9 +178,12 @@ struct TypeTests {
         }
     }
 
-    @Test("an undeclared answer is not something the linker can be wrong about")
-    func undeclaredAnswerLinks() throws {
-        // Given — `counts` says nothing, so nothing is known and nothing refused
+    @Test("an undeclared answer is read off the body, and held to the same rule")
+    func undeclaredAnswerIsReadOffTheBody() throws {
+        // Given — `counts` declares nothing, and its body answers a whole
+        // number. The declaration stays as the author left it; what the link
+        // reads a call as is what the body hands back, so the same
+        // disagreement a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
         let wants = Procedure(
             signature: Signature(parameters: ["word": Parameter(type: .string)]),
@@ -203,8 +206,24 @@ struct TypeTests {
         )
 
         // When / Then
+        #expect {
+            try Language().link(
+                [Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
+                entry: "entry"
+            )
+        } throws: { error in
+            error is LinkError && "\(error)".contains("holds int where string is declared")
+        }
+
+        // And a body whose answer nothing can be read from says nothing —
+        // an answer worked out from its own is not one the text states.
+        let circling = Procedure(
+            body: [],
+            result: .dispatch(Dispatch(selector: "counts"))
+        )
+
         _ = try Language().link(
-            [Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
+            [Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
             entry: "entry"
         )
     }

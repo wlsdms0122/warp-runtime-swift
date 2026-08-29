@@ -35,19 +35,26 @@ public struct Image: Sendable {
     // and the link is where an ambiguity between two such names is refused.
     public let derivations: [String: Procedure]
 
+    // What a bare spelling a path writes may send — its own table, because a
+    // selector and a path spelling are two questions one key must not answer
+    // for each other.
+    public let words: [String: Procedure]
+
     // MARK: - Initializer
     init(
         entry: Procedure,
         procedures: [String: Procedure],
         types: TypeTable,
         pure: Set<String>,
-        derivations: [String: Procedure]
+        derivations: [String: Procedure],
+        words: [String: Procedure]
     ) {
         self.entry = entry
         self.procedures = procedures
         self.types = types
         self.pure = pure
         self.derivations = derivations
+        self.words = words
     }
 
     // MARK: - Public

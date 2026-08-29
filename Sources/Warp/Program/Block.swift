@@ -18,6 +18,15 @@ public struct Block: Sendable {
     public let body: [Statement]
     public let result: Expression?
 
+    // Whether every way through this block leaves — true of the block alone,
+    // validated or not: a leaving body never reaches the result, and a leaving
+    // result leaves the block the body finished. (A result under a leaving
+    // body is separately refused as unreachable — where a document assembles
+    // the pair, and where a hand-assembled block is validated.)
+    public var alwaysLeaves: Bool {
+        body.alwaysLeaves || result?.alwaysLeaves == true
+    }
+
     // MARK: - Initializer
     public init(body: [Statement], result: Expression? = nil) {
         self.body = body

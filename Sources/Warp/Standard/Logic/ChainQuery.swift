@@ -31,6 +31,10 @@ public struct ChainQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
+        // The `.array` case and not the elements projection, for the reason
+        // `joined` gives: this declares `array<procedure>`, which leaves no
+        // byte as it is, so a bytes receiver is read out and refused at the
+        // boundary rather than arriving here compact.
         guard case let .array(links) = question.receiver else { return nil }
 
         for link in links {

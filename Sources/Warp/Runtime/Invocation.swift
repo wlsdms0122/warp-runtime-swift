@@ -75,7 +75,12 @@ public struct Invocation: Sendable {
     }
 
     public func resolver(for scope: Scope) -> Resolver {
-        Resolver(scope: scope, derivations: executor.derivations, types: executor.types)
+        Resolver(
+            scope: scope,
+            derivations: executor.derivations,
+            words: executor.words,
+            types: executor.types
+        )
     }
 
     public func evaluate(_ expression: Expression, in scope: Scope) async throws -> Value {

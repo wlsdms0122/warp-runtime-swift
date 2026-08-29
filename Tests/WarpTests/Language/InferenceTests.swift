@@ -20,7 +20,7 @@ struct InferenceTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a hole carries the element type through the call that filled it")
+    @Test("a type parameter carries the element type through the call that filled it")
     func aHoleCarriesWhatFilledIt() throws {
         // Given — `first` takes `array<some Element>` and answers `some Element`,
         // so what it answers here is a string and the declaration never said so
@@ -61,7 +61,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a hole filled with one shape refuses a call wanting another")
+    @Test("a type parameter filled with one shape refuses a call wanting another")
     func aFilledHoleRefusesWhatDisagrees() throws {
         // Given — the same walk, over an array of ints
         let wants = Procedure(
@@ -101,7 +101,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a hole a procedure answers becomes what the walk answers")
+    @Test("a type parameter a procedure answers becomes what the walk answers")
     func aWalkAnswersWhatItsProcedureDoes() throws {
         // Given — `map` over strings with a procedure answering int. What the
         // walk answers follows the procedure rather than the receiver, so asking
@@ -153,6 +153,128 @@ struct InferenceTests {
     }
 
     // MARK: - Test
+    @Test("a loop's result carries the body name it reads, nullable")
+    func aLoopResultCarriesTheBodyNameItReads() async throws {
+        // Given — a finished round's exit hands the result the body's own
+        // declarations; the 0-round exit never bound them, and a name a
+        // scope does not hold reads as null. So `kept` holds int? — not an
+        // `any` for a name the entry never saw, and not a plain int the
+        // 0-round run would break
+        let loop = Warp.Expression.loop(
+            while: .literal(.bool(false)),
+            body: Block(
+                body: [Statement(id: "tick", expression: .literal(.int(7)))],
+                result: reference("tick")
+            ),
+            round: "walked"
+        )
+
+        let sut = Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(id: "kept", expression: loop),
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                "word": .reference([.key("kept")])
+                            ]))
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(parameters: ["word": Parameter(type: .string)]),
+                    body: []
+                )
+            ]
+        )
+
+        // When / Then — refused as the nullable it is
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("holds int?")
+        }
+
+        // And the 0-round run answers the null the reading admitted
+        let running = Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "kept",
+                            expression: .loop(
+                                while: .literal(.bool(false)),
+                                body: Block(
+                                    body: [
+                                        Statement(id: "tick", expression: .literal(.int(7)))
+                                    ],
+                                    result: reference("tick")
+                                ),
+                                round: "walked"
+                            )
+                        )
+                    ],
+                    result: reference("kept")
+                )
+            ]
+        )
+
+        #expect(try await run([running]) == .null)
+    }
+
+    @Test("a loop result's writes stay out of the rounds' own reading")
+    func aLoopResultsWritesStayOutOfTheRounds() async throws {
+        // Given — the result runs once, at an exit, never between rounds;
+        // a body that reads `y` as the int it is must not be refused on
+        // account of a write only the exit makes
+        let loop = Warp.Expression.loop(
+            while: .literal(.bool(false)),
+            body: Block(
+                body: [
+                    Statement(
+                        id: "used",
+                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                            "count": .reference([.key("y")])
+                        ]))
+                    )
+                ],
+                result: .block(
+                    Block(
+                        body: [
+                            Statement(
+                                id: "y",
+                                binding: .assignment,
+                                expression: .literal(.string("s"))
+                            )
+                        ],
+                        result: reference("y")
+                    )
+                )
+            ),
+            round: "walked"
+        )
+
+        let sut = Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(id: "y", binding: .variable, expression: .literal(.int(1))),
+                        Statement(id: "kept", expression: loop)
+                    ],
+                    result: reference("y")
+                ),
+                "wants": Procedure(
+                    signature: Signature(parameters: ["count": Parameter(type: .int)]),
+                    body: []
+                )
+            ]
+        )
+
+        // When / Then — links, and the run answers what the exit wrote
+        #expect(try await run([sut]) == .string("s"))
+    }
+
     @Test("a name bound to a call carries that call's declared answer")
     func boundCallCarriesItsAnswer() throws {
         // Given
@@ -363,17 +485,16 @@ struct InferenceTests {
                             expression: .literal(.int(1))
                         ),
                         Statement(
-                            id: "gate",
                             expression: .conditional(equals(
                                         .reference([.key("flag")]),
                                         .literal(.bool(true))
-                                        ), then: Block(body: [
+                                        ), then: [
                                         Statement(
                                             id: "held",
                                             binding: .assignment,
                                             expression: .literal(.string("text"))
                                         )
-                                    ]), else: nil)
+                                    ], else: nil)
                         ),
                         Statement(
                             id: "said",
@@ -460,7 +581,7 @@ struct InferenceTests {
 
     @Test("what a map answers is typed by the closure it was given")
     func aMapAnswerCarriesItsElementType() throws {
-        // Given — `map` declares its answer through holes: the closure's
+        // Given — `map` declares its answer through type parameters: the closure's
         // declared answer fills `Answer`, so handing the fan-out's answer to a
         // word that wants another kind is refused before anything runs
         let sut = Module(
@@ -516,9 +637,11 @@ struct InferenceTests {
         }
     }
 
-    @Test("a branch with no other arm holds what it answers when it declines")
-    func aBranchWithoutAnElseAnswersNull() throws {
-        // Given
+    @Test("a write only one arm makes reads back nullable")
+    func aWriteOnlyOneArmMakesReadsBackNullable() throws {
+        // Given — the run either took the arm or did not, so the name holds
+        // the write or the null it started with: `T?`, and a slot that wants
+        // the value plain refuses
         let sut = Module(
             procedures: [
                 "entry": Procedure(
@@ -530,12 +653,19 @@ struct InferenceTests {
                     body: [
                         Statement(
                             id: "many",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
                             expression: .conditional(
                                 .reference([.key("ready")]),
-                                then: Block(
-                                    body: [],
-                                    result: refusing(literal("no"))
-                                ),
+                                then: [
+                                    Statement(
+                                        id: "many",
+                                        binding: .assignment,
+                                        expression: .literal(.string("no"))
+                                    )
+                                ],
                                 else: nil
                             )
                         ),
@@ -648,8 +778,8 @@ struct InferenceTests {
         _ = try language.link([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a field the walk could not read says nothing, so nothing is refused")
-    func anUnreadShapeIsNotRefused() throws {
+    @Test("a dot on any is refused, because any declares nothing to read")
+    func aDotOnAnyIsRefused() throws {
         // Given
         let sut = Module(
             procedures: [
@@ -670,12 +800,747 @@ struct InferenceTests {
         )
 
         // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("declares nothing")
+        }
+    }
+
+    @Test("a cast naming a type nothing declares refuses at the link")
+    func aCastNamingNothingIsRefused() throws {
+        // Given — `as?` says the author expected the value might not be that
+        // shape. A name nothing declares is not that, and letting it reach the
+        // run would have `as?` read a typo as null forever. A type spelled in
+        // a body is held to the rule a type spelled in a signature is
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(
+                        .reference([.key("payload")]),
+                        as: .named("Preson"),
+                        optional: true
+                    )
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("no module in this link declares")
+        }
+    }
+
+    @Test("a cast onto a shape that proves nothing is refused, whatever it reads")
+    func aCastOntoNothingIsRefused() throws {
+        // Given — the claim is judged on itself: `as: any` opens no door over
+        // an `any` receiver any more than it does over an `int` one
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "read",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .any,
+                                optional: false
+                            )
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("`any` is the absence of one")
+        }
+    }
+
+    @Test("a cast may name a shape sharing no field with the reading")
+    func aCastOntoADisjointRecordStands() throws {
+        // Given — two records naming no field in common accept each other in
+        // neither direction and are still both satisfied by one value: a
+        // record says what must be there, not all there is. This is the
+        // spelling the specification gives for reading what a failure carries
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "failed": Parameter(type: .record(["type": .string, "message": .string]))
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "reason",
+                            expression: .cast(
+                                .reference([.key("failed")]),
+                                as: .record(["failures": .object(.string)]),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("reason"), .key("failures")])
+                )
+            ]
+        )
+
+        // When / Then
         _ = try language.link([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a record may carry more than it declares, so a missing field is not refused")
-    func aRecordIsNotClosed() throws {
-        // Given
+    @Test("a cast between two shapes that name themselves does not chase them forever")
+    func aCastBetweenRecursiveTypesTerminates() throws {
+        // Given — the reading is a declared type rather than `any`, so the
+        // walk actually asks whether both could hold. Both sides name
+        // themselves, which is the case a guard living inside one expansion
+        // could not bound
+        let sut = Module(
+            types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .named("Tree"))
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "tree",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .named("Tree"),
+                                optional: true
+                            )
+                        )
+                    ],
+                    result: .reference([.key("tree"), .key("value")])
+                )
+            ]
+        )
+
+        // When / Then — it terminates; whether it refuses as needless is the
+        // sameness rule's business, not this one's
+        _ = try? language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
+    func aCastOntoAMismatchedKindIsRefusedThroughUnprovenInsides() throws {
+        // Given — `array<any>` proves an array is there. Nothing it holds is
+        // proven, but that says nothing about whether the whole could be a
+        // string, and it cannot: this would answer null on every run
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "rows": Parameter(type: .array(.any))
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(.reference([.key("rows")]), as: .string, optional: true)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("no value is both")
+        }
+    }
+
+    @Test("repeating a cast is refused whichever way the shape was spelled")
+    func aRepeatedCastIsRefusedInlineToo() throws {
+        // Given — `payload as? int` hands on `int?`, and asking the sameness
+        // question of the spelling rather than of what was handed on let this
+        // repeat through while the same repeat written with a name was caught
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "once",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .int,
+                                optional: true
+                            )
+                        ),
+                        Statement(
+                            id: "twice",
+                            expression: .cast(
+                                .reference([.key("once")]),
+                                as: .int,
+                                optional: true
+                            )
+                        )
+                    ],
+                    result: .reference([.key("twice")])
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("already is")
+        }
+    }
+
+    @Test("a cast onto any in code nothing reaches is still refused")
+    func anUnreadableClaimIsRefusedWhereNoWalkGoes() throws {
+        // Given — impure and unreachable, so no typing walk sees it. What the
+        // claim names is a fact about the spelling, so it is held anyway;
+        // `as?: never` slipping through here would answer null forever
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(body: [], result: .literal(.int(0))),
+                "stranded": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(
+                        .reference([.key("payload")]),
+                        as: .never,
+                        optional: true
+                    )
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("no value is")
+        }
+    }
+
+    @Test("a name standing for a nullable is not wrapped again")
+    func anAskingCastOntoANullableNameDoesNotDouble() throws {
+        // Given — `Maybe` already holds null, so `as?: Maybe` reads `Maybe`.
+        // Wrapping the name again made the same shape read two ways depending
+        // on whether the author wrote the name or what it stands for, and the
+        // second cast then escaped the sameness rule
+        let sut = Module(
+            types: ["Maybe": .nullable(.int)],
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "once",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .named("Maybe"),
+                                optional: true
+                            )
+                        ),
+                        Statement(
+                            id: "twice",
+                            expression: .cast(
+                                .reference([.key("once")]),
+                                as: .named("Maybe"),
+                                optional: true
+                            )
+                        )
+                    ],
+                    result: .reference([.key("twice")])
+                )
+            ]
+        )
+
+        // When / Then — the second says nothing the first did not
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("already is")
+        }
+    }
+
+    @Test("a cast in a procedure nothing reaches still names a declared shape")
+    func aCastInUnreachedImpureCodeIsStillHeldToItsName() throws {
+        // Given — impure and unreachable from the entry, so neither the
+        // frontier nor the pure set walks it. A signature written here would
+        // still be held to its names; so is a cast
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(body: [], result: .literal(.int(0))),
+                "stranded": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(
+                        .reference([.key("payload")]),
+                        as: .named("Preson"),
+                        optional: true
+                    )
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("no module in this link declares")
+        }
+    }
+
+    @Test("an int may become a double, so a cast onto double stands")
+    func aCastOntoDoubleStands() throws {
+        // Given — the one widening the language has. Refusing it at the link
+        // would refuse a cast that settles on every run
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "count": Parameter(type: .int)
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(.reference([.key("count")]), as: .double, optional: false)
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("a nullable and null share null, so a cast between them stands")
+    func aCastBetweenANullableAndNullStands() throws {
+        // Given — asked of the fact that both hold null, not of which one is
+        // written with `?`
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "count": Parameter(type: .nullable(.int))
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(.reference([.key("count")]), as: .null, optional: true)
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("two nullables share null, so a cast between them stands")
+    func aCastBetweenNullablesStands() throws {
+        // Given — null satisfies both, so a value both shapes hold exists
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "count": Parameter(type: .nullable(.int))
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(
+                        .reference([.key("count")]),
+                        as: .nullable(.string),
+                        optional: true
+                    )
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("an object and a record are one shape read two ways, so a cast between them stands")
+    func aCastBetweenAnObjectAndARecordStands() throws {
+        // Given — the boundary settles both from the same runtime value, so
+        // refusing this would refuse a cast that succeeds
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .object(.string))
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "read",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .record(["a": .string]),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("read"), .key("a")])
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("the reading a cast hands on is the name the author wrote")
+    func aCastHandsOnItsName() throws {
+        // Given — casting the result to the same declared name again is the
+        // sameness rule's case, and it can only see that if the reading it
+        // was handed is still `Person` rather than the shape Person stands
+        // for. (What a refusal *quotes* is the path walk's own business: it
+        // resolves names at every step, for a cast's reading and a declared
+        // parameter's alike.)
+        let sut = Module(
+            types: ["Person": .record(["name": .string])],
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "read",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .named("Person"),
+                                optional: false
+                            )
+                        ),
+                        Statement(
+                            id: "again",
+                            expression: .cast(
+                                .reference([.key("read")]),
+                                as: .named("Person"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("again"), .key("name")])
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("already is")
+        }
+    }
+
+    @Test("a cast onto a type that names itself does not chase the name forever")
+    func aCastOntoARecursiveTypeTerminates() throws {
+        // Given — a type may name itself, and the link's own guarantee that
+        // name chains are finite covers walks that follow names alone. This
+        // walk goes into fields too, so it carries its own guard
+        let sut = Module(
+            types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "tree",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .named("Tree"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("tree"), .key("value")])
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("a cast between shapes no value is both is refused")
+    func aCastThatCanNeverHoldIsRefused() throws {
+        // Given — the reading proves a string is there, and no string is a
+        // whole number. `as?` here would answer null on every run, which is
+        // the permanent silent null `as?` exists not to be
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [],
+                    result: .cast(.reference([.key("word")]), as: .int, optional: true)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("no value is both")
+        }
+    }
+
+    @Test("naming a step of a path through a parameter does not change what it means")
+    func aParameterPathSurvivesBeingNamed() async throws {
+        // Given — `of.a.b` in one statement stands, so `x = of.a` then `x.b`
+        // must stand too. Folding the parameter walk's reading to `any` made
+        // the second refuse on a shape the author never wrote
+        let sut = Module(
+            procedures: [
+                "peek": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .variable(name: "T"))],
+                        returns: .any
+                    ),
+                    body: [
+                        Statement(id: "held", expression: .reference([.key("of"), .key("a")]))
+                    ],
+                    result: .reference([.key("held"), .key("b")])
+                ),
+                "entry": Procedure(
+                    signature: Signature(returns: .any),
+                    body: [],
+                    result: .dispatch(Dispatch(
+                        receiver: .record(["a": .record(["b": .literal(.string("deep"))])]),
+                        selector: "peek",
+                        arguments: [:]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .string("deep"))
+    }
+
+    @Test("a constant folded before any run may hold a cast")
+    func aConstantMayHoldACast() async throws {
+        // Given — the link calls a cast pure, so the pure evaluator has to be
+        // able to read one. A module constant is folded through that evaluator
+        // before anything runs, so a cast in one is where the two would
+        // disagree if only the link believed it
+        let sut = Module(
+            constants: [
+                "counted": .cast(
+                    .literal(.int(7)),
+                    as: .ranged(.whole(from: 0, to: .through(10))),
+                    optional: true
+                )
+            ],
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(returns: .nullable(.int)),
+                    body: [],
+                    result: .reference([.key("counted")])
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .int(7))
+    }
+
+    @Test("a cast onto a shape holding any opens the door it names, and no further")
+    func aCastOntoAShapeHoldingAnyOpensItsOwnDoor() throws {
+        // Given — `as: array<any>` is not `as: any`: the types then prove an
+        // array is there and an index reads one. What each element holds is
+        // still nothing, so a dot on one is still refused — the door it named
+        // opened, and only that one
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "rows",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .array(.any),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("rows"), .index(0)])
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("a cast is not called needless where what it reads holds any inside")
+    func aCastIntoAnUnprovenFieldStands() throws {
+        // Given — the reading proves a record is there and proves nothing
+        // about `data`. Calling this cast needless would refuse the author
+        // both ways: the cast as saying nothing, and the dot it would have
+        // allowed as unjudgeable
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .record(["data": .any]))
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "read",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .record(["data": .record(["name": .string])]),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("read"), .key("data"), .key("name")])
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("a cast keeps the name the author wrote, not the shape it stands for")
+    func aCastKeepsItsName() throws {
+        // Given — the link walks a declared name through to judge it, and what
+        // it writes back is what was written: a refusal and a document both
+        // read the author's spelling
+        let sut = Module(
+            types: ["Person": .record(["name": .string])],
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "read",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .named("Person"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("read"), .key("name")])
+                )
+            ]
+        )
+
+        // When
+        let image = try language.link([sut] + Module.standard, entry: entryName)
+
+        // Then
+        let read = image.entry.block?.body.first { statement in statement.id == "read" }
+
+        guard case let .cast(_, type, _)? = read?.expression else {
+            Issue.record("the cast did not survive the link")
+
+            return
+        }
+
+        #expect(type.rendered.contains("Person"))
+    }
+
+    @Test("a cast opens what any declares nothing about")
+    func aCastOpensAny() throws {
+        // Given — the same read, with the shape the author expects named:
+        // the dot is judged against that shape, and the run is left only the
+        // question of what arrived
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "payload": Parameter(type: .any)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "read",
+                            expression: .cast(
+                                .reference([.key("payload")]),
+                                as: .record(["whatever": .string]),
+                                optional: false
+                            )
+                        ),
+                        Statement(
+                            id: "said",
+                            expression: .reference([.key("read"), .key("whatever")])
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("a field the record does not declare is refused, ?. or not")
+    func anUndeclaredFieldIsRefused() throws {
+        // Given — the type proved the absence, so no spelling reads past it:
+        // `?.` speaks about what may be absent at run, not about what the
+        // declaration already settled
         let sut = Module(
             procedures: [
                 "entry": Procedure(
@@ -695,12 +1560,561 @@ struct InferenceTests {
         )
 
         // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("does not declare")
+        }
+
+        // The optional spelling changes nothing a declaration settled.
+        let optional = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "task": Parameter(type: .record(["id": .string]))
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "said",
+                            expression: .reference([.key("task"), .key("done", optional: true)])
+                        )
+                    ]
+                )
+            ]
+        )
+
+        #expect {
+            try language.link([optional] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("does not declare")
+        }
+    }
+
+    @Test("a write a break carries out of the loop is still counted")
+    func aWriteABreakCarriesOutIsCounted() throws {
+        // Given — the arm writes and then breaks: no run comes back to the
+        // arm, but the loop absorbs the break and the flow after the loop
+        // goes on with the write in the box. The write may be a null, so the
+        // name reads back nullable and the plain slot refuses — a reading
+        // that dropped what left with the break would have said `string` and
+        // linked a lie.
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "ready": Parameter(type: .bool)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "held",
+                            binding: .variable,
+                            expression: .literal(.string("seed"))
+                        ),
+                        Statement(
+                            id: "spin",
+                            expression: .loop(
+                                while: .reference([.key("ready")]),
+                                body: Block(body: [
+                                    Statement(
+                                        expression: .conditional(
+                                            .reference([.key("ready")]),
+                                            then: [
+                                                Statement(
+                                                    id: "held",
+                                                    binding: .assignment,
+                                                    expression: .literal(.null)
+                                                ),
+                                                Statement(
+                                                    expression: .leave(
+                                                        Leave(reach: .construct, target: nil, value: nil)
+                                                    )
+                                                )
+                                            ],
+                                            else: nil
+                                        )
+                                    )
+                                ]),
+                                round: "spin"
+                            )
+                        ),
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                        "word": .reference([.key("held")])
+                                    ]))
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: LinkError.self) {
+            try language.link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a later field reads what an earlier field wrote")
+    func aLaterFieldReadsAnEarlierFieldsWrite() throws {
+        // Given — fields evaluate in name order, and that order is the same
+        // fact for the run and for the reading: field `a` writes the
+        // variable, so field `b` reads it as the int `a` left, not as the
+        // null the record was entered with.
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(
+                            id: "held",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
+                            id: "made",
+                            expression: .record([
+                                "a": .block(
+                                    Block(
+                                        body: [
+                                            Statement(
+                                                id: "held",
+                                                binding: .assignment,
+                                                expression: .literal(.int(1))
+                                            )
+                                        ],
+                                        result: .literal(.int(0))
+                                    )
+                                ),
+                                "b": .reference([.key("held")])
+                            ])
+                        ),
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                        "word": .reference([.key("made"), .key("b")])
+                                    ]))
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .int)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then — links, because `b` is an int by the time it is read
         _ = try language.link([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("an arm that refuses does not cost the arm that answers its type")
+    @Test("a rescue reads what the body may have written before it failed")
+    func aRescueReadsTheBodysPartialWrites() throws {
+        // Given — the body writes a null and then risks a failing call: the
+        // rescue runs with that write in the box, so inside the rescue the
+        // name reads `string?` and the plain string slot refuses. A rescue
+        // judged in the entry environment would have linked a lie.
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(
+                            id: "held",
+                            binding: .variable,
+                            expression: .literal(.string("seed"))
+                        ),
+                        Statement(
+                            expression: .attempt(
+                                Block(body: [
+                                    Statement(
+                                        id: "held",
+                                        binding: .assignment,
+                                        expression: .literal(.null)
+                                    ),
+                                    Statement(
+                                        id: "risky",
+                                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                                    "word": .literal(.string("x"))
+                                                ]))
+                                    )
+                                ]),
+                                rescue: Block(body: [
+                                    Statement(
+                                        id: "saidInside",
+                                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                                    "word": .reference([.key("held")])
+                                                ]))
+                                    )
+                                ], result: .literal(.string("rescued"))),
+                                failure: "why"
+                            )
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: LinkError.self) {
+            try language.link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a round reads what its own earlier rounds may have written")
+    func aRoundReadsItsEarlierRoundsWrites() throws {
+        // Given — the first round reads the seed, but the body also writes a
+        // null, and every later round reads that: inside the loop the name
+        // reads `string?`, so the plain string slot refuses. A body judged
+        // once against the entry environment would have linked the first
+        // round and lied about the rest.
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "ready": Parameter(type: .bool)
+                        ]
+                    ),
+                    body: [
+                        Statement(
+                            id: "held",
+                            binding: .variable,
+                            expression: .literal(.string("seed"))
+                        ),
+                        Statement(
+                            id: "spin",
+                            expression: .loop(
+                                while: .reference([.key("ready")]),
+                                body: Block(body: [
+                                    Statement(
+                                        id: "said",
+                                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                                    "word": .reference([.key("held")])
+                                                ]))
+                                    ),
+                                    Statement(
+                                        id: "held",
+                                        binding: .assignment,
+                                        expression: .literal(.null)
+                                    )
+                                ]),
+                                round: "spin"
+                            )
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: LinkError.self) {
+            try language.link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a chain of writes settles link by link, however long")
+    func aChainOfWritesSettles() throws {
+        // Given — each round moves the null one link up the chain, so the
+        // head only reads nullable after as many settles as the chain is
+        // long. A walk that stopped counting early would return the head
+        // still plain and link a lie.
+        let names = ["a", "b", "c", "d", "e", "f"]
+        let chain: [Statement] = zip(names, names.dropFirst()).map { name, next in
+            Statement(id: name, binding: .assignment, expression: .reference([.key(next)]))
+        } + [Statement(id: "f", binding: .assignment, expression: .literal(.null))]
+
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "ready": Parameter(type: .bool)
+                        ]
+                    ),
+                    body: names.map { name in
+                        Statement(id: name, binding: .variable, expression: .literal(.string("s")))
+                    } + [
+                        Statement(
+                            id: "spin",
+                            expression: .loop(
+                                while: .reference([.key("ready")]),
+                                body: Block(body: chain),
+                                round: "spin"
+                            )
+                        ),
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                        "word": .reference([.key("a")])
+                                    ]))
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then — `a` reads `string?` after enough rounds
+        #expect(throws: LinkError.self) {
+            try language.link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a construct in a condition is refused at the link too")
+    func aConstructInAConditionIsRefusedAtLink() {
+        // Given — a program assembled directly meets the same rule the
+        // check states: the run asks a condition purely
+        let sut = Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            expression: .conditional(
+                                .block(Block(body: [], result: .literal(.bool(true)))),
+                                then: [],
+                                else: nil
+                            )
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("a condition is data")
+        }
+    }
+
+    @Test("a construct in a call's operand is refused at the link too")
+    func aConstructInAnOperandIsRefusedAtTheLink() throws {
+        // Given — the check refuses this shape, but a program assembled
+        // directly may come straight to the link, and the flow walk stands
+        // on operands being the pure half: the link asks the same predicate
+        // rather than taking a stage nobody ran on faith
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(
+                                Dispatch(selector: "wants", arguments: [
+                                    "word": .block(
+                                        Block(body: [], result: .literal(.string("x")))
+                                    )
+                                ])
+                            )
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("travels as a closure")
+        }
+    }
+
+    @Test("a rescue's write is counted even when the body always leaves")
+    func aRescueWriteSurvivesALeavingBody() throws {
+        // Given — the rescue runs on the world failing, which no reading of
+        // the body's leaves rules out: a body that always returns can still
+        // fail before its return, and what the rescue wrote is then in the
+        // box. The write may be a null, so the name reads back nullable and
+        // the plain slot refuses.
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(
+                            id: "held",
+                            binding: .variable,
+                            expression: .literal(.string("seed"))
+                        ),
+                        Statement(
+                            expression: .attempt(
+                                Block(body: [
+                                    Statement(
+                                        id: "risky",
+                                        expression: .dispatch(
+                                            Dispatch(
+                                                receiver: .literal(.string("hey")),
+                                                selector: "wants",
+                                                arguments: ["word": .literal(.string("x"))]
+                                            )
+                                        )
+                                    ),
+                                    Statement(
+                                        expression: .leave(Leave(reach: .procedure, value: nil))
+                                    )
+                                ]),
+                                rescue: Block(body: [
+                                    Statement(
+                                        id: "held",
+                                        binding: .assignment,
+                                        expression: .literal(.null)
+                                    )
+                                ], result: .literal(.string("rescued"))),
+                                failure: "why"
+                            )
+                        ),
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                        "word": .reference([.key("held")])
+                                    ]))
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: [
+                            "of": Parameter(type: .string),
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then — `held` reads `string?`, and the plain string slot says so
+        #expect(throws: LinkError.self) {
+            try language.link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("what the body may have written is not overwritten by the rescue's write")
+    func aBodyWriteJoinsTheRescueWrite() throws {
+        // Given — the body wrote a string or got nowhere, the rescue wrote an
+        // int or never ran: the name holds any of null, the string and the
+        // int. That is `any` — where readings disagree the slot holds neither
+        // — and `any` passes the string slot below, where a join that kept
+        // only the rescue's int would have refused it wrongly.
+        let sut = Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(
+                            id: "held",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
+                            expression: .attempt(
+                                Block(body: [
+                                    Statement(
+                                        id: "held",
+                                        binding: .assignment,
+                                        expression: .literal(.string("text"))
+                                    )
+                                ]),
+                                rescue: Block(body: [
+                                    Statement(
+                                        id: "held",
+                                        binding: .assignment,
+                                        expression: .literal(.int(1))
+                                    )
+                                ], result: .literal(.string("rescued"))),
+                                failure: "why"
+                            )
+                        ),
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                        "word": .reference([.key("held")])
+                                    ]))
+                        )
+                    ]
+                ),
+                "wants": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "word": Parameter(type: .string)
+                        ]
+                    ),
+                    body: [
+                        Statement(id: "done", expression: .literal(.string("ok")))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        _ = try language.link([sut] + Module.standard, entry: entryName)
+    }
+
+    @Test("an arm that refuses does not cost the arm that writes its say")
     func refusingArmKeepsTheOtherArmsType() throws {
-        // Given
+        // Given — no run comes back from the refusing arm, so the ways that
+        // finish all made the other arm's write: the name reads as that write
+        // alone, not as a maybe
         let sut = Module(
             procedures: [
                 "entry": Procedure(
@@ -712,10 +2126,20 @@ struct InferenceTests {
                     body: [
                         Statement(
                             id: "many",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
                             expression: .conditional(
                                 .reference([.key("ready")]),
-                                then: Block(body: [], result: .literal(.int(1))),
-                                else: Block(body: [], result: refusing(literal("no")))
+                                then: [
+                                    Statement(
+                                        id: "many",
+                                        binding: .assignment,
+                                        expression: .literal(.int(1))
+                                    )
+                                ],
+                                else: [Statement(expression: refusing(literal("no")))]
                             )
                         ),
                         Statement(

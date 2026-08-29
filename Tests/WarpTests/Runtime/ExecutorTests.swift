@@ -65,15 +65,20 @@ struct ExecutorTests {
                     body: [
                         Statement(
                             id: "only-a",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
                             expression: .conditional(equals(
                                         .reference([.key("kind")]),
                                         .literal(.string("a"))
-                                        ), then: Block(body: [
+                                        ), then: [
                                         Statement(
-                                            id: "taken",
+                                            id: "only-a",
+                                            binding: .assignment,
                                             expression: .literal(.string("taken"))
                                         )
-                                    ]), else: nil)
+                                    ], else: nil)
                         )
                     ],
                     result: .record([
@@ -276,10 +281,10 @@ struct ExecutorTests {
         }
     }
 
-    @Test("a field the data does not carry reads as null, and does not fail")
-    func absentFieldReadsAsNull() async throws {
-        // Given — absence is optionality, not a failure: nothing is thrown, so
-        // the rescue never runs
+    @Test("an entry the data does not carry reads as null where the author wrote ?.")
+    func absentEntryReadsAsNullThroughOptional() async throws {
+        // Given — `?.` is the one spelling that expects absence: it answers
+        // null, nothing is thrown, and the rescue never runs
         let spec = Module(
             procedures: [
                 "entry": Procedure(
@@ -294,7 +299,7 @@ struct ExecutorTests {
                             expression: .attempt(Block(body: [
                                         Statement(
                                             id: "fragile",
-                                            expression: .reference([.key("data"), .key("missing")])
+                                            expression: .reference([.key("data"), .key("missing", optional: true)])
                                         )
                                     ]), rescue: Block(body: [
                                         Statement(
@@ -318,6 +323,31 @@ struct ExecutorTests {
         #expect(outputs["result"] == .null)
     }
 
+    @Test("an entry the data does not carry refuses where nothing said it may be absent")
+    func absentEntryWithoutOptionalIsUnfit() async throws {
+        // Given — the plain dot promises the entry is there, so an absent one
+        // is a defect the run refuses rather than a null it invents
+        let spec = Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "data": Parameter(type: .object(.any))
+                        ],
+                        returns: .any
+                    ),
+                    body: [],
+                    result: .reference([.key("data"), .key("missing")])
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: ReferenceUnfit.self) {
+            try await run(spec, arguments: ["data": .object([:])])
+        }
+    }
+
     @Test("interpolating a null stays an author mistake, and rescue does not absorb it")
     func nullInsideTemplateIsAuthorMistake() async throws {
         // Given — a skipped step binds null; reading it is fine, writing it
@@ -333,17 +363,20 @@ struct ExecutorTests {
                     body: [
                         Statement(
                             id: "maybe",
+                            binding: .variable,
+                            expression: .literal(.null)
+                        ),
+                        Statement(
                             expression: .conditional(equals(
                                         .reference([.key("kind")]),
                                         .literal(.string("a"))
-                                        ), then: Block(body: [
+                                        ), then: [
                                         Statement(
-                                            id: "made",
-                                            expression: .record([
-                                                    "name": .literal(.string("made"))
-                                                ])
+                                            id: "maybe",
+                                            binding: .assignment,
+                                            expression: .literal(.string("made"))
                                         )
-                                    ]), else: nil)
+                                    ], else: nil)
                         ),
                         Statement(
                             id: "fragile",
@@ -352,7 +385,7 @@ struct ExecutorTests {
                                             id: "fragile",
                                             expression: interpolated(
                                                 literal("name="),
-                                                spelling(reference("maybe", "name"))
+                                                spelling(reference("maybe"))
                                             )
                                         )
                                     ]), rescue: Block(body: [

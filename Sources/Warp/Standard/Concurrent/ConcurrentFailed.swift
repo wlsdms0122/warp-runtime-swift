@@ -14,12 +14,10 @@ public struct ConcurrentFailed: RecoverableFailure {
     // MARK: - Property
     public let failures: [String: String]
 
-    public var payload: Value {
-        .object([
-            "type": .string("concurrent_failed"),
-            "message": .string(message),
-            "failures": .object(failures.mapValues(Value.string))
-        ])
+    public let type = "concurrent_failed"
+
+    public var details: [String: Value] {
+        ["failures": .object(failures.mapValues(Value.string))]
     }
 
     public var message: String {

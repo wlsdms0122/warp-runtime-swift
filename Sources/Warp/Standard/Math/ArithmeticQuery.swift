@@ -14,10 +14,10 @@ import Foundation
 // exception, because a quotient is not generally whole — `remainder` is where a
 // whole division's other half is read.
 //
-// Whole arithmetic refuses rather than traps. An answer that does not fit an int
-// and a divisor of zero are both things a program can be handed at run time, so
-// they leave through the failure channel an `attempt` can catch instead of
-// taking the process with them.
+// `int` is the machine word, so a whole answer can fall off its edge. That is a
+// fault of the program, not a condition of its data: an overflow and a divisor
+// of zero stop the run the way an index past the end does, without the
+// recoverable marker an `attempt` reads.
 public struct ArithmeticQuery: Query {
     public enum Operation: Sendable {
         case plus
@@ -25,8 +25,6 @@ public struct ArithmeticQuery: Query {
         case times
         case dividedBy
         case remainder
-        case min
-        case max
     }
 
     // MARK: - Property
@@ -41,30 +39,37 @@ public struct ArithmeticQuery: Query {
     public func evaluate(_ question: Question) throws -> Value? {
         let operand = question["value"]
 
-        guard let left = number(question.receiver), let right = number(operand) else {
+        guard let receiver = question.receiver, isNumber(receiver), isNumber(operand) else {
             throw ExecutionError(
                 "arithmetic asks \(question.receiver?.type.description ?? "nothing") and"
                     + " \(operand.type), expected two numbers"
             )
         }
 
-        guard !divides || right != 0 else {
+        // Zero by worth, whichever spelling carries it — the divisor is
+        // judged before any conversion, so the check does not lean on what a
+        // fraction can hold.
+        guard !divides || !operand.matches(.int(0)) else {
             throw ExecutionError("\(operation) asks zero")
         }
 
+        // A quotient is a fraction even between wholes, so `dividedBy` always
+        // takes the fraction path.
         if
-            case let .int(leftWhole) = question.receiver,
+            case let .int(leftWhole) = receiver,
             case let .int(rightWhole) = operand,
             operation != .dividedBy
         {
             return .int(try whole(leftWhole, rightWhole))
         }
 
+        let left = fraction(receiver)
+        let right = fraction(operand)
         let answered = real(left, right)
 
-        // The same line the whole path holds. Infinity is a fraction the
-        // arithmetic can reach and no document can carry, so answering it would
-        // mint a value that exists only until someone writes it down.
+        // The line the whole path holds with its edge. Infinity is a fraction
+        // the arithmetic can reach and no document can carry, so answering it
+        // would mint a value that exists only until someone writes it down.
         guard answered.isFinite else {
             throw ExecutionError(
                 "\(operation) of \(left) and \(right) has no finite answer"
@@ -94,22 +99,23 @@ public struct ArithmeticQuery: Query {
         case .times:
             answered = left.multipliedReportingOverflow(by: right)
 
+        // A quotient is a fraction, so `dividedBy` never takes the whole
+        // path — the caller's guard holds that line, and a call that slips
+        // it stops here loudly rather than answering the other operation.
         case .dividedBy:
-            answered = left.dividedReportingOverflow(by: right)
+            preconditionFailure("a quotient is a fraction")
 
+        // A remainder is smaller than its divisor, so it always fits the
+        // word — the overflow guard below is not its judge. The one divisor
+        // that trips the hardware's division (`Int.min % -1`) still has the
+        // answer 0, so it is answered directly.
         case .remainder:
-            answered = left.remainderReportingOverflow(dividingBy: right)
-
-        case .min:
-            answered = (Swift.min(left, right), false)
-
-        case .max:
-            answered = (Swift.max(left, right), false)
+            return right == -1 ? 0 : left % right
         }
 
         guard !answered.overflow else {
             throw ExecutionError(
-                "\(operation) of \(left) and \(right) has no whole answer"
+                "\(operation) of \(left) and \(right) overflows int"
             )
         }
 
@@ -134,16 +140,22 @@ public struct ArithmeticQuery: Query {
         // over doubles reads the way the same wrap written over ints does.
         case .remainder:
             return left.truncatingRemainder(dividingBy: right)
-
-        case .min:
-            return Swift.min(left, right)
-
-        case .max:
-            return Swift.max(left, right)
         }
     }
 
-    private func number(_ value: Value?) -> Double? {
+    private func isNumber(_ value: Value?) -> Bool {
+        switch value {
+        case .int, .double:
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // The fraction path's reading of one side — binary64's own rounding, which
+    // every machine word is within reach of.
+    private func fraction(_ value: Value?) -> Double {
         switch value {
         case let .int(whole):
             return Double(whole)
@@ -151,8 +163,11 @@ public struct ArithmeticQuery: Query {
         case let .double(real):
             return real
 
+        // The numeric guard in `evaluate` already refused everything else, so
+        // reaching here is this file's own defect — the same line `whole`
+        // holds for a quotient, not a failure a program could see.
         default:
-            return nil
+            preconditionFailure("arithmetic reads a number it never admitted")
         }
     }
 }

@@ -17,10 +17,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable("N")
+                    returns: .variable(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.plus))
             ),
@@ -29,10 +29,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable("N")
+                    returns: .variable(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.minus))
             ),
@@ -41,10 +41,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable("N")
+                    returns: .variable(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.times))
             ),
@@ -53,8 +53,8 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                     ],
                     returns: .double
                 ),
@@ -65,43 +65,43 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable("N")
+                    returns: .variable(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.remainder))
             ),
             "min": Procedure(
-                description: "The smaller of two numbers.",
+                description: "The smaller of two of a kind, by the one order.",
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Comparable")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Comparable"))
                     ],
-                    returns: .variable("N")
+                    returns: .variable(name: "N", constraint: "std.Comparable")
                 ),
-                implementation: .query(ArithmeticQuery(.min))
+                implementation: .query(ComparisonQuery(.min))
             ),
             "max": Procedure(
-                description: "The larger of two numbers.",
+                description: "The larger of two of a kind, by the one order.",
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("N")),
-                        "value": Parameter(type: .variable("N"))
+                        "of": Parameter(type: .variable(name: "N", constraint: "std.Comparable")),
+                        "value": Parameter(type: .variable(name: "N", constraint: "std.Comparable"))
                     ],
-                    returns: .variable("N")
+                    returns: .variable(name: "N", constraint: "std.Comparable")
                 ),
-                implementation: .query(ArithmeticQuery(.max))
+                implementation: .query(ComparisonQuery(.max))
             ),
             "absolute": Procedure(
                 description: "The number without its sign.",
                 signature: Signature(
                     receiver: "of",
-                    parameters: ["of": Parameter(type: .variable("N"))],
-                    returns: .variable("N")
+                    parameters: ["of": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))],
+                    returns: .variable(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(NumberQuery(.absolute))
             ),
@@ -128,8 +128,8 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("Ordered")),
-                        "value": Parameter(type: .variable("Ordered"))
+                        "of": Parameter(type: .variable(name: "T", constraint: "std.Comparable")),
+                        "value": Parameter(type: .variable(name: "T", constraint: "std.Comparable"))
                     ],
                     returns: .bool
                 ),
@@ -140,8 +140,8 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable("Ordered")),
-                        "value": Parameter(type: .variable("Ordered"))
+                        "of": Parameter(type: .variable(name: "T", constraint: "std.Comparable")),
+                        "value": Parameter(type: .variable(name: "T", constraint: "std.Comparable"))
                     ],
                     returns: .bool
                 ),

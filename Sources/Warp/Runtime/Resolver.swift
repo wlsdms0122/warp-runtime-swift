@@ -19,16 +19,23 @@ public struct Resolver: Sendable {
     // MARK: - Property
     public let scope: Scope
     public let derivations: [String: Procedure]
+
+    // The words a bare path spelling may send, apart from the selectors: one
+    // key answering both questions let a declaration shadow another's path
+    // word.
+    public let words: [String: Procedure]
     public let types: TypeTable
 
     // MARK: - Initializer
     public init(
         scope: Scope,
         derivations: [String: Procedure] = [:],
+        words: [String: Procedure] = [:],
         types: TypeTable = TypeTable()
     ) {
         self.scope = scope
         self.derivations = derivations
+        self.words = words
         self.types = types
     }
 
@@ -44,8 +51,17 @@ public struct Resolver: Sendable {
         case let .array(array):
             return .array(try array.map(resolve))
 
+        // In name order, the same order the executor reads fields in — the
+        // one order a program could observe (which field's refusal surfaces)
+        // is the text's fact rather than a hash table's.
         case let .record(record):
-            return .object(try record.mapValues(resolve))
+            var fields: [String: Value] = [:]
+
+            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
+                fields[name] = try resolve(field)
+            }
+
+            return .object(fields)
 
         // Making a closure runs nothing — it is the capture, and the capture is
         // this scope. Which is why it belongs to the pure half and a condition
@@ -55,6 +71,18 @@ public struct Resolver: Sendable {
 
         case let .dispatch(dispatch):
             return try send(dispatch)
+
+        // Judging a value against a shape runs nothing, so a cast is data the
+        // pure half can read — and the link says so, which is what makes this
+        // arm necessary rather than optional: `isPure` calls a cast pure, and
+        // a pure expression the pure evaluator cannot read would fail here
+        // with the one sentence the link had just denied.
+        //
+        // The same judge the executor uses, for the same reason both doors of
+        // a boundary share one: "is this value that shape" is answered in one
+        // place or it is answered two ways.
+        case let .cast(value, type, optional):
+            return try type.reading(try resolve(value), optional: optional, in: types)
 
         // Running a body or reaching outside is async and may fail in a way an
         // attempt can catch, so it belongs to the executor. Reaching here means
@@ -72,27 +100,22 @@ public struct Resolver: Sendable {
     }
 
     public func stringify(_ value: Value) -> String {
-        Rendering(value).text
+        Rendering(value).text()
     }
 
     // What a reference names, walked to the end. The scope answers the head;
     // every segment after it is drilling into a value, and a segment that names
     // no field is a message sent to what the walk has reached so far.
     public func lookup(_ path: [PathSegment]) -> Lookup {
-        let walked: [PathSegment]
+        // A mark on the head expects the scope to be missing a name, which is
+        // not absence but a reading gone wrong — the link says so where the
+        // text shows it, and the run says the same rather than reading past.
+        if let refusal = path.markedHead { return .unfit(reason: refusal) }
 
-        switch resolveIndexReferences(path) {
-        case let .resolved(resolved):
-            walked = resolved
-
-        case let .failed(lookup):
-            return lookup
-        }
-
-        guard case let .key(head)? = walked.first else { return .absent }
+        guard case let .key(head, _)? = path.first else { return .absent }
         guard let value = scope.value(of: head) else { return .absent }
 
-        return drill(into: value, Array(walked.dropFirst()), at: [.key(head)])
+        return drill(into: value, Array(path.dropFirst()), at: [.key(head)])
     }
 
     // Running a procedure here rather than in the executor, which is what makes
@@ -135,52 +158,11 @@ public struct Resolver: Sendable {
     }
 
     // MARK: - Private
-    private enum IndexResolution {
-        case resolved([PathSegment])
-        case failed(Lookup)
-    }
-
-    private func resolveIndexReferences(_ path: [PathSegment]) -> IndexResolution {
-        var walked: [PathSegment] = []
-
-        for segment in path {
-            guard case let .indexRef(indexPath) = segment else {
-                walked.append(segment)
-
-                continue
-            }
-
-            let name = indexPath.rendered
-
-            switch lookup(indexPath) {
-            case let .found(.int(index)):
-                walked.append(.index(index))
-
-            case let .found(.double(double)):
-                guard let index = Int(exactly: double) else {
-                    return .failed(.unfit(
-                        reason: "index reference \(name) is not a whole number"
-                    ))
-                }
-
-                walked.append(.index(index))
-
-            case let .found(value):
-                return .failed(.unfit(
-                    reason: "index reference \(name) is \(value.type), expected int"
-                ))
-
-            case .absent:
-                return .failed(.absent)
-
-            case let .unfit(reason):
-                return .failed(.unfit(reason: reason))
-            }
-        }
-
-        return .resolved(walked)
-    }
-
+    // A dot means what its spelling says — the link judged every one and wrote
+    // the judgment into the path. `key` reads a field and nothing else; `word`
+    // sends and nothing else; the value that arrives decides neither. What may
+    // genuinely be absent — a missing entry, a null on the way — is read as
+    // null only where the author spelled `?.`, and refused everywhere else.
     private func drill(
         into value: Value,
         _ path: [PathSegment],
@@ -192,45 +174,119 @@ public struct Resolver: Sendable {
         for segment in path {
             walked.append(segment)
 
-            switch (segment, current) {
-            // Anything derived from nothing is still nothing — drilling into null
-            // (an omitted argument, a name never bound) is absence, not shape
-            // misuse.
-            case (_, .null):
-                return .absent
+            // Null stops every reading the same way, and the rule lives with
+            // the segment — the link's walk over types asks the same judge,
+            // so the two layers cannot drift apart.
+            if current == .null {
+                switch segment.meetingNull(at: walked) {
+                case .reads:
+                    return .found(.null)
 
-            case (.index(let index), .array(let array)):
-                guard index >= 0, index < array.count else { return .absent }
+                case let .refused(reason):
+                    return .unfit(reason: reason)
+                }
+            }
 
-                current = array[index]
+            // One reading for both index spellings — a literal, and a name
+            // settled here, when the walk reaches it rather than up front, so
+            // a path short-circuited before the index never reads its name.
+            func indexed(_ index: Int) -> Lookup? {
+                // What is indexed is whatever has elements — the projection
+                // owns the `array<byte>` equation, lazily, so one element
+                // read does not unpack a compact spelling.
+                guard let elements = current.elements else {
+                    return .unfit(
+                        reason: "\(walked.rendered) indexes into"
+                            + " \(current.type), expected array"
+                    )
+                }
 
-            case (.index, _):
-                return .unfit(
-                    reason: "\(walked.rendered) indexes into"
-                        + " \(current.type), expected array"
-                )
+                // Past the end is a defect, not absence: the array is there
+                // and says how long it is, so a reading that misses it read
+                // the length wrong.
+                guard index >= 0, index < elements.count else {
+                    return .unfit(
+                        reason: "\(walked.rendered) indexes past the end of"
+                            + " \(elements.count) element(s)"
+                    )
+                }
 
-            case (.key(let key), .object(let object)):
-                guard let next = object[key] else {
-                    do {
-                        guard let derived = try derive(key, from: current) else { return .absent }
+                current = elements[elements.index(elements.startIndex, offsetBy: index)]
 
-                        current = derived
-                    } catch {
-                        return .unfit(reason: "\(walked.rendered) — \(error)")
+                return nil
+            }
+
+            switch segment {
+            case let .index(index, _):
+                if let refusal = indexed(index) { return refusal }
+
+            // The name is a path of its own, read against the same scope. A
+            // name that answers nothing is a defect said out loud — the heads
+            // the text shows were checked at load, so absence here is not the
+            // author's optionality but a reading gone wrong.
+            case let .indexRef(inner, _):
+                let name = inner.rendered
+
+                switch lookup(inner) {
+                case let .found(.int(index)):
+                    if let refusal = indexed(index) { return refusal }
+
+                case let .found(.double(double)):
+                    switch Int.reading(double) {
+                    case let .word(index):
+                        if let refusal = indexed(index) { return refusal }
+
+                    case .notANumber, .fractional:
+                        return .unfit(
+                            reason: "index reference \(name) is not a whole number"
+                        )
+
+                    case .pastTheWord:
+                        return .unfit(
+                            reason: "index reference \(name) indexes past the"
+                                + " end of any array"
+                        )
                     }
 
-                    continue
+                case let .found(value):
+                    return .unfit(
+                        reason: "index reference \(name) is \(value.type), expected int"
+                    )
+
+                case .absent:
+                    return .unfit(reason: "index reference \(name) names nothing")
+
+                case let .unfit(reason):
+                    return .unfit(reason: reason)
+                }
+
+            case let .key(key, _):
+                guard case let .object(object) = current else {
+                    return .unfit(
+                        reason: "\(walked.rendered) drills a field into"
+                            + " \(current.type)"
+                    )
+                }
+
+                guard let next = object[key] else {
+                    guard segment.optional else {
+                        return .unfit(
+                            reason: "\(walked.rendered): '\(key)' is not there"
+                                + " — only `\(segment.mark)` reads absence"
+                        )
+                    }
+
+                    return .found(.null)
                 }
 
                 current = next
 
-            case (.key(let key), _):
+            case let .word(key, _):
                 do {
                     guard let derived = try derive(key, from: current) else {
                         return .unfit(
-                            reason: "\(walked.rendered) drills a field into"
-                                + " \(current.type)"
+                            reason: "\(walked.rendered) sends '\(key)',"
+                                + " which does not take \(current.type)"
                         )
                     }
 
@@ -238,9 +294,6 @@ public struct Resolver: Sendable {
                 } catch {
                     return .unfit(reason: "\(walked.rendered) — \(error)")
                 }
-
-            case (.indexRef, _):
-                preconditionFailure("index references are resolved before drilling")
             }
         }
 
@@ -261,8 +314,8 @@ public struct Resolver: Sendable {
     // there.
     private func derive(_ key: String, from value: Value) throws -> Value? {
         guard
-            let procedure = derivations[key],
-            procedure.signature.isDerivable
+            let procedure = words[key],
+            procedure.signature.isDerivable(in: types)
         else {
             return nil
         }
@@ -273,8 +326,8 @@ public struct Resolver: Sendable {
         declared[procedure.signature.receiver ?? ""] = nil
 
         guard
-            let receiver = try? procedure.signature.settling(receiver: value),
-            let arguments = try? Signature(parameters: declared).settle([:])
+            let receiver = try? procedure.signature.settling(receiver: value, in: types),
+            let arguments = try? Signature(parameters: declared).settle([:], in: types)
         else {
             return nil
         }
@@ -311,7 +364,9 @@ public struct Resolver: Sendable {
         // A body the link proved pure runs here, synchronously. Nothing in it
         // can suspend — that is what the proof says — so the surface that reads
         // data can read this too, and a procedure someone wrote is reachable
-        // from a path exactly as a native one is.
+        // from a path exactly as a native one is. Whether a body may run *yet*
+        // is the table's fact: the link's own settling swaps written bodies
+        // for the refusal they earn, so what reaches here runs.
         case let .body(block):
             var bindings = arguments
 
@@ -333,7 +388,10 @@ public struct Resolver: Sendable {
     // so a condition that names one is refused here rather than quietly starting
     // something in the middle of a comparison.
     private func send(_ dispatch: Dispatch) throws -> Value {
-        guard let procedure = derivations[dispatch.selector] else {
+        // The spelling is a resolved selector after the link's rewrite, and an
+        // author's own spelling inside a constant, where nothing rewrites — a
+        // bare spelling not among the selectors may still be a path word.
+        guard let procedure = derivations[dispatch.selector] ?? words[dispatch.selector] else {
             throw ExecutionError(
                 "'\(dispatch.selector)' answers only by running, so it cannot be"
                     + " read as data here"
@@ -345,7 +403,7 @@ public struct Resolver: Sendable {
         do {
             receiver = try dispatch.receiver
                 .map(resolve)
-                .map { value in try procedure.signature.settling(receiver: value) }
+                .map { value in try procedure.signature.settling(receiver: value, in: types) }
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
@@ -371,7 +429,8 @@ public struct Resolver: Sendable {
                     .sorted { left, right in left.key < right.key }
                     .reduce(into: [:]) { settled, argument in
                         settled[argument.key] = try resolve(argument.value)
-                    }
+                    },
+                in: types
             )
 
         do {
@@ -406,8 +465,12 @@ public struct Resolver: Sendable {
                 )
             }
 
-            let value = try Resolver(scope: scope, derivations: derivations, types: types)
-                .resolve(statement.expression)
+            let value = try Resolver(
+                scope: scope,
+                derivations: derivations,
+                words: words,
+                types: types
+            ).resolve(statement.expression)
 
             if let id = statement.id {
                 scope = scope.binding(id, to: value)
@@ -416,12 +479,18 @@ public struct Resolver: Sendable {
 
         guard let result = block.result else { return .null }
 
-        return try Resolver(scope: scope, derivations: derivations, types: types).resolve(result)
+        return try Resolver(
+            scope: scope,
+            derivations: derivations,
+            words: words,
+            types: types
+        ).resolve(result)
     }
 
     // A name the scope does not hold reads as null rather than failing. The
-    // head of every reference is checked at load, so what is left to be absent
-    // at run time is a field that was never set — optionality, not a typo.
+    // head of every reference is checked at load, so absence here is only
+    // ever the head's — every deeper absence answered inside the drill, as
+    // null where the author spelled `?.` and as a refusal where they did not.
     private func found(at path: [PathSegment]) throws -> Value {
         switch lookup(path) {
         case let .found(value):

@@ -26,12 +26,5 @@ struct Symbol: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Whether this declaration answers to a bare name — the spelling a module
-    // uses for its own, and the one another module may use when nothing else
-    // declares it.
-    func declares(_ name: String) -> Bool {
-        qualified == name || qualified.hasSuffix(".\(name)")
-    }
-
     // MARK: - Private
 }

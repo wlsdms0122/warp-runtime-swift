@@ -9,9 +9,8 @@ let package = Package(
     ],
     products: [
         .library(name: "Warp", targets: ["Warp"]),
-        .library(name: "WarpDocument", targets: ["WarpDocument"]),
-        .library(name: "WarpBinary", targets: ["WarpBinary"]),
-        .library(name: "WarpText", targets: ["WarpText"]),
+        .library(name: "WarpSyntax", targets: ["WarpSyntax"]),
+        .library(name: "WarpSerialization", targets: ["WarpSerialization"]),
     ],
     targets: [
         // The language as Swift holds it: the shapes a program is made of, and
@@ -25,45 +24,44 @@ let package = Package(
         .target(
             name: "Warp"
         ),
-        // The shapes written down, and read back: which key names which shape,
-        // the spellings a document may write instead, and the way back out.
+        // What the words mean: which key names which shape, the spellings a
+        // document may write instead, and the way back out. It takes the tree a
+        // serialization hands over and answers with the language's own shapes.
         //
         // Optional, and the dependency graph is where that is said rather than
-        // claimed. A program only travels as text, so this is what a program has
-        // to come through to leave one machine and arrive at another — and a
-        // program that stays where it was built never comes through here at all.
+        // claimed. A program only travels as a document, so this is what a
+        // program has to come through to leave one machine and arrive at another
+        // — and a program that stays where it was built never comes through here
+        // at all.
         .target(
-            name: "WarpDocument",
+            name: "WarpSyntax",
             dependencies: [
                 "Warp"
             ]
         ),
-        // The wire. Warp's own bytes for a document — the encoding a program
-        // travels in when nobody needs to read it on the way. It depends on
-        // `Warp` and not on `WarpDocument`: an encoding carries a tree of data
-        // and never learns what the tree means.
+        // A document written down, and read back. Warp's own bytes for carrying
+        // one, and the same document laid out for eyes — `.wasm` and `.wat`,
+        // one target because they are one job done twice.
+        //
+        // It depends on `Warp` and not on `WarpSyntax`, and that is the whole
+        // point: a serialization carries a tree of data and never learns what
+        // the tree means. So the wire does not move when the language does, and
+        // an implementation in another language can speak it without also
+        // implementing what a procedure is.
         .target(
-            name: "WarpBinary",
-            dependencies: [
-                "Warp"
-            ]
-        ),
-        // The same document laid out for eyes — `.wat` beside `.wasm`. One
-        // encoding, one target, and the same reason it sees only `Warp`.
-        .target(
-            name: "WarpText",
+            name: "WarpSerialization",
             dependencies: [
                 "Warp"
             ]
         ),
         // One test target per target, and the dependencies are the point: a test
-        // that cannot import the notation can only be saying something about the
+        // that cannot import the syntax can only be saying something about the
         // language. Where a behaviour is tested is then a fact anyone can read
         // off the imports, rather than a claim.
         //
         // It was a claim for a while. Writing a `Value` in Swift was awkward
-        // enough that the notation tests reached for the YAML front end to build
-        // fixtures, and the language tests reached for the notation — so a parser
+        // enough that the syntax tests reached for the YAML front end to build
+        // fixtures, and the language tests reached for the syntax — so a parser
         // change could fail a reader's test, and the linker had no test in its own
         // target at all. Each layer writes its own fixtures now, in the shape that
         // layer actually takes.
@@ -74,9 +72,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "WarpDocumentTests",
+            name: "WarpSyntaxTests",
             dependencies: [
-                "WarpDocument"
+                "WarpSyntax"
             ]
         ),
         // The specification's cases, run against this implementation. It imports
@@ -87,8 +85,8 @@ let package = Package(
             name: "WarpConformanceTests",
             dependencies: [
                 "Warp",
-                "WarpDocument",
-                "WarpText"
+                "WarpSyntax",
+                "WarpSerialization"
             ]
         ),
         // The front page's examples, run. It imports exactly what the page
@@ -98,20 +96,14 @@ let package = Package(
             name: "WarpReadmeTests",
             dependencies: [
                 "Warp",
-                "WarpDocument",
-                "WarpBinary"
+                "WarpSyntax",
+                "WarpSerialization"
             ]
         ),
         .testTarget(
-            name: "WarpBinaryTests",
+            name: "WarpSerializationTests",
             dependencies: [
-                "WarpBinary"
-            ]
-        ),
-        .testTarget(
-            name: "WarpTextTests",
-            dependencies: [
-                "WarpText"
+                "WarpSerialization"
             ]
         ),
     ],

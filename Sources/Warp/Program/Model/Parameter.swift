@@ -18,8 +18,14 @@ public struct Parameter: Sendable, Equatable {
     public let `default`: Value?
     public let hint: String?
 
-    // A parameter without a default is required — optionality has no separate axis.
-    public var isRequired: Bool { `default` == nil }
+    // Whether a call must write this argument — the one question, answered in
+    // one place for the call check, the boundary and path reachability alike.
+    // A default answers omission with a value; a type that declares null
+    // (`T?`) answers it with the null it holds. Without either, omission is a
+    // missing argument. Optionality has no third axis.
+    public func mustBeGiven(in types: TypeTable) -> Bool {
+        `default` == nil && !declared.declaresNull(in: types)
+    }
 
     // What this reads as where a type is needed regardless. An undeclared
     // parameter accepts what it is handed, which is what `any` says.
@@ -46,7 +52,13 @@ public struct Parameter: Sendable, Equatable {
     ) throws -> Value {
         guard value != .null else {
             guard let fallback = self.default else {
-                throw ArgumentError("input '\(name)': required, and nothing was given")
+                // A type that declares null holds it as a value, so a null
+                // here is what was given rather than the absence of anything.
+                guard declared.declaresNull(in: types) else {
+                    throw ArgumentError("input '\(name)': required, and nothing was given")
+                }
+
+                return try checking(value, called: name, in: types)
             }
 
             // The fallback walks through the same gate an argument does, so the
@@ -64,7 +76,11 @@ public struct Parameter: Sendable, Equatable {
         in types: TypeTable = TypeTable()
     ) throws -> Value {
         if value == .null {
-            guard self.default == .null else {
+            // Null passes where the declaration says it is a value — a `T?`
+            // slot, or the legacy spelling of the same fact, an explicitly
+            // null default. Both gatekeepers ask the type first, so what the
+            // link accepted the boundary accepts too.
+            guard self.default == .null || declared.declaresNull(in: types) else {
                 throw ArgumentError("input '\(name)': expected \(declared), got null")
             }
 
@@ -80,12 +96,31 @@ public struct Parameter: Sendable, Equatable {
         } ?? value
 
         if let allowed = oneOf {
-            let scalar = Self.scalar(settled)
+            switch settled {
+            // A number meets the candidates by worth, the way the language
+            // compares numbers — `-0.0` is in a list that writes `0.0`. How
+            // a candidate is *written* was the link's question: only the
+            // canonical spellings read here, because an alias is a dead
+            // member the link already refused.
+            case .int, .double:
+                guard allowed.contains(where: { candidate in
+                    Self.numeral(candidate, as: type, in: types).map { numeral in
+                        Value.order(numeral, settled) == .orderedSame
+                    } ?? false
+                }) else {
+                    throw ArgumentError(
+                        "input '\(name)': '\(Self.shown(settled))' not in oneOf \(allowed)"
+                    )
+                }
 
-            guard let scalar, allowed.contains(scalar) else {
-                throw ArgumentError(
-                    "input '\(name)': '\(scalar ?? "\(settled.type)")' not in oneOf \(allowed)"
-                )
+            default:
+                let scalar = Self.scalar(settled)
+
+                guard let scalar, allowed.contains(scalar) else {
+                    throw ArgumentError(
+                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in oneOf \(allowed)"
+                    )
+                }
             }
         }
 
@@ -93,22 +128,75 @@ public struct Parameter: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // A candidate read as the number its canonical spelling names *for the
+    // declared slot* — a fraction slot reads only fraction spellings, so the
+    // boundary and the link agree on which members exist: what the link
+    // called a dead member, this answers nil for, and nothing else. Internal
+    // because the link's candidate judge reads through this same door.
+    static func numeral(
+        _ candidate: String,
+        as declared: TypeExpression?,
+        in types: TypeTable
+    ) -> Value? {
+        switch declared {
+        case .int:
+            return Int(spelling: candidate).map(Value.int)
+
+        // A range is a condition on a number, so the spelling it reads is the
+        // spelling of the kind under it.
+        case let .ranged(refinement):
+            return numeral(candidate, as: refinement.kind, in: types)
+
+        case .double:
+            return Double(spelling: candidate).map(Value.double)
+
+        case let .named(name):
+            return types.resolve(name).flatMap { resolved in
+                numeral(candidate, as: resolved, in: types)
+            }
+
+        case let .nullable(inner):
+            return numeral(candidate, as: inner, in: types)
+
+        // `number`, a parameter a constraint bounds, and the slots that
+        // declare no numeric shape at all: the slot does not name one kind,
+        // so a numeral is whichever kind's one spelling the text is, and
+        // membership is worth across the kinds the way the language compares
+        // numbers — deliberately the same reading the link's candidate judge
+        // takes for these slots.
+        default:
+            if let word = Int(spelling: candidate) { return .int(word) }
+
+            return Double(spelling: candidate).map(Value.double)
+        }
+    }
+
     private static func scalar(_ value: Value) -> String? {
         switch value {
         case let .string(string):
             return string
 
-        case let .int(integer):
-            return String(integer)
-
         case let .bool(bool):
             return String(bool)
 
-        case let .double(double):
-            return Int(exactly: double).map(String.init) ?? String(double)
-
         default:
             return nil
+        }
+    }
+
+    // A number as a refusal shows it — the value's own spelling, not the
+    // template layer's, so a declaration model owes nothing to the runtime's
+    // rendering rules.
+    private static func shown(_ settled: Value) -> String {
+        switch settled {
+        case let .int(integer):
+            return String(integer)
+
+        case let .double(double):
+            return double.spelling ?? "\(double)"
+
+        default:
+            return "\(settled.type)"
         }
     }
 }

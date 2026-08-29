@@ -21,7 +21,10 @@ struct DispatchTests {
     func threeKindsOfWordAreOneExpression() async throws {
         // Given
                 let echo = Procedure(
-            signature: Signature(parameters: ["text": Parameter(type: .string)]),
+            signature: Signature(
+                parameters: ["text": Parameter(type: .string)],
+                returns: .record(["said": .string])
+            ),
             body: [],
             result: .record(["said": reference("text")])
         )
@@ -212,15 +215,14 @@ struct DispatchTests {
         let sut = Procedure(
             body: [
                 Statement(
-                    id: "gate",
                     expression: .conditional(
                         .literal(.bool(false)),
-                        then: Block(body: [
+                        then: [
                             Statement(
                                 id: "gone",
                                 expression: .dispatch(Dispatch(selector: "nowhere"))
                             )
-                        ]),
+                        ],
                         else: nil
                     )
                 )
@@ -237,13 +239,15 @@ struct DispatchTests {
     func recursiveProcedureLinksOnce() async throws {
         // Given
         let countdown = Procedure(
-                signature: Signature(parameters: ["n": Parameter(type: .int)]),
+                signature: Signature(
+                    parameters: ["n": Parameter(type: .int)],
+                    returns: .record(["done": .bool])
+                ),
                 body: [
                     Statement(
-                        id: "again",
                         expression: .conditional(
                             differs(reference("n"), .literal(.int(0))),
-                            then: Block(body: [
+                            then: [
                                 Statement(
                                     id: "recur",
                                     expression: .dispatch(
@@ -253,7 +257,7 @@ struct DispatchTests {
                                         )
                                     )
                                 )
-                            ]),
+                            ],
                             else: nil
                         )
                     )

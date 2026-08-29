@@ -7,11 +7,12 @@
 
 import Foundation
 
-// Resolving is a rewrite. Two things a document writes are not yet what they
-// mean — a selector, which means whichever declaration the writing module can
-// see, and a reference to a constant, which means the value it was bound to.
-// Both are settled here, so the image the executor runs holds no name whose
-// meaning depends on where it was written.
+// Resolving is a rewrite. A selector a document writes is not yet what it
+// means — it means whichever declaration the writing module can see — and it
+// is settled here, so the image the executor runs holds no name whose meaning
+// depends on where it was written. A reference to a constant is settled too,
+// but later: the typing walk judges its dots first, and folds it where the
+// judgment lands.
 //
 // The walk is total over `Expression` on purpose. A case added to the language
 // and forgotten here would be a case whose names silently stay unresolved, and
@@ -23,8 +24,7 @@ extension Linker {
     func bind(
         _ procedure: Procedure,
         within origin: Int,
-        folding: Resolver,
-        symbols: [Symbol],
+        symbols: SymbolSpace,
         at name: String
     ) throws -> Procedure {
         guard let block = procedure.block else { return procedure }
@@ -36,7 +36,6 @@ extension Linker {
                 try bind(
                     block,
                     within: origin,
-                    folding: folding,
                     symbols: symbols,
                     at: "\(name).body"
                 )
@@ -47,15 +46,13 @@ extension Linker {
     func bind(
         _ block: Block,
         within origin: Int,
-        folding: Resolver,
-        symbols: [Symbol],
+        symbols: SymbolSpace,
         at location: String
     ) throws -> Block {
         Block(
             body: try bind(
                 block.body,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: location
             ),
@@ -63,7 +60,6 @@ extension Linker {
                 try bind(
                     result,
                     within: origin,
-                    folding: folding,
                     symbols: symbols,
                     at: location
                 )
@@ -76,8 +72,7 @@ extension Linker {
     func bind(
         _ body: [Statement],
         within origin: Int,
-        folding: Resolver,
-        symbols: [Symbol],
+        symbols: SymbolSpace,
         at location: String
     ) throws -> [Statement] {
         try body.enumerated().map { position, statement in
@@ -85,7 +80,6 @@ extension Linker {
                 statement,
                 at: position,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: location
             )
@@ -97,8 +91,7 @@ extension Linker {
         _ statement: Statement,
         at position: Int,
         within origin: Int,
-        folding: Resolver,
-        symbols: [Symbol],
+        symbols: SymbolSpace,
         at location: String
     ) throws -> Statement {
         Statement(
@@ -107,25 +100,24 @@ extension Linker {
             expression: try bind(
                 statement.expression,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: "\(location).\(statement.id ?? "[\(position)]")"
             )
         )
     }
 
-    private func bind(
+    // Internal for the one lone-expression caller: a constant's expression,
+    // whose selectors mean what its module sees exactly as a body's do.
+    func bind(
         _ expression: Expression,
         within origin: Int,
-        folding: Resolver,
-        symbols: [Symbol],
+        symbols: SymbolSpace,
         at location: String
     ) throws -> Expression {
         func inner(_ expression: Expression) throws -> Expression {
             try bind(
                 expression,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: location
             )
@@ -135,7 +127,6 @@ extension Linker {
             try bind(
                 block,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: location
             )
@@ -145,14 +136,13 @@ extension Linker {
             try bind(
                 body,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: location
             )
         }
 
         switch expression {
-        case .literal:
+        case .literal, .reference:
             return expression
 
         case let .leave(leave):
@@ -160,19 +150,10 @@ extension Linker {
 
             return .leave(Leave(reach: leave.reach, target: leave.target, value: try inner(value)))
 
-        // A path whose head names a constant is data the moment it is read, so
-        // it becomes that data. Drilling is done here too — a constant record's
-        // field is as settled as the record.
-        case let .reference(path):
-            guard case let .key(head)? = path.first, folding.scope.value(of: head) != nil else {
-                return expression
-            }
-
-            do {
-                return .literal(try folding.resolve(expression))
-            } catch {
-                throw LinkError("\(location): reading constant '\(head)' — \(error)")
-            }
+        // The shape a cast names is the qualifying pass's to resolve, not
+        // the binding pass's — nothing in a type spelling is a symbol.
+        case let .cast(value, type, optional):
+            return .cast(try inner(value), as: type, optional: optional)
 
         case let .array(array):
             return .array(try array.map(inner))
@@ -226,7 +207,6 @@ extension Linker {
                 try bind(
                     dispatch,
                     within: origin,
-                    folding: folding,
                     symbols: symbols,
                     at: location
                 )
@@ -241,15 +221,13 @@ extension Linker {
     private func bind(
         _ dispatch: Dispatch,
         within origin: Int,
-        folding: Resolver,
-        symbols: [Symbol],
+        symbols: SymbolSpace,
         at location: String
     ) throws -> Dispatch {
         func inner(_ expression: Expression) throws -> Expression {
             try bind(
                 expression,
                 within: origin,
-                folding: folding,
                 symbols: symbols,
                 at: location
             )
@@ -257,22 +235,20 @@ extension Linker {
 
         let selector: String
 
-        if let symbol = resolve(dispatch.selector, from: origin, in: symbols) {
-            selector = symbol.qualified
-        } else {
-            let candidates = symbols
-                .filter { symbol in symbol.declares(dispatch.selector) }
-                .map(\.qualified)
-                .sorted()
+        // The rule's own account of the failure, not a recomputation — the
+        // candidates an ambiguity names are the ones the rule weighed.
+        switch symbols.resolution(of: dispatch.selector, from: origin) {
+        case let .resolved(qualified):
+            selector = qualified
 
-            guard candidates.isEmpty else {
-                throw LinkError(
-                    "\(location): sends '\(dispatch.selector)', which"
-                        + " \(candidates.joined(separator: " and ")) both declare"
-                        + " — name the one you meant"
-                )
-            }
+        case let .ambiguous(candidates):
+            throw LinkError(
+                "\(location): sends '\(dispatch.selector)', which"
+                    + " \(candidates.joined(separator: " and ")) both declare"
+                    + " — name the one you meant"
+            )
 
+        case .unresolved:
             throw LinkError(
                 "\(location): sends '\(dispatch.selector)', which no module in this"
                     + " link declares"

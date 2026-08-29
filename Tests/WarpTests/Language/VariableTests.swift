@@ -23,18 +23,17 @@ struct VariableTests {
         let sut: [Statement] = [
             Statement(id: "verdict", binding: .variable, expression: .literal(.string("untouched"))),
             Statement(
-                id: "gate",
                 expression: .conditional(
                     .literal(.bool(true)),
-                    then: Block(body: [
+                    then: [
                         Statement(
                             id: "verdict",
                             binding: .assignment,
                             expression: .literal(.string("touched"))
                         )
-                    ]),
+                    ],
                     else: nil
-                )
+                    )
             )
         ]
 
@@ -51,18 +50,17 @@ struct VariableTests {
         let sut: [Statement] = [
             Statement(id: "verdict", binding: .variable, expression: .literal(.string("untouched"))),
             Statement(
-                id: "gate",
                 expression: .conditional(
                     .literal(.bool(false)),
-                    then: Block(body: [
+                    then: [
                         Statement(
                             id: "verdict",
                             binding: .assignment,
                             expression: .literal(.string("touched"))
                         )
-                    ]),
+                    ],
                     else: nil
-                )
+                    )
             )
         ]
 
@@ -78,14 +76,13 @@ struct VariableTests {
         // Given — the box is shared; which names exist is not
         let sut: [Statement] = [
             Statement(
-                id: "gate",
                 expression: .conditional(
                     .literal(.bool(true)),
-                    then: Block(body: [
+                    then: [
                         Statement(id: "inner", binding: .variable, expression: .literal(.int(1)))
-                    ]),
+                    ],
                     else: nil
-                )
+                    )
             ),
             Statement(id: "read", expression: reference("inner"))
         ]
@@ -101,18 +98,17 @@ struct VariableTests {
         let sut: [Statement] = [
             Statement(id: "verdict", binding: .variable, expression: .literal(.string("outer"))),
             Statement(
-                id: "gate",
                 expression: .conditional(
                     .literal(.bool(true)),
-                    then: Block(body: [
+                    then: [
                         Statement(
                             id: "verdict",
                             binding: .variable,
                             expression: .literal(.string("inner"))
                         )
-                    ]),
+                    ],
                     else: nil
-                )
+                    )
             )
         ]
 
@@ -269,8 +265,21 @@ struct VariableTests {
             )
         ]
 
-        // When
-        let answer = try await answer(of: sut, result: reference("both", "left"))
+        // When — `all` answers `any` by its declaration, so the shape the
+        // author expects is named before a dot reads it
+        let answer = try await answer(
+            of: sut + [
+                Statement(
+                    id: "read",
+                    expression: .cast(
+                        reference("both"),
+                        as: .record(["left": .int]),
+                        optional: false
+                    )
+                )
+            ],
+            result: reference("read", "left")
+        )
 
         // Then
         #expect(answer == .int(1))

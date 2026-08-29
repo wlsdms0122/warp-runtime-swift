@@ -28,7 +28,12 @@ public struct Signature: Sendable, Equatable {
     // claim, so a declaration nobody wrote stays distinguishable from one
     // somebody wrote. Nothing is checked either way; they differ in what they
     // say.
-    public let returns: TypeExpression?
+    //
+    // Settable only from here, so `answering(_:)` changes this one field of a
+    // copy instead of naming every field to keep it — a listing that keeps
+    // fields by naming them loses a new one silently, and the initializer's
+    // defaults mean nothing would say so.
+    public private(set) var returns: TypeExpression?
 
     // MARK: - Initializer
     public init(
@@ -42,6 +47,20 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Public
+    // The same declaration with an answer where nobody wrote one. What the
+    // author wrote is never replaced: a declaration is a promise, and one read
+    // off a body is what the link worked out rather than what anybody
+    // promised — so this is what the link reads a call as, and never what the
+    // image carries or the boundary checks.
+    func answering(_ answer: TypeExpression?) -> Signature {
+        guard returns == nil, let answer else { return self }
+
+        var answered = self
+        answered.returns = answer
+
+        return answered
+    }
+
     // The returned value, checked against what was declared. Run time rather
     // than link time because what a body computes is not a thing the linker can
     // read off the text — but a declaration that only ever describes is a declaration
@@ -71,6 +90,12 @@ public struct Signature: Sendable, Equatable {
     // everything it will get back. A body promising less than the slot asks and
     // returning more than the slot allows is the one that fits.
     public func accepts(_ given: Signature, in types: TypeTable = TypeTable()) -> Bool {
+        accepts(given, in: types, assuming: [])
+    }
+
+    // The assumption-carrying half, so a named type reaching itself through a
+    // procedure's signature ends the same way it does through any other shape.
+    func accepts(_ given: Signature, in types: TypeTable, assuming: Set<String>) -> Bool {
         // An undeclared half claims nothing, so it neither demands nor promises —
         // it reads as `any` here, which is the one type that fits both roles.
         //
@@ -80,10 +105,12 @@ public struct Signature: Sendable, Equatable {
         // ones it did declare.
         for (name, parameter) in parameters {
             guard let taken = given.parameters[name] else { continue }
-            guard taken.declared.accepts(parameter.declared, in: types) else { return false }
+            guard taken.declared.accepts(parameter.declared, in: types, assuming: assuming) else {
+                return false
+            }
         }
 
-        return (returns ?? .any).accepts(given.returns ?? .any, in: types)
+        return (returns ?? .any).accepts(given.returns ?? .any, in: types, assuming: assuming)
     }
 
     // Whether a path segment may reach this — it takes a receiver, so there is
@@ -94,14 +121,14 @@ public struct Signature: Sendable, Equatable {
     // value, and this one leaves instead of producing one. Letting it in would
     // put the word that must not be missable where a walk decides on its own
     // whether to send it.
-    public var isDerivable: Bool {
+    public func isDerivable(in types: TypeTable) -> Bool {
         guard let receiver else { return false }
         guard returns != .never else { return false }
 
         return parameters
             .filter { name, _ in name != receiver }
             .values
-            .allSatisfy { parameter in !parameter.isRequired }
+            .allSatisfy { parameter in !parameter.mustBeGiven(in: types) }
     }
 
     // Inputs settle once at the scope boundary — inside the scope, references read
@@ -150,7 +177,7 @@ public struct Signature: Sendable, Equatable {
         // collection, not a blank — so only a key it never offered is missing.
         let missing = parameters
             .filter { name, parameter in
-                parameter.isRequired
+                parameter.mustBeGiven(in: types)
                     && (offered ? given[name] == nil : (given[name] ?? .null) == .null)
             }
             .keys

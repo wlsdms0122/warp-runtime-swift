@@ -65,6 +65,118 @@ public indirect enum Value: Sendable, Equatable {
         return object[field]
     }
 
+    // The elements a value is indexed by, and nil for what has none. This is
+    // where the `bytes = array<byte>` equation lives on the value side: an
+    // array answers its own elements and bytes answer theirs as the ints they
+    // are — lazily, so a compact spelling is not unpacked to read one element
+    // — and a word taking either through `any` reads this one projection
+    // instead of knowing the equation itself.
+    public var elements: AnyRandomAccessCollection<Value>? {
+        switch self {
+        case let .array(array):
+            return AnyRandomAccessCollection(array)
+
+        case let .bytes(bytes):
+            return AnyRandomAccessCollection(bytes.lazy.map { byte in Value.int(Int(byte)) })
+
+        default:
+            return nil
+        }
+    }
+
+    // The elements at these positions, in the spelling this value is — nil for
+    // what has no elements to take, the way `elements` answers nil.
+    //
+    // This is for the words that only put their receiver's own elements in
+    // another order or take fewer of them, and so never have to look at one.
+    // Saying which by position lets bytes be rearranged as the bytes they are:
+    // reading them out as values and writing them back would cost the boxing
+    // twice over, which is the cost being compact exists to avoid.
+    //
+    // A position this value does not have is answered the way a value with no
+    // elements at all is: with nil. The three words in this library count
+    // their positions from `elements` and so can never ask for one — but this
+    // is reachable from outside, where a caller's own arithmetic decides, and
+    // a library that brings its caller's process down over that is not one
+    // this can be.
+    public func elements(at positions: some Sequence<Int>) -> Value? {
+        switch self {
+        case let .bytes(bytes):
+            guard let taken = bytes.taken(at: positions) else { return nil }
+
+            return .bytes(taken)
+
+        case let .array(array):
+            guard let taken = array.taken(at: positions) else { return nil }
+
+            return .array(taken)
+
+        default:
+            return nil
+        }
+    }
+
+    // This value with one more element at one end, in the spelling it is — nil
+    // for what has no elements, the way the two above answer nil.
+    //
+    // Only the arriving element is looked at, because it is the only one that
+    // can make a compact spelling stop holding: the ones already there are
+    // bytes by construction. Reading them out to put one more beside them
+    // would spend the whole collection's boxing on a single addition, which is
+    // the same waste the two above exist against — and it is the arriving
+    // element, not the receiver's size, that decides the answer's spelling.
+    public func adding(_ element: Value, atFront: Bool) -> Value? {
+        guard let held = elements else { return nil }
+
+        if
+            case let .bytes(bytes) = self,
+            case let .int(number) = element,
+            let byte = UInt8(exactly: number)
+        {
+            return .bytes(atFront ? [byte] + bytes : bytes + [byte])
+        }
+
+        // What arrived is not a byte, or there were none to begin with. Only
+        // here is reading the rest out the honest cost of saying what the
+        // collection now is, and `respelled` says which spelling that is.
+        let elements = Array(held)
+
+        return respelled(atFront ? [element] + elements : elements + [element])
+    }
+
+    // These elements, spelled the way this value is. The other half of the
+    // projection above: `elements` reads a compact spelling as the array it is,
+    // and this writes an array back into the compact spelling where it still
+    // holds — so a word that answers its receiver's own elements, rearranged or
+    // fewer, answers bytes when it was given bytes.
+    //
+    // Where it no longer holds — a byte's slot now carrying something that is
+    // not one — the answer is a plain array, because the spelling is a fact
+    // about the value and saying otherwise would be a claim no value backs.
+    //
+    // A word that builds *new* elements does not come through here. `map`
+    // answers what its procedure answered, and that is its own value however it
+    // was reached; the declaration says so by naming a second parameter for it.
+    public func respelled(_ elements: some Collection<Value>) -> Value {
+        guard case .bytes = self else { return .array(Array(elements)) }
+
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(elements.count)
+
+        for element in elements {
+            guard
+                case let .int(number) = element,
+                let byte = UInt8(exactly: number)
+            else {
+                return .array(Array(elements))
+            }
+
+            bytes.append(byte)
+        }
+
+        return .bytes(bytes)
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     public static func == (lhs: Value, rhs: Value) -> Bool {
@@ -107,15 +219,92 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The equality conditions test with — strict except that int and double unify
-    // across numeric width, applied recursively through arrays and objects.
+    // How two values stand to each other, for the kinds that order: numbers
+    // among themselves and strings among themselves. Nil is a pair with no
+    // order — mixed kinds, the kinds that do not order, and a fraction that
+    // is not a number, which orders with nothing. Every consumer of order —
+    // equality across numeric width, `lessThan`/`greaterThan`, `sorted`,
+    // `min`/`max` — reads this one answer, so a whole beside a fraction is
+    // judged in exactly one place.
+    public static func order(_ left: Value, _ right: Value) -> ComparisonResult? {
+        switch (left, right) {
+        case let (.int(first), .int(second)):
+            return first == second
+                ? .orderedSame
+                : first < second ? .orderedAscending : .orderedDescending
+
+        case let (.double(first), .double(second)):
+            guard !first.isNaN, !second.isNaN else { return nil }
+
+            return first == second
+                ? .orderedSame
+                : first < second ? .orderedAscending : .orderedDescending
+
+        case let (.int(first), .double(second)):
+            return order(whole: first, fraction: second)
+
+        case let (.double(first), .int(second)):
+            return order(whole: second, fraction: first).map { order in
+                switch order {
+                case .orderedAscending: .orderedDescending
+                case .orderedDescending: .orderedAscending
+                case .orderedSame: .orderedSame
+                }
+            }
+
+        case let (.string(first), .string(second)):
+            return first == second
+                ? .orderedSame
+                : first < second ? .orderedAscending : .orderedDescending
+
+        default:
+            return nil
+        }
+    }
+
+    // How a whole number stands against a fraction, exactly at every size.
+    // Converting the whole to binary64 rounds above 2^53, and worth must not
+    // depend on the rounding — so the fraction is taken apart instead: its
+    // whole part meets the int exactly, and only a tie reads what is left.
+    private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
+        guard !fraction.isNaN else { return nil }
+
+        // Past either end of what an int can be — 0x1p63 is the word's own
+        // edge, written exactly where `Double(Int.max)` would round past it —
+        // the answer needs no digits, and infinity, which only a host can
+        // hand in, is answered by the same two lines.
+        guard fraction < 0x1p63 else { return .orderedAscending }
+        guard fraction >= -0x1p63 else { return .orderedDescending }
+
+        let floored = fraction.rounded(.down)
+        let settled = Int(floored)
+
+        guard integer == settled else {
+            return integer < settled ? .orderedAscending : .orderedDescending
+        }
+
+        // Equal whole parts: whatever the flooring dropped is what the
+        // fraction has over the int.
+        return fraction == floored ? .orderedSame : .orderedAscending
+    }
+
+    // The equality conditions test with — strict except that worth unifies
+    // across spellings: int and double across numeric width, and bytes beside
+    // an array of what its elements are worth, applied recursively through
+    // arrays and objects.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
-        case let (.int(left), .double(right)):
-            return Double(left) == right
+        case (.int, .double), (.double, .int):
+            return Value.order(self, other) == .orderedSame
 
-        case let (.double(left), .int(right)):
-            return left == Double(right)
+        // Bytes are an array of bytes in a compact spelling — `1` and `1.0`
+        // again, one collection up: the worth is the elements', read through
+        // the one projection that owns the equation.
+        case (.bytes, .array), (.array, .bytes):
+            guard let mine = elements, let theirs = other.elements else { return false }
+
+            return mine.count == theirs.count
+                && zip(mine, theirs).allSatisfy { pair in pair.0.matches(pair.1) }
 
         case let (.array(left), .array(right)):
             return left.count == right.count
@@ -133,4 +322,21 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // MARK: - Private
+}
+
+private extension Array {
+    // These positions taken in order, and nil where one of them is not a
+    // position this holds — so a caller that counted wrong is answered rather
+    // than trapped. Written once for both spellings' storage.
+    func taken(at positions: some Sequence<Int>) -> [Element]? {
+        var taken = [Element]()
+
+        for position in positions {
+            guard indices.contains(position) else { return nil }
+
+            taken.append(self[position])
+        }
+
+        return taken
+    }
 }

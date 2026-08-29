@@ -159,7 +159,12 @@ public struct ConcurrentEffect: Effect {
     private func mapped(of invocation: Invocation) throws -> [Piece] {
         let material = try material(of: invocation)
 
-        guard case let .array(elements) = material else {
+        // Through the one projection that owns the bytes equation, so a
+        // fan-out walks bytes the way `each` does. Read straight from the
+        // projection rather than out of a copy of it — a fan-out makes a piece
+        // for every element by definition, so what this saves is the one
+        // intermediate array and not the making of the elements.
+        guard let elements = material.elements else {
             throw ExecutionError("\(name) walks an array, and was sent \(material.type)")
         }
 

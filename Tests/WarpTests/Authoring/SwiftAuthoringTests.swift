@@ -63,13 +63,23 @@ struct SwiftAuthoringTests {
                 ),
                 Statement(
                     id: "verdict",
+                    binding: .variable,
+                    expression: .literal(.string("counted otherwise"))
+                ),
+                Statement(
                     expression: .conditional(
                         equals(
                             .reference([.key("counted")]),
                             .literal(.int(3))
                             ),
-                        then: Block(body: [], result: .literal(.string("counted to three"))),
-                        else: Block(body: [], result: .literal(.string("counted otherwise")))
+                        then: [
+                            Statement(
+                                id: "verdict",
+                                binding: .assignment,
+                                expression: .literal(.string("counted to three"))
+                            )
+                        ],
+                        else: nil
                     )
                 )
             ],
@@ -158,7 +168,10 @@ struct SwiftAuthoringTests {
         // A second declaration, in the same module — a call names a symbol, and
         // which module declared it is the linker's business.
         let echo = Procedure(
-            signature: Signature(parameters: ["word": Parameter(type: .string)]),
+            signature: Signature(
+                parameters: ["word": Parameter(type: .string)],
+                returns: .record(["said": .string])
+            ),
             body: [],
             result: .record(["said": .reference([.key("word")])])
         )

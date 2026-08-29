@@ -15,16 +15,22 @@ import Foundation
 // sides.
 struct TypeFrame: Sendable {
     // MARK: - Property
-    // Keyed by the resolved selector for a call, and by the bare name a path
-    // writes for a word a path may reach. The two spellings answer the same
-    // question in the two places it gets asked.
+    // Keyed by the resolved selector for a call — and by that alone: the
+    // bare spelling a path writes lives in `words`, because the two spellings
+    // ask two different questions.
     //
-    // Whole signatures rather than what each answers, because a declaration with
-    // a hole in it does not answer anything until a call site fills it — and
-    // what fills it is read from the parameters.
+    // Whole signatures rather than what each answers, because a declaration
+    // with a type parameter in it does not answer anything until a call site
+    // fills it — and what fills it is read from the arguments.
     let signatures: [String: Signature]
 
     let types: TypeTable
+
+    // What a bare spelling a path writes may send: the pure declarations whose
+    // only required slot is the receiver, by the name a walk reaches them
+    // under. Its own table rather than a mask over `signatures`, so the gate
+    // and the declaration it answers with cannot disagree.
+    let words: [String: Signature]
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
@@ -33,10 +39,12 @@ struct TypeFrame: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // What a name answers with, before any hole in it is filled. Enough for a
-    // path, which sends no arguments and so fills nothing.
-    func returns(of name: String) -> TypeExpression? {
-        signatures[name]?.returns
+    // The whole declaration, for the one send a path makes — and only where a
+    // path may make it. There is no way to ask what a name answers without
+    // asking whether a path may send it — a softer question was how a word
+    // nobody may reach got a type.
+    func signature(reachedBy name: String) -> Signature? {
+        words[name]
     }
 
     // A named type stands for what it was declared as. Inference walks into

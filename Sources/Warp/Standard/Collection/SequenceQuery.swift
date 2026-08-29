@@ -26,7 +26,10 @@ public struct SequenceQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
-        guard case let .array(elements) = question.receiver else { return nil }
+        // Through the one projection that owns the `bytes = array<byte>`
+        // equation, so bytes are read where an array is — and `first` reads one
+        // element of a compact spelling without unpacking the rest.
+        guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
         switch reading {
         // An empty array has no first, and having none is absence rather than
@@ -37,8 +40,12 @@ public struct SequenceQuery: Query {
         case .last:
             return elements.last
 
+        // The same elements in the other order, said by position — so the
+        // spelling they arrived in is the spelling they leave in, and a
+        // compact one is turned around as what it holds rather than read out
+        // as values and written back.
         case .reversed:
-            return .array(elements.reversed())
+            return receiver.elements(at: (0 ..< elements.count).reversed())
         }
     }
 

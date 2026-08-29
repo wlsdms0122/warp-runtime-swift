@@ -22,7 +22,7 @@ struct ReferenceLookupTests {
                 "index": .int(1)
             ]
         ),
-        derivations: Module.standard.procedures
+        words: Module.standard.procedures
     )
 
     // MARK: - Initializer
@@ -35,11 +35,34 @@ struct ReferenceLookupTests {
         #expect(sut.lookup([.key("items"), .index(1)]) == .found(.int(2)))
     }
 
-    @Test("a missing key answers absent")
-    func missingKeyReturnsAbsent() {
+    @Test("a missing head answers absent")
+    func missingHeadReturnsAbsent() {
         #expect(sut.lookup([.key("missing")]) == .absent)
         #expect(sut.lookup([.key("nowhere")]) == .absent)
-        #expect(sut.lookup([.key("items"), .index(9)]) == .absent)
+    }
+
+    @Test("a missing entry refuses, and ?. reads it as null")
+    func missingEntryRefusesUnlessOptional() {
+        // Then — absence past the head is a defect unless the author spelled
+        // that they expect it
+        guard case .unfit = sut.lookup([.key("step"), .key("gone")]) else {
+            Issue.record("expected unfit for an absent entry")
+
+            return
+        }
+
+        #expect(sut.lookup([.key("step"), .key("gone", optional: true)]) == .found(.null))
+    }
+
+    @Test("an index past the end is unfit, not absent")
+    func indexPastTheEndIsUnfit() {
+        // Then — the array is there and says how long it is, so a reading
+        // that misses it read the length wrong
+        guard case .unfit = sut.lookup([.key("items"), .index(9)]) else {
+            Issue.record("expected unfit for an index past the end")
+
+            return
+        }
     }
 
     @Test("shape misuse is unfit, not absent")
@@ -58,16 +81,80 @@ struct ReferenceLookupTests {
         }
     }
 
-    @Test("count derives from countable values")
-    func countDerivesFromCountable() {
-        #expect(sut.lookup([.key("items"), .key("count")]) == .found(.int(3)))
-        #expect(sut.lookup([.key("name"), .key("count")]) == .found(.int(4)))
-        #expect(sut.lookup([.key("step"), .key("count")]) == .found(.int(2)))
+    @Test("count derives where the link spelled a word")
+    func countDerivesFromWordSegments() {
+        #expect(sut.lookup([.key("items"), .word("count")]) == .found(.int(3)))
+        #expect(sut.lookup([.key("name"), .word("count")]) == .found(.int(4)))
+        #expect(sut.lookup([.key("step"), .word("count")]) == .found(.int(2)))
+    }
+
+    @Test("a key segment reads data alone, and never derives")
+    func keySegmentDoesNotDerive() {
+        // Then — the value has no say: a `key` the link left as a read is a
+        // read, even where a word by that name would have answered
+        guard case .unfit = sut.lookup([.key("items"), .key("count")]) else {
+            Issue.record("expected unfit for a key on an array")
+
+            return
+        }
+
+        guard case .unfit = sut.lookup([.key("name"), .key("count")]) else {
+            Issue.record("expected unfit for a key on a string")
+
+            return
+        }
     }
 
     @Test("an index-reference segment resolves from a binding")
     func indexReferenceResolvesFromBinding() {
         #expect(sut.lookup([.key("items"), .indexRef([.key("index")])]) == .found(.int(2)))
+    }
+
+    @Test("a fraction index reference misses by the fact it is")
+    func indexReferenceFractionNamesItsMiss() {
+        // Given — a fraction with digits after the point, and a whole one no
+        // machine word holds: two different facts, each named as itself
+        let resolver = Resolver(
+            scope: Scope(
+                bindings: [
+                    "items": .array([.int(1), .int(2)]),
+                    "half": .double(1.5),
+                    "far": .double(1e30)
+                ]
+            ),
+            words: Module.standard.procedures
+        )
+
+        guard case let .unfit(halfway) = resolver.lookup(
+            [.key("items"), .indexRef([.key("half")])]
+        ) else {
+            Issue.record("expected unfit for a fractional index reference")
+
+            return
+        }
+
+        #expect(halfway.contains("is not a whole number"))
+
+        guard case let .unfit(distant) = resolver.lookup(
+            [.key("items"), .indexRef([.key("far")])]
+        ) else {
+            Issue.record("expected unfit for an index reference past the word")
+
+            return
+        }
+
+        #expect(distant.contains("indexes past the end of any array"))
+    }
+
+    @Test("an index reference that names nothing is unfit, not null")
+    func indexReferenceNamingNothingIsUnfit() {
+        // Then — the heads the text shows were checked at load, so a name
+        // that answers nothing here is a defect said out loud
+        guard case .unfit = sut.lookup([.key("items"), .indexRef([.key("typo")])]) else {
+            Issue.record("expected unfit for an index reference naming nothing")
+
+            return
+        }
     }
 
     // A scope is an environment and nothing more — which is what lets the

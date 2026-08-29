@@ -21,9 +21,9 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Public
-    // The runtime lowering door must pass the same gate the load path does — a
-    // body that arrived as data is validated against the heads visible where it
-    // will run.
+    // The door for a caller holding statements it assembled itself, without a
+    // document: the same gate the load path passes, against the heads visible
+    // where the body will run.
     public func validate(body: [Statement], visible: Set<String>) throws {
         try validate(body, visible: visible, label: "lowered")
     }
@@ -93,6 +93,7 @@ public struct Validator: Sendable {
             block,
             visible: constants.union(parameters),
             declared: parameters.union(constants),
+            surroundings: .procedure(constants: constants),
             at: "body"
         )
     }
@@ -129,13 +130,15 @@ public struct Validator: Sendable {
 
                 try normal(id, at: "\(label).\(id)")
 
-                // A leaving statement never finishes, so a name on one is a
-                // binding that could never happen — refused rather than
-                // remembered as false.
-                if case .leave = statement.expression {
+                // The leave rules reach through structure, because the fact
+                // does: every way through a leaving statement leaves, so its
+                // name could never bind — refused before any question about
+                // which name it is.
+                if statement.expression.alwaysLeaves {
                     throw ValidationError(
-                        "\(label).\(id): a leaving statement binds nothing,"
-                            + " and it takes no name"
+                        "\(label).\(id): every way through this statement"
+                            + " leaves, so its name could never bind — it takes"
+                            + " no name"
                     )
                 }
 
@@ -147,6 +150,16 @@ public struct Validator: Sendable {
                         "\(label).\(id): a walk answers nothing, so its name"
                             + " binds the element and no value — it is not"
                             + " writable"
+                    )
+                }
+
+                // A branch answers nothing and binds nothing inside either, so
+                // it takes no name at all: what an arm keeps it writes to an
+                // outer variable, and a value leaves through `return`.
+                if statement.expression.takesNoName {
+                    throw ValidationError(
+                        "\(label).\(id): a branch answers nothing, so its name"
+                            + " could never bind — it takes no name"
                     )
                 }
 
@@ -184,35 +197,14 @@ public struct Validator: Sendable {
                 }
             }
 
-            // Nothing runs after a statement that leaves, so a name written
-            // after one would be read by something that never bound it.
-            if case .leave = statement.expression, position != body.count - 1 {
+            // Nothing runs after a statement that leaves — through structure
+            // too: a branch both of whose arms leave never finishes either.
+            if statement.expression.alwaysLeaves, position != body.count - 1 {
                 throw ValidationError(
-                    "\(label)[\(position)]: nothing runs after leaving,"
-                        + " and what follows it here would never bind"
+                    "\(label)[\(position)]: every way through this"
+                        + " statement leaves, and what follows it here"
+                        + " would never run"
                 )
-            }
-
-            // The leave rules reach through structure, because the fact does: a
-            // branch both of whose arms leave never finishes either, so a name
-            // on such a statement could never bind and what follows it could
-            // never run.
-            if isLeaveThroughStructure(statement.expression) {
-                if let id = statement.id {
-                    throw ValidationError(
-                        "\(label).\(id): every way through this statement"
-                            + " leaves, so its name could never bind — it takes"
-                            + " no name"
-                    )
-                }
-
-                if position != body.count - 1 {
-                    throw ValidationError(
-                        "\(label)[\(position)]: every way through this"
-                            + " statement leaves, and what follows it here"
-                            + " would never run"
-                    )
-                }
             }
 
             try validate(
@@ -253,53 +245,6 @@ public struct Validator: Sendable {
         return true
     }
 
-    // Whether a *compound* statement leaves on every way through — the direct
-    // leave has its own, more specific refusals above. Structural and
-    // conservative: a loop may run no round and an attempt's rescue may finish
-    // normally, so neither counts; a call is judged at the link, where its
-    // signature is known.
-    //
-    // The link's type walk reads the same fact — a body ending never types
-    // never, and joining two never arms answers never — over the full program,
-    // symbols included. This is the symbol-free half of that judgment, and what
-    // it buys is the stage: a document is refused before anything is linked.
-    private func isLeaveThroughStructure(_ expression: Expression) -> Bool {
-        switch expression {
-        case let .conditional(_, then, otherwise):
-            guard let otherwise else { return false }
-
-            return alwaysLeaves(then) && alwaysLeaves(otherwise)
-
-        case let .block(block):
-            return alwaysLeaves(block)
-
-        default:
-            return false
-        }
-    }
-
-    private func alwaysLeaves(_ block: Block) -> Bool {
-        // A block answers through its result when it has one, so the judgment
-        // follows the answer: a leaving result leaves the block, whatever the
-        // body did. (A leaving *body* under a declared result is refused as
-        // unreachable where the block itself is validated.)
-        if let result = block.result {
-            if case .leave = result { return true }
-
-            return isLeaveThroughStructure(result)
-        }
-
-        return alwaysLeaves(block.body)
-    }
-
-    private func alwaysLeaves(_ body: [Statement]) -> Bool {
-        guard let last = body.last else { return false }
-
-        if case .leave = last.expression { return true }
-
-        return isLeaveThroughStructure(last.expression)
-    }
-
     private func validate(
         _ expression: Expression,
         visible: Set<String>,
@@ -316,11 +261,13 @@ public struct Validator: Sendable {
 
         case let .array(array):
             for element in array {
+                try refuseAnswerless(element, at: location)
                 try validate(element, visible: visible, variables: variables, surroundings: surroundings, at: location)
             }
 
         case let .record(record):
             for (name, field) in record.sorted(by: { $0.key < $1.key }) {
+                try refuseAnswerless(field, at: "\(location).\(name)")
                 try validate(
                     field,
                     visible: visible,
@@ -329,6 +276,19 @@ public struct Validator: Sendable {
                     at: "\(location).\(name)"
                 )
             }
+
+        // A cast names a shape and reads a value as it — the shape is the
+        // link's to resolve, so the check has only the value to walk, exactly
+        // as it walks any other operand.
+        case let .cast(value, _, _):
+            try refuseAnswerless(value, at: location)
+            try validate(
+                value,
+                visible: visible,
+                variables: variables,
+                surroundings: surroundings,
+                at: location
+            )
 
         // A closure sees where it was written plus what it declares, which is
         // the capture read statically. Its parameters are declared here for the
@@ -354,6 +314,19 @@ public struct Validator: Sendable {
                 try normal(parameter, at: "\(location).\(parameter)")
             }
 
+            // And the same collision rule: linking folds a constant wherever
+            // its name is read, so a parameter under that name would never be
+            // the one that answers — inside a closure as much as at the top.
+            let colliding = parameters.intersection(surroundings.constants).sorted()
+
+            guard colliding.isEmpty else {
+                throw ValidationError(
+                    "\(location): parameters \(colliding.joined(separator: ", "))"
+                        + " collides with a name the module bound, which it"
+                        + " would take the place of"
+                )
+            }
+
             guard let block = procedure.block else { return }
 
             try validate(
@@ -365,10 +338,12 @@ public struct Validator: Sendable {
             )
 
         case let .invoke(callee, arguments):
+            try refuseConstruct(callee, at: location)
             try validate(callee, visible: visible, variables: variables, surroundings: surroundings, at: location)
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
                 try normal(name, at: "\(location).\(name)")
+                try refuseConstruct(argument, at: "\(location).\(name)")
                 try validate(
                     argument,
                     visible: visible,
@@ -382,6 +357,7 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: location)
 
         case let .conditional(condition, then, otherwise):
+            try refuseConstructCondition(condition, at: "\(location).when")
             try validate(
                 condition,
                 visible: visible,
@@ -394,7 +370,7 @@ public struct Validator: Sendable {
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: "\(location).then"
+                label: "\(location).then"
             )
 
             if let otherwise {
@@ -403,7 +379,7 @@ public struct Validator: Sendable {
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: "\(location).else"
+                    label: "\(location).else"
                 )
             }
 
@@ -414,6 +390,7 @@ public struct Validator: Sendable {
 
             let inner = visible.union([round])
 
+            try refuseConstructCondition(condition, at: "\(location).while")
             try validate(
                 condition,
                 visible: inner,
@@ -476,6 +453,7 @@ public struct Validator: Sendable {
 
         case let .dispatch(dispatch):
             if let receiver = dispatch.receiver {
+                try refuseConstruct(receiver, at: location)
                 try validate(
                     receiver,
                     visible: visible,
@@ -487,6 +465,7 @@ public struct Validator: Sendable {
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
                 try normal(name, at: "\(location).\(name)")
+                try refuseConstruct(argument, at: "\(location).\(name)")
                 try validate(
                     argument,
                     visible: visible,
@@ -497,6 +476,40 @@ public struct Validator: Sendable {
             }
 
         }
+    }
+
+    // A construct that answers nothing — a branch, a walk — has nothing to
+    // give a slot that exists to hold an answer. Refused for that reason
+    // wherever one asks, rather than as a null that fails to fit downstream.
+    private func refuseAnswerless(_ expression: Expression, at location: String) throws {
+        guard expression.answersNothing else { return }
+
+        throw ValidationError(
+            "\(location): this construct answers nothing, so it cannot"
+                + " stand where a value is wanted"
+        )
+    }
+
+    // A call's operand is data the pure half reads — a document cannot even
+    // write a construct there, and the run refuses one that arrives anyway.
+    // Held here too, so a program assembled directly meets the same rule
+    // before it runs — and at the link, which asks the same predicate, so a
+    // program that skipped this door still cannot slip one through: the body
+    // a word is to run travels as a closure, and there is no second channel
+    // for bodies.
+    private func refuseConstruct(_ expression: Expression, at location: String) throws {
+        guard expression.holdsConstruct else { return }
+
+        throw ValidationError("\(location): \(Expression.constructInOperand)")
+    }
+
+    // A condition is data by the same fact an operand is: the run asks it
+    // purely. Refused with its own sentence, because the fix is different —
+    // what a body decides reaches a condition through a word.
+    private func refuseConstructCondition(_ expression: Expression, at location: String) throws {
+        guard expression.holdsConstruct else { return }
+
+        throw ValidationError("\(location): \(Expression.constructInCondition)")
     }
 
     private func validate(
@@ -519,12 +532,18 @@ public struct Validator: Sendable {
         if let result = block.result {
             // The result runs after the body, so it is "after" the same way a
             // trailing statement is — a body that left never reaches it.
-            if alwaysLeaves(block.body) {
+            if block.body.alwaysLeaves {
                 throw ValidationError(
                     "\(location).result: nothing runs after leaving,"
                         + " and this result would never be reached"
                 )
             }
+
+            // A branch answers nothing, so a result slot — a place that
+            // exists to hold an answer — has nothing to take from one.
+            // Refused for that reason, rather than as a type that fails to
+            // fit downstream.
+            try refuseAnswerless(result, at: "\(location).result")
 
             try validate(
                 result,
@@ -584,9 +603,13 @@ public struct Validator: Sendable {
     ) throws {
         for path in paths {
             for segment in path {
-                if case let .key(name) = segment {
+                if let name = segment.named {
                     try normal(name, at: location)
                 }
+            }
+
+            if let refusal = path.markedHead {
+                throw ValidationError("\(location): \(refusal)")
             }
 
             guard let head = path.head else {
@@ -642,12 +665,22 @@ private struct Surroundings: Sendable {
     // and useless. Nil where writing outward is ordinary.
     let boundary: String?
 
+    // The module's bound names, carried so every signature met on the way —
+    // a closure's included — refuses a parameter that would take one's
+    // place: linking folds a constant wherever its name is read, so a
+    // parameter under that name would never be the one that answers.
+    let constants: Set<String>
+
     // A procedure's own body: no loop yet, nothing fenced.
-    static let procedure = Surroundings(rounds: [], boundary: nil)
+    static let procedure = Surroundings(rounds: [], boundary: nil, constants: [])
+
+    static func procedure(constants: Set<String>) -> Surroundings {
+        Surroundings(rounds: [], boundary: nil, constants: constants)
+    }
 
     // MARK: - Public
     func inside(_ round: String) -> Surroundings {
-        Surroundings(rounds: rounds + [round], boundary: boundary)
+        Surroundings(rounds: rounds + [round], boundary: boundary, constants: constants)
     }
 
     // A procedure written inside another. It may be called anywhere and long
@@ -657,7 +690,8 @@ private struct Surroundings: Sendable {
         Surroundings(
             rounds: [],
             boundary: "which lives outside this closure — a closure captures"
-                + " values, and a name it captured is a value it captured"
+                + " values, and a name it captured is a value it captured",
+            constants: constants
         )
     }
 

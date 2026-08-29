@@ -8,8 +8,8 @@
 import Foundation
 import Testing
 import Warp
-import WarpDocument
-import WarpText
+import WarpSyntax
+import WarpSerialization
 
 // The specification's cases, run against this implementation.
 //
@@ -95,7 +95,24 @@ struct ConformanceTests {
 }
 
 // One question, read from the specification rather than written here.
+//
+// A case is not a program and is not written in the shape of one. It is spelled
+// in the same text — the encoding carries a tree and never learns what a tree
+// means, so there is one of those and not two — but what it holds under `test`
+// is a test, and the document it asks about is nested whole under `program`.
+//
+// Which is what lets the two be told apart by saying so rather than by noticing:
+// a case declares `test`, a document declares `warp`, and each is refused by the
+// other's reader for what it is instead of for the keys it happens to carry.
 struct Case: Sendable, CustomStringConvertible {
+    // Which shapes a runner has to understand to ask these questions. It moves
+    // for the same reason `warp` does and on its own schedule — the day a case
+    // may say something new is not the day a document may.
+    static let version = 1
+    static let earliest = 1
+
+    static let versionKey = "test"
+
     enum Stage: String, Sendable {
         case load
         case link
@@ -118,13 +135,40 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Initializer
     init(from written: Value) throws {
+        // The version first, and before the shape, for the reason a document
+        // reads its own first: a later case may say something this runner has
+        // no name for, and "I am too old for this" is a different answer from
+        // "this is not a case".
+        guard let declared = written[Self.versionKey] else {
+            throw ConformanceError(
+                "this is not a case — it does not say which test it is written for"
+                    + " (`\(Self.versionKey)`)"
+            )
+        }
+
+        // Said, but not as a number. A different answer from the one above: that
+        // one is "this is not a case", and this one is "this is a case and it is
+        // wrong", which is the distinction the check exists to keep.
+        guard case let .int(version) = declared else {
+            throw ConformanceError(
+                "a case says which test it is written for as a whole number,"
+                    + " and this says \(declared)"
+            )
+        }
+
+        guard (Self.earliest ... Self.version).contains(version) else {
+            throw ConformanceError(
+                "this case is written for test \(version),"
+                    + " and this reads \(Self.earliest) through \(Self.version)"
+            )
+        }
+
         guard
             case let .string(name)? = written["name"],
             case let .string(note)? = written["note"],
-            let program = written["program"],
-            let expect = written["expect"]
+            let program = written["program"]
         else {
-            throw ConformanceError("a case is a name, a note, a program and what to expect")
+            throw ConformanceError("a case is a name, a note, a program and what should happen")
         }
 
         self.name = name
@@ -137,16 +181,35 @@ struct Case: Sendable, CustomStringConvertible {
             self.arguments = [:]
         }
 
-        if case let .string(stage)? = expect["refuses"] {
-            guard let stage = Stage(rawValue: stage) else {
-                throw ConformanceError("'\(stage)' is not a stage a program is refused at")
+        // One of `answers` or `refuses`, and exactly one. The slot groups them so
+        // that this is a question about one record instead of a rule about two
+        // sibling keys — but a record is not a choice, so the count is still
+        // counted here. A case edited from one to the other and left holding both
+        // would otherwise start asking a different question than it reads as, and
+        // nobody would be told.
+        guard
+            case let .object(expect)? = written["expect"],
+            expect.count == 1,
+            let (held, expected) = expect.first
+        else {
+            throw ConformanceError("a case expects exactly one of `answers` or `refuses`")
+        }
+
+        switch held {
+        case "refuses":
+            guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
+                throw ConformanceError("\(expected) is not a stage a program is refused at")
             }
 
             self.expectation = .refuses(stage)
-        } else if let answer = expect["answers"] {
-            self.expectation = .answers(answer)
-        } else {
-            throw ConformanceError("a case expects an answer or a refusal")
+
+        case "answers":
+            self.expectation = .answers(expected)
+
+        default:
+            throw ConformanceError(
+                "a case expects what it answers or where it is refused, and not `\(held)`"
+            )
         }
     }
 
@@ -164,9 +227,20 @@ struct Case: Sendable, CustomStringConvertible {
             .appendingPathComponent("spec")
             .appendingPathComponent("conformance")
 
+        // The cases are the ones named like cases, and everything else in the
+        // folder is somebody else's business — a `.DS_Store`, a `.orig` left by
+        // a merge, a copy someone kept while editing. A runner that refused to
+        // start over any of those would be putting "is this folder tidy" and "is
+        // this implementation the language" behind one red light, and the second
+        // question is the only one it was built to ask.
+        //
+        // The cost is real and is accepted: a case saved under a name this misses
+        // is not asked, and nothing here says so. What catches that is the same
+        // thing that catches a case deleted outright — it is a file in a diff,
+        // and the dumper that writes these names them.
         let files = try FileManager.default
             .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { file in file.pathExtension == "warpt" }
+            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
             .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
 
         return try files.map { file in

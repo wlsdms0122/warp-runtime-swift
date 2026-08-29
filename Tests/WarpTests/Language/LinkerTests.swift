@@ -257,21 +257,20 @@ struct LinkerTests {
                 "caller": Procedure(
                     body: [
                         Statement(
-                            id: "pick",
                             expression: .conditional(equals(
                                         .literal(.string("yes")),
                                         .literal(.string("yes"))
-                                        ), then: Block(body: [
+                                        ), then: [
                                         Statement(
                                             id: "safe",
                                             expression: .literal(.string("fine"))
                                         )
-                                    ]), else: Block(body: [
+                                    ], else: [
                                         Statement(
                                             id: "risky",
                                             expression: .dispatch(Dispatch(selector: "missing"))
                                         )
-                                    ]))
+                                    ])
                         )
                     ]
                 )
@@ -669,12 +668,13 @@ struct LinkerTests {
         }
     }
 
-    @Test("what nothing declared is not something the link can be wrong about")
-    func undeclaredArgumentIsNotJudged() throws {
-        // Given — `held` comes back from a call that declares no answer, so
-        // nothing is known about it and nothing is refused. That is the bound on
-        // the promise: inference answers where the text says so and `any`
-        // everywhere else.
+    @Test("what no body settles is not something the link can be wrong about")
+    func anAnswerNothingSettlesIsNotJudged() throws {
+        // Given — `held` comes back from a call that declares no answer, and
+        // whose body answers what that same call answers. An answer worked out
+        // from its own is not one the text states, so nothing is known about
+        // it and nothing is refused. That is the bound on the promise:
+        // inference answers where the text settles and `any` everywhere else.
         let sut = Module(
             procedures: [
                 "callee": Procedure(
@@ -705,18 +705,54 @@ struct LinkerTests {
                     ]
                 ),
                 "opaque": Procedure(
-                    body: [
-                        Statement(
-                            id: "made",
-                            expression: .literal(.string("whatever"))
-                        )
-                    ]
+                    body: [],
+                    result: .dispatch(Dispatch(selector: "opaque"))
                 )
             ]
         )
 
         // When / Then
         _ = try language.link([sut], entry: "caller")
+    }
+
+    @Test("a body that settles an answer is held to it, declared or not")
+    func anAnswerReadOffABodyIsJudged() {
+        // Given — the same shape, with a body whose answer the text does
+        // settle: a body with no result hands back null, and null is not a
+        // whole number. What the declaration says stays what it says; what the
+        // link reads a call as is what the body hands back.
+        let sut = Module(
+            procedures: [
+                "callee": Procedure(
+                    signature: Signature(parameters: ["base": Parameter(type: .int)]),
+                    body: [Statement(id: "echo", expression: .reference([.key("base")]))]
+                ),
+                "caller": Procedure(
+                    body: [
+                        Statement(
+                            id: "held",
+                            expression: .dispatch(Dispatch(selector: "opaque"))
+                        ),
+                        Statement(
+                            id: "call",
+                            expression: .dispatch(Dispatch(selector: "callee", arguments: [
+                                        "base": .reference([.key("held")])
+                                    ]))
+                        )
+                    ]
+                ),
+                "opaque": Procedure(
+                    body: [Statement(id: "made", expression: .literal(.string("whatever")))]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try language.link([sut], entry: "caller")
+        } throws: { error in
+            error is LinkError && "\(error)".contains("holds null where int is declared")
+        }
     }
 
     @Test("a procedure that calls nothing links alone")
