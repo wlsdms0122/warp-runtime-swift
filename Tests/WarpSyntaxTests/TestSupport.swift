@@ -129,6 +129,13 @@ extension Loader {
 let entryName = "entry"
 
 extension Loader {
+    // Reading a document without saying which document it is. These tests are
+    // about what a reader accepts, not about pointing a refusal back into the
+    // file it came from, so there is nothing here to name.
+    func load(_ value: Value) throws -> Module {
+        try load(value, identity: nil)
+    }
+
     // A document as a front end hands one over, which is the only way one is
     // ever made: the version filled in, and the list of what the program needs
     // worked out from the program. No author writes either — both are computed,
@@ -138,19 +145,24 @@ extension Loader {
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
     func loadDocument(_ value: Value) throws -> Module {
-        guard case let .object(fields) = value else { return try load(value) }
+        guard case let .object(fields) = value else { return try load(value, identity: nil) }
 
         let stamped = fields.merging(
             [Envelope.versionKey: .int(Envelope.version)]
         ) { written, _ in written }
 
-        guard stamped[Envelope.needsKey] == nil else { return try load(.object(stamped)) }
+        guard stamped[Envelope.needsKey] == nil else { return try load(.object(stamped), identity: nil) }
 
         let needs = Envelope.needs(of: try spelled(.object(stamped)))
 
-        return try load(.object(stamped.merging(
-            [Envelope.needsKey: .array(needs.sorted().map(Value.string))]
-        ) { written, _ in written }))
+        return try load(
+            .object(stamped.merging(
+                [Envelope.needsKey: .array(needs.sorted().map(Value.string))]
+            ) { written, _ in written }),
+            // These are about what a reader accepts, not about pointing a
+            // refusal back into a file, so there is no document to name.
+            identity: nil
+        )
     }
 
     // Most tests here are about one construct or one reader, not about the

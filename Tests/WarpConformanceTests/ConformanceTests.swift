@@ -57,7 +57,7 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
         let language = Language()
-        let module = try Loader().load(sut.program)
+        let module = try Loader().load(sut.program, identity: nil)
         let image = try language.link([module] + Module.standard, entry: "entry")
 
         return try await language.makeExecutor().run(image, arguments: sut.arguments)
@@ -71,7 +71,7 @@ struct ConformanceTests {
         let module: Module
 
         do {
-            module = try Loader().load(sut.program)
+            module = try Loader().load(sut.program, identity: nil)
         } catch {
             return .load
         }

@@ -46,10 +46,11 @@ public struct Module: Sendable {
 
     // Which document this was read out of, where it was read out of one.
     //
-    // Nil for a module a caller built, and that is the whole of what nil means:
-    // nothing was written down, so there is no text for a reader to be pointed
-    // back into. It is never nil for a module that came through a reader —
-    // reading is where it is worked out, from the document being read.
+    // Nil where nobody said which document this came out of: a module a caller
+    // built has no text under it at all, and a reader is told which text it is
+    // reading rather than working it out — deriving one means writing the
+    // document back to its canonical bytes, which is not what reading a
+    // document is for.
     //
     // Not the name. `name` is the namespace this declares into and several
     // documents may share one, since a module split across files is a thing

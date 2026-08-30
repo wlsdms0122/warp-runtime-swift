@@ -66,7 +66,13 @@ public struct Loader: Sendable {
     // the wrong text: whatever compares identities computes its own side from
     // what it holds, so a mismatch is a refusal nobody can place, never a
     // refusal placed somewhere it did not come from.
-    public func load(_ value: Value, identity: Identity? = nil) throws -> Module {
+    //
+    // Stated and never defaulted. A caller with no document under what it is
+    // handing in says `nil` out loud, and a caller that has one cannot forget
+    // to say so — a module that came through here without being told which text
+    // it came from would refuse without ever being able to say where, and
+    // nothing would have gone wrong loudly enough to notice.
+    public func load(_ value: Value, identity: Identity?) throws -> Module {
         let spelled = try spelled(value)
         let module = identity.map(spelled.read(from:)) ?? spelled
 

@@ -616,7 +616,6 @@ public struct Linker: Sendable {
                 symbols.append(
                     Symbol(
                         declared: name,
-                        namespace: module.name,
                         document: .of(module),
                         origin: origin,
                         procedure: procedure

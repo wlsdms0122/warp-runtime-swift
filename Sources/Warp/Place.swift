@@ -77,15 +77,13 @@ public struct Place: Sendable, Equatable {
         }
 
         // The name where the document wrote one, and what the document *is*
-        // where it did not. A person reading a refusal wants the word they
-        // typed; where there is no such word, a short digest still tells two
+        // where it did not: a person reading a refusal wants the word they
+        // typed, and where there is no such word a short digest still tells two
         // documents apart, which is more than nothing tells them.
         if let namespace = document.namespace {
             return "\(namespace)/" + address
         }
 
-        // No name to give, so what the document *is* — a short digest still
-        // tells two of them apart, which is more than nothing tells them.
         guard let identity = document.identity else { return address }
 
         return "\(identity.short)/" + address
@@ -172,22 +170,16 @@ public struct Place: Sendable, Equatable {
 }
 
 public extension Place {
-    // Which document a place is an address in — three answers and not two.
+    // Which document a place is an address in, and what that document's module
+    // calls itself.
     //
-    // A module that wrote no name is still a document; it declares into the
-    // link's shared space, the way a translation unit without a namespace
-    // does. A program a caller assembled in memory is not a document at all,
-    // and the two are not the same fact: spelling both `nil` let a place with
-    // no document under it be matched against any text that wrote no name, and
-    // answered with that text's first line.
-    // Which document, and whether there is one at all.
-    //
-    // A document is told from another by what it says, never by what it is
-    // called: `name` is the namespace a module declares into, several documents
-    // may share one, and a document may write none. The name rides along
-    // because a person reading a refusal wants to see it, and it is no part of
-    // saying which document this is.
-    //
+    // Two facts and not one, because they answer to different things. A
+    // document is told from another by what it says — `name` is the namespace a
+    // module declares into, several documents may share one, and a document may
+    // write none — so identifying by the name would answer a refusal in one
+    // half of a split module with the other half's line. And a module a caller
+    // built has a namespace and no text at all, so folding the two together
+    // would take the namespace out of every refusal about one.
     struct Document: Sendable, Equatable {
         // Which text this is. Nil where the program was never written down —
         // a caller that built it in memory — and that is the whole of what nil
