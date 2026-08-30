@@ -22,17 +22,17 @@ public struct Loader: Sendable {
     // MARK: - Property
     public let language: Language
     public let registry: ConstructRegistry
-    public let spellings: SpellingRegistry
+    public let notation: Notation
 
     // MARK: - Initializer
     public init(
         language: Language = Language(),
         registry: ConstructRegistry = .standard,
-        spellings: SpellingRegistry = .canonical
+        notation: Notation = .canonical
     ) {
         self.language = language
         self.registry = registry
-        self.spellings = spellings
+        self.notation = notation
     }
 
     // Every word this notation reaches on its own — from the readers that spell
@@ -44,7 +44,7 @@ public struct Loader: Sendable {
     // made, so the debt is its own to state. Leaving it unstated would have the
     // bundles read as optional while the spellings quietly required them.
     public var vocabulary: Set<String> {
-        registry.vocabulary(with: spellings).union(spellings.vocabulary)
+        registry.vocabulary(with: notation).union(notation.vocabulary)
     }
 
     // MARK: - Public
@@ -95,7 +95,7 @@ public struct Loader: Sendable {
             codingPath: [],
             userInfo: [
                 .constructRegistry: registry,
-                .spellingRegistry: spellings,
+                .notation: notation,
                 .loader: self
             ]
         ))
@@ -105,5 +105,5 @@ public struct Loader: Sendable {
 public extension CodingUserInfoKey {
     static let constructRegistry = CodingUserInfoKey(rawValue: "warp.constructRegistry")!
     static let loader = CodingUserInfoKey(rawValue: "warp.loader")!
-    static let spellingRegistry = CodingUserInfoKey(rawValue: "warp.spellingRegistry")!
+    static let notation = CodingUserInfoKey(rawValue: "warp.notation")!
 }

@@ -38,7 +38,7 @@ struct LoadGateTests {
             "body": [
                 [
                     "id": "only-a",
-                    "when": ["of": ["ref": "kind"], "is": "a"],
+                    "when": ["of": ["ref": "kind"], "equal": "a"],
                     "value": "taken"
                 ]
             ]

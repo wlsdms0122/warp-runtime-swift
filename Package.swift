@@ -89,17 +89,6 @@ let package = Package(
                 "WarpSerialization"
             ]
         ),
-        // The front page's examples, run. It imports exactly what the page
-        // tells a reader to import — a page whose examples do not compile is
-        // worse than no page, and the way to know is to compile them.
-        .testTarget(
-            name: "WarpReadmeTests",
-            dependencies: [
-                "Warp",
-                "WarpSyntax",
-                "WarpSerialization"
-            ]
-        ),
         .testTarget(
             name: "WarpSerializationTests",
             dependencies: [

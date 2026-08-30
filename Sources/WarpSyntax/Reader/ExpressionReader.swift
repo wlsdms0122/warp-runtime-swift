@@ -250,9 +250,9 @@ public struct ExpressionReader: Decodable {
         // says a document may not write it — it does not hand the words back to
         // mean something else, which is why the set of form keys is the same in
         // every notation whether or not each one is offered.
-        let spellings = decoder?.userInfo[.spellingRegistry] as? SpellingRegistry ?? .canonical
+        let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
 
-        guard spellings.interpolation else {
+        guard let interpolation = notation.interpolation else {
             throw ExpressionFormError(
                 "this notation does not spell a template — put the text together"
                     + " by sending the words that put text together"
@@ -309,7 +309,7 @@ public struct ExpressionReader: Decodable {
         // an ambient lookup at run time.
         try validateClosed(segments, over: Set(bindings.keys))
 
-        return try lowered(segments, over: bindings)
+        return try lowered(segments, over: bindings, spending: interpolation)
     }
 
     // A template as the words that build it. Interpolation is a spelling rather
@@ -321,7 +321,8 @@ public struct ExpressionReader: Decodable {
     // being a shape only the template walk knew how to read.
     private static func lowered(
         _ segments: [TemplateSegment],
-        over bindings: [String: Expression]
+        over bindings: [String: Expression],
+        spending interpolation: Interpolation
     ) throws -> Expression {
         let pieces: [Expression] = try segments.map { segment in
             switch segment {
@@ -332,7 +333,7 @@ public struct ExpressionReader: Decodable {
                 return .dispatch(
                     Dispatch(
                         receiver: try substituted(path, over: bindings),
-                        selector: Spelling.read
+                        selector: interpolation.read
                     )
                 )
             }
@@ -344,7 +345,7 @@ public struct ExpressionReader: Decodable {
             return .literal(.string(only))
         }
 
-        return .dispatch(Dispatch(receiver: .array(pieces), selector: Spelling.joined))
+        return .dispatch(Dispatch(receiver: .array(pieces), selector: interpolation.joined))
     }
 
     // A placeholder names a binding and then drills into it, so what it reads is

@@ -29,7 +29,7 @@ struct VariableNotationTests {
                 ["var": "verdict", "value": "untouched"],
                 [
                     "branch": [
-                        "when": ["of": ["ref": "kind"], "is": "a"],
+                        "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
                 ]
@@ -53,7 +53,7 @@ struct VariableNotationTests {
                 ["var": "verdict", "value": "untouched"],
                 [
                     "branch": [
-                        "when": ["of": ["ref": "kind"], "is": "a"],
+                        "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
                 ]
@@ -77,7 +77,7 @@ struct VariableNotationTests {
                 ["id": "seed", "value": 1],
                 [
                     "branch": [
-                        "when": ["present": ["ref": "seed"]],
+                        "when": ["of": ["ref": "seed"], "notEqual": .null],
                         "then": [["var": "inner", "value": 1]]
                     ]
                 ]
@@ -100,7 +100,7 @@ struct VariableNotationTests {
                 ["var": "verdict", "value": "outer"],
                 [
                     "branch": [
-                        "when": ["present": ["ref": "verdict"]],
+                        "when": ["of": ["ref": "verdict"], "notEqual": .null],
                         "then": [["var": "verdict", "value": "inner"]]
                     ]
                 ]

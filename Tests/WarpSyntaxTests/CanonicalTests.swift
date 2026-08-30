@@ -120,7 +120,7 @@ struct CanonicalTests {
             ])
         }
 
-        let spelled = try picking(on: ["of": ["ref": "word"], "is": "hey"])
+        let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
         let plainly = try picking(on: [
             "call": [
                 "procedure": "equal",

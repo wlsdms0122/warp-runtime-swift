@@ -27,7 +27,7 @@ struct BranchTests {
                 ["var": "pick"],
                 [
                     "branch": [
-                        "when": ["of": ["ref": "kind"], "is": "a"],
+                        "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
                     ]

@@ -27,7 +27,7 @@ struct LoopTests {
                 [
                     "id": "gate",
                     "loop": [
-                        "where": ["of": ["ref": "gate.index"], "is_not": 3],
+                        "where": ["of": ["ref": "gate.index"], "notEqual": 3],
                         "body": [["set": "latest", "value": ["ref": "gate.index"]]],
                         "result": ["ref": "latest"]
                     ]
@@ -53,7 +53,7 @@ struct LoopTests {
                 [
                     "id": "gate",
                     "loop": [
-                        "where": ["of": ["ref": "gate.index"], "is_not": 7],
+                        "where": ["of": ["ref": "gate.index"], "notEqual": 7],
                         "body": [["set": "latest", "value": ["ref": "gate.index"]]],
                         "result": ["ref": "latest"]
                     ]
@@ -80,7 +80,7 @@ struct LoopTests {
                     [
                         "id": "gate",
                         "loop": [
-                            "where": ["of": ["ref": "gate.index"], "is_not": 3],
+                            "where": ["of": ["ref": "gate.index"], "notEqual": 3],
                             "body": [["id": "noop", "value": "again"]],
                             "guard": 2
                         ]
@@ -98,7 +98,7 @@ struct LoopTests {
             "body": [
                 [
                     "id": "gate",
-                    "loop": ["where": ["present": ["ref": "gate.index"]], "body": []]
+                    "loop": ["where": ["of": ["ref": "gate.index"], "notEqual": .null], "body": []]
                 ]
             ]
         ])
@@ -126,7 +126,7 @@ struct LoopTests {
                 [
                     "id": "gate",
                     "loop": [
-                        "where": ["of": ["ref": "gate.index"], "is": 0],
+                        "where": ["of": ["ref": "gate.index"], "equal": 0],
                         "body": [["id": "format", "value": "retried"]],
                     ]
                 ]

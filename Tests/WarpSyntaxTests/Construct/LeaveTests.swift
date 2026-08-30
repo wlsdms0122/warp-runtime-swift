@@ -38,7 +38,7 @@ struct LeaveTests {
                 ["var": "early", "value": "kept going"],
                 [
                     "branch": [
-                        "when": ["of": ["ref": "word"], "is": "stop"],
+                        "when": ["of": ["ref": "word"], "equal": "stop"],
                         "then": [["return": "left early"]]
                     ]
                 ]
@@ -66,7 +66,7 @@ struct LeaveTests {
                 [
                     "id": "walked",
                     "loop": [
-                        "where": ["of": ["ref": "seen"], "is_not": 10],
+                        "where": ["of": ["ref": "seen"], "notEqual": 10],
                         "body": [
                             [
                                 "set": "seen",
@@ -78,7 +78,7 @@ struct LeaveTests {
                             ],
                             [
                                 "branch": [
-                                    "when": ["of": ["ref": "seen"], "is": 3],
+                                    "when": ["of": ["ref": "seen"], "equal": 3],
                                     "then": [["break": Value.null]]
                                 ]
                             ]
@@ -109,7 +109,7 @@ struct LeaveTests {
                         "body": [
                             [
                                 "branch": [
-                                    "when": ["of": ["ref": "kept.item"], "is": "skip"],
+                                    "when": ["of": ["ref": "kept.item"], "equal": "skip"],
                                     "then": [["continue": Value.null]]
                                 ]
                             ],
@@ -151,7 +151,7 @@ struct LeaveTests {
                 [
                     "id": "outer",
                     "loop": [
-                        "where": ["of": ["ref": "count"], "is_not": 100],
+                        "where": ["of": ["ref": "count"], "notEqual": 100],
                         "body": [
                             [
                                 "id": "inner",
@@ -402,7 +402,7 @@ struct LeaveTests {
                 [
                     "id": "walked",
                     "loop": [
-                        "where": ["of": ["ref": "seen"], "is_not": 2],
+                        "where": ["of": ["ref": "seen"], "notEqual": 2],
                         "body": [
                             [
                                 "set": "seen",

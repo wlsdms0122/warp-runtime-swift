@@ -27,9 +27,29 @@ public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
 
+    // Which notation the result has to survive being read by — the far side,
+    // not this side. Nothing here writes a spelling, so this never spells
+    // anything; it is used to *avoid* writing data that the reader over there
+    // would take for one.
+    //
+    // The contract is that writing and reading are inverses, and a reading side
+    // with spellings is a different far side from one without. A record with a
+    // field called `of` is data in a document and a condition in a notation that
+    // recognises one by its subject, so writing it plainly is only safe when
+    // whoever reads it back agrees.
+    //
+    // It is deliberately not paired with a `Loader`'s notation, because they
+    // answer different questions: a loader's says what the input is written in,
+    // and this says who the output is for. A front end is exactly where the two
+    // differ — it reads its own notation and writes for the wire.
+    public let readBy: Notation
+
     // MARK: - Initializer
-    public init(registry: ConstructRegistry = .standard) {
+    // Canonical by default, because a document that travels is read by a
+    // runtime, and a runtime has no notation.
+    public init(registry: ConstructRegistry = .standard, readBy: Notation = .canonical) {
         self.registry = registry
+        self.readBy = readBy
     }
 
     // MARK: - Public

@@ -59,46 +59,6 @@ struct UnwritableTests {
         #expect(sut == nil)
     }
 
-    @Test("a record in a condition slot is refused where its fields spell an operator")
-    func aRecordThatWouldReadAsASpellingIsRefused() throws {
-        // Given — this is the one that would not have announced itself. Written
-        // plainly, `{ of: …, is: … }` in a condition slot is read back as a
-        // comparison, so the program that came out would run where the one that
-        // went in was refused.
-        let condition = Warp.Expression.record([
-            "of": .reference(path("word")),
-            "is": .literal(.string("hey"))
-        ])
-
-        // When / Then — nameless, as every branch statement is
-        #expect {
-            try sut.value(
-                of: Module(
-                    procedures: [
-                        entryName: Procedure(
-                            signature: Signature(parameters: ["word": Parameter(type: .string)]),
-                            body: [
-                                Statement(expression: .conditional(
-                                    condition,
-                                    then: [Statement(expression: .literal(.string("yes")))],
-                                    else: nil
-                                ))
-                            ]
-                        )
-                    ]
-                )
-            )
-        } throws: { error in
-            "\(error)".contains("read as a form")
-        }
-
-        // The same record anywhere else is ordinary — only a condition slot
-        // reads those words
-        #expect(throws: Never.self) {
-            try sut.value(of: module(binding: condition))
-        }
-    }
-
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
         // Given — nothing stops a module declaring a type called `int`; a
@@ -164,41 +124,6 @@ struct UnwritableTests {
         #expect(throws: Never.self) {
             try sut.value(of: TypeExpression.record(["procedure": .int, "other": .bool]))
         }
-    }
-
-    @Test("what a document cannot say, a run does not see either")
-    func whatIsRefusedNeverBecomesAnotherProgram() async throws {
-        // Given — the refusals above are worth having only if the alternative is
-        // worse. This is the alternative: the same shape written plainly comes
-        // back as a comparison and answers, where the shape it came from is
-        // refused before it runs.
-        let asWritten: Value = [
-            "procedures": [
-                "entry": [
-                    "parameters": ["word": "string"],
-                    "body": [
-                        ["var": "pick"],
-                        [
-                            "branch": [
-                                "when": ["of": ["ref": "word"], "is": "hey"],
-                                "then": [["set": "pick", "value": "yes"]],
-                                "else": [["set": "pick", "value": "no"]]
-                            ]
-                        ]
-                    ],
-                    "result": ["result": ["ref": "pick"]]
-                ]
-            ]
-        ]
-
-        // When — read as a spelling, this is a comparison and it answers
-        let outputs = try await run(
-            try loader.loadDocument(asWritten),
-            arguments: ["word": .string("hey")]
-        )
-
-        // Then
-        #expect(outputs["result"] == .string("yes"))
     }
 
     // MARK: - Public

@@ -83,8 +83,10 @@ The stages and what each one checks are the specification's, not this file's.
 
 `Loader` reads the canonical document and nothing else by default. Which
 construct words exist is a `ConstructRegistry`; a host may register its own
-forms, and a notation layer (a front end) may hand a `SpellingRegistry` to
-read spelled documents — the wire never carries a spelling.
+forms. A front end may also hand over a `Notation` — its own condition
+spelling and its own template words — and no table of either is shipped here:
+a document has no spellings, so this package names none. The wire never carries
+one.
 
 `Writer` is the way back out: a program that was *built* rather than read has
 no document to hand to anything running elsewhere, and this is how it gets one.
@@ -144,6 +146,6 @@ thing it must not do.
 ## Status
 
 Settled enough to write in, not settled enough to be stable. Everything above
-is implemented and tested — the examples on this page are executed by test
-suites rather than transcribed into them. Names still move; a program written
-against this package should expect to be edited when they do.
+is implemented and tested; what the language *does* is asked by the
+specification's cases rather than by anything written here. Names still move; a
+program written against this package should expect to be edited when they do.

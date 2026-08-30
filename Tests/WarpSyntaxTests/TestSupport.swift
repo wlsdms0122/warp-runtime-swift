@@ -117,7 +117,7 @@ extension Module {
 extension Loader {
     static let testing = Loader(
         registry: try! ConstructRegistry.standard.registering(FailForm.self),
-        spellings: .standard
+        notation: .testing
     )
 }
 

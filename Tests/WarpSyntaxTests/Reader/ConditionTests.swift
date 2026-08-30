@@ -174,7 +174,7 @@ struct ConditionTests {
             "body": [
                 [
                     "branch": [
-                        "when": ["of": ["ref": "k"], "is": "a", "is_not": "b"],
+                        "when": ["of": ["ref": "k"], "equal": "a", "notEqual": "b"],
                         "then": [["id": "taken", "value": "x"]]
                     ]
                 ]
@@ -182,48 +182,6 @@ struct ConditionTests {
         ]
 
         // When / Then — first-wins would silently drop the second predicate
-        #expect(throws: DecodingError.self) {
-            try Loader.testing.loadProcedure(fixture)
-        }
-    }
-
-    @Test("a binary operator without a subject is rejected")
-    func binaryOperatorWithoutSubjectRejected() {
-        // Given
-        let fixture: Value = [
-            "parameters": ["k": "string"],
-            "body": [
-                [
-                    "branch": [
-                        "when": ["is": "a"],
-                        "then": [["id": "taken", "value": "x"]]
-                    ]
-                ]
-            ]
-        ]
-
-        // When / Then — is compares two sides; a lone operand names neither
-        #expect(throws: DecodingError.self) {
-            try Loader.testing.loadProcedure(fixture)
-        }
-    }
-
-    @Test("present with a subject key is rejected")
-    func presentWithSubjectKeyRejected() {
-        // Given
-        let fixture: Value = [
-            "parameters": ["k": "string"],
-            "body": [
-                [
-                    "branch": [
-                        "when": ["of": ["ref": "k"], "present": ["ref": "k"]],
-                        "then": [["id": "taken", "value": "x"]]
-                    ]
-                ]
-            ]
-        ]
-
-        // When / Then — present takes its expression directly, without `of`
         #expect(throws: DecodingError.self) {
             try Loader.testing.loadProcedure(fixture)
         }

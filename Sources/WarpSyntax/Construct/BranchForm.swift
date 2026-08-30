@@ -22,12 +22,10 @@ public struct BranchForm: ConstructForm {
     // MARK: - Property
     public static let key = "branch"
 
-    // The condition slot reads operators this notation named itself, so the
-    // words behind them are owed wherever this form is registered and nowhere
-    // else.
-    public static func vocabulary(with spellings: SpellingRegistry) -> Set<String> {
-        spellings.operatorWords
-    }
+    // The condition slot may be written in spellings a notation named itself, so
+    // the words behind them are owed wherever this form is registered and
+    // nowhere else. Which words those are is never this form's business.
+    public static let readsCondition = true
 
     private let condition: Expression
     private let then: [Statement]

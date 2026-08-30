@@ -55,10 +55,17 @@ public extension Writer {
         return .object(written)
     }
 
-    // Where the expression is going decides what may be written bare there. Most
-    // slots reserve the form keys alone; a condition slot also reserves the
-    // words a spelling is recognised by, since anything written plainly there
-    // would be read as one.
+    // Where the expression is going decides what may be written bare there. The
+    // form keys are read as forms wherever data appears, so every slot reserves
+    // those; a condition slot also reserves whatever the notation on the far
+    // side recognises a condition by, since data written plainly there would
+    // come back as one.
+    //
+    // The second half is empty for a document, which is what makes it worth
+    // naming rather than assuming: a document's condition slot is an expression
+    // like any other, and `.canonical` reserves nothing there. It stops being
+    // empty exactly when the reading side is a notation, and then this is the
+    // only thing standing between a record and a message.
     func value(of expression: Expression, reserving reserved: Set<String> = []) throws -> Value {
         let reserved = reserved.union(ExpressionReader.formKeys)
 
@@ -122,6 +129,12 @@ public extension Writer {
     }
 
     // MARK: - Private
+    // What the reading side would take for a condition rather than for data.
+    // Nothing for a document, which has no notation to take it for one.
+    private var conditionKeys: Set<String> {
+        readBy.condition?.keys ?? []
+    }
+
     // A construct key and what goes under it. The key comes from the registry
     // rather than from the form, because a notation may have respelled it or
     // given it up.
@@ -152,7 +165,7 @@ public extension Writer {
         // asks.
         case let .conditional(condition, then, otherwise):
             var written: [String: Value] = [
-                "when": try value(of: condition, reserving: ConditionReader.reservedOperatorKeys),
+                "when": try value(of: condition, reserving: conditionKeys),
                 "then": .array(try then.map(value(of:)))
             ]
 
@@ -166,7 +179,7 @@ public extension Writer {
             try named(round, matches: id, in: "loop", binding: "round")
 
             var written: [String: Value] = [
-                "where": try value(of: condition, reserving: ConditionReader.reservedOperatorKeys)
+                "where": try value(of: condition, reserving: conditionKeys)
             ]
 
             written.merge(try fields(of: body)) { one, _ in one }

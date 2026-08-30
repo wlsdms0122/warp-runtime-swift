@@ -27,7 +27,7 @@ struct SpellingTests {
                 BranchForm.self,
                 as: "unless"
             ),
-            spellings: .standard
+            notation: .testing
         )
         let sut = try loader.loadProcedure([
             "parameters": ["kind": "string"],
@@ -35,7 +35,7 @@ struct SpellingTests {
                 ["var": "pick"],
                 [
                     "unless": [
-                        "when": ["of": ["ref": "kind"], "is": "a"],
+                        "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
                     ]
@@ -99,7 +99,7 @@ struct SpellingTests {
                     [
                         "id": "pick",
                         "branch": [
-                            "when": ["of": ["ref": "kind"], "is": "a"],
+                            "when": ["of": ["ref": "kind"], "equal": "a"],
                             "then": [
                                 "body": [["id": "chosen", "value": "took-then"]],
                                 "result": ["ref": "chosen"]

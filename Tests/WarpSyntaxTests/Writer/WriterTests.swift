@@ -72,11 +72,43 @@ struct WriterTests {
         // side is somewhere else.
         let written = try sut.value(of: try loader.loadDocument(document))
 
-        // When
-        let spellings = Set(Spelling.operators.keys).union(["format", "with"])
+        // When — the two template keys, which are reserved in every notation.
+        // The condition spelling these are read with is recognised by `of`,
+        // which is how a message names its receiver everywhere — so it leaves no
+        // key here that a survival could be told apart by. A spelling whose key
+        // is not also a word is asked about below.
+        let spellings: Set<String> = ["format", "with"]
 
         // Then
         #expect(Self.keys(in: written).isDisjoint(with: spellings))
+    }
+
+    @Test("a spelling whose key is nobody's word does not survive being written")
+    func aSpelledKeyIsNotWrittenBack() throws {
+        // Given — the corpus above cannot answer this. Its notation names the
+        // word in the document (`{ of: x, equal: y }`), so a key that survived
+        // and a word that was written look the same on the way out. This one
+        // spells `holds` and reaches `example.holds`, and the key appears in a
+        // document only if the writing side kept a spelling.
+        let loader = Loader(notation: Notation(condition: WordedConditions()))
+        let module = try loader.loadProcedure([
+            "parameters": ["ready": "bool"],
+            "body": [
+                [
+                    "branch": [
+                        "when": ["holds": ["ref": "ready"]],
+                        "then": [["id": "kept", "value": "yes"]]
+                    ]
+                ]
+            ]
+        ])
+
+        // When
+        let written = try sut.value(of: module)
+
+        // Then
+        #expect(Self.keys(in: written).isDisjoint(with: WordedConditions().keys))
+        #expect(Self.keys(in: written).contains("call"))
     }
 
     @Test("a written program runs the way the one it came from did")
@@ -84,7 +116,7 @@ struct WriterTests {
         // Given — a fixed point says the writing settled, not that it kept
         // everything. Running both is what notices a slot dropped on the way out.
         let document: Value = [
-            "needs": ["plus", "std.logic.equal", "std.text.joined", "std.text.text"],
+            "needs": ["equal", "joined", "plus", "text"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>", "word": "string"],
@@ -92,7 +124,7 @@ struct WriterTests {
                         ["var": "pick"],
                         [
                             "branch": [
-                                "when": ["of": ["ref": "word"], "is": "hey"],
+                                "when": ["of": ["ref": "word"], "equal": "hey"],
                                 "then": [["set": "pick", "value": "matched"]],
                                 "else": [["set": "pick", "value": "missed"]]
                             ]
@@ -151,7 +183,7 @@ struct WriterTests {
 
     @Test("a spelling is written back as the words it stood for")
     func aSpellingIsWrittenPlainly() throws {
-        // Given — `{ of: x, is: y }` is a spelling, and what it means is a
+        // Given — `{ of: x, <word>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try loader.loadProcedure([
@@ -159,7 +191,7 @@ struct WriterTests {
             "body": [
                 [
                     "branch": [
-                        "when": ["of": ["ref": "word"], "is": "hey"],
+                        "when": ["of": ["ref": "word"], "equal": "hey"],
                         "then": [["id": "kept", "value": "matched"]]
                     ]
                 ]
@@ -179,10 +211,8 @@ struct WriterTests {
             return
         }
 
-        // The word by its full name, since that is what the spelling reached —
-        // writing the bare one would put a name in the document that a module
-        // declaring its own `equal` could quietly take over.
-        #expect(message["procedure"] == .string(SpellingRegistry.standard.word(for: "is") ?? "is"))
+        // The word the spelling reached, written as the message it always was.
+        #expect(message["procedure"] == .string("equal"))
         #expect(message["of"]?["ref"] == .string("word"))
         #expect(message["arguments"]?["value"] == .string("hey"))
     }
@@ -652,10 +682,36 @@ struct WriterTests {
                         ["var": "pick"],
                         [
                             "branch": [
+                                // A connective is a word over sides nobody has
+                                // asked yet, which is why each arrives as a
+                                // closure. A notation may spell that; a document
+                                // writes it.
                                 "when": [
-                                    "all_of": [
-                                        ["of": ["ref": "word"], "is": "hey"],
-                                        ["not": ["present": ["ref": "ready"]]]
+                                    "call": [
+                                        "procedure": "and",
+                                        "of": [
+                                            [
+                                                "closure": [
+                                                    "result": [
+                                                        "call": [
+                                                            "procedure": "equal",
+                                                            "of": ["ref": "word"],
+                                                            "arguments": ["value": "hey"]
+                                                        ]
+                                                    ]
+                                                ]
+                                            ],
+                                            [
+                                                "closure": [
+                                                    "result": [
+                                                        "call": [
+                                                            "procedure": "not",
+                                                            "of": ["ref": "ready"]
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+                                        ]
                                     ]
                                 ],
                                 "then": [["set": "pick", "value": "yes"]],
@@ -678,7 +734,7 @@ struct WriterTests {
                         [
                             "id": "walked",
                             "loop": [
-                                "where": ["of": ["ref": "seen"], "is_not": 3],
+                                "where": ["of": ["ref": "seen"], "notEqual": 3],
                                     "body": [
                                     [
                                         "set": "seen",

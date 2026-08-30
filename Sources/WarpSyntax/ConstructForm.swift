@@ -23,15 +23,23 @@ public protocol ConstructForm: Sendable, Decodable {
     // a fact about a notation, and a form is not one.
     static var key: String { get }
 
+    // Whether this form opens a condition slot. Answering yes is how a form owns
+    // the words its notation spends there, without knowing any of them.
+    //
+    // It is a fact about the form rather than a sum the form computes. A form
+    // that had to fetch what its slot spends is a form that can fetch nothing
+    // and be believed, and the under-declared debt surfaces as a link failure
+    // far from here. A form says which slots it opens; the registry adds up what
+    // those slots spend.
+    static var readsCondition: Bool { get }
+
     // Words this form's expression sends, which a link has to declare for the
     // spelling to reach anything. Most forms build the language's own constructs
     // and send nothing, so most leave this empty.
     //
-    // It is asked with the spellings on offer because some of what a form spends
-    // is spent on its behalf: a slot that reads a condition spends whatever the
-    // condition spellings reach, and a notation offering none spends nothing
-    // there.
-    static func vocabulary(with spellings: SpellingRegistry) -> Set<String>
+    // These are the form's own — a word it decided to send. What its slots spend
+    // is not here; it is above.
+    static func vocabulary(with notation: Notation) -> Set<String>
 
     // Throws when the form cannot be the statement it was written as — the
     // one case today being a form that binds through the statement's name,
@@ -40,7 +48,9 @@ public protocol ConstructForm: Sendable, Decodable {
 }
 
 public extension ConstructForm {
-    static func vocabulary(with spellings: SpellingRegistry) -> Set<String> { [] }
+    static var readsCondition: Bool { false }
+
+    static func vocabulary(with notation: Notation) -> Set<String> { [] }
 
     // The name a binding construct binds through. It is the statement's own —
     // which is why these constructs cannot be written nameless: with no name,

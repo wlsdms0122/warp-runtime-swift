@@ -144,7 +144,7 @@ struct ExpressionFormTests {
             return
         }
 
-        #expect(joined.selector == Spelling.joined)
+        #expect(joined.selector == Notation.testing.interpolation?.joined)
         #expect(pieces.count == 2)
         #expect(pieces.first?.constantValue == .string("hello, "))
 
@@ -156,7 +156,7 @@ struct ExpressionFormTests {
 
         // The binding is substituted, so the placeholder never names anything
         // the template was not given.
-        #expect(spelled.selector == Spelling.read)
+        #expect(spelled.selector == Notation.testing.interpolation?.read)
         #expect(spelled.receiver?.referencePath == [.key("name")])
     }
 
