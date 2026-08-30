@@ -28,8 +28,17 @@ extension Linker {
     func qualified(_ modules: [Module]) throws -> (
         modules: [Module],
         types: [String: TypeExpression],
-        constraints: [String: [TypeExpression]]
+        constraints: [String: [TypeExpression]],
+        places: [String: Place]
     ) {
+        // Where each of those names was written, by the key the document wrote
+        // it under. Gathered here because this is where both halves of the
+        // joining are in hand — anywhere later has only the joined name, and
+        // taking it apart again is a second copy of a rule that has to be right
+        // once. One table for both spaces: a name declared as a type and as a
+        // constraint is refused below, so the two cannot collide here.
+        var places: [String: Place] = [:]
+
         // Each space checked whole before the two are held against each
         // other: a link is handed its world at once, so what it concludes
         // cannot depend on the order the caller happened to list the modules.
@@ -39,6 +48,8 @@ extension Linker {
         for module in modules {
             for name in module.types.keys.sorted() {
                 let qualified = module.qualified(name)
+
+                places[qualified] = .type(name, in: module.name)
 
                 guard types.insert(qualified).inserted else {
                     throw LinkError(
@@ -52,6 +63,8 @@ extension Linker {
         for module in modules {
             for name in module.constraints.keys.sorted() {
                 let qualified = module.qualified(name)
+
+                places[qualified] = .constraint(name, in: module.name)
 
                 guard !types.contains(qualified) else {
                     throw LinkError(
@@ -112,7 +125,7 @@ extension Linker {
             }
         }
 
-        return (renamed, declaredTypes, declaredConstraints)
+        return (renamed, declaredTypes, declaredConstraints, places)
     }
 
     // The shared rule, with this surface's two failure sentences: a mention
@@ -150,16 +163,6 @@ extension Linker {
 extension Module {
     func qualified(_ name: String) -> String {
         self.name.map { module in "\(module).\(name)" } ?? name
-    }
-
-    // The declared key behind a name this link qualified. The joining above is
-    // this module's, so undoing it is too — a place spelled from a qualified
-    // name anywhere else is a second copy of a rule that only has to be right
-    // once, and the copy is what put the module's name in twice.
-    func declared(_ qualified: String) -> String {
-        guard let name, qualified.hasPrefix("\(name).") else { return qualified }
-
-        return String(qualified.dropFirst(name.count + 1))
     }
 }
 

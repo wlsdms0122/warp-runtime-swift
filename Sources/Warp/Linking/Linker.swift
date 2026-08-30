@@ -47,12 +47,13 @@ public struct Linker: Sendable {
         // reads type expressions and one spelling has to mean one thing. The
         // spaces come back gathered — the qualifying pass owns their
         // uniqueness, so it hands over the tables that fact was proved on.
-        let (modules, declaredTypes, declaredConstraints) = try qualified(modules)
+        let (modules, declaredTypes, declaredConstraints, places) = try qualified(modules)
 
         let types = try types(
             of: modules,
             declared: declaredTypes,
-            constraints: declaredConstraints
+            constraints: declaredConstraints,
+            at: places
         )
         let symbols = try symbols(of: modules)
 
@@ -687,23 +688,9 @@ public struct Linker: Sendable {
     private func types(
         of modules: [Module],
         declared: [String: TypeExpression],
-        constraints members: [String: [TypeExpression]]
+        constraints members: [String: [TypeExpression]],
+        at places: [String: Place]
     ) throws -> TypeTable {
-        // The tables are keyed by what the link calls a declaration, and a
-        // place is spelled by what the document called it. The joining is the
-        // module's, so undoing it is the module's too — asked here once, so
-        // that every refusal below reads the same answer.
-        var places: [String: Place] = [:]
-
-        for module in modules {
-            for name in module.types.keys {
-                places[name] = .type(module.declared(name), in: module.name)
-            }
-
-            for name in module.constraints.keys {
-                places[name] = .constraint(module.declared(name), in: module.name)
-            }
-        }
 
         // A name that reaches a shape may name itself along the way — `Tree`
         // holding `array<Tree>` is a shape. A name that reaches only names
@@ -773,7 +760,7 @@ public struct Linker: Sendable {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
                     in: type,
-                    at: .type(module.declared(name), in: module.name),
+                    at: places[name],
                     parameterized: false,
                     resolve: table
                 )
@@ -783,7 +770,7 @@ public struct Linker: Sendable {
                 for member in members {
                     try mentioned(
                         in: member,
-                        at: .constraint(module.declared(name), in: module.name),
+                        at: places[name],
                         parameterized: false,
                         resolve: table
                     )
@@ -879,7 +866,7 @@ public struct Linker: Sendable {
     // walked by neither the frontier nor the pure set.
     private func judge(
         cast named: TypeExpression,
-        at place: Place,
+        at place: Place?,
         in table: TypeTable
     ) throws {
         try mentioned(in: named, at: place, parameterized: true, resolve: table)
@@ -922,7 +909,7 @@ public struct Linker: Sendable {
     // one thing.
     private func judgeConstraints(
         of signature: Signature,
-        at place: Place,
+        at place: Place?,
         in table: TypeTable
     ) throws {
         var bounds: [String: Set<String>] = [:]
@@ -962,7 +949,7 @@ public struct Linker: Sendable {
     // living in the typing walk is exactly the drift the rule exists against.
     func mentioned(
         in type: TypeExpression,
-        at place: Place,
+        at place: Place?,
         parameterized: Bool,
         resolve table: TypeTable
     ) throws {
@@ -1027,11 +1014,11 @@ public struct Linker: Sendable {
             for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
                     in: parameter.declared,
-                    at: place.key(name),
+                    at: place?.key(name),
                     parameterized: parameterized,
                     resolve: table
                 )
-                try judge(parameter, called: name, at: place.key(name), in: table)
+                try judge(parameter, called: name, at: place?.key(name), in: table)
             }
 
             try mentioned(
@@ -1087,7 +1074,7 @@ public struct Linker: Sendable {
             for (name, field) in fields.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
                     in: field,
-                    at: place.key(name),
+                    at: place?.key(name),
                     parameterized: parameterized,
                     resolve: table
                 )
@@ -1103,7 +1090,7 @@ public struct Linker: Sendable {
     private func judge(
         _ parameter: Parameter,
         called name: String,
-        at place: Place,
+        at place: Place?,
         in table: TypeTable
     ) throws {
         if let allowed = parameter.oneOf {

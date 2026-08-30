@@ -363,7 +363,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(assembled?.place?.document == Place.Document.none)
+        #expect(assembled?.place?.document == .assembled)
         #expect(read?.place?.document == .shared)
     }
 

@@ -119,7 +119,9 @@ still a document — it declares into the link's shared space, the way a
 translation unit without a namespace does. A program a caller assembled in
 memory is not a document at all. Spelling both of those the same way would let a
 place with no text under it be matched against any file an author never named,
-and answered with that file's first line.
+and answered with that file's first line. The third case is `assembled` rather
+than `none`, since `Optional.none` answers to that spelling too and `document ==
+.none` would read true for a place that does not exist.
 
 Not every refusal has a place, and the ones that do not say so: two modules
 declaring one name is two places and an entry nobody declares is none, so those

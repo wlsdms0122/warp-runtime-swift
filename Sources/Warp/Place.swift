@@ -82,7 +82,11 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    public init(_ steps: [Step] = [], in document: Document = .none) {
+    // The document is stated and never defaulted, for the reason a refusal's
+    // place is: a caller that says nothing gets the one state nothing can be
+    // read for, and a place that meant to say which text it was in would look
+    // like a program that was never written down.
+    public init(_ steps: [Step] = [], in document: Document) {
         self.document = document
         self.steps = steps
     }
@@ -110,7 +114,9 @@ public struct Place: Sendable, Equatable {
     // it. There is no key to name, so the place says what was handed in — and
     // no document either, which is a third thing and not a module that wrote
     // no name.
-    public static func given(_ name: String) -> Place { Place([.landmark(name)], in: .none) }
+    public static func given(_ name: String) -> Place {
+        Place([.landmark(name)], in: .assembled)
+    }
 
     public func key(_ name: String) -> Place { appending(.key(name)) }
 
@@ -161,10 +167,14 @@ public extension Place {
     // and the two are not the same fact: spelling both `nil` let a place with
     // no document under it be matched against any text that wrote no name, and
     // answered with that text's first line.
+    // `assembled` and not `none`: `Optional.none` would answer to that
+    // spelling too, so `document == .none` would read true for a place that
+    // does not exist and for one whose program was never written down — the
+    // two the third case exists to keep apart.
     enum Document: Sendable, Equatable {
         case named(String)
         case shared
-        case none
+        case assembled
 
         // What a module declares into, by whether it wrote a name.
         static func declaring(_ name: String?) -> Document {
