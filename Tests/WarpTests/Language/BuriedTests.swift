@@ -122,7 +122,7 @@ struct BuriedTests {
         }
 
         // Then
-        #expect(casts == ["entry.held.closure.result", "entry.result.rescue[0]"])
+        #expect(casts == ["entry.body.held.value.closure.result", "entry.result.rescue.body[0].value"])
 
         // And the closure literal is found at the place its body is
         let closures = sut.buried(at: .given("entry")).compactMap { place, expression -> String? in
@@ -131,7 +131,7 @@ struct BuriedTests {
             return place.rendered
         }
 
-        #expect(closures == ["entry.held.closure"])
+        #expect(closures == ["entry.body.held.value.closure"])
     }
 
     @Test("named children are walked in name order, each under its own place")
@@ -174,7 +174,7 @@ struct BuriedTests {
                 guard case .cast = expression else { return nil }
 
                 return place.rendered
-            } == ["entry.first", "entry.second"]
+            } == ["entry.arguments.first", "entry.arguments.second"]
         )
     }
 

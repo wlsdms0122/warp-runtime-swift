@@ -44,8 +44,8 @@ struct PlaceTests {
         )
 
         // Then
-        #expect(spin?.rendered == "procedures.entry.body.spin.where")
-        #expect(walk?.rendered == "procedures.entry.body.walk.in")
+        #expect(spin?.rendered == "procedures.entry.body.spin.loop.where")
+        #expect(walk?.rendered == "procedures.entry.body.walk.each.in")
     }
 
     @Test("what a call is written with is named under the key holding it")
@@ -62,7 +62,7 @@ struct PlaceTests {
         )
 
         // Then
-        #expect(sut?.rendered == "procedures.entry.body.sent.arguments.amount")
+        #expect(sut?.rendered == "procedures.entry.body.sent.call.arguments.amount")
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
@@ -73,13 +73,13 @@ struct PlaceTests {
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
-        #expect(named?.rendered == "procedures.entry.body.held")
-        #expect(bare?.rendered == "procedures.entry.body[0]")
+        #expect(named?.rendered == "procedures.entry.body.held.value")
+        #expect(bare?.rendered == "procedures.entry.body[0].value")
 
         // And the name is not all that is kept: a reader mapping a place back
         // to the text it was written in needs the position, which a name would
         // have spent.
-        #expect(named?.steps.last == .statement(name: "held", at: 0))
+        #expect(named?.steps.contains(.statement(name: "held", at: 0)) == true)
     }
 
     @Test("a signature's slots are named under the key a procedure declares them with")
@@ -117,9 +117,9 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held")
+        #expect(error?.place?.rendered == "procedures.entry.body.held.value")
         #expect(error?.message.contains("procedures.entry") == false)
-        #expect(error?.description.hasPrefix("procedures.entry.body.held: ") == true)
+        #expect(error?.description.hasPrefix("procedures.entry.body.held.value: ") == true)
     }
 
     @Test("what the link refuses is placed the way what the load refuses is")
@@ -141,7 +141,95 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.sent")
+        #expect(error?.place?.rendered == "procedures.entry.body.sent.call")
+    }
+
+    @Test("the link narrows to the argument it refused, not to the call holding it")
+    func aLinkRefusalNarrowsToTheArgument() {
+        // Given — a call written with several arguments, one of which holds
+        // what the declaration does not take. Reported from the call, an
+        // author is told a thing is wrong and not which of the three it is.
+        let sut = Module(
+            procedures: [
+                entryName: Procedure(body: [
+                    Statement(
+                        id: "sent",
+                        expression: .dispatch(
+                            Dispatch(selector: "helper", arguments: [
+                                "first": .literal(.int(1)),
+                                "second": .literal(.string("two")),
+                                "third": .literal(.int(3))
+                            ])
+                        )
+                    )
+                ]),
+                "helper": Procedure(
+                    signature: Signature(parameters: [
+                        "first": Parameter(type: .int),
+                        "second": Parameter(type: .int),
+                        "third": Parameter(type: .int)
+                    ]),
+                    body: []
+                )
+            ]
+        )
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: entryName)
+        }
+
+        // Then
+        #expect(
+            error?.place?.rendered == "procedures.entry.body.sent.call.arguments.second"
+        )
+    }
+
+    @Test("one place, whichever stage walked the text")
+    func theTwoStagesSpellOneSlotOneWay() {
+        // Given — the same slot of the same statement, reached once by the
+        // walk that checks a document against itself and once by the walk that
+        // resolves its names. Two spellings of one place is two documents as
+        // far as an author following the words is concerned.
+        let refused = Module(
+            procedures: [
+                entryName: Procedure(body: [
+                    Statement(
+                        id: "sent",
+                        expression: .dispatch(
+                            Dispatch(selector: "helper", arguments: ["amount": reference("missing")])
+                        )
+                    )
+                ])
+            ]
+        )
+
+        let linked = Module(
+            procedures: [
+                entryName: Procedure(body: [
+                    Statement(
+                        id: "sent",
+                        expression: .dispatch(
+                            Dispatch(selector: "helper", arguments: ["amount": .literal(.string("x"))])
+                        )
+                    )
+                ]),
+                "helper": Procedure(
+                    signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                    body: []
+                )
+            ]
+        )
+
+        // When
+        let load = #expect(throws: ValidationError.self) { try Validator().validate(refused) }
+        let link = #expect(throws: LinkError.self) {
+            try Language().link([linked] + Module.standard, entry: entryName)
+        }
+
+        // Then
+        #expect(load?.place?.rendered == "procedures.entry.body.sent.call.arguments.amount")
+        #expect(link?.place?.rendered == "procedures.entry.body.sent.call.arguments.amount")
     }
 
     // MARK: - Public

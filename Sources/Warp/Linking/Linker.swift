@@ -255,7 +255,7 @@ public struct Linker: Sendable {
 
                 let (rewritten, gathered) = try resolvedSites(
                     in: block,
-                    at: Place.procedure(symbol.qualified).key("body"),
+                    at: .procedure(symbol.qualified),
                     in: environment,
                     with: frame,
                     folding: folding
@@ -329,7 +329,7 @@ public struct Linker: Sendable {
             if let returns = resolved.signature.returns,
                let answer = resolved.block?.result?.constantValue {
                 do {
-                    _ = try returns.settling(answer, at: "result", in: types)
+                    _ = try returns.settling(answer, at: "answer", in: types)
                 } catch {
                     throw LinkError(
                         "answers \(answer.type), and its"
@@ -1418,7 +1418,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "sending '\(dispatch.selector)' with"
                     + " \(undeclared.joined(separator: ", ")), which it does not declare",
-                at: site.place
+                at: site.place.key("arguments")
             )
         }
 
@@ -1438,7 +1438,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "sending '\(dispatch.selector)' without"
                     + " \(missing.joined(separator: ", ")), which it requires",
-                at: site.place
+                at: site.place.key("arguments")
             )
         }
 
@@ -1456,7 +1456,10 @@ public struct Linker: Sendable {
             do {
                 _ = try parameter.taking(constant, called: name, in: types)
             } catch {
-                throw LinkError("sending '\(dispatch.selector)' — \(error)", at: site.place)
+                throw LinkError(
+                    "sending '\(dispatch.selector)' — \(error)",
+                    at: site.place.key("arguments").key(name)
+                )
             }
         }
 
@@ -1470,7 +1473,10 @@ public struct Linker: Sendable {
             do {
                 try query.validate(constants)
             } catch {
-                throw LinkError("sending '\(dispatch.selector)' — \(error)", at: site.place)
+                throw LinkError(
+                    "sending '\(dispatch.selector)' — \(error)",
+                    at: site.place.key("arguments")
+                )
             }
         }
 
@@ -1489,7 +1495,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "sending '\(dispatch.selector)' with \(name),"
                     + " which holds \(written) where \(parameter.declared) is declared",
-                at: site.place
+                at: site.place.key("arguments").key(name)
             )
         }
 
@@ -1504,7 +1510,7 @@ public struct Linker: Sendable {
                 throw LinkError(
                     "sending '\(dispatch.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",
-                    at: site.place
+                    at: site.place.key("of")
                 )
             }
         }

@@ -63,20 +63,27 @@ public extension Expression {
         // having to say it twice.
         let here: Trail = if case .closure = self { stepping(trail, .key("closure")) } else { trail }
 
-        func inner(_ expression: Expression) -> [(Trail, Expression)] {
-            expression.buried(at: here, stepping: stepping)
+        func inner(_ expression: Expression, under key: String? = nil) -> [(Trail, Expression)] {
+            expression.buried(
+                at: key.map { key in stepping(here, .key(key)) } ?? here,
+                stepping: stepping
+            )
         }
 
-        // Named children are walked in name order and each is given its own
-        // place. Order because a `Dictionary` walks in whatever order its seed
-        // decided, and the stages downstream stop at the first refusal — which
-        // one an author is shown would be a fact of the run rather than of the
-        // text. Its own place because two of them reported from the same one
-        // would say a thing is wrong and not say which.
-        func named(_ children: [String: Expression]) -> [(Trail, Expression)] {
+        // What a call is written with, walked in name order and each given its
+        // own place. Order because a `Dictionary` walks in whatever order its
+        // seed decided, and the stages downstream stop at the first refusal —
+        // which one an author is shown would be a fact of the run rather than
+        // of the text. Its own place because two of them reported from the
+        // same one would say a thing is wrong and not say which.
+        func arguments(_ children: [String: Expression]) -> [(Trail, Expression)] {
+            named(children, under: stepping(here, .key("arguments")))
+        }
+
+        func named(_ children: [String: Expression], under place: Trail) -> [(Trail, Expression)] {
             children.sorted { mine, theirs in mine.key < theirs.key }
                 .flatMap { name, child in
-                    child.buried(at: stepping(here, .key(name)), stepping: stepping)
+                    child.buried(at: stepping(place, .key(name)), stepping: stepping)
                 }
         }
 
@@ -88,36 +95,42 @@ public extension Expression {
             procedure.block?.buried(at: here, stepping: stepping) ?? []
 
         case let .cast(value, _, _):
-            inner(value)
+            inner(value, under: "of")
 
+        // A leave writes what it carries directly under its own construct key,
+        // which the statement holding it already stepped into.
         case let .leave(leave):
-            leave.value.map(inner) ?? []
+            leave.value.map { value in inner(value) } ?? []
 
         case let .array(array):
-            array.flatMap(inner)
+            array.enumerated().flatMap { position, element in
+                element.buried(at: stepping(here, .index(position)), stepping: stepping)
+            }
 
         case let .record(record):
-            named(record)
+            named(record, under: here)
 
-        case let .invoke(callee, arguments):
-            inner(callee) + named(arguments)
+        case let .invoke(callee, written):
+            inner(callee, under: "procedure") + arguments(written)
 
         case let .dispatch(dispatch):
-            (dispatch.receiver.map(inner) ?? []) + named(dispatch.arguments)
+            (dispatch.receiver.map { receiver in inner(receiver, under: "of") } ?? [])
+                + arguments(dispatch.arguments)
 
         case let .block(block):
             block.buried(at: here, stepping: stepping)
 
         case let .conditional(condition, then, otherwise):
-            inner(condition)
-                + then.buried(at: here, stepping: stepping)
-                + (otherwise?.buried(at: here, stepping: stepping) ?? [])
+            inner(condition, under: "when")
+                + then.buried(at: stepping(here, .key("then")), stepping: stepping)
+                + (otherwise?.buried(at: stepping(here, .key("else")), stepping: stepping) ?? [])
 
         case let .loop(condition, body, _):
-            inner(condition) + body.buried(at: here, stepping: stepping)
+            inner(condition, under: "where") + body.buried(at: here, stepping: stepping)
 
         case let .iteration(material, body, _):
-            inner(material) + body.buried(at: here, stepping: stepping)
+            inner(material, under: "in")
+                + body.buried(at: stepping(here, .key("body")), stepping: stepping)
 
         case let .attempt(block, rescue, _):
             block.buried(at: here, stepping: stepping)
@@ -133,7 +146,7 @@ public extension Block {
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Expression)] {
-        body.buried(at: trail, stepping: stepping)
+        body.buried(at: stepping(trail, .key("body")), stepping: stepping)
             + (result.map { result in
                 result.buried(at: stepping(trail, .key("result")), stepping: stepping)
             } ?? [])
@@ -141,15 +154,19 @@ public extension Block {
 }
 
 public extension [Statement] {
-    // A statement is found under its own name, and one run for its effect
-    // alone under its position — which is the only thing there is to call it.
+    // A statement is found under its own name — or, one run for its effect
+    // alone, under its position, which is the only thing there is to call it —
+    // and then under the construct key it writes, the way a document nests it.
     func buried<Trail>(
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Expression)] {
         enumerated().flatMap { position, statement in
             statement.expression.buried(
-                at: stepping(trail, .statement(name: statement.id, at: position)),
+                at: stepping(
+                    stepping(trail, .statement(name: statement.id, at: position)),
+                    .key(statement.expression.constructKey)
+                ),
                 stepping: stepping
             )
         }

@@ -1005,8 +1005,14 @@ extension Linker {
             var flowed = Flow()
             var element: TypeExpression?
 
-            for member in array {
-                let inner = try inspected(member, at: place, in: environment, with: frame, ask: ask)
+            for (position, member) in array.enumerated() {
+                let inner = try inspected(
+                    member,
+                    at: place.index(position),
+                    in: environment,
+                    with: frame,
+                    ask: ask
+                )
 
                 apply(inner.flow, to: &environment)
                 flowed = sequenced(flowed, then: inner.flow)
@@ -1032,7 +1038,13 @@ extension Linker {
         // nothing, and a spelling that says nothing is a reading gone wrong.
         // `as: any` lands here too, and rightly — every reading fits it.
         case let .cast(value, type, optional):
-            let inner = try inspected(value, at: place, in: environment, with: frame, ask: ask)
+            let inner = try inspected(
+                value,
+                at: place.key("of"),
+                in: environment,
+                with: frame,
+                ask: ask
+            )
             let settled = type.resolved(in: frame.types)
 
             let read = inner.reading.resolved(in: frame.types)
@@ -1134,7 +1146,13 @@ extension Linker {
             var fields: [String: TypeExpression] = [:]
 
             for (name, field) in record.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(field, at: place, in: environment, with: frame, ask: ask)
+                let inner = try inspected(
+                    field,
+                    at: place.key(name),
+                    in: environment,
+                    with: frame,
+                    ask: ask
+                )
 
                 apply(inner.flow, to: &environment)
                 flowed = sequenced(flowed, then: inner.flow)
@@ -1208,12 +1226,24 @@ extension Linker {
                 throw LinkError("\(Expression.constructInOperand)", at: place)
             }
 
-            let called = try inspected(callee, at: place, in: environment, with: frame, ask: ask)
+            let called = try inspected(
+                callee,
+                at: place.key("procedure"),
+                in: environment,
+                with: frame,
+                ask: ask
+            )
             var rewritten: [String: Expression] = [:]
             var calls = called.calls
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(argument, at: place, in: environment, with: frame, ask: ask)
+                let inner = try inspected(
+                    argument,
+                    at: place.key("arguments").key(name),
+                    in: environment,
+                    with: frame,
+                    ask: ask
+                )
 
                 rewritten[name] = inner.rewritten
                 calls += inner.calls
@@ -1256,7 +1286,7 @@ extension Linker {
                         receiver: try dispatch.receiver.map { receiver in
                             try inspected(
                                 receiver,
-                                at: place,
+                                at: place.key("of"),
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1277,7 +1307,13 @@ extension Linker {
             var receiver: Inspection?
 
             if let written = dispatch.receiver {
-                receiver = try inspected(written, at: place, in: environment, with: frame, ask: ask)
+                receiver = try inspected(
+                    written,
+                    at: place.key("of"),
+                    in: environment,
+                    with: frame,
+                    ask: ask
+                )
             }
 
             var arguments: [String: Expression] = [:]
@@ -1285,7 +1321,13 @@ extension Linker {
             var calls = receiver?.calls ?? []
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(argument, at: place, in: environment, with: frame, ask: ask)
+                let inner = try inspected(
+                    argument,
+                    at: place.key("arguments").key(name),
+                    in: environment,
+                    with: frame,
+                    ask: ask
+                )
 
                 arguments[name] = inner.rewritten
                 sent[name] = inner.reading
@@ -1338,16 +1380,22 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place, when: ask)
+                try refuse(Expression.constructInCondition, at: place.key("when"), when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
             // above is what makes that a fact — so the arms stand in the
             // environment the branch stands in.
-            let head = try inspected(condition, at: place, in: environment, with: frame, ask: ask)
+            let head = try inspected(
+                condition,
+                at: place.key("when"),
+                in: environment,
+                with: frame,
+                ask: ask
+            )
             let inside = environment
 
-            let taken = try inspected(then, at: place, in: inside, with: frame, ask: ask)
+            let taken = try inspected(then, at: place.key("then"), in: inside, with: frame, ask: ask)
 
             guard let otherwise else {
                 return Inspection(
@@ -1360,7 +1408,13 @@ extension Linker {
                 )
             }
 
-            let declined = try inspected(otherwise, at: place, in: inside, with: frame, ask: ask)
+            let declined = try inspected(
+                otherwise,
+                at: place.key("else"),
+                in: inside,
+                with: frame,
+                ask: ask
+            )
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1386,7 +1440,7 @@ extension Linker {
             // operand has — so a construct is refused there by the same
             // predicate, at the check and here alike.
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place, when: ask)
+                try refuse(Expression.constructInCondition, at: place.key("where"), when: ask)
             }
 
             // The fixpoint probes the statements alone — the rounds are what
@@ -1397,7 +1451,13 @@ extension Linker {
             let (seeded, probed, converged) = try settled(
                 from: rounded(environment, as: round)
             ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try inspected(body.body, at: place, in: entry, with: frame, ask: .reading)
+                let walk = try inspected(
+                    body.body,
+                    at: place.key("body"),
+                    in: entry,
+                    with: frame,
+                    ask: .reading
+                )
 
                 return (walk, walk.flow)
             }
@@ -1412,9 +1472,15 @@ extension Linker {
                 )
             }
 
-            let head = try inspected(condition, at: place, in: seeded, with: frame, ask: ask)
+            let head = try inspected(
+                condition,
+                at: place.key("where"),
+                in: seeded,
+                with: frame,
+                ask: ask
+            )
             let rounds = ask.rewrites
-                ? try inspected(body.body, at: place, in: seeded, with: frame, ask: ask)
+                ? try inspected(body.body, at: place.key("body"), in: seeded, with: frame, ask: ask)
                 : probed
 
             // The result runs once, at whichever exit the run takes — a
@@ -1434,7 +1500,7 @@ extension Linker {
                         ?? join(.null, written)
                 }
 
-                tail = try inspected(result, at: place, in: exit, with: frame, ask: ask)
+                tail = try inspected(result, at: place.key("result"), in: exit, with: frame, ask: ask)
             }
 
             return Inspection(
@@ -1460,7 +1526,13 @@ extension Linker {
         // the settled environment too, seeded with the element the
         // material's reading feeds.
         case let .iteration(material, body, element):
-            let fed = try inspected(material, at: place, in: environment, with: frame, ask: ask)
+            let fed = try inspected(
+                material,
+                at: place.key("in"),
+                in: environment,
+                with: frame,
+                ask: ask
+            )
             var threaded = environment
 
             apply(fed.flow, to: &threaded)
@@ -1468,7 +1540,13 @@ extension Linker {
             let (inside, probed, converged) = try settled(
                 from: walking(element, holding: fed.reading, in: threaded)
             ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try inspected(body, at: place, in: entry, with: frame, ask: .reading)
+                let walk = try inspected(
+                    body,
+                    at: place.key("body"),
+                    in: entry,
+                    with: frame,
+                    ask: .reading
+                )
 
                 return (walk, walk.flow)
             }
@@ -1484,7 +1562,7 @@ extension Linker {
             }
 
             let inner = ask.rewrites
-                ? try inspected(body, at: place, in: inside, with: frame, ask: ask)
+                ? try inspected(body, at: place.key("body"), in: inside, with: frame, ask: ask)
                 : probed
 
             return Inspection(
@@ -1545,7 +1623,13 @@ extension Linker {
         with frame: TypeFrame,
         ask: Ask
     ) throws -> (block: Block, calls: [CallSite], reading: TypeExpression, flow: Flow) {
-        let body = try inspected(block.body, at: place, in: environment, with: frame, ask: ask)
+        let body = try inspected(
+            block.body,
+            at: place.key("body"),
+            in: environment,
+            with: frame,
+            ask: ask
+        )
 
         // Where the result reads, or why it does not. A block's result sits
         // after its statements — it reads in the environment the body left,
@@ -1570,7 +1654,13 @@ extension Linker {
             reading = .never
             flow = body.flow
         } else if let result = block.result {
-            let read = try inspected(result, at: place, in: body.environment, with: frame, ask: ask)
+            let read = try inspected(
+                result,
+                at: place.key("result"),
+                in: body.environment,
+                with: frame,
+                ask: ask
+            )
 
             tail = read
             reading = read.reading
@@ -1623,7 +1713,9 @@ extension Linker {
         var calls: [CallSite] = []
 
         for (position, statement) in body.enumerated() {
-            let here = place.statement(statement.id, at: position)
+            let here = place
+                .statement(statement.id, at: position)
+                .key(statement.expression.constructKey)
 
             let inner = try inspected(
                 statement.expression,
@@ -1662,7 +1754,9 @@ extension Linker {
             // never run. What the syntactic leaves get at reading, a call
             // gets here, where the signature is known.
             if inner.flow.leaves || inner.reading == .never {
-                try refuseNeverBinding(named: statement.id, at: here, when: ask)
+                if statement.id != nil {
+                    try refuseNeverBinding(at: here, when: ask)
+                }
 
                 if position != body.count - 1 {
                     let next = body[position + 1]
@@ -1670,7 +1764,9 @@ extension Linker {
                     try refuse(
                         "never finishes, and nothing"
                             + " written after it would ever run",
-                        at: place.statement(next.id, at: position + 1),
+                        at: place
+                            .statement(next.id, at: position + 1)
+                            .key(next.expression.constructKey),
                         when: ask
                     )
                 }
@@ -1713,13 +1809,7 @@ extension Linker {
     // statement that ends the body, so the two facts cannot part. The reader
     // catches the shapes it can see, and the link catches the words only it
     // can see — one rule, two stages.
-    private func refuseNeverBinding(
-        named id: String?,
-        at place: Place,
-        when ask: Ask
-    ) throws {
-        guard id != nil else { return }
-
+    private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
             "never finishes,"
                 + " so it binds nothing and takes no name",

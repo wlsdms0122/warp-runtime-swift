@@ -89,6 +89,35 @@ public indirect enum Expression: Sendable {
     case leave(Leave)
 
     // MARK: - Property
+    // The key a document writes this under, where it stands as a statement's
+    // construct. Everything with no construct of its own is a `value`, which
+    // is the key a document writes an expression under.
+    //
+    // Here rather than worked out by each walk that reports a place, because
+    // two walks reporting one statement under two keys is two documents as
+    // far as an author following the words is concerned. It is a fact about
+    // the specified document and not about any one reader's table: a caller
+    // may register its own forms, and what it wrote them to read is the same
+    // grammar under whatever word it chose.
+    public var constructKey: String {
+        switch self {
+        case .literal, .reference, .array, .record, .closure, .cast: "value"
+        case .invoke: "invoke"
+        case .block: "group"
+        case .conditional: "branch"
+        case .loop: "loop"
+        case .iteration: "each"
+        case .attempt: "attempt"
+        case .dispatch: "call"
+        case let .leave(leave):
+            switch leave.reach {
+            case .procedure: "return"
+            case .construct: "break"
+            case .round: "continue"
+            }
+        }
+    }
+
     // The path of a plain reference — an effect that requires one names it
     // through this.
     public var referencePath: [PathSegment]? {

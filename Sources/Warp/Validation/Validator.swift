@@ -114,7 +114,12 @@ public struct Validator: Sendable {
         var declared = startDeclared
 
         for (position, statement) in body.enumerated() {
-            let here = place.statement(statement.id, at: position)
+            // A statement is its name and the construct it writes under —
+            // both, because a document writes both and following one word at a
+            // time is what a place is for.
+            let here = place
+                .statement(statement.id, at: position)
+                .key(statement.expression.constructKey)
 
             // A binding with no name is a write that goes nowhere. The document
             // reader cannot produce one — the binding comes from the naming key
@@ -129,7 +134,7 @@ public struct Validator: Sendable {
 
             if let id = statement.id {
                 guard !id.isEmpty else {
-                    throw ValidationError("statement with empty id", at: place)
+                    throw ValidationError("statement with empty id", at: here)
                 }
 
                 try normal(id, at: here)
@@ -187,7 +192,7 @@ public struct Validator: Sendable {
 
                         throw ValidationError(
                             "assigns '\(id)', \(reason)",
-                            at: place
+                            at: here
                         )
                     }
                 }
@@ -198,7 +203,7 @@ public struct Validator: Sendable {
                 // duplicates are ambiguous.
                 if case .assignment = statement.binding {} else {
                     guard !declared.contains(id) else {
-                        throw ValidationError("duplicate statement id '\(id)'", at: place)
+                        throw ValidationError("duplicate statement id '\(id)'", at: here)
                     }
 
                     declared.insert(id)
@@ -407,7 +412,7 @@ public struct Validator: Sendable {
         // The round state is bound before the condition is asked, which is what
         // lets `where` read how many rounds have passed.
         case let .loop(condition, body, round):
-            try normal(round, at: place.landmark("round"))
+            try normal(round, at: place)
 
             let inner = visible.union([round])
 
@@ -428,7 +433,7 @@ public struct Validator: Sendable {
             )
 
         case let .iteration(material, body, element):
-            try normal(element, at: place.landmark("element"))
+            try normal(element, at: place)
 
             try validate(
                 material,
@@ -447,7 +452,7 @@ public struct Validator: Sendable {
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
-            try normal(failure, at: place.landmark("failure"))
+            try normal(failure, at: place)
 
             try validate(
                 block,

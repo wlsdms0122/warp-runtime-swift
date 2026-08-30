@@ -37,7 +37,7 @@ extension Linker {
                     block,
                     within: origin,
                     symbols: symbols,
-                    at: place.key("body")
+                    at: place
                 )
             )
         )
@@ -54,14 +54,14 @@ extension Linker {
                 block.body,
                 within: origin,
                 symbols: symbols,
-                at: place
+                at: place.key("body")
             ),
             result: try block.result.map { result in
                 try bind(
                     result,
                     within: origin,
                     symbols: symbols,
-                    at: place
+                    at: place.key("result")
                 )
             }
         )
@@ -101,7 +101,9 @@ extension Linker {
                 statement.expression,
                 within: origin,
                 symbols: symbols,
-                at: place.statement(statement.id, at: position)
+                at: place
+                    .statement(statement.id, at: position)
+                    .key(statement.expression.constructKey)
             )
         )
     }

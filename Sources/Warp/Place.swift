@@ -23,7 +23,7 @@ import Foundation
 // string spells both the same way and neither can be recovered from it.
 //
 // So the steps say what the document says, and are spelled from the document's
-// own keys: an author reading `procedures.greet.body.total.arguments.amount`
+// own keys: an author reading `procedures.greet.body.total.call.arguments.amount`
 // finds every one of those words in front of them.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
@@ -74,8 +74,11 @@ public struct Place: Sendable, Equatable {
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
+    // A name with nothing in it is no name — the position is what is left to
+    // call the statement by, and a step that rendered an empty name would put
+    // a dot in front of nothing.
     public func statement(_ name: String?, at position: Int) -> Place {
-        appending(.statement(name: name, at: position))
+        appending(.statement(name: name?.isEmpty == true ? nil : name, at: position))
     }
 
     public func landmark(_ name: String) -> Place { appending(.landmark(name)) }

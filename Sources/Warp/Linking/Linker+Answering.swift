@@ -83,7 +83,7 @@ extension Linker {
             // decided.
             let read = try? reading(
                 from: only.block,
-                at: Place.procedure(only.qualified).key("body"),
+                at: .procedure(only.qualified),
                 in: only.environment,
                 with: frame()
             )
