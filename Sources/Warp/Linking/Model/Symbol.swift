@@ -16,6 +16,12 @@ struct Symbol: Sendable {
     // the module writes. What a reader has to look for in the text is these
     // two: `procedures` holds the declared key and never the module's name.
     let declared: String
+
+    // The namespace this declares into, which is the module's name — and a
+    // different question from which document it was written in. Two documents
+    // may declare into one namespace, so the name qualifies and the document
+    // identifies, and neither stands in for the other.
+    let namespace: String?
     let document: Place.Document
 
     // Which module declared it, by position in the link. Identity rather than
@@ -31,9 +37,9 @@ struct Symbol: Sendable {
     // does. Worked out rather than stored, since the two halves are here and a
     // stored copy is a second place the joining could be written differently.
     var qualified: String {
-        guard case let .named(module) = document else { return declared }
+        guard let namespace else { return declared }
 
-        return "\(module).\(declared)"
+        return "\(namespace).\(declared)"
     }
 
     // Where this declaration's words are, in the document that wrote it.

@@ -107,21 +107,34 @@ where the run had been, which is the other question.
 
 A module's name is never a step. A link calls a declaration `wallet.entry`, and
 no document writes that: `name` sits beside `procedures`, and what `procedures`
-holds is the declared key alone. It is carried beside the steps instead, because
-a link holds several documents and the steps alone do not say which —
-`std.collection` and `std.concurrent` both declare `first`, and a reader handed
-`procedures.first` with no document would point at whichever one it was holding.
-So a place reads `wallet/procedures.entry.body.sent[0].call`, and the part before
-the slash is the only part that is not a key.
+holds is the declared key alone. So a place reads
+`wallet/procedures.entry.body.sent[0].call`, and the part before the slash is
+the only part that is not a key.
 
-Which document is three answers rather than two. A module that wrote no name is
-still a document — it declares into the link's shared space, the way a
-translation unit without a namespace does. A program a caller assembled in
-memory is not a document at all. Spelling both of those the same way would let a
-place with no text under it be matched against any file an author never named,
-and answered with that file's first line. The third case is `assembled` rather
-than `none`, since `Optional.none` answers to that spelling too and `document ==
-.none` would read true for a place that does not exist.
+**Which document a place is in is an `Identity`, and never a name.** A link
+holds several documents and the steps alone do not say which —
+`std.collection` and `std.concurrent` both declare `first`. A name cannot
+settle it either: `name` is the namespace a module declares into, two documents
+may write `name: wallet` between them (splitting a module across files is
+allowed), and a document may write no name at all. So identity is derived from
+the document itself — the digest of its canonical bytes, worked out by
+`WarpSerialization` and never written down by anybody. Nothing to declare means
+nothing to declare wrongly, and two callers holding one document arrive at one
+answer without having agreed on anything.
+
+`Module.identity` is nil for a module a caller built, and that is the whole of
+what nil means: nothing was written down, so there is no text to be pointed
+back into. A reader stamps what it read:
+
+```swift
+let module = try Loader().load(document).read(from: try Identity.of(document))
+```
+
+The name still rides beside the steps, because a person reading a refusal wants
+the word they typed — it takes no part in saying which document this is. And a
+place from a program nobody wrote down says `assembled` rather than `none`,
+since `Optional.none` answers to that spelling too and `document == .none`
+would read true for a place that does not exist.
 
 Not every refusal has a place, and the ones that do not say so: two modules
 declaring one name is two places and an entry nobody declares is none, so those

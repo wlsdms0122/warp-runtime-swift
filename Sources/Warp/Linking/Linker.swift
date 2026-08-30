@@ -616,7 +616,8 @@ public struct Linker: Sendable {
                 symbols.append(
                     Symbol(
                         declared: name,
-                        document: .declaring(module.name),
+                        namespace: module.name,
+                        document: .of(module),
                         origin: origin,
                         procedure: procedure
                     )
@@ -788,14 +789,14 @@ public struct Linker: Sendable {
 
         for module in modules {
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
-                try judge(procedure.signature, at: .procedure(name, in: .declaring(module.name)), in: table)
+                try judge(procedure.signature, at: .procedure(name, in: .of(module)), in: table)
 
                 // A closure literal carries a signature the way a declaration
                 // does, and unreached code still has to compile — so what the
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
-                    let buried = block.buried(at: .procedure(name, in: .declaring(module.name)))
+                    let buried = block.buried(at: .procedure(name, in: .of(module)))
 
                     for (place, inner) in closures(in: buried) {
                         try judge(inner.signature, at: place, in: table)
@@ -815,7 +816,7 @@ public struct Linker: Sendable {
             }
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
-                let buried = constant.buried(at: .constant(name, in: .declaring(module.name)))
+                let buried = constant.buried(at: .constant(name, in: .of(module)))
 
                 for (place, inner) in closures(in: buried) {
                     try judge(inner.signature, at: place, in: table)
@@ -1295,7 +1296,7 @@ public struct Linker: Sendable {
                         expression,
                         within: origin,
                         symbols: space,
-                        at: .constant(name, in: .declaring(module.name))
+                        at: .constant(name, in: .of(module))
                     )
 
                     // Everything this constant reads is settled, so a refusal
@@ -1309,7 +1310,7 @@ public struct Linker: Sendable {
                     // place, so only the settling refusal below needs one.
                     let (judged, calls) = try resolvedSites(
                         in: bound,
-                        at: .constant(name, in: .declaring(module.name)),
+                        at: .constant(name, in: .of(module)),
                         in: known.mapValues { value in type(of: value) },
                         with: frame,
                         folding: nil
@@ -1323,7 +1324,7 @@ public struct Linker: Sendable {
                     do {
                         known[name] = try resolver.resolve(judged)
                     } catch {
-                        throw LinkError("\(error)", at: .constant(name, in: .declaring(module.name)))
+                        throw LinkError("\(error)", at: .constant(name, in: .of(module)))
                     }
 
                     pending[name] = nil

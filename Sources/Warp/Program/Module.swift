@@ -44,6 +44,18 @@ public struct Module: Sendable {
 
     public let procedures: [String: Procedure]
 
+    // Which document this was read out of, where it was read out of one.
+    //
+    // Nil for a module a caller built, and that is the whole of what nil means:
+    // nothing was written down, so there is no text for a reader to be pointed
+    // back into. It is never nil for a module that came through a reader —
+    // reading is where it is worked out, from the document being read.
+    //
+    // Not the name. `name` is the namespace this declares into and several
+    // documents may share one, since a module split across files is a thing
+    // this language allows; two documents named `wallet` are two documents.
+    public let identity: Identity?
+
     // MARK: - Initializer
     public init(
         name: String? = nil,
@@ -51,7 +63,8 @@ public struct Module: Sendable {
         types: [String: TypeExpression] = [:],
         constraints: [String: [TypeExpression]] = [:],
         constants: [String: Expression] = [:],
-        procedures: [String: Procedure]
+        procedures: [String: Procedure],
+        identity: Identity? = nil
     ) {
         self.name = name
         self.description = description
@@ -59,6 +72,23 @@ public struct Module: Sendable {
         self.constraints = constraints
         self.constants = constants
         self.procedures = procedures
+        self.identity = identity
+    }
+
+    // The same module, told which document it was read out of. A reader works
+    // that out from the document in front of it, which is the only place the
+    // answer exists — so it is put on afterwards rather than passed inward
+    // through everything that builds a module up.
+    public func read(from identity: Identity) -> Module {
+        Module(
+            name: name,
+            description: description,
+            types: types,
+            constraints: constraints,
+            constants: constants,
+            procedures: procedures,
+            identity: identity
+        )
     }
 
     // MARK: - Public

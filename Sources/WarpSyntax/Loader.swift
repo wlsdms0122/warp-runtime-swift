@@ -52,12 +52,40 @@ public struct Loader: Sendable {
     // the fragment is a module worth linking. It answers with a module rather than
     // something runnable because a document is not runnable — what runs is
     // decided when this module is linked with the others.
+    // The module carries no identity: working one out means writing the
+    // document back to its canonical bytes, which is the serialization's job
+    // and not this target's — reading a document has never needed the wire.
+    // A caller that wants refusals it can map back into a file says so with
+    // the document in hand:
+    //
+    //     let module = try Loader().load(document)
+    //         .read(from: try Identity.of(document))
+    //
+    // Two lines and not one because the second is the wire's. Handing the
+    // wrong document to the second line is not a way to be pointed at the
+    // wrong text: what compares identities computes both sides from what it
+    // holds, so a mismatch is a refusal nobody can place, never a refusal
+    // placed somewhere it did not come from.
     public func load(_ value: Value) throws -> Module {
-        let module = try read(ModuleReader.self, from: value).module
+        let module = try spelled(value)
 
         try language.validate(module)
 
         return module
+    }
+
+    // The module a document spells, unjudged.
+    //
+    // Reading and judging are two things and this is the first of them. What
+    // wants it on its own is anything asking what a document *is* rather than
+    // whether its program is any good — writing it back out canonically, which
+    // is how a document is told from another document. A program with a name
+    // nothing declares is still a document, and still that document.
+    //
+    // Not for running. Nothing here has been held to the language's rules, and
+    // `load` is the door that has.
+    public func spelled(_ value: Value) throws -> Module {
+        try read(ModuleReader.self, from: value).module
     }
 
     // One procedure, for a caller holding a procedure's worth of data rather than a

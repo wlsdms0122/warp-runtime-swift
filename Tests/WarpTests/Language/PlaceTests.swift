@@ -307,7 +307,7 @@ struct PlaceTests {
         let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
-                .buried(at: .procedure(entryName, in: .shared))
+                .buried(at: .procedure(entryName, in: .assembled))
                 .first { _, expression in
                     guard case .dispatch = expression else { return false }
 
@@ -332,39 +332,40 @@ struct PlaceTests {
                 ])
             ]
         )
+            .read(from: reading)
 
         // When
         let error = #expect(throws: LinkError.self) {
             try Language().link([sut] + Module.standard, entry: "wallet.entry")
         }
 
-        // Then — the name says which document, and never which key
-        #expect(error?.place?.document == .named("wallet"))
+        // Then — the name rides beside the steps and is never one of them
+        #expect(error?.place?.document == .read(reading, named: "wallet"))
         #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
         #expect(error?.place?.rendered == "wallet/procedures.entry.body.sent[0].call")
     }
 
-    @Test("a program with no document under it says so, rather than saying no name")
+    @Test("a program nobody wrote down says so, rather than saying no name")
     func anAssembledProgramNamesNoDocument() {
-        // Given — a procedure handed in on its own, which is what a caller
-        // assembling a program in memory holds. There is no document, which is
-        // a different fact from a document that wrote no name: reading them as
-        // one would match this against any text an author never named, and
-        // answer with that text's own first line.
-        let sut = Procedure(body: [Statement(id: "held", expression: reference("missing"))])
+        // Given — the same program twice: once handed in as a caller assembling
+        // one in memory holds it, and once read out of a document. There is no
+        // text under the first, which is a different fact from a text that
+        // wrote no name — reading them as one would match a program nobody
+        // wrote against a file somebody did, and answer with that file's line.
+        let statement = Statement(expression: reference("missing"))
 
         // When
         let assembled = #expect(throws: ValidationError.self) {
-            try Validator().validate(sut)
+            try Validator().validate(module(refusing: statement))
         }
 
         let read = #expect(throws: ValidationError.self) {
-            try Validator().validate(module(refusing: Statement(expression: reference("missing"))))
+            try Validator().validate(module(refusing: statement).read(from: reading))
         }
 
         // Then
         #expect(assembled?.place?.document == .assembled)
-        #expect(read?.place?.document == .shared)
+        #expect(read?.place?.document == .read(reading, named: nil))
     }
 
     @Test("a shape a named module declares is placed by the key it declared it under")
@@ -378,6 +379,7 @@ struct PlaceTests {
             types: ["Coin": .record(["amount": .named("Missing")])],
             procedures: [entryName: Procedure(body: [])]
         )
+            .read(from: reading)
 
         // When
         let error = #expect(throws: LinkError.self) {
@@ -398,6 +400,7 @@ struct PlaceTests {
             constraints: ["Spendable": []],
             procedures: [entryName: Procedure(body: [])]
         )
+            .read(from: reading)
 
         // When
         let error = #expect(throws: LinkError.self) {
@@ -502,6 +505,11 @@ struct PlaceTests {
 
     // MARK: - Public
     // MARK: - Private
+    // A document to stand in for one that was read. What derives an identity is
+    // the wire's, which is a target these tests do not import — and what a place
+    // does with one is the same whatever wrote it.
+    private let reading = Identity([0xd0, 0xcf, 0x00])
+
     private func module(refusing statement: Statement) -> Module {
         Module(procedures: [entryName: Procedure(body: [statement])])
     }

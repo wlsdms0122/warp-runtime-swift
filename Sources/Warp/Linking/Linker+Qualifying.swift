@@ -46,7 +46,7 @@ extension Linker {
             for name in module.types.keys.sorted() {
                 let qualified = module.qualified(name)
 
-                places[qualified] = .type(name, in: .declaring(module.name))
+                places[qualified] = .type(name, in: .of(module))
 
                 guard types.insert(qualified).inserted else {
                     throw LinkError(
@@ -61,7 +61,7 @@ extension Linker {
             for name in module.constraints.keys.sorted() {
                 let qualified = module.qualified(name)
 
-                places[qualified] = .constraint(name, in: .declaring(module.name))
+                places[qualified] = .constraint(name, in: .of(module))
 
                 guard !types.contains(qualified) else {
                     throw LinkError(
@@ -190,7 +190,12 @@ private extension Module {
             },
             procedures: try procedures.mapValues { procedure in
                 try procedure.renamed(types: types, constraints: rename)
-            }
+            },
+            // Renaming rewrites what the declarations are called across the
+            // link and changes nothing about which document they were written
+            // in — dropping it here would make every refusal after this pass
+            // read as a program nobody wrote down.
+            identity: identity
         )
     }
 }

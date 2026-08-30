@@ -76,9 +76,20 @@ public struct Place: Sendable, Equatable {
             }
         }
 
-        guard case let .named(name) = document else { return address }
+        // The name where the document wrote one, and what the document *is*
+        // where it did not. A person reading a refusal wants the word they
+        // typed; where there is no such word, a short digest still tells two
+        // documents apart, which is more than nothing tells them.
+        switch document {
+        case let .read(_, named?):
+            return "\(named)/" + address
 
-        return "\(name)/" + address
+        case let .read(identity, nil):
+            return "\(identity.short)/" + address
+
+        case .assembled:
+            return address
+        }
     }
 
     // MARK: - Initializer
@@ -170,18 +181,28 @@ public extension Place {
     // and the two are not the same fact: spelling both `nil` let a place with
     // no document under it be matched against any text that wrote no name, and
     // answered with that text's first line.
-    // `assembled` and not `none`: `Optional.none` would answer to that
-    // spelling too, so `document == .none` would read true for a place that
-    // does not exist and for one whose program was never written down — the
-    // two the third case exists to keep apart.
+    // Which document, and whether there is one at all.
+    //
+    // A document is told from another by what it says, never by what it is
+    // called: `name` is the namespace a module declares into, several documents
+    // may share one, and a document may write none. The name rides along
+    // because a person reading a refusal wants to see it, and it is no part of
+    // saying which document this is.
+    //
+    // `assembled` and not `none`: `Optional.none` would answer to that spelling
+    // too, so `document == .none` would read true for a place that does not
+    // exist and for one whose program was never written down — the two cases
+    // that have to stay apart.
     enum Document: Sendable, Equatable {
-        case named(String)
-        case shared
+        case read(Identity, named: String?)
         case assembled
 
-        // What a module declares into, by whether it wrote a name.
-        static func declaring(_ name: String?) -> Document {
-            name.map(Document.named) ?? .shared
+        // What a module was read out of, where it was read out of anything. A
+        // module a caller built has no document under it, whatever it is named.
+        static func of(_ module: Module) -> Document {
+            guard let identity = module.identity else { return .assembled }
+
+            return .read(identity, named: module.name)
         }
     }
 

@@ -1,0 +1,130 @@
+//
+//  SHA256.swift
+//  WarpSerialization
+//
+//  Created by JSilver
+//
+
+import Foundation
+
+// FIPS 180-4, written out here.
+//
+// Not borrowed from a package, because the one thing this target promises is
+// that another implementation can speak the wire without taking on anything of
+// ours — and a dependency in the way of that would be an odd thing to add to
+// the target that says so. Not taken from the platform either: the one that
+// ships it is one platform, and what this computes has to be the same number
+// everywhere or it is not an identity.
+//
+// Everything below is the published algorithm. The only judgment in it is the
+// choice of algorithm, which the specification names.
+enum SHA256 {
+    // MARK: - Property
+    private static let round: [UInt32] = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
+        0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+        0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
+        0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+        0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+        0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
+        0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
+        0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+        0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    ]
+
+    private static let start: [UInt32] = [
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    ]
+
+    // MARK: - Internal
+    static func digest(of data: Data) -> [UInt8] {
+        var state = start
+        let padded = padded(data)
+
+        for start in stride(from: 0, to: padded.count, by: 64) {
+            var schedule = [UInt32](repeating: 0, count: 64)
+
+            for index in 0..<16 {
+                let at = start + index * 4
+
+                schedule[index] = UInt32(padded[at]) << 24
+                    | UInt32(padded[at + 1]) << 16
+                    | UInt32(padded[at + 2]) << 8
+                    | UInt32(padded[at + 3])
+            }
+
+            for index in 16..<64 {
+                let first = schedule[index - 15]
+                let second = schedule[index - 2]
+
+                let one = rotated(first, 7) ^ rotated(first, 18) ^ (first >> 3)
+                let two = rotated(second, 17) ^ rotated(second, 19) ^ (second >> 10)
+
+                schedule[index] = schedule[index - 16] &+ one &+ schedule[index - 7] &+ two
+            }
+
+            var working = state
+
+            for index in 0..<64 {
+                let one = rotated(working[4], 6) ^ rotated(working[4], 11)
+                    ^ rotated(working[4], 25)
+                let choose = (working[4] & working[5]) ^ (~working[4] & working[6])
+                let first = working[7] &+ one &+ choose &+ round[index] &+ schedule[index]
+
+                let two = rotated(working[0], 2) ^ rotated(working[0], 13)
+                    ^ rotated(working[0], 22)
+                let majority = (working[0] & working[1]) ^ (working[0] & working[2])
+                    ^ (working[1] & working[2])
+                let second = two &+ majority
+
+                working = [
+                    first &+ second, working[0], working[1], working[2],
+                    working[3] &+ first, working[4], working[5], working[6]
+                ]
+            }
+
+            for index in 0..<8 {
+                state[index] = state[index] &+ working[index]
+            }
+        }
+
+        return state.flatMap { word in
+            [
+                UInt8(truncatingIfNeeded: word >> 24),
+                UInt8(truncatingIfNeeded: word >> 16),
+                UInt8(truncatingIfNeeded: word >> 8),
+                UInt8(truncatingIfNeeded: word)
+            ]
+        }
+    }
+
+    // MARK: - Private
+    private static func rotated(_ word: UInt32, _ places: UInt32) -> UInt32 {
+        (word >> places) | (word << (32 - places))
+    }
+
+    private static func padded(_ data: Data) -> [UInt8] {
+        var padded = [UInt8](data)
+        let length = UInt64(data.count) * 8
+
+        padded.append(0x80)
+
+        while padded.count % 64 != 56 {
+            padded.append(0)
+        }
+
+        for shift in stride(from: 56, through: 0, by: -8) {
+            padded.append(UInt8(truncatingIfNeeded: length >> UInt64(shift)))
+        }
+
+        return padded
+    }
+}
