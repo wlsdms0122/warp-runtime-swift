@@ -98,8 +98,16 @@ spelled from the keys the document itself writes, so
 which an author can follow in the text in front of them. It is steps rather
 than a sentence because a front end holding the file this was authored in has
 to walk them to point at the line, and only the front end knows that file: what
-crossed the wire is the document. A refusal from a run carries a `Trace`
-instead — where the run had been, which is the other question.
+crossed the wire is the document. Which is why a step says how it was got: a
+`key` is a word the document itself writes and a reader may go looking for one
+in the text, while a `landmark` — the word for a statement's construct — is
+this implementation's for a shape, since `{ call: … }` and `{ value: { call:
+… } }` arrive here as one. A refusal from a run carries a `Trace` instead —
+where the run had been, which is the other question.
+
+A module's name is never a step. A link calls a declaration `wallet.entry`, and
+no document writes that: `name` sits beside `procedures`, and what `procedures`
+holds is the declared key alone.
 
 Not every refusal has a place, and the ones that do not say so: two modules
 declaring one name is two places and an entry nobody declares is none, so those
