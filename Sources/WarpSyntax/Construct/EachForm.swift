@@ -21,6 +21,10 @@ public struct EachForm: ConstructForm {
     // MARK: - Property
     public static let key = "each"
 
+    // The body is decoded as a key that must be there, so a walk over nothing
+    // is still written with an empty one.
+    public static let requiresBody = true
+
     private let material: Expression
     private let body: [Statement]
 

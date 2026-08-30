@@ -21,28 +21,28 @@ public struct Module: Sendable {
     // declaring `plus` declares `std.math.plus` — and a module without one
     // declares into the shared space under the bare names. The description is
     // metadata only.
-    public let name: String?
-    public let description: String?
+    public private(set) var name: String?
+    public private(set) var description: String?
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type — a module declares, and what it declares differs only in
     // what kind of thing the name stands for.
-    public let types: [String: TypeExpression]
+    public private(set) var types: [String: TypeExpression]
 
     // Constraints this module declares: a name bound to the types a bounded
     // parameter under that name admits. Declared the same way a type is and
     // kept apart from the types, because nothing is ever *of* a constraint —
     // it bounds `some T`, and a slot cannot declare it directly.
-    public let constraints: [String: [TypeExpression]]
+    public private(set) var constraints: [String: [TypeExpression]]
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second namespace in path position
     // — where a qualified spelling cannot be told from drilling into a record.
-    public let constants: [String: Expression]
+    public private(set) var constants: [String: Expression]
 
-    public let procedures: [String: Procedure]
+    public private(set) var procedures: [String: Procedure]
 
     // Which document this was read out of, where it was read out of one.
     //
@@ -55,7 +55,7 @@ public struct Module: Sendable {
     // Not the name. `name` is the namespace this declares into and several
     // documents may share one, since a module split across files is a thing
     // this language allows; two documents named `wallet` are two documents.
-    public let identity: Identity?
+    public private(set) var identity: Identity?
 
     // MARK: - Initializer
     public init(
@@ -76,11 +76,14 @@ public struct Module: Sendable {
         self.identity = identity
     }
 
-    // The same module with something changed, and the one place every field is
-    // named. A copy written out by hand somewhere else keeps whatever the next
-    // field to be added is not added to — and the symptom is not a compiler
-    // error but a fact quietly going missing, which is how `identity` nearly
-    // went missing from the pass that renames declarations.
+    // The same module with something changed.
+    //
+    // A copy of the whole with the named parts written over, rather than a new
+    // module built field by field: a copy that lists what it carries keeps only
+    // what somebody remembered to list, and a field left off is not a compiler
+    // error but a fact quietly going missing. Nothing here enumerates, so a
+    // field added to a module is carried through by every copy without this
+    // having to be told about it.
     func replacing(
         types: [String: TypeExpression]? = nil,
         constraints: [String: [TypeExpression]]? = nil,
@@ -88,15 +91,15 @@ public struct Module: Sendable {
         procedures: [String: Procedure]? = nil,
         identity: Identity? = nil
     ) -> Module {
-        Module(
-            name: name,
-            description: description,
-            types: types ?? self.types,
-            constraints: constraints ?? self.constraints,
-            constants: constants ?? self.constants,
-            procedures: procedures ?? self.procedures,
-            identity: identity ?? self.identity
-        )
+        var copy = self
+
+        if let types { copy.types = types }
+        if let constraints { copy.constraints = constraints }
+        if let constants { copy.constants = constants }
+        if let procedures { copy.procedures = procedures }
+        if let identity { copy.identity = identity }
+
+        return copy
     }
 
     // The same module, told which document it was read out of. A reader is told

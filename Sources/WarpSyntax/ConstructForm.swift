@@ -33,6 +33,13 @@ public protocol ConstructForm: Sendable, Decodable {
     // those slots spend.
     static var readsCondition: Bool { get }
 
+    // Whether this form reads `body` as a key it must have. A writer asks the
+    // form rather than keeping its own list of which forms do: the two sides
+    // are a file apart, and a writer that drops an empty body a reader demands
+    // writes documents that cannot be read back — which is a failure at the far
+    // end of a wire, where nobody can see what wrote it.
+    static var requiresBody: Bool { get }
+
     // Words this form's expression sends, which a link has to declare for the
     // spelling to reach anything. Most forms build the language's own constructs
     // and send nothing, so most leave this empty.
@@ -49,6 +56,8 @@ public protocol ConstructForm: Sendable, Decodable {
 
 public extension ConstructForm {
     static var readsCondition: Bool { false }
+
+    static var requiresBody: Bool { false }
 
     static func vocabulary(with notation: Notation) -> Set<String> { [] }
 

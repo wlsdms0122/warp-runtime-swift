@@ -158,7 +158,7 @@ public extension Writer {
             return (try spelling(InvokeForm.self), .object(written))
 
         case let .block(block):
-            return (try spelling(GroupForm.self), .object(try fields(of: block)))
+            return (try spelling(GroupForm.self), .object(try fields(of: block, in: GroupForm.self)))
 
         // A name on a branch was already refused where the statement's
         // envelope is written — `takesNoName`, the one predicate every door
@@ -182,7 +182,7 @@ public extension Writer {
                 "where": try value(of: condition, reserving: conditionKeys)
             ]
 
-            written.merge(try fields(of: body, keeping: true)) { one, _ in one }
+            written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
 
             return (try spelling(LoopForm.self), .object(written))
 
@@ -217,7 +217,7 @@ public extension Writer {
         case let .attempt(attempted, rescue, failure):
             try named(failure, matches: id, in: "attempt", binding: "failure")
 
-            var written = try fields(of: attempted, keeping: true)
+            var written = try fields(of: attempted, in: AttemptForm.self)
 
             written["rescue"] = .object(try fields(of: rescue))
 
@@ -246,14 +246,31 @@ public extension Writer {
         return .object(written)
     }
 
-    // The keys a block writes. `body` is dropped when empty only where the
-    // reader on the far side lets it be absent — a form that decodes `body` as
-    // a key it must have gets it written even empty, since a writer that drops
-    // what its reader demands writes documents nobody can read back.
-    internal func fields(of block: Block, keeping body: Bool = false) throws -> [String: Value] {
+    // The keys a construct's block writes, with the form asked whether an empty
+    // `body` is written or dropped. Asked rather than remembered: a writer
+    // carrying its own list of which forms demand the key is a list that goes
+    // stale the moment a form is added, and what it writes then is a document
+    // its own reader refuses.
+    internal func fields<Form: ConstructForm>(
+        of block: Block,
+        in form: Form.Type
+    ) throws -> [String: Value] {
+        try fields(of: block, writingEmptyBody: Form.requiresBody)
+    }
+
+    // The keys a block writes where no form reads it — a rescue, a procedure —
+    // and those readers take `body` as a key that may be absent.
+    internal func fields(of block: Block) throws -> [String: Value] {
+        try fields(of: block, writingEmptyBody: false)
+    }
+
+    private func fields(
+        of block: Block,
+        writingEmptyBody: Bool
+    ) throws -> [String: Value] {
         var written: [String: Value] = [:]
 
-        if body || !block.body.isEmpty {
+        if writingEmptyBody || !block.body.isEmpty {
             written["body"] = .array(try block.body.map(value(of:)))
         }
 

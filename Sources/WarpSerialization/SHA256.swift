@@ -98,9 +98,14 @@ enum SHA256 {
                 a = first &+ second
             }
 
-            for (index, working) in [a, b, c, d, e, f, g, h].enumerated() {
-                state[index] = state[index] &+ working
-            }
+            state[0] &+= a
+            state[1] &+= b
+            state[2] &+= c
+            state[3] &+= d
+            state[4] &+= e
+            state[5] &+= f
+            state[6] &+= g
+            state[7] &+= h
         }
 
         return state.flatMap { word in

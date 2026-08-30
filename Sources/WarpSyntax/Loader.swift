@@ -118,22 +118,22 @@ public struct Loader: Sendable {
     // second way into `Language.link` — which checks what a link can check and
     // was never the stage that checks a body against itself.
     //
-    // What comes back is sealed: the writer fills in the version and the list
-    // of what the program needs, which are the two things nobody writes by
-    // hand. So the way to make a document out of anything is this, and a
-    // caller that then loads what it got is loading exactly what it will send.
+    // What comes back is sealed: the version and the list of what the program
+    // needs are filled in here, which are the two things nobody writes by hand.
+    // So the way to make a document out of anything is this, and a caller that
+    // then loads what it got is loading exactly what it will send.
+    //
+    // The version is put on before the reading rather than left to the writer
+    // alone, because the reading refuses a value that does not say which warp
+    // it is written for — so a caller left to stamp it first would be keeping
+    // one half of this call's contract on this call's behalf, and two callers
+    // will not keep it the same way. A number the value already carries is left
+    // alone: a document claiming a language this reader is not is refused, and
+    // that refusal is the version's whole job.
     public func canonical(_ value: Value) throws -> Value {
-        try Writer(registry: registry, readBy: .canonical).value(of: try spelled(value))
+        try Writer(registry: registry, readBy: .canonical).value(of: try spelled(stamped(value)))
     }
 
-    // MARK: - Private
-    // The module a document spells, unjudged. Not a door: nothing here has been
-    // held to the language's rules, and `load` is the one that has.
-    private func spelled(_ value: Value) throws -> Module {
-        try read(ModuleReader.self, from: value).module
-    }
-
-    // MARK: - Public
     // One procedure, for a caller holding a procedure's worth of data rather than a
     // document. A module is how a *file* declares procedures; a caller that has
     // exactly one and already knows what to call it does not have to write an
@@ -163,6 +163,24 @@ public struct Loader: Sendable {
     }
 
     // MARK: - Private
+    // The module a document spells, unjudged. Not a door: nothing here has been
+    // held to the language's rules, and `load` is the one that has.
+    private func spelled(_ value: Value) throws -> Module {
+        try read(ModuleReader.self, from: value).module
+    }
+
+    // The value with this reader's version on it, where it does not say. What a
+    // caller hands in is not yet a document and the version is the reason why:
+    // it says which reader the document is written for, and that is an answer
+    // about the writing rather than about the program.
+    private func stamped(_ value: Value) -> Value {
+        guard case let .object(fields) = value else { return value }
+
+        return .object(fields.merging(
+            [Envelope.versionKey: .int(Envelope.version)]
+        ) { written, _ in written })
+    }
+
     private func read<T: Decodable>(_ type: T.Type, from value: Value) throws -> T {
         try T(from: ValueDecoder(
             value: value,

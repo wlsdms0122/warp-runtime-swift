@@ -364,7 +364,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(assembled?.place?.document.isWrittenDown == false)
+        #expect(assembled?.place?.document == .assembled)
         #expect(read?.place?.document == Place.Document(identity: reading, namespace: nil))
     }
 

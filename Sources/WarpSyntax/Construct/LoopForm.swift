@@ -26,6 +26,10 @@ public struct LoopForm: ConstructForm {
     // nowhere else. Which words those are is never this form's business.
     public static let readsCondition = true
 
+    // The body is decoded as a key that must be there, so a loop with nothing
+    // in it is still written with an empty one.
+    public static let requiresBody = true
+
     private let condition: Expression
     private let body: Block
 

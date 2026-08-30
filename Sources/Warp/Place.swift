@@ -200,11 +200,6 @@ public extension Place {
         // is the whole of what this is for.
         public let namespace: String?
 
-        // Whether there is a text under this at all. The one question worth
-        // asking of a document from outside — a name is not an answer to it,
-        // since a module a caller built may have one.
-        public var isWrittenDown: Bool { identity != nil }
-
         // A program nobody wrote down and nobody named, which is what a caller
         // holding a body it assembled has. Spelled out rather than left to a
         // default, so that a place meaning to say which text it is in cannot
