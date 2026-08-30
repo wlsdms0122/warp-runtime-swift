@@ -76,20 +76,35 @@ public struct Module: Sendable {
         self.identity = identity
     }
 
-    // The same module, told which document it was read out of. A reader works
-    // that out from the document in front of it, which is the only place the
-    // answer exists — so it is put on afterwards rather than passed inward
-    // through everything that builds a module up.
-    public func read(from identity: Identity) -> Module {
+    // The same module with something changed, and the one place every field is
+    // named. A copy written out by hand somewhere else keeps whatever the next
+    // field to be added is not added to — and the symptom is not a compiler
+    // error but a fact quietly going missing, which is how `identity` nearly
+    // went missing from the pass that renames declarations.
+    func replacing(
+        types: [String: TypeExpression]? = nil,
+        constraints: [String: [TypeExpression]]? = nil,
+        constants: [String: Expression]? = nil,
+        procedures: [String: Procedure]? = nil,
+        identity: Identity? = nil
+    ) -> Module {
         Module(
             name: name,
             description: description,
-            types: types,
-            constraints: constraints,
-            constants: constants,
-            procedures: procedures,
-            identity: identity
+            types: types ?? self.types,
+            constraints: constraints ?? self.constraints,
+            constants: constants ?? self.constants,
+            procedures: procedures ?? self.procedures,
+            identity: identity ?? self.identity
         )
+    }
+
+    // The same module, told which document it was read out of. A reader is told
+    // that from outside, since working it out means writing the document back
+    // to its canonical bytes — so it is put on afterwards rather than passed
+    // inward through everything that builds a module up.
+    public func read(from identity: Identity) -> Module {
+        replacing(identity: identity)
     }
 
     // MARK: - Public

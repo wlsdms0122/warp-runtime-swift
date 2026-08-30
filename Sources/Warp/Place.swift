@@ -76,17 +76,25 @@ public struct Place: Sendable, Equatable {
             }
         }
 
-        // The name where the document wrote one, and what the document *is*
-        // where it did not: a person reading a refusal wants the word they
-        // typed, and where there is no such word a short digest still tells two
-        // documents apart, which is more than nothing tells them.
-        if let namespace = document.namespace {
+        // Both, where there are both. A person reading a refusal wants the word
+        // they typed, and the word alone does not tell two documents apart —
+        // two halves of a module split across files write one name between
+        // them, which is the case this exists to keep separate. Showing the
+        // name and hiding what makes it unambiguous would put that case back
+        // in front of the only reader who cannot check it.
+        switch (document.namespace, document.identity) {
+        case let (namespace?, identity?):
+            return "\(namespace)@\(identity.short)/" + address
+
+        case let (namespace?, nil):
             return "\(namespace)/" + address
+
+        case let (nil, identity?):
+            return "\(identity.short)/" + address
+
+        case (nil, nil):
+            return address
         }
-
-        guard let identity = document.identity else { return address }
-
-        return "\(identity.short)/" + address
     }
 
     // MARK: - Initializer
@@ -102,9 +110,8 @@ public struct Place: Sendable, Equatable {
     // MARK: - Public
     // The four things a module declares, each under the key the document writes
     // it under — which is what makes a place something an author can follow.
-    // Which document is stated, never defaulted: `.shared` is not the absence
-    // of an answer, it is a document that wrote no name, and a caller that
-    // meant to say which text it was in would silently get that one.
+    // Which document is stated and never defaulted, so that a caller meaning to
+    // say which text it was in cannot get "none" by saying nothing.
     public static func procedure(_ name: String, in document: Document) -> Place {
         Place([.key("procedures"), .key(name)], in: document)
     }
@@ -193,7 +200,13 @@ public extension Place {
         // is the whole of what this is for.
         public let namespace: String?
 
-        // A program nobody wrote down. Spelled out rather than left to a
+        // Whether there is a text under this at all. The one question worth
+        // asking of a document from outside — a name is not an answer to it,
+        // since a module a caller built may have one.
+        public var isWrittenDown: Bool { identity != nil }
+
+        // A program nobody wrote down and nobody named, which is what a caller
+        // holding a body it assembled has. Spelled out rather than left to a
         // default, so that a place meaning to say which text it is in cannot
         // get this one by saying nothing.
         public static let assembled = Document(identity: nil, namespace: nil)

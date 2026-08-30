@@ -137,30 +137,31 @@ extension Loader {
     }
 
     // A document as a front end hands one over, which is the only way one is
-    // ever made: the version filled in, and the list of what the program needs
-    // worked out from the program. No author writes either — both are computed,
-    // and a fixture spelling them out in every test would be writing the two
-    // parts of a document nobody writes.
+    // ever made: written back out the one way a document is written, with the
+    // version and the needs list filled in. No author writes either — a fixture
+    // spelling them out in every test would be writing the two parts of a
+    // document nobody writes.
     //
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
     func loadDocument(_ value: Value) throws -> Module {
         guard case let .object(fields) = value else { return try load(value, identity: nil) }
 
-        let stamped = fields.merging(
+        let stamped = Value.object(fields.merging(
             [Envelope.versionKey: .int(Envelope.version)]
-        ) { written, _ in written }
+        ) { written, _ in written })
 
-        guard stamped[Envelope.needsKey] == nil else { return try load(.object(stamped), identity: nil) }
+        // The list is borrowed from the canonical writing rather than worked
+        // out again here, and only the list — what these fixtures write is the
+        // subject, so they are loaded as they were written.
+        guard case let .object(sealed) = try canonical(stamped),
+              let needs = sealed[Envelope.needsKey]
+        else { return try load(stamped, identity: nil) }
 
-        let needs = Envelope.needs(of: try spelled(.object(stamped)))
+        guard case let .object(fields) = stamped else { return try load(stamped, identity: nil) }
 
         return try load(
-            .object(stamped.merging(
-                [Envelope.needsKey: .array(needs.sorted().map(Value.string))]
-            ) { written, _ in written }),
-            // These are about what a reader accepts, not about pointing a
-            // refusal back into a file, so there is no document to name.
+            .object(fields.merging([Envelope.needsKey: needs]) { written, _ in written }),
             identity: nil
         )
     }

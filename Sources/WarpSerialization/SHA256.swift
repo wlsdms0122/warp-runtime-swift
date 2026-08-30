@@ -71,28 +71,35 @@ enum SHA256 {
                 schedule[index] = schedule[index - 16] &+ one &+ schedule[index - 7] &+ two
             }
 
-            var working = state
+            // The eight working variables the standard names, kept as eight
+            // variables. Written as an array rebuilt each round it is an
+            // allocation per round of a loop that runs sixty-four times per
+            // block, for a shape the algorithm never asked for — and this runs
+            // once per document read and once per document written.
+            var (a, b, c, d) = (state[0], state[1], state[2], state[3])
+            var (e, f, g, h) = (state[4], state[5], state[6], state[7])
 
             for index in 0..<64 {
-                let one = rotated(working[4], 6) ^ rotated(working[4], 11)
-                    ^ rotated(working[4], 25)
-                let choose = (working[4] & working[5]) ^ (~working[4] & working[6])
-                let first = working[7] &+ one &+ choose &+ round[index] &+ schedule[index]
+                let one = rotated(e, 6) ^ rotated(e, 11) ^ rotated(e, 25)
+                let choose = (e & f) ^ (~e & g)
+                let first = h &+ one &+ choose &+ round[index] &+ schedule[index]
 
-                let two = rotated(working[0], 2) ^ rotated(working[0], 13)
-                    ^ rotated(working[0], 22)
-                let majority = (working[0] & working[1]) ^ (working[0] & working[2])
-                    ^ (working[1] & working[2])
+                let two = rotated(a, 2) ^ rotated(a, 13) ^ rotated(a, 22)
+                let majority = (a & b) ^ (a & c) ^ (b & c)
                 let second = two &+ majority
 
-                working = [
-                    first &+ second, working[0], working[1], working[2],
-                    working[3] &+ first, working[4], working[5], working[6]
-                ]
+                h = g
+                g = f
+                f = e
+                e = d &+ first
+                d = c
+                c = b
+                b = a
+                a = first &+ second
             }
 
-            for index in 0..<8 {
-                state[index] = state[index] &+ working[index]
+            for (index, working) in [a, b, c, d, e, f, g, h].enumerated() {
+                state[index] = state[index] &+ working
             }
         }
 

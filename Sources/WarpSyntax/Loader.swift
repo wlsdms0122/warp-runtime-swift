@@ -49,9 +49,10 @@ public struct Loader: Sendable {
 
     // MARK: - Public
     // Loading is not decoding: decoding produces a fragment, and only this says
-    // the fragment is a module worth linking. It answers with a module rather than
-    // something runnable because a document is not runnable — what runs is
+    // the fragment is a module worth linking. It answers with a module rather
+    // than something runnable because a document is not runnable — what runs is
     // decided when this module is linked with the others.
+    //
     // Which document this is, handed in rather than worked out: deriving it
     // means writing the document back to its canonical bytes, and that is the
     // serialization's job — reading a document has never needed the wire.
@@ -104,20 +105,35 @@ public struct Loader: Sendable {
         return module
     }
 
-    // The module a document spells, unjudged.
+    // The document a document is: what it spells, written back out the one way
+    // a document is written, with the version and the needs list filled in.
     //
-    // Reading and judging are two things and this is the first of them. What
-    // wants it on its own is anything asking what a document *is* rather than
-    // whether its program is any good — writing it back out canonically, which
-    // is how a document is told from another document. A program with a name
-    // nothing declares is still a document, and still that document.
+    // What wants this is anything asking what a text *is* rather than whether
+    // its program is any good — telling one document from another, which is
+    // done on the canonical writing. A program with a name nothing declares is
+    // still a document, and still that one, so nothing here is judged.
     //
-    // Not for running. Nothing here has been held to the language's rules, and
-    // `load` is the door that has.
-    public func spelled(_ value: Value) throws -> Module {
+    // It answers with a document and not with the module behind it. The module
+    // has been read and not held to anything, and handing one out would be a
+    // second way into `Language.link` — which checks what a link can check and
+    // was never the stage that checks a body against itself.
+    //
+    // What comes back is sealed: the writer fills in the version and the list
+    // of what the program needs, which are the two things nobody writes by
+    // hand. So the way to make a document out of anything is this, and a
+    // caller that then loads what it got is loading exactly what it will send.
+    public func canonical(_ value: Value) throws -> Value {
+        try Writer(registry: registry, readBy: .canonical).value(of: try spelled(value))
+    }
+
+    // MARK: - Private
+    // The module a document spells, unjudged. Not a door: nothing here has been
+    // held to the language's rules, and `load` is the one that has.
+    private func spelled(_ value: Value) throws -> Module {
         try read(ModuleReader.self, from: value).module
     }
 
+    // MARK: - Public
     // One procedure, for a caller holding a procedure's worth of data rather than a
     // document. A module is how a *file* declares procedures; a caller that has
     // exactly one and already knows what to call it does not have to write an

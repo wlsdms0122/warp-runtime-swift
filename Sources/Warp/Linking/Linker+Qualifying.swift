@@ -172,9 +172,10 @@ private extension Module {
         types: (String) throws -> String,
         constraints rename: (String) throws -> String
     ) throws -> Module {
-        Module(
-            name: name,
-            description: description,
+        // Everything this does not name is carried through, which is the point
+        // of going by way of the copy: renaming rewrites what declarations are
+        // called across the link and changes nothing else about the module.
+        replacing(
             types: try self.types
                 .reduce(into: [:]) { renamed, entry in
                     renamed[qualified(entry.key)] = try entry.value
@@ -190,12 +191,7 @@ private extension Module {
             },
             procedures: try procedures.mapValues { procedure in
                 try procedure.renamed(types: types, constraints: rename)
-            },
-            // Renaming rewrites what the declarations are called across the
-            // link and changes nothing about which document they were written
-            // in — dropping it here would make every refusal after this pass
-            // read as a program nobody wrote down.
-            identity: identity
+            }
         )
     }
 }

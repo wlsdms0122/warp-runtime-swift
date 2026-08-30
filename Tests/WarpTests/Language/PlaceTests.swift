@@ -342,7 +342,7 @@ struct PlaceTests {
         // Then — the name rides beside the steps and is never one of them
         #expect(error?.place?.document == Place.Document(identity: reading, namespace: "wallet"))
         #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
-        #expect(error?.place?.rendered == "wallet/procedures.entry.body.sent[0].call")
+        #expect(error?.place?.rendered == "wallet@d0cf00/procedures.entry.body.sent[0].call")
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
@@ -364,8 +364,40 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(assembled?.place?.document == .assembled)
+        #expect(assembled?.place?.document.isWrittenDown == false)
         #expect(read?.place?.document == Place.Document(identity: reading, namespace: nil))
+    }
+
+    @Test("two halves of a split module do not read as one, to a person either")
+    func oneNameIsTwoDocumentsInTheLineToo() {
+        // Given — one module written across two files, which is a thing a link
+        // allows: both write `name: wallet`. A reader with the documents in
+        // hand tells them apart by identity, and the person reading the line
+        // has only the line — so the line has to say it too.
+        func module(declaring name: String, as identity: Identity) -> Module {
+            Module(
+                name: "wallet",
+                procedures: [
+                    name: Procedure(body: [
+                        Statement(id: "held", expression: reference("missing"))
+                    ])
+                ]
+            )
+                .read(from: identity)
+        }
+
+        // When
+        let charge = #expect(throws: ValidationError.self) {
+            try Validator().validate(module(declaring: "charge", as: Identity([0x01])))
+        }
+
+        let refund = #expect(throws: ValidationError.self) {
+            try Validator().validate(module(declaring: "refund", as: Identity([0x02])))
+        }
+
+        // Then
+        #expect(charge?.place?.rendered == "wallet@01/procedures.charge.body.held[0].value")
+        #expect(refund?.place?.rendered == "wallet@02/procedures.refund.body.held[0].value")
     }
 
     @Test("a shape a named module declares is placed by the key it declared it under")
@@ -387,7 +419,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/types.Coin.amount")
+        #expect(error?.place?.rendered == "wallet@d0cf00/types.Coin.amount")
     }
 
     @Test("a membership a named module declares is placed the same way")
@@ -408,7 +440,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/constraints.Spendable")
+        #expect(error?.place?.rendered == "wallet@d0cf00/constraints.Spendable")
     }
 
     @Test("a statement's construct is the language's word, and says so")

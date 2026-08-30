@@ -182,16 +182,13 @@ public extension Writer {
                 "where": try value(of: condition, reserving: conditionKeys)
             ]
 
-            written.merge(try fields(of: body)) { one, _ in one }
+            written.merge(try fields(of: body, keeping: true)) { one, _ in one }
 
             return (try spelling(LoopForm.self), .object(written))
 
         case let .iteration(material, body, element):
             try named(element, matches: id, in: "each", binding: "element")
 
-            // `body` is written even when empty, because the reader requires
-            // the key — a writer that drops what its reader demands writes
-            // documents nobody can read back.
             let written: [String: Value] = [
                 "in": try value(of: material),
                 "body": .array(try body.map(value(of:)))
@@ -220,7 +217,7 @@ public extension Writer {
         case let .attempt(attempted, rescue, failure):
             try named(failure, matches: id, in: "attempt", binding: "failure")
 
-            var written = try fields(of: attempted)
+            var written = try fields(of: attempted, keeping: true)
 
             written["rescue"] = .object(try fields(of: rescue))
 
@@ -249,10 +246,14 @@ public extension Writer {
         return .object(written)
     }
 
-    internal func fields(of block: Block) throws -> [String: Value] {
+    // The keys a block writes. `body` is dropped when empty only where the
+    // reader on the far side lets it be absent — a form that decodes `body` as
+    // a key it must have gets it written even empty, since a writer that drops
+    // what its reader demands writes documents nobody can read back.
+    internal func fields(of block: Block, keeping body: Bool = false) throws -> [String: Value] {
         var written: [String: Value] = [:]
 
-        if !block.body.isEmpty {
+        if body || !block.body.isEmpty {
             written["body"] = .array(try block.body.map(value(of:)))
         }
 

@@ -140,7 +140,13 @@ stamped only when nothing was wrong with it.
 The name still rides beside the steps, because a person reading a refusal wants
 the word they typed — it takes no part in saying which document this is, and a
 module a caller built still says which namespace it declares into even though
-there is no text under it. And a
+there is no text under it. Where there is both, a place reads
+`wallet@a1b2c3d4/procedures.charge…`: the name alone does not tell two halves of
+a split module apart, and the person holding only the line is the one reader who
+cannot check.
+
+Whether a place has a text under it at all is `document.isWrittenDown`, which is
+`identity != nil` and nothing to do with the name. And a
 place from a program nobody wrote down says `assembled` rather than `none`,
 since `Optional.none` answers to that spelling too and `document == .none`
 would read true for a place that does not exist.
