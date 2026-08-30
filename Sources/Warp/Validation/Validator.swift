@@ -45,18 +45,18 @@ public struct Validator: Sendable {
         // else. Which is also why it is checked here rather than per procedure:
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { $0.key < $1.key }) {
-            try normal(name, at: .constant(name, in: module.name))
-            try validate(expression, visible: constants, at: .constant(name, in: module.name))
+            try normal(name, at: .constant(name, in: .declaring(module.name)))
+            try validate(expression, visible: constants, at: .constant(name, in: .declaring(module.name)))
         }
 
         for name in module.procedures.keys.sorted() {
-            try normal(name, at: .procedure(name, in: module.name))
+            try normal(name, at: .procedure(name, in: .declaring(module.name)))
         }
 
         for name in module.procedures.keys.sorted() {
             guard let procedure = module.procedures[name] else { continue }
 
-            try validate(procedure, constants: constants, at: .procedure(name, in: module.name))
+            try validate(procedure, constants: constants, at: .procedure(name, in: .declaring(module.name)))
         }
     }
 

@@ -27,16 +27,13 @@ extension Linker {
     // the mention lives.
     func qualified(_ modules: [Module]) throws -> (
         modules: [Module],
-        types: [String: TypeExpression],
-        constraints: [String: [TypeExpression]],
-        places: [String: Place]
+        types: [String: Declared<TypeExpression>],
+        constraints: [String: Declared<[TypeExpression]>]
     ) {
-        // Where each of those names was written, by the key the document wrote
-        // it under. Gathered here because this is where both halves of the
-        // joining are in hand — anywhere later has only the joined name, and
-        // taking it apart again is a second copy of a rule that has to be right
-        // once. One table for both spaces: a name declared as a type and as a
-        // constraint is refused below, so the two cannot collide here.
+        // Where each name was written, gathered here and carried with what it
+        // holds. This is where both halves of the joining are in hand —
+        // anywhere later has only the joined name, and taking it apart again is
+        // a second copy of a rule that has to be right once.
         var places: [String: Place] = [:]
 
         // Each space checked whole before the two are held against each
@@ -49,7 +46,7 @@ extension Linker {
             for name in module.types.keys.sorted() {
                 let qualified = module.qualified(name)
 
-                places[qualified] = .type(name, in: module.name)
+                places[qualified] = .type(name, in: .declaring(module.name))
 
                 guard types.insert(qualified).inserted else {
                     throw LinkError(
@@ -64,7 +61,7 @@ extension Linker {
             for name in module.constraints.keys.sorted() {
                 let qualified = module.qualified(name)
 
-                places[qualified] = .constraint(name, in: module.name)
+                places[qualified] = .constraint(name, in: .declaring(module.name))
 
                 guard !types.contains(qualified) else {
                     throw LinkError(
@@ -112,20 +109,24 @@ extension Linker {
         // Uniqueness was refused above, so this only gathers — from the
         // renamed modules, whose keys and mentions are the spellings every
         // later reading uses.
-        var declaredTypes: [String: TypeExpression] = [:]
-        var declaredConstraints: [String: [TypeExpression]] = [:]
+        var declaredTypes: [String: Declared<TypeExpression>] = [:]
+        var declaredConstraints: [String: Declared<[TypeExpression]>] = [:]
 
         for module in renamed {
             for (name, type) in module.types {
-                declaredTypes[name] = type
+                // The place was gathered above, under the same joined name and
+                // from the same declaration, so this cannot miss — and if the
+                // two ever came apart, the crash says so where a `nil` place
+                // would have gone out looking like a refusal with nowhere to be.
+                declaredTypes[name] = Declared(type, at: places[name]!)
             }
 
             for (name, members) in module.constraints {
-                declaredConstraints[name] = members
+                declaredConstraints[name] = Declared(members, at: places[name]!)
             }
         }
 
-        return (renamed, declaredTypes, declaredConstraints, places)
+        return (renamed, declaredTypes, declaredConstraints)
     }
 
     // The shared rule, with this surface's two failure sentences: a mention

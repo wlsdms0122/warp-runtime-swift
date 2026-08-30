@@ -307,7 +307,7 @@ struct PlaceTests {
         let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
-                .buried(at: .procedure(entryName))
+                .buried(at: .procedure(entryName, in: .shared))
                 .first { _, expression in
                     guard case .dispatch = expression else { return false }
 

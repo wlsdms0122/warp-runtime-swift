@@ -94,20 +94,23 @@ public struct Place: Sendable, Equatable {
     // MARK: - Public
     // The four things a module declares, each under the key the document writes
     // it under — which is what makes a place something an author can follow.
-    public static func procedure(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("procedures"), .key(name)], in: .declaring(document))
+    // Which document is stated, never defaulted: `.shared` is not the absence
+    // of an answer, it is a document that wrote no name, and a caller that
+    // meant to say which text it was in would silently get that one.
+    public static func procedure(_ name: String, in document: Document) -> Place {
+        Place([.key("procedures"), .key(name)], in: document)
     }
 
-    public static func constant(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("const"), .key(name)], in: .declaring(document))
+    public static func constant(_ name: String, in document: Document) -> Place {
+        Place([.key("const"), .key(name)], in: document)
     }
 
-    public static func type(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("types"), .key(name)], in: .declaring(document))
+    public static func type(_ name: String, in document: Document) -> Place {
+        Place([.key("types"), .key(name)], in: document)
     }
 
-    public static func constraint(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("constraints"), .key(name)], in: .declaring(document))
+    public static func constraint(_ name: String, in document: Document) -> Place {
+        Place([.key("constraints"), .key(name)], in: document)
     }
 
     // A caller holding a program it assembled itself, with no document under
