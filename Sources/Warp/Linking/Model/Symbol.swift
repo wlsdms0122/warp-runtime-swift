@@ -18,11 +18,21 @@ struct Symbol: Sendable {
     // shared space the way a translation unit without a namespace does.
     let qualified: String
 
+    // The key this declaration is written under in its module. Kept beside the
+    // qualified name because the two answer different questions: what a link
+    // calls a declaration is the link's fact, and what a reader has to look for
+    // in the text is this — `procedures` holds the declared key and never the
+    // module's name, so a place spelled with the qualified one leads nowhere.
+    let declared: String
+
     // Which module declared it, by position in the link. Identity rather than
     // name, so two unnamed modules are still two modules.
     let origin: Int
 
     let procedure: Procedure
+
+    // Where this declaration's words are, in the document that wrote it.
+    var place: Place { .procedure(declared) }
 
     // MARK: - Initializer
     // MARK: - Public

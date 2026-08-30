@@ -167,7 +167,7 @@ public struct Linker: Sendable {
                 symbol.procedure,
                 within: symbol.origin,
                 symbols: space,
-                at: .procedure(symbol.qualified)
+                at: symbol.place
             )
 
             boundBodies[symbol.qualified] = bound
@@ -196,6 +196,7 @@ public struct Linker: Sendable {
 
                 return Unsaid(
                     qualified: symbol.qualified,
+                    place: symbol.place,
                     block: block,
                     environment: opening(symbol, of: bound.signature),
                     sends: sent(in: block, reaching: wordSymbols)
@@ -258,7 +259,7 @@ public struct Linker: Sendable {
 
                 let (rewritten, gathered) = try resolvedSites(
                     in: block,
-                    at: .procedure(symbol.qualified),
+                    at: symbol.place,
                     in: environment,
                     with: frame,
                     folding: folding
@@ -337,7 +338,7 @@ public struct Linker: Sendable {
                     throw LinkError(
                         "answers \(answer.type), and its"
                             + " declaration promises \(returns) — \(error)",
-                        at: Place.procedure(symbol.qualified).slot(.result)
+                        at: symbol.place.slot(.result)
                     )
                 }
             }
@@ -614,7 +615,12 @@ public struct Linker: Sendable {
                 }
 
                 symbols.append(
-                    Symbol(qualified: qualified, origin: origin, procedure: procedure)
+                    Symbol(
+                        qualified: qualified,
+                        declared: name,
+                        origin: origin,
+                        procedure: procedure
+                    )
                 )
             }
         }

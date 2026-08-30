@@ -34,6 +34,12 @@ extension Linker {
     // statement, and which other unwritten answers its own may come from.
     struct Unsaid {
         let qualified: String
+
+        // Where the declaration's words are. Carried rather than spelled from
+        // the qualified name, which is the link's word for it and not the
+        // document's.
+        let place: Place
+
         let block: Block
         let environment: [String: TypeExpression]
         let sends: Set<String>
@@ -83,7 +89,7 @@ extension Linker {
             // decided.
             let read = try? reading(
                 from: only.block,
-                at: .procedure(only.qualified),
+                at: only.place,
                 in: only.environment,
                 with: frame()
             )

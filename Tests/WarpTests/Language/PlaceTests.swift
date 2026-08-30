@@ -318,6 +318,30 @@ struct PlaceTests {
         #expect(gathered.0.rendered == reached)
     }
 
+    @Test("a named module does not put its name in the place")
+    func aModuleNameIsNotADocumentKey() {
+        // Given — the same refusal from a module that has a name. A link calls
+        // this declaration `wallet.entry`, and no document writes that: the
+        // name is a field beside `procedures`, and what `procedures` holds is
+        // the declared key alone.
+        let sut = Module(
+            name: "wallet",
+            procedures: [
+                entryName: Procedure(body: [
+                    Statement(id: "sent", expression: .dispatch(Dispatch(selector: "nowhere")))
+                ])
+            ]
+        )
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "wallet.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
+    }
+
     @Test("a statement's construct is the language's word, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
         // Given — one shape, two texts: `{ call: … }` and `{ value: { call:
