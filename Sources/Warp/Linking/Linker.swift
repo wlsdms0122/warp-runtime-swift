@@ -70,7 +70,8 @@ public struct Linker: Sendable {
             guard let symbol = space.symbol(spelled: qualified) else {
                 throw LinkError(
                     "entry '\(entry)' is not declared by any module in this link"
-                        + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))"
+                        + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                    at: nil
                 )
             }
 
@@ -79,13 +80,15 @@ public struct Linker: Sendable {
         case let .ambiguous(candidates):
             throw LinkError(
                 "entry '\(entry)' is declared by more than one module —"
-                    + " \(candidates.joined(separator: " and ")) — name the one you meant"
+                    + " \(candidates.joined(separator: " and ")) — name the one you meant",
+                at: nil
             )
 
         case .unresolved:
             throw LinkError(
                 "entry '\(entry)' is not declared by any module in this link"
-                    + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))"
+                    + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                at: nil
             )
         }
 
@@ -580,7 +583,8 @@ public struct Linker: Sendable {
             throw LinkError(
                 "\(ambiguous.sorted().joined(separator: ", ")) is declared by more than"
                     + " one module as something a path may reach — a path segment names"
-                    + " no module, so there is no spelling that would tell them apart"
+                    + " no module, so there is no spelling that would tell them apart",
+                at: nil
             )
         }
 
@@ -604,7 +608,8 @@ public struct Linker: Sendable {
                 guard claimed.insert(qualified).inserted else {
                     throw LinkError(
                         "'\(qualified)' is declared more than once in this link"
-                            + " — two declarations of a name have no way to be told apart"
+                            + " — two declarations of a name have no way to be told apart",
+                        at: nil
                     )
                 }
 
@@ -1311,7 +1316,8 @@ public struct Linker: Sendable {
                     throw LinkError(
                         "constants \(pending.keys.sorted().joined(separator: ", ")) cannot"
                             + " be settled — a constant may name another declared beside it,"
-                            + " but not one that names it back"
+                            + " but not one that names it back",
+                        at: nil
                     )
                 }
             }

@@ -13,7 +13,7 @@ public struct ValidationError: WarpError {
     public let place: Place?
 
     // MARK: - Initializer
-    public init(_ message: String, at place: Place? = nil) {
+    public init(_ message: String, at place: Place?) {
         self.message = message
         self.place = place
     }

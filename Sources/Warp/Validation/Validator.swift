@@ -117,9 +117,7 @@ public struct Validator: Sendable {
             // A statement is its name and the construct it writes under —
             // both, because a document writes both and following one word at a
             // time is what a place is for.
-            let here = place
-                .statement(statement.id, at: position)
-                .key(statement.expression.constructKey)
+            let here = place.statement(statement, at: position)
 
             // A binding with no name is a write that goes nowhere. The document
             // reader cannot produce one — the binding comes from the naming key
@@ -320,6 +318,22 @@ public struct Validator: Sendable {
         // there is refused here rather than discovered at a run.
         case let .leave(leave):
             try validate(leave, in: surroundings, at: place)
+
+            // What a `return` carries is an operand like any other — a name it
+            // reads has to be visible where it was written, and a construct
+            // that answers nothing has nothing to hand back. Only `return`
+            // reaches here with one: the check above refuses a value on the
+            // two that end a loop.
+            guard let value = leave.value else { return }
+
+            try refuseAnswerless(value, at: place)
+            try validate(
+                value,
+                visible: visible,
+                variables: variables,
+                surroundings: surroundings,
+                at: place
+            )
 
         case let .closure(procedure):
             let inside = place.slot(.closure)

@@ -1724,9 +1724,7 @@ extension Linker {
         var calls: [CallSite] = []
 
         for (position, statement) in body.enumerated() {
-            let here = place
-                .statement(statement.id, at: position)
-                .key(statement.expression.constructKey)
+            let here = place.statement(statement, at: position)
 
             let inner = try inspected(
                 statement.expression,
@@ -1770,14 +1768,13 @@ extension Linker {
                 }
 
                 if position != body.count - 1 {
-                    let next = body[position + 1]
-
+                    // The leaving statement, not what follows it: what an
+                    // author has to change is the one that ends the body, and
+                    // the load says the same thing from the same place.
                     try refuse(
-                        "never finishes, and nothing"
-                            + " written after it would ever run",
-                        at: place
-                            .statement(next.id, at: position + 1)
-                            .key(next.expression.constructKey),
+                        "every way through this statement leaves, and what"
+                            + " follows it here would never run",
+                        at: here,
                         when: ask
                     )
                 }

@@ -16,7 +16,12 @@ public struct LinkError: WarpError {
     public let place: Place?
 
     // MARK: - Initializer
-    public init(_ message: String, at place: Place? = nil) {
+    // The place is stated and never defaulted. Most of what this refuses is
+    // somewhere — and the few that are not are facts about the link rather
+    // than about a document: two modules declaring one name is two places, and
+    // an entry nobody declares is none. Saying `nil` out loud is how those
+    // stay distinguishable from a place somebody forgot to carry.
+    public init(_ message: String, at place: Place?) {
         self.message = message
         self.place = place
     }

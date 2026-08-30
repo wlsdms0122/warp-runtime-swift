@@ -165,7 +165,7 @@ public extension [Statement] {
             statement.expression.buried(
                 at: stepping(
                     stepping(trail, .statement(name: statement.id, at: position)),
-                    .key(statement.expression.constructKey)
+                    .landmark(statement.expression.constructKey)
                 ),
                 stepping: stepping
             )

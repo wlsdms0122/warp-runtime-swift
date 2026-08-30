@@ -54,7 +54,7 @@ struct NeverTests {
         #expect {
             try language.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("nothing written after")
+            "\(error)".contains("what follows it here would never run")
         }
     }
 

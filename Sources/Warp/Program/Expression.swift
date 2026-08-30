@@ -89,16 +89,19 @@ public indirect enum Expression: Sendable {
     case leave(Leave)
 
     // MARK: - Property
-    // The key a document writes this under, where it stands as a statement's
-    // construct. Everything with no construct of its own is a `value`, which
-    // is the key a document writes an expression under.
+    // The word for the construct this is, where it stands as a statement's.
+    // Everything with no construct of its own answers `value`.
     //
     // Here rather than worked out by each walk that reports a place, because
-    // two walks reporting one statement under two keys is two documents as
-    // far as an author following the words is concerned. It is a fact about
-    // the specified document and not about any one reader's table: a caller
-    // may register its own forms, and what it wrote them to read is the same
-    // grammar under whatever word it chose.
+    // two walks calling one statement's construct two things is two documents
+    // as far as an author following the words is concerned.
+    //
+    // It is what this implementation calls the shape and **not** a word read
+    // off any document: a caller registers the forms it likes under the
+    // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
+    // two texts that arrive here as one shape. So a place carries this as a
+    // landmark — a word the language chose — and what a reader may follow back
+    // into a file is only what is marked as the document's own.
     public var constructKey: String {
         switch self {
         case .literal, .reference, .array, .record, .closure, .cast: "value"

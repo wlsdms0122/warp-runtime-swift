@@ -91,16 +91,22 @@ one.
 `Writer` is the way back out: a program that was *built* rather than read has
 no document to hand to anything running elsewhere, and this is how it gets one.
 
-Whatever refuses says where. A refusal from the two stages that read a program
-before running it carries a `Place` — the path to it through the document,
+Whatever refuses somewhere says where. A refusal from the two stages that read
+a program before running it carries a `Place` — the path to it through the document,
 spelled from the keys the document itself writes, so
 `procedures.greet.body.total[2].call.arguments.amount` is a line every word of
 which an author can follow in the text in front of them. It is steps rather
 than a sentence because a front end holding the file this was authored in has
 to walk them to point at the line, and only the front end knows that file: what
 crossed the wire is the document. A refusal from a run carries a `Trace`
-instead — where the run had been, which is the other question. What a notation
-refuses while reading a document is not placed this way yet.
+instead — where the run had been, which is the other question.
+
+Not every refusal has a place, and the ones that do not say so: two modules
+declaring one name is two places and an entry nobody declares is none, so those
+carry `nil` — written out at the call, because the initializer takes no default
+and a place nobody carried would otherwise look like a place that does not
+exist. What a notation refuses while reading a document is not placed this way
+yet.
 
 ## Vocabulary — the boundary to the outside
 

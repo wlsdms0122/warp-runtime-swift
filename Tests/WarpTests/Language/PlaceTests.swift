@@ -318,6 +318,98 @@ struct PlaceTests {
         #expect(gathered.0.rendered == reached)
     }
 
+    @Test("a statement's construct is the language's word, and says so")
+    func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
+        // Given — one shape, two texts: `{ call: … }` and `{ value: { call:
+        // … } }` are both a dispatch by the time anything here sees one, so
+        // the word for the construct is this implementation's rather than
+        // something a reader may go looking for in a file.
+        let sut = try #require(
+            place(
+                refusing: Statement(
+                    id: "sent",
+                    expression: .dispatch(
+                        Dispatch(selector: "send", arguments: ["amount": reference("missing")])
+                    )
+                )
+            )
+        )
+
+        // Then — the word is spelled for the person reading the line
+        #expect(sut.rendered.contains(".sent[0].call."))
+
+        // And carried as the language's, beside the keys that are the text's
+        #expect(sut.steps.contains(.landmark("call")))
+        #expect(sut.steps.contains(.key("call")) == false)
+        #expect(sut.steps.contains(.key("arguments")))
+    }
+
+    @Test("what a return carries is checked, and placed where the return is")
+    func aReturnsValueIsWalked() {
+        // Given — the door a caller assembling a program itself passes. What
+        // `return` carries is an operand like any other: a name it reads has
+        // to be visible where it was written.
+        let sut = module(
+            refusing: Statement(
+                expression: .leave(Leave(reach: .procedure, value: reference("missing")))
+            )
+        )
+
+        // When
+        let error = #expect(throws: ValidationError.self) {
+            try Validator().validate(sut)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "procedures.entry.body[0].return")
+    }
+
+    @Test("both stages point at the statement that leaves, not at what follows it")
+    func theLeaveRuleIsPlacedOnTheLeavingStatement() {
+        // Given — the one rule both stages hold: the load catches the leaves
+        // the text shows, the link catches the word that declares `never`.
+        // What an author has to change is the statement that ends the body, so
+        // that is where each of them says it is.
+        let shown = Module(
+            procedures: [
+                entryName: Procedure(body: [
+                    Statement(expression: .leave(Leave(reach: .procedure))),
+                    Statement(id: "after", expression: .literal(.int(1)))
+                ])
+            ]
+        )
+
+        let declared = Module(
+            procedures: [
+                entryName: Procedure(body: [
+                    Statement(
+                        expression: .dispatch(
+                            Dispatch(selector: "stop", arguments: ["message": .literal(.string("x"))])
+                        )
+                    ),
+                    Statement(id: "after", expression: .literal(.int(1)))
+                ]),
+                "stop": Procedure(
+                    signature: Signature(
+                        parameters: ["message": Parameter(type: .string)],
+                        returns: .never
+                    ),
+                    body: [Statement(expression: .leave(Leave(reach: .procedure)))]
+                )
+            ]
+        )
+
+        // When
+        let load = #expect(throws: ValidationError.self) { try Validator().validate(shown) }
+        let link = #expect(throws: LinkError.self) {
+            try Language().link([declared] + Module.standard, entry: entryName)
+        }
+
+        // Then
+        #expect(load?.place?.rendered == "procedures.entry.body[0].return")
+        #expect(link?.place?.rendered == "procedures.entry.body[0].call")
+    }
+
     // MARK: - Public
     // MARK: - Private
     private func module(refusing statement: Statement) -> Module {

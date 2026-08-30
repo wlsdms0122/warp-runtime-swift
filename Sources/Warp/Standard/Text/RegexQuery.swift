@@ -23,7 +23,9 @@ public struct RegexQuery: Query {
             case let .string(pattern) = arguments["value"] ?? .null,
             (try? NSRegularExpression(pattern: pattern)) != nil
         else {
-            throw ValidationError("regex needs a valid string pattern")
+            // A word judging its own arguments is handed the values and not
+            // where they were written; the link knows that, and says it.
+            throw ValidationError("regex needs a valid string pattern", at: nil)
         }
     }
 

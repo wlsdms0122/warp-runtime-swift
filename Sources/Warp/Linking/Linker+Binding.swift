@@ -101,9 +101,7 @@ extension Linker {
                 statement.expression,
                 within: origin,
                 symbols: symbols,
-                at: place
-                    .statement(statement.id, at: position)
-                    .key(statement.expression.constructKey)
+                at: place.statement(statement, at: position)
             )
         )
     }
@@ -171,7 +169,7 @@ extension Linker {
 
         case let .record(record):
             return .record(
-                try record.reduce(into: [:]) { bound, field in
+                try record.sorted(by: { $0.key < $1.key }).reduce(into: [:]) { bound, field in
                     bound[field.key] = try bind(
                         field.value,
                         within: origin,
@@ -195,7 +193,8 @@ extension Linker {
         case let .invoke(callee, arguments):
             return .invoke(
                 try inner(callee, under: .procedure),
-                arguments: try arguments.reduce(into: [:]) { bound, argument in
+                arguments: try arguments.sorted(by: { $0.key < $1.key })
+                    .reduce(into: [:]) { bound, argument in
                     bound[argument.key] = try bind(
                         argument.value,
                         within: origin,
@@ -287,7 +286,8 @@ extension Linker {
                 try bind(receiver, within: origin, symbols: symbols, at: place.slot(.of))
             },
             selector: selector,
-            arguments: try dispatch.arguments.reduce(into: [:]) { bound, argument in
+            arguments: try dispatch.arguments.sorted(by: { $0.key < $1.key })
+                .reduce(into: [:]) { bound, argument in
                 bound[argument.key] = try bind(
                     argument.value,
                     within: origin,

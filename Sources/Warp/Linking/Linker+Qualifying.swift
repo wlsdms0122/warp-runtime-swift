@@ -42,7 +42,8 @@ extension Linker {
 
                 guard types.insert(qualified).inserted else {
                     throw LinkError(
-                        "type '\(qualified)' is declared more than once in this link"
+                        "type '\(qualified)' is declared more than once in this link",
+                        at: nil
                     )
                 }
             }
@@ -56,13 +57,15 @@ extension Linker {
                     throw LinkError(
                         "'\(qualified)' is declared as both a type and a constraint in"
                             + " this link — one name cannot stand for a shape and"
-                            + " a membership at once"
+                            + " a membership at once",
+                        at: nil
                     )
                 }
 
                 guard constraints.insert(qualified).inserted else {
                     throw LinkError(
-                        "constraint '\(qualified)' is declared more than once in this link"
+                        "constraint '\(qualified)' is declared more than once in this link",
+                        at: nil
                     )
                 }
             }
@@ -134,7 +137,8 @@ extension Linker {
             throw LinkError(
                 "\(kind) '\(name)' is declared by more than one module —"
                     + " \(candidates.joined(separator: ", ")) — a bare"
-                    + " spelling cannot say which, so write the qualified name"
+                    + " spelling cannot say which, so write the qualified name",
+                at: nil
             )
         }
     }

@@ -30,9 +30,12 @@ public struct Place: Sendable, Equatable {
     // MARK: - Property
     public let steps: [Step]
 
-    // How the place reads in a message. Named steps are joined with dots and
-    // positions are bracketed — the same spelling `Trace` uses, since an author
-    // reading one has just read the other.
+    // How the place reads in a message: named steps joined with dots, positions
+    // bracketed. `Trace` reads by the same two rules, since an author holding
+    // one has just read the other — what differs is what gets a bracket. A
+    // trace brackets an occurrence, because the text it names ran more than
+    // once; a place brackets every statement, because one name in the text may
+    // be two statements.
     public var rendered: String {
         steps.reduce(into: "") { written, step in
             switch step {
@@ -99,6 +102,15 @@ public struct Place: Sendable, Equatable {
         appending(.statement(name: name?.isEmpty == true ? nil : name, at: position))
     }
 
+    // A statement and the construct it writes, which is how every walk reaches
+    // what one holds. The construct is a landmark and not a key: it is the word
+    // this implementation has for the shape, and two documents that write the
+    // shape differently arrive as one shape.
+    public func statement(_ statement: Statement, at position: Int) -> Place {
+        self.statement(statement.id, at: position)
+            .appending(.landmark(statement.expression.constructKey))
+    }
+
     public func appending(_ step: Step) -> Place {
         Place(steps + [step])
     }
@@ -146,11 +158,13 @@ public extension Place {
         // alone finds nothing when a `var` and the `set` writing it share one.
         case statement(name: String?, at: Int)
 
-        // Somewhere no document names — a body a caller assembled and handed
-        // over, which has no document under it to have a key in. It renders
-        // like a key on purpose, since a person reading a line wants a line;
-        // what tells the two apart is this case, for the reader that has to
-        // know which words came from the text.
+        // A word the language chose, where the document's own is not known: a
+        // statement's construct, which two texts spell two ways and one shape
+        // arrives as; a body a caller assembled and handed over, which has no
+        // document under it to have a key in. It renders like a key on purpose,
+        // since a person reading a line wants a line — what tells the two apart
+        // is this case, for the reader that has to know which of the words it
+        // may look for in a file.
         case landmark(String)
     }
 }
