@@ -144,13 +144,16 @@ extension Linker {
     }
 }
 
-private extension Module {
-    // What this module's declaration of `name` is called across the link — the
-    // same joining a procedure symbol gets.
+// Named across the link. Reachable past this file because a refusal keyed by
+// what the link calls a declaration has to be walked back to what the document
+// calls it, and this is the joining that has to be undone.
+extension Module {
     func qualified(_ name: String) -> String {
         self.name.map { module in "\(module).\(name)" } ?? name
     }
+}
 
+private extension Module {
     func renamed(
         types: (String) throws -> String,
         constraints rename: (String) throws -> String

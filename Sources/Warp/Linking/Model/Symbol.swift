@@ -25,6 +25,10 @@ struct Symbol: Sendable {
     // module's name, so a place spelled with the qualified one leads nowhere.
     let declared: String
 
+    // The name the declaring module writes, which is the document a place made
+    // from `declared` is an address in. Nil where the module wrote none.
+    let document: String?
+
     // Which module declared it, by position in the link. Identity rather than
     // name, so two unnamed modules are still two modules.
     let origin: Int
@@ -32,7 +36,7 @@ struct Symbol: Sendable {
     let procedure: Procedure
 
     // Where this declaration's words are, in the document that wrote it.
-    var place: Place { .procedure(declared) }
+    var place: Place { .procedure(declared, in: document) }
 
     // MARK: - Initializer
     // MARK: - Public

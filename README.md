@@ -107,7 +107,14 @@ where the run had been, which is the other question.
 
 A module's name is never a step. A link calls a declaration `wallet.entry`, and
 no document writes that: `name` sits beside `procedures`, and what `procedures`
-holds is the declared key alone.
+holds is the declared key alone. It is carried beside the steps instead, because
+a link holds several documents and the steps alone do not say which —
+`std.collection` and `std.concurrent` both declare `first`, and a reader handed
+`procedures.first` with no document would point at whichever one it was holding.
+So a place reads `wallet/procedures.entry.body.sent[0].call`, and the part before
+the slash is the only part that is not a key. A module that wrote no name carries
+none: it declares into the link's shared space, where nothing else may declare
+what it declares.
 
 Not every refusal has a place, and the ones that do not say so: two modules
 declaring one name is two places and an entry nobody declares is none, so those

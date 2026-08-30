@@ -338,8 +338,10 @@ struct PlaceTests {
             try Language().link([sut] + Module.standard, entry: "wallet.entry")
         }
 
-        // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
+        // Then — the name says which document, and never which key
+        #expect(error?.place?.document == "wallet")
+        #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
+        #expect(error?.place?.rendered == "wallet/procedures.entry.body.sent[0].call")
     }
 
     @Test("a statement's construct is the language's word, and says so")

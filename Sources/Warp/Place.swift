@@ -28,6 +28,19 @@ import Foundation
 // those words in front of them.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
+    // Which document the steps are in, by the name that document writes beside
+    // its declarations. Not a step: `name` sits next to `procedures` rather
+    // than inside it, so no walk down the keys ever passes through it.
+    //
+    // It is here because a link holds several documents and the steps alone do
+    // not say which one — `std.collection` and `std.concurrent` both declare
+    // `first`, and a reader handed `procedures.first` with no document would
+    // point at whichever `first` it happened to be holding. Nil where the
+    // module wrote no name: such a module declares into the link's shared
+    // space, where nothing else may declare the same name, so there is nothing
+    // to tell apart.
+    public let document: String?
+
     public let steps: [Step]
 
     // How the place reads in a message: named steps joined with dots, positions
@@ -37,10 +50,10 @@ public struct Place: Sendable, Equatable {
     // once; a place brackets every statement, because one name in the text may
     // be two statements.
     public var rendered: String {
-        steps.reduce(into: "") { written, step in
+        steps.reduce(into: document.map { name in "\(name)/" } ?? "") { written, step in
             switch step {
             case let .key(name), let .landmark(name):
-                written += written.isEmpty ? name : ".\(name)"
+                written += stepless(written) ? name : ".\(name)"
 
             case let .index(position):
                 written += "[\(position)]"
@@ -50,7 +63,7 @@ public struct Place: Sendable, Equatable {
             // `var` and the `set` that writes it are two statements and one
             // name, and a place that dropped the position would call them one.
             case let .statement(name?, position):
-                written += (written.isEmpty ? name : ".\(name)") + "[\(position)]"
+                written += (stepless(written) ? name : ".\(name)") + "[\(position)]"
 
             case let .statement(nil, position):
                 written += "[\(position)]"
@@ -59,20 +72,29 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    public init(_ steps: [Step] = []) {
+    public init(_ steps: [Step] = [], in document: String? = nil) {
+        self.document = document
         self.steps = steps
     }
 
     // MARK: - Public
     // The four things a module declares, each under the key the document writes
     // it under — which is what makes a place something an author can follow.
-    public static func procedure(_ name: String) -> Place { Place([.key("procedures"), .key(name)]) }
+    public static func procedure(_ name: String, in document: String? = nil) -> Place {
+        Place([.key("procedures"), .key(name)], in: document)
+    }
 
-    public static func constant(_ name: String) -> Place { Place([.key("const"), .key(name)]) }
+    public static func constant(_ name: String, in document: String? = nil) -> Place {
+        Place([.key("const"), .key(name)], in: document)
+    }
 
-    public static func type(_ name: String) -> Place { Place([.key("types"), .key(name)]) }
+    public static func type(_ name: String, in document: String? = nil) -> Place {
+        Place([.key("types"), .key(name)], in: document)
+    }
 
-    public static func constraint(_ name: String) -> Place { Place([.key("constraints"), .key(name)]) }
+    public static func constraint(_ name: String, in document: String? = nil) -> Place {
+        Place([.key("constraints"), .key(name)], in: document)
+    }
 
     // A caller holding a program it assembled itself, with no document under
     // it. There is no key to name, so the place says what was handed in.
@@ -112,10 +134,15 @@ public struct Place: Sendable, Equatable {
     }
 
     public func appending(_ step: Step) -> Place {
-        Place(steps + [step])
+        Place(steps + [step], in: document)
     }
 
     // MARK: - Private
+    // Whether nothing has been written yet but the document's name, which takes
+    // no dot after it — it is not a key, and the slash already separates it.
+    private func stepless(_ written: String) -> Bool {
+        written.isEmpty || written.hasSuffix("/")
+    }
 }
 
 public extension Place {

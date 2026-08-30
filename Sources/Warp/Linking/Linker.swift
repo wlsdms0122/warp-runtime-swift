@@ -195,8 +195,7 @@ public struct Linker: Sendable {
                 else { return nil }
 
                 return Unsaid(
-                    qualified: symbol.qualified,
-                    place: symbol.place,
+                    symbol: symbol,
                     block: block,
                     environment: opening(symbol, of: bound.signature),
                     sends: sent(in: block, reaching: wordSymbols)
@@ -618,6 +617,7 @@ public struct Linker: Sendable {
                     Symbol(
                         qualified: qualified,
                         declared: name,
+                        document: module.name,
                         origin: origin,
                         procedure: procedure
                     )
@@ -695,6 +695,23 @@ public struct Linker: Sendable {
         declared: [String: TypeExpression],
         constraints members: [String: [TypeExpression]]
     ) throws -> TypeTable {
+        // The tables arrive keyed by qualified names, which is what the link
+        // calls a declaration and not what any document writes. A place has to
+        // be the document's, so the walk back is made here, from the modules
+        // the names were gathered out of.
+        var declaredPlaces: [String: Place] = [:]
+        var memberPlaces: [String: Place] = [:]
+
+        for module in modules {
+            for name in module.types.keys {
+                declaredPlaces[module.qualified(name)] = .type(name, in: module.name)
+            }
+
+            for name in module.constraints.keys {
+                memberPlaces[module.qualified(name)] = .constraint(name, in: module.name)
+            }
+        }
+
         // A name that reaches a shape may name itself along the way — `Tree`
         // holding `array<Tree>` is a shape. A name that reaches only names
         // never becomes one, and everything that resolves names would chase
@@ -709,7 +726,7 @@ public struct Linker: Sendable {
                     throw LinkError(
                         "reaches itself through nothing but names"
                             + " — a name that only names names never reaches a shape",
-                        at: .type(name)
+                        at: declaredPlaces[name]
                     )
                 }
 
@@ -722,7 +739,7 @@ public struct Linker: Sendable {
                 throw LinkError(
                     "admits nothing, so no parameter it"
                         + " bounds could ever be filled",
-                    at: .constraint(name)
+                    at: memberPlaces[name]
                 )
             }
 
@@ -748,7 +765,7 @@ public struct Linker: Sendable {
                         "a member is a concrete shape"
                             + " — `\(member.rendered)` says nothing a"
                             + " membership could hold",
-                        at: .constraint(name)
+                        at: memberPlaces[name]
                     )
 
                 default:
@@ -761,14 +778,19 @@ public struct Linker: Sendable {
 
         for module in modules {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
-                try mentioned(in: type, at: .type(name), parameterized: false, resolve: table)
+                try mentioned(
+                    in: type,
+                    at: .type(name, in: module.name),
+                    parameterized: false,
+                    resolve: table
+                )
             }
 
             for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
                 for member in members {
                     try mentioned(
                         in: member,
-                        at: .constraint(name),
+                        at: .constraint(name, in: module.name),
                         parameterized: false,
                         resolve: table
                     )
@@ -776,14 +798,14 @@ public struct Linker: Sendable {
             }
 
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
-                try judge(procedure.signature, at: .procedure(name), in: table)
+                try judge(procedure.signature, at: .procedure(name, in: module.name), in: table)
 
                 // A closure literal carries a signature the way a declaration
                 // does, and unreached code still has to compile — so what the
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
-                    let buried = block.buried(at: .procedure(name))
+                    let buried = block.buried(at: .procedure(name, in: module.name))
 
                     for (place, inner) in closures(in: buried) {
                         try judge(inner.signature, at: place, in: table)
@@ -803,7 +825,7 @@ public struct Linker: Sendable {
             }
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
-                let buried = constant.buried(at: .constant(name))
+                let buried = constant.buried(at: .constant(name, in: module.name))
 
                 for (place, inner) in closures(in: buried) {
                     try judge(inner.signature, at: place, in: table)
@@ -1283,7 +1305,7 @@ public struct Linker: Sendable {
                         expression,
                         within: origin,
                         symbols: space,
-                        at: .constant(name)
+                        at: .constant(name, in: module.name)
                     )
 
                     // Everything this constant reads is settled, so a refusal
@@ -1297,7 +1319,7 @@ public struct Linker: Sendable {
                     // place, so only the settling refusal below needs one.
                     let (judged, calls) = try resolvedSites(
                         in: bound,
-                        at: .constant(name),
+                        at: .constant(name, in: module.name),
                         in: known.mapValues { value in type(of: value) },
                         with: frame,
                         folding: nil
@@ -1311,7 +1333,7 @@ public struct Linker: Sendable {
                     do {
                         known[name] = try resolver.resolve(judged)
                     } catch {
-                        throw LinkError("\(error)", at: .constant(name))
+                        throw LinkError("\(error)", at: .constant(name, in: module.name))
                     }
 
                     pending[name] = nil

@@ -33,12 +33,11 @@ extension Linker {
     // off the body: the body itself, the names in scope before its first
     // statement, and which other unwritten answers its own may come from.
     struct Unsaid {
-        let qualified: String
-
-        // Where the declaration's words are. Carried rather than spelled from
-        // the qualified name, which is the link's word for it and not the
-        // document's.
-        let place: Place
+        // The declaration itself, rather than the two things this walk asks of
+        // it. What it is called across the link and where its words are in the
+        // document are both the symbol's to say, and copying either out here
+        // would be a second place the rule for it lives.
+        let symbol: Symbol
 
         let block: Block
         let environment: [String: TypeExpression]
@@ -58,12 +57,12 @@ extension Linker {
         recording: (String, TypeExpression) -> Void
     ) {
         let declared = Dictionary(
-            unsaid.map { one in (one.qualified, one) },
+            unsaid.map { one in (one.symbol.qualified, one) },
             uniquingKeysWith: { first, _ in first }
         )
 
         let edges = Dictionary(
-            unsaid.map { one in (one.qualified, one.sends.sorted()) },
+            unsaid.map { one in (one.symbol.qualified, one.sends.sorted()) },
             uniquingKeysWith: { first, _ in first }
         )
 
@@ -74,7 +73,7 @@ extension Linker {
             guard
                 circle.count == 1,
                 let only = circle.first.flatMap({ name in declared[name] }),
-                !only.sends.contains(only.qualified)
+                !only.sends.contains(only.symbol.qualified)
             else {
                 for name in circle { recording(name, .any) }
 
@@ -89,7 +88,7 @@ extension Linker {
             // decided.
             let read = try? reading(
                 from: only.block,
-                at: only.place,
+                at: only.symbol.place,
                 in: only.environment,
                 with: frame()
             )
@@ -102,7 +101,7 @@ extension Linker {
             // parameter reaches, named for the path that reached it) fills
             // with nothing, which is `any`. One rule, and the useful half
             // comes for free.
-            recording(only.qualified, read ?? .any)
+            recording(only.symbol.qualified, read ?? .any)
         }
     }
 
