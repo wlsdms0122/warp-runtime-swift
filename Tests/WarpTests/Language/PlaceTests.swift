@@ -344,6 +344,47 @@ struct PlaceTests {
         #expect(error?.place?.rendered == "wallet/procedures.entry.body.sent[0].call")
     }
 
+    @Test("a shape a named module declares is placed by the key it declared it under")
+    func aTypeInANamedModuleIsPlacedByItsDeclaredKey() {
+        // Given — a named module, whose type keys the link rewrites into the
+        // names it calls them by. A place spelled from one of those carries the
+        // module's name twice and leads nowhere: `types.wallet.Coin` is not
+        // what any document writes.
+        let sut = Module(
+            name: "wallet",
+            types: ["Coin": .record(["amount": .named("Missing")])],
+            procedures: [entryName: Procedure(body: [])]
+        )
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "wallet.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/types.Coin.amount")
+    }
+
+    @Test("a membership a named module declares is placed the same way")
+    func aConstraintInANamedModuleIsPlacedByItsDeclaredKey() {
+        // Given — the other space the qualifying pass rewrites keys in. A
+        // membership admitting nothing is refused from the table alone, which
+        // is the walk that has only the link's names to go on.
+        let sut = Module(
+            name: "wallet",
+            constraints: ["Spendable": []],
+            procedures: [entryName: Procedure(body: [])]
+        )
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "wallet.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/constraints.Spendable")
+    }
+
     @Test("a statement's construct is the language's word, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
         // Given — one shape, two texts: `{ call: … }` and `{ value: { call:

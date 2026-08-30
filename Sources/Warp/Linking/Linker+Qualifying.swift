@@ -30,6 +30,7 @@ extension Linker {
         types: [String: TypeExpression],
         constraints: [String: [TypeExpression]]
     ) {
+
         // Each space checked whole before the two are held against each
         // other: a link is handed its world at once, so what it concludes
         // cannot depend on the order the caller happened to list the modules.
@@ -150,6 +151,16 @@ extension Linker {
 extension Module {
     func qualified(_ name: String) -> String {
         self.name.map { module in "\(module).\(name)" } ?? name
+    }
+
+    // The declared key behind a name this link qualified. The joining above is
+    // this module's, so undoing it is too — a place spelled from a qualified
+    // name anywhere else is a second copy of a rule that only has to be right
+    // once, and the copy is what put the module's name in twice.
+    func declared(_ qualified: String) -> String {
+        guard let name, qualified.hasPrefix("\(name).") else { return qualified }
+
+        return String(qualified.dropFirst(name.count + 1))
     }
 }
 

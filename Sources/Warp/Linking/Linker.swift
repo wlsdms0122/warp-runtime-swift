@@ -603,7 +603,7 @@ public struct Linker: Sendable {
             for name in module.procedures.keys.sorted() {
                 guard let procedure = module.procedures[name] else { continue }
 
-                let qualified = module.name.map { module in "\(module).\(name)" } ?? name
+                let qualified = module.qualified(name)
 
                 guard claimed.insert(qualified).inserted else {
                     throw LinkError(
@@ -614,13 +614,7 @@ public struct Linker: Sendable {
                 }
 
                 symbols.append(
-                    Symbol(
-                        qualified: qualified,
-                        declared: name,
-                        document: module.name,
-                        origin: origin,
-                        procedure: procedure
-                    )
+                    Symbol(declared: name, document: module.name, origin: origin, procedure: procedure)
                 )
             }
         }
@@ -695,20 +689,19 @@ public struct Linker: Sendable {
         declared: [String: TypeExpression],
         constraints members: [String: [TypeExpression]]
     ) throws -> TypeTable {
-        // The tables arrive keyed by qualified names, which is what the link
-        // calls a declaration and not what any document writes. A place has to
-        // be the document's, so the walk back is made here, from the modules
-        // the names were gathered out of.
-        var declaredPlaces: [String: Place] = [:]
-        var memberPlaces: [String: Place] = [:]
+        // The tables are keyed by what the link calls a declaration, and a
+        // place is spelled by what the document called it. The joining is the
+        // module's, so undoing it is the module's too — asked here once, so
+        // that every refusal below reads the same answer.
+        var places: [String: Place] = [:]
 
         for module in modules {
             for name in module.types.keys {
-                declaredPlaces[module.qualified(name)] = .type(name, in: module.name)
+                places[name] = .type(module.declared(name), in: module.name)
             }
 
             for name in module.constraints.keys {
-                memberPlaces[module.qualified(name)] = .constraint(name, in: module.name)
+                places[name] = .constraint(module.declared(name), in: module.name)
             }
         }
 
@@ -726,7 +719,7 @@ public struct Linker: Sendable {
                     throw LinkError(
                         "reaches itself through nothing but names"
                             + " — a name that only names names never reaches a shape",
-                        at: declaredPlaces[name]
+                        at: places[name]
                     )
                 }
 
@@ -739,7 +732,7 @@ public struct Linker: Sendable {
                 throw LinkError(
                     "admits nothing, so no parameter it"
                         + " bounds could ever be filled",
-                    at: memberPlaces[name]
+                    at: places[name]
                 )
             }
 
@@ -765,7 +758,7 @@ public struct Linker: Sendable {
                         "a member is a concrete shape"
                             + " — `\(member.rendered)` says nothing a"
                             + " membership could hold",
-                        at: memberPlaces[name]
+                        at: places[name]
                     )
 
                 default:
@@ -780,7 +773,7 @@ public struct Linker: Sendable {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
                     in: type,
-                    at: .type(name, in: module.name),
+                    at: .type(module.declared(name), in: module.name),
                     parameterized: false,
                     resolve: table
                 )
@@ -790,7 +783,7 @@ public struct Linker: Sendable {
                 for member in members {
                     try mentioned(
                         in: member,
-                        at: .constraint(name, in: module.name),
+                        at: .constraint(module.declared(name), in: module.name),
                         parameterized: false,
                         resolve: table
                     )

@@ -50,10 +50,19 @@ public struct Place: Sendable, Equatable {
     // once; a place brackets every statement, because one name in the text may
     // be two statements.
     public var rendered: String {
-        steps.reduce(into: document.map { name in "\(name)/" } ?? "") { written, step in
+        let address = steps.enumerated().reduce(into: "") { written, entry in
+            let (offset, step) = entry
+            // The first step takes no dot: there is nothing to its left but the
+            // document's name, which the slash already separates. Read off the
+            // position rather than the text written so far — a step's name is
+            // whatever a document wrote, slashes included, and asking the text
+            // what it is would be reading a string this type keeps steps to
+            // avoid having to read.
+            let joined = offset == 0
+
             switch step {
             case let .key(name), let .landmark(name):
-                written += stepless(written) ? name : ".\(name)"
+                written += joined ? name : ".\(name)"
 
             case let .index(position):
                 written += "[\(position)]"
@@ -63,12 +72,14 @@ public struct Place: Sendable, Equatable {
             // `var` and the `set` that writes it are two statements and one
             // name, and a place that dropped the position would call them one.
             case let .statement(name?, position):
-                written += (stepless(written) ? name : ".\(name)") + "[\(position)]"
+                written += (joined ? name : ".\(name)") + "[\(position)]"
 
             case let .statement(nil, position):
                 written += "[\(position)]"
             }
         }
+
+        return (document.map { name in "\(name)/" } ?? "") + address
     }
 
     // MARK: - Initializer
@@ -138,11 +149,6 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Private
-    // Whether nothing has been written yet but the document's name, which takes
-    // no dot after it — it is not a key, and the slash already separates it.
-    private func stepless(_ written: String) -> Bool {
-        written.isEmpty || written.hasSuffix("/")
-    }
 }
 
 public extension Place {
