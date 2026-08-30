@@ -69,6 +69,29 @@ public struct Loader: Sendable {
     public func load(_ value: Value) throws -> Module {
         let module = try spelled(value)
 
+        // What a document needs is read before the program it belongs to, so a
+        // caller decides whether to grant before it decides whether to link. A
+        // document that leaves the list out is asking to be trusted about the
+        // one thing that was worth checking, and silence is not a claim a
+        // caller can act on — so the door a program arrives through wants it
+        // said. Whether the list is *right* is the reader's, and it refuses
+        // there.
+        //
+        // After the shapes and not before them: a document that will not even
+        // read is refused for that. A missing list is the least specific thing
+        // that can be wrong with a document, and going first would make it the
+        // only thing an author ever heard about.
+        guard case let .object(fields) = value, fields[Envelope.needsKey] != nil else {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: [],
+                    debugDescription: "a document says what it needs, and this one"
+                        + " does not — write `\(Envelope.needsKey)`, empty where the"
+                        + " program sends nothing"
+                )
+            )
+        }
+
         try language.validate(module)
 
         return module

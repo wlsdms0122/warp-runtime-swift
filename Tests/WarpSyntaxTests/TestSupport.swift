@@ -130,17 +130,26 @@ let entryName = "entry"
 
 extension Loader {
     // A document as a front end hands one over, which is the only way one is
-    // ever made: the version filled in. No author writes that number — it is
-    // computed, and a fixture that wrote it by hand in every test would be
-    // spelling out the one part of a document nobody spells.
+    // ever made: the version filled in, and the list of what the program needs
+    // worked out from the program. No author writes either — both are computed,
+    // and a fixture spelling them out in every test would be writing the two
+    // parts of a document nobody writes.
     //
     // Tests about the envelope itself call `load` directly, because for those
-    // the number is the subject rather than the ceremony.
+    // the envelope is the subject rather than the ceremony.
     func loadDocument(_ value: Value) throws -> Module {
         guard case let .object(fields) = value else { return try load(value) }
 
-        return try load(.object(fields.merging(
+        let stamped = fields.merging(
             [Envelope.versionKey: .int(Envelope.version)]
+        ) { written, _ in written }
+
+        guard stamped[Envelope.needsKey] == nil else { return try load(.object(stamped)) }
+
+        let needs = Envelope.needs(of: try spelled(.object(stamped)))
+
+        return try load(.object(stamped.merging(
+            [Envelope.needsKey: .array(needs.sorted().map(Value.string))]
         ) { written, _ in written }))
     }
 

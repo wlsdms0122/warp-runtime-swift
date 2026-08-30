@@ -46,6 +46,7 @@ struct EnvelopeTests {
         #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
+                "needs": [],
                 "procedures": ["entry": ["result": "hello"]]
             ])
         }
@@ -109,6 +110,49 @@ struct EnvelopeTests {
 
         // Then
         #expect(written[Envelope.needsKey] == .array([.string("plus")]))
+    }
+
+    @Test("a document that says nothing about what it needs is refused")
+    func aSilentManifestIsRefused() {
+        // Given — silence is not a claim a caller can act on. The list is read
+        // before the program and a grant is decided from it, so a document that
+        // leaves it out is asking to be trusted about the one thing worth
+        // checking — and a caller with no list has no way to tell a program
+        // that touches nothing from one that touches everything.
+        #expect {
+            try loader.load([
+                "warp": .int(Envelope.version),
+                "procedures": ["entry": ["result": "hello"]]
+            ])
+        } throws: { error in
+            "\(error)".contains("says what it needs")
+        }
+
+        // And a program that sends nothing still says so, rather than saying
+        // nothing — the empty list is a claim and the absent one is not.
+        #expect(throws: Never.self) {
+            try loader.load([
+                "warp": .int(Envelope.version),
+                "needs": [],
+                "procedures": ["entry": ["result": "hello"]]
+            ])
+        }
+    }
+
+    @Test("what a document will not even read is what it is refused for")
+    func aMalformedDocumentIsRefusedForBeingMalformed() {
+        // Given — a document with something else wrong with it and no list
+        // either. A missing list is the least specific thing that can be wrong,
+        // so going first would make it the only thing an author ever heard
+        // about.
+        #expect {
+            try loader.load([
+                "warp": .int(Envelope.version),
+                "procedures": ["entry": ["nonsense": "hello"]]
+            ])
+        } throws: { error in
+            "\(error)".contains("says what it needs") == false
+        }
     }
 
     @Test("a document that undersells what it needs is refused")
@@ -207,6 +251,7 @@ struct EnvelopeTests {
         // anyone, which is the whole reason the number exists. Nothing has
         // shipped yet, so the two ends of the promise are one number for now.
         let sut = try loader.load([
+            "needs": [],
             "warp": .int(Envelope.earliest),
             "procedures": ["entry": ["result": "hello"]]
         ])
