@@ -54,14 +54,14 @@ extension Linker {
                 block.body,
                 within: origin,
                 symbols: symbols,
-                at: place.key("body")
+                at: place.slot(.body)
             ),
             result: try block.result.map { result in
                 try bind(
                     result,
                     within: origin,
                     symbols: symbols,
-                    at: place.key("result")
+                    at: place.slot(.result)
                 )
             }
         )
@@ -116,30 +116,35 @@ extension Linker {
         symbols: SymbolSpace,
         at place: Place
     ) throws -> Expression {
-        func inner(_ expression: Expression) throws -> Expression {
+        // Every part is bound under the slot a document writes it in. The
+        // rewrite reaches the same expressions whatever place it carries, so
+        // what these steps decide is only where a refusal says it is — and a
+        // rescue reported from the place its body was is two refusals wearing
+        // one address.
+        func inner(_ expression: Expression, under slot: Place.Slot? = nil) throws -> Expression {
             try bind(
                 expression,
                 within: origin,
                 symbols: symbols,
-                at: place
+                at: slot.map(place.slot) ?? place
             )
         }
 
-        func inner(_ block: Block) throws -> Block {
+        func inner(_ block: Block, under slot: Place.Slot? = nil) throws -> Block {
             try bind(
                 block,
                 within: origin,
                 symbols: symbols,
-                at: place
+                at: slot.map(place.slot) ?? place
             )
         }
 
-        func inner(_ body: [Statement]) throws -> [Statement] {
+        func inner(_ body: [Statement], under slot: Place.Slot) throws -> [Statement] {
             try bind(
                 body,
                 within: origin,
                 symbols: symbols,
-                at: place
+                at: place.slot(slot)
             )
         }
 
@@ -155,13 +160,26 @@ extension Linker {
         // The shape a cast names is the qualifying pass's to resolve, not
         // the binding pass's — nothing in a type spelling is a symbol.
         case let .cast(value, type, optional):
-            return .cast(try inner(value), as: type, optional: optional)
+            return .cast(try inner(value, under: .of), as: type, optional: optional)
 
         case let .array(array):
-            return .array(try array.map(inner))
+            return .array(
+                try array.enumerated().map { position, element in
+                    try bind(element, within: origin, symbols: symbols, at: place.index(position))
+                }
+            )
 
         case let .record(record):
-            return .record(try record.mapValues(inner))
+            return .record(
+                try record.reduce(into: [:]) { bound, field in
+                    bound[field.key] = try bind(
+                        field.value,
+                        within: origin,
+                        symbols: symbols,
+                        at: place.key(field.key)
+                    )
+                }
+            )
 
         case let .closure(procedure):
             guard let block = procedure.block else { return expression }
@@ -170,39 +188,53 @@ extension Linker {
                 Procedure(
                     description: procedure.description,
                     signature: procedure.signature,
-                    implementation: .body(try inner(block))
+                    implementation: .body(try inner(block, under: .closure))
                 )
             )
 
         case let .invoke(callee, arguments):
-            return .invoke(try inner(callee), arguments: try arguments.mapValues(inner))
+            return .invoke(
+                try inner(callee, under: .procedure),
+                arguments: try arguments.reduce(into: [:]) { bound, argument in
+                    bound[argument.key] = try bind(
+                        argument.value,
+                        within: origin,
+                        symbols: symbols,
+                        at: place.argument(argument.key)
+                    )
+                }
+            )
 
         case let .block(block):
             return .block(try inner(block))
 
         case let .conditional(condition, then, otherwise):
             return .conditional(
-                try inner(condition),
-                then: try inner(then),
-                else: try otherwise.map(inner)
+                try inner(condition, under: .when),
+                then: try inner(then, under: .then),
+                else: try otherwise.map { otherwise in try inner(otherwise, under: .otherwise) }
             )
 
         case let .loop(condition, body, round):
             return .loop(
-                while: try inner(condition),
+                while: try inner(condition, under: .condition),
                 body: try inner(body),
                 round: round
             )
 
         case let .iteration(material, body, element):
             return .iteration(
-                over: try inner(material),
-                body: try inner(body),
+                over: try inner(material, under: .material),
+                body: try inner(body, under: .body),
                 element: element
             )
 
         case let .attempt(block, rescue, failure):
-            return .attempt(try inner(block), rescue: try inner(rescue), failure: failure)
+            return .attempt(
+                try inner(block),
+                rescue: try inner(rescue, under: .rescue),
+                failure: failure
+            )
 
         case let .dispatch(dispatch):
             return .dispatch(
@@ -226,15 +258,6 @@ extension Linker {
         symbols: SymbolSpace,
         at place: Place
     ) throws -> Dispatch {
-        func inner(_ expression: Expression) throws -> Expression {
-            try bind(
-                expression,
-                within: origin,
-                symbols: symbols,
-                at: place
-            )
-        }
-
         let selector: String
 
         // The rule's own account of the failure, not a recomputation — the
@@ -260,9 +283,18 @@ extension Linker {
         }
 
         return Dispatch(
-            receiver: try dispatch.receiver.map(inner),
+            receiver: try dispatch.receiver.map { receiver in
+                try bind(receiver, within: origin, symbols: symbols, at: place.slot(.of))
+            },
             selector: selector,
-            arguments: try dispatch.arguments.mapValues(inner)
+            arguments: try dispatch.arguments.reduce(into: [:]) { bound, argument in
+                bound[argument.key] = try bind(
+                    argument.value,
+                    within: origin,
+                    symbols: symbols,
+                    at: place.argument(argument.key)
+                )
+            }
         )
     }
 }

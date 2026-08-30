@@ -1040,7 +1040,7 @@ extension Linker {
         case let .cast(value, type, optional):
             let inner = try inspected(
                 value,
-                at: place.key("of"),
+                at: place.slot(.of),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1183,7 +1183,7 @@ extension Linker {
             if case .judging = ask, let written = procedure.block {
                 let inner = try inspected(
                     block: written,
-                    at: place.key("closure"),
+                    at: place.slot(.closure),
                     in: environment.merging(self.environment(of: procedure.signature)) {
                         _, new in new
                     },
@@ -1221,14 +1221,20 @@ extension Linker {
             }
 
             // The guard above already said judging, so this refusal has no
-            // ask to ask.
-            for operand in [callee] + Array(arguments.values) where operand.holdsConstruct {
-                throw LinkError("\(Expression.constructInOperand)", at: place)
+            // ask to ask. Named one by one, because a loop over the values
+            // alone reports the third operand from the place the first was.
+            if callee.holdsConstruct {
+                throw LinkError(Expression.constructInOperand, at: place.slot(.procedure))
+            }
+
+            for (name, argument) in arguments.sorted(by: { $0.key < $1.key })
+            where argument.holdsConstruct {
+                throw LinkError(Expression.constructInOperand, at: place.argument(name))
             }
 
             let called = try inspected(
                 callee,
-                at: place.key("procedure"),
+                at: place.slot(.procedure),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1239,7 +1245,7 @@ extension Linker {
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
                 let inner = try inspected(
                     argument,
-                    at: place.key("arguments").key(name),
+                    at: place.argument(name),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1274,10 +1280,10 @@ extension Linker {
                     reading: try answered(
                         by: signature,
                         at: dispatch,
-                        readings: try dispatch.arguments.mapValues { argument in
-                            try inspected(
-                                argument,
-                                at: place,
+                        readings: try dispatch.arguments.reduce(into: [:]) { read, argument in
+                            read[argument.key] = try inspected(
+                                argument.value,
+                                at: place.argument(argument.key),
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1286,7 +1292,7 @@ extension Linker {
                         receiver: try dispatch.receiver.map { receiver in
                             try inspected(
                                 receiver,
-                                at: place.key("of"),
+                                at: place.slot(.of),
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1298,10 +1304,15 @@ extension Linker {
             }
 
             // The guard above already said judging, so this refusal has no
-            // ask to ask.
-            for operand in (dispatch.receiver.map { [$0] } ?? []) + Array(dispatch.arguments.values)
-            where operand.holdsConstruct {
-                throw LinkError("\(Expression.constructInOperand)", at: place)
+            // ask to ask. Named one by one, because a loop over the values
+            // alone reports the third operand from the place the first was.
+            if dispatch.receiver?.holdsConstruct == true {
+                throw LinkError(Expression.constructInOperand, at: place.slot(.of))
+            }
+
+            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
+            where argument.holdsConstruct {
+                throw LinkError(Expression.constructInOperand, at: place.argument(name))
             }
 
             var receiver: Inspection?
@@ -1309,7 +1320,7 @@ extension Linker {
             if let written = dispatch.receiver {
                 receiver = try inspected(
                     written,
-                    at: place.key("of"),
+                    at: place.slot(.of),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1323,7 +1334,7 @@ extension Linker {
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
                 let inner = try inspected(
                     argument,
-                    at: place.key("arguments").key(name),
+                    at: place.argument(name),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1380,7 +1391,7 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.key("when"), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.when), when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
@@ -1388,14 +1399,14 @@ extension Linker {
             // environment the branch stands in.
             let head = try inspected(
                 condition,
-                at: place.key("when"),
+                at: place.slot(.when),
                 in: environment,
                 with: frame,
                 ask: ask
             )
             let inside = environment
 
-            let taken = try inspected(then, at: place.key("then"), in: inside, with: frame, ask: ask)
+            let taken = try inspected(then, at: place.slot(.then), in: inside, with: frame, ask: ask)
 
             guard let otherwise else {
                 return Inspection(
@@ -1410,7 +1421,7 @@ extension Linker {
 
             let declined = try inspected(
                 otherwise,
-                at: place.key("else"),
+                at: place.slot(.otherwise),
                 in: inside,
                 with: frame,
                 ask: ask
@@ -1440,7 +1451,7 @@ extension Linker {
             // operand has — so a construct is refused there by the same
             // predicate, at the check and here alike.
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.key("where"), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition), when: ask)
             }
 
             // The fixpoint probes the statements alone — the rounds are what
@@ -1453,7 +1464,7 @@ extension Linker {
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try inspected(
                     body.body,
-                    at: place.key("body"),
+                    at: place.slot(.body),
                     in: entry,
                     with: frame,
                     ask: .reading
@@ -1474,13 +1485,13 @@ extension Linker {
 
             let head = try inspected(
                 condition,
-                at: place.key("where"),
+                at: place.slot(.condition),
                 in: seeded,
                 with: frame,
                 ask: ask
             )
             let rounds = ask.rewrites
-                ? try inspected(body.body, at: place.key("body"), in: seeded, with: frame, ask: ask)
+                ? try inspected(body.body, at: place.slot(.body), in: seeded, with: frame, ask: ask)
                 : probed
 
             // The result runs once, at whichever exit the run takes — a
@@ -1500,7 +1511,7 @@ extension Linker {
                         ?? join(.null, written)
                 }
 
-                tail = try inspected(result, at: place.key("result"), in: exit, with: frame, ask: ask)
+                tail = try inspected(result, at: place.slot(.result), in: exit, with: frame, ask: ask)
             }
 
             return Inspection(
@@ -1528,7 +1539,7 @@ extension Linker {
         case let .iteration(material, body, element):
             let fed = try inspected(
                 material,
-                at: place.key("in"),
+                at: place.slot(.material),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1542,7 +1553,7 @@ extension Linker {
             ) { entry -> (round: BodyWalk, flow: Flow) in
                 let walk = try inspected(
                     body,
-                    at: place.key("body"),
+                    at: place.slot(.body),
                     in: entry,
                     with: frame,
                     ask: .reading
@@ -1562,7 +1573,7 @@ extension Linker {
             }
 
             let inner = ask.rewrites
-                ? try inspected(body, at: place.key("body"), in: inside, with: frame, ask: ask)
+                ? try inspected(body, at: place.slot(.body), in: inside, with: frame, ask: ask)
                 : probed
 
             return Inspection(
@@ -1593,7 +1604,7 @@ extension Linker {
             )
             let rescued = try inspected(
                 block: rescue,
-                at: place.key("rescue"),
+                at: place.slot(.rescue),
                 in: caught(soaking: attempted.flow, failure: failure, in: environment),
                 with: frame,
                 ask: ask
@@ -1625,7 +1636,7 @@ extension Linker {
     ) throws -> (block: Block, calls: [CallSite], reading: TypeExpression, flow: Flow) {
         let body = try inspected(
             block.body,
-            at: place.key("body"),
+            at: place.slot(.body),
             in: environment,
             with: frame,
             ask: ask
@@ -1645,7 +1656,7 @@ extension Linker {
                 try refuse(
                     "never finishes before it, and nothing"
                         + " written after it would ever run",
-                    at: place.key("result"),
+                    at: place.slot(.result),
                     when: ask
                 )
             }
@@ -1656,7 +1667,7 @@ extension Linker {
         } else if let result = block.result {
             let read = try inspected(
                 result,
-                at: place.key("result"),
+                at: place.slot(.result),
                 in: body.environment,
                 with: frame,
                 ask: ask

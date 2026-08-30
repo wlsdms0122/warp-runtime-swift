@@ -44,8 +44,8 @@ struct PlaceTests {
         )
 
         // Then
-        #expect(spin?.rendered == "procedures.entry.body.spin.loop.where")
-        #expect(walk?.rendered == "procedures.entry.body.walk.each.in")
+        #expect(spin?.rendered == "procedures.entry.body.spin[0].loop.where")
+        #expect(walk?.rendered == "procedures.entry.body.walk[0].each.in")
     }
 
     @Test("what a call is written with is named under the key holding it")
@@ -62,7 +62,7 @@ struct PlaceTests {
         )
 
         // Then
-        #expect(sut?.rendered == "procedures.entry.body.sent.call.arguments.amount")
+        #expect(sut?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
@@ -73,7 +73,7 @@ struct PlaceTests {
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
-        #expect(named?.rendered == "procedures.entry.body.held.value")
+        #expect(named?.rendered == "procedures.entry.body.held[0].value")
         #expect(bare?.rendered == "procedures.entry.body[0].value")
 
         // And the name is not all that is kept: a reader mapping a place back
@@ -117,9 +117,9 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held.value")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value")
         #expect(error?.message.contains("procedures.entry") == false)
-        #expect(error?.description.hasPrefix("procedures.entry.body.held.value: ") == true)
+        #expect(error?.description.hasPrefix("procedures.entry.body.held[0].value: ") == true)
     }
 
     @Test("what the link refuses is placed the way what the load refuses is")
@@ -141,7 +141,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.sent.call")
+        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
     @Test("the link narrows to the argument it refused, not to the call holding it")
@@ -181,7 +181,7 @@ struct PlaceTests {
 
         // Then
         #expect(
-            error?.place?.rendered == "procedures.entry.body.sent.call.arguments.second"
+            error?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.second"
         )
     }
 
@@ -228,8 +228,94 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(load?.place?.rendered == "procedures.entry.body.sent.call.arguments.amount")
-        #expect(link?.place?.rendered == "procedures.entry.body.sent.call.arguments.amount")
+        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+    }
+
+    @Test("every walk that reports a place steps through the same slots to reach one")
+    func theWalksAgreeOnHowDeepASlotIs() throws {
+        // Given — one call, buried under an attempt's rescue: a slot no walk
+        // reaches without stepping through the keys between. Four walks report
+        // places and each destructures the language for itself, so what one of
+        // them forgets to step into is a place that reads like another one.
+        //
+        // Each of them is made to speak about this call in the way only it can:
+        // a name nothing declares for the walk that checks the document against
+        // itself, a word nothing declares for the walk that resolves names, a
+        // claim the types already prove for the walk that reads them.
+        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].call"
+
+        func module(sending selector: String, with argument: Warp.Expression) -> Module {
+            Module(
+                procedures: [
+                    entryName: Procedure(body: [
+                        Statement(
+                            id: "guarded",
+                            expression: .attempt(
+                                Block(body: []),
+                                rescue: Block(body: [
+                                    Statement(
+                                        id: "sent",
+                                        expression: .dispatch(
+                                            Dispatch(
+                                                selector: selector,
+                                                arguments: ["amount": argument]
+                                            )
+                                        )
+                                    )
+                                ]),
+                                failure: "guarded"
+                            )
+                        )
+                    ]),
+                    "helper": Procedure(
+                        signature: Signature(parameters: ["amount": Parameter(type: .int)]),
+                        body: []
+                    )
+                ]
+            )
+        }
+
+        // When
+        let load = #expect(throws: ValidationError.self) {
+            try Validator().validate(module(sending: "helper", with: reference("missing")))
+        }
+
+        let bound = #expect(throws: LinkError.self) {
+            try Language().link(
+                [module(sending: "nowhere", with: .literal(.int(1)))] + Module.standard,
+                entry: entryName
+            )
+        }
+
+        let typed = #expect(throws: LinkError.self) {
+            try Language().link(
+                [module(
+                    sending: "helper",
+                    with: .cast(.literal(.int(1)), as: .int, optional: false)
+                )] + Module.standard,
+                entry: entryName
+            )
+        }
+
+        // Then — each says something different about the call, from one place
+        #expect(load?.place?.rendered.hasPrefix(reached) == true)
+        #expect(bound?.place?.rendered.hasPrefix(reached) == true)
+        #expect(typed?.place?.rendered.hasPrefix(reached) == true)
+
+        // And the walk that only gathers puts it in the same place
+        let gathered = try #require(
+            module(sending: "helper", with: .literal(.int(1)))
+                .procedures[entryName]?.block?
+                .buried(at: .procedure(entryName))
+                .first { _, expression in
+                    guard case .dispatch = expression else { return false }
+
+                    return true
+                }
+        )
+
+        #expect(gathered.0.rendered == reached)
     }
 
     // MARK: - Public

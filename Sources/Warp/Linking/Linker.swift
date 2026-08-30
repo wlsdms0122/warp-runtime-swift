@@ -334,7 +334,7 @@ public struct Linker: Sendable {
                     throw LinkError(
                         "answers \(answer.type), and its"
                             + " declaration promises \(returns) — \(error)",
-                        at: Place.procedure(symbol.qualified).key("result")
+                        at: Place.procedure(symbol.qualified).slot(.result)
                     )
                 }
             }
@@ -734,9 +734,10 @@ public struct Linker: Sendable {
                 switch resolved {
                 case .variable, .any, .never:
                     throw LinkError(
-                        "constraint '\(name)': a member is a concrete shape"
+                        "a member is a concrete shape"
                             + " — `\(member.rendered)` says nothing a"
-                            + " membership could hold"
+                            + " membership could hold",
+                        at: .constraint(name)
                     )
 
                 default:
@@ -819,16 +820,16 @@ public struct Linker: Sendable {
         for (input, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
             try mentioned(
                 in: parameter.declared,
-                at: place.key("parameters").key(input),
+                at: place.slot(.parameters).key(input),
                 parameterized: true,
                 resolve: table
             )
-            try judge(parameter, called: input, at: place.key("parameters").key(input), in: table)
+            try judge(parameter, called: input, at: place.slot(.parameters).key(input), in: table)
         }
 
         try mentioned(
             in: signature.returns ?? .any,
-            at: place.key("returns"),
+            at: place.slot(.returns),
             parameterized: true,
             resolve: table
         )
@@ -1418,7 +1419,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "sending '\(dispatch.selector)' with"
                     + " \(undeclared.joined(separator: ", ")), which it does not declare",
-                at: site.place.key("arguments")
+                at: site.place.slot(.arguments)
             )
         }
 
@@ -1438,7 +1439,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "sending '\(dispatch.selector)' without"
                     + " \(missing.joined(separator: ", ")), which it requires",
-                at: site.place.key("arguments")
+                at: site.place.slot(.arguments)
             )
         }
 
@@ -1458,7 +1459,7 @@ public struct Linker: Sendable {
             } catch {
                 throw LinkError(
                     "sending '\(dispatch.selector)' — \(error)",
-                    at: site.place.key("arguments").key(name)
+                    at: site.place.argument(name)
                 )
             }
         }
@@ -1475,7 +1476,7 @@ public struct Linker: Sendable {
             } catch {
                 throw LinkError(
                     "sending '\(dispatch.selector)' — \(error)",
-                    at: site.place.key("arguments")
+                    at: site.place.slot(.arguments)
                 )
             }
         }
@@ -1495,7 +1496,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "sending '\(dispatch.selector)' with \(name),"
                     + " which holds \(written) where \(parameter.declared) is declared",
-                at: site.place.key("arguments").key(name)
+                at: site.place.argument(name)
             )
         }
 
@@ -1510,7 +1511,7 @@ public struct Linker: Sendable {
                 throw LinkError(
                     "sending '\(dispatch.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",
-                    at: site.place.key("of")
+                    at: site.place.slot(.of)
                 )
             }
         }

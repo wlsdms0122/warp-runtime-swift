@@ -73,7 +73,7 @@ public struct Validator: Sendable {
         let parameters = Set(procedure.signature.parameters.keys)
 
         for parameter in parameters.sorted() {
-            try normal(parameter, at: place.key("parameters").key(parameter))
+            try normal(parameter, at: place.slot(.parameters).key(parameter))
         }
         let colliding = parameters.intersection(constants).sorted()
 
@@ -81,7 +81,7 @@ public struct Validator: Sendable {
             throw ValidationError(
                 "\(colliding.joined(separator: ", ")) collides with a name"
                     + " the module bound, which it would take the place of",
-                at: place.key("parameters")
+                at: place.slot(.parameters)
             )
         }
 
@@ -297,13 +297,13 @@ public struct Validator: Sendable {
         // link's to resolve, so the check has only the value to walk, exactly
         // as it walks any other operand.
         case let .cast(value, _, _):
-            try refuseAnswerless(value, at: place.key("of"))
+            try refuseAnswerless(value, at: place.slot(.of))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("of")
+                at: place.slot(.of)
             )
 
         // A closure sees where it was written plus what it declares, which is
@@ -322,13 +322,13 @@ public struct Validator: Sendable {
             try validate(leave, in: surroundings, at: place)
 
         case let .closure(procedure):
-            let inside = place.key("closure")
+            let inside = place.slot(.closure)
             let parameters = Set(procedure.signature.parameters.keys)
 
             // The same rule the top-level signature gets — a closure's
             // parameter is a name a body reads, wherever the signature sits.
             for parameter in parameters.sorted() {
-                try normal(parameter, at: inside.key("parameters").key(parameter))
+                try normal(parameter, at: inside.slot(.parameters).key(parameter))
             }
 
             // And the same collision rule: linking folds a constant wherever
@@ -356,17 +356,17 @@ public struct Validator: Sendable {
             )
 
         case let .invoke(callee, arguments):
-            try refuseConstruct(callee, at: place.key("procedure"))
+            try refuseConstruct(callee, at: place.slot(.procedure))
             try validate(
                 callee,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("procedure")
+                at: place.slot(.procedure)
             )
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                let here = place.key("arguments").key(name)
+                let here = place.argument(name)
 
                 try normal(name, at: here)
                 try refuseConstruct(argument, at: here)
@@ -383,20 +383,20 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(condition, at: place.key("when"))
+            try refuseConstructCondition(condition, at: place.slot(.when))
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("when")
+                at: place.slot(.when)
             )
             try validate(
                 then,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("then")
+                at: place.slot(.then)
             )
 
             if let otherwise {
@@ -405,7 +405,7 @@ public struct Validator: Sendable {
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.key("else")
+                    at: place.slot(.otherwise)
                 )
             }
 
@@ -416,13 +416,13 @@ public struct Validator: Sendable {
 
             let inner = visible.union([round])
 
-            try refuseConstructCondition(condition, at: place.key("where"))
+            try refuseConstructCondition(condition, at: place.slot(.condition))
             try validate(
                 condition,
                 visible: inner,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("where")
+                at: place.slot(.condition)
             )
             try validate(
                 body,
@@ -440,14 +440,14 @@ public struct Validator: Sendable {
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("in")
+                at: place.slot(.material)
             )
             try validate(
                 body,
                 visible: visible.union([element]),
                 variables: variables,
                 surroundings: surroundings.inside(element),
-                at: place.key("body")
+                at: place.slot(.body)
             )
 
         // While the rescue runs, the failure is a value under the declared name.
@@ -466,7 +466,7 @@ public struct Validator: Sendable {
                 // An empty rescue would swallow a failure into null without a
                 // trace — if the alternate path produces nothing, the author's
                 // honest form is no rescue at all.
-                throw ValidationError("must not be empty", at: place.key("rescue"))
+                throw ValidationError("must not be empty", at: place.slot(.rescue))
             }
 
             try validate(
@@ -474,23 +474,23 @@ public struct Validator: Sendable {
                 visible: visible.union([failure]),
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("rescue")
+                at: place.slot(.rescue)
             )
 
         case let .dispatch(dispatch):
             if let receiver = dispatch.receiver {
-                try refuseConstruct(receiver, at: place.key("of"))
+                try refuseConstruct(receiver, at: place.slot(.of))
                 try validate(
                     receiver,
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.key("of")
+                    at: place.slot(.of)
                 )
             }
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
-                let here = place.key("arguments").key(name)
+                let here = place.argument(name)
 
                 try normal(name, at: here)
                 try refuseConstruct(argument, at: here)
@@ -555,7 +555,7 @@ public struct Validator: Sendable {
             variables: variables,
             declared: declared,
             surroundings: surroundings,
-            at: place.key("body")
+            at: place.slot(.body)
         )
 
         if let result = block.result {
@@ -565,7 +565,7 @@ public struct Validator: Sendable {
                 throw ValidationError(
                     "nothing runs after leaving,"
                         + " and this result would never be reached",
-                    at: place.key("result")
+                    at: place.slot(.result)
                 )
             }
 
@@ -573,14 +573,14 @@ public struct Validator: Sendable {
             // exists to hold an answer — has nothing to take from one.
             // Refused for that reason, rather than as a type that fails to
             // fit downstream.
-            try refuseAnswerless(result, at: place.key("result"))
+            try refuseAnswerless(result, at: place.slot(.result))
 
             try validate(
                 result,
                 visible: inner,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.key("result")
+                at: place.slot(.result)
             )
         }
     }

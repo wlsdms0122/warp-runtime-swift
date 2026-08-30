@@ -23,8 +23,9 @@ import Foundation
 // string spells both the same way and neither can be recovered from it.
 //
 // So the steps say what the document says, and are spelled from the document's
-// own keys: an author reading `procedures.greet.body.total.call.arguments.amount`
-// finds every one of those words in front of them.
+// own keys: an author reading
+// `procedures.greet.body.total[2].call.arguments.amount` finds every one of
+// those words in front of them.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
     public let steps: [Step]
@@ -41,8 +42,12 @@ public struct Place: Sendable, Equatable {
             case let .index(position):
                 written += "[\(position)]"
 
-            case let .statement(name?, _):
-                written += written.isEmpty ? name : ".\(name)"
+            // A statement wears both: the name an author knows it by, and
+            // the position that tells two statements of one name apart — a
+            // `var` and the `set` that writes it are two statements and one
+            // name, and a place that dropped the position would call them one.
+            case let .statement(name?, position):
+                written += (written.isEmpty ? name : ".\(name)") + "[\(position)]"
 
             case let .statement(nil, position):
                 written += "[\(position)]"
@@ -72,6 +77,19 @@ public struct Place: Sendable, Equatable {
 
     public func key(_ name: String) -> Place { appending(.key(name)) }
 
+    // The slot a part of a program sits in, by the key a document writes it
+    // under. Four walks report places into these slots and each destructures
+    // the language for itself; spelling the keys here is what keeps them from
+    // disagreeing about where one thing is. What a walk cannot be stopped from
+    // doing is forgetting a slot, so the suite asks the four of them for the
+    // same place and compares.
+    public func slot(_ slot: Slot) -> Place { key(slot.rawValue) }
+
+    // What a call is written with. Two steps and not one — a document nests
+    // them under a key of their own, and an argument named beside a statement
+    // would be a name meaning two things.
+    public func argument(_ name: String) -> Place { slot(.arguments).key(name) }
+
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
     // A name with nothing in it is no name — the position is what is left to
@@ -81,8 +99,6 @@ public struct Place: Sendable, Equatable {
         appending(.statement(name: name?.isEmpty == true ? nil : name, at: position))
     }
 
-    public func landmark(_ name: String) -> Place { appending(.landmark(name)) }
-
     public func appending(_ step: Step) -> Place {
         Place(steps + [step])
     }
@@ -91,6 +107,29 @@ public struct Place: Sendable, Equatable {
 }
 
 public extension Place {
+    // Every slot a document names, under the key it names it with. The
+    // spellings differ from the model's own names — a loop's condition is
+    // `where` and a walk's collection is `in` — and it is the document's that
+    // an author is reading.
+    enum Slot: String, Sendable {
+        case parameters
+        case returns
+        case body
+        case result
+
+        case of
+        case procedure
+        case arguments
+        case closure
+
+        case when
+        case then
+        case otherwise = "else"
+        case condition = "where"
+        case material = "in"
+        case rescue
+    }
+
     // What one step of a place is. The cases divide on who chose the word,
     // because that is the division a reader that maps a place back to a file
     // has to make.
@@ -103,14 +142,15 @@ public extension Place {
 
         // A statement, which a document writes as an array element and an
         // author knows by the name it fixes. Both are carried: the name is what
-        // a person looks for, and the position is what finds it when there is
-        // no name to look for.
+        // a person looks for, and the position is what finds it — the name
+        // alone finds nothing when a `var` and the `set` writing it share one.
         case statement(name: String?, at: Int)
 
-        // Somewhere the document gives no key — what a construct binds, or a
-        // body a caller handed over without one. It renders like a key on
-        // purpose, since a person reading a line wants a line; what tells the
-        // two apart is this case, for the reader that needs them apart.
+        // Somewhere no document names — a body a caller assembled and handed
+        // over, which has no document under it to have a key in. It renders
+        // like a key on purpose, since a person reading a line wants a line;
+        // what tells the two apart is this case, for the reader that has to
+        // know which words came from the text.
         case landmark(String)
     }
 }
