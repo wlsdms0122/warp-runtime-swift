@@ -35,7 +35,7 @@ struct LinkerTests {
             try language.link([sut] + Module.standard, entry: entryName)
         }
 
-        #expect(error?.message.contains("greeting") == true)
+        #expect(error?.place?.rendered == "const.greeting")
         #expect(
             error?.message.contains("names it back") == false,
             "a refusal of its own was reported as a cycle"
@@ -65,7 +65,7 @@ struct LinkerTests {
             try language.link([sut] + Module.standard, entry: entryName)
         }
 
-        #expect(error?.message.contains("helper.inputs.count") == true)
+        #expect(error?.place?.rendered == "procedures.helper.parameters.count")
     }
 
     @Test("a default outside its own oneOf is refused at link")
@@ -94,7 +94,7 @@ struct LinkerTests {
             try language.link([sut] + Module.standard, entry: entryName)
         }
 
-        #expect(error?.message.contains("helper.inputs.mode") == true)
+        #expect(error?.place?.rendered == "procedures.helper.parameters.mode")
     }
 
     @Test("an omitted argument arrives as the settled default")

@@ -708,21 +708,21 @@ extension TypeExpression {
     // shared fact is wanted (`provesNothing`), and three sentences here,
     // because a refusal carries its reason: telling an author that `T` names
     // no shape is false — a call names it, elsewhere.
-    func unreadableClaim(at location: String) -> String? {
+    var unreadableClaim: String? {
         if self == .any {
-            return "\(location): reads as \(rendered), which declares nothing"
+            return "reads as \(rendered), which declares nothing"
                 + " — a cast names the shape a value is read as, and `any` is"
                 + " the absence of one"
         }
 
         if self == .never {
-            return "\(location): reads as \(rendered), which no value is"
+            return "reads as \(rendered), which no value is"
                 + " — a cast names the shape a value turns out to have, and"
                 + " nothing arrives to have this one"
         }
 
         if decidedAtCall {
-            return "\(location): reads as \(rendered), whose shape the call"
+            return "reads as \(rendered), whose shape the call"
                 + " decides — a cast names a shape here, and this one is named"
                 + " somewhere else"
         }

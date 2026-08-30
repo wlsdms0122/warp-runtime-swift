@@ -7,13 +7,13 @@
 
 import Foundation
 
-// A message plus where it was written. The location exists only to make a
-// refusal answerable: a name that did not resolve, said without the path to the
+// A message plus where it was written. The place exists only to make a refusal
+// answerable: a name that did not resolve, said without the path to the
 // statement holding it, sends the author searching the whole document.
 struct CallSite: Sendable {
     // MARK: - Property
     let dispatch: Dispatch
-    let location: String
+    let place: Place
 
     // What each operand held where this was written — the walk's own answers,
     // carried so the check never walks a body a second time for them. A
@@ -25,12 +25,12 @@ struct CallSite: Sendable {
     // MARK: - Initializer
     init(
         dispatch: Dispatch,
-        location: String,
+        place: Place,
         readings: [String: TypeExpression],
         received: TypeExpression?
     ) {
         self.dispatch = dispatch
-        self.location = location
+        self.place = place
         self.readings = readings
         self.received = received
     }

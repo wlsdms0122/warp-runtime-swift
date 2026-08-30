@@ -50,13 +50,13 @@ extension Linker {
     // link worked out.
     func reading(
         from block: Block,
-        at location: String,
+        at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame
     ) throws -> TypeExpression {
         let walked = try inspected(
             block: block,
-            at: location,
+            at: place,
             in: environment,
             with: frame,
             ask: .reading
@@ -71,14 +71,14 @@ extension Linker {
     // before it bound.
     func resolvedSites(
         in block: Block,
-        at location: String,
+        at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
         folding: Resolver?
     ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
             block: block,
-            at: location,
+            at: place,
             in: environment,
             with: frame,
             ask: .judging(folding: folding)
@@ -90,14 +90,14 @@ extension Linker {
     // The expression form — a constant's body is one rather than a block.
     func resolvedSites(
         in expression: Expression,
-        at location: String,
+        at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
         folding: Resolver?
     ) throws -> (Expression, [CallSite]) {
         let inner = try inspected(
             expression,
-            at: location,
+            at: place,
             in: environment,
             with: frame,
             ask: .judging(folding: folding)
@@ -646,7 +646,7 @@ extension Linker {
     // them.
     func foldedIndexReferences(
         _ segments: [PathSegment],
-        at location: String,
+        at place: Place,
         folding: Resolver
     ) throws -> [PathSegment] {
         try segments.map { segment in
@@ -657,7 +657,7 @@ extension Linker {
                 folding.scope.value(of: head) != nil
             else {
                 return .indexRef(
-                    try foldedIndexReferences(inner, at: location, folding: folding),
+                    try foldedIndexReferences(inner, at: place, folding: folding),
                     optional: optionally
                 )
             }
@@ -667,7 +667,7 @@ extension Linker {
             do {
                 settled = try folding.resolve(.reference(inner))
             } catch {
-                throw LinkError("\(location): reading constant '\(head)' — \(error)")
+                throw LinkError("reading constant '\(head)' — \(error)", at: place)
             }
 
             // The mark rides the fold: which element is read settles now,
@@ -683,21 +683,24 @@ extension Linker {
 
                 case .notANumber, .fractional:
                     throw LinkError(
-                        "\(location): index reference \(inner.rendered)"
-                            + " is not a whole number"
+                        "index reference \(inner.rendered)"
+                            + " is not a whole number",
+                        at: place
                     )
 
                 case .pastTheWord:
                     throw LinkError(
-                        "\(location): index reference \(inner.rendered)"
-                            + " indexes past the end of any array"
+                        "index reference \(inner.rendered)"
+                            + " indexes past the end of any array",
+                        at: place
                     )
                 }
 
             default:
                 throw LinkError(
-                    "\(location): index reference \(inner.rendered) is"
-                        + " \(settled.type), expected int"
+                    "index reference \(inner.rendered) is"
+                        + " \(settled.type), expected int",
+                    at: place
                 )
             }
         }
@@ -881,10 +884,14 @@ extension Linker {
     // the degraded answer beside each call. The constant-folding throws
     // stand apart on purpose: a folding scope rides only the judging ask,
     // so those are judging's by construction.
-    private func refuse(_ reason: @autoclosure () -> String, when ask: Ask) throws {
+    private func refuse(
+        _ reason: @autoclosure () -> String,
+        at place: Place,
+        when ask: Ask
+    ) throws {
         guard case .judging = ask else { return }
 
-        throw LinkError(reason())
+        throw LinkError(reason(), at: place)
     }
 
     // One walk's answers: the expression with every dot's meaning written
@@ -902,7 +909,7 @@ extension Linker {
     // before it left behind, which is the environment the run gives it.
     private func inspected(
         _ expression: Expression,
-        at location: String,
+        at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
         ask: Ask
@@ -936,7 +943,7 @@ extension Linker {
                 )
             }
 
-            let carried = try inspected(value, at: location, in: environment, with: frame, ask: ask)
+            let carried = try inspected(value, at: place, in: environment, with: frame, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -957,7 +964,7 @@ extension Linker {
         case let .reference(path):
             switch reading(of: path, in: environment, with: frame) {
             case let .refused(reason):
-                try refuse("\(location): \(reason)", when: ask)
+                try refuse(reason, at: place, when: ask)
 
                 return Inspection(rewritten: expression, reading: .any)
 
@@ -973,7 +980,7 @@ extension Linker {
                 // An inner index path may read a constant too — `items[C]`
                 // folds its index the way a whole constant path folds, so no
                 // constant name survives into the image.
-                let settled = try foldedIndexReferences(resolved, at: location, folding: folding)
+                let settled = try foldedIndexReferences(resolved, at: place, folding: folding)
 
                 guard
                     case let .key(head, _)? = settled.first,
@@ -987,7 +994,7 @@ extension Linker {
 
                     return Inspection(rewritten: .literal(value), reading: type(of: value))
                 } catch {
-                    throw LinkError("\(location): reading constant '\(head)' — \(error)")
+                    throw LinkError("reading constant '\(head)' — \(error)", at: place)
                 }
             }
 
@@ -999,7 +1006,7 @@ extension Linker {
             var element: TypeExpression?
 
             for member in array {
-                let inner = try inspected(member, at: location, in: environment, with: frame, ask: ask)
+                let inner = try inspected(member, at: place, in: environment, with: frame, ask: ask)
 
                 apply(inner.flow, to: &environment)
                 flowed = sequenced(flowed, then: inner.flow)
@@ -1025,7 +1032,7 @@ extension Linker {
         // nothing, and a spelling that says nothing is a reading gone wrong.
         // `as: any` lands here too, and rightly — every reading fits it.
         case let .cast(value, type, optional):
-            let inner = try inspected(value, at: location, in: environment, with: frame, ask: ask)
+            let inner = try inspected(value, at: place, in: environment, with: frame, ask: ask)
             let settled = type.resolved(in: frame.types)
 
             let read = inner.reading.resolved(in: frame.types)
@@ -1068,10 +1075,11 @@ extension Linker {
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
                 try refuse(
-                    "\(location): reads \(inner.reading.rendered) as \(settled.rendered),"
+                    "reads \(inner.reading.rendered) as \(settled.rendered),"
                         + " and no value is both"
                         + " — a cast names a shape the value may turn out to"
                         + " have, and this one it never can",
+                    at: place,
                     when: ask
                 )
             } else if settled == read || handed.resolved(in: frame.types) == read {
@@ -1081,10 +1089,11 @@ extension Linker {
                 // and reading the question off the spelling let the second
                 // catch a repeat that the first waved through.
                 try refuse(
-                    "\(location): reads \(inner.reading.rendered) as \(settled.rendered),"
+                    "reads \(inner.reading.rendered) as \(settled.rendered),"
                         + " which it already is"
                         + " — a cast opens a shape the types do not prove,"
                         + " and here they do",
+                    at: place,
                     when: ask
                 )
             }
@@ -1125,7 +1134,7 @@ extension Linker {
             var fields: [String: TypeExpression] = [:]
 
             for (name, field) in record.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(field, at: location, in: environment, with: frame, ask: ask)
+                let inner = try inspected(field, at: place, in: environment, with: frame, ask: ask)
 
                 apply(inner.flow, to: &environment)
                 flowed = sequenced(flowed, then: inner.flow)
@@ -1156,7 +1165,7 @@ extension Linker {
             if case .judging = ask, let written = procedure.block {
                 let inner = try inspected(
                     block: written,
-                    at: "\(location).closure",
+                    at: place.key("closure"),
                     in: environment.merging(self.environment(of: procedure.signature)) {
                         _, new in new
                     },
@@ -1196,15 +1205,15 @@ extension Linker {
             // The guard above already said judging, so this refusal has no
             // ask to ask.
             for operand in [callee] + Array(arguments.values) where operand.holdsConstruct {
-                throw LinkError("\(location): \(Expression.constructInOperand)")
+                throw LinkError("\(Expression.constructInOperand)", at: place)
             }
 
-            let called = try inspected(callee, at: location, in: environment, with: frame, ask: ask)
+            let called = try inspected(callee, at: place, in: environment, with: frame, ask: ask)
             var rewritten: [String: Expression] = [:]
             var calls = called.calls
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(argument, at: location, in: environment, with: frame, ask: ask)
+                let inner = try inspected(argument, at: place, in: environment, with: frame, ask: ask)
 
                 rewritten[name] = inner.rewritten
                 calls += inner.calls
@@ -1238,7 +1247,7 @@ extension Linker {
                         readings: try dispatch.arguments.mapValues { argument in
                             try inspected(
                                 argument,
-                                at: location,
+                                at: place,
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1247,7 +1256,7 @@ extension Linker {
                         receiver: try dispatch.receiver.map { receiver in
                             try inspected(
                                 receiver,
-                                at: location,
+                                at: place,
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1262,13 +1271,13 @@ extension Linker {
             // ask to ask.
             for operand in (dispatch.receiver.map { [$0] } ?? []) + Array(dispatch.arguments.values)
             where operand.holdsConstruct {
-                throw LinkError("\(location): \(Expression.constructInOperand)")
+                throw LinkError("\(Expression.constructInOperand)", at: place)
             }
 
             var receiver: Inspection?
 
             if let written = dispatch.receiver {
-                receiver = try inspected(written, at: location, in: environment, with: frame, ask: ask)
+                receiver = try inspected(written, at: place, in: environment, with: frame, ask: ask)
             }
 
             var arguments: [String: Expression] = [:]
@@ -1276,7 +1285,7 @@ extension Linker {
             var calls = receiver?.calls ?? []
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(argument, at: location, in: environment, with: frame, ask: ask)
+                let inner = try inspected(argument, at: place, in: environment, with: frame, ask: ask)
 
                 arguments[name] = inner.rewritten
                 sent[name] = inner.reading
@@ -1294,7 +1303,7 @@ extension Linker {
                 calls: [
                     CallSite(
                         dispatch: rewritten,
-                        location: location,
+                        place: place,
                         readings: sent,
                         received: receiver?.reading
                     )
@@ -1309,7 +1318,7 @@ extension Linker {
             )
 
         case let .block(block):
-            let inner = try inspected(block: block, at: location, in: environment, with: frame, ask: ask)
+            let inner = try inspected(block: block, at: place, in: environment, with: frame, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites ? .block(inner.block) : expression,
@@ -1329,16 +1338,16 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse("\(location): \(Expression.constructInCondition)", when: ask)
+                try refuse(Expression.constructInCondition, at: place, when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
             // above is what makes that a fact — so the arms stand in the
             // environment the branch stands in.
-            let head = try inspected(condition, at: location, in: environment, with: frame, ask: ask)
+            let head = try inspected(condition, at: place, in: environment, with: frame, ask: ask)
             let inside = environment
 
-            let taken = try inspected(then, at: location, in: inside, with: frame, ask: ask)
+            let taken = try inspected(then, at: place, in: inside, with: frame, ask: ask)
 
             guard let otherwise else {
                 return Inspection(
@@ -1351,7 +1360,7 @@ extension Linker {
                 )
             }
 
-            let declined = try inspected(otherwise, at: location, in: inside, with: frame, ask: ask)
+            let declined = try inspected(otherwise, at: place, in: inside, with: frame, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1377,7 +1386,7 @@ extension Linker {
             // operand has — so a construct is refused there by the same
             // predicate, at the check and here alike.
             if condition.holdsConstruct {
-                try refuse("\(location): \(Expression.constructInCondition)", when: ask)
+                try refuse(Expression.constructInCondition, at: place, when: ask)
             }
 
             // The fixpoint probes the statements alone — the rounds are what
@@ -1388,23 +1397,24 @@ extension Linker {
             let (seeded, probed, converged) = try settled(
                 from: rounded(environment, as: round)
             ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try inspected(body.body, at: location, in: entry, with: frame, ask: .reading)
+                let walk = try inspected(body.body, at: place, in: entry, with: frame, ask: .reading)
 
                 return (walk, walk.flow)
             }
 
             if !converged {
                 try refuse(
-                    "\(location): the names this loop writes never settle"
+                    "the names this loop writes never settle"
                         + " into one reading, so the link cannot say what"
                         + " they hold",
+                    at: place,
                     when: ask
                 )
             }
 
-            let head = try inspected(condition, at: location, in: seeded, with: frame, ask: ask)
+            let head = try inspected(condition, at: place, in: seeded, with: frame, ask: ask)
             let rounds = ask.rewrites
-                ? try inspected(body.body, at: location, in: seeded, with: frame, ask: ask)
+                ? try inspected(body.body, at: place, in: seeded, with: frame, ask: ask)
                 : probed
 
             // The result runs once, at whichever exit the run takes — a
@@ -1424,7 +1434,7 @@ extension Linker {
                         ?? join(.null, written)
                 }
 
-                tail = try inspected(result, at: location, in: exit, with: frame, ask: ask)
+                tail = try inspected(result, at: place, in: exit, with: frame, ask: ask)
             }
 
             return Inspection(
@@ -1450,7 +1460,7 @@ extension Linker {
         // the settled environment too, seeded with the element the
         // material's reading feeds.
         case let .iteration(material, body, element):
-            let fed = try inspected(material, at: location, in: environment, with: frame, ask: ask)
+            let fed = try inspected(material, at: place, in: environment, with: frame, ask: ask)
             var threaded = environment
 
             apply(fed.flow, to: &threaded)
@@ -1458,22 +1468,23 @@ extension Linker {
             let (inside, probed, converged) = try settled(
                 from: walking(element, holding: fed.reading, in: threaded)
             ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try inspected(body, at: location, in: entry, with: frame, ask: .reading)
+                let walk = try inspected(body, at: place, in: entry, with: frame, ask: .reading)
 
                 return (walk, walk.flow)
             }
 
             if !converged {
                 try refuse(
-                    "\(location): the names this walk writes never settle"
+                    "the names this walk writes never settle"
                         + " into one reading, so the link cannot say what"
                         + " they hold",
+                    at: place,
                     when: ask
                 )
             }
 
             let inner = ask.rewrites
-                ? try inspected(body, at: location, in: inside, with: frame, ask: ask)
+                ? try inspected(body, at: place, in: inside, with: frame, ask: ask)
                 : probed
 
             return Inspection(
@@ -1497,14 +1508,14 @@ extension Linker {
         case let .attempt(block, rescue, failure):
             let attempted = try inspected(
                 block: block,
-                at: location,
+                at: place,
                 in: environment,
                 with: frame,
                 ask: ask
             )
             let rescued = try inspected(
                 block: rescue,
-                at: "\(location).rescue",
+                at: place.key("rescue"),
                 in: caught(soaking: attempted.flow, failure: failure, in: environment),
                 with: frame,
                 ask: ask
@@ -1529,12 +1540,12 @@ extension Linker {
     // judging's to refuse — the reading ask answers `never` and moves on.
     private func inspected(
         block: Block,
-        at location: String,
+        at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> (block: Block, calls: [CallSite], reading: TypeExpression, flow: Flow) {
-        let body = try inspected(block.body, at: location, in: environment, with: frame, ask: ask)
+        let body = try inspected(block.body, at: place, in: environment, with: frame, ask: ask)
 
         // Where the result reads, or why it does not. A block's result sits
         // after its statements — it reads in the environment the body left,
@@ -1548,8 +1559,9 @@ extension Linker {
         if body.reading == .never {
             if block.result != nil {
                 try refuse(
-                    "\(location).result: never finishes before it, and nothing"
+                    "never finishes before it, and nothing"
                         + " written after it would ever run",
+                    at: place.key("result"),
                     when: ask
                 )
             }
@@ -1558,7 +1570,7 @@ extension Linker {
             reading = .never
             flow = body.flow
         } else if let result = block.result {
-            let read = try inspected(result, at: location, in: body.environment, with: frame, ask: ask)
+            let read = try inspected(result, at: place, in: body.environment, with: frame, ask: ask)
 
             tail = read
             reading = read.reading
@@ -1599,7 +1611,7 @@ extension Linker {
     // ask is walking.
     private func inspected(
         _ body: [Statement],
-        at location: String,
+        at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
         ask: Ask
@@ -1611,9 +1623,11 @@ extension Linker {
         var calls: [CallSite] = []
 
         for (position, statement) in body.enumerated() {
+            let here = place.statement(statement.id, at: position)
+
             let inner = try inspected(
                 statement.expression,
-                at: "\(location).\(statement.id ?? "[\(position)]")",
+                at: here,
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1648,12 +1662,15 @@ extension Linker {
             // never run. What the syntactic leaves get at reading, a call
             // gets here, where the signature is known.
             if inner.flow.leaves || inner.reading == .never {
-                try refuseNeverBinding(named: statement.id, at: location, when: ask)
+                try refuseNeverBinding(named: statement.id, at: here, when: ask)
 
                 if position != body.count - 1 {
+                    let next = body[position + 1]
+
                     try refuse(
-                        "\(location)[\(position + 1)]: never finishes, and nothing"
+                        "never finishes, and nothing"
                             + " written after it would ever run",
+                        at: place.statement(next.id, at: position + 1),
                         when: ask
                     )
                 }
@@ -1698,14 +1715,15 @@ extension Linker {
     // can see — one rule, two stages.
     private func refuseNeverBinding(
         named id: String?,
-        at location: String,
+        at place: Place,
         when ask: Ask
     ) throws {
-        guard let id else { return }
+        guard id != nil else { return }
 
         try refuse(
-            "\(location).\(id): never finishes,"
+            "never finishes,"
                 + " so it binds nothing and takes no name",
+            at: place,
             when: ask
         )
     }

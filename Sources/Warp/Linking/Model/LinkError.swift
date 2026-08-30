@@ -13,10 +13,12 @@ import Foundation
 public struct LinkError: WarpError {
     // MARK: - Property
     public let message: String
+    public let place: Place?
 
     // MARK: - Initializer
-    public init(_ message: String) {
+    public init(_ message: String, at place: Place? = nil) {
         self.message = message
+        self.place = place
     }
 
     // MARK: - Public

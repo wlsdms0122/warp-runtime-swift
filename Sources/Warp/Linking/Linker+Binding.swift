@@ -25,7 +25,7 @@ extension Linker {
         _ procedure: Procedure,
         within origin: Int,
         symbols: SymbolSpace,
-        at name: String
+        at place: Place
     ) throws -> Procedure {
         guard let block = procedure.block else { return procedure }
 
@@ -37,7 +37,7 @@ extension Linker {
                     block,
                     within: origin,
                     symbols: symbols,
-                    at: "\(name).body"
+                    at: place.key("body")
                 )
             )
         )
@@ -47,21 +47,21 @@ extension Linker {
         _ block: Block,
         within origin: Int,
         symbols: SymbolSpace,
-        at location: String
+        at place: Place
     ) throws -> Block {
         Block(
             body: try bind(
                 block.body,
                 within: origin,
                 symbols: symbols,
-                at: location
+                at: place
             ),
             result: try block.result.map { result in
                 try bind(
                     result,
                     within: origin,
                     symbols: symbols,
-                    at: location
+                    at: place
                 )
             }
         )
@@ -73,7 +73,7 @@ extension Linker {
         _ body: [Statement],
         within origin: Int,
         symbols: SymbolSpace,
-        at location: String
+        at place: Place
     ) throws -> [Statement] {
         try body.enumerated().map { position, statement in
             try bind(
@@ -81,7 +81,7 @@ extension Linker {
                 at: position,
                 within: origin,
                 symbols: symbols,
-                at: location
+                at: place
             )
         }
     }
@@ -92,7 +92,7 @@ extension Linker {
         at position: Int,
         within origin: Int,
         symbols: SymbolSpace,
-        at location: String
+        at place: Place
     ) throws -> Statement {
         Statement(
             id: statement.id,
@@ -101,7 +101,7 @@ extension Linker {
                 statement.expression,
                 within: origin,
                 symbols: symbols,
-                at: "\(location).\(statement.id ?? "[\(position)]")"
+                at: place.statement(statement.id, at: position)
             )
         )
     }
@@ -112,14 +112,14 @@ extension Linker {
         _ expression: Expression,
         within origin: Int,
         symbols: SymbolSpace,
-        at location: String
+        at place: Place
     ) throws -> Expression {
         func inner(_ expression: Expression) throws -> Expression {
             try bind(
                 expression,
                 within: origin,
                 symbols: symbols,
-                at: location
+                at: place
             )
         }
 
@@ -128,7 +128,7 @@ extension Linker {
                 block,
                 within: origin,
                 symbols: symbols,
-                at: location
+                at: place
             )
         }
 
@@ -137,7 +137,7 @@ extension Linker {
                 body,
                 within: origin,
                 symbols: symbols,
-                at: location
+                at: place
             )
         }
 
@@ -208,7 +208,7 @@ extension Linker {
                     dispatch,
                     within: origin,
                     symbols: symbols,
-                    at: location
+                    at: place
                 )
             )
         }
@@ -222,14 +222,14 @@ extension Linker {
         _ dispatch: Dispatch,
         within origin: Int,
         symbols: SymbolSpace,
-        at location: String
+        at place: Place
     ) throws -> Dispatch {
         func inner(_ expression: Expression) throws -> Expression {
             try bind(
                 expression,
                 within: origin,
                 symbols: symbols,
-                at: location
+                at: place
             )
         }
 
@@ -243,15 +243,17 @@ extension Linker {
 
         case let .ambiguous(candidates):
             throw LinkError(
-                "\(location): sends '\(dispatch.selector)', which"
+                "sends '\(dispatch.selector)', which"
                     + " \(candidates.joined(separator: " and ")) both declare"
-                    + " — name the one you meant"
+                    + " — name the one you meant",
+                at: place
             )
 
         case .unresolved:
             throw LinkError(
-                "\(location): sends '\(dispatch.selector)', which no module in this"
-                    + " link declares"
+                "sends '\(dispatch.selector)', which no module in this"
+                    + " link declares",
+                at: place
             )
         }
 

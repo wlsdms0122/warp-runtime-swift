@@ -164,7 +164,7 @@ public struct Linker: Sendable {
                 symbol.procedure,
                 within: symbol.origin,
                 symbols: space,
-                at: symbol.qualified
+                at: .procedure(symbol.qualified)
             )
 
             boundBodies[symbol.qualified] = bound
@@ -255,7 +255,7 @@ public struct Linker: Sendable {
 
                 let (rewritten, gathered) = try resolvedSites(
                     in: block,
-                    at: "\(symbol.qualified).body",
+                    at: Place.procedure(symbol.qualified).key("body"),
                     in: environment,
                     with: frame,
                     folding: folding
@@ -329,11 +329,12 @@ public struct Linker: Sendable {
             if let returns = resolved.signature.returns,
                let answer = resolved.block?.result?.constantValue {
                 do {
-                    _ = try returns.settling(answer, at: "\(symbol.qualified).result", in: types)
+                    _ = try returns.settling(answer, at: "result", in: types)
                 } catch {
                     throw LinkError(
-                        "\(symbol.qualified): answers \(answer.type), and its"
-                            + " declaration promises \(returns) — \(error)"
+                        "answers \(answer.type), and its"
+                            + " declaration promises \(returns) — \(error)",
+                        at: Place.procedure(symbol.qualified).key("result")
                     )
                 }
             }
@@ -382,8 +383,9 @@ public struct Linker: Sendable {
 
             guard let callee = space.symbol(spelled: selector) else {
                 throw LinkError(
-                    "\(call.location): sends '\(selector)', which no module in"
-                        + " this link declares"
+                    "sends '\(selector)', which no module in"
+                        + " this link declares",
+                    at: call.place
                 )
             }
 
@@ -694,8 +696,9 @@ public struct Linker: Sendable {
             while case let .named(next) = current {
                 guard seen.insert(next).inserted else {
                     throw LinkError(
-                        "type '\(name)': reaches itself through nothing but names"
-                            + " — a name that only names names never reaches a shape"
+                        "reaches itself through nothing but names"
+                            + " — a name that only names names never reaches a shape",
+                        at: .type(name)
                     )
                 }
 
@@ -706,8 +709,9 @@ public struct Linker: Sendable {
         for name in members.keys.sorted() {
             guard let admitted = members[name], !admitted.isEmpty else {
                 throw LinkError(
-                    "constraint '\(name)' admits nothing, so no parameter it"
-                        + " bounds could ever be filled"
+                    "admits nothing, so no parameter it"
+                        + " bounds could ever be filled",
+                    at: .constraint(name)
                 )
             }
 
@@ -745,14 +749,14 @@ public struct Linker: Sendable {
 
         for module in modules {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
-                try mentioned(in: type, at: "type '\(name)'", parameterized: false, resolve: table)
+                try mentioned(in: type, at: .type(name), parameterized: false, resolve: table)
             }
 
             for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
                 for member in members {
                     try mentioned(
                         in: member,
-                        at: "constraint '\(name)'",
+                        at: .constraint(name),
                         parameterized: false,
                         resolve: table
                     )
@@ -760,17 +764,17 @@ public struct Linker: Sendable {
             }
 
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
-                try judge(procedure.signature, at: name, in: table)
+                try judge(procedure.signature, at: .procedure(name), in: table)
 
                 // A closure literal carries a signature the way a declaration
                 // does, and unreached code still has to compile — so what the
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
-                    let buried = block.buried(at: name)
+                    let buried = block.buried(at: .procedure(name))
 
-                    for (location, inner) in closures(in: buried) {
-                        try judge(inner.signature, at: location, in: table)
+                    for (place, inner) in closures(in: buried) {
+                        try judge(inner.signature, at: place, in: table)
                     }
 
                     // A cast names a shape, which is a mention like a
@@ -780,21 +784,21 @@ public struct Linker: Sendable {
                     // a procedure both impure and unreachable is walked by
                     // neither the frontier nor the pure set, and its casts
                     // would name whatever they liked.
-                    for (location, named) in castTypes(in: buried) {
-                        try judge(cast: named, at: location, in: table)
+                    for (place, named) in castTypes(in: buried) {
+                        try judge(cast: named, at: place, in: table)
                     }
                 }
             }
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
-                let buried = constant.buried(at: "constant '\(name)'")
+                let buried = constant.buried(at: .constant(name))
 
-                for (location, inner) in closures(in: buried) {
-                    try judge(inner.signature, at: location, in: table)
+                for (place, inner) in closures(in: buried) {
+                    try judge(inner.signature, at: place, in: table)
                 }
 
-                for (location, named) in castTypes(in: buried) {
-                    try judge(cast: named, at: location, in: table)
+                for (place, named) in castTypes(in: buried) {
+                    try judge(cast: named, at: place, in: table)
                 }
             }
         }
@@ -809,32 +813,33 @@ public struct Linker: Sendable {
     // of re-deriving.
     private func judge(
         _ signature: Signature,
-        at location: String,
+        at place: Place,
         in table: TypeTable
     ) throws {
         for (input, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
             try mentioned(
                 in: parameter.declared,
-                at: "\(location).inputs.\(input)",
+                at: place.key("parameters").key(input),
                 parameterized: true,
                 resolve: table
             )
-            try judge(parameter, called: input, at: "\(location).inputs.\(input)", in: table)
+            try judge(parameter, called: input, at: place.key("parameters").key(input), in: table)
         }
 
         try mentioned(
             in: signature.returns ?? .any,
-            at: "\(location).returns",
+            at: place.key("returns"),
             parameterized: true,
             resolve: table
         )
 
-        try judgeConstraints(of: signature, at: location, in: table)
+        try judgeConstraints(of: signature, at: place, in: table)
 
         if let receiver = signature.receiver, signature.parameters[receiver] == nil {
             throw LinkError(
-                "\(location): receiver names '\(receiver)', which this"
-                    + " signature does not declare"
+                "receiver names '\(receiver)', which this"
+                    + " signature does not declare",
+                at: place
             )
         }
     }
@@ -847,13 +852,13 @@ public struct Linker: Sendable {
     // walked by neither the frontier nor the pure set.
     private func judge(
         cast named: TypeExpression,
-        at location: String,
+        at place: Place,
         in table: TypeTable
     ) throws {
-        try mentioned(in: named, at: location, parameterized: true, resolve: table)
+        try mentioned(in: named, at: place, parameterized: true, resolve: table)
 
-        if let refusal = named.resolved(in: table).unreadableClaim(at: location) {
-            throw LinkError(refusal)
+        if let refusal = named.resolved(in: table).unreadableClaim {
+            throw LinkError(refusal, at: place)
         }
     }
 
@@ -861,12 +866,12 @@ public struct Linker: Sendable {
     // found. What the walk buries is `buried`'s to know — this says only which
     // of it a cast scan keeps.
     private func castTypes(
-        in buried: [(String, Expression)]
-    ) -> [(String, TypeExpression)] {
-        buried.compactMap { location, expression in
+        in buried: [(Place, Expression)]
+    ) -> [(Place, TypeExpression)] {
+        buried.compactMap { place, expression in
             guard case let .cast(_, named, _) = expression else { return nil }
 
-            return (location, named)
+            return (place, named)
         }
     }
 
@@ -874,12 +879,12 @@ public struct Linker: Sendable {
     // found. A closure's own body may hold more of them, and the one walk goes
     // through the one it found.
     private func closures(
-        in buried: [(String, Expression)]
-    ) -> [(String, Procedure)] {
-        buried.compactMap { location, expression in
+        in buried: [(Place, Expression)]
+    ) -> [(Place, Procedure)] {
+        buried.compactMap { place, expression in
             guard case let .closure(procedure) = expression else { return nil }
 
-            return (location, procedure)
+            return (place, procedure)
         }
     }
 
@@ -890,7 +895,7 @@ public struct Linker: Sendable {
     // one thing.
     private func judgeConstraints(
         of signature: Signature,
-        at location: String,
+        at place: Place,
         in table: TypeTable
     ) throws {
         var bounds: [String: Set<String>] = [:]
@@ -899,17 +904,19 @@ public struct Linker: Sendable {
         for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
             guard names.count <= 1 else {
                 throw LinkError(
-                    "\(location): `some \(parameter)` is bounded by"
+                    "`some \(parameter)` is bounded by"
                         + " \(names.sorted().joined(separator: " and "))"
-                        + " — one parameter takes one constraint"
+                        + " — one parameter takes one constraint",
+                    at: place
                 )
             }
 
             guard let bound = names.first, table.constraint(bound) == nil else { continue }
 
             throw LinkError(
-                "\(location): `some \(parameter)` names constraint '\(bound)',"
-                    + " which no module in this link declares"
+                "`some \(parameter)` names constraint '\(bound)',"
+                    + " which no module in this link declares",
+                at: place
             )
         }
     }
@@ -928,7 +935,7 @@ public struct Linker: Sendable {
     // living in the typing walk is exactly the drift the rule exists against.
     func mentioned(
         in type: TypeExpression,
-        at location: String,
+        at place: Place,
         parameterized: Bool,
         resolve table: TypeTable
     ) throws {
@@ -943,10 +950,11 @@ public struct Linker: Sendable {
         // way a declaration is built and a host assembling one is another.
         case let .reading(of, path):
             throw LinkError(
-                "\(location): writes `\(type.rendered)`, which is a shape the link"
+                "writes `\(type.rendered)`, which is a shape the link"
                     + " read out of a body — a declaration says what a call fills,"
                     + " and `\(([PathSegment.key(of)] + path).rendered)` is a path"
-                    + " only that body can read"
+                    + " only that body can read",
+                at: place
             )
 
         // The bounds are the declaration's own claim, so an order the numbers
@@ -955,16 +963,18 @@ public struct Linker: Sendable {
         case let .ranged(refinement):
             if refinement.saysNothing {
                 throw LinkError(
-                    "\(location): writes `\(type.rendered)` with neither bound"
+                    "writes `\(type.rendered)` with neither bound"
                         + " — a range that says nothing is spelled"
-                        + " `\(refinement.kind.rendered)`"
+                        + " `\(refinement.kind.rendered)`",
+                    at: place
                 )
             }
 
             if refinement.admitsNothing {
                 throw LinkError(
-                    "\(location): writes `\(type.rendered)`, which admits nothing"
-                        + " — no \(refinement.kind.rendered) is inside it"
+                    "writes `\(type.rendered)`, which admits nothing"
+                        + " — no \(refinement.kind.rendered) is inside it",
+                    at: place
                 )
             }
 
@@ -973,8 +983,9 @@ public struct Linker: Sendable {
         case .variable:
             guard parameterized else {
                 throw LinkError(
-                    "\(location): writes `\(type.rendered)`, and nothing here is"
-                        + " filled by a call — a type parameter lives in a signature"
+                    "writes `\(type.rendered)`, and nothing here is"
+                        + " filled by a call — a type parameter lives in a signature",
+                    at: place
                 )
             }
 
@@ -989,32 +1000,33 @@ public struct Linker: Sendable {
             for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
                     in: parameter.declared,
-                    at: "\(location).\(name)",
+                    at: place.key(name),
                     parameterized: parameterized,
                     resolve: table
                 )
-                try judge(parameter, called: name, at: "\(location).\(name)", in: table)
+                try judge(parameter, called: name, at: place.key(name), in: table)
             }
 
             try mentioned(
                 in: signature.returns ?? .any,
-                at: location,
+                at: place,
                 parameterized: parameterized,
                 resolve: table
             )
 
-            try judgeConstraints(of: signature, at: location, in: table)
+            try judgeConstraints(of: signature, at: place, in: table)
 
         case let .named(name):
             guard table.resolve(name) != nil else {
                 throw LinkError(
-                    "\(location): names type '\(name)', which no module in this"
-                        + " link declares"
+                    "names type '\(name)', which no module in this"
+                        + " link declares",
+                    at: place
                 )
             }
 
         case let .array(element), let .object(element):
-            try mentioned(in: element, at: location, parameterized: parameterized, resolve: table)
+            try mentioned(in: element, at: place, parameterized: parameterized, resolve: table)
 
         // The reader refuses a `?` that says nothing new — but the reader
         // sees spellings, and a name may hide one of the refused shapes
@@ -1031,23 +1043,24 @@ public struct Linker: Sendable {
             switch resolved {
             case .any, .null, .never, .variable, .nullable:
                 throw LinkError(
-                    "\(location): writes `?` on \(inner.rendered), which"
+                    "writes `?` on \(inner.rendered), which"
                         + " stands for `\(resolved.rendered)` — a `?` says"
                         + " nothing there, the same rule the spelling"
-                        + " `\(resolved.rendered)?` is refused by"
+                        + " `\(resolved.rendered)?` is refused by",
+                    at: place
                 )
 
             default:
                 break
             }
 
-            try mentioned(in: inner, at: location, parameterized: parameterized, resolve: table)
+            try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
 
         case let .record(fields):
             for (name, field) in fields.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
                     in: field,
-                    at: "\(location).\(name)",
+                    at: place.key(name),
                     parameterized: parameterized,
                     resolve: table
                 )
@@ -1063,7 +1076,7 @@ public struct Linker: Sendable {
     private func judge(
         _ parameter: Parameter,
         called name: String,
-        at location: String,
+        at place: Place,
         in table: TypeTable
     ) throws {
         if let allowed = parameter.oneOf {
@@ -1079,15 +1092,17 @@ public struct Linker: Sendable {
 
             if dead.count == allowed.count {
                 throw LinkError(
-                    "\(location): oneOf admits nothing, so no call could ever fit"
+                    "oneOf admits nothing, so no call could ever fit",
+                    at: place
                 )
             }
 
             if let first = dead.first {
                 throw LinkError(
-                    "\(location): oneOf lists '\(first)', which"
+                    "oneOf lists '\(first)', which"
                         + " \(parameter.declared.rendered) does not admit —"
-                        + " no call could ever match it"
+                        + " no call could ever match it",
+                    at: place
                 )
             }
         }
@@ -1101,7 +1116,8 @@ public struct Linker: Sendable {
         if fallback == .null {
             guard parameter.oneOf == nil, admitsNull(parameter.declared, resolve: table) else {
                 throw LinkError(
-                    "\(location): its default is not a value it takes — null"
+                    "its default is not a value it takes — null",
+                    at: place
                 )
             }
 
@@ -1112,7 +1128,8 @@ public struct Linker: Sendable {
             _ = try parameter.checking(fallback, called: name, in: table)
         } catch {
             throw LinkError(
-                "\(location): its default is not a value it takes — \(error)"
+                "its default is not a value it takes — \(error)",
+                at: place
             )
         }
     }
@@ -1254,7 +1271,7 @@ public struct Linker: Sendable {
                         expression,
                         within: origin,
                         symbols: space,
-                        at: "constant '\(name)'"
+                        at: .constant(name)
                     )
 
                     // Everything this constant reads is settled, so a refusal
@@ -1265,10 +1282,10 @@ public struct Linker: Sendable {
                     // a body's are: the settled neighbours' types are the
                     // environment, so an absent field or a needless `?.`
                     // refuses here by the one rule — and carries its own
-                    // location, so only the settling refusal below needs one.
+                    // place, so only the settling refusal below needs one.
                     let (judged, calls) = try resolvedSites(
                         in: bound,
-                        at: "constant '\(name)'",
+                        at: .constant(name),
                         in: known.mapValues { value in type(of: value) },
                         with: frame,
                         folding: nil
@@ -1282,7 +1299,7 @@ public struct Linker: Sendable {
                     do {
                         known[name] = try resolver.resolve(judged)
                     } catch {
-                        throw LinkError("constant '\(name)': \(error)")
+                        throw LinkError("\(error)", at: .constant(name))
                     }
 
                     pending[name] = nil
@@ -1386,7 +1403,8 @@ public struct Linker: Sendable {
         ) {
         case let .refusal(reason):
             throw LinkError(
-                "\(site.location): sending '\(dispatch.selector)' — \(reason)"
+                "sending '\(dispatch.selector)' — \(reason)",
+                at: site.place
             )
 
         case let .fits(filled):
@@ -1398,8 +1416,9 @@ public struct Linker: Sendable {
 
         guard undeclared.isEmpty else {
             throw LinkError(
-                "\(site.location): sending '\(dispatch.selector)' with"
-                    + " \(undeclared.joined(separator: ", ")), which it does not declare"
+                "sending '\(dispatch.selector)' with"
+                    + " \(undeclared.joined(separator: ", ")), which it does not declare",
+                at: site.place
             )
         }
 
@@ -1417,8 +1436,9 @@ public struct Linker: Sendable {
 
         guard missing.isEmpty else {
             throw LinkError(
-                "\(site.location): sending '\(dispatch.selector)' without"
-                    + " \(missing.joined(separator: ", ")), which it requires"
+                "sending '\(dispatch.selector)' without"
+                    + " \(missing.joined(separator: ", ")), which it requires",
+                at: site.place
             )
         }
 
@@ -1436,7 +1456,7 @@ public struct Linker: Sendable {
             do {
                 _ = try parameter.taking(constant, called: name, in: types)
             } catch {
-                throw LinkError("\(site.location): sending '\(dispatch.selector)' — \(error)")
+                throw LinkError("sending '\(dispatch.selector)' — \(error)", at: site.place)
             }
         }
 
@@ -1450,7 +1470,7 @@ public struct Linker: Sendable {
             do {
                 try query.validate(constants)
             } catch {
-                throw LinkError("\(site.location): sending '\(dispatch.selector)' — \(error)")
+                throw LinkError("sending '\(dispatch.selector)' — \(error)", at: site.place)
             }
         }
 
@@ -1467,8 +1487,9 @@ public struct Linker: Sendable {
             guard !parameter.declared.accepts(written, in: types) else { continue }
 
             throw LinkError(
-                "\(site.location): sending '\(dispatch.selector)' with \(name),"
-                    + " which holds \(written) where \(parameter.declared) is declared"
+                "sending '\(dispatch.selector)' with \(name),"
+                    + " which holds \(written) where \(parameter.declared) is declared",
+                at: site.place
             )
         }
 
@@ -1481,8 +1502,9 @@ public struct Linker: Sendable {
         {
             guard parameter.declared.accepts(written, in: types) else {
                 throw LinkError(
-                    "\(site.location): sending '\(dispatch.selector)' to \(written),"
-                        + " where \(parameter.declared) is declared"
+                    "sending '\(dispatch.selector)' to \(written),"
+                        + " where \(parameter.declared) is declared",
+                    at: site.place
                 )
             }
         }
