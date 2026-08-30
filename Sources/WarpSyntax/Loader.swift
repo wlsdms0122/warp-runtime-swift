@@ -52,22 +52,23 @@ public struct Loader: Sendable {
     // the fragment is a module worth linking. It answers with a module rather than
     // something runnable because a document is not runnable — what runs is
     // decided when this module is linked with the others.
-    // The module carries no identity: working one out means writing the
-    // document back to its canonical bytes, which is the serialization's job
-    // and not this target's — reading a document has never needed the wire.
-    // A caller that wants refusals it can map back into a file says so with
-    // the document in hand:
+    // Which document this is, handed in rather than worked out: deriving it
+    // means writing the document back to its canonical bytes, and that is the
+    // serialization's job — reading a document has never needed the wire.
     //
-    //     let module = try Loader().load(document)
-    //         .read(from: try Identity.of(document))
+    //     let module = try Loader().load(document, identity: Identity.of(document))
     //
-    // Two lines and not one because the second is the wire's. Handing the
-    // wrong document to the second line is not a way to be pointed at the
-    // wrong text: what compares identities computes both sides from what it
-    // holds, so a mismatch is a refusal nobody can place, never a refusal
-    // placed somewhere it did not come from.
-    public func load(_ value: Value) throws -> Module {
-        let module = try spelled(value)
+    // Taken *before* the judging and not after it. A refusal is exactly the
+    // moment somebody wants the file it came from, so a module stamped on the
+    // way out would be stamped only when nothing was wrong with it.
+    //
+    // Handing the wrong document to `Identity.of` is not a way to be pointed at
+    // the wrong text: whatever compares identities computes its own side from
+    // what it holds, so a mismatch is a refusal nobody can place, never a
+    // refusal placed somewhere it did not come from.
+    public func load(_ value: Value, identity: Identity? = nil) throws -> Module {
+        let spelled = try spelled(value)
+        let module = identity.map(spelled.read(from:)) ?? spelled
 
         // What a document needs is read before the program it belongs to, so a
         // caller decides whether to grant before it decides whether to link. A

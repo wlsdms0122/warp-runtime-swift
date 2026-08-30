@@ -72,7 +72,10 @@ import WarpSyntax
 import WarpSerialization
 
 let document = try BinaryEncoding.value(from: bytes)   // bytes → tree, or refused
-let module = try Loader().load(document)               // tree → module, or refused
+let module = try Loader().load(                        // tree → module, or refused
+    document,
+    identity: try Identity.of(document)                // which document, for refusals
+)
 let image = try Language().link([module] + Module.standard, entry: "entry")
 let answer = try await Language().makeExecutor().run(image)
 ```
@@ -124,14 +127,20 @@ answer without having agreed on anything.
 
 `Module.identity` is nil for a module a caller built, and that is the whole of
 what nil means: nothing was written down, so there is no text to be pointed
-back into. A reader stamps what it read:
+back into. A reader says which document it is reading, and says it going in:
 
 ```swift
-let module = try Loader().load(document).read(from: try Identity.of(document))
+let module = try Loader().load(document, identity: try Identity.of(document))
 ```
 
+Going in rather than on the way out, because a refusal is exactly the moment
+somebody wants the file it came from — a module stamped afterwards would be
+stamped only when nothing was wrong with it.
+
 The name still rides beside the steps, because a person reading a refusal wants
-the word they typed — it takes no part in saying which document this is. And a
+the word they typed — it takes no part in saying which document this is, and a
+module a caller built still says which namespace it declares into even though
+there is no text under it. And a
 place from a program nobody wrote down says `assembled` rather than `none`,
 since `Optional.none` answers to that spelling too and `document == .none`
 would read true for a place that does not exist.

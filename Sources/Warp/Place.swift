@@ -80,16 +80,15 @@ public struct Place: Sendable, Equatable {
         // where it did not. A person reading a refusal wants the word they
         // typed; where there is no such word, a short digest still tells two
         // documents apart, which is more than nothing tells them.
-        switch document {
-        case let .read(_, named?):
-            return "\(named)/" + address
-
-        case let .read(identity, nil):
-            return "\(identity.short)/" + address
-
-        case .assembled:
-            return address
+        if let namespace = document.namespace {
+            return "\(namespace)/" + address
         }
+
+        // No name to give, so what the document *is* — a short digest still
+        // tells two of them apart, which is more than nothing tells them.
+        guard let identity = document.identity else { return address }
+
+        return "\(identity.short)/" + address
     }
 
     // MARK: - Initializer
@@ -189,20 +188,31 @@ public extension Place {
     // because a person reading a refusal wants to see it, and it is no part of
     // saying which document this is.
     //
-    // `assembled` and not `none`: `Optional.none` would answer to that spelling
-    // too, so `document == .none` would read true for a place that does not
-    // exist and for one whose program was never written down — the two cases
-    // that have to stay apart.
-    enum Document: Sendable, Equatable {
-        case read(Identity, named: String?)
-        case assembled
+    struct Document: Sendable, Equatable {
+        // Which text this is. Nil where the program was never written down —
+        // a caller that built it in memory — and that is the whole of what nil
+        // means here: there is no file for a reader to be pointed back into.
+        public let identity: Identity?
 
-        // What a module was read out of, where it was read out of anything. A
-        // module a caller built has no document under it, whatever it is named.
-        static func of(_ module: Module) -> Document {
-            guard let identity = module.identity else { return .assembled }
+        // What the module calls itself. Carried beside the identity and never
+        // instead of it: a name is the namespace a module declares into, two
+        // documents may share one, and a module a caller built has a name and
+        // no text. A person reading a refusal wants the word they typed, which
+        // is the whole of what this is for.
+        public let namespace: String?
 
-            return .read(identity, named: module.name)
+        // A program nobody wrote down. Spelled out rather than left to a
+        // default, so that a place meaning to say which text it is in cannot
+        // get this one by saying nothing.
+        public static let assembled = Document(identity: nil, namespace: nil)
+
+        public init(identity: Identity?, namespace: String?) {
+            self.identity = identity
+            self.namespace = namespace
+        }
+
+        public static func of(_ module: Module) -> Document {
+            Document(identity: module.identity, namespace: module.name)
         }
     }
 

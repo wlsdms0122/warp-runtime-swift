@@ -46,7 +46,12 @@ public struct Identity: Sendable, Equatable, Hashable {
     }
 
     // MARK: - Initializer
-    public init(_ bytes: [UInt8]) {
+    // Not public. What makes an identity worth having is that it is derived and
+    // never declared, and a public door taking any bytes at all is a way to
+    // declare one — a caller could assemble a place addressing a document it
+    // never held. `Identity.of` is the only way in from outside, and it takes a
+    // document.
+    package init(_ bytes: [UInt8]) {
         self.bytes = bytes
     }
 

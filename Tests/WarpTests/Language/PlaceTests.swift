@@ -340,7 +340,7 @@ struct PlaceTests {
         }
 
         // Then — the name rides beside the steps and is never one of them
-        #expect(error?.place?.document == .read(reading, named: "wallet"))
+        #expect(error?.place?.document == Place.Document(identity: reading, namespace: "wallet"))
         #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
         #expect(error?.place?.rendered == "wallet/procedures.entry.body.sent[0].call")
     }
@@ -365,7 +365,7 @@ struct PlaceTests {
 
         // Then
         #expect(assembled?.place?.document == .assembled)
-        #expect(read?.place?.document == .read(reading, named: nil))
+        #expect(read?.place?.document == Place.Document(identity: reading, namespace: nil))
     }
 
     @Test("a shape a named module declares is placed by the key it declared it under")

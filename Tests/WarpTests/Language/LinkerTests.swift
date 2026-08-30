@@ -35,7 +35,7 @@ struct LinkerTests {
             try language.link([sut] + Module.standard, entry: entryName)
         }
 
-        #expect(error?.place?.rendered == "const.greeting")
+        #expect(error?.place?.rendered == "app/const.greeting")
         #expect(
             error?.message.contains("names it back") == false,
             "a refusal of its own was reported as a cycle"
