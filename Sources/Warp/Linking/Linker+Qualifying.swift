@@ -30,7 +30,6 @@ extension Linker {
         types: [String: TypeExpression],
         constraints: [String: [TypeExpression]]
     ) {
-
         // Each space checked whole before the two are held against each
         // other: a link is handed its world at once, so what it concludes
         // cannot depend on the order the caller happened to list the modules.

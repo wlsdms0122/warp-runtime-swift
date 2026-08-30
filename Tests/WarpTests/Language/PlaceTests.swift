@@ -339,9 +339,32 @@ struct PlaceTests {
         }
 
         // Then — the name says which document, and never which key
-        #expect(error?.place?.document == "wallet")
+        #expect(error?.place?.document == .named("wallet"))
         #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
         #expect(error?.place?.rendered == "wallet/procedures.entry.body.sent[0].call")
+    }
+
+    @Test("a program with no document under it says so, rather than saying no name")
+    func anAssembledProgramNamesNoDocument() {
+        // Given — a procedure handed in on its own, which is what a caller
+        // assembling a program in memory holds. There is no document, which is
+        // a different fact from a document that wrote no name: reading them as
+        // one would match this against any text an author never named, and
+        // answer with that text's own first line.
+        let sut = Procedure(body: [Statement(id: "held", expression: reference("missing"))])
+
+        // When
+        let assembled = #expect(throws: ValidationError.self) {
+            try Validator().validate(sut)
+        }
+
+        let read = #expect(throws: ValidationError.self) {
+            try Validator().validate(module(refusing: Statement(expression: reference("missing"))))
+        }
+
+        // Then
+        #expect(assembled?.place?.document == Place.Document.none)
+        #expect(read?.place?.document == .shared)
     }
 
     @Test("a shape a named module declares is placed by the key it declared it under")

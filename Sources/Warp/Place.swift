@@ -28,18 +28,15 @@ import Foundation
 // those words in front of them.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
-    // Which document the steps are in, by the name that document writes beside
-    // its declarations. Not a step: `name` sits next to `procedures` rather
-    // than inside it, so no walk down the keys ever passes through it.
+    // Which document the steps are in. Not a step: `name` sits next to
+    // `procedures` rather than inside it, so no walk down the keys passes
+    // through it.
     //
     // It is here because a link holds several documents and the steps alone do
     // not say which one — `std.collection` and `std.concurrent` both declare
     // `first`, and a reader handed `procedures.first` with no document would
-    // point at whichever `first` it happened to be holding. Nil where the
-    // module wrote no name: such a module declares into the link's shared
-    // space, where nothing else may declare the same name, so there is nothing
-    // to tell apart.
-    public let document: String?
+    // point at whichever `first` it happened to be holding.
+    public let document: Document
 
     public let steps: [Step]
 
@@ -79,11 +76,13 @@ public struct Place: Sendable, Equatable {
             }
         }
 
-        return (document.map { name in "\(name)/" } ?? "") + address
+        guard case let .named(name) = document else { return address }
+
+        return "\(name)/" + address
     }
 
     // MARK: - Initializer
-    public init(_ steps: [Step] = [], in document: String? = nil) {
+    public init(_ steps: [Step] = [], in document: Document = .none) {
         self.document = document
         self.steps = steps
     }
@@ -92,24 +91,26 @@ public struct Place: Sendable, Equatable {
     // The four things a module declares, each under the key the document writes
     // it under — which is what makes a place something an author can follow.
     public static func procedure(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("procedures"), .key(name)], in: document)
+        Place([.key("procedures"), .key(name)], in: .declaring(document))
     }
 
     public static func constant(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("const"), .key(name)], in: document)
+        Place([.key("const"), .key(name)], in: .declaring(document))
     }
 
     public static func type(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("types"), .key(name)], in: document)
+        Place([.key("types"), .key(name)], in: .declaring(document))
     }
 
     public static func constraint(_ name: String, in document: String? = nil) -> Place {
-        Place([.key("constraints"), .key(name)], in: document)
+        Place([.key("constraints"), .key(name)], in: .declaring(document))
     }
 
     // A caller holding a program it assembled itself, with no document under
-    // it. There is no key to name, so the place says what was handed in.
-    public static func given(_ name: String) -> Place { Place([.landmark(name)]) }
+    // it. There is no key to name, so the place says what was handed in — and
+    // no document either, which is a third thing and not a module that wrote
+    // no name.
+    public static func given(_ name: String) -> Place { Place([.landmark(name)], in: .none) }
 
     public func key(_ name: String) -> Place { appending(.key(name)) }
 
@@ -152,6 +153,25 @@ public struct Place: Sendable, Equatable {
 }
 
 public extension Place {
+    // Which document a place is an address in — three answers and not two.
+    //
+    // A module that wrote no name is still a document; it declares into the
+    // link's shared space, the way a translation unit without a namespace
+    // does. A program a caller assembled in memory is not a document at all,
+    // and the two are not the same fact: spelling both `nil` let a place with
+    // no document under it be matched against any text that wrote no name, and
+    // answered with that text's first line.
+    enum Document: Sendable, Equatable {
+        case named(String)
+        case shared
+        case none
+
+        // What a module declares into, by whether it wrote a name.
+        static func declaring(_ name: String?) -> Document {
+            name.map(Document.named) ?? .shared
+        }
+    }
+
     // Every slot a document names, under the key it names it with. The
     // spellings differ from the model's own names — a loop's condition is
     // `where` and a walk's collection is `in` — and it is the document's that

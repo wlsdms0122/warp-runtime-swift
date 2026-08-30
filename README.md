@@ -112,9 +112,14 @@ a link holds several documents and the steps alone do not say which —
 `std.collection` and `std.concurrent` both declare `first`, and a reader handed
 `procedures.first` with no document would point at whichever one it was holding.
 So a place reads `wallet/procedures.entry.body.sent[0].call`, and the part before
-the slash is the only part that is not a key. A module that wrote no name carries
-none: it declares into the link's shared space, where nothing else may declare
-what it declares.
+the slash is the only part that is not a key.
+
+Which document is three answers rather than two. A module that wrote no name is
+still a document — it declares into the link's shared space, the way a
+translation unit without a namespace does. A program a caller assembled in
+memory is not a document at all. Spelling both of those the same way would let a
+place with no text under it be matched against any file an author never named,
+and answered with that file's first line.
 
 Not every refusal has a place, and the ones that do not say so: two modules
 declaring one name is two places and an entry nobody declares is none, so those
