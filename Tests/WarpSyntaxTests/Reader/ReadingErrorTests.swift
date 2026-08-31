@@ -250,6 +250,81 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered?.hasPrefix("wallet/procedures.entry.body[0]") == true)
     }
 
+    @Test("a reading inside a closure keeps the address it reached")
+    func aReadingInsideAClosureKeepsItsAddress() throws {
+        // Given — an expression is a walk like any other and it records where
+        // it is like any other. A refusal that arrived here with an address
+        // and left with the expression's own would be a shallower answer
+        // written over a truer one, and the front end says "exact" about
+        // whatever it is handed.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [[
+                "id": "helper",
+                "value": ["closure": ["body": [["id": "inner", "value": "x", "fallbck": "y"]]]]
+            ]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(
+            error?.place?.rendered
+                == "wallet/procedures.entry.body.helper[0].value.closure.body.inner[0].fallbck"
+        )
+    }
+
+    @Test("a reading inside a record says which field it was in")
+    func aReadingInsideARecordSaysWhichField() throws {
+        // Given — the walk descends by key here and by position in a list, the
+        // same two ways every other walk descends, so a record ten fields deep
+        // is not answered with the address of the record
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [[
+                "id": "held",
+                "value": ["first": "a", "second": ["ref": [1]]]
+            ]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/procedures.entry.body.held[0].value.second")
+    }
+
+    @Test("a document that writes its needs as nothing has not written them")
+    func needsWrittenAsNothingIsNotADeclaration() throws {
+        // Given — the door and the reader ask the same question of the same
+        // key. Answering differently is how a list walks past the door as a
+        // claim and past the reader as no claim, arriving trusted and never
+        // checked, which is the one thing the list exists to prevent.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": .null,
+            "name": "wallet",
+            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "plus"]]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.message.contains("says what it needs") == true)
+    }
+
     @Test("a fragment is refused about no document, and says so by naming none")
     func aFragmentNamesNoDocument() throws {
         // Given — what a fragment will be part of is the caller's, and a reader

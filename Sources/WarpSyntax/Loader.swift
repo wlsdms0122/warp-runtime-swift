@@ -95,7 +95,9 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        guard case let .object(fields) = value, fields[Envelope.needsKey] != nil else {
+        guard case let .object(fields) = value,
+            Envelope.declaresNeeds(fields[Envelope.needsKey])
+        else {
             throw ReadingError(
                 "a document says what it needs, and this one does not —"
                     + " write `\(Envelope.needsKey)`, empty where the program sends nothing"

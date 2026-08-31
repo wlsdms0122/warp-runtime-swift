@@ -55,16 +55,7 @@ public struct ExpressionReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        let value = try ValueReader(from: decoder).value
-
-        do {
-            self.expression = try Self.read(value, in: decoder)
-        } catch let error as ExpressionFormError {
-            // The grammar's own refusal, given the address of the walk that was
-            // reading it. It is written where an expression is spelled and one
-            // is spelled everywhere, so it carries no address of its own.
-            throw ReadingError(error.message, at: decoder.steps)
-        }
+        self.expression = try Self.read(try ValueReader(from: decoder).value, in: decoder)
     }
 
     // MARK: - Public
@@ -78,31 +69,70 @@ public struct ExpressionReader: Decodable {
     // that asked for it. A door around that boundary is a way to refuse with no
     // address at all, and one existed for exactly as long as this was public.
     static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
-        switch value {
-        case .null, .bool, .int, .double, .string, .bytes:
-            return .literal(value)
-
-        case let .array(array):
-            return .array(try array.map { element in try read(element, in: decoder) })
-
-        case let .object(object):
-            return try read(object: object, in: decoder)
-
-        // A document is text. Nothing it parses to is ever a procedure, so this
-        // arm is unreachable rather than unwritten — a closure reaches the
-        // language by being spelled, and spelling it is a form.
-        case .procedure:
-            throw ExpressionFormError("a document cannot contain a procedure value")
-        }
+        try read(value, at: decoder?.steps ?? [], in: decoder)
     }
 
     // MARK: - Private
-    private static func read(object: [String: Value], in decoder: Decoder?) throws -> Expression {
+    // An expression is a value with a value inside it, so reading one is a walk
+    // like any other and it records where it is like any other. The decoder
+    // stops at the key the expression is written under and everything below
+    // that is this walk's own descent, which is why the steps travel here as
+    // well as in the decoder — a walk that carried only the decoder's would
+    // answer for a record ten fields deep with the address of the record.
+    //
+    // This is also where the grammar's refusal is given an address. It is
+    // written wherever an expression is spelled, so it carries none of its own,
+    // and the innermost walk that was reading is the one that knows. A refusal
+    // that already has an address is deeper than this one and passes.
+    private static func read(
+        _ value: Value,
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
+        do {
+            switch value {
+            case .null, .bool, .int, .double, .string, .bytes:
+                return .literal(value)
+
+            case let .array(array):
+                return .array(
+                    try array.enumerated().map { offset, element in
+                        try read(element, at: steps + [.index(offset)], in: decoder)
+                    }
+                )
+
+            case let .object(object):
+                return try read(object: object, at: steps, in: decoder)
+
+            // A document is text. Nothing it parses to is ever a procedure, so
+            // this arm is unreachable rather than unwritten — a closure reaches
+            // the language by being spelled, and spelling it is a form.
+            case .procedure:
+                throw ExpressionFormError("a document cannot contain a procedure value")
+            }
+        } catch let error as ExpressionFormError {
+            throw ReadingError(error.message, at: steps)
+        }
+    }
+
+    private static func read(
+        object: [String: Value],
+        at steps: [Place.Step],
+        in decoder: Decoder?
+    ) throws -> Expression {
         let formKeys = Set(object.keys).intersection(Self.formKeys)
 
         // No form key — an ordinary record of expressions.
         guard !formKeys.isEmpty else {
-            return .record(try object.mapValues { field in try read(field, in: decoder) })
+            return .record(
+                try object.reduce(into: [String: Expression]()) { fields, entry in
+                    fields[entry.key] = try read(
+                        entry.value,
+                        at: steps + [.key(entry.key)],
+                        in: decoder
+                    )
+                }
+            )
         }
 
         if object.keys.contains("ref") {
@@ -167,7 +197,7 @@ public struct ExpressionReader: Decodable {
                     type = try TypeReader(from: ValueDecoder(
                         value: written,
                         codingPath: decoder.codingPath,
-                        steps: decoder.steps,
+                        steps: steps + [.key(key)],
                         userInfo: decoder.userInfo
                     ))
                     .type
@@ -177,7 +207,7 @@ public struct ExpressionReader: Decodable {
             }
 
             return .cast(
-                try Self.read(read, in: decoder),
+                try Self.read(read, at: steps + [.key("of")], in: decoder),
                 as: type,
                 optional: optional
             )
@@ -203,11 +233,16 @@ public struct ExpressionReader: Decodable {
                     try ProcedureReader(from: ValueDecoder(
                         value: written,
                         codingPath: decoder.codingPath,
-                        steps: decoder.steps,
+                        steps: steps + [.key("closure")],
                         userInfo: decoder.userInfo
                     ))
                     .procedure
                 )
+            } catch let refusal as ReadingError {
+                // A reading that says where it is says it deeper than here, and
+                // folding it into this form's sentence would spend the address
+                // to say the words again.
+                throw refusal
             } catch {
                 throw ExpressionFormError("{ closure: } — \(error)")
             }
@@ -234,10 +269,12 @@ public struct ExpressionReader: Decodable {
                 return try CallForm(from: ValueDecoder(
                     value: written,
                     codingPath: decoder.codingPath,
-                    steps: decoder.steps,
+                    steps: steps + [.key("call")],
                     userInfo: decoder.userInfo
                 ))
                 .expression(boundTo: "")
+            } catch let refusal as ReadingError {
+                throw refusal
             } catch {
                 throw ExpressionFormError("{ call: } — \(error)")
             }
@@ -297,7 +334,13 @@ public struct ExpressionReader: Decodable {
             bindings = [:]
 
         case let .object(withObject)?:
-            bindings = try withObject.mapValues { binding in try read(binding, in: decoder) }
+            bindings = try withObject.reduce(into: [String: Expression]()) { bound, entry in
+                bound[entry.key] = try read(
+                    entry.value,
+                    at: steps + [.key("with"), .key(entry.key)],
+                    in: decoder
+                )
+            }
 
         case let other?:
             throw ExpressionFormError(

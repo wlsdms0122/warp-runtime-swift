@@ -76,7 +76,7 @@ public struct ModuleReader: Decodable {
         // reads it to decide whether to run the program at all, so a list that
         // was allowed to drift would be worse than none — it would be trusted
         // and wrong.
-        if container.contains(.needs), try !container.decodeNil(forKey: .needs) {
+        if try Envelope.declaresNeeds(in: container, forKey: .needs) {
             let listed = try container.superDecoder(forKey: .needs)
             let claimed = try listed.read([String].self)
             let sent = Envelope.needs(of: module)
@@ -108,13 +108,13 @@ public struct ModuleReader: Decodable {
     // and the refusal for writing one is the reading's — this one going first
     // would answer every refusal about the name key by refusing again.
     //
-    // A name written empty is no name, which is what a place already says
-    // about an empty statement name: the two ways of writing nothing spell the
-    // same, and only one of them can be the one this answers with.
+    // A name written empty is no name, and that rule is `Place.Document`'s.
+    // What is answered here is only what the document wrote, since keeping the
+    // rule as well would be the second of two places that decide what an empty
+    // name means.
     static func namespace(of value: Value) -> String? {
         guard case let .object(fields) = value,
-            case let .string(name)? = fields[CodingKeys.name.stringValue],
-            !name.isEmpty
+            case let .string(name)? = fields[CodingKeys.name.stringValue]
         else { return nil }
 
         return name

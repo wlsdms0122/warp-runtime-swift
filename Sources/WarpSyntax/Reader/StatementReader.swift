@@ -62,7 +62,12 @@ public struct StatementReader: Decodable {
         // something that is not text, is a refusal is the reading's question
         // and the reading answers it below. What is asked here is what to call
         // the statement while refusing it, and neither of those is a name.
-        let id = names.count == 1 ? try? envelope.decode(String.self, forKey: names[0]) : nil
+        //
+        // The same read as the reading's, through the same door, and lenient
+        // only in what it does with a failure: an address that refused on its
+        // own would decide which refusal an author sees first, and that is the
+        // reading's to decide.
+        let id = names.count == 1 ? try? Self.name(names[0], in: envelope) : nil
 
         do {
             self.statement = try Self.read(from: decoder, envelope: envelope, names: names)
@@ -73,6 +78,14 @@ public struct StatementReader: Decodable {
 
     // MARK: - Public
     // MARK: - Private
+    // What a naming key holds, read the one way it is read.
+    private static func name(
+        _ key: EnvelopeKeys,
+        in envelope: KeyedDecodingContainer<EnvelopeKeys>
+    ) throws -> String {
+        try envelope.decode(String.self, forKey: key)
+    }
+
     // This statement's own address, with the name on it. The position stays:
     // two statements of one name are told apart by it, and a `var` and the
     // `set` that writes it are exactly that.
@@ -125,7 +138,7 @@ public struct StatementReader: Decodable {
         // one-name rule above has already spoken, so "alone" is one question.
         if found.isEmpty, names == [.variable] {
             return Statement(
-                id: try envelope.decode(String.self, forKey: .variable),
+                id: try Self.name(.variable, in: envelope),
                 binding: .variable,
                 expression: .literal(.null)
             )
@@ -148,7 +161,7 @@ public struct StatementReader: Decodable {
         }
 
         let name = names.first
-        let id = try name.map { name in try envelope.decode(String.self, forKey: name) }
+        let id = try name.map { name in try Self.name(name, in: envelope) }
         let inside = try container.superDecoder(forKey: AnyCodingKey(stringValue: key))
         let built: any ConstructForm
         let expression: Expression

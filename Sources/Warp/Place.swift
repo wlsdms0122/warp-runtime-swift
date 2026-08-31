@@ -50,6 +50,10 @@ public struct Place: Sendable, Equatable {
     // is what a caller holding a body it assembled has, and spelling it as ""
     // would fold an absence into a string every reader then has to unfold
     // again — the same absence `Document` keeps as an absence one field over.
+    //
+    // The only way to read a place as text, for the same reason. A
+    // `description` would have to answer something for a place that says
+    // nothing, and "" is the string this deliberately does not return.
     public var rendered: String? {
         let address = steps.enumerated().reduce(into: "") { written, entry in
             let (offset, step) = entry
@@ -290,8 +294,4 @@ public extension Place {
             .statement(name: name?.isEmpty == true ? nil : name, at: position)
         }
     }
-}
-
-extension Place: CustomStringConvertible {
-    public var description: String { rendered ?? "" }
 }
