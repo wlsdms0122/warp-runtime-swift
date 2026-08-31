@@ -1280,9 +1280,10 @@ public struct Linker: Sendable {
     // nothing about them left for a run to do: a constant sees no scope, so what
     // it will be is knowable the moment the document is read.
     //
-    // One may name another declared beside it, which is why this repeats until it
-    // stops learning — and why a name that never settles is a cycle rather than a
-    // typo, and says so.
+    // One may name another declared beside it, so they are settled in the order
+    // they read each other and that order is worked out first. What is wrong
+    // with a set of constants is a fact about that order, and asking the order
+    // is the whole of finding it.
     private func constants(
         of modules: [Module],
         reaching derivations: [String: Procedure],
@@ -1295,88 +1296,51 @@ public struct Linker: Sendable {
 
         for (origin, module) in modules.enumerated() where !module.constants.isEmpty {
             var known: [String: Value] = [:]
-            var pending = module.constants
 
-            while !pending.isEmpty {
-                var progressed = false
+            for name in try order(module.constants, in: module) {
+                // Everything this one reads comes before it in that order, so
+                // it is settled by the time this is reached. Nothing here has
+                // to ask whether it is.
+                guard let expression = module.constants[name] else { continue }
 
-                for (name, expression) in pending.sorted(by: { $0.key < $1.key }) {
-                    // Every constant this one reads must already be settled.
-                    // Without the check a name that is not settled yet would
-                    // resolve to null — the reading a scope gives an absent
-                    // name — and a cycle would quietly become two nulls.
-                    guard heads(of: expression).isSubset(of: Set(known.keys)) else { continue }
+                let resolver = Resolver(
+                    scope: Scope(bindings: known),
+                    derivations: derivations,
+                    words: words,
+                    types: types
+                )
 
-                    let resolver = Resolver(
-                        scope: Scope(bindings: known),
-                        derivations: derivations,
-                        words: words,
-                        types: types
-                    )
+                // A constant's selectors resolve the way a body's do —
+                // the constant belongs to a module, and its sends mean
+                // what that module sees.
+                let bound = try bind(
+                    expression,
+                    within: origin,
+                    symbols: space,
+                    at: .constant(name, in: .of(module))
+                )
 
-                    // A constant's selectors resolve the way a body's do —
-                    // the constant belongs to a module, and its sends mean
-                    // what that module sees.
-                    let bound = try bind(
-                        expression,
-                        within: origin,
-                        symbols: space,
-                        at: .constant(name, in: .of(module))
-                    )
+                // A constant's dots are judged before it settles, the way a
+                // body's are: the settled neighbours' types are the
+                // environment, so an absent field or a needless `?.` refuses
+                // here by the one rule, and carries its own place.
+                let (judged, calls) = try resolvedSites(
+                    in: bound,
+                    at: .constant(name, in: .of(module)),
+                    in: known.mapValues { value in type(of: value) },
+                    with: frame,
+                    folding: nil
+                )
 
-                    // Everything this constant reads is settled, so a refusal
-                    // here is the expression's own and not a dependency waiting
-                    // its turn. Swallowing it would report the one thing it is
-                    // not — a cycle — and leave the author nothing to act on.
-                    // A constant's dots are judged before it settles, the way
-                    // a body's are: the settled neighbours' types are the
-                    // environment, so an absent field or a needless `?.`
-                    // refuses here by the one rule — and carries its own
-                    // place, so only the settling refusal below needs one.
-                    let (judged, calls) = try resolvedSites(
-                        in: bound,
-                        at: .constant(name, in: .of(module)),
-                        in: known.mapValues { value in type(of: value) },
-                        with: frame,
-                        folding: nil
-                    )
+                // A closure a constant holds runs later, so evaluating
+                // the constant proves nothing about the sends inside it —
+                // they pass the same gate every gathered send does.
+                try checked(calls, in: frame, symbols: space)
 
-                    // A closure a constant holds runs later, so evaluating
-                    // the constant proves nothing about the sends inside it —
-                    // they pass the same gate every gathered send does.
-                    try checked(calls, in: frame, symbols: space)
-
-                    do {
-                        known[name] = try resolver.resolve(judged)
-                    } catch {
-                        throw LinkError("\(error)", at: .constant(name, in: .of(module)))
-                    }
-
-                    pending[name] = nil
-                    progressed = true
-                }
-
-                guard progressed else {
-                    let (circling, stray) = blame(in: pending, beside: Set(known.keys))
-
-                    // A circle is the more exact of the two shapes, so it is
-                    // what is said where there is one. Whatever is only waiting
-                    // on either is in neither list and in neither sentence.
-                    let stuck = circling.isEmpty ? stray : circling
-
-                    throw LinkError(
-                        circling.isEmpty
-                            ? "constants \(stuck.joined(separator: ", ")) read a name no"
-                                + " constant declared beside them settles to"
-                            : "constants \(stuck.joined(separator: ", ")) name each other"
-                                + " in a circle — a constant may name another declared"
-                                + " beside it, but not one that names it back",
-                        // Any of them is where the fix can be made, so the one
-                        // walked to is the first in sorted order — a circle has
-                        // no first member, and reading one off a dictionary
-                        // would name a different constant per run.
-                        at: .constant(stuck[0], in: .of(module))
-                    )
+                do {
+                    known[name] = try resolver.resolve(judged)
+                } catch {
+                    throw LinkError("\(error)", at: .constant(name, in: .of(module)))
                 }
             }
 
@@ -1390,58 +1354,70 @@ public struct Linker: Sendable {
     // is skipped: what it reads is answered where it is called, from the scope
     // it captured, so requiring those names to be settled first would be asking
     // the wrong question.
-    // Which of the waiting constants is the mistake, and not which of them are
-    // waiting on it.
+    // The order a module's constants settle in, which is the order they read
+    // each other in: everything a constant reads comes before it.
     //
-    // A constant settles when everything it reads has settled, so a round that
-    // settles nothing leaves two shapes behind. Names that read each other in a
-    // circle, where none of them can be first and every one is the mistake. And
-    // names that read something nothing here settles, where the one holding
-    // that name is the mistake. Whoever reads either is waiting for its
-    // reason, and changing that one leaves the reason exactly as it was.
-    //
-    // One question with two answers rather than two questions: what is at the
-    // far end of the wait. Answering it in one place is what keeps a fix to one
-    // of the shapes from leaving the other pointing where it always did.
-    private func blame(
-        in pending: [String: Expression],
-        beside settled: Set<String>
-    ) -> (circling: [String], stray: [String]) {
-        let waiting = Set(pending.keys)
-        let reads = pending.mapValues { expression in heads(of: expression) }
+    // Worked out before any of them settles, rather than found by settling what
+    // can be settled and asking afterwards why the rest could not. Asked
+    // afterwards, the answer has to be reconstructed from what is left over —
+    // and what is wrong and what is merely waiting on it look the same from
+    // there, so the reconstruction is a guess about which is which. Here there
+    // is no leftover: the walk is standing on the constant that is wrong at the
+    // moment it finds out, and both refusals are that constant's own.
+    private func order(_ constants: [String: Expression], in module: Module) throws -> [String] {
+        var ordered: [String] = []
+        var settled: Set<String> = []
 
-        // Reads a name that is neither settled nor waiting, so nothing is going
-        // to provide it and the wait is this one's own.
-        let stray = waiting.filter { name in
-            !(reads[name] ?? []).subtracting(settled).subtracting(waiting).isEmpty
-        }
+        // What the walk is standing on, root first. Where it meets a name
+        // already on it, everything from that name down is the circle — and
+        // nothing above it is, which is the difference between what names
+        // itself back and what merely waits on something that does.
+        var walking: [String] = []
 
-        // On a circle when following what it reads comes back to it. Followed
-        // rather than peeled: dropping what nothing reads leaves a name
-        // standing on a path between two circles, which reads and is read and
-        // is on neither.
-        let circling = waiting.filter { start in
-            var seen: Set<String> = []
-            var front = (reads[start] ?? []).intersection(waiting)
+        func place(_ name: String, reading expression: Expression) throws {
+            guard !settled.contains(name) else { return }
 
-            while let next = front.popFirst() {
-                guard next != start else { return true }
-                guard seen.insert(next).inserted else { continue }
+            if let met = walking.firstIndex(of: name) {
+                let circle = walking[met...].sorted()
 
-                front.formUnion((reads[next] ?? []).intersection(waiting))
+                throw LinkError(
+                    "constants \(circle.joined(separator: ", ")) name each other in a"
+                        + " circle — a constant may name another declared beside it, but"
+                        + " not one that names it back",
+                    // Any of them is where the fix can be made, so the one
+                    // walked to is the first in sorted order: a circle has no
+                    // first member, and reading one off the walk would name a
+                    // different constant depending on where the walk started.
+                    at: .constant(circle[0], in: .of(module))
+                )
             }
 
-            return false
+            walking.append(name)
+
+            // Sorted, so a module with two mistakes in it refuses the same one
+            // every run — what a set hands back is seeded per process.
+            for read in heads(of: expression).sorted() {
+                guard let named = constants[read] else {
+                    throw LinkError(
+                        "constant '\(name)' reads '\(read)', and a constant sees nothing"
+                            + " but the constants declared beside it",
+                        at: .constant(name, in: .of(module))
+                    )
+                }
+
+                try place(read, reading: named)
+            }
+
+            walking.removeLast()
+            settled.insert(name)
+            ordered.append(name)
         }
 
-        guard circling.isEmpty, stray.isEmpty else {
-            return (circling.sorted(), stray.sorted())
+        for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
+            try place(name, reading: expression)
         }
 
-        // A round that settled nothing holds one of the two shapes, so there is
-        // no way here — and a reader is owed a name rather than a sentence that
-        // lists nothing if there ever is.
-        return ([], waiting.sorted())
+        return ordered
     }
 
     private func heads(of expression: Expression) -> Set<String> {

@@ -220,6 +220,42 @@ struct LinkerTests {
         #expect(error?.message.contains("admits nothing") == true)
     }
 
+    @Test("constants settle in the order they read each other, however deep")
+    func constantsSettleInReadingOrder() async throws {
+        // Given — a chain written so that alphabetical order is the reverse of
+        // reading order, and long enough that settling whatever can be settled
+        // and going round again would take more than one pass. What each one
+        // reads is settled before it because the order says so, not because
+        // enough rounds happened.
+        let sut = Module(
+            name: "app",
+            constants: [
+                "zebra": .literal(.int(2)),
+                "yak": .dispatch(
+                    Dispatch(
+                        receiver: reference("zebra"),
+                        selector: "times",
+                        arguments: ["value": reference("zebra")]
+                    )
+                ),
+                "xerus": .dispatch(
+                    Dispatch(
+                        receiver: reference("yak"),
+                        selector: "plus",
+                        arguments: ["value": reference("zebra")]
+                    )
+                )
+            ],
+            procedures: [entryName: Procedure(body: [], result: reference("xerus"))]
+        )
+
+        // When
+        let answer = try await run(sut)
+
+        // Then
+        #expect(answer == .int(6))
+    }
+
     @Test("a constant may reach a word the same way a body does")
     func aConstantReachesAWord() async throws {
         // Given — folding happens after the words are known, so a constant that

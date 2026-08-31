@@ -667,9 +667,9 @@ struct PlaceTests {
 
     @Test("a constant on a circle's edge is not counted as part of it")
     func aConstantReadByACircleIsNotOnIt() {
-        // Given — `delta` is read by one of a circle and reads a name that
-        // never settles, so it is waiting and read and on no circle. Narrowing
-        // by what nothing reads keeps it, because something does.
+        // Given — `delta` is read by one of a circle and settles perfectly
+        // well, so the circle is the only thing wrong here. Narrowing by what
+        // nothing reads keeps it anyway, because something does read it.
         let sut = Module(
             name: "pricing",
             constants: [
@@ -679,7 +679,8 @@ struct PlaceTests {
                     arguments: ["value": reference("delta")]
                 )),
                 "gamma": reference("beta"),
-                "delta": reference("nowhere")
+                "delta": reference("epsilon"),
+                "epsilon": .literal(.int(1))
             ],
             procedures: [entryName: Procedure(body: [])]
         )
@@ -717,6 +718,10 @@ struct PlaceTests {
         // Then
         #expect(error?.place?.rendered == "pricing@d0cf00/const.bbb")
         #expect(error?.message.contains("aaa") == false)
+
+        // And the name it reads is said, since that is the half of the mistake
+        // the place cannot point at
+        #expect(error?.message.contains("'nowhere'") == true)
     }
 
     @Test("two modules nobody wrote down are told apart by where the caller put them")
