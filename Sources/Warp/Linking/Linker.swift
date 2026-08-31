@@ -1397,6 +1397,11 @@ public struct Linker: Sendable {
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
             for read in heads(of: expression).sorted() {
+                // What a constant may see is the validator's rule and a
+                // document arrives having been held to it. This is not that
+                // rule a second time: a caller may hand a module it built
+                // straight to a link, and the walk has to say what it found
+                // rather than read the name it was refused as nothing.
                 guard let named = constants[read] else {
                     throw LinkError(
                         "constant '\(name)' reads '\(read)', and a constant sees nothing"
