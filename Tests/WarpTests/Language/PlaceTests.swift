@@ -636,6 +636,57 @@ struct PlaceTests {
         #expect(error?.message.contains("alpha, zebra") == true)
     }
 
+    @Test("a constant merely blocked by a ring is neither placed nor accused")
+    func aConstantWaitingOnARingIsNotOnIt() {
+        // Given — `aardvark` names one of a ring, so it never settles either
+        // and is still waiting when the ring is refused. It is sorted first,
+        // which is how it becomes the place if what is waiting is mistaken for
+        // what is wrong — and changing it would leave the ring exactly as it
+        // is.
+        let sut = Module(
+            name: "pricing",
+            constants: [
+                "aardvark": reference("zebra"),
+                "zebra": reference("yak"),
+                "yak": reference("zebra")
+            ],
+            procedures: [entryName: Procedure(body: [])]
+        )
+            .read(from: reading)
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@d0cf00/const.yak")
+        #expect(error?.message.contains("yak, zebra") == true)
+        #expect(error?.message.contains("aardvark") == false)
+    }
+
+    @Test("a constant reading a name that never settles is not called a circle")
+    func aConstantReadingNothingIsNotARing() {
+        // Given — nothing names it back, so there is no ring to narrow to.
+        // Narrowing without saying so leaves nothing to be refused about and
+        // nowhere to send anyone.
+        let sut = Module(
+            name: "pricing",
+            constants: ["alpha": reference("nowhere")],
+            procedures: [entryName: Procedure(body: [])]
+        )
+            .read(from: reading)
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@d0cf00/const.alpha")
+        #expect(error?.message.contains("in a circle") == false)
+    }
+
     @Test("two words one path spelling could reach are refused at a declaration")
     func aContestedPathWordIsPlacedAtADeclaration() {
         // Given — a path segment names no module, so no spelling an author
@@ -661,17 +712,27 @@ struct PlaceTests {
 
         let catalog = declaring("catalog", as: Identity([0x01]))
         let pricing = declaring("pricing", as: Identity([0x02]))
+        let shipping = declaring("shipping", as: Identity([0x03]))
         let caller = Module(procedures: [entryName: Procedure(body: [])])
 
-        // When
+        // When — three of them, because a slot holding the latest collision
+        // keeps the newest two and drops whoever took the name first. With two
+        // there is nothing for a third to push out.
         let error = #expect(throws: LinkError.self) {
-            try Language().link([catalog, pricing, caller] + Module.standard, entry: entryName)
+            try Language().link(
+                [catalog, pricing, shipping, caller] + Module.standard,
+                entry: entryName
+            )
         }
 
         // Then — the declarations are walked in qualified order, so the second
-        // is `pricing` and the first it collides with is named
+        // is `pricing`
         #expect(error?.place?.rendered == "pricing@02/procedures.discounted")
-        #expect(error?.message.contains("catalog@01") == true)
+
+        // And every one of them is named, the first included
+        #expect(error?.message.contains("catalog.discounted") == true)
+        #expect(error?.message.contains("pricing.discounted") == true)
+        #expect(error?.message.contains("shipping.discounted") == true)
     }
 
     // MARK: - Public

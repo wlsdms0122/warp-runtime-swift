@@ -552,11 +552,13 @@ public struct Linker: Sendable {
     ) throws -> (selectors: [String: Symbol], words: [String: Symbol]) {
         var selectors: [String: Symbol] = [:]
         var words: [String: Symbol] = [:]
-        // The two declarations that contest a name, and not only that one is
+        // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
-        // on a declaration — which makes both of them something a reader has
-        // to be able to reach.
-        var ambiguous: [String: (declared: Symbol, first: Symbol)] = [:]
+        // on a declaration — which makes all of them something a reader has to
+        // be able to reach. A slot holding the latest collision would keep the
+        // newest two and drop whoever took the name first, so a third arrival
+        // hides the declaration the other two are colliding with.
+        var contested: [String: [Symbol]] = [:]
 
         // Two tables, because a name answers two different questions — what a
         // resolved selector reaches, and what a bare spelling a path writes
@@ -579,7 +581,7 @@ public struct Linker: Sendable {
             // declaration a path cannot reach shares the link but not the
             // question, so it is not competing for the name.
             if let first = words.updateValue(symbol, forKey: bare) {
-                ambiguous[bare] = (symbol, first)
+                contested[bare, default: [first]].append(symbol)
             }
         }
 
@@ -587,17 +589,22 @@ public struct Linker: Sendable {
         // word, so the name that is walked to is picked in sorted order — the
         // order a dictionary hands its keys back is seeded per process, and
         // which declaration an author is sent to would change between runs.
-        guard let (contested, pair) = ambiguous.sorted(by: { $0.key < $1.key }).first else {
-            return (selectors, words)
+        //
+        // The second is what is walked to, the way it is wherever two
+        // declarations collide. A name reaches this table only by colliding,
+        // so there are always at least two.
+        if let (word, declarations) = contested.min(by: { one, other in one.key < other.key }) {
+            throw LinkError(
+                "\(contested.keys.sorted().joined(separator: ", ")) is declared by more"
+                    + " than one module as something a path may reach — '\(word)' by"
+                    + " \(declarations.map(\.qualified).joined(separator: ", "))"
+                    + " — a path segment names no module, so there is no spelling that"
+                    + " would tell them apart",
+                at: declarations[1].place
+            )
         }
 
-        throw LinkError(
-            "\(ambiguous.keys.sorted().joined(separator: ", ")) is declared by more than"
-                + " one module as something a path may reach — \(pair.first.document.spelled)"
-                + " declares '\(contested)' too, and a path segment names no module, so"
-                + " there is no spelling that would tell them apart",
-            at: pair.declared.place
-        )
+        return (selectors, words)
     }
 
     // Every declaration, qualified. A module with a name declares into that
@@ -1348,17 +1355,33 @@ public struct Linker: Sendable {
                 }
 
                 guard progressed else {
-                    let ring = pending.keys.sorted()
+                    // Which of them name each other, and not which of them are
+                    // waiting. A constant blocked on a ring is stuck for the
+                    // ring's reason, so a place walked to one of those is a
+                    // place with nothing to do there — `a: b` beside `b: c`
+                    // and `c: b` leaves all three waiting and only two of them
+                    // are the mistake.
+                    let ring = ring(in: pending)
+
+                    // What is left waiting when nothing names anything else
+                    // reads a name no constant beside it settles to, which is
+                    // a different mistake with a different sentence. There is
+                    // something waiting either way — this is inside the round
+                    // that settled nothing — so one of the two is a place.
+                    let stuck = ring.isEmpty ? pending.keys.sorted() : ring
 
                     throw LinkError(
-                        "constants \(ring.joined(separator: ", ")) cannot"
-                            + " be settled — a constant may name another declared beside it,"
-                            + " but not one that names it back",
-                        // Any of the ring is a place the fix can be made, so
-                        // the one walked to is the first in sorted order —
-                        // a cycle has no first member, and reading one off a
-                        // dictionary would name a different constant per run.
-                        at: ring.first.map { name in Place.constant(name, in: .of(module)) }
+                        ring.isEmpty
+                            ? "constants \(stuck.joined(separator: ", ")) read a name no"
+                                + " constant declared beside them settles to"
+                            : "constants \(stuck.joined(separator: ", ")) name each other"
+                                + " in a circle — a constant may name another declared"
+                                + " beside it, but not one that names it back",
+                        // Any of the ring is where the fix can be made, so the
+                        // one walked to is the first in sorted order — a ring
+                        // has no first member, and reading one off a dictionary
+                        // would name a different constant per run.
+                        at: .constant(stuck[0], in: .of(module))
                     )
                 }
             }
@@ -1373,6 +1396,32 @@ public struct Linker: Sendable {
     // is skipped: what it reads is answered where it is called, from the scope
     // it captured, so requiring those names to be settled first would be asking
     // the wrong question.
+    // The constants that name each other, out of the ones left waiting.
+    //
+    // A name nothing else waiting reads is not on a ring: whatever it is
+    // blocked on, it is not blocking anybody, so dropping it cannot break a
+    // circle that exists. Dropped until there is nothing left to drop, and what
+    // survives has something waiting that reads it and reads something waiting,
+    // which is what being on a ring is.
+    //
+    // Empty where the waiting names no circle at all, which is a set of
+    // constants reading a name that never settles rather than each other.
+    private func ring(in pending: [String: Expression]) -> [String] {
+        var left = pending
+
+        while true {
+            let read = left.values.reduce(into: Set<String>()) { names, expression in
+                names.formUnion(heads(of: expression))
+            }
+
+            let kept = left.filter { name, _ in read.contains(name) }
+
+            guard kept.count < left.count else { return left.keys.sorted() }
+
+            left = kept
+        }
+    }
+
     private func heads(of expression: Expression) -> Set<String> {
         switch expression {
         case .literal, .closure:

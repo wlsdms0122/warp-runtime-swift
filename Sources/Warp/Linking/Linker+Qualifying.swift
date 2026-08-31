@@ -107,21 +107,14 @@ extension Linker {
 
             return try module.renamed(
                 types: { name in
-                    try resolve(
-                        name,
-                        of: "type",
-                        owning: ownedTypes,
-                        among: types,
-                        in: module
-                    )
+                    try resolve(name, of: "type", owning: ownedTypes, among: types)
                 },
                 constraints: { name in
                     try resolve(
                         name,
                         of: "constraint",
                         owning: ownedConstraints,
-                        among: constraints,
-                        in: module
+                        among: constraints
                     )
                 }
             )
@@ -159,8 +152,7 @@ extension Linker {
         _ name: String,
         of kind: String,
         owning owned: [String],
-        among declared: Set<String>,
-        in module: Module
+        among declared: Set<String>
     ) throws -> String {
         switch Self.resolution(of: name, owned: owned, among: declared) {
         case let .resolved(qualified):
@@ -174,12 +166,14 @@ extension Linker {
                 "\(kind) '\(name)' is declared by more than one module —"
                     + " \(candidates.joined(separator: ", ")) — a bare"
                     + " spelling cannot say which, so write the qualified name",
-                // Which document, and no further. The mention is reached by a
-                // walk that rewrites every type expression a module carries and
-                // does not carry where it is, so this says the one thing it
-                // knows rather than the one a reader would rather have. What
-                // is wrong is the spelling, and the spelling is in here.
-                at: Place(in: .of(module))
+                // What is wrong is the mention, and the walk that reaches one
+                // rewrites every type expression a module carries without
+                // carrying where in the module it is. The document alone would
+                // be an address that addresses nothing — a place is a thing a
+                // front end walks into a line, and there is nothing here to
+                // walk. The candidates are all in the sentence, which is what
+                // there is to act on.
+                at: nil
             )
         }
     }
