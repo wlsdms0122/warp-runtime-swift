@@ -297,6 +297,60 @@ struct LinkerTests {
         #expect(last == .int(3))
     }
 
+    @Test("a name a closure introduces is not a mention of the constant sharing it")
+    func aClosuresOwnNamesAreNotSiblings() async throws {
+        // Given — what a closure body reads from around it settles before the
+        // closure is made, so reading the body is part of ordering constants.
+        // Read without the scopes in it, a parameter called `zebra` and a
+        // statement called `zebra` both look like mentions of the constant
+        // `zebra`, which reads `apply` back — and two constants that name each
+        // other are refused. Nobody wrote a circle here.
+        func module(introducing statement: Statement?) -> Module {
+            Module(
+                name: "app",
+                constants: [
+                    "apply": .closure(Procedure(
+                        signature: Signature(
+                            parameters: statement == nil
+                                ? ["zebra": Parameter(type: .int)]
+                                : [:],
+                            returns: .int
+                        ),
+                        body: statement.map { one in [one] } ?? [],
+                        result: reference("zebra")
+                    )),
+                    "zebra": reference("apply")
+                ],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "got",
+                                expression: .invoke(
+                                    reference("zebra"),
+                                    arguments: statement == nil
+                                        ? ["zebra": .literal(.int(7))]
+                                        : [:]
+                                )
+                            )
+                        ],
+                        result: reference("got")
+                    )
+                ]
+            )
+        }
+
+        // When — the two ways a closure introduces a name of its own
+        let parameter = try await run(module(introducing: nil))
+        let fixed = try await run(
+            module(introducing: Statement(id: "zebra", expression: .literal(.int(7))))
+        )
+
+        // Then
+        #expect(parameter == .int(7))
+        #expect(fixed == .int(7))
+    }
+
     @Test("a constant may reach a word the same way a body does")
     func aConstantReachesAWord() async throws {
         // Given — folding happens after the words are known, so a constant that

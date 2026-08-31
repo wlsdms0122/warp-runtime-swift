@@ -1448,14 +1448,94 @@ public struct Linker: Sendable {
     // its own, a parameter or a name one of its statements fixes, and a
     // parameter that happens to share a constant's name only settles that
     // constant sooner than it had to.
+    // Walked here rather than gathered off `buried`, which is the one walk
+    // everything else that has to see all of an expression uses. That walk
+    // flattens, and flattening is what this question cannot afford: a name
+    // means the constant only where nothing nearer introduced it, so where the
+    // walk is matters and a flat list has thrown that away. Asked flat, a
+    // closure whose parameter happens to share a constant's name reads as a
+    // mention of the constant, and two of those name each other in a circle
+    // that nobody wrote.
     private func depends(_ expression: Expression, on constants: Set<String>) -> Set<String> {
-        expression.buried
-            .reduce(into: Set<String>()) { names, held in
-                guard case let .reference(path) = held else { return }
+        switch expression {
+        case .literal:
+            return []
 
-                names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-            }
-            .intersection(constants)
+        case let .reference(path):
+            return Set(path.expandingIndexReferences.compactMap(\.head))
+                .intersection(constants)
+
+        case let .closure(procedure):
+            // Everything the closure introduces stops being a mention of a
+            // constant inside it: its parameters, and the names its statements
+            // fix. What is left is what its body reads from around it, which
+            // is what the capture has to have by the time the closure is made.
+            return depends(
+                procedure.block,
+                on: constants
+                    .subtracting(procedure.signature.parameters.keys)
+                    .subtracting(procedure.body.compactMap(\.id))
+            )
+
+        case let .array(array):
+            return depends(array, on: constants)
+
+        case let .record(record):
+            return depends(Array(record.values), on: constants)
+
+        case let .cast(value, _, _):
+            return depends(value, on: constants)
+
+        case let .leave(leave):
+            return leave.value.map { value in depends(value, on: constants) } ?? []
+
+        case let .invoke(callee, arguments):
+            return depends(callee, on: constants)
+                .union(depends(Array(arguments.values), on: constants))
+
+        case let .dispatch(dispatch):
+            return (dispatch.receiver.map { one in depends(one, on: constants) } ?? [])
+                .union(depends(Array(dispatch.arguments.values), on: constants))
+
+        case let .block(block):
+            return depends(block, on: constants)
+
+        case let .conditional(condition, then, otherwise):
+            return depends(condition, on: constants)
+                .union(depends(then, on: constants))
+                .union(depends(otherwise ?? [], on: constants))
+
+        // The three that name what they hand their body, each introducing that
+        // one name the way a closure introduces its parameters.
+        case let .loop(condition, body, round):
+            return depends(condition, on: constants)
+                .union(depends(body, on: constants.subtracting([round])))
+
+        case let .iteration(material, body, element):
+            return depends(material, on: constants)
+                .union(depends(body, on: constants.subtracting([element])))
+
+        case let .attempt(block, rescue, failure):
+            return depends(block, on: constants)
+                .union(depends(rescue, on: constants.subtracting([failure])))
+        }
+    }
+
+    private func depends(_ expressions: [Expression], on constants: Set<String>) -> Set<String> {
+        expressions.reduce(into: Set<String>()) { names, expression in
+            names.formUnion(depends(expression, on: constants))
+        }
+    }
+
+    private func depends(_ statements: [Statement], on constants: Set<String>) -> Set<String> {
+        depends(statements.map(\.expression), on: constants)
+    }
+
+    private func depends(_ block: Block?, on constants: Set<String>) -> Set<String> {
+        guard let block else { return [] }
+
+        return depends(block.body, on: constants)
+            .union(block.result.map { result in depends(result, on: constants) } ?? [])
     }
 
     // What an expression reads from the scope around it, which for a constant
