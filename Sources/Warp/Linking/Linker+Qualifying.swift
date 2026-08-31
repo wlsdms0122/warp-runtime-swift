@@ -34,52 +34,66 @@ extension Linker {
         // holds. This is where both halves of the joining are in hand —
         // anywhere later has only the joined name, and taking it apart again is
         // a second copy of a rule that has to be right once.
-        var places: [String: Place] = [:]
-
-        // Each space checked whole before the two are held against each
-        // other: a link is handed its world at once, so what it concludes
-        // cannot depend on the order the caller happened to list the modules.
-        var types: Set<String> = []
-        var constraints: Set<String> = []
+        //
+        // One table per space, and the table is what says a name is taken. A
+        // set beside it saying the same thing is a second answer to one
+        // question, and the two come apart exactly where it matters: a refusal
+        // about a name declared twice is the one reader that needs the entry
+        // the set had already accounted for.
+        //
+        // Each space is walked whole before the two are held against each
+        // other, so what a link concludes cannot depend on the order the caller
+        // happened to list the modules in.
+        var typePlaces: [String: Place] = [:]
+        var constraintPlaces: [String: Place] = [:]
 
         for module in modules {
             for name in module.types.keys.sorted() {
                 let qualified = module.qualified(name)
 
-                places[qualified] = .type(name, in: .of(module))
-
-                guard types.insert(qualified).inserted else {
+                // Read before written. Written first, the entry that says what
+                // this collides with is the one this call overwrote.
+                if let first = typePlaces[qualified] {
                     throw LinkError(
-                        "type '\(qualified)' is declared more than once in this link",
-                        at: nil
+                        "type '\(qualified)' is declared more than once in this link"
+                            + " — \(first.document.spelled) declares it too",
+                        at: .type(name, in: .of(module))
                     )
                 }
+
+                typePlaces[qualified] = .type(name, in: .of(module))
             }
         }
 
         for module in modules {
             for name in module.constraints.keys.sorted() {
                 let qualified = module.qualified(name)
+                let place = Place.constraint(name, in: .of(module))
 
-                places[qualified] = .constraint(name, in: .of(module))
-
-                guard !types.contains(qualified) else {
+                if let declared = typePlaces[qualified] {
                     throw LinkError(
                         "'\(qualified)' is declared as both a type and a constraint in"
-                            + " this link — one name cannot stand for a shape and"
+                            + " this link — \(declared.document.spelled) declares the"
+                            + " type — one name cannot stand for a shape and"
                             + " a membership at once",
-                        at: nil
+                        at: place
                     )
                 }
 
-                guard constraints.insert(qualified).inserted else {
+                if let first = constraintPlaces[qualified] {
                     throw LinkError(
-                        "constraint '\(qualified)' is declared more than once in this link",
-                        at: nil
+                        "constraint '\(qualified)' is declared more than once in this"
+                            + " link — \(first.document.spelled) declares it too",
+                        at: place
                     )
                 }
+
+                constraintPlaces[qualified] = place
             }
         }
+
+        let types = Set(typePlaces.keys)
+        let constraints = Set(constraintPlaces.keys)
 
         // A shape and a membership are two questions, so a name is resolved in
         // the space its position asks in — a slot mentions types, a bound
@@ -93,14 +107,21 @@ extension Linker {
 
             return try module.renamed(
                 types: { name in
-                    try resolve(name, of: "type", owning: ownedTypes, among: types)
+                    try resolve(
+                        name,
+                        of: "type",
+                        owning: ownedTypes,
+                        among: types,
+                        in: module
+                    )
                 },
                 constraints: { name in
                     try resolve(
                         name,
                         of: "constraint",
                         owning: ownedConstraints,
-                        among: constraints
+                        among: constraints,
+                        in: module
                     )
                 }
             )
@@ -118,11 +139,11 @@ extension Linker {
                 // from the same declaration, so this cannot miss — and if the
                 // two ever came apart, the crash says so where a `nil` place
                 // would have gone out looking like a refusal with nowhere to be.
-                declaredTypes[name] = Declared(type, at: places[name]!)
+                declaredTypes[name] = Declared(type, at: typePlaces[name]!)
             }
 
             for (name, members) in module.constraints {
-                declaredConstraints[name] = Declared(members, at: places[name]!)
+                declaredConstraints[name] = Declared(members, at: constraintPlaces[name]!)
             }
         }
 
@@ -138,7 +159,8 @@ extension Linker {
         _ name: String,
         of kind: String,
         owning owned: [String],
-        among declared: Set<String>
+        among declared: Set<String>,
+        in module: Module
     ) throws -> String {
         switch Self.resolution(of: name, owned: owned, among: declared) {
         case let .resolved(qualified):
@@ -152,7 +174,12 @@ extension Linker {
                 "\(kind) '\(name)' is declared by more than one module —"
                     + " \(candidates.joined(separator: ", ")) — a bare"
                     + " spelling cannot say which, so write the qualified name",
-                at: nil
+                // Which document, and no further. The mention is reached by a
+                // walk that rewrites every type expression a module carries and
+                // does not carry where it is, so this says the one thing it
+                // knows rather than the one a reader would rather have. What
+                // is wrong is the spelling, and the spelling is in here.
+                at: Place(in: .of(module))
             )
         }
     }

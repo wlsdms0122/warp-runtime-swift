@@ -84,21 +84,7 @@ public struct Place: Sendable, Equatable {
             }
         }
 
-        // Both, where there are both. A person reading a refusal wants the word
-        // they typed, and the word alone does not tell two documents apart —
-        // two halves of a module split across files write one name between
-        // them, which is the case this exists to keep separate. Showing the
-        // name and hiding what makes it unambiguous would put that case back
-        // in front of the only reader who cannot check it.
-        // Absence stays absence rather than folding into an empty string and
-        // being read back out of one: a document that wrote its name as nothing
-        // would otherwise spell the same as a program nobody wrote down.
-        let named: String? = switch (document.namespace, document.identity) {
-        case let (namespace?, identity?): "\(namespace)@\(identity.short)"
-        case let (namespace?, nil): namespace
-        case let (nil, identity?): identity.short
-        case (nil, nil): nil
-        }
+        let named = document.rendered
 
         // The slash separates the document from an address inside it, so it is
         // written where there are both. What is refused about a document rather
@@ -234,6 +220,33 @@ public extension Place {
         public static func of(_ module: Module) -> Document {
             Document(identity: module.identity, namespace: module.name)
         }
+
+        // How the document reads on its own, which is both halves where there
+        // are both. A person reading a refusal wants the word they typed, and
+        // the word alone does not tell two documents apart — two halves of a
+        // module split across files write one name between them, which is the
+        // case this exists to keep separate. Showing the name and hiding what
+        // makes it unambiguous would put that case back in front of the only
+        // reader who cannot check it.
+        //
+        // Absence stays absence rather than folding into an empty string and
+        // being read back out of one: a document that wrote its name as nothing
+        // would otherwise spell the same as a program nobody wrote down.
+        var rendered: String? {
+            switch (namespace, identity) {
+            case let (namespace?, identity?): "\(namespace)@\(identity.short)"
+            case let (namespace?, nil): namespace
+            case let (nil, identity?): identity.short
+            case (nil, nil): nil
+            }
+        }
+
+        // What a sentence calls this document when it names one the refusal is
+        // not addressed to. Two declarations of a name are two documents and a
+        // refusal is addressed to one of them, so the other is named in words
+        // — and a module a caller assembled has nothing written down to be
+        // called by, which still has to read as something.
+        var spelled: String { rendered ?? "a module the caller assembled" }
     }
 
     // Every slot a document names, under the key it names it with. The

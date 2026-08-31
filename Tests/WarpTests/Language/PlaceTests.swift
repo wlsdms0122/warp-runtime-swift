@@ -535,6 +535,145 @@ struct PlaceTests {
         #expect(link?.place?.rendered == "procedures.entry.body[0].call")
     }
 
+    @Test("a name two documents declare is refused at the one that could not be added")
+    func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() {
+        // Given — a caller receiving a module from somewhere else appends it to
+        // what it already holds and links again. What that link refuses is a
+        // collision between two documents, and only the caller knows which file
+        // either arrived in — a refusal naming neither sends it opening all of
+        // them.
+        func declaring(_ procedure: String, as identity: Identity) -> Module {
+            Module(
+                name: "pricing",
+                procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))]
+            )
+                .read(from: identity)
+        }
+
+        let held = declaring("taxed", as: Identity([0x01]))
+        let sent = declaring("taxed", as: Identity([0x02]))
+        let caller = Module(procedures: [entryName: Procedure(body: [])])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([held, sent, caller] + Module.standard, entry: entryName)
+        }
+
+        // Then — the place is the declaration that cannot be added
+        #expect(error?.place?.rendered == "pricing@02/procedures.taxed")
+
+        // And the one it collides with is named, since a place says one thing
+        #expect(error?.message.contains("pricing@01") == true)
+    }
+
+    @Test("a shape two documents declare is placed the same way a procedure is")
+    func aTypeDeclaredTwiceIsPlacedAtTheSecond() {
+        // Given — the same rule in the space a type is resolved in. The two
+        // spaces are walked by different code and an author reading either
+        // refusal is reading about the same mistake.
+        func declaring(_ shape: TypeExpression, as identity: Identity) -> Module {
+            Module(name: "pricing", types: ["Money": shape], procedures: [:])
+                .read(from: identity)
+        }
+
+        let held = declaring(.int, as: Identity([0x01]))
+        let sent = declaring(.string, as: Identity([0x02]))
+        let caller = Module(procedures: [entryName: Procedure(body: [])])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([held, sent, caller] + Module.standard, entry: entryName)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@02/types.Money")
+        #expect(error?.message.contains("pricing@01") == true)
+    }
+
+    @Test("a name written as a shape in one document and a membership in another")
+    func aNameThatIsBothIsPlacedAtTheMembership() {
+        // Given — the two spaces held against each other, which is the one
+        // judgment that reads both tables. The membership is what the walk is
+        // standing on when it refuses, so that is what it is addressed to.
+        let shape = Module(name: "pricing", types: ["Money": .int], procedures: [:])
+            .read(from: Identity([0x01]))
+
+        let membership = Module(name: "pricing", constraints: ["Money": [.int]], procedures: [:])
+            .read(from: Identity([0x02]))
+
+        let caller = Module(procedures: [entryName: Procedure(body: [])])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([shape, membership, caller] + Module.standard, entry: entryName)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@02/constraints.Money")
+        #expect(error?.message.contains("pricing@01") == true)
+    }
+
+    @Test("constants that name each other are placed at one of the ring, and the same one")
+    func aConstantCycleIsPlacedInSortedOrder() {
+        // Given — a cycle has no first member, so which of them an author is
+        // sent to is chosen rather than found. Read off a dictionary it would
+        // be a different constant per run, and the two below are written in the
+        // order that makes an unsorted answer the likely one.
+        let sut = Module(
+            name: "pricing",
+            constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
+            procedures: [entryName: Procedure(body: [])]
+        )
+            .read(from: reading)
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@d0cf00/const.alpha")
+        #expect(error?.message.contains("alpha, zebra") == true)
+    }
+
+    @Test("two words one path spelling could reach are refused at a declaration")
+    func aContestedPathWordIsPlacedAtADeclaration() {
+        // Given — a path segment names no module, so no spelling an author
+        // could write would say which of these is meant. The fix is on a
+        // declaration, which makes a declaration the place to be sent to.
+        func declaring(_ namespace: String, as identity: Identity) -> Module {
+            Module(
+                name: namespace,
+                procedures: [
+                    "discounted": Procedure(
+                        signature: Signature(
+                            receiver: "of",
+                            parameters: ["of": Parameter(type: .int)],
+                            returns: .int
+                        ),
+                        body: [],
+                        result: reference("of")
+                    )
+                ]
+            )
+                .read(from: identity)
+        }
+
+        let catalog = declaring("catalog", as: Identity([0x01]))
+        let pricing = declaring("pricing", as: Identity([0x02]))
+        let caller = Module(procedures: [entryName: Procedure(body: [])])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([catalog, pricing, caller] + Module.standard, entry: entryName)
+        }
+
+        // Then — the declarations are walked in qualified order, so the second
+        // is `pricing` and the first it collides with is named
+        #expect(error?.place?.rendered == "pricing@02/procedures.discounted")
+        #expect(error?.message.contains("catalog@01") == true)
+    }
+
     // MARK: - Public
     // MARK: - Private
     // A document to stand in for one that was read. What derives an identity is

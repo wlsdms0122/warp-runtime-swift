@@ -552,7 +552,11 @@ public struct Linker: Sendable {
     ) throws -> (selectors: [String: Symbol], words: [String: Symbol]) {
         var selectors: [String: Symbol] = [:]
         var words: [String: Symbol] = [:]
-        var ambiguous: Set<String> = []
+        // The two declarations that contest a name, and not only that one is
+        // contested. Nothing a path writes can tell them apart, so the fix is
+        // on a declaration — which makes both of them something a reader has
+        // to be able to reach.
+        var ambiguous: [String: (declared: Symbol, first: Symbol)] = [:]
 
         // Two tables, because a name answers two different questions — what a
         // resolved selector reaches, and what a bare spelling a path writes
@@ -574,21 +578,26 @@ public struct Linker: Sendable {
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
             // question, so it is not competing for the name.
-            if words.updateValue(symbol, forKey: bare) != nil {
-                ambiguous.insert(bare)
+            if let first = words.updateValue(symbol, forKey: bare) {
+                ambiguous[bare] = (symbol, first)
             }
         }
 
-        guard ambiguous.isEmpty else {
-            throw LinkError(
-                "\(ambiguous.sorted().joined(separator: ", ")) is declared by more than"
-                    + " one module as something a path may reach — a path segment names"
-                    + " no module, so there is no spelling that would tell them apart",
-                at: nil
-            )
+        // The place is one declaration and the sentence names every contested
+        // word, so the name that is walked to is picked in sorted order — the
+        // order a dictionary hands its keys back is seeded per process, and
+        // which declaration an author is sent to would change between runs.
+        guard let (contested, pair) = ambiguous.sorted(by: { $0.key < $1.key }).first else {
+            return (selectors, words)
         }
 
-        return (selectors, words)
+        throw LinkError(
+            "\(ambiguous.keys.sorted().joined(separator: ", ")) is declared by more than"
+                + " one module as something a path may reach — \(pair.first.document.spelled)"
+                + " declares '\(contested)' too, and a path segment names no module, so"
+                + " there is no spelling that would tell them apart",
+            at: pair.declared.place
+        )
     }
 
     // Every declaration, qualified. A module with a name declares into that
@@ -597,7 +606,12 @@ public struct Linker: Sendable {
     // cannot both define a symbol.
     private func symbols(of modules: [Module]) throws -> [Symbol] {
         var symbols: [Symbol] = []
-        var claimed: Set<String> = []
+
+        // Which document took each name, rather than only that one did. A
+        // refusal about a name declared twice is addressed to the declaration
+        // that cannot be added, and the sentence has to say what it collides
+        // with — a set answers the first half and throws the second away.
+        var claimed: [String: Place.Document] = [:]
 
         for (origin, module) in modules.enumerated() {
             for name in module.procedures.keys.sorted() {
@@ -605,13 +619,16 @@ public struct Linker: Sendable {
 
                 let qualified = module.qualified(name)
 
-                guard claimed.insert(qualified).inserted else {
+                if let first = claimed[qualified] {
                     throw LinkError(
                         "'\(qualified)' is declared more than once in this link"
-                            + " — two declarations of a name have no way to be told apart",
-                        at: nil
+                            + " — \(first.spelled) declares it too, and two declarations"
+                            + " of a name have no way to be told apart",
+                        at: .procedure(name, in: .of(module))
                     )
                 }
+
+                claimed[qualified] = .of(module)
 
                 symbols.append(
                     Symbol(
@@ -1331,11 +1348,17 @@ public struct Linker: Sendable {
                 }
 
                 guard progressed else {
+                    let ring = pending.keys.sorted()
+
                     throw LinkError(
-                        "constants \(pending.keys.sorted().joined(separator: ", ")) cannot"
+                        "constants \(ring.joined(separator: ", ")) cannot"
                             + " be settled — a constant may name another declared beside it,"
                             + " but not one that names it back",
-                        at: nil
+                        // Any of the ring is a place the fix can be made, so
+                        // the one walked to is the first in sorted order —
+                        // a cycle has no first member, and reading one off a
+                        // dictionary would name a different constant per run.
+                        at: ring.first.map { name in Place.constant(name, in: .of(module)) }
                     )
                 }
             }
