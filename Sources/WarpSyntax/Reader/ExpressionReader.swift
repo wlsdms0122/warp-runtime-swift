@@ -60,17 +60,24 @@ public struct ExpressionReader: Decodable {
         do {
             self.expression = try Self.read(value, in: decoder)
         } catch let error as ExpressionFormError {
-            throw DecodingError.dataCorrupted(
-                .init(codingPath: decoder.codingPath, debugDescription: error.message)
-            )
+            // The grammar's own refusal, given the address of the walk that was
+            // reading it. It is written where an expression is spelled and one
+            // is spelled everywhere, so it carries no address of its own.
+            throw ReadingError(error.message, at: decoder.steps)
         }
     }
 
     // MARK: - Public
+    // MARK: - Internal
     // The decoder comes along because one form needs more than the value: a
     // closure carries statements, and which words a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.
-    public static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
+    //
+    // Not public: a form reading an expression goes through `init(from:)`, which
+    // is where a refusal from this grammar is given the address of the walk
+    // that asked for it. A door around that boundary is a way to refuse with no
+    // address at all, and one existed for exactly as long as this was public.
+    static func read(_ value: Value, in decoder: Decoder? = nil) throws -> Expression {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
             return .literal(value)
@@ -160,6 +167,7 @@ public struct ExpressionReader: Decodable {
                     type = try TypeReader(from: ValueDecoder(
                         value: written,
                         codingPath: decoder.codingPath,
+                        steps: decoder.steps,
                         userInfo: decoder.userInfo
                     ))
                     .type
@@ -195,6 +203,7 @@ public struct ExpressionReader: Decodable {
                     try ProcedureReader(from: ValueDecoder(
                         value: written,
                         codingPath: decoder.codingPath,
+                        steps: decoder.steps,
                         userInfo: decoder.userInfo
                     ))
                     .procedure
@@ -225,6 +234,7 @@ public struct ExpressionReader: Decodable {
                 return try CallForm(from: ValueDecoder(
                     value: written,
                     codingPath: decoder.codingPath,
+                    steps: decoder.steps,
                     userInfo: decoder.userInfo
                 ))
                 .expression(boundTo: "")

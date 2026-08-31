@@ -33,8 +33,9 @@ public struct TypeReader: Decodable {
             do {
                 self.type = try Self.parse(written)
             } catch let error as TypeFormError {
-                throw DecodingError.dataCorrupted(
-                    .init(codingPath: decoder.codingPath, debugDescription: error.message)
+                throw ReadingError(
+                    error.message,
+                    at: decoder.steps
                 )
             }
 
@@ -66,12 +67,10 @@ public struct TypeReader: Decodable {
                 .singleValueContainer()
                 .decode([String: TypeReader].self)
         else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "a type is a name like `string`, `array<string>` or"
-                        + " `Task`, or a record like { id: string }"
-                )
+            throw ReadingError(
+                "a type is a name like `string`, `array<string>` or"
+                    + " `Task`, or a record like { id: string }",
+                at: decoder.steps
             )
         }
 

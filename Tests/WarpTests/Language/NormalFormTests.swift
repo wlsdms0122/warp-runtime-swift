@@ -121,11 +121,17 @@ struct NormalFormTests {
         ),
         Module(
             procedures: ["cafe\u{301}": Procedure(body: [], result: .literal(.int(1)))]
+        ),
+        Module(
+            name: "cafe\u{301}",
+            procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))]
         )
     ])
     func aDenormalModuleNameIsRefused(_ module: Module) {
         // Given — a constant's and a procedure's name are read by references
-        // and calls, so they meet the same bytes rule their readers do
+        // and calls, so they meet the same bytes rule their readers do. So is
+        // the namespace: a qualified call spells it, and a name nobody can
+        // type is a namespace nothing can join
         #expect {
             try Validator().validate(module)
         } throws: { error in
@@ -168,6 +174,23 @@ struct NormalFormTests {
             try Validator().validate(sut, visible: [])
         } throws: { error in
             "\(error)".contains("normal form C")
+        }
+    }
+
+    @Test("a module that writes a name and no name in it is refused")
+    func anEmptyModuleNameIsRefused() {
+        // Given — a namespace written empty says a document has one and names
+        // none. Every stage that spells a place would then have to decide what
+        // an empty name renders as, and they would not decide it the same way.
+        let sut = Module(
+            name: "",
+            procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))]
+        )
+
+        #expect {
+            try Validator().validate(sut)
+        } throws: { error in
+            "\(error)".contains("writes a name")
         }
     }
 }

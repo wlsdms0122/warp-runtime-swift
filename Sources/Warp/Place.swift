@@ -162,7 +162,7 @@ public struct Place: Sendable, Equatable {
     // call the statement by, and a step that rendered an empty name would put
     // a dot in front of nothing.
     public func statement(_ name: String?, at position: Int) -> Place {
-        appending(.statement(name: name?.isEmpty == true ? nil : name, at: position))
+        appending(.statement(name, at: position))
     }
 
     // A statement and the construct it writes, which is how every walk reaches
@@ -211,9 +211,16 @@ public extension Place {
         // get this one by saying nothing.
         public static let assembled = Document(identity: nil, namespace: nil)
 
+        // A namespace written empty is no namespace. The rule is here and not
+        // at whoever is assembling one, because a place is assembled at every
+        // stage: what is read from a document before it is judged, what a
+        // validated module says it is called, what a caller hands in. Three
+        // sites keeping one rule is three chances to spell one document two
+        // ways, and which document a refusal is about is the one thing a place
+        // exists to answer.
         public init(identity: Identity?, namespace: String?) {
             self.identity = identity
-            self.namespace = namespace
+            self.namespace = namespace?.isEmpty == true ? nil : namespace
         }
 
         public static func of(_ module: Module) -> Document {
@@ -268,6 +275,16 @@ public extension Place {
         // is this case, for the reader that has to know which of the words it
         // may look for in a file.
         case landmark(String)
+
+        // A statement step, with a name written empty read as no name.
+        //
+        // The rule is on the case rather than beside each caller: a step
+        // rendering an empty name puts a dot in front of nothing, and every
+        // stage that spells a statement — reading a document, validating a
+        // module, linking one — makes this step from a name it did not write.
+        public static func statement(_ name: String?, at position: Int) -> Step {
+            .statement(name: name?.isEmpty == true ? nil : name, at: position)
+        }
     }
 }
 

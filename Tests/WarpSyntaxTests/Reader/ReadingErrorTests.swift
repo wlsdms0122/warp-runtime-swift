@@ -83,6 +83,47 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "wallet/procedures.12.body.broken[0]")
     }
 
+    @Test("a statement that writes an empty name is a statement with no name")
+    func anEmptyStatementNameIsNoName() throws {
+        // Given — the two ways of writing nothing spell the same, and a step
+        // rendering an empty name puts a dot in front of nothing
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [["id": "", "value": "x", "fallbck": "y"]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/procedures.entry.body[0]")
+    }
+
+    @Test("a document that writes an empty name is a document with no name")
+    func anEmptyNamespaceIsNoNamespace() throws {
+        // Given — the same rule one step out. What spells the document is
+        // assembled at every stage, and an empty name is not one of them.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "",
+            "procedures": ["entry": ["body": [["id": "sent", "value": "x", "fallbck": "y"]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: identity)
+        }
+
+        // Then
+        #expect(error?.place?.document.namespace == nil)
+        #expect(error?.place?.rendered == "abababababab/procedures.entry.body.sent[0]")
+    }
+
     @Test("a form that refuses in its own words still says which document")
     func aFormsOwnRefusalIsPlaced() throws {
         // Given — a form reading an expression refuses with the expression

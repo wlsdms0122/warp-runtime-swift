@@ -39,13 +39,11 @@ public struct KeyGate {
             .filter { key in !known.contains(key) }
 
         guard unknown.isEmpty else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "\(context): unknown key(s)"
-                        + " \(unknown.sorted().joined(separator: ", "))"
-                        + " — known keys: \(known.sorted().joined(separator: ", "))"
-                )
+            throw ReadingError(
+                "\(context): unknown key(s)"
+                    + " \(unknown.sorted().joined(separator: ", "))"
+                    + " — known keys: \(known.sorted().joined(separator: ", "))",
+                at: decoder.steps
             )
         }
     }

@@ -41,18 +41,16 @@ public struct AttemptForm: ConstructForm {
             body: try container.decode(BodyReader.self, forKey: .body).statements,
             result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
                 .expression,
-            at: decoder.codingPath
+            at: decoder.steps
         )
         self.rescue = try container.decode(BlockReader.self, forKey: .rescue).block
 
         // An empty rescue would swallow a failure into null without a trace — if
         // the alternate path produces nothing, the honest form is no attempt.
         guard !rescue.body.isEmpty || rescue.result != nil else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "attempt `rescue` must not be empty"
-                )
+            throw ReadingError(
+                "attempt `rescue` must not be empty",
+                at: decoder.steps
             )
         }
     }

@@ -66,12 +66,10 @@ public struct StatementReader: Decodable {
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
         guard let registry = decoder.userInfo[.constructRegistry] as? ConstructRegistry else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "statement decoding requires a ConstructRegistry"
-                        + " — decode through Loader"
-                )
+            throw ReadingError(
+                "statement decoding requires a ConstructRegistry"
+                    + " — decode through Loader",
+                at: decoder.steps
             )
         }
 
@@ -93,13 +91,11 @@ public struct StatementReader: Decodable {
         let names = EnvelopeKeys.allCases.filter { name in envelope.contains(name) }
 
         guard names.count <= 1 else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: envelope.codingPath,
-                    debugDescription: "a statement names itself at most once with"
-                        + " \(EnvelopeKeys.allCases.map { key in "'\(key.stringValue)'" }.joined(separator: ", "));"
-                        + " found: \(names.map { name in "'\(name.stringValue)'" })"
-                )
+            throw ReadingError(
+                "a statement names itself at most once with"
+                    + " \(EnvelopeKeys.allCases.map { key in "'\(key.stringValue)'" }.joined(separator: ", "));"
+                    + " found: \(names.map { name in "'\(name.stringValue)'" })",
+                at: decoder.steps
             )
         }
 
@@ -118,31 +114,45 @@ public struct StatementReader: Decodable {
         }
 
         guard found.count == 1, let key = found.first else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "a statement must declare exactly one construct key"
-                        + " (\(registry.keys.joined(separator: "/")));"
-                        + " found: \(found)"
-                )
+            throw ReadingError(
+                "a statement must declare exactly one construct key"
+                    + " (\(registry.keys.joined(separator: "/")));"
+                    + " found: \(found)",
+                at: decoder.steps
             )
         }
 
         guard let form = registry.form(for: key) else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "no construct registered for key '\(key)'"
-                )
+            throw ReadingError(
+                "no construct registered for key '\(key)'",
+                at: decoder.steps
             )
         }
 
         let name = names.first
         let id = try name.map { name in try envelope.decode(String.self, forKey: name) }
-        let expression = try form.init(
-            from: container.superDecoder(forKey: AnyCodingKey(stringValue: key))
-        )
-        .expression(boundTo: id)
+        let inside = try container.superDecoder(forKey: AnyCodingKey(stringValue: key))
+        let built: any ConstructForm
+        let expression: Expression
+
+        do {
+            built = try form.init(from: inside)
+        } catch let refusal as DecodingError {
+            // A form written outside this package reads with `Codable`'s
+            // refusal, which carries `Codable`'s address. The walk's own is
+            // right here, so it is put on rather than the one a coding key
+            // would spell.
+            throw ReadingError(refusal, at: inside.steps)
+        }
+
+        do {
+            expression = try built.expression(boundTo: id)
+        } catch let refusal as ReadingError {
+            // A form lowering what it read is past every decoder, so a refusal
+            // from there says nothing about where it is. This statement is
+            // where it is, and this is what is holding that.
+            throw refusal.asked(at: decoder.steps)
+        }
 
         // A statement that leaves never finishes, so a name on one promises a
         // binding that cannot happen. Only the structure a document shows is
@@ -151,12 +161,10 @@ public struct StatementReader: Decodable {
         // sentence is the Validator's, word for word: one rule, one wording,
         // whichever door a statement came through.
         if id != nil, expression.alwaysLeaves {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: envelope.codingPath,
-                    debugDescription: "every way through this statement leaves,"
-                        + " so its name could never bind — it takes no name"
-                )
+            throw ReadingError(
+                "every way through this statement leaves,"
+                    + " so its name could never bind — it takes no name",
+                at: decoder.steps
             )
         }
 
@@ -164,13 +172,11 @@ public struct StatementReader: Decodable {
         // branch — a notation's own spelling included — so no form has to
         // remember the rule itself.
         if id != nil, expression.takesNoName {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: envelope.codingPath,
-                    debugDescription: "a branch answers nothing, so its name"
-                        + " could never bind — it takes no name; what an arm"
-                        + " keeps is written to an outer variable with 'set'"
-                )
+            throw ReadingError(
+                "a branch answers nothing, so its name"
+                    + " could never bind — it takes no name; what an arm"
+                    + " keeps is written to an outer variable with 'set'",
+                at: decoder.steps
             )
         }
 

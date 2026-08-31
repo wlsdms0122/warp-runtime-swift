@@ -20,16 +20,32 @@ public struct BodyReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        let statements = try [StatementReader](from: decoder).map(\.statement)
+        // The elements as the document wrote them, beside what they read as.
+        // A walk into an array knows it descended by position and no more; this
+        // is the one reader that knows the positions hold statements, so the
+        // names an author knows them by are its to put on — and the only ones
+        // it puts on, since everywhere else an element is a position.
+        let written = (try ValueReader(from: decoder).value.elements).map(Array.init) ?? []
+        let depth = decoder.steps.count
+
+        func name(at position: Int) -> String? {
+            written.indices.contains(position) ? StatementReader.name(of: written[position]) : nil
+        }
+
+        let statements: [Statement]
+
+        do {
+            statements = try [StatementReader](from: decoder).map(\.statement)
+        } catch let refusal as ReadingError {
+            throw refusal.naming(at: depth, name(at:))
+        }
 
         for (position, statement) in statements.dropLast().enumerated()
         where statement.expression.alwaysLeaves {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "[\(position)]: every way through this statement"
-                        + " leaves, and what follows it here would never run"
-                )
+            throw ReadingError(
+                "every way through this statement leaves,"
+                    + " and what follows it here would never run",
+                at: decoder.steps + [.statement(name(at: position), at: position)]
             )
         }
 
@@ -50,15 +66,13 @@ extension Block {
     static func reading(
         body: [Statement],
         result: Expression?,
-        at codingPath: [any CodingKey]
+        at steps: [Place.Step]
     ) throws -> Block {
         if body.alwaysLeaves, result != nil {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "result: nothing runs after leaving,"
-                        + " and this result would never be reached"
-                )
+            throw ReadingError(
+                "result: nothing runs after leaving,"
+                    + " and this result would never be reached",
+                at: steps
             )
         }
 

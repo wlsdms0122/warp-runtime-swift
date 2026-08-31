@@ -10,102 +10,101 @@ import Warp
 
 // What a document is refused with while it is being read.
 //
-// Reading a document is decoding, and decoding refuses with `DecodingError`:
-// a sentence and the address the reader had reached, and nothing about which
-// document either belongs to. A caller holding several documents needs the
-// third fact to act on the first two — one of four files it just read is the
-// one to open, and a refusal that does not say which sends it opening all of
-// them.
+// It carries the two halves of a place separately, because they are known at
+// different moments. The steps are known where the refusal happens — the walk
+// is there, and only there — and which document is being read is known at the
+// door the value came through. So the reading says where it got to, the door
+// says what it was reading, and neither has to hold the other's answer to say
+// its own.
 //
-// So the coding path becomes the steps of a place, and the document is the one
-// the door was told it was reading.
+// Until a door says, there is no document and the place is nothing rather than
+// an empty one: a refusal that has not reached a door has not been told, and a
+// reader guessing would be answering the one question it was never given.
 public struct ReadingError: WarpError {
     // MARK: - Property
     public let message: String
-    public let place: Place?
 
-    // MARK: - Initializer
-    public init(_ message: String, at place: Place?) {
-        self.message = message
-        self.place = place
+    // Where the reading had reached, in the document's own words.
+    public let steps: [Place.Step]
+
+    private let document: Place.Document?
+
+    public var place: Place? {
+        document.map { document in Place(steps, in: document) }
     }
 
-    // A decoding refusal, said about a document. Which key it stopped at is
-    // already in hand — `keyNotFound` holds the key the path does not, since
-    // the reader never got as far as descending into it.
+    // MARK: - Initializer
+    public init(_ message: String, at steps: [Place.Step] = []) {
+        self.message = message
+        self.steps = steps
+        self.document = nil
+    }
+
+    private init(_ message: String, at steps: [Place.Step], in document: Place.Document?) {
+        self.message = message
+        self.steps = steps
+        self.document = document
+    }
+
+    // A decoding refusal, with the address the walk knows.
     //
-    // The document is walked beside the path because a coding key does not say
-    // which kind of step it is. A dictionary key that reads as a number carries
-    // an `intValue` — `procedures: { "12": … }` would address `procedures[12]`,
-    // which is not a place in the document — and an array of statements is
-    // spelled by the names its statements wrote everywhere else a place is
-    // made. What the document holds at each step settles both.
-    init(_ error: DecodingError, in document: Place.Document, reading value: Value) {
-        let (said, path): (String, [any CodingKey]) = switch error {
-        case let .dataCorrupted(context):
-            (context.debugDescription, context.codingPath)
-
-        case let .keyNotFound(key, context):
-            (context.debugDescription, context.codingPath + [key])
-
-        case let .typeMismatch(_, context):
-            (context.debugDescription, context.codingPath)
-
-        case let .valueNotFound(_, context):
-            (context.debugDescription, context.codingPath)
-
-        @unknown default:
-            ("\(error)", [])
+    // `DecodingError` has an address of its own and it is not this one: a
+    // coding key carries whatever number its spelling parses to, so the walk's
+    // own steps are taken instead and the sentence is all that is read off the
+    // refusal. What the reader wrote is right; where it says it is is not its
+    // to say.
+    init(_ error: DecodingError, at steps: [Place.Step]) {
+        let said = switch error {
+        case let .dataCorrupted(context): context.debugDescription
+        case let .keyNotFound(_, context): context.debugDescription
+        case let .typeMismatch(_, context): context.debugDescription
+        case let .valueNotFound(_, context): context.debugDescription
+        @unknown default: "\(error)"
         }
 
-        self.message = said
-        self.place = Place(Self.steps(path, through: value), in: document)
+        self.init(said, at: steps, in: nil)
     }
 
     // MARK: - Public
-    // MARK: - Private
-    private static func steps(_ path: [any CodingKey], through value: Value) -> [Place.Step] {
-        var steps: [Place.Step] = []
-        // What the document holds where the walk has reached, or nothing once
-        // the path leads past what is written — a reader refusing a key the
-        // document does not have walks one step further than the document goes.
-        var reached: Value? = value
+    // The same refusal, told which document it was reading. Said once, at the
+    // door: a refusal already told keeps what it was told, so a door inside a
+    // door cannot rename another's document.
+    func read(in document: Place.Document) -> ReadingError {
+        guard self.document == nil else { return self }
 
-        for key in path {
-            switch reached {
-            case let .array(elements)?:
-                guard let position = key.intValue, elements.indices.contains(position) else {
-                    steps.append(Self.step(of: key))
-                    reached = nil
-
-                    continue
-                }
-
-                let element = elements[position]
-
-                steps.append(
-                    StatementReader.name(of: element)
-                        .map { name in .statement(name: name, at: position) } ?? .index(position)
-                )
-                reached = element
-
-            case let .object(fields)?:
-                steps.append(.key(key.stringValue))
-                reached = fields[key.stringValue]
-
-            default:
-                steps.append(Self.step(of: key))
-                reached = nil
-            }
-        }
-
-        return steps
+        return ReadingError(message, at: steps, in: document)
     }
 
-    // A step read from the key alone, for where the document ran out. Nothing
-    // is left to tell a position from a name, so the key's own claim is all
-    // there is.
-    private static func step(of key: any CodingKey) -> Place.Step {
-        key.intValue.map(Place.Step.index) ?? .key(key.stringValue)
+    // The same refusal, addressed from where it was asked for — for what
+    // refuses somewhere with no address to give. A refusal that has one keeps
+    // it: where it happened is deeper than where it was asked for, and the
+    // deeper answer is the true one.
+    func asked(at steps: [Place.Step]) -> ReadingError {
+        self.steps.isEmpty ? ReadingError(message, at: steps, in: document) : self
+    }
+
+    // The same refusal, with one step of its address said better. A walk
+    // descends into an array knowing only that it is an array; the reader that
+    // knows the array holds statements is the only one that can name them, and
+    // everywhere else an element is a position and nothing more.
+    //
+    // Which element is asked of the caller rather than told to it: the refusal
+    // knows where it happened and the reader knows what lives there, and this
+    // is where the two meet.
+    func naming(at depth: Int, _ name: (Int) -> String?) -> ReadingError {
+        guard case let .index(position)? = steps[safe: depth] else { return self }
+
+        var named = steps
+        named[depth] = .statement(name(position), at: position)
+
+        return ReadingError(message, at: named, in: document)
+    }
+
+    // MARK: - Private
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

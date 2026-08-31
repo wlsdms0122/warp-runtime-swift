@@ -78,10 +78,7 @@ public struct Loader: Sendable {
         // anything is read: what fails is the reading, and a reader that got
         // far enough to fail may not have got far enough to say what it was
         // reading.
-        let document = Place.Document(
-            identity: identity,
-            namespace: ModuleReader.namespace(of: value)
-        )
+        let document = document(of: value, identity: identity)
 
         let read = try spelled(value, in: document)
         let module = identity.map(read.read(from:)) ?? read
@@ -101,9 +98,9 @@ public struct Loader: Sendable {
         guard case let .object(fields) = value, fields[Envelope.needsKey] != nil else {
             throw ReadingError(
                 "a document says what it needs, and this one does not —"
-                    + " write `\(Envelope.needsKey)`, empty where the program sends nothing",
-                at: Place(in: document)
+                    + " write `\(Envelope.needsKey)`, empty where the program sends nothing"
             )
+            .read(in: document)
         }
 
         try language.validate(module)
@@ -137,8 +134,13 @@ public struct Loader: Sendable {
     // alone: a document claiming a language this reader is not is refused, and
     // that refusal is the version's whole job.
     public func canonical(_ value: Value) throws -> Value {
-        try Writer(registry: registry, readBy: .canonical)
-            .value(of: try spelled(stamped(value), in: document(of: value)))
+        // The value that is read and the value a refusal about it is named
+        // after are one value, held once. Two calls to `stamped` would be two
+        // values that happen to agree today about the one field this reads.
+        let stamped = stamped(value)
+
+        return try Writer(registry: registry, readBy: .canonical)
+            .value(of: try spelled(stamped, in: document(of: stamped)))
     }
 
     // One procedure, for a caller holding a procedure's worth of data rather than a
@@ -181,11 +183,15 @@ public struct Loader: Sendable {
     }
 
     // What a value says it is called, as the document a refusal about reading it
-    // is in. The identity is the caller's to hand in and is not here: what a
-    // document is, is worked out from its canonical writing, and a value being
-    // read has not been written yet.
-    private func document(of value: Value) -> Place.Document {
-        Place.Document(identity: nil, namespace: ModuleReader.namespace(of: value))
+    // is in.
+    //
+    // The identity is handed in where there is one and left out where there is
+    // not: what a document *is* is worked out from its canonical writing, so a
+    // value on its way to being written has none yet. One assembly rather than
+    // one per door, because the namespace rule is the same rule at every door
+    // and a second copy of it is a second answer waiting to happen.
+    private func document(of value: Value, identity: Identity? = nil) -> Place.Document {
+        Place.Document(identity: identity, namespace: ModuleReader.namespace(of: value))
     }
 
     // The value with this reader's version on it, where it does not say. What a
@@ -211,25 +217,26 @@ public struct Loader: Sendable {
         in document: Place.Document
     ) throws -> T {
         do {
-            return try T(from: ValueDecoder(
+            return try ValueDecoder(
                 value: value,
                 codingPath: [],
+                steps: [],
                 userInfo: [
                     .constructRegistry: registry,
                     .notation: notation,
                     .loader: self
                 ]
-            ))
-        } catch let error as DecodingError {
-            throw ReadingError(error, in: document, reading: value)
-        } catch let refusal as any WarpError where refusal.place == nil {
-            // A reader that refused in its own words rather than decoding's.
-            // The sentence is already right and the address is not there to be
-            // had — what the walk had reached is decoding's to say, and this
-            // did not come through it — so the document is what can be added
-            // and this adds it rather than letting the one refusal that says
-            // nowhere leave by the door that promises otherwise.
-            throw ReadingError(refusal.message, at: Place(in: document))
+            )
+            .decode(type)
+        } catch let refusal as ReadingError {
+            throw refusal.read(in: document)
+        } catch let refusal as DecodingError {
+            // Nothing in this package refuses this way any more — every reading
+            // it does says where it was. What reaches here is a reader written
+            // somewhere else, refusing in `Codable`'s terms from a place this
+            // walk was not watching, so the document is all that can honestly
+            // be added to it.
+            throw ReadingError(refusal, at: []).read(in: document)
         }
     }
 }

@@ -67,7 +67,7 @@ struct ValueNotationTests {
         // out — and `Data` is still held to its own spelling, so an array of
         // small numbers cannot quietly become bytes.
         func decoding<T: Decodable>(_ type: T.Type, from value: Value) throws -> T {
-            try T(from: ValueDecoder(value: value, codingPath: [], userInfo: [:]))
+            try T(from: ValueDecoder(value: value, codingPath: [], steps: [], userInfo: [:]))
         }
 
         #expect(try decoding([Int].self, from: .bytes([1, 2])) == [1, 2])
@@ -116,7 +116,7 @@ struct ValueNotationTests {
         // happens to be whole must not be re-guessed from its spelling and
         // come back an int
         let whole = Value.double(5)
-        let decoder = ValueDecoder(value: whole, codingPath: [], userInfo: [:])
+        let decoder = ValueDecoder(value: whole, codingPath: [], steps: [], userInfo: [:])
 
         // When
         let read = try ValueReader(from: decoder)

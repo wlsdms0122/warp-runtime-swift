@@ -24,7 +24,7 @@ enum BoundsReader {
     static func apply(
         _ bounds: [String: String]?,
         to signature: Signature,
-        at codingPath: [any CodingKey]
+        at steps: [Place.Step]
     ) throws -> Signature {
         guard let bounds, !bounds.isEmpty else { return signature }
 
@@ -34,14 +34,12 @@ enum BoundsReader {
         // predicate the slot's `some T` spelling is held to.
         for (parameter, constraint) in bounds.sorted(by: { $0.key < $1.key }) {
             guard TypeReader.isName(constraint) else {
-                throw DecodingError.dataCorrupted(
-                    .init(
-                        codingPath: codingPath,
-                        debugDescription: "bounds bind '\(parameter)' to"
-                            + " '\(constraint)', which is not a constraint's name"
-                            + " — a membership is declared, never written in a"
-                            + " signature"
-                    )
+                throw ReadingError(
+                    "bounds bind '\(parameter)' to"
+                        + " '\(constraint)', which is not a constraint's name"
+                        + " — a membership is declared, never written in a"
+                        + " signature",
+                    at: steps
                 )
             }
         }
@@ -56,14 +54,12 @@ enum BoundsReader {
             .sorted()
 
         guard unwritten.isEmpty else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "bounds name"
-                        + " \(unwritten.joined(separator: ", ")), and no slot writes"
-                        + " `some \(unwritten.first ?? "")` — a bound rides on a"
-                        + " parameter some slot mentions"
-                )
+            throw ReadingError(
+                "bounds name"
+                    + " \(unwritten.joined(separator: ", ")), and no slot writes"
+                    + " `some \(unwritten.first ?? "")` — a bound rides on a"
+                    + " parameter some slot mentions",
+                at: steps
             )
         }
 

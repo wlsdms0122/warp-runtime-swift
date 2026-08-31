@@ -66,12 +66,12 @@ struct NotationGateTests {
     func statementNeedsARegistry() {
         // Given — the registry travels in the decoder rather than in the data, so
         // a reader reached without one has no way to know what a word means
-        let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], userInfo: [:])
+        let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], steps: [], userInfo: [:])
 
-        // When / Then — read without going through a door, so what comes back is
-        // the decoding's own refusal: a place is put on one where a reading is
-        // asked for, and nothing here asked
-        #expect(throws: DecodingError.self) {
+        // When / Then — a reading refuses as a reading wherever it is asked
+        // for, and which document it was reading is the door's to say: nothing
+        // here went through one, so the refusal names none
+        #expect(throws: ReadingError.self) {
             try StatementReader(from: decoder)
         }
     }

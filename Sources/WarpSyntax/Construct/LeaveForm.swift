@@ -98,12 +98,10 @@ extension BreakForm {
             return name
 
         case let other:
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "\(word) takes the name of a loop, or nothing for the"
-                        + " nearest one — got \(other.type)"
-                )
+            throw ReadingError(
+                "\(word) takes the name of a loop, or nothing for the"
+                    + " nearest one — got \(other.type)",
+                at: decoder.steps
             )
         }
     }

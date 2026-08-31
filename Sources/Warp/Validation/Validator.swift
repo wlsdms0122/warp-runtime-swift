@@ -39,6 +39,21 @@ public struct Validator: Sendable {
     // whether its names collide with another module's is a link question, and
     // there is no other module in sight from inside one.
     public func validate(_ module: Module) throws {
+        // The namespace a module declares into is a name, and every other name
+        // a document writes is held to the same two rules here. A module that
+        // writes the key and nothing in it has said it has a namespace and
+        // named none — and a name nobody can type is a name no other document
+        // can join, which is what a namespace is for.
+        if let name = module.name {
+            let here = Place([.key("name")], in: .of(module))
+
+            guard !name.isEmpty else {
+                throw ValidationError("a module that writes a name writes one", at: here)
+            }
+
+            try normal(name, at: here)
+        }
+
         let constants = Set(module.constants.keys)
 
         // A constant sees no scope, so it may name another constant and nothing

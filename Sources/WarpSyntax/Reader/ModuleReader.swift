@@ -41,7 +41,7 @@ public struct ModuleReader: Decodable {
             version: try decoder
                 .container(keyedBy: AnyCodingKey.self)
                 .decodeIfPresent(Int.self, forKey: AnyCodingKey(stringValue: Envelope.versionKey)),
-            at: decoder.codingPath
+            at: decoder.steps
         )
 
         try KeyGate().rejectUnknownKeys(
@@ -55,12 +55,10 @@ public struct ModuleReader: Decodable {
         let procedures = try container.decode([String: ProcedureReader].self, forKey: .procedures)
 
         guard !procedures.isEmpty else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "a module that declares nothing can never be"
-                        + " linked into anything — write at least one procedure"
-                )
+            throw ReadingError(
+                "a module that declares nothing can never be"
+                    + " linked into anything — write at least one procedure",
+                at: decoder.steps
             )
         }
 
@@ -87,12 +85,10 @@ public struct ModuleReader: Decodable {
             let sent = Envelope.needs(of: module)
 
             guard Set(claimed) == sent else {
-                throw DecodingError.dataCorrupted(
-                    .init(
-                        codingPath: container.codingPath,
-                        debugDescription: "this document says it needs"
-                            + " \(claimed.sorted()) and sends \(sent.sorted())"
-                    )
+                throw ReadingError(
+                    "this document says it needs"
+                        + " \(claimed.sorted()) and sends \(sent.sorted())",
+                    at: decoder.steps
                 )
             }
         }
@@ -136,24 +132,20 @@ public struct ModuleReader: Decodable {
     //
     // Anything outside the range this reader knows is refused rather than guessed
     // at — below it, the document is claiming a language that never existed.
-    private static func check(version: Int?, at codingPath: [any CodingKey]) throws {
+    private static func check(version: Int?, at steps: [Place.Step]) throws {
         guard let version else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "this is not a warp document — it does not say"
-                        + " which warp it is written for (`\(Envelope.versionKey)`)"
-                )
+            throw ReadingError(
+                "this is not a warp document — it does not say"
+                    + " which warp it is written for (`\(Envelope.versionKey)`)",
+                at: steps
             )
         }
 
         guard (Envelope.earliest ... Envelope.version).contains(version) else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "this document is written for warp \(version),"
-                        + " and this reads \(Envelope.earliest) through \(Envelope.version)"
-                )
+            throw ReadingError(
+                "this document is written for warp \(version),"
+                    + " and this reads \(Envelope.earliest) through \(Envelope.version)",
+                at: steps
             )
         }
     }

@@ -97,11 +97,9 @@ public struct ValueReader: Decodable {
             return
         }
 
-        throw DecodingError.dataCorrupted(
-            .init(
-                codingPath: decoder.codingPath,
-                debugDescription: "Value could not be decoded"
-            )
+        throw ReadingError(
+            "Value could not be decoded",
+            at: decoder.steps
         )
     }
 
