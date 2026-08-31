@@ -594,13 +594,20 @@ public struct Linker: Sendable {
         // declarations collide. A name reaches this table only by colliding,
         // so there are always at least two.
         if let (word, declarations) = contested.min(by: { one, other in one.key < other.key }) {
+            // In the order the caller handed the modules over, which is the
+            // order every collision refusal is read in: the second is the one
+            // that could not be added. Gathered in name order above, because
+            // that is the order the tables are built in, so the two are sorted
+            // apart here rather than one being made to serve for both.
+            let ranked = declarations.sorted { one, other in one.origin < other.origin }
+
             throw LinkError(
                 "\(contested.keys.sorted().joined(separator: ", ")) is declared by more"
                     + " than one module as something a path may reach — '\(word)' by"
-                    + " \(declarations.map(\.qualified).joined(separator: ", "))"
+                    + " \(ranked.map(\.qualified).joined(separator: ", "))"
                     + " — a path segment names no module, so there is no spelling that"
                     + " would tell them apart",
-                at: declarations[1].place
+                at: ranked[1].place
             )
         }
 
@@ -614,12 +621,12 @@ public struct Linker: Sendable {
     private func symbols(of modules: [Module]) throws -> [Symbol] {
         var symbols: [Symbol] = []
 
-        // Which document took each name and where the caller put it, rather
-        // than only that the name is taken. A refusal about a name declared
-        // twice is addressed to the declaration that cannot be added and names
-        // both in the sentence — a set answers neither half, and the place
-        // alone answers neither when the two documents were never written down.
-        var claimed: [String: (document: Place.Document, origin: Int)] = [:]
+        // The declaration that took each name, rather than only that the name
+        // is taken. A refusal about a name declared twice is addressed to the
+        // declaration that cannot be added and names both in the sentence — a
+        // set answers neither half, and the place alone answers neither when
+        // the two documents were never written down.
+        var claimed: [String: Symbol] = [:]
 
         for (origin, module) in modules.enumerated() {
             for name in module.procedures.keys.sorted() {
@@ -627,26 +634,25 @@ public struct Linker: Sendable {
 
                 let qualified = module.qualified(name)
 
+                let symbol = Symbol(
+                    declared: name,
+                    document: .of(module),
+                    origin: origin,
+                    procedure: procedure
+                )
+
                 if let first = claimed[qualified] {
                     throw LinkError(
                         "'\(qualified)' is declared more than once in this link — by"
-                            + " \(first.document.spelled(at: first.origin)) and"
-                            + " \(Place.Document.of(module).spelled(at: origin))"
-                            + " — two declarations of a name have no way to be told apart",
-                        at: .procedure(name, in: .of(module))
+                            + " \(first.spelled) and \(symbol.spelled) — two declarations"
+                            + " of a name have no way to be told apart",
+                        at: symbol.place
                     )
                 }
 
-                claimed[qualified] = (.of(module), origin)
+                claimed[qualified] = symbol
 
-                symbols.append(
-                    Symbol(
-                        declared: name,
-                        document: .of(module),
-                        origin: origin,
-                        procedure: procedure
-                    )
-                )
+                symbols.append(symbol)
             }
         }
 
@@ -1297,12 +1303,11 @@ public struct Linker: Sendable {
         for (origin, module) in modules.enumerated() where !module.constants.isEmpty {
             var known: [String: Value] = [:]
 
-            for name in try order(module.constants, in: module) {
-                // Everything this one reads comes before it in that order, so
-                // it is settled by the time this is reached. Nothing here has
-                // to ask whether it is.
-                guard let expression = module.constants[name] else { continue }
-
+            // Handed over with what each one reads, so nothing looks a name
+            // back up in the table the order was read from — everything this
+            // one needs comes before it, and asking again is a second chance
+            // to ask a different table.
+            for (name, expression) in try order(of: module) {
                 let resolver = Resolver(
                     scope: Scope(bindings: known),
                     derivations: derivations,
@@ -1364,8 +1369,10 @@ public struct Linker: Sendable {
     // there, so the reconstruction is a guess about which is which. Here there
     // is no leftover: the walk is standing on the constant that is wrong at the
     // moment it finds out, and both refusals are that constant's own.
-    private func order(_ constants: [String: Expression], in module: Module) throws -> [String] {
-        var ordered: [String] = []
+    private func order(of module: Module) throws -> [(name: String, expression: Expression)] {
+        let constants = module.constants
+
+        var ordered: [(name: String, expression: Expression)] = []
         var settled: Set<String> = []
 
         // What the walk is standing on, root first. Where it meets a name
@@ -1394,28 +1401,31 @@ public struct Linker: Sendable {
 
             walking.append(name)
 
+            // What a constant may see is the validator's rule and a document
+            // arrives having been held to it. This is not that rule a second
+            // time: a caller may hand a module it built straight to a link, and
+            // the walk has to say what it found rather than read the name it
+            // was refused as nothing.
+            //
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
-            for read in heads(of: expression).sorted() {
-                // What a constant may see is the validator's rule and a
-                // document arrives having been held to it. This is not that
-                // rule a second time: a caller may hand a module it built
-                // straight to a link, and the walk has to say what it found
-                // rather than read the name it was refused as nothing.
-                guard let named = constants[read] else {
-                    throw LinkError(
-                        "constant '\(name)' reads '\(read)', and a constant sees nothing"
-                            + " but the constants declared beside it",
-                        at: .constant(name, in: .of(module))
-                    )
-                }
+            for read in heads(of: expression).sorted() where constants[read] == nil {
+                throw LinkError(
+                    "constant '\(name)' reads '\(read)', and a constant sees nothing"
+                        + " but the constants declared beside it",
+                    at: .constant(name, in: .of(module))
+                )
+            }
 
-                try place(read, reading: named)
+            for read in depends(expression, on: Set(constants.keys)).sorted() {
+                // Gathered by intersecting with these keys, so the walk cannot
+                // be sent to a name that is not one of them.
+                try place(read, reading: constants[read]!)
             }
 
             walking.removeLast()
             settled.insert(name)
-            ordered.append(name)
+            ordered.append((name, expression))
         }
 
         for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
@@ -1425,6 +1435,33 @@ public struct Linker: Sendable {
         return ordered
     }
 
+    // The constants this one has to have settled before it can be made.
+    //
+    // What an expression reads directly is most of it, and a closure is the
+    // rest: making one runs nothing, but it freezes the scope it was made in,
+    // so a sibling its body reads has to be in there by then. Read as no
+    // dependency, the same module answers differently depending on what its
+    // constants happen to be called — a closure sorted before the constant it
+    // reads froze a scope without it and answered null, quietly.
+    //
+    // Only names that are constants come back. Inside a closure the rest are
+    // its own, a parameter or a name one of its statements fixes, and a
+    // parameter that happens to share a constant's name only settles that
+    // constant sooner than it had to.
+    private func depends(_ expression: Expression, on constants: Set<String>) -> Set<String> {
+        expression.buried
+            .reduce(into: Set<String>()) { names, held in
+                guard case let .reference(path) = held else { return }
+
+                names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+            }
+            .intersection(constants)
+    }
+
+    // What an expression reads from the scope around it, which for a constant
+    // is the constants declared beside it. A closure's body is not read here:
+    // what it holds is a dependency rather than something this constant reads,
+    // and `depends(_:on:)` is the question that gathers it.
     private func heads(of expression: Expression) -> Set<String> {
         switch expression {
         case .literal, .closure:
@@ -1461,8 +1498,13 @@ public struct Linker: Sendable {
                 names.formUnion(heads(of: argument))
             }
 
-        // A constant sees no scope, so nothing that runs a body can be one —
-        // the validator refuses these before linking ever asks.
+        // A constant sees no scope, so nothing that runs a body can be one.
+        // What a link does not trust is which names a module wrote, and this
+        // is not one of those: a shape no constant may take is refused by the
+        // validator on the way in, and one that reached here unvalidated is
+        // refused by the resolver, which has no reading for it either. Reading
+        // names out of a body that will never run would be answering for a
+        // shape nothing downstream can hold.
         case .block, .conditional, .loop, .iteration, .attempt:
             return []
         }

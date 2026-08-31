@@ -44,6 +44,11 @@ struct Symbol: Sendable {
     // Where this declaration's words are, in the document that wrote it.
     var place: Place { .procedure(declared, in: document) }
 
+    // What a sentence calls this declaration when it names one among several.
+    // The position is the document's discriminator where it has no identity,
+    // and this is the one place that holds both.
+    var spelled: String { document.spelled(at: origin) }
+
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private

@@ -256,6 +256,47 @@ struct LinkerTests {
         #expect(answer == .int(6))
     }
 
+    @Test("a closure constant reads a constant beside it whatever the two are called")
+    func aClosureConstantCapturesItsSiblings() async throws {
+        // Given — making a closure freezes the scope it was made in, so a
+        // sibling its body reads has to be settled by then. Nothing in the body
+        // runs while the constants settle, which is what makes it look like no
+        // dependency at all — and read that way, what the closure captures is
+        // whatever happened to be settled when its turn came round.
+        //
+        // Both spellings of one program, differing only in whether the closure
+        // sorts before or after what it reads. An answer that is not the same
+        // twice is a program whose meaning is in its names.
+        func module(closure: String, reading constant: String) -> Module {
+            Module(
+                name: "app",
+                constants: [
+                    closure: .closure(Procedure(body: [], result: reference(constant))),
+                    constant: .literal(.int(3))
+                ],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "got",
+                                expression: .invoke(reference(closure), arguments: [:])
+                            )
+                        ],
+                        result: reference("got")
+                    )
+                ]
+            )
+        }
+
+        // When
+        let first = try await run(module(closure: "apply", reading: "zebra"))
+        let last = try await run(module(closure: "zapply", reading: "alpha"))
+
+        // Then
+        #expect(first == .int(3))
+        #expect(last == .int(3))
+    }
+
     @Test("a constant may reach a word the same way a body does")
     func aConstantReachesAWord() async throws {
         // Given — folding happens after the words are known, so a constant that

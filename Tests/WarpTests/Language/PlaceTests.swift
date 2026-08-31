@@ -799,16 +799,20 @@ struct PlaceTests {
         // When — three of them, because a slot holding the latest collision
         // keeps the newest two and drops whoever took the name first. With two
         // there is nothing for a third to push out.
+        //
+        // Handed over in an order the names do not sort in, since the tables
+        // behind this are built in name order and the second declaration is
+        // the second the caller handed over.
         let error = #expect(throws: LinkError.self) {
             try Language().link(
-                [catalog, pricing, shipping, caller] + Module.standard,
+                [shipping, catalog, pricing, caller] + Module.standard,
                 entry: entryName
             )
         }
 
-        // Then — the declarations are walked in qualified order, so the second
-        // is `pricing`
-        #expect(error?.place?.rendered == "pricing@02/procedures.discounted")
+        // Then — `catalog` is the second the caller handed over, whatever the
+        // three names sort as
+        #expect(error?.place?.rendered == "catalog@01/procedures.discounted")
 
         // And every one of them is named, the first included
         #expect(error?.message.contains("catalog.discounted") == true)
