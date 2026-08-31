@@ -566,6 +566,31 @@ struct PlaceTests {
         #expect(error?.message.contains("pricing@01") == true)
     }
 
+    @Test("the same document handed to one link twice is refused as that")
+    func theSameDocumentHandedTwiceIsRefusedAsOneDocument() {
+        // Given — a caller that appends what arrives without checking whether
+        // it already holds it. An identity is derived from the text, so the two
+        // are one document and every name in it collides with itself. Read as a
+        // collision between two declarations, the sentence names the same
+        // document on both sides and tells the caller nothing it can act on.
+        let module = Module(
+            name: "pricing",
+            procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))]
+        )
+            .read(from: Identity([0x01]))
+
+        let caller = Module(procedures: [entryName: Procedure(body: [])])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([module, module, caller] + Module.standard, entry: entryName)
+        }
+
+        // Then — what is wrong is the second copy, not anything inside it
+        #expect(error?.place?.rendered == "pricing@01")
+        #expect(error?.message.contains("twice") == true)
+    }
+
     @Test("a shape two documents declare is placed the same way a procedure is")
     func aTypeDeclaredTwiceIsPlacedAtTheSecond() {
         // Given — the same rule in the space a type is resolved in. The two

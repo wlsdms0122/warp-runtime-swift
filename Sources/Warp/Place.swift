@@ -243,8 +243,9 @@ public extension Place {
 
         // What a sentence calls this document when it names one among several.
         //
-        // An identity tells one document from every other, so where there is
-        // one nothing else is needed. Without one there is only the name, and
+        // An identity tells one document from every other in a link, since a
+        // link refuses the same one twice, so where there is one nothing else
+        // is needed. Without one there is only the name, and
         // two modules a caller built may write the same name or no name at all
         // — so where the caller put it goes on as well. The caller counts its
         // own modules, in the order it handed them over.

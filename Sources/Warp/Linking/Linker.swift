@@ -47,6 +47,8 @@ public struct Linker: Sendable {
         // reads type expressions and one spelling has to mean one thing. The
         // spaces come back gathered — the qualifying pass owns their
         // uniqueness, so it hands over the tables that fact was proved on.
+        try once(modules)
+
         let (modules, declaredTypes, declaredConstraints) = try qualified(modules)
 
         let types = try types(
@@ -373,6 +375,31 @@ public struct Linker: Sendable {
     }
 
     // MARK: - Private
+    // No document twice. An identity is derived from the text, so two copies of
+    // one are one document, and every name in it collides with itself.
+    //
+    // Refused here rather than left to the collision, because the collision has
+    // nothing to say: both sides of its sentence are the same document, and the
+    // fix is not a spelling but a caller holding what it already had.
+    private func once(_ modules: [Module]) throws {
+        var held: Set<Identity> = []
+
+        for module in modules {
+            guard let identity = module.identity else { continue }
+            guard held.contains(identity) else {
+                held.insert(identity)
+                continue
+            }
+
+            throw LinkError(
+                "this document was handed to the link twice — a link states its"
+                    + " whole world once, so a document already in it is not"
+                    + " something to add",
+                at: Place(in: .of(module))
+            )
+        }
+    }
+
     // The one gate every gathered send passes, wherever its body sits — a
     // procedure, a word, a constant's closure. The callee is found by the
     // spelling the rewrite settled on, and the call is judged against it.
@@ -1355,20 +1382,9 @@ public struct Linker: Sendable {
         return settled
     }
 
-    // The names an expression reads from the scope around it. A closure's body
-    // is skipped: what it reads is answered where it is called, from the scope
-    // it captured, so requiring those names to be settled first would be asking
-    // the wrong question.
-    // The order a module's constants settle in, which is the order they read
-    // each other in: everything a constant reads comes before it.
-    //
-    // Worked out before any of them settles, rather than found by settling what
-    // can be settled and asking afterwards why the rest could not. Asked
-    // afterwards, the answer has to be reconstructed from what is left over —
-    // and what is wrong and what is merely waiting on it look the same from
-    // there, so the reconstruction is a guess about which is which. Here there
-    // is no leftover: the walk is standing on the constant that is wrong at the
-    // moment it finds out, and both refusals are that constant's own.
+    // The order a module's constants settle in: what a constant reads comes
+    // before it. A constant that reads nothing settled beside it is refused
+    // here, standing on the constant that is wrong.
     private func order(of module: Module) throws -> [(name: String, expression: Expression)] {
         let constants = module.constants
 
@@ -1409,7 +1425,7 @@ public struct Linker: Sendable {
             //
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
-            for read in heads(of: expression).sorted() where constants[read] == nil {
+            for read in mentions(of: expression).sorted() where constants[read] == nil {
                 throw LinkError(
                     "constant '\(name)' reads '\(read)', and a constant sees nothing"
                         + " but the constants declared beside it",
@@ -1417,9 +1433,9 @@ public struct Linker: Sendable {
                 )
             }
 
-            for read in depends(expression, on: Set(constants.keys)).sorted() {
-                // Gathered by intersecting with these keys, so the walk cannot
-                // be sent to a name that is not one of them.
+            for read in heads(of: expression).intersection(constants.keys).sorted() {
+                // Intersected with these keys, so the walk cannot be sent to a
+                // name that is not one of them.
                 try place(read, reading: constants[read]!)
             }
 
@@ -1435,156 +1451,64 @@ public struct Linker: Sendable {
         return ordered
     }
 
-    // The constants this one has to have settled before it can be made.
+    // The constants this expression names, at whatever depth.
     //
-    // What an expression reads directly is most of it, and a closure is the
-    // rest: making one runs nothing, but it freezes the scope it was made in,
-    // so a sibling its body reads has to be in there by then. Read as no
-    // dependency, the same module answers differently depending on what its
-    // constants happen to be called — a closure sorted before the constant it
-    // reads froze a scope without it and answered null, quietly.
-    //
-    // Only names that are constants come back. Inside a closure the rest are
-    // its own, a parameter or a name one of its statements fixes, and a
-    // parameter that happens to share a constant's name only settles that
-    // constant sooner than it had to.
-    // Walked here rather than gathered off `buried`, which is the one walk
-    // everything else that has to see all of an expression uses. That walk
-    // flattens, and flattening is what this question cannot afford: a name
-    // means the constant only where nothing nearer introduced it, so where the
-    // walk is matters and a flat list has thrown that away. Asked flat, a
-    // closure whose parameter happens to share a constant's name reads as a
-    // mention of the constant, and two of those name each other in a circle
-    // that nobody wrote.
-    private func depends(_ expression: Expression, on constants: Set<String>) -> Set<String> {
-        switch expression {
-        case .literal:
-            return []
-
-        case let .reference(path):
-            return Set(path.expandingIndexReferences.compactMap(\.head))
-                .intersection(constants)
-
-        case let .closure(procedure):
-            // Everything the closure introduces stops being a mention of a
-            // constant inside it: its parameters, and the names its statements
-            // fix. What is left is what its body reads from around it, which
-            // is what the capture has to have by the time the closure is made.
-            return depends(
-                procedure.block,
-                on: constants
-                    .subtracting(procedure.signature.parameters.keys)
-                    .subtracting(procedure.body.compactMap(\.id))
-            )
-
-        case let .array(array):
-            return depends(array, on: constants)
-
-        case let .record(record):
-            return depends(Array(record.values), on: constants)
-
-        case let .cast(value, _, _):
-            return depends(value, on: constants)
-
-        case let .leave(leave):
-            return leave.value.map { value in depends(value, on: constants) } ?? []
-
-        case let .invoke(callee, arguments):
-            return depends(callee, on: constants)
-                .union(depends(Array(arguments.values), on: constants))
-
-        case let .dispatch(dispatch):
-            return (dispatch.receiver.map { one in depends(one, on: constants) } ?? [])
-                .union(depends(Array(dispatch.arguments.values), on: constants))
-
-        case let .block(block):
-            return depends(block, on: constants)
-
-        case let .conditional(condition, then, otherwise):
-            return depends(condition, on: constants)
-                .union(depends(then, on: constants))
-                .union(depends(otherwise ?? [], on: constants))
-
-        // The three that name what they hand their body, each introducing that
-        // one name the way a closure introduces its parameters.
-        case let .loop(condition, body, round):
-            return depends(condition, on: constants)
-                .union(depends(body, on: constants.subtracting([round])))
-
-        case let .iteration(material, body, element):
-            return depends(material, on: constants)
-                .union(depends(body, on: constants.subtracting([element])))
-
-        case let .attempt(block, rescue, failure):
-            return depends(block, on: constants)
-                .union(depends(rescue, on: constants.subtracting([failure])))
-        }
-    }
-
-    private func depends(_ expressions: [Expression], on constants: Set<String>) -> Set<String> {
-        expressions.reduce(into: Set<String>()) { names, expression in
-            names.formUnion(depends(expression, on: constants))
-        }
-    }
-
-    private func depends(_ statements: [Statement], on constants: Set<String>) -> Set<String> {
-        depends(statements.map(\.expression), on: constants)
-    }
-
-    private func depends(_ block: Block?, on constants: Set<String>) -> Set<String> {
-        guard let block else { return [] }
-
-        return depends(block.body, on: constants)
-            .union(block.result.map { result in depends(result, on: constants) } ?? [])
-    }
-
-    // What an expression reads from the scope around it, which for a constant
-    // is the constants declared beside it. A closure's body is not read here:
-    // what it holds is a dependency rather than something this constant reads,
-    // and `depends(_:on:)` is the question that gathers it.
+    // Flat, because nothing in here can mean anything but a constant: a body
+    // may not introduce a name the module bound, so no scope between a mention
+    // and this one can have taken the spelling. A closure's body is walked with
+    // the rest — making one captures the scope it was written in, so a sibling
+    // it reads has to be settled by then.
     private func heads(of expression: Expression) -> Set<String> {
+        expression.buried.reduce(into: Set<String>()) { names, held in
+            guard case let .reference(path) = held else { return }
+
+            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+        }
+    }
+
+    // The names this constant reads where it is written, which are the
+    // constants declared beside it.
+    //
+    // A closure holds a scope of its own, and which of the names its body reads
+    // are declared is that scope's question rather than this one's. Nothing
+    // that runs a body can be a constant, so the arms that hold one are here
+    // only for a module a caller assembled without validating it.
+    private func mentions(of expression: Expression) -> Set<String> {
         switch expression {
         case .literal, .closure:
             return []
 
         case let .leave(leave):
-            return leave.value.map(heads(of:)) ?? []
+            return leave.value.map(mentions(of:)) ?? []
 
         case let .reference(path):
             return Set(path.expandingIndexReferences.compactMap(\.head))
 
         case let .cast(value, _, _):
-            return heads(of: value)
+            return mentions(of: value)
 
         case let .array(array):
             return array.reduce(into: Set()) { names, element in
-                names.formUnion(heads(of: element))
+                names.formUnion(mentions(of: element))
             }
 
         case let .record(record):
             return record.values.reduce(into: Set()) { names, field in
-                names.formUnion(heads(of: field))
+                names.formUnion(mentions(of: field))
             }
 
         case let .invoke(callee, arguments):
-            return arguments.values.reduce(into: heads(of: callee)) { names, argument in
-                names.formUnion(heads(of: argument))
+            return arguments.values.reduce(into: mentions(of: callee)) { names, argument in
+                names.formUnion(mentions(of: argument))
             }
 
         case let .dispatch(dispatch):
             return dispatch.arguments.values.reduce(
-                into: dispatch.receiver.map(heads(of:)) ?? []
+                into: dispatch.receiver.map(mentions(of:)) ?? []
             ) { names, argument in
-                names.formUnion(heads(of: argument))
+                names.formUnion(mentions(of: argument))
             }
 
-        // A constant sees no scope, so nothing that runs a body can be one.
-        // What a link does not trust is which names a module wrote, and this
-        // is not one of those: a shape no constant may take is refused by the
-        // validator on the way in, and one that reached here unvalidated is
-        // refused by the resolver, which has no reading for it either. Reading
-        // names out of a body that will never run would be answering for a
-        // shape nothing downstream can hold.
         case .block, .conditional, .loop, .iteration, .attempt:
             return []
         }

@@ -17,6 +17,107 @@ struct ValidationTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
+    @Test("a name the module bound is not introduced again at any depth")
+    func aBoundNameIsNotIntroducedAgainAtAnyDepth() {
+        // Given — linking folds a constant wherever its name is read, so a name
+        // introduced under that spelling would never be the one that answers.
+        // The rule is the whole body's: a sub scope is where a reader is least
+        // able to see that the name was already taken.
+        func module(introducing statement: Statement) -> Module {
+            Module(
+                name: "app",
+                constants: ["limit": .literal(.int(3))],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "got",
+                                expression: .block(Block(
+                                    body: [statement],
+                                    result: reference("limit")
+                                ))
+                            )
+                        ],
+                        result: reference("got")
+                    )
+                ]
+            )
+        }
+
+        // When / Then
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(
+                module(introducing: Statement(id: "limit", expression: .literal(.int(9))))
+            )
+        }
+    }
+
+    @Test("nor by the name a construct hands its body")
+    func aBoundNameIsNotWhatAConstructHandsItsBody() {
+        // Given — the same rule where the name is the language's to introduce
+        // rather than a statement's: a walk's element, a loop's round, and the
+        // failure an attempt rescues.
+        func module(running expression: Warp.Expression) -> Module {
+            Module(
+                name: "app",
+                constants: ["limit": .literal(.int(3))],
+                procedures: [
+                    entryName: Procedure(
+                        body: [Statement(id: "got", expression: expression)],
+                        result: reference("limit")
+                    )
+                ]
+            )
+        }
+
+        let body = Block(body: [Statement(expression: .literal(.null))])
+
+        // When / Then
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(running: .iteration(over: .array([]), body: body.body, element: "limit")))
+        }
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body, round: "limit")))
+        }
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(running: .attempt(body, rescue: body, failure: "limit")))
+        }
+    }
+
+    @Test("nor inside a closure a constant holds")
+    func aBoundNameIsNotIntroducedInsideAConstantsClosure() {
+        // Given — a constant's own expression is a body like any other. Read
+        // without this rule, a closure among the constants may introduce a name
+        // one of its siblings has, and what that name means then depends on
+        // which of the two the reader is standing in.
+        func module(_ procedure: Procedure) -> Module {
+            Module(
+                name: "app",
+                constants: [
+                    "apply": .closure(procedure),
+                    "limit": .literal(.int(3))
+                ],
+                procedures: [entryName: Procedure(body: [])]
+            )
+        }
+
+        // When / Then — the two ways a closure introduces a name of its own
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(Procedure(
+                signature: Signature(parameters: ["limit": Parameter(type: .int)], returns: .int),
+                body: [],
+                result: reference("limit")
+            )))
+        }
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(Procedure(
+                signature: Signature(returns: .int),
+                body: [Statement(id: "limit", expression: .literal(.int(9)))],
+                result: reference("limit")
+            )))
+        }
+    }
+
     @Test("a construct in a call's operand is refused at the check")
     func aConstructInACallOperandIsRefused() {
         // Given — a document cannot even write one there, and the run would

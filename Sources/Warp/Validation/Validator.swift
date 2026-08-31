@@ -61,7 +61,12 @@ public struct Validator: Sendable {
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { $0.key < $1.key }) {
             try normal(name, at: .constant(name, in: .of(module)))
-            try validate(expression, visible: constants, at: .constant(name, in: .of(module)))
+            try validate(
+                expression,
+                visible: constants,
+                surroundings: .procedure(constants: constants),
+                at: .constant(name, in: .of(module))
+            )
         }
 
         for name in module.procedures.keys.sorted() {
@@ -88,28 +93,19 @@ public struct Validator: Sendable {
         let parameters = Set(procedure.signature.parameters.keys)
 
         for parameter in parameters.sorted() {
-            try normal(parameter, at: place.slot(.parameters).key(parameter))
-        }
-        let colliding = parameters.intersection(constants).sorted()
-
-        guard colliding.isEmpty else {
-            throw ValidationError(
-                "\(colliding.joined(separator: ", ")) collides with a name"
-                    + " the module bound, which it would take the place of",
-                at: place.slot(.parameters)
+            try introduced(
+                parameter,
+                beside: constants,
+                at: place.slot(.parameters).key(parameter)
             )
         }
 
-        // A constant is declared, not merely visible: linking folds a reference
-        // to one into the value it holds, so a statement that reintroduced the
-        // name would leave two readings of the same spelling and only one of
-        // them true.
         guard let block = procedure.block else { return }
 
         try validate(
             block,
             visible: constants.union(parameters),
-            declared: parameters.union(constants),
+            declared: parameters,
             surroundings: .procedure(constants: constants),
             at: place
         )
@@ -150,7 +146,7 @@ public struct Validator: Sendable {
                     throw ValidationError("statement with empty id", at: here)
                 }
 
-                try normal(id, at: here)
+                try introduced(id, beside: surroundings.constants, at: here)
 
                 // The leave rules reach through structure, because the fact
                 // does: every way through a leaving statement leaves, so its
@@ -357,20 +353,10 @@ public struct Validator: Sendable {
             // The same rule the top-level signature gets — a closure's
             // parameter is a name a body reads, wherever the signature sits.
             for parameter in parameters.sorted() {
-                try normal(parameter, at: inside.slot(.parameters).key(parameter))
-            }
-
-            // And the same collision rule: linking folds a constant wherever
-            // its name is read, so a parameter under that name would never be
-            // the one that answers — inside a closure as much as at the top.
-            let colliding = parameters.intersection(surroundings.constants).sorted()
-
-            guard colliding.isEmpty else {
-                throw ValidationError(
-                    "parameters \(colliding.joined(separator: ", "))"
-                        + " collides with a name the module bound, which it"
-                        + " would take the place of",
-                    at: inside
+                try introduced(
+                    parameter,
+                    beside: surroundings.constants,
+                    at: inside.slot(.parameters).key(parameter)
                 )
             }
 
@@ -441,7 +427,7 @@ public struct Validator: Sendable {
         // The round state is bound before the condition is asked, which is what
         // lets `where` read how many rounds have passed.
         case let .loop(condition, body, round):
-            try normal(round, at: place)
+            try introduced(round, beside: surroundings.constants, at: place)
 
             let inner = visible.union([round])
 
@@ -462,7 +448,7 @@ public struct Validator: Sendable {
             )
 
         case let .iteration(material, body, element):
-            try normal(element, at: place)
+            try introduced(element, beside: surroundings.constants, at: place)
 
             try validate(
                 material,
@@ -481,7 +467,7 @@ public struct Validator: Sendable {
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
-            try normal(failure, at: place)
+            try introduced(failure, beside: surroundings.constants, at: place)
 
             try validate(
                 block,
@@ -705,6 +691,29 @@ public struct Validator: Sendable {
                 at: place
             )
         }
+    }
+
+    // A name a body introduces: a parameter, a statement's id, or the one a
+    // construct hands its body. Every such name passes here, so the module's
+    // bound names are checked at whatever depth the name appears — a sub scope
+    // is where a reader is least able to see that the spelling was taken.
+    //
+    // Linking folds a constant wherever its name is read, so a name introduced
+    // under that spelling would never be the one that answers.
+    private func introduced(
+        _ name: String,
+        beside constants: Set<String>,
+        at place: Place
+    ) throws {
+        try normal(name, at: place)
+
+        guard constants.contains(name) else { return }
+
+        throw ValidationError(
+            "'\(name)' collides with a name the module bound, which it would"
+                + " take the place of",
+            at: place
+        )
     }
 }
 

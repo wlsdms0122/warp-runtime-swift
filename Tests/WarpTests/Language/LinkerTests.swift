@@ -297,14 +297,12 @@ struct LinkerTests {
         #expect(last == .int(3))
     }
 
-    @Test("a name a closure introduces is not a mention of the constant sharing it")
-    func aClosuresOwnNamesAreNotSiblings() async throws {
-        // Given — what a closure body reads from around it settles before the
-        // closure is made, so reading the body is part of ordering constants.
-        // Read without the scopes in it, a parameter called `zebra` and a
-        // statement called `zebra` both look like mentions of the constant
-        // `zebra`, which reads `apply` back — and two constants that name each
-        // other are refused. Nobody wrote a circle here.
+    @Test("a closure a constant holds may not introduce a sibling's name")
+    func aClosureConstantMayNotShadowASibling() async throws {
+        // Given — the rule a body is held to at load, met here from the caller's
+        // side. Neither shape links, and both are the same mistake: a name the
+        // module bound, introduced again where it would take the constant's
+        // place.
         func module(introducing statement: Statement?) -> Module {
             Module(
                 name: "app",
@@ -319,36 +317,96 @@ struct LinkerTests {
                         body: statement.map { one in [one] } ?? [],
                         result: reference("zebra")
                     )),
-                    "zebra": reference("apply")
+                    "zebra": .literal(.int(7))
                 ],
-                procedures: [
-                    entryName: Procedure(
-                        body: [
-                            Statement(
-                                id: "got",
-                                expression: .invoke(
-                                    reference("zebra"),
-                                    arguments: statement == nil
-                                        ? ["zebra": .literal(.int(7))]
-                                        : [:]
-                                )
-                            )
-                        ],
-                        result: reference("got")
-                    )
-                ]
+                procedures: [entryName: Procedure(body: [])]
             )
         }
 
-        // When — the two ways a closure introduces a name of its own
-        let parameter = try await run(module(introducing: nil))
-        let fixed = try await run(
-            module(introducing: Statement(id: "zebra", expression: .literal(.int(7))))
+        // When / Then — the two ways a closure introduces a name of its own
+        for introduced in [nil, Statement(id: "zebra", expression: .literal(.int(7)))] {
+            await #expect(throws: ValidationError.self) {
+                try await run(module(introducing: introduced))
+            }
+        }
+    }
+
+    @Test("a closure reading a constant from inside a block still has it")
+    func aClosureReadsASiblingFromInsideABlock() async throws {
+        // Given — how deep in the closure the name is read makes no difference
+        // to when it has to be settled: the capture happens once, when the
+        // closure is made. The spelling puts the closure first in name order,
+        // which is the order it would settle in if nothing said otherwise.
+        let sut = Module(
+            name: "app",
+            constants: [
+                "apply": .closure(Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            id: "got",
+                            expression: .block(Block(body: [], result: reference("zebra")))
+                        )
+                    ],
+                    result: reference("got")
+                )),
+                "zebra": .literal(.int(7))
+            ],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "got",
+                            expression: .invoke(reference("apply"), arguments: [:])
+                        )
+                    ],
+                    result: reference("got")
+                )
+            ]
         )
 
+        // When
+        let answer = try await run(sut)
+
         // Then
-        #expect(parameter == .int(7))
-        #expect(fixed == .int(7))
+        #expect(answer == .int(7))
+    }
+
+    @Test("a closure a constant holds inside a record reads the constants beside it")
+    func aClosureInsideARecordCapturesItsSiblings() async throws {
+        // Given — what captures is the closure and not the constant holding it,
+        // so a closure nested in a record has the same demand on the order as
+        // one written on its own.
+        let sut = Module(
+            name: "app",
+            constants: [
+                "apply": .record([
+                    "run": .closure(Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: reference("zebra")
+                    ))
+                ]),
+                "zebra": .literal(.int(3))
+            ],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "got",
+                            expression: .invoke(reference("apply", "run"), arguments: [:])
+                        )
+                    ],
+                    result: reference("got")
+                )
+            ]
+        )
+
+        // When
+        let answer = try await run(sut)
+
+        // Then
+        #expect(answer == .int(3))
     }
 
     @Test("a constant may reach a word the same way a body does")
