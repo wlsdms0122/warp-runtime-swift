@@ -31,7 +31,11 @@ public struct ReturnForm: ConstructForm {
 
         // Nothing written answers with nothing. A procedure always answers
         // something, so this is `null` rather than a procedure that does not.
-        self.value = written == .null ? nil : try ExpressionReader.read(written, in: decoder)
+        // Through the reader and not around it: what a form refuses with is a
+        // refusal about a document, and only the `Decodable` boundary turns an
+        // expression's own into one. Reading the value here to see whether
+        // anything was written is not that boundary.
+        self.value = written == .null ? nil : try ExpressionReader(from: decoder).expression
     }
 
     // MARK: - Public

@@ -221,7 +221,15 @@ public struct Loader: Sendable {
                 ]
             ))
         } catch let error as DecodingError {
-            throw ReadingError(error, in: document)
+            throw ReadingError(error, in: document, reading: value)
+        } catch let refusal as any WarpError where refusal.place == nil {
+            // A reader that refused in its own words rather than decoding's.
+            // The sentence is already right and the address is not there to be
+            // had — what the walk had reached is decoding's to say, and this
+            // did not come through it — so the document is what can be added
+            // and this adds it rather than letting the one refusal that says
+            // nowhere leave by the door that promises otherwise.
+            throw ReadingError(refusal.message, at: Place(in: document))
         }
     }
 }

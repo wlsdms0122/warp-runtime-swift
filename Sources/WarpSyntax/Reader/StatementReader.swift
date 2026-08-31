@@ -44,6 +44,25 @@ public struct StatementReader: Decodable {
     // MARK: - Property
     public let statement: Statement
 
+    // What a statement written in a document is called, read off the data.
+    //
+    // A place naming a statement is assembled where the reading failed, so
+    // there is no `Statement` to ask — and the three spellings a name is
+    // written in are this reader's, so nobody else has to keep a copy of them.
+    // A statement wearing two of them is refused, and until it is refused it is
+    // called nothing.
+    static func name(of value: Value) -> String? {
+        guard case let .object(fields) = value else { return nil }
+
+        let written = EnvelopeKeys.allCases.compactMap { key -> String? in
+            guard case let .string(name)? = fields[key.stringValue] else { return nil }
+
+            return name
+        }
+
+        return written.count == 1 ? written.first : nil
+    }
+
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
         guard let registry = decoder.userInfo[.constructRegistry] as? ConstructRegistry else {

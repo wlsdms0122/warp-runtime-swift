@@ -43,7 +43,9 @@ struct ReadingErrorTests {
     @Test("the steps of a reading's refusal are the document's own keys")
     func aReadingWalksTheDocumentsKeys() throws {
         // Given — the address decoding reached, spelled the way every other
-        // stage spells one, so an author follows the same words either way
+        // stage spells one, so an author follows the same words either way: a
+        // statement wears the name it wrote, which is what validation and the
+        // link call it
         let fixture: Value = [
             "warp": 1,
             "needs": [],
@@ -57,7 +59,50 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body[0]")
+        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body.broken[0]")
+    }
+
+    @Test("a declared name that reads as a number is a key and not a position")
+    func aNumericNameIsAKey() throws {
+        // Given — a coding key made for a dictionary carries the number its
+        // spelling parses to, and `procedures[12]` is an address no document
+        // has: what the document holds where the walk is settles which it is
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["12": ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/procedures.12.body.broken[0]")
+    }
+
+    @Test("a form that refuses in its own words still says which document")
+    func aFormsOwnRefusalIsPlaced() throws {
+        // Given — a form reading an expression refuses with the expression
+        // reader's own error, which carries no place of its own. It leaves
+        // through the door that says every reading is placed, so it is.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [["return": ["ref": [1]]]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: identity)
+        }
+
+        // Then
+        #expect(error?.place?.document.identity == identity)
+        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body[0].return")
     }
 
     @Test("a document refused for the list it does not write is refused about itself")
