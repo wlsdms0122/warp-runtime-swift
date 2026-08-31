@@ -386,17 +386,14 @@ public struct Linker: Sendable {
 
         for module in modules {
             guard let identity = module.identity else { continue }
-            guard held.contains(identity) else {
-                held.insert(identity)
-                continue
+            guard held.insert(identity).inserted else {
+                throw LinkError(
+                    "this document was handed to the link twice — a link states"
+                        + " its whole world once, so a document already in it is"
+                        + " not something to add",
+                    at: Place(in: .of(module))
+                )
             }
-
-            throw LinkError(
-                "this document was handed to the link twice — a link states its"
-                    + " whole world once, so a document already in it is not"
-                    + " something to add",
-                at: Place(in: .of(module))
-            )
         }
     }
 
@@ -1425,7 +1422,7 @@ public struct Linker: Sendable {
             //
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
-            for read in mentions(of: expression).sorted() where constants[read] == nil {
+            for read in reads(of: expression).sorted() where constants[read] == nil {
                 throw LinkError(
                     "constant '\(name)' reads '\(read)', and a constant sees nothing"
                         + " but the constants declared beside it",
@@ -1433,7 +1430,7 @@ public struct Linker: Sendable {
                 )
             }
 
-            for read in heads(of: expression).intersection(constants.keys).sorted() {
+            for read in mentions(of: expression).intersection(constants.keys).sorted() {
                 // Intersected with these keys, so the walk cannot be sent to a
                 // name that is not one of them.
                 try place(read, reading: constants[read]!)
@@ -1451,14 +1448,14 @@ public struct Linker: Sendable {
         return ordered
     }
 
-    // The constants this expression names, at whatever depth.
+    // Every constant this expression names, at whatever depth.
     //
     // Flat, because nothing in here can mean anything but a constant: a body
     // may not introduce a name the module bound, so no scope between a mention
     // and this one can have taken the spelling. A closure's body is walked with
     // the rest — making one captures the scope it was written in, so a sibling
     // it reads has to be settled by then.
-    private func heads(of expression: Expression) -> Set<String> {
+    private func mentions(of expression: Expression) -> Set<String> {
         expression.buried.reduce(into: Set<String>()) { names, held in
             guard case let .reference(path) = held else { return }
 
@@ -1470,43 +1467,44 @@ public struct Linker: Sendable {
     // constants declared beside it.
     //
     // A closure holds a scope of its own, and which of the names its body reads
-    // are declared is that scope's question rather than this one's. Nothing
+    // are declared is that scope's question rather than this one's — `mentions`
+    // is the one that goes in. Nothing
     // that runs a body can be a constant, so the arms that hold one are here
     // only for a module a caller assembled without validating it.
-    private func mentions(of expression: Expression) -> Set<String> {
+    private func reads(of expression: Expression) -> Set<String> {
         switch expression {
         case .literal, .closure:
             return []
 
         case let .leave(leave):
-            return leave.value.map(mentions(of:)) ?? []
+            return leave.value.map(reads(of:)) ?? []
 
         case let .reference(path):
             return Set(path.expandingIndexReferences.compactMap(\.head))
 
         case let .cast(value, _, _):
-            return mentions(of: value)
+            return reads(of: value)
 
         case let .array(array):
             return array.reduce(into: Set()) { names, element in
-                names.formUnion(mentions(of: element))
+                names.formUnion(reads(of: element))
             }
 
         case let .record(record):
             return record.values.reduce(into: Set()) { names, field in
-                names.formUnion(mentions(of: field))
+                names.formUnion(reads(of: field))
             }
 
         case let .invoke(callee, arguments):
-            return arguments.values.reduce(into: mentions(of: callee)) { names, argument in
-                names.formUnion(mentions(of: argument))
+            return arguments.values.reduce(into: reads(of: callee)) { names, argument in
+                names.formUnion(reads(of: argument))
             }
 
         case let .dispatch(dispatch):
             return dispatch.arguments.values.reduce(
-                into: dispatch.receiver.map(mentions(of:)) ?? []
+                into: dispatch.receiver.map(reads(of:)) ?? []
             ) { names, argument in
-                names.formUnion(mentions(of: argument))
+                names.formUnion(reads(of: argument))
             }
 
         case .block, .conditional, .loop, .iteration, .attempt:

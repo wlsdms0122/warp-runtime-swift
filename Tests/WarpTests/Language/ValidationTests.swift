@@ -52,6 +52,31 @@ struct ValidationTests {
         }
     }
 
+    @Test("but writing one is refused for what it is, not for introducing a name")
+    func writingABoundNameIsRefusedAsAWrite() {
+        // Given — an assignment names a name rather than introducing one, and
+        // the two mistakes have different fixes: one is to pick another
+        // spelling, the other is to declare a variable.
+        let sut = Module(
+            name: "app",
+            constants: ["limit": .literal(.int(3))],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(id: "limit", binding: .assignment, expression: .literal(.int(9)))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        let error = #expect(throws: ValidationError.self) {
+            try Validator().validate(sut)
+        }
+
+        #expect(error?.message.contains("declare it as a variable to write it") == true)
+    }
+
     @Test("nor by the name a construct hands its body")
     func aBoundNameIsNotWhatAConstructHandsItsBody() {
         // Given — the same rule where the name is the language's to introduce

@@ -146,7 +146,13 @@ public struct Validator: Sendable {
                     throw ValidationError("statement with empty id", at: here)
                 }
 
-                try introduced(id, beside: surroundings.constants, at: here)
+                // An assignment names a name rather than introducing one, so
+                // what it may write is the assignment rule's to answer below.
+                if case .assignment = statement.binding {
+                    try normal(id, at: here)
+                } else {
+                    try introduced(id, beside: surroundings.constants, at: here)
+                }
 
                 // The leave rules reach through structure, because the fact
                 // does: every way through a leaving statement leaves, so its
