@@ -21,8 +21,8 @@ public struct Module: Sendable {
     // declaring `plus` declares `std.math.plus` — and a module without one
     // declares into the shared space under the bare names. The description is
     // metadata only.
-    public private(set) var name: String?
-    public private(set) var description: String?
+    public let name: String?
+    public let description: String?
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in

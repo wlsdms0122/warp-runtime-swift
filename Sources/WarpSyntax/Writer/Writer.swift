@@ -117,7 +117,7 @@ public struct Writer: Sendable {
         // refuses a bound it meets, so a bound can neither be written twice
         // nor quietly dropped.
         written.merge(try fields(of: stripped(procedure.signature))) { one, _ in one }
-        written.merge(try fields(of: block)) { one, _ in one }
+        written.merge(try fields(of: block, in: nil)) { one, _ in one }
 
         if let bounds = try bounds(of: procedure.signature) {
             written["bounds"] = bounds
