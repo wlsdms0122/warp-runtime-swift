@@ -39,17 +39,19 @@ public struct KeyGate {
             .filter { key in !known.contains(key) }
             .sorted()
 
-        // The address is one of the keys and not the thing holding them. A
-        // reader shown where the object starts has to find the offending key
-        // themselves, and this is the one refusal that already knows which key
-        // it is. The first by name, since the sentence names the rest.
         guard let first = unknown.first else { return }
+
+        // Standing on the key that is turned away, which is where the refusal
+        // is about. A reader shown the thing holding the keys has to find the
+        // offending one themselves, and this refusal knows which it is. The
+        // first by name, since the sentence names the rest.
+        let written = try container.superDecoder(forKey: AnyCodingKey(stringValue: first))
 
         throw ReadingError(
             "\(context): unknown key(s)"
                 + " \(unknown.joined(separator: ", "))"
                 + " — known keys: \(known.sorted().joined(separator: ", "))",
-            at: decoder.steps + [.key(first)]
+            at: written.steps
         )
     }
 

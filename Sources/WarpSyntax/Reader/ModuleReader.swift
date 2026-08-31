@@ -32,17 +32,7 @@ public struct ModuleReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        // The version first, and through its own container, because everything
-        // after it is read by rules a newer document may not be written to —
-        // including which keys exist. A later version adding a key would
-        // otherwise be turned away as malformed, and a reader has to tell "I am
-        // too old for this" (upgrade me) from "this is wrong" (fix the sender).
-        try Self.check(
-            version: try decoder
-                .container(keyedBy: AnyCodingKey.self)
-                .decodeIfPresent(Int.self, forKey: AnyCodingKey(stringValue: Envelope.versionKey)),
-            at: decoder.steps
-        )
+        try Self.checkVersion(in: decoder)
 
         try KeyGate().rejectUnknownKeys(
             in: decoder,
@@ -52,13 +42,18 @@ public struct ModuleReader: Decodable {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        let procedures = try container.decode([String: ProcedureReader].self, forKey: .procedures)
+        // Read standing on the procedures rather than on the module holding
+        // them, because what is refused just below is about the procedures. A
+        // reading is addressed where it is, so being where the answer is is
+        // the whole of what puts an author on the right line.
+        let written = try container.superDecoder(forKey: .procedures)
+        let procedures = try written.read([String: ProcedureReader].self)
 
         guard !procedures.isEmpty else {
             throw ReadingError(
                 "a module that declares nothing can never be"
                     + " linked into anything — write at least one procedure",
-                at: decoder.steps + [.key(CodingKeys.procedures.stringValue)]
+                at: written.steps
             )
         }
 
@@ -81,14 +76,16 @@ public struct ModuleReader: Decodable {
         // reads it to decide whether to run the program at all, so a list that
         // was allowed to drift would be worse than none — it would be trusted
         // and wrong.
-        if let claimed = try container.decodeIfPresent([String].self, forKey: .needs) {
+        if container.contains(.needs), try !container.decodeNil(forKey: .needs) {
+            let listed = try container.superDecoder(forKey: .needs)
+            let claimed = try listed.read([String].self)
             let sent = Envelope.needs(of: module)
 
             guard Set(claimed) == sent else {
                 throw ReadingError(
                     "this document says it needs"
                         + " \(claimed.sorted()) and sends \(sent.sorted())",
-                    at: decoder.steps + [.key(CodingKeys.needs.stringValue)]
+                    at: listed.steps
                 )
             }
         }
@@ -132,26 +129,38 @@ public struct ModuleReader: Decodable {
     //
     // Anything outside the range this reader knows is refused rather than guessed
     // at — below it, the document is claiming a language that never existed.
-    private static func check(version: Int?, at steps: [Place.Step]) throws {
-        // About the document and not about a key in it: what is missing is the
-        // one thing that would have made this a document, and there is nothing
-        // written here to point at.
-        guard let version else {
+    // Read through its own container, before anything else and before the keys
+    // are judged, because everything after it is read by rules a newer document
+    // may not be written to — including which keys exist. A later version adding
+    // a key would otherwise be turned away as malformed, and a reader has to
+    // tell "I am too old for this" (upgrade me) from "this is wrong" (fix the
+    // sender).
+    private static func checkVersion(in decoder: Decoder) throws {
+        let envelope = try decoder.container(keyedBy: AnyCodingKey.self)
+        let key = AnyCodingKey(stringValue: Envelope.versionKey)
+
+        // About the document and not about anything in it: what is missing is
+        // the one thing that would have made this a document, and there is
+        // nothing written here to stand on.
+        guard envelope.contains(key), try !envelope.decodeNil(forKey: key) else {
             throw ReadingError(
                 "this is not a warp document — it does not say"
                     + " which warp it is written for (`\(Envelope.versionKey)`)",
-                at: steps
+                at: decoder.steps
             )
         }
 
-        // The key is written, so the refusal is about the key. Pointing at the
-        // document instead would put the answer at its first character, which
-        // is a line the author has no reason to look at.
+        // The rest is about the word that is written, so it is read standing on
+        // it. Refusing from out here would put the answer at the document's
+        // first character, which is a line the author has no reason to look at.
+        let written = try envelope.superDecoder(forKey: key)
+        let version = try written.read(Int.self)
+
         guard (Envelope.earliest ... Envelope.version).contains(version) else {
             throw ReadingError(
                 "this document is written for warp \(version),"
                     + " and this reads \(Envelope.earliest) through \(Envelope.version)",
-                at: steps + [.key(Envelope.versionKey)]
+                at: written.steps
             )
         }
     }

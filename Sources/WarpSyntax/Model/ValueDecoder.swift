@@ -375,4 +375,23 @@ extension Decoder {
     // where the reading is not this package's, which is the honest answer for a
     // decoder whose descent nobody here watched.
     var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }
+
+    // Read what is written here, standing on it.
+    //
+    // For a reader that has to judge a value after reading it: what is judged
+    // and what is refused are then one place, and the address is where the
+    // reading is rather than a key the guard below remembered to name. An
+    // address assembled from a remembered key is a second answer to a question
+    // the walk already answers, and the two go apart the first time a reader
+    // is written that forgets to assemble one.
+    //
+    // The boundary is not a second one. This is the same door
+    // `ValueDecoder.decode` is, reached from a decoder handed over as the
+    // protocol — and where the decoder is somebody else's there is no door of
+    // ours to go through.
+    func read<T: Decodable>(_ type: T.Type) throws -> T {
+        guard let decoder = self as? ValueDecoder else { return try T(from: self) }
+
+        return try decoder.decode(type)
+    }
 }
