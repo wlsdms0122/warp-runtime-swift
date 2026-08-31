@@ -37,7 +37,7 @@ public extension WarpError {
         // A place in no document at no step says nothing and says so, which is
         // what a fragment a caller assembled has, and then the sentence is the
         // whole answer.
-        guard let whereabouts = trace?.rendered ?? place?.rendered ?? nil else {
+        guard let whereabouts = trace?.rendered ?? place.flatMap(\.rendered) else {
             return message
         }
 

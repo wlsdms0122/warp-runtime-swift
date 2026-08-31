@@ -394,4 +394,23 @@ extension Decoder {
 
         return try decoder.decode(type)
     }
+
+    // A record of readers, read in the order the names sort in.
+    //
+    // `Dictionary` reads its keys in hash order, and the seed for that changes
+    // from one process to the next. Two entries that are both wrong would then
+    // be refused in either order, and the one line an author is given would not
+    // be the same line twice — which is the whole of what an address is for.
+    // Sorted rather than as-written because a document is a value by then and a
+    // value's record has no order to have kept.
+    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+        let container = try container(keyedBy: AnyCodingKey.self)
+
+        return try container.allKeys
+            .map(\.stringValue)
+            .sorted()
+            .reduce(into: [String: T]()) { read, key in
+                read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
+            }
+    }
 }

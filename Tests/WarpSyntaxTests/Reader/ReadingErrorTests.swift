@@ -303,6 +303,31 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "wallet/procedures.entry.body.held[0].value.second")
     }
 
+    @Test("a record with two things wrong refuses the same one every time")
+    func aRecordRefusesInNameOrder() throws {
+        // Given — one line, and the same line twice. A record read in the
+        // order a dictionary hands its keys back is read in an order seeded
+        // afresh per process, so which of two bad fields an author is sent to
+        // would change between runs of the same reader on the same document.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [[
+                "id": "held",
+                "value": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]
+            ]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/procedures.entry.body.held[0].value.alpha")
+    }
+
     @Test("a document that writes its needs as nothing has not written them")
     func needsWrittenAsNothingIsNotADeclaration() throws {
         // Given — the door and the reader ask the same question of the same

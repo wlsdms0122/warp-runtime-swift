@@ -60,15 +60,12 @@ public struct ModuleReader: Decodable {
         let module = Module(
             name: try container.decodeIfPresent(String.self, forKey: .name),
             description: try container.decodeIfPresent(String.self, forKey: .description),
-            types: try container
-                .decodeIfPresent([String: TypeReader].self, forKey: .types)?
-                .mapValues(\.type) ?? [:],
-            constraints: try container
-                .decodeIfPresent([String: [TypeReader]].self, forKey: .constraints)?
-                .mapValues { members in members.map(\.type) } ?? [:],
-            constants: try container
-                .decodeIfPresent([String: ExpressionReader].self, forKey: .const)?
-                .mapValues(\.expression) ?? [:],
+            types: try Self.record(TypeReader.self, in: container, forKey: .types)
+                .mapValues(\.type),
+            constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
+                .mapValues { members in members.map(\.type) },
+            constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
+                .mapValues(\.expression),
             procedures: procedures.mapValues(\.procedure)
         )
 
@@ -121,6 +118,20 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Private
+    // One of the slots a module declares a record of things under, read
+    // standing on the slot so that what is refused inside it is addressed
+    // there. Nothing written is nothing declared, which is what an absent slot
+    // is and what a slot written as null says.
+    private static func record<T: Decodable>(
+        _ type: T.Type,
+        in container: KeyedDecodingContainer<CodingKeys>,
+        forKey key: CodingKeys
+    ) throws -> [String: T] {
+        guard container.contains(key), try !container.decodeNil(forKey: key) else { return [:] }
+
+        return try container.superDecoder(forKey: key).read([String: T].self)
+    }
+
     // A document says which language it is written for, and one that does not is
     // not a document. Reading silence as the earliest would mean guessing at the
     // one question that has to be answerable from the bytes alone — and it is

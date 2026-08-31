@@ -124,11 +124,16 @@ public struct ExpressionReader: Decodable {
 
         // No form key — an ordinary record of expressions.
         guard !formKeys.isEmpty else {
+            // In the order the names sort in, so that a record with two bad
+            // fields refuses the same one every run. What a document wrote is
+            // a value by now and a value's record kept no order of its own,
+            // and `Dictionary` hands its keys back in an order seeded afresh
+            // per process.
             return .record(
-                try object.reduce(into: [String: Expression]()) { fields, entry in
-                    fields[entry.key] = try read(
-                        entry.value,
-                        at: steps + [.key(entry.key)],
+                try object.keys.sorted().reduce(into: [String: Expression]()) { fields, key in
+                    fields[key] = try read(
+                        object[key] ?? .null,
+                        at: steps + [.key(key)],
                         in: decoder
                     )
                 }
@@ -196,7 +201,7 @@ public struct ExpressionReader: Decodable {
 
                     type = try TypeReader(from: ValueDecoder(
                         value: written,
-                        codingPath: decoder.codingPath,
+                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key)],
                         steps: steps + [.key(key)],
                         userInfo: decoder.userInfo
                     ))
@@ -232,7 +237,7 @@ public struct ExpressionReader: Decodable {
                 return .closure(
                     try ProcedureReader(from: ValueDecoder(
                         value: written,
-                        codingPath: decoder.codingPath,
+                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "closure")],
                         steps: steps + [.key("closure")],
                         userInfo: decoder.userInfo
                     ))
@@ -268,7 +273,7 @@ public struct ExpressionReader: Decodable {
                 // take a name from, and nothing in a message wants one.
                 return try CallForm(from: ValueDecoder(
                     value: written,
-                    codingPath: decoder.codingPath,
+                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "call")],
                     steps: steps + [.key("call")],
                     userInfo: decoder.userInfo
                 ))
@@ -334,10 +339,10 @@ public struct ExpressionReader: Decodable {
             bindings = [:]
 
         case let .object(withObject)?:
-            bindings = try withObject.reduce(into: [String: Expression]()) { bound, entry in
-                bound[entry.key] = try read(
-                    entry.value,
-                    at: steps + [.key("with"), .key(entry.key)],
+            bindings = try withObject.keys.sorted().reduce(into: [String: Expression]()) { bound, key in
+                bound[key] = try read(
+                    withObject[key] ?? .null,
+                    at: steps + [.key("with"), .key(key)],
                     in: decoder
                 )
             }

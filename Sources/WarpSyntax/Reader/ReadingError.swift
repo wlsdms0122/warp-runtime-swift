@@ -20,6 +20,15 @@ import Warp
 // Until a door says, there is no document and the place is nothing rather than
 // an empty one: a refusal that has not reached a door has not been told, and a
 // reader guessing would be answering the one question it was never given.
+//
+// Three readers say something about a place a refusal is already carrying, and
+// one rule is behind all three: a place only ever becomes more exact. What is
+// deeper wins over what is shallower, what was said wins over what is guessed,
+// and nothing anybody adds later can take an address back to where it was.
+// `read(in:)` keeps the first document it was told; `asked(at:)` keeps the
+// deeper of two addresses; `addressed(from:)` lets a caller spell its own part
+// better and never touches what is past it. Three questions, three guards, and
+// the fourth one that gets added answers to the same sentence.
 public struct ReadingError: WarpError {
     // MARK: - Property
     public let message: String
