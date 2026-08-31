@@ -23,7 +23,7 @@ struct LoadGateTests {
         let fixture: Value = ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(fixture)
         }
     }
@@ -45,7 +45,7 @@ struct LoadGateTests {
         ]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(fixture)
         }
     }
@@ -56,7 +56,7 @@ struct LoadGateTests {
         let fixture: Value = ["body": [["id": "broken", "value": "x", "fail": true]]]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(fixture)
         }
     }
@@ -114,7 +114,7 @@ struct LoadGateTests {
         ]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(fixture)
         }
     }
@@ -143,7 +143,7 @@ struct LoadGateTests {
         ]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(fixture)
         }
     }

@@ -82,19 +82,21 @@ public struct Place: Sendable, Equatable {
         // them, which is the case this exists to keep separate. Showing the
         // name and hiding what makes it unambiguous would put that case back
         // in front of the only reader who cannot check it.
-        switch (document.namespace, document.identity) {
-        case let (namespace?, identity?):
-            return "\(namespace)@\(identity.short)/" + address
-
-        case let (namespace?, nil):
-            return "\(namespace)/" + address
-
-        case let (nil, identity?):
-            return "\(identity.short)/" + address
-
-        case (nil, nil):
-            return address
+        let named = switch (document.namespace, document.identity) {
+        case let (namespace?, identity?): "\(namespace)@\(identity.short)"
+        case let (namespace?, nil): namespace
+        case let (nil, identity?): identity.short
+        case (nil, nil): ""
         }
+
+        // The slash separates the document from an address inside it, so it is
+        // written where there are both. What is refused about a document rather
+        // than about anything in it has no steps, and the document alone is the
+        // whole answer.
+        guard !named.isEmpty else { return address }
+        guard !address.isEmpty else { return named }
+
+        return "\(named)/\(address)"
     }
 
     // MARK: - Initializer

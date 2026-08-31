@@ -47,7 +47,7 @@ struct ModuleNotationTests {
         let fixture: Value = ["name": "legacy", "body": [["id": "done", "value": "end"]]]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadDocument(fixture)
         }
     }
@@ -58,7 +58,7 @@ struct ModuleNotationTests {
         let fixture: Value = ["name": "empty", "procedures": [:]]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadDocument(fixture)
         }
     }
@@ -74,7 +74,7 @@ struct ModuleNotationTests {
         ]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadDocument(fixture)
         }
     }

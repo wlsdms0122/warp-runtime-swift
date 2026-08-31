@@ -29,7 +29,7 @@ struct NotationGateTests {
     ])
     func malformedTypeIsRefused(written: String) {
         // Given / When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": ["subject": Value.string(written)],
                 "body": [["id": "done", "value": "end"]]
@@ -40,7 +40,7 @@ struct NotationGateTests {
     @Test("a body written as something other than a list is refused")
     func bodyMustBeAList() {
         // Given / When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": ["id": "done", "value": "end"]])
         }
     }
@@ -48,7 +48,7 @@ struct NotationGateTests {
     @Test("a statement written as something other than a record is refused")
     func statementMustBeARecord() {
         // Given / When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": ["done"]])
         }
     }
@@ -57,7 +57,7 @@ struct NotationGateTests {
     func unknownConstructIsRefused() {
         // Given / When / Then — the message names the words there are, because a
         // misspelling is the likeliest way to arrive here
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": [["id": "done", "brnach": [:]]]])
         }
     }
@@ -68,7 +68,9 @@ struct NotationGateTests {
         // a reader reached without one has no way to know what a word means
         let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], userInfo: [:])
 
-        // When / Then
+        // When / Then — read without going through a door, so what comes back is
+        // the decoding's own refusal: a place is put on one where a reading is
+        // asked for, and nothing here asked
         #expect(throws: DecodingError.self) {
             try StatementReader(from: decoder)
         }

@@ -101,6 +101,20 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Public
+    // What the document calls itself, without reading the document.
+    //
+    // A refusal from the reading says which document it is about, and the
+    // reading is the thing that failed — so the one key that answer needs is
+    // read here, where a module's keys are, rather than spelled a second time
+    // wherever the refusal is assembled.
+    public static func namespace(of value: Value) -> String? {
+        guard case let .object(fields) = value,
+            case let .string(name)? = fields[CodingKeys.name.stringValue]
+        else { return nil }
+
+        return name
+    }
+
     // MARK: - Private
     // A document says which language it is written for, and one that does not is
     // not a document. Reading silence as the earliest would mean guessing at the

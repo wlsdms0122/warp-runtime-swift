@@ -93,7 +93,7 @@ struct ExpressionFormTests {
     func ambiguousFormRecordRejected(fixture: Value) {
         // When / Then — a half-spelled form is an author mistake, not a record;
         // plain data carrying these keys must be quoted with { value: }
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             _ = try loader.expression(from: fixture)
         }
     }
@@ -107,7 +107,7 @@ struct ExpressionFormTests {
         ]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             _ = try loader.expression(from: fixture)
         }
     }

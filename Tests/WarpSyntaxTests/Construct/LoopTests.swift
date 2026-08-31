@@ -74,7 +74,7 @@ struct LoopTests {
         // Given — repetition carries no budget of its own: an author bounds a
         // loop with a counter and a word, and a receiver stops one with
         // cancellation. The key is gone rather than ignored.
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "body": [
                     [

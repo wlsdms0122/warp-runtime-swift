@@ -74,8 +74,17 @@ public struct Loader: Sendable {
     // it came from would refuse without ever being able to say where, and
     // nothing would have gone wrong loudly enough to notice.
     public func load(_ value: Value, identity: Identity?) throws -> Module {
-        let spelled = try spelled(value)
-        let module = identity.map(spelled.read(from:)) ?? spelled
+        // Which document every refusal from here is about, worked out before
+        // anything is read: what fails is the reading, and a reader that got
+        // far enough to fail may not have got far enough to say what it was
+        // reading.
+        let document = Place.Document(
+            identity: identity,
+            namespace: ModuleReader.namespace(of: value)
+        )
+
+        let read = try spelled(value, in: document)
+        let module = identity.map(read.read(from:)) ?? read
 
         // What a document needs is read before the program it belongs to, so a
         // caller decides whether to grant before it decides whether to link. A
@@ -90,13 +99,10 @@ public struct Loader: Sendable {
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
         guard case let .object(fields) = value, fields[Envelope.needsKey] != nil else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: [],
-                    debugDescription: "a document says what it needs, and this one"
-                        + " does not — write `\(Envelope.needsKey)`, empty where the"
-                        + " program sends nothing"
-                )
+            throw ReadingError(
+                "a document says what it needs, and this one does not —"
+                    + " write `\(Envelope.needsKey)`, empty where the program sends nothing",
+                at: Place(in: document)
             )
         }
 
@@ -131,15 +137,20 @@ public struct Loader: Sendable {
     // alone: a document claiming a language this reader is not is refused, and
     // that refusal is the version's whole job.
     public func canonical(_ value: Value) throws -> Value {
-        try Writer(registry: registry, readBy: .canonical).value(of: try spelled(stamped(value)))
+        try Writer(registry: registry, readBy: .canonical)
+            .value(of: try spelled(stamped(value), in: document(of: value)))
     }
 
     // One procedure, for a caller holding a procedure's worth of data rather than a
     // document. A module is how a *file* declares procedures; a caller that has
     // exactly one and already knows what to call it does not have to write an
     // envelope around it to say so.
+    //
+    // A fragment is in no document — what it will be part of is the caller's,
+    // and a refusal from here says so rather than naming a document it cannot
+    // know. The steps still lead to what was wrong inside what was handed in.
     public func procedure(from value: Value) throws -> Procedure {
-        let procedure = try read(ProcedureReader.self, from: value).procedure
+        let procedure = try read(ProcedureReader.self, from: value, in: .assembled).procedure
 
         try language.validate(procedure)
 
@@ -151,22 +162,30 @@ public struct Loader: Sendable {
     // no signature of its own, so what comes back still has to reach a link
     // inside something that does.
     public func statements(from value: Value) throws -> [Statement] {
-        try read(BodyReader.self, from: value).statements
+        try read(BodyReader.self, from: value, in: .assembled).statements
     }
 
     public func statement(from value: Value) throws -> Statement {
-        try read(StatementReader.self, from: value).statement
+        try read(StatementReader.self, from: value, in: .assembled).statement
     }
 
     public func expression(from value: Value) throws -> Expression {
-        try read(ExpressionReader.self, from: value).expression
+        try read(ExpressionReader.self, from: value, in: .assembled).expression
     }
 
     // MARK: - Private
     // The module a document spells, unjudged. Not a door: nothing here has been
     // held to the language's rules, and `load` is the one that has.
-    private func spelled(_ value: Value) throws -> Module {
-        try read(ModuleReader.self, from: value).module
+    private func spelled(_ value: Value, in document: Place.Document) throws -> Module {
+        try read(ModuleReader.self, from: value, in: document).module
+    }
+
+    // What a value says it is called, as the document a refusal about reading it
+    // is in. The identity is the caller's to hand in and is not here: what a
+    // document is, is worked out from its canonical writing, and a value being
+    // read has not been written yet.
+    private func document(of value: Value) -> Place.Document {
+        Place.Document(identity: nil, namespace: ModuleReader.namespace(of: value))
     }
 
     // The value with this reader's version on it, where it does not say. What a
@@ -181,16 +200,29 @@ public struct Loader: Sendable {
         ) { written, _ in written })
     }
 
-    private func read<T: Decodable>(_ type: T.Type, from value: Value) throws -> T {
-        try T(from: ValueDecoder(
-            value: value,
-            codingPath: [],
-            userInfo: [
-                .constructRegistry: registry,
-                .notation: notation,
-                .loader: self
-            ]
-        ))
+    // Every reading goes through here, and so does every refusal one raises.
+    // Decoding says what is wrong and where in the data it stopped, and knows
+    // nothing about which document either is about — the door does, and it says
+    // so by handing one in. A door that could read without saying would be a
+    // refusal nobody can place, which is the state this asks about up front.
+    private func read<T: Decodable>(
+        _ type: T.Type,
+        from value: Value,
+        in document: Place.Document
+    ) throws -> T {
+        do {
+            return try T(from: ValueDecoder(
+                value: value,
+                codingPath: [],
+                userInfo: [
+                    .constructRegistry: registry,
+                    .notation: notation,
+                    .loader: self
+                ]
+            ))
+        } catch let error as DecodingError {
+            throw ReadingError(error, in: document)
+        }
     }
 }
 

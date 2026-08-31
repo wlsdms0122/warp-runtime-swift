@@ -32,7 +32,14 @@ public protocol WarpError: Error, Sendable, CustomStringConvertible {
 
 public extension WarpError {
     var description: String {
-        guard let whereabouts = trace?.rendered ?? place?.rendered else { return message }
+        // A place in nothing, at no step, spells nothing — what refuses about a
+        // fragment a caller assembled has no document to name and may not have
+        // got as far as a key. The sentence is then the whole answer, and a
+        // colon with nothing before it would read as an answer that went
+        // missing.
+        guard let whereabouts = trace?.rendered ?? place?.rendered, !whereabouts.isEmpty else {
+            return message
+        }
 
         return "\(whereabouts): \(message)"
     }
