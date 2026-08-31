@@ -665,6 +665,82 @@ struct PlaceTests {
         #expect(error?.message.contains("aardvark") == false)
     }
 
+    @Test("a constant on a circle's edge is not counted as part of it")
+    func aConstantReadByACircleIsNotOnIt() {
+        // Given — `delta` is read by one of a circle and reads a name that
+        // never settles, so it is waiting and read and on no circle. Narrowing
+        // by what nothing reads keeps it, because something does.
+        let sut = Module(
+            name: "pricing",
+            constants: [
+                "beta": .dispatch(Dispatch(
+                    receiver: reference("gamma"),
+                    selector: "plus",
+                    arguments: ["value": reference("delta")]
+                )),
+                "gamma": reference("beta"),
+                "delta": reference("nowhere")
+            ],
+            procedures: [entryName: Procedure(body: [])]
+        )
+            .read(from: reading)
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+        }
+
+        // Then
+        #expect(error?.message.contains("beta, gamma") == true)
+        #expect(error?.message.contains("delta") == false)
+    }
+
+    @Test("a constant waiting on one that reads nothing is not the one to change")
+    func aConstantWaitingOnAStrayIsNotTheStray() {
+        // Given — a chain and not a circle. `aaa` reads `bbb`, which is
+        // declared right beside it, so nothing about `aaa` is wrong: `bbb` is
+        // the one reading a name nothing here settles. Sorted first is what
+        // makes `aaa` the answer if what is waiting is mistaken for what is
+        // wrong.
+        let sut = Module(
+            name: "pricing",
+            constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
+            procedures: [entryName: Procedure(body: [])]
+        )
+            .read(from: reading)
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@d0cf00/const.bbb")
+        #expect(error?.message.contains("aaa") == false)
+    }
+
+    @Test("two modules nobody wrote down are told apart by where the caller put them")
+    func modulesWithNoDocumentAreToldApartByPosition() {
+        // Given — a caller assembling modules itself. Neither was read from
+        // anything, so neither has an identity and both spell the same: the
+        // sentence names two documents that read as one, and the place renders
+        // without a document at all. Where the caller put them is what is left.
+        func declaring() -> Module {
+            Module(procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))])
+        }
+
+        let caller = Module(procedures: [entryName: Procedure(body: [])])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try Language().link([declaring(), declaring(), caller] + Module.standard, entry: entryName)
+        }
+
+        // Then
+        #expect(error?.message.contains("the module at 0 in this link") == true)
+        #expect(error?.message.contains("the module at 1 in this link") == true)
+    }
+
     @Test("a constant reading a name that never settles is not called a circle")
     func aConstantReadingNothingIsNotARing() {
         // Given — nothing names it back, so there is no ring to narrow to.

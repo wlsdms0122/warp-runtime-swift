@@ -614,11 +614,12 @@ public struct Linker: Sendable {
     private func symbols(of modules: [Module]) throws -> [Symbol] {
         var symbols: [Symbol] = []
 
-        // Which document took each name, rather than only that one did. A
-        // refusal about a name declared twice is addressed to the declaration
-        // that cannot be added, and the sentence has to say what it collides
-        // with — a set answers the first half and throws the second away.
-        var claimed: [String: Place.Document] = [:]
+        // Which document took each name and where the caller put it, rather
+        // than only that the name is taken. A refusal about a name declared
+        // twice is addressed to the declaration that cannot be added and names
+        // both in the sentence — a set answers neither half, and the place
+        // alone answers neither when the two documents were never written down.
+        var claimed: [String: (document: Place.Document, origin: Int)] = [:]
 
         for (origin, module) in modules.enumerated() {
             for name in module.procedures.keys.sorted() {
@@ -628,14 +629,15 @@ public struct Linker: Sendable {
 
                 if let first = claimed[qualified] {
                     throw LinkError(
-                        "'\(qualified)' is declared more than once in this link"
-                            + " — \(first.spelled) declares it too, and two declarations"
-                            + " of a name have no way to be told apart",
+                        "'\(qualified)' is declared more than once in this link — by"
+                            + " \(first.document.spelled(at: first.origin)) and"
+                            + " \(Place.Document.of(module).spelled(at: origin))"
+                            + " — two declarations of a name have no way to be told apart",
                         at: .procedure(name, in: .of(module))
                     )
                 }
 
-                claimed[qualified] = .of(module)
+                claimed[qualified] = (.of(module), origin)
 
                 symbols.append(
                     Symbol(
@@ -1355,31 +1357,23 @@ public struct Linker: Sendable {
                 }
 
                 guard progressed else {
-                    // Which of them name each other, and not which of them are
-                    // waiting. A constant blocked on a ring is stuck for the
-                    // ring's reason, so a place walked to one of those is a
-                    // place with nothing to do there — `a: b` beside `b: c`
-                    // and `c: b` leaves all three waiting and only two of them
-                    // are the mistake.
-                    let ring = ring(in: pending)
+                    let (circling, stray) = blame(in: pending, beside: Set(known.keys))
 
-                    // What is left waiting when nothing names anything else
-                    // reads a name no constant beside it settles to, which is
-                    // a different mistake with a different sentence. There is
-                    // something waiting either way — this is inside the round
-                    // that settled nothing — so one of the two is a place.
-                    let stuck = ring.isEmpty ? pending.keys.sorted() : ring
+                    // A circle is the more exact of the two shapes, so it is
+                    // what is said where there is one. Whatever is only waiting
+                    // on either is in neither list and in neither sentence.
+                    let stuck = circling.isEmpty ? stray : circling
 
                     throw LinkError(
-                        ring.isEmpty
+                        circling.isEmpty
                             ? "constants \(stuck.joined(separator: ", ")) read a name no"
                                 + " constant declared beside them settles to"
                             : "constants \(stuck.joined(separator: ", ")) name each other"
                                 + " in a circle — a constant may name another declared"
                                 + " beside it, but not one that names it back",
-                        // Any of the ring is where the fix can be made, so the
-                        // one walked to is the first in sorted order — a ring
-                        // has no first member, and reading one off a dictionary
+                        // Any of them is where the fix can be made, so the one
+                        // walked to is the first in sorted order — a circle has
+                        // no first member, and reading one off a dictionary
                         // would name a different constant per run.
                         at: .constant(stuck[0], in: .of(module))
                     )
@@ -1396,30 +1390,58 @@ public struct Linker: Sendable {
     // is skipped: what it reads is answered where it is called, from the scope
     // it captured, so requiring those names to be settled first would be asking
     // the wrong question.
-    // The constants that name each other, out of the ones left waiting.
+    // Which of the waiting constants is the mistake, and not which of them are
+    // waiting on it.
     //
-    // A name nothing else waiting reads is not on a ring: whatever it is
-    // blocked on, it is not blocking anybody, so dropping it cannot break a
-    // circle that exists. Dropped until there is nothing left to drop, and what
-    // survives has something waiting that reads it and reads something waiting,
-    // which is what being on a ring is.
+    // A constant settles when everything it reads has settled, so a round that
+    // settles nothing leaves two shapes behind. Names that read each other in a
+    // circle, where none of them can be first and every one is the mistake. And
+    // names that read something nothing here settles, where the one holding
+    // that name is the mistake. Whoever reads either is waiting for its
+    // reason, and changing that one leaves the reason exactly as it was.
     //
-    // Empty where the waiting names no circle at all, which is a set of
-    // constants reading a name that never settles rather than each other.
-    private func ring(in pending: [String: Expression]) -> [String] {
-        var left = pending
+    // One question with two answers rather than two questions: what is at the
+    // far end of the wait. Answering it in one place is what keeps a fix to one
+    // of the shapes from leaving the other pointing where it always did.
+    private func blame(
+        in pending: [String: Expression],
+        beside settled: Set<String>
+    ) -> (circling: [String], stray: [String]) {
+        let waiting = Set(pending.keys)
+        let reads = pending.mapValues { expression in heads(of: expression) }
 
-        while true {
-            let read = left.values.reduce(into: Set<String>()) { names, expression in
-                names.formUnion(heads(of: expression))
+        // Reads a name that is neither settled nor waiting, so nothing is going
+        // to provide it and the wait is this one's own.
+        let stray = waiting.filter { name in
+            !(reads[name] ?? []).subtracting(settled).subtracting(waiting).isEmpty
+        }
+
+        // On a circle when following what it reads comes back to it. Followed
+        // rather than peeled: dropping what nothing reads leaves a name
+        // standing on a path between two circles, which reads and is read and
+        // is on neither.
+        let circling = waiting.filter { start in
+            var seen: Set<String> = []
+            var front = (reads[start] ?? []).intersection(waiting)
+
+            while let next = front.popFirst() {
+                guard next != start else { return true }
+                guard seen.insert(next).inserted else { continue }
+
+                front.formUnion((reads[next] ?? []).intersection(waiting))
             }
 
-            let kept = left.filter { name, _ in read.contains(name) }
-
-            guard kept.count < left.count else { return left.keys.sorted() }
-
-            left = kept
+            return false
         }
+
+        guard circling.isEmpty, stray.isEmpty else {
+            return (circling.sorted(), stray.sorted())
+        }
+
+        // A round that settled nothing holds one of the two shapes, so there is
+        // no way here — and a reader is owed a name rather than a sentence that
+        // lists nothing if there ever is.
+        return ([], waiting.sorted())
     }
 
     private func heads(of expression: Expression) -> Set<String> {

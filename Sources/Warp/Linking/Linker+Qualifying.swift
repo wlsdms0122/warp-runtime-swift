@@ -19,6 +19,17 @@ import Foundation
 // rewritten into qualified names, so the table the run reads is keyed by one
 // spelling and never has to ask where a mention was written.
 extension Linker {
+    // A declaration's place together with where the caller put the module that
+    // wrote it. The position is what tells two documents apart when neither was
+    // read from anything, since a module a caller built has no identity and two
+    // of them may declare into one namespace or into none.
+    struct Declaration {
+        let place: Place
+        let origin: Int
+
+        var spelled: String { place.document.spelled(at: origin) }
+    }
+
     // The modules with every type and constraint mention resolved, together
     // with the two spaces gathered whole — gathered here and nowhere else, so
     // the uniqueness this pass refuses on is the same fact the tables are
@@ -44,51 +55,55 @@ extension Linker {
         // Each space is walked whole before the two are held against each
         // other, so what a link concludes cannot depend on the order the caller
         // happened to list the modules in.
-        var typePlaces: [String: Place] = [:]
-        var constraintPlaces: [String: Place] = [:]
+        var typePlaces: [String: Declaration] = [:]
+        var constraintPlaces: [String: Declaration] = [:]
 
-        for module in modules {
+        for (origin, module) in modules.enumerated() {
             for name in module.types.keys.sorted() {
                 let qualified = module.qualified(name)
+                let declaration = Declaration(place: .type(name, in: .of(module)), origin: origin)
 
                 // Read before written. Written first, the entry that says what
                 // this collides with is the one this call overwrote.
                 if let first = typePlaces[qualified] {
                     throw LinkError(
-                        "type '\(qualified)' is declared more than once in this link"
-                            + " — \(first.document.spelled) declares it too",
-                        at: .type(name, in: .of(module))
+                        "type '\(qualified)' is declared more than once in this link — by"
+                            + " \(first.spelled) and \(declaration.spelled)",
+                        at: declaration.place
                     )
                 }
 
-                typePlaces[qualified] = .type(name, in: .of(module))
+                typePlaces[qualified] = declaration
             }
         }
 
-        for module in modules {
+        for (origin, module) in modules.enumerated() {
             for name in module.constraints.keys.sorted() {
                 let qualified = module.qualified(name)
-                let place = Place.constraint(name, in: .of(module))
+                let declaration = Declaration(
+                    place: .constraint(name, in: .of(module)),
+                    origin: origin
+                )
 
                 if let declared = typePlaces[qualified] {
                     throw LinkError(
                         "'\(qualified)' is declared as both a type and a constraint in"
-                            + " this link — \(declared.document.spelled) declares the"
-                            + " type — one name cannot stand for a shape and"
-                            + " a membership at once",
-                        at: place
+                            + " this link — as a type by \(declared.spelled) and as a"
+                            + " constraint by \(declaration.spelled) — one name cannot"
+                            + " stand for a shape and a membership at once",
+                        at: declaration.place
                     )
                 }
 
                 if let first = constraintPlaces[qualified] {
                     throw LinkError(
                         "constraint '\(qualified)' is declared more than once in this"
-                            + " link — \(first.document.spelled) declares it too",
-                        at: place
+                            + " link — by \(first.spelled) and \(declaration.spelled)",
+                        at: declaration.place
                     )
                 }
 
-                constraintPlaces[qualified] = place
+                constraintPlaces[qualified] = declaration
             }
         }
 
@@ -132,11 +147,11 @@ extension Linker {
                 // from the same declaration, so this cannot miss — and if the
                 // two ever came apart, the crash says so where a `nil` place
                 // would have gone out looking like a refusal with nowhere to be.
-                declaredTypes[name] = Declared(type, at: typePlaces[name]!)
+                declaredTypes[name] = Declared(type, at: typePlaces[name]!.place)
             }
 
             for (name, members) in module.constraints {
-                declaredConstraints[name] = Declared(members, at: constraintPlaces[name]!)
+                declaredConstraints[name] = Declared(members, at: constraintPlaces[name]!.place)
             }
         }
 

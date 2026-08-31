@@ -241,12 +241,20 @@ public extension Place {
             }
         }
 
-        // What a sentence calls this document when it names one the refusal is
-        // not addressed to. Two declarations of a name are two documents and a
-        // refusal is addressed to one of them, so the other is named in words
-        // — and a module a caller assembled has nothing written down to be
-        // called by, which still has to read as something.
-        var spelled: String { rendered ?? "a module the caller assembled" }
+        // What a sentence calls this document when it names one among several.
+        //
+        // An identity tells one document from every other, so where there is
+        // one nothing else is needed. Without one there is only the name, and
+        // two modules a caller built may write the same name or no name at all
+        // — so where the caller put it goes on as well. The caller counts its
+        // own modules, in the order it handed them over.
+        func spelled(at origin: Int) -> String {
+            if identity != nil, let rendered { return rendered }
+
+            let position = "the module at \(origin) in this link"
+
+            return namespace.map { namespace in "\(namespace), \(position)" } ?? position
+        }
     }
 
     // Every slot a document names, under the key it names it with. The
