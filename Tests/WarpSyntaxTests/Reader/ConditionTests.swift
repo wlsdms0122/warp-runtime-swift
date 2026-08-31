@@ -182,7 +182,7 @@ struct ConditionTests {
         ]
 
         // When / Then — first-wins would silently drop the second predicate
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try Loader.testing.loadProcedure(fixture)
         }
     }

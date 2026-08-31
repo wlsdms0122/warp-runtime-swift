@@ -62,7 +62,7 @@ struct EachTests {
     func aResultKeyIsRefusedAtDecode() throws {
         // Given — collecting rounds into an answer was `result`'s one job, and
         // that job is a map's; the key is gone rather than ignored
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": ["items": "array"],
                 "body": [

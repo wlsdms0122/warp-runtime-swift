@@ -299,9 +299,9 @@ struct PlaceTests {
         }
 
         // Then — each says something different about the call, from one place
-        #expect(load?.place?.rendered.hasPrefix(reached) == true)
-        #expect(bound?.place?.rendered.hasPrefix(reached) == true)
-        #expect(typed?.place?.rendered.hasPrefix(reached) == true)
+        #expect(load?.place?.rendered?.hasPrefix(reached) == true)
+        #expect(bound?.place?.rendered?.hasPrefix(reached) == true)
+        #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
 
         // And the walk that only gathers puts it in the same place
         let gathered = try #require(
@@ -461,7 +461,7 @@ struct PlaceTests {
         )
 
         // Then — the word is spelled for the person reading the line
-        #expect(sut.rendered.contains(".sent[0].call."))
+        #expect(sut.rendered?.contains(".sent[0].call.") == true)
 
         // And carried as the language's, beside the keys that are the text's
         #expect(sut.steps.contains(.landmark("call")))

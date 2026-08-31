@@ -36,6 +36,7 @@ struct ValueDecoder: Decoder {
         // MARK: - Property
         let object: [String: Value]
         let codingPath: [CodingKey]
+        let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
@@ -69,10 +70,7 @@ struct ValueDecoder: Decoder {
 
         func superDecoder() throws -> Decoder {
             guard let key = Key(stringValue: "super") else {
-                throw DecodingError.keyNotFound(
-                    AnyKey(stringValue: "super"),
-                    .init(codingPath: codingPath, debugDescription: "no super key")
-                )
+                throw ReadingError("no super key", at: steps)
             }
 
             return try decoder(forKey: key)
@@ -85,12 +83,9 @@ struct ValueDecoder: Decoder {
         // MARK: - Private
         private func value(forKey key: Key) throws -> Value {
             guard let value = object[key.stringValue] else {
-                throw DecodingError.keyNotFound(
-                    key,
-                    .init(
-                        codingPath: codingPath,
-                        debugDescription: "no value for key '\(key.stringValue)'"
-                    )
+                throw ReadingError(
+                    "no value for key '\(key.stringValue)'",
+                    at: steps + [.key(key.stringValue)]
                 )
             }
 
@@ -101,6 +96,7 @@ struct ValueDecoder: Decoder {
             ValueDecoder(
                 value: try value(forKey: key),
                 codingPath: codingPath + [key],
+                steps: steps + [.key(key.stringValue)],
                 userInfo: userInfo
             )
         }
@@ -113,6 +109,7 @@ struct ValueDecoder: Decoder {
         // not made into a boxed element apiece before the first is read.
         let elements: AnyRandomAccessCollection<Value>
         let codingPath: [CodingKey]
+        let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var count: Int? { elements.count }
@@ -135,6 +132,7 @@ struct ValueDecoder: Decoder {
             let decoded = try ValueDecoder(
                 value: try current(),
                 codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).decode(type)
 
@@ -149,6 +147,7 @@ struct ValueDecoder: Decoder {
             let container = try ValueDecoder(
                 value: try current(),
                 codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).container(keyedBy: type)
 
@@ -161,6 +160,7 @@ struct ValueDecoder: Decoder {
             let container = try ValueDecoder(
                 value: try current(),
                 codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             ).unkeyedContainer()
 
@@ -173,6 +173,7 @@ struct ValueDecoder: Decoder {
             let decoder = ValueDecoder(
                 value: try current(),
                 codingPath: codingPath + [AnyKey(intValue: currentIndex)],
+                steps: steps + [.index(currentIndex)],
                 userInfo: userInfo
             )
 
@@ -184,12 +185,9 @@ struct ValueDecoder: Decoder {
         // MARK: - Private
         private func current() throws -> Value {
             guard !isAtEnd else {
-                throw DecodingError.valueNotFound(
-                    Value.self,
-                    .init(
-                        codingPath: codingPath,
-                        debugDescription: "unkeyed container is at end"
-                    )
+                throw ReadingError(
+                    "unkeyed container is at end",
+                    at: steps + [.index(currentIndex)]
                 )
             }
 
@@ -201,6 +199,7 @@ struct ValueDecoder: Decoder {
         // MARK: - Property
         let value: Value
         let codingPath: [CodingKey]
+        let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         // MARK: - Initializer
@@ -266,6 +265,7 @@ struct ValueDecoder: Decoder {
             try ValueDecoder(
                 value: value,
                 codingPath: codingPath,
+                steps: steps,
                 userInfo: userInfo
             ).decode(type)
         }
@@ -282,38 +282,38 @@ struct ValueDecoder: Decoder {
             return narrowed
         }
 
-        private func mismatch(_ type: Any.Type) -> DecodingError {
-            .typeMismatch(
-                type,
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "expected \(type), found \(value.type)"
-                )
-            )
+        private func mismatch(_ type: Any.Type) -> ReadingError {
+            ReadingError("expected \(type), found \(value.type)", at: steps)
         }
     }
 
     // MARK: - Property
     let value: Value
     let codingPath: [CodingKey]
+
+    // Where the reading has reached, said in the document's own words.
+    //
+    // `codingPath` is the same walk in `Codable`'s terms, and it cannot answer
+    // this: a coding key carries a number whenever its spelling reads as one,
+    // so a procedure declared under `"12"` is indistinguishable from the
+    // twelfth element of an array. Here the two are never confused, because
+    // this is built where the walk descends, by the container that knows which
+    // of the two it just did.
+    let steps: [Place.Step]
+
     let userInfo: [CodingUserInfoKey: Any]
 
     // MARK: - Initializer
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         guard case let .object(object) = value else {
-            throw DecodingError.typeMismatch(
-                [String: Value].self,
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "expected object, found \(value.type)"
-                )
-            )
+            throw ReadingError("expected object, found \(value.type)", at: steps)
         }
 
         return KeyedDecodingContainer(KeyedContainer(
             object: object,
             codingPath: codingPath,
+            steps: steps,
             userInfo: userInfo
         ))
     }
@@ -325,20 +325,19 @@ struct ValueDecoder: Decoder {
         // `Data` is still answered by `decode` below, which holds bytes to
         // their own spelling so an int array cannot quietly become them.
         guard let elements = value.elements else {
-            throw DecodingError.typeMismatch(
-                [Value].self,
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "expected array, found \(value.type)"
-                )
-            )
+            throw ReadingError("expected array, found \(value.type)", at: steps)
         }
 
-        return UnkeyedContainer(elements: elements, codingPath: codingPath, userInfo: userInfo)
+        return UnkeyedContainer(
+            elements: elements,
+            codingPath: codingPath,
+            steps: steps,
+            userInfo: userInfo
+        )
     }
 
     func singleValueContainer() throws -> SingleValueDecodingContainer {
-        SingleContainer(value: value, codingPath: codingPath, userInfo: userInfo)
+        SingleContainer(value: value, codingPath: codingPath, steps: steps, userInfo: userInfo)
     }
 
     // The one place a Codable type is made from a value, shared by all three
@@ -352,18 +351,66 @@ struct ValueDecoder: Decoder {
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
         if type == Data.self {
             guard case let .bytes(bytes) = value, let data = Data(bytes) as? T else {
-                throw DecodingError.typeMismatch(
-                    type,
-                    .init(
-                        codingPath: codingPath,
-                        debugDescription: "expected \(type), found \(value.type)"
-                    )
-                )
+                throw ReadingError("expected \(type), found \(value.type)", at: steps)
             }
 
             return data
         }
 
-        return try T(from: self)
+        // The boundary a reader's own refusal crosses, and where it is given
+        // the address this walk knows and the reader does not. A refusal that
+        // already carries one passes through: the innermost boundary it crossed
+        // is the deepest anybody reached, and a step further out would be a
+        // shallower answer written over a truer one.
+        do {
+            return try T(from: self)
+        } catch let refusal as DecodingError {
+            throw ReadingError(refusal, at: steps)
+        }
+    }
+}
+
+extension Decoder {
+    // Where this reading has reached, in the document's own words — nothing
+    // where the reading is not this package's, which is the honest answer for a
+    // decoder whose descent nobody here watched.
+    var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }
+
+    // Read what is written here, standing on it.
+    //
+    // For a reader that has to judge a value after reading it: what is judged
+    // and what is refused are then one place, and the address is where the
+    // reading is rather than a key the guard below remembered to name. An
+    // address assembled from a remembered key is a second answer to a question
+    // the walk already answers, and the two go apart the first time a reader
+    // is written that forgets to assemble one.
+    //
+    // The boundary is not a second one. This is the same door
+    // `ValueDecoder.decode` is, reached from a decoder handed over as the
+    // protocol — and where the decoder is somebody else's there is no door of
+    // ours to go through.
+    func read<T: Decodable>(_ type: T.Type) throws -> T {
+        guard let decoder = self as? ValueDecoder else { return try T(from: self) }
+
+        return try decoder.decode(type)
+    }
+
+    // A record of readers, read in the order the names sort in.
+    //
+    // `Dictionary` reads its keys in hash order, and the seed for that changes
+    // from one process to the next. Two entries that are both wrong would then
+    // be refused in either order, and the one line an author is given would not
+    // be the same line twice — which is the whole of what an address is for.
+    // Sorted rather than as-written because a document is a value by then and a
+    // value's record has no order to have kept.
+    func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {
+        let container = try container(keyedBy: AnyCodingKey.self)
+
+        return try container.allKeys
+            .map(\.stringValue)
+            .sorted()
+            .reduce(into: [String: T]()) { read, key in
+                read[key] = try container.decode(T.self, forKey: AnyCodingKey(stringValue: key))
+            }
     }
 }

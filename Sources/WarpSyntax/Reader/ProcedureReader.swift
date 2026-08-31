@@ -41,7 +41,7 @@ public struct ProcedureReader: Decodable {
             result: try container
                 .decodeIfPresent(ExpressionReader.self, forKey: .result)?
                 .expression,
-            at: decoder.codingPath
+            at: decoder.steps
         )
 
         // A procedure has no name of its own — it is named by the key its module
@@ -63,7 +63,7 @@ public struct ProcedureReader: Decodable {
                         .decodeIfPresent(TypeReader.self, forKey: .returns)?
                         .type
                 ),
-                at: decoder.codingPath
+                at: decoder.steps
             ),
             // A procedure that only returns a value has nothing to do first, so
             // `body:` is what a procedure writes when it has statements rather

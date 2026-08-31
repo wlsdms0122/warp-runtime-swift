@@ -29,7 +29,7 @@ struct NotationGateTests {
     ])
     func malformedTypeIsRefused(written: String) {
         // Given / When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": ["subject": Value.string(written)],
                 "body": [["id": "done", "value": "end"]]
@@ -40,7 +40,7 @@ struct NotationGateTests {
     @Test("a body written as something other than a list is refused")
     func bodyMustBeAList() {
         // Given / When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": ["id": "done", "value": "end"]])
         }
     }
@@ -48,7 +48,7 @@ struct NotationGateTests {
     @Test("a statement written as something other than a record is refused")
     func statementMustBeARecord() {
         // Given / When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": ["done"]])
         }
     }
@@ -57,7 +57,7 @@ struct NotationGateTests {
     func unknownConstructIsRefused() {
         // Given / When / Then — the message names the words there are, because a
         // misspelling is the likeliest way to arrive here
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": [["id": "done", "brnach": [:]]]])
         }
     }
@@ -66,10 +66,12 @@ struct NotationGateTests {
     func statementNeedsARegistry() {
         // Given — the registry travels in the decoder rather than in the data, so
         // a reader reached without one has no way to know what a word means
-        let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], userInfo: [:])
+        let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], steps: [], userInfo: [:])
 
-        // When / Then
-        #expect(throws: DecodingError.self) {
+        // When / Then — a reading refuses as a reading wherever it is asked
+        // for, and which document it was reading is the door's to say: nothing
+        // here went through one, so the refusal names none
+        #expect(throws: ReadingError.self) {
             try StatementReader(from: decoder)
         }
     }

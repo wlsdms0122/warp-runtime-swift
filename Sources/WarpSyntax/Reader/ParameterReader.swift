@@ -30,8 +30,9 @@ public struct ParameterReader: Decodable {
             do {
                 self.parameter = Parameter(type: try TypeReader.parse(single))
             } catch let error as TypeFormError {
-                throw DecodingError.dataCorrupted(
-                    .init(codingPath: decoder.codingPath, debugDescription: error.message)
+                throw ReadingError(
+                    error.message,
+                    at: decoder.steps
                 )
             }
 

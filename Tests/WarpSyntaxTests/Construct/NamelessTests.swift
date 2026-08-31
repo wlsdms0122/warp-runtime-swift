@@ -64,7 +64,7 @@ struct NamelessTests {
 
     @Test("two naming keys are refused")
     func twoNamingKeysAreRefused() {
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "body": [["id": "one", "var": "another", "value": 1]]
             ])
@@ -160,7 +160,7 @@ struct NamelessTests {
     func aNullNameIsRefused() {
         // Given — a key written with no name in it: reading it as "no naming
         // key" would make a failed name and an omitted one the same document
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": [["id": Value.null, "value": 1]]])
         }
     }

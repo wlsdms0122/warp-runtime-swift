@@ -193,7 +193,7 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
 
         // A bound on a name no slot writes binds nothing.
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Comparable"],
                 "parameters": ["of": "int"],
@@ -202,7 +202,7 @@ struct TypeNotationTests {
         }
 
         // A bound is a constraint's name, never a shape.
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "array<int>"],
                 "parameters": ["of": "some T"],
@@ -214,7 +214,7 @@ struct TypeNotationTests {
         // parameters are the declaring signature's slots, and the declaring
         // signature owns their bounds. Two records binding one namespace
         // would be two claims about one thing.
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
                     "by": [

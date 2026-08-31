@@ -20,16 +20,20 @@ public struct BodyReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
+        // Nothing is done to what a statement refuses with. Each one names
+        // itself as it is read, so a refusal arrives already wearing the name
+        // the author knows it by.
         let statements = try [StatementReader](from: decoder).map(\.statement)
 
+        // What is refused here is a pair and not a statement, so the name is
+        // read off the statement that was made rather than off the document a
+        // second time.
         for (position, statement) in statements.dropLast().enumerated()
         where statement.expression.alwaysLeaves {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "[\(position)]: every way through this statement"
-                        + " leaves, and what follows it here would never run"
-                )
+            throw ReadingError(
+                "every way through this statement leaves,"
+                    + " and what follows it here would never run",
+                at: decoder.steps + [.statement(statement.id, at: position)]
             )
         }
 
@@ -50,15 +54,13 @@ extension Block {
     static func reading(
         body: [Statement],
         result: Expression?,
-        at codingPath: [any CodingKey]
+        at steps: [Place.Step]
     ) throws -> Block {
         if body.alwaysLeaves, result != nil {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: codingPath,
-                    debugDescription: "result: nothing runs after leaving,"
-                        + " and this result would never be reached"
-                )
+            throw ReadingError(
+                "result: nothing runs after leaving,"
+                    + " and this result would never be reached",
+                at: steps
             )
         }
 

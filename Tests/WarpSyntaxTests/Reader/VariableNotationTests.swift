@@ -216,7 +216,7 @@ struct VariableNotationTests {
         let fixture: Value = ["body": [["id": "verdict", "var": "verdict", "value": "x"]]]
 
         // When / Then
-        #expect(throws: DecodingError.self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure(fixture)
         }
     }

@@ -44,7 +44,7 @@ public struct LoopForm: ConstructForm {
             body: try container.decode(BodyReader.self, forKey: .body).statements,
             result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
                 .expression,
-            at: decoder.codingPath
+            at: decoder.steps
         )
     }
 

@@ -37,17 +37,22 @@ public struct KeyGate {
         let unknown = container.allKeys
             .map(\.stringValue)
             .filter { key in !known.contains(key) }
+            .sorted()
 
-        guard unknown.isEmpty else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "\(context): unknown key(s)"
-                        + " \(unknown.sorted().joined(separator: ", "))"
-                        + " — known keys: \(known.sorted().joined(separator: ", "))"
-                )
-            )
-        }
+        guard let first = unknown.first else { return }
+
+        // Standing on the key that is turned away, which is where the refusal
+        // is about. A reader shown the thing holding the keys has to find the
+        // offending one themselves, and this refusal knows which it is. The
+        // first by name, since the sentence names the rest.
+        let written = try container.superDecoder(forKey: AnyCodingKey(stringValue: first))
+
+        throw ReadingError(
+            "\(context): unknown key(s)"
+                + " \(unknown.joined(separator: ", "))"
+                + " — known keys: \(known.sorted().joined(separator: ", "))",
+            at: written.steps
+        )
     }
 
     // MARK: - Private

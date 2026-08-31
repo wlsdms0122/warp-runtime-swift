@@ -29,7 +29,7 @@ public struct BlockReader: Decodable {
                 .statements ?? [],
             result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?
                 .expression,
-            at: decoder.codingPath
+            at: decoder.steps
         )
     }
 

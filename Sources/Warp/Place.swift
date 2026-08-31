@@ -46,7 +46,15 @@ public struct Place: Sendable, Equatable {
     // trace brackets an occurrence, because the text it names ran more than
     // once; a place brackets every statement, because one name in the text may
     // be two statements.
-    public var rendered: String {
+    // Nothing where there is nothing to say. A place in no document at no step
+    // is what a caller holding a body it assembled has, and spelling it as ""
+    // would fold an absence into a string every reader then has to unfold
+    // again — the same absence `Document` keeps as an absence one field over.
+    //
+    // The only way to read a place as text, for the same reason. A
+    // `description` would have to answer something for a place that says
+    // nothing, and "" is the string this deliberately does not return.
+    public var rendered: String? {
         let address = steps.enumerated().reduce(into: "") { written, entry in
             let (offset, step) = entry
             // The first step takes no dot: there is nothing to its left but the
@@ -82,19 +90,24 @@ public struct Place: Sendable, Equatable {
         // them, which is the case this exists to keep separate. Showing the
         // name and hiding what makes it unambiguous would put that case back
         // in front of the only reader who cannot check it.
-        switch (document.namespace, document.identity) {
-        case let (namespace?, identity?):
-            return "\(namespace)@\(identity.short)/" + address
-
-        case let (namespace?, nil):
-            return "\(namespace)/" + address
-
-        case let (nil, identity?):
-            return "\(identity.short)/" + address
-
-        case (nil, nil):
-            return address
+        // Absence stays absence rather than folding into an empty string and
+        // being read back out of one: a document that wrote its name as nothing
+        // would otherwise spell the same as a program nobody wrote down.
+        let named: String? = switch (document.namespace, document.identity) {
+        case let (namespace?, identity?): "\(namespace)@\(identity.short)"
+        case let (namespace?, nil): namespace
+        case let (nil, identity?): identity.short
+        case (nil, nil): nil
         }
+
+        // The slash separates the document from an address inside it, so it is
+        // written where there are both. What is refused about a document rather
+        // than about anything in it has no steps, and the document alone is the
+        // whole answer.
+        guard let named else { return address.isEmpty ? nil : address }
+        guard !address.isEmpty else { return named }
+
+        return "\(named)/\(address)"
     }
 
     // MARK: - Initializer
@@ -157,7 +170,7 @@ public struct Place: Sendable, Equatable {
     // call the statement by, and a step that rendered an empty name would put
     // a dot in front of nothing.
     public func statement(_ name: String?, at position: Int) -> Place {
-        appending(.statement(name: name?.isEmpty == true ? nil : name, at: position))
+        appending(.statement(name, at: position))
     }
 
     // A statement and the construct it writes, which is how every walk reaches
@@ -206,9 +219,16 @@ public extension Place {
         // get this one by saying nothing.
         public static let assembled = Document(identity: nil, namespace: nil)
 
+        // A namespace written empty is no namespace. The rule is here and not
+        // at whoever is assembling one, because a place is assembled at every
+        // stage: what is read from a document before it is judged, what a
+        // validated module says it is called, what a caller hands in. Three
+        // sites keeping one rule is three chances to spell one document two
+        // ways, and which document a refusal is about is the one thing a place
+        // exists to answer.
         public init(identity: Identity?, namespace: String?) {
             self.identity = identity
-            self.namespace = namespace
+            self.namespace = namespace?.isEmpty == true ? nil : namespace
         }
 
         public static func of(_ module: Module) -> Document {
@@ -263,9 +283,15 @@ public extension Place {
         // is this case, for the reader that has to know which of the words it
         // may look for in a file.
         case landmark(String)
-    }
-}
 
-extension Place: CustomStringConvertible {
-    public var description: String { rendered }
+        // A statement step, with a name written empty read as no name.
+        //
+        // The rule is on the case rather than beside each caller: a step
+        // rendering an empty name puts a dot in front of nothing, and every
+        // stage that spells a statement — reading a document, validating a
+        // module, linking one — makes this step from a name it did not write.
+        public static func statement(_ name: String?, at position: Int) -> Step {
+            .statement(name: name?.isEmpty == true ? nil : name, at: position)
+        }
+    }
 }

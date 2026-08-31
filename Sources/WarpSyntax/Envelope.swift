@@ -37,6 +37,31 @@ public enum Envelope {
     public static let needsKey = "needs"
 
     // MARK: - Public
+    // Whether a document declares what it needs.
+    //
+    // Written and not null. A key holding nothing is not a claim, and the two
+    // who ask have to agree about that: the door turns away a document that
+    // declares nothing, and the reader holds a document that declares to what
+    // it declared. Answering differently is how `needs: null` walks through
+    // the door as a claim and past the reader as no claim, arriving trusted
+    // and unchecked — which is the one thing this list exists to prevent.
+    //
+    // Asked twice because the two are in different places. The door holds the
+    // document and reads the value; the reader is inside it and has a
+    // container. One rule, said here in both of their words.
+    public static func declaresNeeds(_ written: Value?) -> Bool {
+        guard let written else { return false }
+
+        return written != .null
+    }
+
+    public static func declaresNeeds<Key: CodingKey>(
+        in container: KeyedDecodingContainer<Key>,
+        forKey key: Key
+    ) throws -> Bool {
+        try container.contains(key) && !container.decodeNil(forKey: key)
+    }
+
     // The words a document sends and does not declare. Every one has to be
     // declared by something in the link or the program cannot run, so this is
     // what a reader needs from elsewhere, listed rather than discovered.

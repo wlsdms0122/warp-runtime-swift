@@ -31,7 +31,11 @@ public struct ReturnForm: ConstructForm {
 
         // Nothing written answers with nothing. A procedure always answers
         // something, so this is `null` rather than a procedure that does not.
-        self.value = written == .null ? nil : try ExpressionReader.read(written, in: decoder)
+        // Through the reader and not around it: what a form refuses with is a
+        // refusal about a document, and only the `Decodable` boundary turns an
+        // expression's own into one. Reading the value here to see whether
+        // anything was written is not that boundary.
+        self.value = written == .null ? nil : try ExpressionReader(from: decoder).expression
     }
 
     // MARK: - Public
@@ -94,12 +98,10 @@ extension BreakForm {
             return name
 
         case let other:
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "\(word) takes the name of a loop, or nothing for the"
-                        + " nearest one — got \(other.type)"
-                )
+            throw ReadingError(
+                "\(word) takes the name of a loop, or nothing for the"
+                    + " nearest one — got \(other.type)",
+                at: decoder.steps
             )
         }
     }

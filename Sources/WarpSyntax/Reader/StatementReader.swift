@@ -46,13 +46,65 @@ public struct StatementReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
+        // The name first, so that everything refused below wears it.
+        //
+        // A walk into an array knows it descended by position and no more. This
+        // is the reader that knows the position holds a statement, so the name
+        // an author knows it by is this one's to put on. It is read here off
+        // the envelope, the one way a name is read at all, rather than worked
+        // out from the data again once something has failed — a second reading
+        // is a second rule, and two rules for one name is a document called one
+        // thing while being refused as another.
+        let envelope = try decoder.container(keyedBy: EnvelopeKeys.self)
+        let names = EnvelopeKeys.allCases.filter { name in envelope.contains(name) }
+
+        // Only a name that is one. Whether naming itself twice, or with
+        // something that is not text, is a refusal is the reading's question
+        // and the reading answers it below. What is asked here is what to call
+        // the statement while refusing it, and neither of those is a name.
+        //
+        // The same read as the reading's, through the same door, and lenient
+        // only in what it does with a failure: an address that refused on its
+        // own would decide which refusal an author sees first, and that is the
+        // reading's to decide.
+        let id = names.count == 1 ? try? Self.name(names[0], in: envelope) : nil
+
+        do {
+            self.statement = try Self.read(from: decoder, envelope: envelope, names: names)
+        } catch let refusal as ReadingError {
+            throw refusal.addressed(from: Self.address(of: id, in: decoder.steps))
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // What a naming key holds, read the one way it is read.
+    private static func name(
+        _ key: EnvelopeKeys,
+        in envelope: KeyedDecodingContainer<EnvelopeKeys>
+    ) throws -> String {
+        try envelope.decode(String.self, forKey: key)
+    }
+
+    // This statement's own address, with the name on it. The position stays:
+    // two statements of one name are told apart by it, and a `var` and the
+    // `set` that writes it are exactly that.
+    private static func address(of id: String?, in steps: [Place.Step]) -> [Place.Step] {
+        guard case let .index(position)? = steps.last else { return steps }
+
+        return Array(steps.dropLast()) + [Place.Step.statement(id, at: position)]
+    }
+
+    private static func read(
+        from decoder: Decoder,
+        envelope: KeyedDecodingContainer<EnvelopeKeys>,
+        names: [EnvelopeKeys]
+    ) throws -> Statement {
         guard let registry = decoder.userInfo[.constructRegistry] as? ConstructRegistry else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: decoder.codingPath,
-                    debugDescription: "statement decoding requires a ConstructRegistry"
-                        + " — decode through Loader"
-                )
+            throw ReadingError(
+                "statement decoding requires a ConstructRegistry"
+                    + " — decode through Loader",
+                at: decoder.steps
             )
         }
 
@@ -62,25 +114,21 @@ public struct StatementReader: Decodable {
             context: "statement"
         )
 
-        let envelope = try decoder.container(keyedBy: EnvelopeKeys.self)
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
         let found = registry.keys.filter { key in
             container.contains(AnyCodingKey(stringValue: key))
         }
 
-        // Presence first, decoding second — `id: null` is a key written with
-        // no name in it, and reading it as "no naming key" would make a failed
-        // name and an omitted one the same document.
-        let names = EnvelopeKeys.allCases.filter { name in envelope.contains(name) }
-
+        // The naming keys were read by presence and not by decoding — `id:
+        // null` is a key written with no name in it, and reading it as "no
+        // naming key" would make a failed name and an omitted one the same
+        // document.
         guard names.count <= 1 else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: envelope.codingPath,
-                    debugDescription: "a statement names itself at most once with"
-                        + " \(EnvelopeKeys.allCases.map { key in "'\(key.stringValue)'" }.joined(separator: ", "));"
-                        + " found: \(names.map { name in "'\(name.stringValue)'" })"
-                )
+            throw ReadingError(
+                "a statement names itself at most once with"
+                    + " \(EnvelopeKeys.allCases.map { key in "'\(key.stringValue)'" }.joined(separator: ", "));"
+                    + " found: \(names.map { name in "'\(name.stringValue)'" })",
+                at: decoder.steps
             )
         }
 
@@ -89,41 +137,53 @@ public struct StatementReader: Decodable {
         // something about a construct, so they still require one — and the
         // one-name rule above has already spoken, so "alone" is one question.
         if found.isEmpty, names == [.variable] {
-            self.statement = Statement(
-                id: try envelope.decode(String.self, forKey: .variable),
+            return Statement(
+                id: try Self.name(.variable, in: envelope),
                 binding: .variable,
                 expression: .literal(.null)
             )
-
-            return
         }
 
         guard found.count == 1, let key = found.first else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "a statement must declare exactly one construct key"
-                        + " (\(registry.keys.joined(separator: "/")));"
-                        + " found: \(found)"
-                )
+            throw ReadingError(
+                "a statement must declare exactly one construct key"
+                    + " (\(registry.keys.joined(separator: "/")));"
+                    + " found: \(found)",
+                at: decoder.steps
             )
         }
 
         guard let form = registry.form(for: key) else {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: container.codingPath,
-                    debugDescription: "no construct registered for key '\(key)'"
-                )
+            throw ReadingError(
+                "no construct registered for key '\(key)'",
+                at: decoder.steps
             )
         }
 
         let name = names.first
-        let id = try name.map { name in try envelope.decode(String.self, forKey: name) }
-        let expression = try form.init(
-            from: container.superDecoder(forKey: AnyCodingKey(stringValue: key))
-        )
-        .expression(boundTo: id)
+        let id = try name.map { name in try Self.name(name, in: envelope) }
+        let inside = try container.superDecoder(forKey: AnyCodingKey(stringValue: key))
+        let built: any ConstructForm
+        let expression: Expression
+
+        do {
+            built = try form.init(from: inside)
+        } catch let refusal as DecodingError {
+            // A form written outside this package reads with `Codable`'s
+            // refusal, which carries `Codable`'s address. The walk's own is
+            // right here, so it is put on rather than the one a coding key
+            // would spell.
+            throw ReadingError(refusal, at: inside.steps)
+        }
+
+        do {
+            expression = try built.expression(boundTo: id)
+        } catch let refusal as ReadingError {
+            // A form lowering what it read is past every decoder, so a refusal
+            // from there says nothing about where it is. This statement is
+            // where it is, and this is what is holding that.
+            throw refusal.asked(at: decoder.steps)
+        }
 
         // A statement that leaves never finishes, so a name on one promises a
         // binding that cannot happen. Only the structure a document shows is
@@ -132,12 +192,10 @@ public struct StatementReader: Decodable {
         // sentence is the Validator's, word for word: one rule, one wording,
         // whichever door a statement came through.
         if id != nil, expression.alwaysLeaves {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: envelope.codingPath,
-                    debugDescription: "every way through this statement leaves,"
-                        + " so its name could never bind — it takes no name"
-                )
+            throw ReadingError(
+                "every way through this statement leaves,"
+                    + " so its name could never bind — it takes no name",
+                at: decoder.steps
             )
         }
 
@@ -145,23 +203,18 @@ public struct StatementReader: Decodable {
         // branch — a notation's own spelling included — so no form has to
         // remember the rule itself.
         if id != nil, expression.takesNoName {
-            throw DecodingError.dataCorrupted(
-                .init(
-                    codingPath: envelope.codingPath,
-                    debugDescription: "a branch answers nothing, so its name"
-                        + " could never bind — it takes no name; what an arm"
-                        + " keeps is written to an outer variable with 'set'"
-                )
+            throw ReadingError(
+                "a branch answers nothing, so its name"
+                    + " could never bind — it takes no name; what an arm"
+                    + " keeps is written to an outer variable with 'set'",
+                at: decoder.steps
             )
         }
 
-        self.statement = Statement(
+        return Statement(
             id: id,
             binding: name?.binding ?? .constant,
             expression: expression
         )
     }
-
-    // MARK: - Public
-    // MARK: - Private
 }
