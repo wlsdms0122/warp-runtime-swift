@@ -44,27 +44,49 @@ public struct StatementReader: Decodable {
     // MARK: - Property
     public let statement: Statement
 
-    // What a statement written in a document is called, read off the data.
-    //
-    // A place naming a statement is assembled where the reading failed, so
-    // there is no `Statement` to ask — and the three spellings a name is
-    // written in are this reader's, so nobody else has to keep a copy of them.
-    // A statement wearing two of them is refused, and until it is refused it is
-    // called nothing.
-    static func name(of value: Value) -> String? {
-        guard case let .object(fields) = value else { return nil }
-
-        let written = EnvelopeKeys.allCases.compactMap { key -> String? in
-            guard case let .string(name)? = fields[key.stringValue] else { return nil }
-
-            return name
-        }
-
-        return written.count == 1 ? written.first : nil
-    }
-
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
+        // The name first, so that everything refused below wears it.
+        //
+        // A walk into an array knows it descended by position and no more. This
+        // is the reader that knows the position holds a statement, so the name
+        // an author knows it by is this one's to put on. It is read here off
+        // the envelope, the one way a name is read at all, rather than worked
+        // out from the data again once something has failed — a second reading
+        // is a second rule, and two rules for one name is a document called one
+        // thing while being refused as another.
+        let envelope = try decoder.container(keyedBy: EnvelopeKeys.self)
+        let names = EnvelopeKeys.allCases.filter { name in envelope.contains(name) }
+
+        // Only a name that is one. Whether naming itself twice, or with
+        // something that is not text, is a refusal is the reading's question
+        // and the reading answers it below. What is asked here is what to call
+        // the statement while refusing it, and neither of those is a name.
+        let id = names.count == 1 ? try? envelope.decode(String.self, forKey: names[0]) : nil
+
+        do {
+            self.statement = try Self.read(from: decoder, envelope: envelope, names: names)
+        } catch let refusal as ReadingError {
+            throw refusal.addressed(from: Self.address(of: id, in: decoder.steps))
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // This statement's own address, with the name on it. The position stays:
+    // two statements of one name are told apart by it, and a `var` and the
+    // `set` that writes it are exactly that.
+    private static func address(of id: String?, in steps: [Place.Step]) -> [Place.Step] {
+        guard case let .index(position)? = steps.last else { return steps }
+
+        return Array(steps.dropLast()) + [Place.Step.statement(id, at: position)]
+    }
+
+    private static func read(
+        from decoder: Decoder,
+        envelope: KeyedDecodingContainer<EnvelopeKeys>,
+        names: [EnvelopeKeys]
+    ) throws -> Statement {
         guard let registry = decoder.userInfo[.constructRegistry] as? ConstructRegistry else {
             throw ReadingError(
                 "statement decoding requires a ConstructRegistry"
@@ -79,17 +101,15 @@ public struct StatementReader: Decodable {
             context: "statement"
         )
 
-        let envelope = try decoder.container(keyedBy: EnvelopeKeys.self)
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
         let found = registry.keys.filter { key in
             container.contains(AnyCodingKey(stringValue: key))
         }
 
-        // Presence first, decoding second — `id: null` is a key written with
-        // no name in it, and reading it as "no naming key" would make a failed
-        // name and an omitted one the same document.
-        let names = EnvelopeKeys.allCases.filter { name in envelope.contains(name) }
-
+        // The naming keys were read by presence and not by decoding — `id:
+        // null` is a key written with no name in it, and reading it as "no
+        // naming key" would make a failed name and an omitted one the same
+        // document.
         guard names.count <= 1 else {
             throw ReadingError(
                 "a statement names itself at most once with"
@@ -104,13 +124,11 @@ public struct StatementReader: Decodable {
         // something about a construct, so they still require one — and the
         // one-name rule above has already spoken, so "alone" is one question.
         if found.isEmpty, names == [.variable] {
-            self.statement = Statement(
+            return Statement(
                 id: try envelope.decode(String.self, forKey: .variable),
                 binding: .variable,
                 expression: .literal(.null)
             )
-
-            return
         }
 
         guard found.count == 1, let key = found.first else {
@@ -180,13 +198,10 @@ public struct StatementReader: Decodable {
             )
         }
 
-        self.statement = Statement(
+        return Statement(
             id: id,
             binding: name?.binding ?? .constant,
             expression: expression
         )
     }
-
-    // MARK: - Public
-    // MARK: - Private
 }

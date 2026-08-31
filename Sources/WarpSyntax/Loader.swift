@@ -230,14 +230,12 @@ public struct Loader: Sendable {
             .decode(type)
         } catch let refusal as ReadingError {
             throw refusal.read(in: document)
-        } catch let refusal as DecodingError {
-            // Nothing in this package refuses this way any more — every reading
-            // it does says where it was. What reaches here is a reader written
-            // somewhere else, refusing in `Codable`'s terms from a place this
-            // walk was not watching, so the document is all that can honestly
-            // be added to it.
-            throw ReadingError(refusal, at: []).read(in: document)
         }
+        // Nothing arrives here refusing in `Codable`'s terms. A reader written
+        // outside this package still refuses that way, and `ValueDecoder`
+        // turns it into a reading at the boundary it crossed — which is the
+        // only place that still knows how deep it was. Catching it again here
+        // could only add a document to an address already thrown away.
     }
 }
 

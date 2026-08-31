@@ -20,32 +20,20 @@ public struct BodyReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        // The elements as the document wrote them, beside what they read as.
-        // A walk into an array knows it descended by position and no more; this
-        // is the one reader that knows the positions hold statements, so the
-        // names an author knows them by are its to put on — and the only ones
-        // it puts on, since everywhere else an element is a position.
-        let written = (try ValueReader(from: decoder).value.elements).map(Array.init) ?? []
-        let depth = decoder.steps.count
+        // Nothing is done to what a statement refuses with. Each one names
+        // itself as it is read, so a refusal arrives already wearing the name
+        // the author knows it by.
+        let statements = try [StatementReader](from: decoder).map(\.statement)
 
-        func name(at position: Int) -> String? {
-            written.indices.contains(position) ? StatementReader.name(of: written[position]) : nil
-        }
-
-        let statements: [Statement]
-
-        do {
-            statements = try [StatementReader](from: decoder).map(\.statement)
-        } catch let refusal as ReadingError {
-            throw refusal.naming(at: depth, name(at:))
-        }
-
+        // What is refused here is a pair and not a statement, so the name is
+        // read off the statement that was made rather than off the document a
+        // second time.
         for (position, statement) in statements.dropLast().enumerated()
         where statement.expression.alwaysLeaves {
             throw ReadingError(
                 "every way through this statement leaves,"
                     + " and what follows it here would never run",
-                at: decoder.steps + [.statement(name(at: position), at: position)]
+                at: decoder.steps + [.statement(statement.id, at: position)]
             )
         }
 

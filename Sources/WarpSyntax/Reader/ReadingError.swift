@@ -83,28 +83,21 @@ public struct ReadingError: WarpError {
         self.steps.isEmpty ? ReadingError(message, at: steps, in: document) : self
     }
 
-    // The same refusal, with one step of its address said better. A walk
-    // descends into an array knowing only that it is an array; the reader that
-    // knows the array holds statements is the only one that can name them, and
-    // everywhere else an element is a position and nothing more.
+    // The same refusal, with the part of its address a reader spells better
+    // spelled that way. A walk descends into an array knowing only that it is
+    // an array; the reader that knows the array holds statements is the only
+    // one that can name them, and everywhere else an element is a position and
+    // nothing more.
     //
-    // Which element is asked of the caller rather than told to it: the refusal
-    // knows where it happened and the reader knows what lives there, and this
-    // is where the two meet.
-    func naming(at depth: Int, _ name: (Int) -> String?) -> ReadingError {
-        guard case let .index(position)? = steps[safe: depth] else { return self }
+    // The caller says where it is and nothing about where the refusal is: what
+    // is deeper than the caller stays untouched, because the refusal happened
+    // there and the caller was never there. A refusal shallower than the
+    // caller is not one the caller can speak for, and passes.
+    func addressed(from named: [Place.Step]) -> ReadingError {
+        guard steps.count >= named.count else { return self }
 
-        var named = steps
-        named[depth] = .statement(name(position), at: position)
-
-        return ReadingError(message, at: named, in: document)
+        return ReadingError(message, at: named + steps.dropFirst(named.count), in: document)
     }
 
     // MARK: - Private
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
 }

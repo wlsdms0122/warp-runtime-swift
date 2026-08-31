@@ -59,7 +59,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body.broken[0]")
+        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body.broken[0].fallbck")
     }
 
     @Test("a declared name that reads as a number is a key and not a position")
@@ -80,7 +80,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.12.body.broken[0]")
+        #expect(error?.place?.rendered == "wallet/procedures.12.body.broken[0].fallbck")
     }
 
     @Test("a statement that writes an empty name is a statement with no name")
@@ -100,7 +100,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.entry.body[0]")
+        #expect(error?.place?.rendered == "wallet/procedures.entry.body[0].fallbck")
     }
 
     @Test("a document that writes an empty name is a document with no name")
@@ -121,7 +121,7 @@ struct ReadingErrorTests {
 
         // Then
         #expect(error?.place?.document.namespace == nil)
-        #expect(error?.place?.rendered == "abababababab/procedures.entry.body.sent[0]")
+        #expect(error?.place?.rendered == "abababababab/procedures.entry.body.sent[0].fallbck")
     }
 
     @Test("a form that refuses in its own words still says which document")
@@ -164,6 +164,90 @@ struct ReadingErrorTests {
         // Then
         #expect(error?.place?.steps.isEmpty == true)
         #expect(error?.description.hasPrefix("wallet@abababababab: ") == true)
+    }
+
+    @Test("a refusal about a key the document writes is addressed to that key")
+    func aRefusalAboutAKeyIsAtThatKey() throws {
+        // Given — a place is what a front end turns into a line, so a refusal
+        // that stopped at the document while knowing the key would be pointing
+        // an author at the first character of their file
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": [:]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/procedures")
+    }
+
+    @Test("a document written for another warp is refused at the word that says so")
+    func aVersionRefusalIsAtTheVersionKey() throws {
+        // Given — the key is written, so there is something to point at. What
+        // says no version at all is refused about the document, since nothing
+        // is written there to look at.
+        let fixture: Value = [
+            "warp": 99,
+            "name": "wallet",
+            "procedures": ["entry": ["result": "hello"]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/warp")
+    }
+
+    @Test("a statement that names itself twice is called by neither name")
+    func anAmbiguouslyNamedStatementWearsNoName() throws {
+        // Given — the name on the place and the name in the sentence are read
+        // once, in one place. Two readings would let a statement be labelled
+        // 'held' by the address of the very refusal saying it is named twice.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [["id": "held", "var": "kept", "value": "x"]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "wallet/procedures.entry.body[0]")
+        #expect(error?.message.contains("at most once") == true)
+    }
+
+    @Test("a statement whose name is not text is called by no name")
+    func aNameThatIsNotTextIsNoName() throws {
+        // Given — what a name has to be is the reading's question and it is
+        // answered by refusing. What the statement is called while that
+        // happens is this one, and a number is nothing to call it by.
+        let fixture: Value = [
+            "warp": 1,
+            "needs": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [["id": 12, "value": "x"]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: nil)
+        }
+
+        // Then
+        #expect(error?.place?.rendered?.hasPrefix("wallet/procedures.entry.body[0]") == true)
     }
 
     @Test("a fragment is refused about no document, and says so by naming none")

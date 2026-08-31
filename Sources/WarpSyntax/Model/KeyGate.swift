@@ -37,15 +37,20 @@ public struct KeyGate {
         let unknown = container.allKeys
             .map(\.stringValue)
             .filter { key in !known.contains(key) }
+            .sorted()
 
-        guard unknown.isEmpty else {
-            throw ReadingError(
-                "\(context): unknown key(s)"
-                    + " \(unknown.sorted().joined(separator: ", "))"
-                    + " — known keys: \(known.sorted().joined(separator: ", "))",
-                at: decoder.steps
-            )
-        }
+        // The address is one of the keys and not the thing holding them. A
+        // reader shown where the object starts has to find the offending key
+        // themselves, and this is the one refusal that already knows which key
+        // it is. The first by name, since the sentence names the rest.
+        guard let first = unknown.first else { return }
+
+        throw ReadingError(
+            "\(context): unknown key(s)"
+                + " \(unknown.joined(separator: ", "))"
+                + " — known keys: \(known.sorted().joined(separator: ", "))",
+            at: decoder.steps + [.key(first)]
+        )
     }
 
     // MARK: - Private

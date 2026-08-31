@@ -46,7 +46,11 @@ public struct Place: Sendable, Equatable {
     // trace brackets an occurrence, because the text it names ran more than
     // once; a place brackets every statement, because one name in the text may
     // be two statements.
-    public var rendered: String {
+    // Nothing where there is nothing to say. A place in no document at no step
+    // is what a caller holding a body it assembled has, and spelling it as ""
+    // would fold an absence into a string every reader then has to unfold
+    // again — the same absence `Document` keeps as an absence one field over.
+    public var rendered: String? {
         let address = steps.enumerated().reduce(into: "") { written, entry in
             let (offset, step) = entry
             // The first step takes no dot: there is nothing to its left but the
@@ -96,7 +100,7 @@ public struct Place: Sendable, Equatable {
         // written where there are both. What is refused about a document rather
         // than about anything in it has no steps, and the document alone is the
         // whole answer.
-        guard let named else { return address }
+        guard let named else { return address.isEmpty ? nil : address }
         guard !address.isEmpty else { return named }
 
         return "\(named)/\(address)"
@@ -289,5 +293,5 @@ public extension Place {
 }
 
 extension Place: CustomStringConvertible {
-    public var description: String { rendered }
+    public var description: String { rendered ?? "" }
 }

@@ -58,7 +58,7 @@ public struct ModuleReader: Decodable {
             throw ReadingError(
                 "a module that declares nothing can never be"
                     + " linked into anything — write at least one procedure",
-                at: decoder.steps
+                at: decoder.steps + [.key(CodingKeys.procedures.stringValue)]
             )
         }
 
@@ -88,7 +88,7 @@ public struct ModuleReader: Decodable {
                 throw ReadingError(
                     "this document says it needs"
                         + " \(claimed.sorted()) and sends \(sent.sorted())",
-                    at: decoder.steps
+                    at: decoder.steps + [.key(CodingKeys.needs.stringValue)]
                 )
             }
         }
@@ -133,6 +133,9 @@ public struct ModuleReader: Decodable {
     // Anything outside the range this reader knows is refused rather than guessed
     // at — below it, the document is claiming a language that never existed.
     private static func check(version: Int?, at steps: [Place.Step]) throws {
+        // About the document and not about a key in it: what is missing is the
+        // one thing that would have made this a document, and there is nothing
+        // written here to point at.
         guard let version else {
             throw ReadingError(
                 "this is not a warp document — it does not say"
@@ -141,11 +144,14 @@ public struct ModuleReader: Decodable {
             )
         }
 
+        // The key is written, so the refusal is about the key. Pointing at the
+        // document instead would put the answer at its first character, which
+        // is a line the author has no reason to look at.
         guard (Envelope.earliest ... Envelope.version).contains(version) else {
             throw ReadingError(
                 "this document is written for warp \(version),"
                     + " and this reads \(Envelope.earliest) through \(Envelope.version)",
-                at: steps
+                at: steps + [.key(Envelope.versionKey)]
             )
         }
     }
