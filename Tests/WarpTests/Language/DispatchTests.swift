@@ -121,7 +121,7 @@ struct DispatchTests {
         )
 
         #expect(throws: LinkError.self) {
-            try Language().link(
+            try Linker().link(
                 [try Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
                 entry: "entry"
             )

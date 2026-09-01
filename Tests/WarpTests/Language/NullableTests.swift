@@ -13,7 +13,7 @@ import Testing
 @Suite
 struct NullableTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -78,7 +78,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("holds int?")
         }
@@ -130,7 +130,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("reads through null")
         }
@@ -263,7 +263,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("does not declare")
         }
@@ -282,7 +282,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([needless] + Module.standard, entry: entryName)
+            try linker.link([needless] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("never null")
         }
@@ -308,7 +308,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([hidingAny] + Module.standard, entry: entryName)
+            try linker.link([hidingAny] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("writes `?`")
         }
@@ -331,7 +331,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([hidingNullable] + Module.standard, entry: entryName)
+            try linker.link([hidingNullable] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("writes `?`")
         }
@@ -390,7 +390,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([onAField] + Module.standard, entry: entryName)
+            try linker.link([onAField] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("read with `.`")
         }
@@ -410,7 +410,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([onAWord] + Module.standard, entry: entryName)
+            try linker.link([onAWord] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("never null")
         }
@@ -436,7 +436,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("absence is read with `?[`")
@@ -518,7 +518,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("never null")
         }
@@ -599,7 +599,7 @@ struct NullableTests {
 @Suite
 struct IndexReferenceJudgmentTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -635,7 +635,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("native words alone")
         }
@@ -790,7 +790,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("loudly")
         }
@@ -889,7 +889,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("does not declare")
         }
@@ -916,7 +916,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("expected int")
         }
@@ -954,7 +954,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then — `loudly` names no parameter of uppercased
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("loudly")
         }
@@ -980,7 +980,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("only an array is indexed")
         }
@@ -992,7 +992,7 @@ struct IndexReferenceJudgmentTests {
 @Suite
 struct ParameterReceiverTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Test
     @Test("a dot on some T reads the field the call filled in")
@@ -1125,7 +1125,7 @@ struct ParameterReceiverTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("which declares nothing")
         }
@@ -1195,7 +1195,7 @@ struct ParameterReceiverTests {
 
         // When / Then — written the same way twice, and written two ways, link alike
         for marking in [false, true] {
-            _ = try language.link([module(marking: marking)] + Module.standard, entry: entryName)
+            _ = try linker.link([module(marking: marking)] + Module.standard, entry: entryName)
         }
     }
 
@@ -1256,7 +1256,7 @@ struct ParameterReceiverTests {
         )
 
         // When / Then
-        _ = try language.link([sut] + Module.standard, entry: entryName)
+        _ = try linker.link([sut] + Module.standard, entry: entryName)
     }
 
     @Test("one unknown is one unknown, whichever parameter it was read through")
@@ -1309,7 +1309,7 @@ struct ParameterReceiverTests {
         )
 
         // When / Then
-        _ = try language.link([sut] + Module.standard, entry: entryName)
+        _ = try linker.link([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a shape read out of a body is not a declaration anybody can write")
@@ -1336,7 +1336,7 @@ struct ParameterReceiverTests {
         )
 
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("read out of a body")
         }

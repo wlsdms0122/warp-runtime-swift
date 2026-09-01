@@ -25,9 +25,18 @@ public struct Executor: Sendable {
     let types: TypeTable
 
     // MARK: - Initializer
-    // Deliberately not public. An executor may only be made by the `Language`
-    // that validated the procedure, so that the vocabulary which judged a procedure
-    // is the vocabulary that runs it — a contract rather than a habit.
+    // What a caller has to say to make one: who watches, and what the run may
+    // reach outside itself. The tables come from an image, so this is an
+    // executor with nothing to run yet.
+    public init(
+        observer: (any ExecutionObserver)? = nil,
+        environment: (any Environment)? = nil
+    ) {
+        self.init(observer: observer, environment: environment, procedures: [:])
+    }
+
+    // Seeded, and not public: the tables are the link's answer, so a caller
+    // that could write them would be running a program nothing linked.
     init(
         observer: (any ExecutionObserver)?,
         environment: (any Environment)?,

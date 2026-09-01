@@ -102,7 +102,7 @@ struct ModuleDeclarationTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try loader.language.link([caller, first, second], entry: "caller.entry")
+            try Linker().link([caller, first, second], entry: "caller.entry")
         }
     }
 
@@ -188,7 +188,7 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .string("https://example.com/api"))
 
         #expect(throws: LinkError.self) {
-            try loader.language.link([cyclic], entry: entryName)
+            try Linker().link([cyclic], entry: entryName)
         }
     }
 

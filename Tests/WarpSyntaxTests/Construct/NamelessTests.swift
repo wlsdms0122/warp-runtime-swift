@@ -207,8 +207,8 @@ struct NamelessTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [String: Value] = [:]) async throws -> Value {
-        let image = try loader.language.link([module] + Module.standard, entry: "entry")
+        let image = try Linker().link([module] + Module.standard, entry: "entry")
 
-        return try await loader.language.makeExecutor().run(image, arguments: arguments)
+        return try await Executor().run(image, arguments: arguments)
     }
 }

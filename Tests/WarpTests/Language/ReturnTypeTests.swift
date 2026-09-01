@@ -15,7 +15,7 @@ import Testing
 @Suite("What a procedure returns")
 struct ReturnTypeTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -40,8 +40,8 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try language.link([sut], entry: entryName)
-        let answer = try await language.makeExecutor().run(image)
+        let image = try linker.link([sut], entry: entryName)
+        let answer = try await Executor().run(image)
 
         // Then — settled to the declared representation, not merely waved past
         #expect(answer == .int(3))
@@ -59,9 +59,8 @@ struct ReturnTypeTests {
         )
 
         await #expect(throws: (any Error).self) {
-            try await language
-                .makeExecutor()
-                .run(try language.link([narrowing], entry: entryName))
+            try await Executor()
+                .run(try linker.link([narrowing], entry: entryName))
         }
     }
 
@@ -85,10 +84,10 @@ struct ReturnTypeTests {
         )
 
         // When / Then
-        let image = try language.link([sut], entry: entryName)
+        let image = try linker.link([sut], entry: entryName)
 
         await #expect(throws: ArgumentError.self) {
-            try await language.makeExecutor().run(image)
+            try await Executor().run(image)
         }
     }
 
@@ -122,8 +121,8 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try language.link([sut], entry: entryName)
-        let answer = try await language.makeExecutor().run(image)
+        let image = try linker.link([sut], entry: entryName)
+        let answer = try await Executor().run(image)
 
         // Then
         #expect(answer == .array([.object(["id": .string("a")])]))
@@ -150,7 +149,7 @@ struct ReturnTypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            _ = try language.link([sut], entry: entryName)
+            _ = try linker.link([sut], entry: entryName)
         }
     }
 }

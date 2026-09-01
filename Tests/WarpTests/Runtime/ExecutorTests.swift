@@ -12,7 +12,7 @@ import Testing
 @Suite
 struct ExecutorTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Initializer
     // MARK: - Test

@@ -15,7 +15,7 @@ import Testing
 @Suite("The standard vocabulary")
 struct StandardTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -41,11 +41,11 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut, .math, .text, .foundation], entry: entryName)
+            try linker.link([sut, .math, .text, .foundation], entry: entryName)
         }
 
         #expect(throws: Never.self) {
-            try language.link([sut, .collection, .foundation], entry: entryName)
+            try linker.link([sut, .collection, .foundation], entry: entryName)
         }
     }
 
@@ -254,7 +254,7 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut, .shouting] + Module.standard, entry: entryName)
+            try linker.link([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 
@@ -872,7 +872,7 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1081,7 +1081,7 @@ struct StandardTests {
 
         // When / Then — the branch holds a string, and `wants` declares an int
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 }

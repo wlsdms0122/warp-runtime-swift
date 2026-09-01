@@ -56,18 +56,18 @@ struct ConformanceTests {
     // MARK: - Public
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
-        let language = Language()
+        let linker = Linker()
         let module = try Loader().load(sut.program, identity: nil)
-        let image = try language.link([module] + Module.standard, entry: "entry")
+        let image = try linker.link([module] + Module.standard, entry: "entry")
 
-        return try await language.makeExecutor().run(image, arguments: sut.arguments)
+        return try await Executor().run(image, arguments: sut.arguments)
     }
 
     // How far a case got before it was refused. The stage is part of the answer:
     // stopping at a run what another implementation stops at a link means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async -> Case.Stage? {
-        let language = Language()
+        let linker = Linker()
         let module: Module
 
         do {
@@ -79,13 +79,13 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try language.link([module] + Module.standard, entry: "entry")
+            image = try linker.link([module] + Module.standard, entry: "entry")
         } catch {
             return .link
         }
 
         do {
-            _ = try await language.makeExecutor().run(image, arguments: sut.arguments)
+            _ = try await Executor().run(image, arguments: sut.arguments)
         } catch {
             return .run
         }

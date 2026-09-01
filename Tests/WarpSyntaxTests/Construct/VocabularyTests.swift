@@ -87,7 +87,7 @@ struct VocabularyTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try loader.language.link([sut], entry: entryName)
+            try Linker().link([sut], entry: entryName)
         }
     }
 
@@ -112,7 +112,7 @@ struct VocabularyTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try loader.language.link([sut] + Module.standard + [rival], entry: entryName)
+            try Linker().link([sut] + Module.standard + [rival], entry: entryName)
         }
     }
 

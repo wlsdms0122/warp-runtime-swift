@@ -43,6 +43,16 @@ public struct Linker: Sendable {
     }
 
     // MARK: - Public
+    // The second judgement, and the one a module cannot make about itself: a
+    // module is checked against itself, an image is checked across every module
+    // given.
+    //
+    // What to link is the caller's statement — the whole world at once — and
+    // `entry` names which declaration this run starts from. There is no default:
+    // guessing which procedure was meant would be an opinion nobody gave.
+    //
+    // A bundled vocabulary is one of those modules, and a caller that leaves it
+    // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: String) throws -> Image {
         // Type and constraint mentions first, because everything after this
         // reads type expressions and one spelling has to mean one thing. The

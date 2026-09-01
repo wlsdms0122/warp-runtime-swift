@@ -340,7 +340,7 @@ struct LeaveTests {
 
         // When / Then
         #expect {
-            try loader.language.link(
+            try Linker().link(
                 [try loader.loadDocument(sut)] + Module.standard,
                 entry: entryName
             )
@@ -485,11 +485,11 @@ struct LeaveTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [String: Value] = [:]) async throws -> Value {
-        let image = try loader.language.link(
+        let image = try Linker().link(
             [module] + Module.standard + [.testing],
             entry: entryName
         )
 
-        return try await loader.language.makeExecutor().run(image, arguments: arguments)
+        return try await Executor().run(image, arguments: arguments)
     }
 }

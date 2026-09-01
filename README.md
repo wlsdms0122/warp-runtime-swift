@@ -12,8 +12,6 @@ it is what a program that stays where it was built looks like.
 ```swift
 import Warp
 
-let language = Language()
-
 let greet = Procedure(
     signature: Signature(
         parameters: ["name": Parameter(type: .string)],
@@ -38,12 +36,12 @@ let greet = Procedure(
     result: .reference([.key("greeting")])
 )
 
-let image = try language.link(
-    [Module(name: "hello", procedures: ["greet": greet])] + Module.standard,
+let image = try Linker().link(
+    [try Module(name: "hello", procedures: ["greet": greet])] + Module.standard,
     entry: "greet"
 )
 
-let value = try await language.makeExecutor().run(
+let value = try await Executor().run(
     image,
     arguments: ["name": .string("warp")]
 )
@@ -76,8 +74,8 @@ let module = try Loader().load(                        // tree → module, or re
     document,
     identity: try Identity.of(document)                // which document, for refusals
 )
-let image = try Language().link([module] + Module.standard, entry: "entry")
-let answer = try await Language().makeExecutor().run(image)
+let image = try Linker().link([module] + Module.standard, entry: "entry")
+let answer = try await Executor().run(image)
 ```
 
 Each step refuses rather than guesses, and everything refusable is refused

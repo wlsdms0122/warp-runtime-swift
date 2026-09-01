@@ -133,7 +133,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: entryName)
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -172,7 +172,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: entryName)
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -224,7 +224,7 @@ struct PlaceTests {
         }
 
         let link = #expect(throws: LinkError.self) {
-            try Language().link([linked] + Module.standard, entry: entryName)
+            try Linker().link([linked] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -282,14 +282,14 @@ struct PlaceTests {
         }
 
         let bound = #expect(throws: LinkError.self) {
-            try Language().link(
+            try Linker().link(
                 [module(sending: "nowhere", with: .literal(.int(1)))] + Module.standard,
                 entry: entryName
             )
         }
 
         let typed = #expect(throws: LinkError.self) {
-            try Language().link(
+            try Linker().link(
                 [module(
                     sending: "helper",
                     with: .cast(.literal(.int(1)), as: .int, optional: false)
@@ -336,7 +336,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: "wallet.entry")
+            try Linker().link([sut] + Module.standard, entry: "wallet.entry")
         }
 
         // Then — the name rides beside the steps and is never one of them
@@ -415,7 +415,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: "wallet.entry")
+            try Linker().link([sut] + Module.standard, entry: "wallet.entry")
         }
 
         // Then
@@ -436,7 +436,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: "wallet.entry")
+            try Linker().link([sut] + Module.standard, entry: "wallet.entry")
         }
 
         // Then
@@ -526,7 +526,7 @@ struct PlaceTests {
         }
 
         let link = #expect(throws: LinkError.self) {
-            try Language().link([declared] + Module.standard, entry: entryName)
+            try Linker().link([declared] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -555,7 +555,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([held, sent, caller] + Module.standard, entry: entryName)
+            try Linker().link([held, sent, caller] + Module.standard, entry: entryName)
         }
 
         // Then — the place is the declaration that cannot be added
@@ -582,7 +582,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([module, module, caller] + Module.standard, entry: entryName)
+            try Linker().link([module, module, caller] + Module.standard, entry: entryName)
         }
 
         // Then — what is wrong is the second copy, not anything inside it
@@ -605,7 +605,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([held, sent, caller] + Module.standard, entry: entryName)
+            try Linker().link([held, sent, caller] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -626,7 +626,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([shape, membership, caller] + Module.standard, entry: entryName)
+            try Linker().link([shape, membership, caller] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -649,7 +649,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+            try Linker().link([sut] + Module.standard, entry: "pricing.entry")
         }
 
         // Then
@@ -677,7 +677,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+            try Linker().link([sut] + Module.standard, entry: "pricing.entry")
         }
 
         // Then
@@ -709,7 +709,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([sut] + Module.standard, entry: "pricing.entry")
+            try Linker().link([sut] + Module.standard, entry: "pricing.entry")
         }
 
         // Then
@@ -731,7 +731,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Language().link([declaring(), declaring(), caller] + Module.standard, entry: entryName)
+            try Linker().link([declaring(), declaring(), caller] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -775,7 +775,7 @@ struct PlaceTests {
         // behind this are built in name order and the second declaration is
         // the second the caller handed over.
         let error = #expect(throws: LinkError.self) {
-            try Language().link(
+            try Linker().link(
                 [shipping, catalog, pricing, caller] + Module.standard,
                 entry: entryName
             )

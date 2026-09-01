@@ -14,7 +14,7 @@ import Testing
 @Suite
 struct LinkerTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -32,7 +32,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "app/const.greeting")
@@ -62,7 +62,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.count")
@@ -91,7 +91,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.mode")
@@ -131,7 +131,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -155,7 +155,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("null") == true)
@@ -191,7 +191,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -214,7 +214,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -468,7 +468,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         }
     }
 
@@ -502,7 +502,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         }
     }
 
@@ -532,7 +532,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         }
     }
 
@@ -578,7 +578,7 @@ struct LinkerTests {
         )
 
         // When
-        let image = try language.link([caller, middle, leaf], entry: "caller")
+        let image = try linker.link([caller, middle, leaf], entry: "caller")
 
         // Then
         #expect(Set(image.procedures.keys) == ["caller", "middle", "leaf"])
@@ -615,10 +615,10 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([caller], entry: "caller")
+            try linker.link([caller], entry: "caller")
         }
         #expect(throws: Never.self) {
-            try language.link([caller, leaf], entry: "caller")
+            try linker.link([caller, leaf], entry: "caller")
         }
     }
 
@@ -653,7 +653,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([left, right], entry: "shared")
+            try linker.link([left, right], entry: "shared")
         }
     }
 
@@ -675,7 +675,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "absent")
+            try linker.link([sut], entry: "absent")
         }
     }
 
@@ -735,7 +735,7 @@ struct LinkerTests {
         )
 
         // When
-        let image = try language.link([sut], entry: "loopy")
+        let image = try linker.link([sut], entry: "loopy")
 
         // Then
         #expect(Set(image.procedures.keys) == ["loopy"])
@@ -775,7 +775,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         }
     }
 
@@ -810,7 +810,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         }
     }
 
@@ -853,7 +853,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         }
     }
 
@@ -901,7 +901,7 @@ struct LinkerTests {
         )
 
         // When / Then
-        _ = try language.link([sut], entry: "caller")
+        _ = try linker.link([sut], entry: "caller")
     }
 
     @Test("a body that settles an answer is held to it, declared or not")
@@ -938,7 +938,7 @@ struct LinkerTests {
 
         // When / Then
         #expect {
-            try language.link([sut], entry: "caller")
+            try linker.link([sut], entry: "caller")
         } throws: { error in
             error is LinkError && "\(error)".contains("holds null where int is declared")
         }
@@ -961,7 +961,7 @@ struct LinkerTests {
         )
 
         // When
-        let image = try language.link([sut], entry: "alone")
+        let image = try linker.link([sut], entry: "alone")
 
         // Then
         #expect(Set(image.procedures.keys) == ["alone"])
@@ -998,7 +998,7 @@ struct LinkerTests {
         // When / Then — the refusal names both candidates, which is the whole
         // of what a caller needs to pick one
         #expect {
-            try language.link([sut] + Module.standard, entry: "caller")
+            try linker.link([sut] + Module.standard, entry: "caller")
         } throws: { error in
             "\(error)".contains("std.collection.map")
                 && "\(error)".contains("std.concurrent.map")
@@ -1030,6 +1030,6 @@ struct LinkerTests {
         )
 
         // When / Then
-        _ = try language.link([sut] + Module.standard, entry: "caller")
+        _ = try linker.link([sut] + Module.standard, entry: "caller")
     }
 }

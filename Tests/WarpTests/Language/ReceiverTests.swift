@@ -15,7 +15,7 @@ import Testing
 @Suite("A declaration may be sent to something")
 struct ReceiverTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -103,7 +103,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try language.link([written] + Module.standard, entry: entryName)
+        let image = try linker.link([written] + Module.standard, entry: entryName)
 
         // Then — one table, and what separates them is only how each is written
         let shout = try #require(image.words["shout"])
@@ -189,7 +189,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
 
         // Then — `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
@@ -227,7 +227,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image.pure.contains("label"))
@@ -331,7 +331,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
 
         // Then
         #expect(!image.pure.contains("summarize"))
@@ -377,7 +377,7 @@ struct ReceiverTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard + [.failing], entry: entryName)
+            try linker.link([sut] + Module.standard + [.failing], entry: entryName)
         }
     }
 

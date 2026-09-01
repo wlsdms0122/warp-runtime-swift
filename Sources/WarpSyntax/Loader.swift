@@ -10,7 +10,7 @@ import Warp
 
 // The door a notation comes through: data in, IR out. It holds the one thing a
 // document needs and a procedure does not — the words its constructs are spelled
-// with — together with the language it is judged against.
+// with.
 //
 // A front end with a document stops at `Value`. A YAML or JSON parser produces
 // data; turning that data into a procedure is this one path, and what every
@@ -20,17 +20,14 @@ import Warp
 // end's instructions rather than printing them and reading them back.
 public struct Loader: Sendable {
     // MARK: - Property
-    public let language: Language
     public let registry: ConstructRegistry
     public let notation: Notation
 
     // MARK: - Initializer
     public init(
-        language: Language = Language(),
         registry: ConstructRegistry = .standard,
         notation: Notation = .canonical
     ) {
-        self.language = language
         self.registry = registry
         self.notation = notation
     }
@@ -155,7 +152,7 @@ public struct Loader: Sendable {
     public func procedure(from value: Value) throws -> Procedure {
         let procedure = try read(ProcedureReader.self, from: value, in: .assembled).procedure
 
-        try language.validate(procedure)
+        try Validator().validate(procedure)
 
         return procedure
     }

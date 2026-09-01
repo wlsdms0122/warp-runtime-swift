@@ -95,7 +95,7 @@ struct ClosureTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link([sut, .shouting] + Module.standard, entry: entryName)
+            try Linker().link([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 

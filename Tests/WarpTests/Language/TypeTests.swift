@@ -128,7 +128,7 @@ struct TypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link([sut], entry: "entry")
+            try Linker().link([sut], entry: "entry")
         }
     }
 
@@ -171,7 +171,7 @@ struct TypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link(
+            try Linker().link(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -207,7 +207,7 @@ struct TypeTests {
 
         // When / Then
         #expect {
-            try Language().link(
+            try Linker().link(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -222,7 +222,7 @@ struct TypeTests {
             result: .dispatch(Dispatch(selector: "counts"))
         )
 
-        _ = try Language().link(
+        _ = try Linker().link(
             [try Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
             entry: "entry"
         )

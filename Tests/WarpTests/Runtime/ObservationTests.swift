@@ -18,7 +18,7 @@ import Testing
 @Suite("What a run reports while it runs")
 struct ObservationTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -39,9 +39,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events == [
@@ -78,9 +78,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.started("outer.inner")))
@@ -114,9 +114,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.completed("walk[0].step", .int(1))))
@@ -162,9 +162,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.completed("both[0].step", .int(1))))
@@ -195,9 +195,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.completed("said.helper.inner", .int(7))))
@@ -230,15 +230,15 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
         await #expect(throws: Aborted.self) {
-            try await language.makeExecutor().run(image)
+            try await Executor().run(image)
         }
 
         do {
-            _ = try await language.makeExecutor().run(image)
+            _ = try await Executor().run(image)
         } catch let error as Aborted {
             #expect(error.trace?.rendered == "[0].helper.[0]")
             #expect("\(error)" == "[0].helper.[0]: no")
@@ -263,9 +263,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
 
-        _ = try? await language.makeExecutor(observer: observer).run(image)
+        _ = try? await Executor(observer: observer).run(image)
 
         // Then
         let events = await observer.events
@@ -315,8 +315,8 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard + [.failing], entry: entryName)
-        let answer = try await language.makeExecutor(observer: observer).run(image)
+        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let answer = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(answer == .string("caught"))
@@ -336,8 +336,8 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
-        let answer = try await language.makeExecutor().run(image)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let answer = try await Executor().run(image)
 
         // Then
         #expect(answer == .int(1))

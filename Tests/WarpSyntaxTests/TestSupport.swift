@@ -177,15 +177,13 @@ extension Loader {
 func run(
     _ modules: [Module],
     entry: String = entryName,
-    language: Language = Loader.testing.language,
     arguments: [String: Value] = [:],
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
 ) async throws -> [String: Value] {
-    let image = try language.link(modules + vocabulary, entry: entry)
+    let image = try Linker().link(modules + vocabulary, entry: entry)
 
-    let answer = try await language
-        .makeExecutor(environment: environment)
+    let answer = try await Executor(environment: environment)
         .run(image, arguments: arguments)
 
     // This notation spells several named outputs, which the reader lowers to one
@@ -200,7 +198,6 @@ func run(
 func run(
     _ module: Module,
     entry: String = entryName,
-    language: Language = Loader.testing.language,
     arguments: [String: Value] = [:],
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
@@ -208,7 +205,6 @@ func run(
     try await run(
         [module],
         entry: entry,
-        language: language,
         arguments: arguments,
         vocabulary: vocabulary,
         environment: environment

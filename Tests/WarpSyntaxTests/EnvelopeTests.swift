@@ -316,7 +316,7 @@ struct EnvelopeTests {
 
         // And the link still holds it to that — the word has to be there
         #expect(throws: LinkError.self) {
-            try loader.language.link([module], entry: entryName)
+            try Linker().link([module], entry: entryName)
         }
     }
 

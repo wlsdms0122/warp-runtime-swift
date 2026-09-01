@@ -16,7 +16,7 @@ import Testing
 @Suite("What never finishes binds nothing")
 struct NeverTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -52,7 +52,7 @@ struct NeverTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("what follows it here would never run")
         }
@@ -75,7 +75,7 @@ struct NeverTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("binds nothing and takes no name")
         }
@@ -200,7 +200,7 @@ struct NeverTests {
         )
 
         #expect {
-            try Language().link([refusing] + Module.standard, entry: entryName)
+            try Linker().link([refusing] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("holds string")
         }
@@ -319,7 +319,7 @@ struct NeverTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("holds string")
         }
@@ -343,7 +343,7 @@ struct NeverTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("never finishes before it")
         }

@@ -23,7 +23,7 @@ import Testing
 @Suite("An answer nobody wrote is read off the body")
 struct AnsweringTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -135,11 +135,11 @@ struct AnsweringTests {
         }
 
         // When / Then — one way out, and the dot is judged against it
-        _ = try language.link([module(leaving: false)] + Module.standard, entry: entryName)
+        _ = try linker.link([module(leaving: false)] + Module.standard, entry: entryName)
 
         // Two, and what holds both says nothing about a field
         #expect {
-            try language.link([module(leaving: true)] + Module.standard, entry: entryName)
+            try linker.link([module(leaving: true)] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("which declares nothing")
         }
@@ -168,7 +168,7 @@ struct AnsweringTests {
         )
 
         // When / Then — nothing is claimed, so nothing is refused
-        _ = try language.link([sut] + Module.standard, entry: entryName)
+        _ = try linker.link([sut] + Module.standard, entry: entryName)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
         // like at a call site — where the same shape with the circle broken
@@ -197,10 +197,10 @@ struct AnsweringTests {
         }
 
         #expect(throws: LinkError.self) {
-            try language.link([reading(circling: true)] + Module.standard, entry: entryName)
+            try linker.link([reading(circling: true)] + Module.standard, entry: entryName)
         }
 
-        _ = try language.link([reading(circling: false)] + Module.standard, entry: entryName)
+        _ = try linker.link([reading(circling: false)] + Module.standard, entry: entryName)
     }
 
     @Test("an answer naming a type parameter is filled at the call, or fills with nothing")
@@ -241,14 +241,14 @@ struct AnsweringTests {
 
         // When / Then — the parameter itself: filled with what the call put
         // there, so the caller reads that record and is held to it
-        _ = try language.link(
+        _ = try linker.link(
             [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
                 + Module.standard,
             entry: entryName
         )
 
         #expect {
-            try language.link(
+            try linker.link(
                 [module(reading: [.key("said"), .key("missing")], answering: [.key("of")])]
                     + Module.standard,
                 entry: entryName
@@ -260,7 +260,7 @@ struct AnsweringTests {
         // And a field of it: a name only `peek` could read, which no call
         // fills — so the caller reads `any` and the dot is refused
         #expect {
-            try language.link(
+            try linker.link(
                 [module(
                     reading: [.key("said"), .key("inner")],
                     answering: [.key("of"), .key("inner")]
@@ -285,7 +285,7 @@ struct AnsweringTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image.entry.signature.returns == nil)

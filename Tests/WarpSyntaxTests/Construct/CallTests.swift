@@ -78,7 +78,7 @@ struct CallTests {
         // When / Then — nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
         #expect(throws: LinkError.self) {
-            try loader.language.link([sut], entry: "caller")
+            try Linker().link([sut], entry: "caller")
         }
     }
 
@@ -183,8 +183,8 @@ struct CallTests {
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["body": [["id": "again", "call": ["procedure": "loopy"]]]]]
         ])
-        let image = try loader.language.link([module], entry: "loopy")
-        let sut = loader.language.makeExecutor()
+        let image = try Linker().link([module], entry: "loopy")
+        let sut = Executor()
 
         // When
         let task = Task {

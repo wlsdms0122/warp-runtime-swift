@@ -16,7 +16,7 @@ import Testing
 @Suite
 struct BytesTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -385,7 +385,7 @@ struct BytesTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 

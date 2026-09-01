@@ -17,7 +17,7 @@ import Testing
 @Suite("A type name carries its module")
 struct QualifiedNameTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -53,7 +53,7 @@ struct QualifiedNameTests {
         )
 
         // When
-        let image = try language.link([sut, store] + Module.standard, entry: entryName)
+        let image = try linker.link([sut, store] + Module.standard, entry: entryName)
 
         // Then — the mention resolved to the qualified declaration
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
@@ -120,7 +120,7 @@ struct QualifiedNameTests {
 
         // When / Then
         #expect {
-            try language.link([sut, one, two], entry: entryName)
+            try linker.link([sut, one, two], entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("declared by more than one module")
@@ -181,7 +181,7 @@ struct QualifiedNameTests {
 
         // When / Then
         #expect {
-            try language.link([one, two], entry: entryName)
+            try linker.link([one, two], entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("declared more than once")
         }
@@ -239,7 +239,7 @@ struct QualifiedNameTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -331,7 +331,7 @@ struct QualifiedNameTests {
 
         // When / Then
         #expect {
-            try language.link([sut], entry: "m.\(entryName)")
+            try linker.link([sut], entry: "m.\(entryName)")
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("m.Limit")
@@ -355,7 +355,7 @@ struct QualifiedNameTests {
         )
 
         #expect(throws: Never.self) {
-            try language.link([spelled], entry: "m.\(entryName)")
+            try linker.link([spelled], entry: "m.\(entryName)")
         }
     }
 
@@ -380,7 +380,7 @@ struct QualifiedNameTests {
         // the caller listed the modules cannot change the conclusion
         for modules in [[membership, shape], [shape, membership]] {
             #expect {
-                try language.link(modules, entry: entryName)
+                try linker.link(modules, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("both a type and a constraint")
             }
@@ -444,7 +444,7 @@ struct QualifiedNameTests {
         )
 
         #expect {
-            try language.link([arithmetic] + Module.standard, entry: entryName)
+            try linker.link([arithmetic] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -494,13 +494,13 @@ struct QualifiedNameTests {
         // When / Then — without the foundation the constraint name resolves to
         // nothing, and the declaration that mentions it is refused
         #expect {
-            try language.link([sut, .collection], entry: entryName)
+            try linker.link([sut, .collection], entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("names constraint 'std.Comparable'")
         }
 
         #expect(throws: Never.self) {
-            try language.link([sut, .collection, .foundation], entry: entryName)
+            try linker.link([sut, .collection, .foundation], entry: entryName)
         }
     }
 }
