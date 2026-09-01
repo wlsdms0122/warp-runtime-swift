@@ -103,8 +103,22 @@ public struct Validator: Sendable {
 
         guard sends != module.imports else { return }
 
+        // The two differences and not the two lists. They are different
+        // mistakes with different fixes — a word sent and not listed is the
+        // grant the list existed to disclose, and a word listed and not sent
+        // asks for one the program has no use for — and a module sending
+        // thirty words would otherwise leave an author diffing two of them by
+        // eye to find the one that moved.
+        let undisclosed = sends.subtracting(module.imports).sorted()
+        let unspent = module.imports.subtracting(sends).sorted()
+
+        let said = [
+            undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
+            unspent.isEmpty ? nil : "imports \(unspent), which it does not send"
+        ]
+
         throw ValidationError(
-            "imports \(module.imports.sorted()) and sends \(sends.sorted())",
+            said.compactMap { said in said }.joined(separator: ", and "),
             at: Place([.slot(.imports)], in: .of(module))
         )
     }

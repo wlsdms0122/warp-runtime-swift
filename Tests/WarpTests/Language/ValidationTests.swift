@@ -391,6 +391,39 @@ struct ValidationTests {
         }
     }
 
+    @Test("a list wrong in both directions says which words moved, not which lists")
+    func bothDifferencesAreSaidApart() {
+        // Given — a module sending thirty words would leave an author diffing
+        // two lists by eye, and the two differences are two mistakes with two
+        // fixes: one word is a grant nobody disclosed, the other is a grant
+        // nothing uses.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                imports: ["minus"],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "counted",
+                                expression: .dispatch(Dispatch(
+                                    receiver: .literal(.array([.int(1)])),
+                                    selector: "count"
+                                ))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
+
+        // Then
+        #expect(
+            error?.message
+                == "sends [\"count\"], which it does not import,"
+                    + " and imports [\"minus\"], which it does not send"
+        )
+    }
+
     @Test("a module that claims nothing states what it sends")
     func anUnclaimedModuleStatesWhatItSends() throws {
         // Given — a caller assembling shapes in Swift holds the module and has

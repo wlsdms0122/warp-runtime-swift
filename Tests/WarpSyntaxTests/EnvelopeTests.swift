@@ -158,7 +158,8 @@ struct EnvelopeTests {
 
     @Test("a document that undersells what it imports is refused")
     func anUntruthfulManifestIsRefused() {
-        // Given — the whole value of the list is that it can be believed
+        // Given — the whole value of the list is that it can be believed, and
+        // what is said back is the word that moved rather than both lists
         #expect {
             try loader.loadDocument([
                 "imports": [],
@@ -175,7 +176,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("and sends")
+            "\(error)".contains("sends [\"plus\"], which it does not import")
         }
     }
 
@@ -200,7 +201,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("and sends")
+            "\(error)".contains("imports [\"minus\"], which it does not send")
         }
     }
 
