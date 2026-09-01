@@ -26,7 +26,7 @@ import Warp
 //
 // It is a function of everything *inside* it, down to the order of an array —
 // which is more than the language calls a difference. Two documents listing the
-// same needs in two orders are one program and two documents to this, because
+// same imports in two orders are one program and two documents to this, because
 // what is being told apart is which text a refusal came out of, and a text that
 // was rewritten is not the text somebody is holding.
 //

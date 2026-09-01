@@ -116,7 +116,7 @@ struct WriterTests {
         // Given — a fixed point says the writing settled, not that it kept
         // everything. Running both is what notices a slot dropped on the way out.
         let document: Value = [
-            "needs": ["equal", "joined", "plus", "text"],
+            "imports": ["equal", "joined", "plus", "text"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>", "word": "string"],
@@ -535,7 +535,7 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "needs": ["plus", "std.logic.notEqual"],
+        "imports": ["plus", "std.logic.notEqual"],
         "name": "canonical",
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],

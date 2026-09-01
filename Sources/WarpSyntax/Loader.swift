@@ -83,7 +83,7 @@ public struct Loader: Sendable {
         let read = try spelled(value, in: document)
         let module = identity.map(read.read(from:)) ?? read
 
-        // What a document needs is read before the program it belongs to, so a
+        // What a document imports is read before the program it belongs to, so a
         // caller decides whether to grant before it decides whether to link. A
         // document that leaves the list out is asking to be trusted about the
         // one thing that was worth checking, and silence is not a claim a
@@ -96,11 +96,11 @@ public struct Loader: Sendable {
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
         guard case let .object(fields) = value,
-            Envelope.declaresNeeds(fields[Envelope.needsKey])
+            Envelope.declaresImports(fields[Envelope.importsKey])
         else {
             throw ReadingError(
-                "a document says what it needs, and this one does not —"
-                    + " write `\(Envelope.needsKey)`, empty where the program sends nothing"
+                "a document says what it imports, and this one does not —"
+                    + " write `\(Envelope.importsKey)`, empty where the program sends nothing"
             )
             .read(in: document)
         }
@@ -111,7 +111,7 @@ public struct Loader: Sendable {
     }
 
     // The document a document is: what it spells, written back out the one way
-    // a document is written, with the version and the needs list filled in.
+    // a document is written, with the version and the imports list filled in.
     //
     // What wants this is anything asking what a text *is* rather than whether
     // its program is any good — telling one document from another, which is
@@ -124,7 +124,7 @@ public struct Loader: Sendable {
     // was never the stage that checks a body against itself.
     //
     // What comes back is sealed: the version and the list of what the program
-    // needs are filled in here, which are the two things nobody writes by hand.
+    // imports are filled in here, which are the two things nobody writes by hand.
     // So the way to make a document out of anything is this, and a caller that
     // then loads what it got is loading exactly what it will send.
     //

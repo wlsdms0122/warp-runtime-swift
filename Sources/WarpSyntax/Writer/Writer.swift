@@ -61,7 +61,7 @@ public struct Writer: Sendable {
         // way through.
         var written: [String: Value] = [
             Envelope.versionKey: .int(Envelope.version),
-            Envelope.needsKey: .array(Envelope.needs(of: module).sorted().map(Value.string)),
+            Envelope.importsKey: .array(Envelope.imports(of: module).sorted().map(Value.string)),
             "procedures": .object(try module.procedures.mapValues(value(of:)))
         ]
 

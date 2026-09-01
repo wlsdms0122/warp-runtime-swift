@@ -23,7 +23,7 @@ import Warp
 //   not a value somebody guessed.
 //
 // The header carries the *encoding's* version, not the language's. What the
-// program needs of its reader is said inside the document (`warp`, `needs`),
+// program needs of its reader is said inside the document (`warp`, `imports`),
 // because it is true in every encoding; this byte only says how the bytes
 // themselves are laid out.
 public enum BinaryEncoding {

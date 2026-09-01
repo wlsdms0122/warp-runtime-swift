@@ -138,7 +138,7 @@ extension Loader {
 
     // A document as a front end hands one over, which is the only way one is
     // ever made: written back out the one way a document is written, with the
-    // version and the needs list filled in. No author writes either — a fixture
+    // version and the imports list filled in. No author writes either — a fixture
     // spelling them out in every test would be writing the two parts of a
     // document nobody writes.
     //
@@ -155,13 +155,13 @@ extension Loader {
         // out again here, and only the list — what these fixtures write is the
         // subject, so they are loaded as they were written.
         guard case let .object(sealed) = try canonical(stamped),
-              let needs = sealed[Envelope.needsKey]
+              let imports = sealed[Envelope.importsKey]
         else { return try load(stamped, identity: nil) }
 
         guard case let .object(fields) = stamped else { return try load(stamped, identity: nil) }
 
         return try load(
-            .object(fields.merging([Envelope.needsKey: needs]) { written, _ in written }),
+            .object(fields.merging([Envelope.importsKey: imports]) { written, _ in written }),
             identity: nil
         )
     }

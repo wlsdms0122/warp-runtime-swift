@@ -20,7 +20,7 @@ public enum Envelope {
     // MARK: - Property
     // Which shapes a reader has to understand. It goes up when a shape is added
     // or an existing one changes what it means, and does not move for a new word
-    // — a word is vocabulary, and vocabulary is what `needs` is for.
+    // — a word is vocabulary, and vocabulary is what `imports` is for.
     //
     // Every document says it. A reader that filled in a default would be reading
     // a document that never said which language it was written for, and a file
@@ -34,28 +34,28 @@ public enum Envelope {
     public static let earliest = 1
 
     public static let versionKey = "warp"
-    public static let needsKey = "needs"
+    public static let importsKey = "imports"
 
     // MARK: - Public
-    // Whether a document declares what it needs.
+    // Whether a document declares what it imports.
     //
     // Written and not null. A key holding nothing is not a claim, and the two
     // who ask have to agree about that: the door turns away a document that
     // declares nothing, and the reader holds a document that declares to what
-    // it declared. Answering differently is how `needs: null` walks through
+    // it declared. Answering differently is how `imports: null` walks through
     // the door as a claim and past the reader as no claim, arriving trusted
     // and unchecked — which is the one thing this list exists to prevent.
     //
     // Asked twice because the two are in different places. The door holds the
     // document and reads the value; the reader is inside it and has a
     // container. One rule, said here in both of their words.
-    public static func declaresNeeds(_ written: Value?) -> Bool {
+    public static func declaresImports(_ written: Value?) -> Bool {
         guard let written else { return false }
 
         return written != .null
     }
 
-    public static func declaresNeeds<Key: CodingKey>(
+    public static func declaresImports<Key: CodingKey>(
         in container: KeyedDecodingContainer<Key>,
         forKey key: Key
     ) throws -> Bool {
@@ -71,7 +71,7 @@ public enum Envelope {
     // path safe to walk. So what is listed here is everything the program can do
     // that touches anything, and a caller reading it is reading the bounds of
     // what it is about to allow.
-    public static func needs(of module: Module) -> Set<String> {
+    public static func imports(of module: Module) -> Set<String> {
         // A constant is an expression, so it sends words like any other. Missing
         // them would understate what a program needs, and the list is only worth
         // having if it can be believed.

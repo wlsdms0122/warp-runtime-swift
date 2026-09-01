@@ -18,7 +18,7 @@ import Warp
 public struct ModuleReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case warp
-        case needs
+        case imports
         case name
         case description
         case types
@@ -69,18 +69,18 @@ public struct ModuleReader: Decodable {
             procedures: procedures.mapValues(\.procedure)
         )
 
-        // A document that lists what it needs is held to the list. A caller
+        // A document that lists what it imports is held to the list. A caller
         // reads it to decide whether to run the program at all, so a list that
         // was allowed to drift would be worse than none — it would be trusted
         // and wrong.
-        if try Envelope.declaresNeeds(in: container, forKey: .needs) {
-            let listed = try container.superDecoder(forKey: .needs)
+        if try Envelope.declaresImports(in: container, forKey: .imports) {
+            let listed = try container.superDecoder(forKey: .imports)
             let claimed = try listed.read([String].self)
-            let sent = Envelope.needs(of: module)
+            let sent = Envelope.imports(of: module)
 
             guard Set(claimed) == sent else {
                 throw ReadingError(
-                    "this document says it needs"
+                    "this document says it imports"
                         + " \(claimed.sorted()) and sends \(sent.sorted())",
                     at: listed.steps
                 )
