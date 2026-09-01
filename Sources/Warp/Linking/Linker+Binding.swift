@@ -209,7 +209,7 @@ extension Linker {
 
         case let .conditional(condition, then, otherwise):
             return .conditional(
-                try inner(condition, under: .condition(of: .conditional)),
+                try inner(condition, under: .condition(of: .branch)),
                 then: try inner(then, under: .then),
                 else: try otherwise.map { otherwise in try inner(otherwise, under: .otherwise) }
             )

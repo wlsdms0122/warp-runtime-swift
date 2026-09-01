@@ -53,7 +53,7 @@ struct PlaceWrittenTests {
         let branch = Place.procedure(entryName, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition(of: .conditional))
+            .slot(.condition(of: .branch))
 
         let loop = Place.procedure(entryName, in: .assembled)
             .statement("spin", at: 0)
@@ -78,7 +78,7 @@ struct PlaceWrittenTests {
         let sut = Place.procedure(entryName, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition(of: .conditional))
+            .slot(.condition(of: .branch))
 
         // Then
         #expect(sut.written(by: registry).rendered?.hasSuffix(".if.when") == true)

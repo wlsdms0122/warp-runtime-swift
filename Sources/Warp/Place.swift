@@ -291,7 +291,11 @@ public extension Place {
         // asks `when` and a loop asks `where` — and a slot that had to be told
         // by whatever step came before it is a slot that can be reached from
         // somewhere nobody remembered to tell.
-        case condition(of: Construct)
+        //
+        // Only what can hold one, so a side spelling this has nothing to
+        // guess at and a construct added later cannot be spelled by a default
+        // arm that nobody looked at.
+        case condition(of: Conditional)
         case then
         case otherwise
         case material
@@ -321,6 +325,14 @@ public extension Place {
             case .rescue: "rescue"
             }
         }
+    }
+
+    // A construct that holds a condition. Two of them, and a third would be a
+    // third here — which is the point: whoever spells a condition for a
+    // document is asked about every one of these by name.
+    enum Conditional: Sendable, Equatable {
+        case branch
+        case loop
     }
 
     // What one step of a place is. The cases divide on who chose the word,

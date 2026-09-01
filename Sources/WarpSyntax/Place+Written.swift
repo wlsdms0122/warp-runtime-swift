@@ -77,11 +77,13 @@ public extension Place {
         case .rescue: AttemptForm.CodingKeys.rescue.stringValue
 
         // The one slot two constructs write differently, which is why the slot
-        // says which one holds it.
+        // says which one holds it. Answered by name and not by a default, so a
+        // third construct that holds a condition arrives here as a compiler
+        // error rather than as a word nobody chose.
         case let .condition(construct):
             switch construct {
+            case .branch: BranchForm.CodingKeys.when.stringValue
             case .loop: LoopForm.CodingKeys.where.stringValue
-            default: BranchForm.CodingKeys.when.stringValue
             }
         }
     }

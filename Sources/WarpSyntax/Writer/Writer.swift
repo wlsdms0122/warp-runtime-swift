@@ -77,7 +77,8 @@ public struct Writer: Sendable {
             Envelope.importsKey: .array(
                 (draft.imports ?? draft.sends).sorted().map(Value.string)
             ),
-            "procedures": .object(try draft.procedures.mapValues(value(of:)))
+            ModuleReader.CodingKeys.procedures.stringValue:
+                .object(try draft.procedures.mapValues(value(of:)))
         ]
 
         if let namespace = draft.namespace {
@@ -85,15 +86,15 @@ public struct Writer: Sendable {
         }
 
         if let description = draft.description {
-            written["description"] = .string(description)
+            written[ModuleReader.CodingKeys.description.stringValue] = .string(description)
         }
 
         if !draft.types.isEmpty {
-            written["types"] = .object(try draft.types.mapValues(value(of:)))
+            written[ModuleReader.CodingKeys.types.stringValue] = .object(try draft.types.mapValues(value(of:)))
         }
 
         if !draft.constraints.isEmpty {
-            written["constraints"] = .object(
+            written[ModuleReader.CodingKeys.constraints.stringValue] = .object(
                 try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
@@ -101,7 +102,7 @@ public struct Writer: Sendable {
         }
 
         if !draft.constants.isEmpty {
-            written["const"] = .object(
+            written[ModuleReader.CodingKeys.const.stringValue] = .object(
                 try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
@@ -123,7 +124,7 @@ public struct Writer: Sendable {
         var written: [String: Value] = [:]
 
         if let description = procedure.description {
-            written["description"] = .string(description)
+            written[ProcedureReader.CodingKeys.description.stringValue] = .string(description)
         }
 
         // Stripped here, at the declaration, because this is the one place a

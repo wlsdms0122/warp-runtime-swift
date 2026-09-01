@@ -123,21 +123,35 @@ public struct Validator: Sendable {
         )
     }
 
+    // One parameter, and everything a parameter is held to. Two walks meet a
+    // signature — a procedure's and a closure's — and a rule written at one of
+    // them is a rule the other does not have.
+    private func validate(
+        _ parameter: String,
+        of signature: Signature,
+        beside constants: Set<String>,
+        at here: Place
+    ) throws {
+        try introduced(parameter, beside: constants, at: here)
+
+        // A default is a value a document writes, so it is held to what a
+        // document can hold. It reaches the wire without ever passing through
+        // a body, so a body's rules never see it.
+        guard signature.parameters[parameter]?.default?.holdsProcedure == true else { return }
+
+        throw ValidationError(Value.procedureIsNotData, at: here)
+    }
+
     private func validate(_ procedure: Procedure, constants: Set<String>, at place: Place) throws {
         let parameters = Set(procedure.signature.parameters.keys)
 
         for parameter in parameters.sorted() {
-            let here = place.slot(.parameters).key(parameter)
-
-            try introduced(parameter, beside: constants, at: here)
-
-            // A default is a value a document writes, so it is held to what a
-            // document can hold. It reaches the wire without ever passing
-            // through a body, so a body's rules never see it.
-            guard procedure.signature.parameters[parameter]?.default?.holdsProcedure == true
-            else { continue }
-
-            throw ValidationError(Value.procedureIsNotData, at: here)
+            try validate(
+                parameter,
+                of: procedure.signature,
+                beside: constants,
+                at: place.slot(.parameters).key(parameter)
+            )
         }
 
         guard let block = procedure.block else { return }
@@ -406,8 +420,9 @@ public struct Validator: Sendable {
             // The same rule the top-level signature gets — a closure's
             // parameter is a name a body reads, wherever the signature sits.
             for parameter in parameters.sorted() {
-                try introduced(
+                try validate(
                     parameter,
+                    of: procedure.signature,
                     beside: surroundings.constants,
                     at: inside.slot(.parameters).key(parameter)
                 )
@@ -451,13 +466,13 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(condition, at: place.slot(.condition(of: .conditional)))
+            try refuseConstructCondition(condition, at: place.slot(.condition(of: .branch)))
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition(of: .conditional))
+                at: place.slot(.condition(of: .branch))
             )
             try validate(
                 then,

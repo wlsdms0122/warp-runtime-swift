@@ -1391,7 +1391,7 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .conditional)), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .branch)), when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
@@ -1399,7 +1399,7 @@ extension Linker {
             // environment the branch stands in.
             let head = try inspected(
                 condition,
-                at: place.slot(.condition(of: .conditional)),
+                at: place.slot(.condition(of: .branch)),
                 in: environment,
                 with: frame,
                 ask: ask

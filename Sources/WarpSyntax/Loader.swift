@@ -269,8 +269,7 @@ public struct Loader: Sendable {
     ) throws -> T {
         let userInfo: [CodingUserInfoKey: Any] = [
             .constructRegistry: registry,
-            .notation: notation,
-            .loader: self
+            .notation: notation
         ]
 
         do {
@@ -294,6 +293,5 @@ public struct Loader: Sendable {
 
 public extension CodingUserInfoKey {
     static let constructRegistry = CodingUserInfoKey(rawValue: "warp.constructRegistry")!
-    static let loader = CodingUserInfoKey(rawValue: "warp.loader")!
     static let notation = CodingUserInfoKey(rawValue: "warp.notation")!
 }

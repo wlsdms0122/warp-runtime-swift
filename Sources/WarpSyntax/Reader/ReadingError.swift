@@ -75,6 +75,11 @@ public struct ReadingError: WarpError {
     }
 
     // MARK: - Public
+    // Nothing to re-read. The steps come off the decoding, which walked the
+    // document's own keys, so this is already the reading a caller holding
+    // the text is owed.
+    public func placed(_ place: Place) -> Self { self }
+
     // The same refusal, told which document it was reading. Said once, at the
     // door: a refusal already told keeps what it was told, so a door inside a
     // door cannot rename another's document.
