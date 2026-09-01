@@ -1,6 +1,6 @@
 //
 //  IdentityTests.swift
-//  WarpSerializationTests
+//  WarpSyntaxTests
 //
 //  Created by JSilver
 //
@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 import Warp
-@testable import WarpSerialization
+@testable import WarpSyntax
 
 // Which document a document is.
 @Suite("A document's identity")

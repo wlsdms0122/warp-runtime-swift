@@ -1,6 +1,6 @@
 //
 //  TextEncodingTests.swift
-//  WarpSerializationTests
+//  WarpSyntaxTests
 //
 //  Created by JSilver on 8/21/26.
 //
@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 import Warp
-@testable import WarpSerialization
+@testable import WarpSyntax
 
 // The readable projection, held to the whole of the canonical promise: one
 // document, one text, and a text that is not the canonical writing is not a

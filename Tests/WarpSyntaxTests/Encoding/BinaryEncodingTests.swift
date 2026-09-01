@@ -1,6 +1,6 @@
 //
 //  BinaryEncodingTests.swift
-//  WarpSerializationTests
+//  WarpSyntaxTests
 //
 //  Created by JSilver on 8/21/26.
 //
@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 import Warp
-@testable import WarpSerialization
+@testable import WarpSyntax
 
 // Warp's own bytes, held to the two promises that justify having our own:
 // the same document is the same bytes, and bytes the writer would not write

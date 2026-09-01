@@ -9,7 +9,6 @@ import Foundation
 import Testing
 import Warp
 import WarpSyntax
-import WarpSerialization
 
 // The specification's cases, run against this implementation.
 //
