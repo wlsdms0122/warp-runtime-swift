@@ -130,8 +130,8 @@ struct UnwritableTests {
     // MARK: - Private
     // One statement around whatever is under test, since none of these shapes
     // can be reached by writing a document.
-    private func module(binding expression: Warp.Expression) -> Module {
-        Module(
+    private func module(binding expression: Warp.Expression) throws -> Module {
+        try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),

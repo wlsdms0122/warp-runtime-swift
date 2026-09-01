@@ -109,6 +109,7 @@ struct ClosureNotationTests {
     func closureDeclaresParameters() async throws {
         // Given
         let sut = try loader.loadDocument([
+            "imports": ["joined", "text"],
             "procedures": [
                 "entry": [
                     "body": [

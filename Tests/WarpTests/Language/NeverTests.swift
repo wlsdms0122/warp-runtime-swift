@@ -35,10 +35,10 @@ struct NeverTests {
     }
 
     @Test("a statement after a call that never finishes is refused at link")
-    func nothingRunsAfterANeverCall() {
+    func nothingRunsAfterANeverCall() throws {
         // Given — `std.control.abort` declares never, so the statement after
         // it would never run, and a name written there would never bind
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -59,10 +59,10 @@ struct NeverTests {
     }
 
     @Test("a name on the last statement is still refused when it never finishes")
-    func aNamedNeverLastStatementIsRefused() {
+    func aNamedNeverLastStatementIsRefused() throws {
         // Given — last in the body, so the "nothing after" rule has nothing to
         // say; only the name itself is wrong
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -99,7 +99,7 @@ struct NeverTests {
             round: "round"
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -151,7 +151,7 @@ struct NeverTests {
             round: "round"
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -178,7 +178,7 @@ struct NeverTests {
 
         // And the write is definite — every exit made it — so `y` reads as
         // exactly what the result wrote, and an int slot refuses it
-        let refusing = Module(
+        let refusing = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -211,7 +211,7 @@ struct NeverTests {
         // Given — the image holds only judged spellings, and a body whose
         // last statement leaves is still a body the image holds: the
         // constant it carries out folds like any other
-        let sut = Module(
+        let sut = try Module(
             constants: ["C": .literal(.int(7))],
             procedures: [
                 entryName: Procedure(
@@ -297,7 +297,7 @@ struct NeverTests {
             round: "round"
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -326,11 +326,11 @@ struct NeverTests {
     }
 
     @Test("a result after a statement that never finishes is refused at link")
-    func aResultAfterNeverIsRefused() {
+    func aResultAfterNeverIsRefused() throws {
         // Given — the result runs after the body, so it is "after" the same
         // way a trailing statement is; the type reading already knows it (a
         // block ending in never types never), and the refusal must know it too
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [

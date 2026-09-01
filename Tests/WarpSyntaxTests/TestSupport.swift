@@ -101,7 +101,7 @@ func validates(
 // declaration in a module. The split is the point — one says how a document
 // spells it, the other says what answers.
 extension Module {
-    static let testing = Module(
+    static let testing = try! Module(
         name: "test",
         procedures: [
             "fail": Procedure(
@@ -136,32 +136,21 @@ extension Loader {
         try load(value, identity: nil)
     }
 
-    // A document as a front end hands one over, which is the only way one is
-    // ever made: written back out the one way a document is written, with the
-    // version and the imports list filled in. No author writes either — a fixture
-    // spelling them out in every test would be writing the two parts of a
-    // document nobody writes.
+    // A document with the version filled in, which nobody writes by hand. A
+    // fixture that sends words still writes its own `imports` — what a program
+    // takes from its link is the author's to say, and a helper that said it for
+    // them would make every fixture's list true by construction.
     //
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
     func loadDocument(_ value: Value) throws -> Module {
         guard case let .object(fields) = value else { return try load(value, identity: nil) }
 
-        let stamped = Value.object(fields.merging(
-            [Envelope.versionKey: .int(Envelope.version)]
-        ) { written, _ in written })
-
-        // The list is borrowed from the canonical writing rather than worked
-        // out again here, and only the list — what these fixtures write is the
-        // subject, so they are loaded as they were written.
-        guard case let .object(sealed) = try canonical(stamped),
-              let imports = sealed[Envelope.importsKey]
-        else { return try load(stamped, identity: nil) }
-
-        guard case let .object(fields) = stamped else { return try load(stamped, identity: nil) }
-
         return try load(
-            .object(fields.merging([Envelope.importsKey: imports]) { written, _ in written }),
+            .object(fields.merging([
+                Envelope.versionKey: .int(Envelope.version),
+                Envelope.importsKey: .array([])
+            ]) { written, _ in written }),
             identity: nil
         )
     }
@@ -173,8 +162,15 @@ extension Loader {
     // The fixture is a `Value` because that is what a loader takes. Writing YAML
     // here would import a front end, and then a parser bug could fail a reader's
     // test — the imports are supposed to say which layer a test is about.
-    func loadProcedure(_ value: Value, named name: String = entryName) throws -> Module {
-        try loadDocument(["procedures": [name: value]])
+    func loadProcedure(
+        _ value: Value,
+        named name: String = entryName,
+        importing imports: [String] = []
+    ) throws -> Module {
+        try loadDocument([
+            "imports": .array(imports.map(Value.string)),
+            "procedures": [name: value]
+        ])
     }
 }
 

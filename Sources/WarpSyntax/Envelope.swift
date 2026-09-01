@@ -41,10 +41,9 @@ public enum Envelope {
     //
     // Written and not null. A key holding nothing is not a claim, and the two
     // who ask have to agree about that: the door turns away a document that
-    // declares nothing, and the reader holds a document that declares to what
-    // it declared. Answering differently is how `imports: null` walks through
-    // the door as a claim and past the reader as no claim, arriving trusted
-    // and unchecked — which is the one thing this list exists to prevent.
+    // declares nothing, and the reader takes a key holding nothing as a list
+    // of no words. Answering differently is how `imports: null` passes the
+    // door as a claim while the module behind it says it takes nothing.
     //
     // Asked twice because the two are in different places. The door holds the
     // document and reads the value; the reader is inside it and has a
@@ -62,43 +61,5 @@ public enum Envelope {
         try container.contains(key) && !container.decodeNil(forKey: key)
     }
 
-    // The words a document sends and does not declare. Every one has to be
-    // declared by something in the link or the program cannot run, so this is
-    // what a reader needs from elsewhere, listed rather than discovered.
-    //
-    // Sent, not reached. A path reaches words too — `x.count` is one — but only
-    // ones that answer without running, since that is the whole of what makes a
-    // path safe to walk. So what is listed here is everything the program can do
-    // that touches anything, and a caller reading it is reading the bounds of
-    // what it is about to allow.
-    public static func imports(of module: Module) -> Set<String> {
-        // A constant is an expression, so it sends words like any other. Missing
-        // them would understate what a program needs, and the list is only worth
-        // having if it can be believed.
-        module.constants.values
-            .reduce(into: Set()) { sent, constant in
-                sent.formUnion(selectors(in: constant.buried))
-            }
-            .union(
-                module.procedures.values.reduce(into: Set()) { sent, procedure in
-                    guard case let .body(block) = procedure.implementation else { return }
-
-                    sent.formUnion(selectors(in: block.buried))
-                }
-            )
-            .subtracting(module.procedures.keys)
-    }
-
     // MARK: - Private
-    // The selectors an expression sends, however deep. The walk is the one
-    // `Expression` owns — a closure is a body that runs later and what it
-    // sends is still sent, a cast sends nothing and what it reads may — and
-    // this says only which of what the walk finds is a send.
-    private static func selectors(in buried: [Expression]) -> Set<String> {
-        buried.reduce(into: Set()) { sent, expression in
-            guard case let .dispatch(dispatch) = expression else { return }
-
-            sent.insert(dispatch.selector)
-        }
-    }
 }

@@ -147,7 +147,7 @@ struct ConditionTests {
         // where names resolve.
         #expect(throws: LinkError.self) {
             try Loader.testing.language.link(
-                [try Loader.testing.loadProcedure(fixture)] + Module.standard,
+                [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard,
                 entry: entryName
             )
         }

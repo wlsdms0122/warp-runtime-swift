@@ -78,6 +78,11 @@ public struct Validator: Sendable {
 
             try validate(procedure, constants: constants, at: .procedure(name, in: .of(module)))
         }
+
+        // Last, because it is the least specific thing that can be wrong: a
+        // module whose bodies do not even check is refused for that, and going
+        // first would make the list the only thing an author ever heard about.
+        try declared(module)
     }
 
     // A parameter is a name the body can read, so it is visible from the first
@@ -89,6 +94,21 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Private
+    // What a module says it imports against what it sends. A caller reads the
+    // list to decide whether to grant the words before it links anything, so a
+    // list allowed to drift would be worse than none: it would be trusted and
+    // wrong.
+    private func declared(_ module: Module) throws {
+        let sends = module.sends
+
+        guard sends != module.imports else { return }
+
+        throw ValidationError(
+            "imports \(module.imports.sorted()) and sends \(sends.sorted())",
+            at: Place([.key("imports")], in: .of(module))
+        )
+    }
+
     private func validate(_ procedure: Procedure, constants: Set<String>, at place: Place) throws {
         let parameters = Set(procedure.signature.parameters.keys)
 

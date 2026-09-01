@@ -33,7 +33,7 @@ struct AnsweringTests {
         // The dot after the call is judged against that record, which is the
         // whole of what this buys: the shape the body states does not have to
         // be stated twice.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "counts": Procedure(
                     body: [],
@@ -60,7 +60,7 @@ struct AnsweringTests {
         // Given — three declarations, none of which says what it answers. The
         // order is the call graph's, so each is read after the one its answer
         // comes from.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "innermost": Procedure(body: [], result: .record(["total": .literal(.int(3))])),
                 "middle": Procedure(
@@ -90,8 +90,8 @@ struct AnsweringTests {
         // way out, so the second answers what holds both, and a dot on that is
         // refused the way a dot on `any` is. Reading the result alone would
         // have called both a record and let both dots stand.
-        func module(leaving early: Bool) -> Module {
-            Module(
+        func module(leaving early: Bool) throws -> Module {
+            try Module(
                 procedures: [
                     "counts": Procedure(
                         signature: Signature(parameters: ["flag": Parameter(type: .bool)]),
@@ -151,7 +151,7 @@ struct AnsweringTests {
         // either needs the other, so neither is read: an answer worked out
         // from itself is not one the text states, and a guess there would be
         // a refusal an author cannot act on.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "ping": Procedure(body: [], result: .dispatch(Dispatch(selector: "pong"))),
                 "pong": Procedure(body: [], result: .dispatch(Dispatch(selector: "ping"))),
@@ -173,8 +173,8 @@ struct AnsweringTests {
         // And a dot on it refuses, because `any` is what saying nothing looks
         // like at a call site — where the same shape with the circle broken
         // reads the record `pong` answers.
-        func reading(circling: Bool) -> Module {
-            Module(
+        func reading(circling: Bool) throws -> Module {
+            try Module(
                 procedures: [
                     "ping": Procedure(body: [], result: .dispatch(Dispatch(selector: "pong"))),
                     "pong": Procedure(
@@ -211,8 +211,8 @@ struct AnsweringTests {
         // decides itself: the parameter is a slot the signature declares and
         // the call fills it, and what a walk *through* a parameter reached is
         // named for a path only that body can read, which nothing fills.
-        func module(reading path: [PathSegment], answering answer: [PathSegment]) -> Module {
-            Module(
+        func module(reading path: [PathSegment], answering answer: [PathSegment]) throws -> Module {
+            try Module(
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -278,7 +278,7 @@ struct AnsweringTests {
         // is a promise, and one read off a body is not a promise anybody made:
         // writing it back would make the boundary check a shape nobody wrote,
         // and would put it in a document the writer hands back.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.int(7)))
             ]

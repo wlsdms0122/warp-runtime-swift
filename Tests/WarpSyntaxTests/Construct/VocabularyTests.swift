@@ -23,7 +23,7 @@ struct VocabularyTests {
     func moduleAddsWords() async throws {
         // Given — `count` and `contains` are declarations, not language
         // structure; anyone adds their own the same way
-        let extra = Module(
+        let extra = try Module(
             name: "extra",
             procedures: [
                 "head": Procedure(
@@ -59,7 +59,7 @@ struct VocabularyTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"], "head": ["ref": "names.first"]]
-        ])
+        ], importing: ["longerThan"])
 
         // When
         let outputs = try await run(
@@ -83,7 +83,7 @@ struct VocabularyTests {
                 ["id": "how_many", "value": ["ref": "names.count"]],
                 ["id": "said", "call": ["procedure": "count"]]
             ]
-        ])
+        ], importing: ["count"])
 
         // When / Then
         #expect(throws: LinkError.self) {
@@ -95,7 +95,7 @@ struct VocabularyTests {
     func ambiguousDerivationRefused() throws {
         // Given — `${x.count}` writes no module, so there is no spelling that
         // would tell two of them apart
-        let rival = Module(
+        let rival = try Module(
             name: "rival",
             procedures: [
                 "count": Procedure(

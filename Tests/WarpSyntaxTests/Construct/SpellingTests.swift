@@ -42,7 +42,7 @@ struct SpellingTests {
                 ]
             ],
             "result": ["result": ["ref": "pick"]]
-        ])
+        ], importing: ["equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])

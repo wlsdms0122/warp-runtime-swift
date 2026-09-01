@@ -26,7 +26,7 @@ struct ObservationTests {
     func statementsAreAnnounced() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -56,7 +56,7 @@ struct ObservationTests {
     func nestedStatementsAreAnnounced() async throws {
         // Given — observation follows the run, not the top level of the text
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -91,7 +91,7 @@ struct ObservationTests {
     func roundsAreToldApart() async throws {
         // Given — the text says `step` once, and the run reaches it once a round
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -127,7 +127,7 @@ struct ObservationTests {
     func piecesAreToldApart() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -175,7 +175,7 @@ struct ObservationTests {
     func aCallPushesRatherThanReplaces() async throws {
         // Given — a place is how the run got here, not where it ended up
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -206,7 +206,7 @@ struct ObservationTests {
     @Test("a refusal carries the place it happened, not the one it passed through")
     func aRefusalCarriesItsInnermostPlace() async throws {
         // Given — the mistake is inside the body, two statements deep
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -249,7 +249,7 @@ struct ObservationTests {
     func failureIsAnnounced() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -282,7 +282,7 @@ struct ObservationTests {
     func rescueIsAnnounced() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -326,7 +326,7 @@ struct ObservationTests {
     @Test("a run with no observer is the same run")
     func observationIsOptional() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [Statement(id: "only", expression: .literal(.int(1)))],

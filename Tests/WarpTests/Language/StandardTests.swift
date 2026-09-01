@@ -23,7 +23,7 @@ struct StandardTests {
     func aBundleLeftOutDoesNotResolve() throws {
         // Given — a program that only counts, linked without the bundle that
         // declares counting
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -53,7 +53,7 @@ struct StandardTests {
     func connectivesShortCircuit() async throws {
         // Given — the later side divides by zero, which refuses when it is
         // asked. `all` is settled by the first false, so it never is
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -124,7 +124,7 @@ struct StandardTests {
             ))
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
@@ -199,7 +199,7 @@ struct StandardTests {
                 arguments: ["value": .literal(.int(1))]
             ))
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
@@ -238,7 +238,7 @@ struct StandardTests {
                 arguments: ["text": reference("item")]
             ))
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
@@ -268,7 +268,7 @@ struct StandardTests {
         ]
 
         for (word, receiver, operand) in asks {
-            let sut = Module(
+            let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -299,8 +299,8 @@ struct StandardTests {
             ("minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ word: String, _ receiver: Value, _ operand: Value) -> Module {
-            Module(
+        func asking(_ word: String, _ receiver: Value, _ operand: Value) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -330,8 +330,8 @@ struct StandardTests {
     func aQuotientIsAFraction() async throws {
         // Given — dividedBy never answers an int; `floored` is where a whole
         // division's whole half is read back
-        func divided(_ left: Int, _ right: Int) -> Module {
-            Module(
+        func divided(_ left: Int, _ right: Int) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -389,7 +389,7 @@ struct StandardTests {
     func textSpellsWholeNumbersUniformly() async throws {
         // Given — the quotes must not change with the value's size: a number
         // is a number wherever it sits, and only text wears quotes
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [],
@@ -425,7 +425,7 @@ struct StandardTests {
         ]
 
         for (word, receiver) in asks {
-            let sut = Module(
+            let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -450,7 +450,7 @@ struct StandardTests {
     func wholeDivisionIsWritable() async throws {
         // Given — `dividedBy` always answers a double, so a whole division is
         // that floored, and what it left over is `remainder`
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["n": Parameter(type: .int)]),
@@ -500,7 +500,7 @@ struct StandardTests {
         // takes it on and lets its own end go. Nothing here is a length the
         // author could have counted, and `each` cannot write it because `each`
         // answers one element for every element it was given.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -573,7 +573,7 @@ struct StandardTests {
     @Test("an object is walked and rebuilt without naming its fields")
     func anObjectIsDataRatherThanAShape() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["counts": Parameter(type: .object(.int))]),
@@ -632,7 +632,7 @@ struct StandardTests {
     @Test("whole numbers stay whole, and a quotient does not")
     func arithmeticKeepsItsRepresentation() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -679,7 +679,7 @@ struct StandardTests {
     @Test("dividing by zero is refused rather than answered")
     func divisionByZeroFails() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -705,7 +705,7 @@ struct StandardTests {
     func comparisonReadsAsACondition() async throws {
         // Given — `{ of: x, lessThan: y }` is the condition grammar sending a
         // word, so ordering needed no grammar of its own
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -752,7 +752,7 @@ struct StandardTests {
     @Test("a word that needs nothing is reachable from a path")
     func nilaryWordsAreReachableFromPaths() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -793,7 +793,7 @@ struct StandardTests {
     @Test("text words compose the way a document writes them")
     func textWordsCompose() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -843,7 +843,7 @@ struct StandardTests {
     func standardAnswersAreDeclared() throws {
         // Given — `count` declares that it answers an int, and `split` declares
         // that it is sent a string
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1040,7 +1040,7 @@ struct StandardTests {
     func refusalDoesNotWidenTheOtherArm() throws {
         // Given — `returns: never` is what keeps the branch a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
-        let sut = Module(
+        let sut = try Module(
             name: "app",
             procedures: [
                 entryName: Procedure(

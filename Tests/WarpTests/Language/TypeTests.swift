@@ -113,9 +113,9 @@ struct TypeTests {
     }
 
     @Test("the linker refuses a signature that names a shape nobody declared")
-    func unknownTypeIsALinkError() {
+    func unknownTypeIsALinkError() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -172,7 +172,7 @@ struct TypeTests {
         // When / Then
         #expect(throws: LinkError.self) {
             try Language().link(
-                [Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
+                [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         }
@@ -208,7 +208,7 @@ struct TypeTests {
         // When / Then
         #expect {
             try Language().link(
-                [Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
+                [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         } throws: { error in
@@ -223,7 +223,7 @@ struct TypeTests {
         )
 
         _ = try Language().link(
-            [Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
+            [try Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
             entry: "entry"
         )
     }

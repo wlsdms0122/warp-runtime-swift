@@ -68,9 +68,8 @@ func reference(_ names: String...) -> Warp.Expression {
 // run starts from is an argument, so there is nothing special about this one.
 let entryName = "entry"
 
-// Validate every module, link the set, run. The way a caller does it, and the
-// way the model reads: the caller states its whole world, then names one
-// procedure in it.
+// Link the set and run. The way a caller does it, and the way the model reads:
+// the caller states its whole world, then names one procedure in it.
 func run(
     _ modules: [Module],
     entry: String = entryName,
@@ -79,10 +78,6 @@ func run(
     environment: (any Environment)? = nil
 ) async throws -> Value {
     let language = Language()
-
-    for module in modules {
-        try language.validate(module)
-    }
 
     let image = try language.link(modules + vocabulary, entry: entry)
 
@@ -115,7 +110,7 @@ func run(
     vocabulary: [Module] = Module.standard,
 ) async throws -> Value {
     try await run(
-        [Module(procedures: others.merging([entryName: procedure]) { _, new in new })],
+        [try Module(procedures: others.merging([entryName: procedure]) { _, new in new })],
         arguments: arguments,
         vocabulary: vocabulary,
     )
@@ -164,7 +159,7 @@ func validates(body: [Statement], visible: Set<String> = []) -> Bool {
 // Vocabulary is modules, so a test that needs a word declares one and puts it
 // in the link.
 extension Module {
-    static let shouting = Module(
+    static let shouting = try! Module(
         name: "app",
         procedures: [
             "shout": Procedure(
@@ -177,7 +172,7 @@ extension Module {
         ]
     )
 
-    static let failing = Module(
+    static let failing = try! Module(
         name: "app",
         procedures: [
             "fail": Procedure(

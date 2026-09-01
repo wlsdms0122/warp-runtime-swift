@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Module {
-    static let text = Module(
+    static let text = try! Module(
         name: "std.text",
         description: "Words about strings.",
         procedures: [

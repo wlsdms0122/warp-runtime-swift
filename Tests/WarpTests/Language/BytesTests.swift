@@ -182,7 +182,7 @@ struct BytesTests {
     @Test("an index reads one byte out as the int it is")
     func anIndexReadsAByte() async throws {
         // Given — the path is judged at the link, drilled at the run
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -242,7 +242,7 @@ struct BytesTests {
         ]
 
         for (expression, answer) in asks {
-            let sut = Module(
+            let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(
@@ -268,7 +268,7 @@ struct BytesTests {
         //
         // This is why a word whose elements no byte can be still asks for the
         // `.array` case: a bytes value never reaches it.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -297,7 +297,7 @@ struct BytesTests {
     func aWalkIteratesBytes() async throws {
         // Given — the material is bytes, and each round's element is the
         // ordinary int one byte is
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -339,8 +339,8 @@ struct BytesTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func word(_ selector: String, on receiver: Value) -> Module {
-            Module(
+        func word(_ selector: String, on receiver: Value) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -370,7 +370,7 @@ struct BytesTests {
     func anUnknownEncodingRefuses() throws {
         // Given — the oneOf names the encodings, and a constant is judged at
         // the link
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [],
@@ -393,7 +393,7 @@ struct BytesTests {
     func aMixedLiteralJoinsByTheEquation() async throws {
         // Given — the elements spell one type two ways, so the list's element
         // type is that type and the call is judged, not waved through as any
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -469,7 +469,7 @@ struct BytesTests {
     func aBytesConstantFillsAnArraySlot() async throws {
         // Given — the equation is read at the link, and the boundary has
         // nothing to settle: the slot asked for an array and bytes are one
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(

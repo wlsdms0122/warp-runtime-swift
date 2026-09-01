@@ -22,7 +22,7 @@ struct ReceiverTests {
     @Test("a declared receiver is read by the name the signature gave it")
     func receiverIsANamedParameter() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -74,7 +74,7 @@ struct ReceiverTests {
     @Test("a native word and a written one are declared the same way")
     func nativeAndWrittenDeclareAlike() throws {
         // Given
-        let written = Module(
+        let written = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -119,7 +119,7 @@ struct ReceiverTests {
     func receiverSuppliesItsParameter() async throws {
         // Given — the receiver is written on the other side of the dot, so the
         // linker must not read its parameter as one nobody supplied
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -153,7 +153,7 @@ struct ReceiverTests {
     @Test("what answers without running is worked out at link, not declared")
     func purityIsALinkFact() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "clean": Procedure(
                     body: [
@@ -213,7 +213,7 @@ struct ReceiverTests {
             body: [],
             result: .dispatch(Dispatch(receiver: reference("of"), selector: "joined"))
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "label": label,
                 entryName: Procedure(
@@ -239,7 +239,7 @@ struct ReceiverTests {
         // Given — this is what unifying bought. `summarize` is a body, not
         // native, and `${tasks.summarize}` reaches it because the link proved it
         // answers without running.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -296,7 +296,7 @@ struct ReceiverTests {
     @Test("a body that reaches an effect is not reachable from a path")
     func impureProcedureIsNotReachableFromAPath() throws {
         // Given — the proof is what opens the path, so losing it closes it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -341,7 +341,7 @@ struct ReceiverTests {
     @Test("a path to a body that reaches an effect is refused before any run")
     func aPathToAnImpureProcedureIsRefused() throws {
         // Given — the same shape, reached
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -386,7 +386,7 @@ struct ReceiverTests {
         // Given — the receiver's declared type is what makes the dot a send:
         // the link reads `array<any>`, finds no field there, and judges the
         // word against the receiver it declared
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -424,7 +424,7 @@ struct ReceiverTests {
         // dot stays a read, and a value without fields refuses it at run even
         // though a word by that name exists. A word on an undeclared value is
         // reached by declaring the value.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -458,7 +458,7 @@ struct ReceiverTests {
     @Test("a word reached from a path takes the defaults it declared")
     func aPathAppliesDefaults() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(

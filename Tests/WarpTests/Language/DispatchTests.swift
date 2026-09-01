@@ -110,7 +110,7 @@ struct DispatchTests {
         // Given / When / Then — which one runs must never be a link-order
         // accident, and an implementation is not a namespace: a body and a
         // native answering one name collide the same way two bodies would
-        let rival = Module(
+        let rival = try Module(
             name: "std.collection",
             procedures: [
                 "count": Procedure(
@@ -122,7 +122,7 @@ struct DispatchTests {
 
         #expect(throws: LinkError.self) {
             try Language().link(
-                [Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
+                [try Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
                 entry: "entry"
             )
         }

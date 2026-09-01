@@ -11,7 +11,7 @@ public extension Module {
     // Words that run closures at once. Vocabulary rather than grammar, so
     // running things concurrently is something a caller grants by linking this
     // bundle — a program whose caller left it out cannot fan out at all.
-    static let concurrent = Module(
+    static let concurrent = try! Module(
         name: "std.concurrent",
         description: "Running closures at once.",
         procedures: [

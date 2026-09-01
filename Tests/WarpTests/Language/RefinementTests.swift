@@ -86,11 +86,11 @@ struct RefinementTests {
     }
 
     @Test("a range whose bounds meet on an excluded edge admits nothing")
-    func anEmptyOpenRangeRefusesAtTheLink() {
+    func anEmptyOpenRangeRefusesAtTheLink() throws {
         // Given — the far bound is outside, so a floor standing on it leaves
         // nothing between them. A slot no call could fill is refused where it
         // was written, the way a range below its own floor is.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -112,13 +112,13 @@ struct RefinementTests {
     }
 
     @Test("a bound that is not a number admits nothing")
-    func aNanBoundAdmitsNothing() {
+    func aNanBoundAdmitsNothing() throws {
         // Given — nothing compares to a nan, so every ordering question about
         // a range bounded by one answers no and the range holds no value at
         // all. A document cannot spell one; a declaration assembled in the
         // host can, and a slot no call could fill is refused where it was
         // written.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -257,7 +257,7 @@ struct RefinementTests {
         // where the element leaves every byte as it is. A fraction range takes
         // every byte and hands on a fraction, so the bytes are read out and
         // each arrives as what the declaration says it is.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -280,7 +280,7 @@ struct RefinementTests {
         )
 
         // And a whole range that holds every byte leaves the spelling alone.
-        let kept = Module(
+        let kept = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -302,7 +302,7 @@ struct RefinementTests {
 
     @Test("what only the run sees is judged at the boundary, in the range's words")
     func aFractionOutsideItsRangeRefusesAtTheBoundary() async throws {
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(

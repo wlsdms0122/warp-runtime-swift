@@ -48,7 +48,7 @@ struct CanonicalTests {
                 ]
             ],
             "result": ["result": ["ref": "pick"]]
-        ])
+        ], importing: ["equal"])
 
         // When
         let one = try await run(sut, arguments: ["count": .int(1)])
@@ -89,7 +89,7 @@ struct CanonicalTests {
                 ]
             ],
             "result": ["result": ["ref": "seen"]]
-        ])
+        ], importing: ["notEqual", "plus"])
 
         // When
         let outputs = try await run(sut)
@@ -117,7 +117,7 @@ struct CanonicalTests {
                     ]
                 ],
                 "result": ["result": ["ref": "pick"]]
-            ])
+            ], importing: ["equal"])
         }
 
         let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
@@ -171,6 +171,33 @@ struct CanonicalTests {
 
         // Then
         #expect(outputs["result"] == .string("go"))
+    }
+
+    @Test("a program that does not hold together is still one document")
+    func anUnsoundDocumentIsStillADocument() throws {
+        // Given — a name nothing declares. What a text *is* and whether its
+        // program is any good are two questions, and the first is the one a
+        // caller asks when it wants the file a refusal came from. Answering it
+        // only for the texts that had nothing wrong with them would take the
+        // answer away exactly where it is wanted.
+        let unsound: Value = [
+            "imports": [],
+            "name": "wallet",
+            "procedures": ["entry": ["result": ["ref": "missing"]]]
+        ]
+
+        // When
+        let written = try loader.canonical(unsound)
+
+        // Then — which document this is comes off the canonical writing, so the
+        // same text twice is the same document
+        #expect(written["name"] == .string("wallet"))
+        #expect(written == (try loader.canonical(unsound)))
+
+        // And the program is still refused when something asks whether it holds
+        #expect(throws: ValidationError.self) {
+            try loader.load(written, identity: nil)
+        }
     }
 
     // MARK: - Public

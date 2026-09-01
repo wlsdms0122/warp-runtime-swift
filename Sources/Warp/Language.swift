@@ -45,10 +45,6 @@ public struct Language: Sendable {
         try Linker().link(modules, entry: entry)
     }
 
-    public func validate(_ module: Module) throws {
-        try Validator().validate(module)
-    }
-
     public func validate(_ procedure: Procedure) throws {
         try Validator().validate(procedure)
     }

@@ -34,7 +34,7 @@ struct BoundaryTests {
         // of text was found by running it. In a language whose whole claim is
         // that what can be decided before running is, that was the claim not
         // holding in the most ordinary place a program has.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],
@@ -63,7 +63,7 @@ struct BoundaryTests {
         // a declaration that only said "a number" would not fit anywhere asking
         // for one. Both sides and the answer are one reading, which is what a
         // language with overloading would need several declarations to say.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],
@@ -128,12 +128,12 @@ struct BoundaryTests {
     }
 
     @Test("a type parameter read two ways that do not fit is a refusal, not a shrug")
-    func aDisagreeingHoleIsRefused() {
+    func aDisagreeingHoleIsRefused() throws {
         // Given — appending a whole number to a list of text. The hole is read
         // as text by the list and as a number by what is being appended, and
         // widening to `any` was the checker announcing it had stopped checking
         // and announcing it silently: the call then went through.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
@@ -167,7 +167,7 @@ struct BoundaryTests {
         // yes both ways and whichever was read first would win. Reading it first
         // is what a receiver does, and that made a list of anything into a list
         // of whatever went in first.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(parameters: ["xs": Parameter(type: .array(.any))]),
@@ -206,7 +206,7 @@ struct BoundaryTests {
         // call wrote. They are the same type, and calling them a disagreement
         // was asking the question without the table that answers it — the same
         // table the rest of the link uses.
-        let module = Module(
+        let module = try Module(
             types: ["Tree": .record(["a": .int])],
             procedures: [
                 "entry": Procedure(
@@ -236,7 +236,7 @@ struct BoundaryTests {
         // Given — a list of numbers and a whole number are not a disagreement.
         // One reading takes the other, so the one that holds both is the answer,
         // and refusing here would refuse a program with nothing wrong with it.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(parameters: ["counts": Parameter(type: .array(.number))]),
@@ -337,7 +337,7 @@ struct BoundaryTests {
         _ receiver: Value,
         _ operand: Value
     ) async throws -> Value {
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],

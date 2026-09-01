@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Module {
-    static let logic = Module(
+    static let logic = try! Module(
         name: "std.logic",
         description: "Equality, negation and the connectives.",
         procedures: [

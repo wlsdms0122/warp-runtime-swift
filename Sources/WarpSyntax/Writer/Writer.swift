@@ -54,40 +54,55 @@ public struct Writer: Sendable {
 
     // MARK: - Public
     public func value(of module: Module) throws -> Value {
+        try value(of: module.draft)
+    }
+
+    // A draft and not only a module, because what a document *is* is answered by
+    // writing it back out, and that answer is owed for a text whose program does
+    // not hold together. Nothing here judges.
+    public func value(of draft: Draft) throws -> Value {
         // Written every time, because a document that travels is the only kind
         // worth writing and neither question can be asked of it later. What it
         // costs is two keys; what it buys is that a reader too old for it, or
         // without the words it calls, says so instead of finding out part of the
         // way through.
+        //
+        // The version is this writer's and the imports are the program's: which
+        // shapes were used is a fact about the writing, and what a program takes
+        // from its link is a fact about the program. A draft that claimed
+        // nothing is written with what it sends, since a document that says
+        // nothing is not one and there is nobody left to ask.
         var written: [String: Value] = [
             Envelope.versionKey: .int(Envelope.version),
-            Envelope.importsKey: .array(Envelope.imports(of: module).sorted().map(Value.string)),
-            "procedures": .object(try module.procedures.mapValues(value(of:)))
+            Envelope.importsKey: .array(
+                (draft.imports ?? draft.sends).sorted().map(Value.string)
+            ),
+            "procedures": .object(try draft.procedures.mapValues(value(of:)))
         ]
 
-        if let name = module.name {
+        if let name = draft.name {
             written["name"] = .string(name)
         }
 
-        if let description = module.description {
+        if let description = draft.description {
             written["description"] = .string(description)
         }
 
-        if !module.types.isEmpty {
-            written["types"] = .object(try module.types.mapValues(value(of:)))
+        if !draft.types.isEmpty {
+            written["types"] = .object(try draft.types.mapValues(value(of:)))
         }
 
-        if !module.constraints.isEmpty {
+        if !draft.constraints.isEmpty {
             written["constraints"] = .object(
-                try module.constraints.mapValues { members in
+                try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
             )
         }
 
-        if !module.constants.isEmpty {
+        if !draft.constants.isEmpty {
             written["const"] = .object(
-                try module.constants.mapValues { constant in try value(of: constant) }
+                try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
 

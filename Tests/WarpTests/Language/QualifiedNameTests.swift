@@ -25,7 +25,7 @@ struct QualifiedNameTests {
     func aBareMentionFindsTheOneDeclaration() async throws {
         // Given — `Task` is declared by `store` alone, and the entry module
         // mentions it bare
-        let store = Module(
+        let store = try Module(
             name: "store",
             types: ["Task": .record(["id": .string])],
             procedures: [
@@ -39,7 +39,7 @@ struct QualifiedNameTests {
                 )
             ]
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .named("Task")),
@@ -64,7 +64,7 @@ struct QualifiedNameTests {
     func ownDeclarationWins() async throws {
         // Given — two modules declare `Limit`, and `mine` mentions it bare
         // from inside: its own is an int, the other module's is a string
-        let mine = Module(
+        let mine = try Module(
             name: "mine",
             types: ["Limit": .int],
             procedures: [
@@ -75,7 +75,7 @@ struct QualifiedNameTests {
                 )
             ]
         )
-        let theirs = Module(
+        let theirs = try Module(
             name: "theirs",
             types: ["Limit": .string],
             procedures: [
@@ -94,21 +94,21 @@ struct QualifiedNameTests {
     func anAmbiguousBareNameRefuses() throws {
         // Given — the mention lives in a third module that declares no `Limit`
         // of its own, so neither rule reaches a single answer
-        let one = Module(
+        let one = try Module(
             name: "one",
             types: ["Limit": .int],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let two = Module(
+        let two = try Module(
             name: "two",
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .named("Limit")),
@@ -132,21 +132,21 @@ struct QualifiedNameTests {
     @Test("the qualified spelling says which, where the bare one cannot")
     func theQualifiedSpellingResolvesTheTie() async throws {
         // Given — the same tie, written through
-        let one = Module(
+        let one = try Module(
             name: "one",
             types: ["Limit": .int],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let two = Module(
+        let two = try Module(
             name: "two",
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .named("one.Limit")),
@@ -166,13 +166,13 @@ struct QualifiedNameTests {
     func oneQualifiedNameDeclaredTwiceRefuses() throws {
         // Given — two unnamed modules declare into the shared space, so the
         // qualified names collide the way two `.c` files' symbols do
-        let one = Module(
+        let one = try Module(
             types: ["Limit": .int],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let two = Module(
+        let two = try Module(
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -191,7 +191,7 @@ struct QualifiedNameTests {
     func aConstraintMentionResolves() async throws {
         // Given — `Comparable` is declared by std alone, and a document-shaped
         // module bounds its own parameter with the bare name
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -224,7 +224,7 @@ struct QualifiedNameTests {
     func sortingTheUnorderableRefuses() throws {
         // Given — `sorted` is bounded by the shared ground's `Comparable`,
         // and booleans are a reading the link can see
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -251,20 +251,20 @@ struct QualifiedNameTests {
         // named module declares its own, and a third module mentions the bare
         // name: the shared declaration is the exact spelling, so it wins the
         // way an unnamed module's procedure does
-        let shared = Module(
+        let shared = try Module(
             types: ["Limit": .int],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let named = Module(
+        let named = try Module(
             name: "one",
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .named("Limit")),
@@ -284,7 +284,7 @@ struct QualifiedNameTests {
     func minWithoutAReceiverRefusesInItsOwnWords() async throws {
         // Given — the receiver is a reference that reads null, which a word
         // is sent as nothing
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -314,7 +314,7 @@ struct QualifiedNameTests {
         // Given — `m` declares `Limit` and `extra.Limit`, and both answer the
         // bare spelling. Picking either would be an order deciding a meaning,
         // so the tie refuses — and the exact spelling still says which.
-        let sut = Module(
+        let sut = try Module(
             name: "m",
             types: [
                 "Limit": .int,
@@ -339,7 +339,7 @@ struct QualifiedNameTests {
         }
 
         // The exact spelling resolves what the bare one cannot
-        let spelled = Module(
+        let spelled = try Module(
             name: "m",
             types: [
                 "Limit": .int,
@@ -363,13 +363,13 @@ struct QualifiedNameTests {
     func aCrossSpaceCollisionRefusesInEitherOrder() throws {
         // Given — one module declares `Limit` as a constraint, another as a
         // type, both into the shared space
-        let membership = Module(
+        let membership = try Module(
             constraints: ["Limit": [.int]],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let shape = Module(
+        let shape = try Module(
             types: ["Limit": .int],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -391,7 +391,7 @@ struct QualifiedNameTests {
     func aBareDeclarationDoesNotCaptureTheStandardName() async throws {
         // Given — an unnamed module declares its own `Numeric`, admitting
         // text, and still leans on std.math for arithmetic
-        let sut = Module(
+        let sut = try Module(
             constraints: ["Numeric": [.string]],
             procedures: [
                 "keep": Procedure(
@@ -428,7 +428,7 @@ struct QualifiedNameTests {
 
         // And std.math's arithmetic still reads std's declaration: two pieces
         // of text refuse exactly as they do without the document's `Numeric`
-        let arithmetic = Module(
+        let arithmetic = try Module(
             constraints: ["Numeric": [.string]],
             procedures: [
                 entryName: Procedure(
@@ -454,7 +454,7 @@ struct QualifiedNameTests {
     func minAndMaxOrderLikeTheComparisons() async throws {
         // Given — strings order lexicographically under Comparable, which
         // bounds `min` the way it bounds `lessThan`
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .string),
@@ -478,7 +478,7 @@ struct QualifiedNameTests {
     func aBundleNeedsTheSharedGround() throws {
         // Given — collection's `sorted` mentions `Comparable`, which only the
         // foundation module declares
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),

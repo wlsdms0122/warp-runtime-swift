@@ -44,7 +44,7 @@ struct GroupTests {
                 ]
             ],
             "result": ["result": ["ref": "greet"]]
-        ])
+        ], importing: ["joined", "text"])
 
         // When
         let outputs = try await run(spec, arguments: ["who": .string("spec")])

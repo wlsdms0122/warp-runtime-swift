@@ -10,10 +10,11 @@ import Foundation
 // Takes every module this run was given and one name to start from, and answers
 // with an image — or refuses.
 //
-// A link is handed its whole world at once, and no module says anything about
-// the others: what to link is the caller's statement, and joining the names up
-// is this. So a module declares no imports, and the entry is an argument rather
-// than a name written into a document.
+// A link is handed its whole world at once. The words a program can send are
+// the words the caller put in front of it, so what to link is the caller's
+// statement and joining the names up is this. A module's `imports` says what it
+// asks for and never where to find it, and the entry is an argument rather than
+// a name written into a document.
 //
 // Unreached code is checked too. A misspelled procedure in a branch today's
 // arguments never take is a defect whether or not this run walks that way, so
@@ -1380,8 +1381,8 @@ public struct Linker: Sendable {
     }
 
     // The order a module's constants settle in: what a constant reads comes
-    // before it. A constant that reads nothing settled beside it is refused
-    // here, standing on the constant that is wrong.
+    // before it. Constants that wait on each other have no such order, and that
+    // is refused here, standing on one of them.
     private func order(of module: Module) throws -> [(name: String, expression: Expression)] {
         let constants = module.constants
 
@@ -1414,22 +1415,8 @@ public struct Linker: Sendable {
 
             walking.append(name)
 
-            // What a constant may see is the validator's rule and a document
-            // arrives having been held to it. This is not that rule a second
-            // time: a caller may hand a module it built straight to a link, and
-            // the walk has to say what it found rather than read the name it
-            // was refused as nothing.
-            //
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
-            for read in reads(of: expression).sorted() where constants[read] == nil {
-                throw LinkError(
-                    "constant '\(name)' reads '\(read)', and a constant sees nothing"
-                        + " but the constants declared beside it",
-                    at: .constant(name, in: .of(module))
-                )
-            }
-
             for read in mentions(of: expression).intersection(constants.keys).sorted() {
                 // Intersected with these keys, so the walk cannot be sent to a
                 // name that is not one of them.
@@ -1451,8 +1438,9 @@ public struct Linker: Sendable {
     // Every constant this expression names, at whatever depth.
     //
     // Flat, because nothing in here can mean anything but a constant: a body
-    // may not introduce a name the module bound, so no scope between a mention
-    // and this one can have taken the spelling. A closure's body is walked with
+    // may not introduce a name the module bound, which is settled where a
+    // module is made, so no scope between a mention and this one can have taken
+    // the spelling. A closure's body is walked with
     // the rest — making one captures the scope it was written in, so a sibling
     // it reads has to be settled by then.
     private func mentions(of expression: Expression) -> Set<String> {
@@ -1460,55 +1448,6 @@ public struct Linker: Sendable {
             guard case let .reference(path) = held else { return }
 
             names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-        }
-    }
-
-    // The names this constant reads where it is written, which are the
-    // constants declared beside it.
-    //
-    // A closure holds a scope of its own, and which of the names its body reads
-    // are declared is that scope's question rather than this one's — `mentions`
-    // is the one that goes in. Nothing
-    // that runs a body can be a constant, so the arms that hold one are here
-    // only for a module a caller assembled without validating it.
-    private func reads(of expression: Expression) -> Set<String> {
-        switch expression {
-        case .literal, .closure:
-            return []
-
-        case let .leave(leave):
-            return leave.value.map(reads(of:)) ?? []
-
-        case let .reference(path):
-            return Set(path.expandingIndexReferences.compactMap(\.head))
-
-        case let .cast(value, _, _):
-            return reads(of: value)
-
-        case let .array(array):
-            return array.reduce(into: Set()) { names, element in
-                names.formUnion(reads(of: element))
-            }
-
-        case let .record(record):
-            return record.values.reduce(into: Set()) { names, field in
-                names.formUnion(reads(of: field))
-            }
-
-        case let .invoke(callee, arguments):
-            return arguments.values.reduce(into: reads(of: callee)) { names, argument in
-                names.formUnion(reads(of: argument))
-            }
-
-        case let .dispatch(dispatch):
-            return dispatch.arguments.values.reduce(
-                into: dispatch.receiver.map(reads(of:)) ?? []
-            ) { names, argument in
-                names.formUnion(reads(of: argument))
-            }
-
-        case .block, .conditional, .loop, .iteration, .attempt:
-            return []
         }
     }
 

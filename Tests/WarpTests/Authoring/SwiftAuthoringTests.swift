@@ -30,7 +30,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try sut.link(
-            [Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
+            [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
         let outputs = try await sut.makeExecutor().run(image)
@@ -90,7 +90,7 @@ struct SwiftAuthoringTests {
         // Comparing is a word, so this links the bundle that declares one — the
         // control flow beside it needs nothing.
         let image = try sut.link(
-            [Module(procedures: ["entry": procedure]), .logic],
+            [try Module(procedures: ["entry": procedure]), .logic],
             entry: "entry"
         )
         let outputs = try await sut.makeExecutor().run(
@@ -123,7 +123,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try sut.link(
-            [Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
+            [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
         let outputs = try await sut.makeExecutor().run(image)
@@ -178,7 +178,7 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try sut.link(
-            [Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
+            [try Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
             entry: "speak"
         )
         let outputs = try await sut.makeExecutor().run(image)

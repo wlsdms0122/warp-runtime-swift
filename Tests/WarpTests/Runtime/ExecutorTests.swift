@@ -19,7 +19,7 @@ struct ExecutorTests {
     @Test("bindings flow through a step sequence")
     func bindingsFlowThroughSequence() async throws {
         // Given
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -54,7 +54,7 @@ struct ExecutorTests {
     @Test("a declining condition skips the step and binds null")
     func decliningConditionSkipsStep() async throws {
         // Given
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -98,7 +98,7 @@ struct ExecutorTests {
     @Test("a recoverable failure runs the rescue path")
     func recoverableFailureRunsRescue() async throws {
         // Given
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -139,7 +139,7 @@ struct ExecutorTests {
     @Test("the failure is a value inside the rescue, and only there")
     func rescueSeesFailurePayload() async throws {
         // Given
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -185,7 +185,7 @@ struct ExecutorTests {
     @Test("an author mistake propagates past rescue")
     func fatalErrorBypassesRescue() async throws {
         // Given — an author mistake must not be absorbed by rescue
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -219,7 +219,7 @@ struct ExecutorTests {
     @Test("an unrescued failure propagates")
     func unrescuedFailurePropagates() async throws {
         // Given
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -243,7 +243,7 @@ struct ExecutorTests {
     @Test("a reference typo is not disguised by rescue")
     func referenceTypoBypassesRescue() async throws {
         // Given — shape misuse is an author error; rescue must not disguise it
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -285,7 +285,7 @@ struct ExecutorTests {
     func absentEntryReadsAsNullThroughOptional() async throws {
         // Given — `?.` is the one spelling that expects absence: it answers
         // null, nothing is thrown, and the rescue never runs
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -327,7 +327,7 @@ struct ExecutorTests {
     func absentEntryWithoutOptionalIsUnfit() async throws {
         // Given — the plain dot promises the entry is there, so an absent one
         // is a defect the run refuses rather than a null it invents
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -352,7 +352,7 @@ struct ExecutorTests {
     func nullInsideTemplateIsAuthorMistake() async throws {
         // Given — a skipped step binds null; reading it is fine, writing it
         // into text is not, and an author mistake passes through rescue
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -413,7 +413,7 @@ struct ExecutorTests {
     @Test("abort throws carrying its rendered message")
     func abortThrowsWithMessage() async throws {
         // Given
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -447,7 +447,7 @@ struct ExecutorTests {
     @Test("abort is caught by rescue like any thrown error")
     func abortRescuesLikeThrownError() async throws {
         // Given — like a thrown error, abort is catchable
-        let spec = Module(
+        let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [

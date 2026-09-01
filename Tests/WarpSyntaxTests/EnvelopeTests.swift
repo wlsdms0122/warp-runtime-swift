@@ -91,6 +91,7 @@ struct EnvelopeTests {
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
         let module = try loader.loadDocument([
+            "imports": ["plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -174,7 +175,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("says it imports")
+            "\(error)".contains("and sends")
         }
     }
 
@@ -199,23 +200,39 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("says it imports")
+            "\(error)".contains("and sends")
         }
     }
 
-    @Test("a word sent from a constant is needed like any other")
+    @Test("a word sent from a constant is imported like any other")
     func constantsSendWordsToo() throws {
         // Given — a constant is an expression, and understating what a program
         // imports is worse than saying nothing: a caller decides from this list
         // what to allow, and would then be refused at the link by a word the
         // list never mentioned.
+        let constant: Value = [
+            "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+        ]
+
         let module = try loader.loadDocument([
-            "const": ["limit": ["call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]]],
+            "imports": ["plus"],
+            "const": ["limit": constant],
             "procedures": ["entry": ["result": ["ref": "limit"]]]
         ])
 
         // Then
-        #expect(Envelope.imports(of: module) == ["plus"])
+        #expect(module.imports == ["plus"])
+
+        // And a list that leaves the constant's word out is refused
+        #expect {
+            try loader.loadDocument([
+                "imports": [],
+                "const": ["limit": constant],
+                "procedures": ["entry": ["result": ["ref": "limit"]]]
+            ])
+        } throws: { error in
+            "\(error)".contains("sends [\"plus\"]")
+        }
     }
 
     @Test("a document claiming a version that never existed is refused")
@@ -274,7 +291,7 @@ struct EnvelopeTests {
         ])
 
         // Then
-        #expect(Envelope.imports(of: module).isEmpty)
+        #expect(module.imports.isEmpty)
     }
 
     @Test("what a program can do to anything is what it sends")
@@ -295,7 +312,7 @@ struct EnvelopeTests {
         ])
 
         // Then
-        #expect(Envelope.imports(of: module).isEmpty)
+        #expect(module.imports.isEmpty)
 
         // And the link still holds it to that — the word has to be there
         #expect(throws: LinkError.self) {
@@ -308,6 +325,7 @@ struct EnvelopeTests {
         // Given — a list that missed one would be a list nobody could rely on,
         // so every place a message can be written is walked
         let module = try loader.loadDocument([
+            "imports": ["inClosure", "inEach", "inBody", "inRescue", "inNestedData"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -348,7 +366,7 @@ struct EnvelopeTests {
 
         // Then
         #expect(
-            Envelope.imports(of: module)
+            module.imports
                 == ["inClosure", "inEach", "inBody", "inRescue", "inNestedData"]
         )
     }

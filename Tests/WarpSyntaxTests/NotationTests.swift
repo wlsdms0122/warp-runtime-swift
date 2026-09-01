@@ -70,6 +70,7 @@ struct NotationTests {
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
         let sut = try canonical.loadDocument([
+            "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string"],
@@ -139,7 +140,7 @@ struct NotationTests {
         // notation that recognises a condition by its subject key, this record
         // would come back a message, so it has no document *there* — even though
         // it has one in a document, below.
-        let module = Self.branch(on: .record([
+        let module = try Self.branch(on: .record([
             "of": .reference(path("word")),
             "equal": .literal(.string("hey"))
         ]))
@@ -157,7 +158,7 @@ struct NotationTests {
         // Given — the same record, written for a document. A document's
         // condition slot is an expression like any other and no notation is
         // reading it back, so the record is data and is written as data.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .bool)]),
@@ -201,6 +202,7 @@ struct NotationTests {
         // and nothing would say so.
         #expect {
             try canonical.loadDocument([
+                "imports": ["joined", "text"],
                 "procedures": [
                     "entry": [
                         "parameters": ["word": "string"],
@@ -227,7 +229,7 @@ struct NotationTests {
             "body": [
                 ["id": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
-        ])
+        ], importing: ["joined", "text"])
 
         // Then
         guard
@@ -280,8 +282,8 @@ struct NotationTests {
     // MARK: - Private
     // One branch around a condition, since a condition slot is a slot rather
     // than something a document holds on its own.
-    private static func branch(on condition: Warp.Expression) -> Module {
-        Module(
+    private static func branch(on condition: Warp.Expression) throws -> Module {
+        try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),

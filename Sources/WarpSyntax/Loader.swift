@@ -59,9 +59,10 @@ public struct Loader: Sendable {
     //
     //     let module = try Loader().load(document, identity: Identity.of(document))
     //
-    // Taken *before* the judging and not after it. A refusal is exactly the
-    // moment somebody wants the file it came from, so a module stamped on the
-    // way out would be stamped only when nothing was wrong with it.
+    // It goes in with what is being read rather than onto what came back. A
+    // module is checked where it is made, so a stamp put on afterwards would
+    // reach only the modules nothing was wrong with — and a refusal is exactly
+    // the moment somebody wants the file it came from.
     //
     // Handing the wrong document to `Identity.of` is not a way to be pointed at
     // the wrong text: whatever compares identities computes its own side from
@@ -80,8 +81,11 @@ public struct Loader: Sendable {
         // reading.
         let document = document(of: value, identity: identity)
 
-        let read = try spelled(value, in: document)
-        let module = identity.map(read.read(from:)) ?? read
+        // Reading first and checking second, and both before the envelope
+        // question below. A module is checked where it is made, so the stamp
+        // goes in with what is being made rather than onto what came back — a
+        // refusal is exactly the moment somebody wants the file it came from.
+        let module = try Module(try spelled(value, in: document), identity: identity)
 
         // What a document imports is read before the program it belongs to, so a
         // caller decides whether to grant before it decides whether to link. A
@@ -105,26 +109,21 @@ public struct Loader: Sendable {
             .read(in: document)
         }
 
-        try language.validate(module)
-
         return module
     }
 
     // The document a document is: what it spells, written back out the one way
-    // a document is written, with the version and the imports list filled in.
+    // a document is written, with the version filled in.
     //
     // What wants this is anything asking what a text *is* rather than whether
     // its program is any good — telling one document from another, which is
     // done on the canonical writing. A program with a name nothing declares is
     // still a document, and still that one, so nothing here is judged.
     //
-    // It answers with a document and not with the module behind it. The module
-    // has been read and not held to anything, and handing one out would be a
-    // second way into `Language.link` — which checks what a link can check and
-    // was never the stage that checks a body against itself.
+    // It answers with a document and not with the module behind it: what is
+    // being asked for is the text, and a module is the reading of one.
     //
-    // What comes back is sealed: the version and the list of what the program
-    // imports are filled in here, which are the two things nobody writes by hand.
+    // What comes back is stamped with the version, which nobody writes by hand.
     // So the way to make a document out of anything is this, and a caller that
     // then loads what it got is loading exactly what it will send.
     //
@@ -178,10 +177,10 @@ public struct Loader: Sendable {
     }
 
     // MARK: - Private
-    // The module a document spells, unjudged. Not a door: nothing here has been
-    // held to the language's rules, and `load` is the one that has.
-    private func spelled(_ value: Value, in document: Place.Document) throws -> Module {
-        try read(ModuleReader.self, from: value, in: document).module
+    // What a document spells, unjudged. Not a door: nothing here has been held
+    // to the language's rules, and `load` is the one that has.
+    private func spelled(_ value: Value, in document: Place.Document) throws -> Draft {
+        try read(ModuleReader.self, from: value, in: document).draft
     }
 
     // What a value says it is called, as the document a refusal about reading it
@@ -218,16 +217,18 @@ public struct Loader: Sendable {
         from value: Value,
         in document: Place.Document
     ) throws -> T {
+        let userInfo: [CodingUserInfoKey: Any] = [
+            .constructRegistry: registry,
+            .notation: notation,
+            .loader: self
+        ]
+
         do {
             return try ValueDecoder(
                 value: value,
                 codingPath: [],
                 steps: [],
-                userInfo: [
-                    .constructRegistry: registry,
-                    .notation: notation,
-                    .loader: self
-                ]
+                userInfo: userInfo
             )
             .decode(type)
         } catch let refusal as ReadingError {

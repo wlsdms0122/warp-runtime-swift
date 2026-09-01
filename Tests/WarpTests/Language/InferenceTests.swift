@@ -28,7 +28,7 @@ struct InferenceTests {
             signature: Signature(parameters: ["word": Parameter(type: .string)]),
             body: []
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "wants": wants,
                 entryName: Procedure(
@@ -68,7 +68,7 @@ struct InferenceTests {
             signature: Signature(parameters: ["word": Parameter(type: .string)]),
             body: []
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "wants": wants,
                 entryName: Procedure(
@@ -118,7 +118,7 @@ struct InferenceTests {
             signature: Signature(parameters: ["ns": Parameter(type: .array(.string))]),
             body: []
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "wants": wants,
                 entryName: Procedure(
@@ -169,7 +169,7 @@ struct InferenceTests {
             round: "walked"
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -197,7 +197,7 @@ struct InferenceTests {
         }
 
         // And the 0-round run answers the null the reading admitted
-        let running = Module(
+        let running = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -255,7 +255,7 @@ struct InferenceTests {
             round: "walked"
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -278,7 +278,7 @@ struct InferenceTests {
     @Test("a name bound to a call carries that call's declared answer")
     func boundCallCarriesItsAnswer() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "counts": Procedure(
                     signature: Signature(
@@ -330,7 +330,7 @@ struct InferenceTests {
     @Test("a field of a declared shape carries the field's type")
     func declaredShapeCarriesItsFields() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             types: [
                 "Task": .record([
                         "done": .bool,
@@ -380,7 +380,7 @@ struct InferenceTests {
     func pathWordCarriesItsAnswer() throws {
         // Given — `${names.count}` is `count` sent to `names`, and `count`
         // declares that it answers an int
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -422,7 +422,7 @@ struct InferenceTests {
     @Test("an element of an iteration carries the material's element type")
     func iterationElementIsTyped() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -470,7 +470,7 @@ struct InferenceTests {
     func disagreeingWritesAreUnknown() throws {
         // Given — a join that guessed would be a refusal an author cannot act
         // on, so where two readings disagree nothing is claimed
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -527,7 +527,7 @@ struct InferenceTests {
     @Test("a declared answer is checked against what the body actually names")
     func rightTypesLink() throws {
         // Given — the same shapes, agreeing
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "counts": Procedure(
                     signature: Signature(
@@ -584,7 +584,7 @@ struct InferenceTests {
         // Given — `map` declares its answer through type parameters: the closure's
         // declared answer fills `Answer`, so handing the fan-out's answer to a
         // word that wants another kind is refused before anything runs
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -642,7 +642,7 @@ struct InferenceTests {
         // Given — the run either took the arm or did not, so the name holds
         // the write or the null it started with: `T?`, and a slot that wants
         // the value plain refuses
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -702,7 +702,7 @@ struct InferenceTests {
     @Test("a path drilling a field into a shape that has none is refused")
     func drillingIntoAShapeWithoutFieldsIsRefused() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -729,7 +729,7 @@ struct InferenceTests {
     @Test("a path indexing into something that is not an array is refused")
     func indexingIntoANonArrayIsRefused() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -756,7 +756,7 @@ struct InferenceTests {
     @Test("a path naming a word of the shape it reached is not refused")
     func aWordReachedFromAPathIsAllowed() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -781,7 +781,7 @@ struct InferenceTests {
     @Test("a dot on any is refused, because any declares nothing to read")
     func aDotOnAnyIsRefused() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -813,7 +813,7 @@ struct InferenceTests {
         // shape. A name nothing declares is not that, and letting it reach the
         // run would have `as?` read a typo as null forever. A type spelled in
         // a body is held to the rule a type spelled in a signature is
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -843,7 +843,7 @@ struct InferenceTests {
     func aCastOntoNothingIsRefused() throws {
         // Given — the claim is judged on itself: `as: any` opens no door over
         // an `any` receiver any more than it does over an `int` one
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -879,7 +879,7 @@ struct InferenceTests {
         // neither direction and are still both satisfied by one value: a
         // record says what must be there, not all there is. This is the
         // spelling the specification gives for reading what a failure carries
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -912,7 +912,7 @@ struct InferenceTests {
         // walk actually asks whether both could hold. Both sides name
         // themselves, which is the case a guard living inside one expansion
         // could not bound
-        let sut = Module(
+        let sut = try Module(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
                 "entry": Procedure(
@@ -946,7 +946,7 @@ struct InferenceTests {
         // Given — `array<any>` proves an array is there. Nothing it holds is
         // proven, but that says nothing about whether the whole could be a
         // string, and it cannot: this would answer null on every run
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -973,7 +973,7 @@ struct InferenceTests {
         // Given — `payload as? int` hands on `int?`, and asking the sameness
         // question of the spelling rather than of what was handed on let this
         // repeat through while the same repeat written with a name was caught
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1017,7 +1017,7 @@ struct InferenceTests {
         // Given — impure and unreachable, so no typing walk sees it. What the
         // claim names is a fact about the spelling, so it is held anyway;
         // `as?: never` slipping through here would answer null forever
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(body: [], result: .literal(.int(0))),
                 "stranded": Procedure(
@@ -1050,7 +1050,7 @@ struct InferenceTests {
         // Wrapping the name again made the same shape read two ways depending
         // on whether the author wrote the name or what it stands for, and the
         // second cast then escaped the sameness rule
-        let sut = Module(
+        let sut = try Module(
             types: ["Maybe": .nullable(.int)],
             procedures: [
                 "entry": Procedure(
@@ -1095,7 +1095,7 @@ struct InferenceTests {
         // Given — impure and unreachable from the entry, so neither the
         // frontier nor the pure set walks it. A signature written here would
         // still be held to its names; so is a cast
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(body: [], result: .literal(.int(0))),
                 "stranded": Procedure(
@@ -1126,7 +1126,7 @@ struct InferenceTests {
     func aCastOntoDoubleStands() throws {
         // Given — the one widening the language has. Refusing it at the link
         // would refuse a cast that settles on every run
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1148,7 +1148,7 @@ struct InferenceTests {
     func aCastBetweenANullableAndNullStands() throws {
         // Given — asked of the fact that both hold null, not of which one is
         // written with `?`
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1169,7 +1169,7 @@ struct InferenceTests {
     @Test("two nullables share null, so a cast between them stands")
     func aCastBetweenNullablesStands() throws {
         // Given — null satisfies both, so a value both shapes hold exists
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1195,7 +1195,7 @@ struct InferenceTests {
     func aCastBetweenAnObjectAndARecordStands() throws {
         // Given — the boundary settles both from the same runtime value, so
         // refusing this would refuse a cast that succeeds
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1230,7 +1230,7 @@ struct InferenceTests {
         // for. (What a refusal *quotes* is the path walk's own business: it
         // resolves names at every step, for a cast's reading and a declared
         // parameter's alike.)
-        let sut = Module(
+        let sut = try Module(
             types: ["Person": .record(["name": .string])],
             procedures: [
                 "entry": Procedure(
@@ -1275,7 +1275,7 @@ struct InferenceTests {
         // Given — a type may name itself, and the link's own guarantee that
         // name chains are finite covers walks that follow names alone. This
         // walk goes into fields too, so it carries its own guard
-        let sut = Module(
+        let sut = try Module(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
                 "entry": Procedure(
@@ -1308,7 +1308,7 @@ struct InferenceTests {
         // Given — the reading proves a string is there, and no string is a
         // whole number. `as?` here would answer null on every run, which is
         // the permanent silent null `as?` exists not to be
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1335,7 +1335,7 @@ struct InferenceTests {
         // Given — `of.a.b` in one statement stands, so `x = of.a` then `x.b`
         // must stand too. Folding the parameter walk's reading to `any` made
         // the second refuse on a shape the author never wrote
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1370,7 +1370,7 @@ struct InferenceTests {
         // able to read one. A module constant is folded through that evaluator
         // before anything runs, so a cast in one is where the two would
         // disagree if only the link believed it
-        let sut = Module(
+        let sut = try Module(
             constants: [
                 "counted": .cast(
                     .literal(.int(7)),
@@ -1397,7 +1397,7 @@ struct InferenceTests {
         // array is there and an index reads one. What each element holds is
         // still nothing, so a dot on one is still refused — the door it named
         // opened, and only that one
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1430,7 +1430,7 @@ struct InferenceTests {
         // about `data`. Calling this cast needless would refuse the author
         // both ways: the cast as saying nothing, and the dot it would have
         // allowed as unjudgeable
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1462,7 +1462,7 @@ struct InferenceTests {
         // Given — the link walks a declared name through to judge it, and what
         // it writes back is what was written: a refusal and a document both
         // read the author's spelling
-        let sut = Module(
+        let sut = try Module(
             types: ["Person": .record(["name": .string])],
             procedures: [
                 "entry": Procedure(
@@ -1506,7 +1506,7 @@ struct InferenceTests {
         // Given — the same read, with the shape the author expects named:
         // the dot is judged against that shape, and the run is left only the
         // question of what arrived
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1541,7 +1541,7 @@ struct InferenceTests {
         // Given — the type proved the absence, so no spelling reads past it:
         // `?.` speaks about what may be absent at run, not about what the
         // declaration already settled
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1567,7 +1567,7 @@ struct InferenceTests {
         }
 
         // The optional spelling changes nothing a declaration settled.
-        let optional = Module(
+        let optional = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1600,7 +1600,7 @@ struct InferenceTests {
         // name reads back nullable and the plain slot refuses — a reading
         // that dropped what left with the break would have said `string` and
         // linked a lie.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1674,7 +1674,7 @@ struct InferenceTests {
         // fact for the run and for the reading: field `a` writes the
         // variable, so field `b` reads it as the int `a` left, not as the
         // null the record was entered with.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -1732,7 +1732,7 @@ struct InferenceTests {
         // rescue runs with that write in the box, so inside the rescue the
         // name reads `string?` and the plain string slot refuses. A rescue
         // judged in the entry environment would have linked a lie.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -1795,7 +1795,7 @@ struct InferenceTests {
         // reads `string?`, so the plain string slot refuses. A body judged
         // once against the entry environment would have linked the first
         // round and lied about the rest.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1861,7 +1861,7 @@ struct InferenceTests {
             Statement(id: name, binding: .assignment, expression: .reference([.key(next)]))
         } + [Statement(id: "f", binding: .assignment, expression: .literal(.null))]
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -1907,77 +1907,6 @@ struct InferenceTests {
         }
     }
 
-    @Test("a construct in a condition is refused at the link too")
-    func aConstructInAConditionIsRefusedAtLink() {
-        // Given — a program assembled directly meets the same rule the
-        // check states: the run asks a condition purely
-        let sut = Module(
-            procedures: [
-                entryName: Procedure(
-                    body: [
-                        Statement(
-                            expression: .conditional(
-                                .block(Block(body: [], result: .literal(.bool(true)))),
-                                then: [],
-                                else: nil
-                            )
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("a condition is data")
-        }
-    }
-
-    @Test("a construct in a call's operand is refused at the link too")
-    func aConstructInAnOperandIsRefusedAtTheLink() throws {
-        // Given — the check refuses this shape, but a program assembled
-        // directly may come straight to the link, and the flow walk stands
-        // on operands being the pure half: the link asks the same predicate
-        // rather than taking a stage nobody ran on faith
-        let sut = Module(
-            procedures: [
-                "entry": Procedure(
-                    body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(
-                                Dispatch(selector: "wants", arguments: [
-                                    "word": .block(
-                                        Block(body: [], result: .literal(.string("x")))
-                                    )
-                                ])
-                            )
-                        )
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "word": Parameter(type: .string)
-                        ]
-                    ),
-                    body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
-                    ]
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is LinkError && "\(error)".contains("travels as a closure")
-        }
-    }
-
     @Test("a rescue's write is counted even when the body always leaves")
     func aRescueWriteSurvivesALeavingBody() throws {
         // Given — the rescue runs on the world failing, which no reading of
@@ -1985,7 +1914,7 @@ struct InferenceTests {
         // fail before its return, and what the rescue wrote is then in the
         // box. The write may be a null, so the name reads back nullable and
         // the plain slot refuses.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -2057,7 +1986,7 @@ struct InferenceTests {
         // int. That is `any` — where readings disagree the slot holds neither
         // — and `any` passes the string slot below, where a join that kept
         // only the rescue's int would have refused it wrongly.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -2115,7 +2044,7 @@ struct InferenceTests {
         // Given — no run comes back from the refusing arm, so the ways that
         // finish all made the other arm's write: the name reads as that write
         // alone, not as a maybe
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -2175,7 +2104,7 @@ struct InferenceTests {
     @Test("an attempt whose body only refuses holds what the rescue answers")
     func attemptHoldsTheRescueWhenTheBodyRefuses() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -2222,7 +2151,7 @@ struct InferenceTests {
         // Given — `gives_up` declares never, so a name on its call promises a
         // binding that cannot happen. The link refuses the name where the
         // signature is known, rather than inventing a type for the binding
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "gives_up": Procedure(
                     signature: Signature(

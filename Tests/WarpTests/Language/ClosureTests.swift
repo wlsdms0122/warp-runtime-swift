@@ -59,7 +59,7 @@ struct ClosureTests {
                 )
             ]
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "twice": twice,
                 entryName: Procedure(
@@ -115,7 +115,7 @@ struct ClosureTests {
             ],
             result: reference("once")
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "twice": twice,
                 entryName: Procedure(

@@ -57,6 +57,7 @@ struct ModuleDeclarationTests {
     func uniqueNameNeedsNoQualifying() async throws {
         // Given
         let caller = try loader.loadDocument([
+            "imports": ["greet"],
             "name": "caller",
             "procedures": [
                 "entry": [
@@ -86,6 +87,7 @@ struct ModuleDeclarationTests {
     func ambiguousNameIsRefused() throws {
         // Given
         let caller = try loader.loadDocument([
+            "imports": ["helper"],
             "name": "caller",
             "procedures": ["entry": ["body": [["id": "said", "call": ["procedure": "helper"]]]]]
         ])
@@ -108,6 +110,7 @@ struct ModuleDeclarationTests {
     func qualifiedNameReachesAcross() async throws {
         // Given — `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
+            "imports": ["second.helper"],
             "name": "first",
             "procedures": [
                 "entry": [
@@ -162,6 +165,7 @@ struct ModuleDeclarationTests {
     func constantsMayComposeButNotCycle() async throws {
         // Given
         let composed = try loader.loadDocument([
+            "imports": ["joined", "text"],
             "const": [
                 "host": "example.com",
                 "url": ["format": "https://${host}/api", "with": ["host": ["ref": "host"]]]

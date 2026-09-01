@@ -86,6 +86,7 @@ struct CallTests {
     func callNamesASymbol() async throws {
         // Given — the callee lives in a module the caller never mentions
         let caller = try loader.loadDocument([
+            "imports": ["greet"],
             "procedures": [
                 "caller": [
                     "body": [["id": "call", "call": ["procedure": "greet"]]],
@@ -116,6 +117,7 @@ struct CallTests {
         // Given — `call` reaches a receiver the same way a spelling does, so a
         // document is not forced through `x.shout` to send to one
         let sut = try loader.loadDocument([
+            "imports": ["joined", "text"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string"],

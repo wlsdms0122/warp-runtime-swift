@@ -101,7 +101,7 @@ struct WriterTests {
                     ]
                 ]
             ]
-        ])
+        ], importing: ["example.holds"])
 
         // When
         let written = try sut.value(of: module)
@@ -196,7 +196,7 @@ struct WriterTests {
                     ]
                 ]
             ]
-        ])
+        ], importing: ["equal"])
 
         // When
         let written = try sut.value(of: module)
@@ -221,7 +221,7 @@ struct WriterTests {
     func dataThatLooksLikeAFormIsQuoted() throws {
         // Given — a payload with a field called `ref` is not a reference, and
         // writing it bare would make a document that loads into something else
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -293,7 +293,7 @@ struct WriterTests {
             ],
             returns: .bool
         )
-        let module = Module(
+        let module = try Module(
             types: ["Predicate": .procedure(bounded, .unstated)],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -313,7 +313,7 @@ struct WriterTests {
         }
 
         // A bounded variable declared as a type directly refuses the same way
-        let variable = Module(
+        let variable = try Module(
             types: ["Loose": .variable(name: "T", constraint: "Scalar")],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -326,7 +326,7 @@ struct WriterTests {
 
         // And the same claim carried by a procedure's own slot is written —
         // once, as the declaring signature's `bounds`
-        let declaring = Module(
+        let declaring = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: bounded,
@@ -368,7 +368,7 @@ struct WriterTests {
         // language's shapes directly is under no such obligation, so this is
         // reachable and says so rather than writing a document that would load
         // into something else.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -398,7 +398,7 @@ struct WriterTests {
         // Given — what a caller brings is declared where the run is assembled,
         // not carried in the program. Writing its name alone would make a
         // document that loads into a body nobody wrote.
-        let module = Module(procedures: Module.logic.procedures)
+        let module = try Module(procedures: Module.logic.procedures)
 
         // When / Then
         #expect(throws: WritingError.self) {
@@ -435,7 +435,7 @@ struct WriterTests {
         // Both cast spellings, over both ways a type is written — a name, and
         // the mapping a record is. A type written back as a string it cannot
         // be read from would survive neither direction.
-        Module(
+        try! Module(
             name: "casting",
             procedures: [
                 entryName: Procedure(
@@ -464,7 +464,7 @@ struct WriterTests {
         ),
         // Messages nested inside other expressions, deeper than a document's
         // fixed shapes would ever place them
-        Module(
+        try! Module(
             name: "nested",
             procedures: [
                 entryName: Procedure(
@@ -505,7 +505,7 @@ struct WriterTests {
             ]
         ),
         // Data that would read as a form, quoted, and a variable written twice
-        Module(
+        try! Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -675,6 +675,7 @@ struct WriterTests {
         ],
         // Branch, group and the condition spellings
         [
+            "imports": ["and", "equal", "not"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string", "ready": "bool"],
@@ -726,6 +727,7 @@ struct WriterTests {
         ],
         // Loop, each, attempt
         [
+            "imports": ["fail", "notEqual", "plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -810,6 +812,7 @@ struct WriterTests {
         ],
         // Messages: receivers, carried bodies, closures, invocation, templates
         [
+            "imports": ["filter", "joined", "notEqual", "text"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string", "names": "array<string>"],

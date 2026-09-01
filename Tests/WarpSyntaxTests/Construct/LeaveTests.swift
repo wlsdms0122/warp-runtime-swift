@@ -44,7 +44,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "early"]
-        ])
+        ], importing: ["equal"])
 
         // When
         let stopped = try await answer(sut, ["word": .string("stop")])
@@ -88,7 +88,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "walked"]
-        ])
+        ], importing: ["equal", "notEqual", "plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(3))
@@ -128,7 +128,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "seen"]
-        ])
+        ], importing: ["equal", "joined", "text"])
 
         // When
         let answered = try await answer(
@@ -176,7 +176,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "outer"]
-        ])
+        ], importing: ["notEqual", "plus"])
 
         // When / Then — one round of each, because the break left both
         #expect(try await answer(sut) == .int(1))
@@ -385,7 +385,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "walked"]
-        ])
+        ], importing: ["plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(1))
@@ -419,7 +419,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "walked"]
-        ])
+        ], importing: ["notEqual", "plus"])
 
         // When / Then — what the last round bound, not nothing
         #expect(try await answer(sut) == .int(2))

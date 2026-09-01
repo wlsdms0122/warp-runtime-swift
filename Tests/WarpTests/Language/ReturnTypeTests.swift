@@ -22,7 +22,7 @@ struct ReturnTypeTests {
     @Test("a declared answer is settled before the caller sees it")
     func answerIsSettled() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -48,7 +48,7 @@ struct ReturnTypeTests {
 
         // And a fraction is not that representation, whatever it is worth: a
         // declaration is about the type, not about which values happen to fit.
-        let narrowing = Module(
+        let narrowing = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(returns: .int),
@@ -68,7 +68,7 @@ struct ReturnTypeTests {
     @Test("a body that answers something else fails")
     func wrongReturnFails() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -95,7 +95,7 @@ struct ReturnTypeTests {
     @Test("a declared shape is settled on the way out, not only on the way in")
     func declaredShapeSettlesOnTheWayOut() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             types: [
                 "Task": .record([
                         "id": .string
@@ -132,7 +132,7 @@ struct ReturnTypeTests {
     @Test("an answer naming a shape nobody declared is refused at link")
     func unknownReturnTypeIsALinkError() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(

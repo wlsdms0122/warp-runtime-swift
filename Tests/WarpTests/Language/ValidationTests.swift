@@ -23,8 +23,8 @@ struct ValidationTests {
         // introduced under that spelling would never be the one that answers.
         // The rule is the whole body's: a sub scope is where a reader is least
         // able to see that the name was already taken.
-        func module(introducing statement: Statement) -> Module {
-            Module(
+        func module(introducing statement: Statement) throws -> Module {
+            try Module(
                 name: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
@@ -53,25 +53,23 @@ struct ValidationTests {
     }
 
     @Test("but writing one is refused for what it is, not for introducing a name")
-    func writingABoundNameIsRefusedAsAWrite() {
+    func writingABoundNameIsRefusedAsAWrite() throws {
         // Given — an assignment names a name rather than introducing one, and
         // the two mistakes have different fixes: one is to pick another
         // spelling, the other is to declare a variable.
-        let sut = Module(
-            name: "app",
-            constants: ["limit": .literal(.int(3))],
-            procedures: [
-                entryName: Procedure(
-                    body: [
-                        Statement(id: "limit", binding: .assignment, expression: .literal(.int(9)))
-                    ]
-                )
-            ]
-        )
-
         // When / Then
         let error = #expect(throws: ValidationError.self) {
-            try Validator().validate(sut)
+            try Module(
+                name: "app",
+                constants: ["limit": .literal(.int(3))],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(id: "limit", binding: .assignment, expression: .literal(.int(9)))
+                        ]
+                    )
+                ]
+            )
         }
 
         #expect(error?.message.contains("declare it as a variable to write it") == true)
@@ -82,8 +80,8 @@ struct ValidationTests {
         // Given — the same rule where the name is the language's to introduce
         // rather than a statement's: a walk's element, a loop's round, and the
         // failure an attempt rescues.
-        func module(running expression: Warp.Expression) -> Module {
-            Module(
+        func module(running expression: Warp.Expression) throws -> Module {
+            try Module(
                 name: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
@@ -115,8 +113,8 @@ struct ValidationTests {
         // without this rule, a closure among the constants may introduce a name
         // one of its siblings has, and what that name means then depends on
         // which of the two the reader is standing in.
-        func module(_ procedure: Procedure) -> Module {
-            Module(
+        func module(_ procedure: Procedure) throws -> Module {
+            try Module(
                 name: "app",
                 constants: [
                     "apply": .closure(procedure),
@@ -141,6 +139,29 @@ struct ValidationTests {
                 result: reference("limit")
             )))
         }
+    }
+
+    @Test("a constant sees the constants declared beside it and nothing else")
+    func aConstantReadsOnlyItsSiblings() throws {
+        // Given — a chain and not a circle. `aaa` reads `bbb`, declared right
+        // beside it, so nothing about `aaa` is wrong: `bbb` is the one reading
+        // a name nothing here settles, and the refusal stands on it.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                name: "pricing",
+                constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
+                procedures: [entryName: Procedure(body: [])],
+                identity: Identity([0x01])
+            )
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@01/const.bbb")
+        #expect(error?.message.contains("aaa") == false)
+
+        // And the name it reads is said, since that is the half of the mistake
+        // the place cannot point at
+        #expect(error?.message.contains("nowhere") == true)
     }
 
     @Test("a construct in a call's operand is refused at the check")
@@ -339,6 +360,81 @@ struct ValidationTests {
         }
 
         try Validator().validate(taken)
+    }
+
+    @Test("a module is held to the words it says it imports", arguments: [
+        [] as Set<String>,
+        ["count", "plus"]
+    ])
+    func aModuleIsHeldToItsImports(_ claimed: Set<String>) {
+        // Given — a caller decides what to grant from this list and then links
+        // what it granted, so a list that says less than the program sends
+        // links a word nobody allowed, and one that says more takes a grant the
+        // program never uses
+        #expect(throws: ValidationError.self) {
+            try Module(
+                imports: claimed,
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "counted",
+                                expression: .dispatch(Dispatch(
+                                    receiver: .literal(.array([.int(1)])),
+                                    selector: "count"
+                                ))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test("a module that claims nothing states what it sends")
+    func anUnclaimedModuleStatesWhatItSends() throws {
+        // Given — a caller assembling shapes in Swift holds the module and has
+        // nobody to disclose it to, so there is no claim to be held to. What
+        // travels is written from this, and what is written has to be true.
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "counted",
+                            expression: .dispatch(Dispatch(
+                                receiver: .literal(.array([.int(1)])),
+                                selector: "count"
+                            ))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // Then
+        #expect(sut.imports == ["count"])
+    }
+
+    @Test("a word the module declares itself is not one it imports")
+    func ownWordsAreNotImports() throws {
+        // Given — what a module brings with it is not what it asks for
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "greet"))
+                        )
+                    ]
+                ),
+                "greet": Procedure(body: [], result: .literal(.string("hello")))
+            ]
+        )
+
+        // Then
+        #expect(sut.imports.isEmpty)
     }
 
     @Test("a result expression is checked against what the body left visible")

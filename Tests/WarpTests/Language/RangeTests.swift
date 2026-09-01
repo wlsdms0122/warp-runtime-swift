@@ -73,7 +73,7 @@ struct RangeTests {
     @Test("an argument only the run sees is judged at the boundary")
     func aRuntimeValueIsJudgedAtTheBoundary() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -98,7 +98,7 @@ struct RangeTests {
     @Test("a constant argument is judged at the link")
     func aConstantArgumentIsJudgedAtTheLink() throws {
         // Given — the argument is text, so the miss is the link's to see
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "paint": Procedure(
                     signature: Signature(
@@ -128,7 +128,7 @@ struct RangeTests {
     @Test("a default outside its own range refuses at the link")
     func aDefaultOutsideTheRangeRefuses() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -156,7 +156,7 @@ struct RangeTests {
     @Test("a range that admits nothing refuses where it was written")
     func anEmptyRangeRefusesAtTheLink() throws {
         // Given — no whole number is at once at least 9 and at most 1
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -180,8 +180,8 @@ struct RangeTests {
     func aOneOfOutsideTheRangeRefuses() throws {
         // Given — no candidate is a value the range could hold, so the
         // parameter fits no call: the same judgment an empty oneOf gets
-        func module(oneOf candidates: [String]) -> Module {
-            Module(
+        func module(oneOf candidates: [String]) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(
@@ -227,7 +227,7 @@ struct RangeTests {
     @Test("std declares byte, and a name resolves to its range")
     func byteIsANamedRange() async throws {
         // Given — `byte = int(0...255)`, declared where every bundle can name it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -252,7 +252,7 @@ struct RangeTests {
     @Test("a dot on a range is a word send, the way it is on an int")
     func aDotOnARangeSendsAWord() async throws {
         // Given — a range's value has no fields; the dot reaches vocabulary
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -271,7 +271,7 @@ struct RangeTests {
     @Test("what a range answers stays inside the wider slot it fills")
     func aRangeReadingFillsAnIntSlot() async throws {
         // Given — a byte-typed value handed to an int slot: provably inside
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(

@@ -35,7 +35,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"]]
-        ])
+        ], importing: ["equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
@@ -59,7 +59,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"]]
-        ])
+        ], importing: ["equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("b")])
@@ -106,7 +106,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"]]
-        ])
+        ], importing: ["notEqual"])
 
         // When
         let outputs = try await run(sut)
@@ -200,7 +200,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "read.left"]]
-        ])
+        ], importing: ["all"])
 
         // When
         let outputs = try await run(sut)

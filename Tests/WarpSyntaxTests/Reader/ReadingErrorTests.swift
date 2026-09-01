@@ -27,11 +27,33 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": [],
             "name": "wallet",
-            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "plus"]]]]]
+            "procedures": ["entry": ["body": [["id": "sent", "var": "again", "value": 1]]]]
         ]
 
         // When
         let error = #expect(throws: ReadingError.self) {
+            try loader.load(fixture, identity: identity)
+        }
+
+        // Then
+        #expect(error?.place?.document.identity == identity)
+        #expect(error?.place?.document.namespace == "wallet")
+    }
+
+    @Test("a document refused for what it says about itself says which document it was")
+    func aCheckSaysWhichDocument() throws {
+        // Given — the same answer is owed by the refusals that come from making
+        // the module rather than from reading it, since a caller holding four
+        // files cannot tell which stage refused and still has to open one
+        let fixture: Value = [
+            "warp": 1,
+            "imports": [],
+            "name": "wallet",
+            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "plus"]]]]]
+        ]
+
+        // When
+        let error = #expect(throws: ValidationError.self) {
             try loader.load(fixture, identity: identity)
         }
 

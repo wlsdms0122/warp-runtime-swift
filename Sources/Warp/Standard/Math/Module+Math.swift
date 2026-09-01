@@ -8,7 +8,7 @@
 import Foundation
 
 public extension Module {
-    static let math = Module(
+    static let math = try! Module(
         name: "std.math",
         description: "Arithmetic, and the ordering of numbers and strings.",
         procedures: [
