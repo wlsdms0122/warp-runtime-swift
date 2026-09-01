@@ -45,7 +45,7 @@ public struct Validator: Sendable {
         // named none — and a name nobody can type is a name no other document
         // can join, which is what a namespace is for.
         if let name = module.name {
-            let here = Place([.key("name")], in: .of(module))
+            let here = Place([.slot(.name)], in: .of(module))
 
             guard !name.isEmpty else {
                 throw ValidationError("a module that writes a name writes one", at: here)
@@ -105,7 +105,7 @@ public struct Validator: Sendable {
 
         throw ValidationError(
             "imports \(module.imports.sorted()) and sends \(sends.sorted())",
-            at: Place([.key("imports")], in: .of(module))
+            at: Place([.slot(.imports)], in: .of(module))
         )
     }
 
@@ -332,13 +332,13 @@ public struct Validator: Sendable {
         // link's to resolve, so the check has only the value to walk, exactly
         // as it walks any other operand.
         case let .cast(value, _, _):
-            try refuseAnswerless(value, at: place.slot(.of))
+            try refuseAnswerless(value, at: place.slot(.receiver))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.of)
+                at: place.slot(.receiver)
             )
 
         // A closure sees where it was written plus what it declares, which is
@@ -397,13 +397,13 @@ public struct Validator: Sendable {
             )
 
         case let .invoke(callee, arguments):
-            try refuseConstruct(callee, at: place.slot(.procedure))
+            try refuseConstruct(callee, at: place.slot(.callee))
             try validate(
                 callee,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.procedure)
+                at: place.slot(.callee)
             )
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
@@ -424,13 +424,13 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(condition, at: place.slot(.when))
+            try refuseConstructCondition(condition, at: place.slot(.condition))
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.when)
+                at: place.slot(.condition)
             )
             try validate(
                 then,
@@ -520,13 +520,13 @@ public struct Validator: Sendable {
 
         case let .dispatch(dispatch):
             if let receiver = dispatch.receiver {
-                try refuseConstruct(receiver, at: place.slot(.of))
+                try refuseConstruct(receiver, at: place.slot(.receiver))
                 try validate(
                     receiver,
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.slot(.of)
+                    at: place.slot(.receiver)
                 )
             }
 

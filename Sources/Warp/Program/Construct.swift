@@ -1,0 +1,60 @@
+//
+//  Construct.swift
+//  Warp
+//
+//  Created by JSilver
+//
+
+import Foundation
+
+// Which shape an expression is, without any of it.
+//
+// A place says which construct a statement writes, and the shape is the whole
+// of what it has to say — carrying the expression would put a program inside an
+// address. The cases are the language's own and no document's: what a text
+// spells a shape with is the notation's, and two texts spelling one shape two
+// ways arrive here as one case.
+public enum Construct: Sendable, Equatable {
+    case literal
+    case reference
+    case array
+    case record
+    case closure
+    case cast
+
+    case invoke
+    case block
+    case conditional
+    case loop
+    case iteration
+    case attempt
+    case dispatch
+    case leave(Leave.Reach)
+
+    // MARK: - Public
+    // What the language calls this shape. A document calls several of them
+    // something else, and the reading that knows which is not this one.
+    //
+    // Leaving reads as one word for all three reaches. Which loop a `leave`
+    // ends is carried in the case and spelled by whoever spells for a document
+    // — an address exists to reach the statement, and the statement is already
+    // named a step above.
+    public var rendered: String {
+        switch self {
+        case .literal: "literal"
+        case .reference: "reference"
+        case .array: "array"
+        case .record: "record"
+        case .closure: "closure"
+        case .cast: "cast"
+        case .invoke: "invoke"
+        case .block: "block"
+        case .conditional: "conditional"
+        case .loop: "loop"
+        case .iteration: "iteration"
+        case .attempt: "attempt"
+        case .dispatch: "dispatch"
+        case .leave: "leave"
+        }
+    }
+}

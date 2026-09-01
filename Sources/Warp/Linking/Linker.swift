@@ -1603,7 +1603,7 @@ public struct Linker: Sendable {
                 throw LinkError(
                     "sending '\(dispatch.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",
-                    at: site.place.slot(.of)
+                    at: site.place.slot(.receiver)
                 )
             }
         }

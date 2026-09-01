@@ -99,25 +99,23 @@ public indirect enum Expression: Sendable {
     // It is what this implementation calls the shape and **not** a word read
     // off any document: a caller registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
-    // two texts that arrive here as one shape. So a place carries this as a
-    // landmark — a word the language chose — and what a reader may follow back
-    // into a file is only what is marked as the document's own.
-    public var constructKey: String {
+    // two texts that arrive here as one shape.
+    public var construct: Construct {
         switch self {
-        case .literal, .reference, .array, .record, .closure, .cast: "value"
-        case .invoke: "invoke"
-        case .block: "group"
-        case .conditional: "branch"
-        case .loop: "loop"
-        case .iteration: "each"
-        case .attempt: "attempt"
-        case .dispatch: "call"
-        case let .leave(leave):
-            switch leave.reach {
-            case .procedure: "return"
-            case .construct: "break"
-            case .round: "continue"
-            }
+        case .literal: .literal
+        case .reference: .reference
+        case .array: .array
+        case .record: .record
+        case .closure: .closure
+        case .cast: .cast
+        case .invoke: .invoke
+        case .block: .block
+        case .conditional: .conditional
+        case .loop: .loop
+        case .iteration: .iteration
+        case .attempt: .attempt
+        case .dispatch: .dispatch
+        case let .leave(leave): .leave(leave.reach)
         }
     }
 

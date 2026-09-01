@@ -156,7 +156,7 @@ struct ValidationTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@01/const.bbb")
+        #expect(error?.place?.rendered == "pricing@01/constants.bbb")
         #expect(error?.message.contains("aaa") == false)
 
         // And the name it reads is said, since that is the half of the mistake

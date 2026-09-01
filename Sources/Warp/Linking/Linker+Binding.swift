@@ -158,7 +158,7 @@ extension Linker {
         // The shape a cast names is the qualifying pass's to resolve, not
         // the binding pass's — nothing in a type spelling is a symbol.
         case let .cast(value, type, optional):
-            return .cast(try inner(value, under: .of), as: type, optional: optional)
+            return .cast(try inner(value, under: .receiver), as: type, optional: optional)
 
         case let .array(array):
             return .array(
@@ -192,7 +192,7 @@ extension Linker {
 
         case let .invoke(callee, arguments):
             return .invoke(
-                try inner(callee, under: .procedure),
+                try inner(callee, under: .callee),
                 arguments: try arguments.sorted(by: { $0.key < $1.key })
                     .reduce(into: [:]) { bound, argument in
                     bound[argument.key] = try bind(
@@ -209,7 +209,7 @@ extension Linker {
 
         case let .conditional(condition, then, otherwise):
             return .conditional(
-                try inner(condition, under: .when),
+                try inner(condition, under: .condition),
                 then: try inner(then, under: .then),
                 else: try otherwise.map { otherwise in try inner(otherwise, under: .otherwise) }
             )
@@ -283,7 +283,7 @@ extension Linker {
 
         return Dispatch(
             receiver: try dispatch.receiver.map { receiver in
-                try bind(receiver, within: origin, symbols: symbols, at: place.slot(.of))
+                try bind(receiver, within: origin, symbols: symbols, at: place.slot(.receiver))
             },
             selector: selector,
             arguments: try dispatch.arguments.sorted(by: { $0.key < $1.key })

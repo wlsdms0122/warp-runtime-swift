@@ -11,20 +11,24 @@ import Testing
 
 // Where a refusal says the words are.
 //
-// An author reading one has the document in front of them, so what these ask of
-// every place is one thing: that following it word by word lands on something
-// the author typed. A place spelled out of the model's own names — the enum
-// case, the Swift label — reads like a path and leads nowhere.
+// What these hold a place to is that it leads somewhere for the reader it is
+// shown to. These programs are assembled in Swift and were never written down,
+// so the reader is the caller that built them and the words are the language's
+// own — a document's would name keys that exist in no file. Reading a place in
+// a document's words is asked of `WarpSyntax`, which has the document.
+//
+// The steps are what makes both readings possible: a slot and a construct
+// travel as themselves, and only what an author named travels as a word.
 @Suite
 struct PlaceTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a place is spelled from the keys the document writes")
-    func aPlaceIsSpelledFromDocumentKeys() {
-        // Given — the two slots whose model name and document key differ. A
-        // loop's condition is `while` to this implementation and `where` to
-        // every document; a walk's collection is `over` here and `in` there.
+    @Test("a place is spelled from the language's own names")
+    func aPlaceIsSpelledFromTheLanguagesNames() {
+        // Given — the two slots a document calls something else. A loop's
+        // condition is `where` in a document and a walk's collection is `in`,
+        // and neither word appears in what a caller assembling this wrote.
         let spin = place(
             refusing: Statement(
                 id: "spin",
@@ -44,8 +48,8 @@ struct PlaceTests {
         )
 
         // Then
-        #expect(spin?.rendered == "procedures.entry.body.spin[0].loop.where")
-        #expect(walk?.rendered == "procedures.entry.body.walk[0].each.in")
+        #expect(spin?.rendered == "procedures.entry.body.spin[0].loop.condition")
+        #expect(walk?.rendered == "procedures.entry.body.walk[0].iteration.material")
     }
 
     @Test("what a call is written with is named under the key holding it")
@@ -62,7 +66,7 @@ struct PlaceTests {
         )
 
         // Then
-        #expect(sut?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+        #expect(sut?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.amount")
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
@@ -73,8 +77,8 @@ struct PlaceTests {
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
-        #expect(named?.rendered == "procedures.entry.body.held[0].value")
-        #expect(bare?.rendered == "procedures.entry.body[0].value")
+        #expect(named?.rendered == "procedures.entry.body.held[0].reference")
+        #expect(bare?.rendered == "procedures.entry.body[0].reference")
 
         // And the name is not all that is kept: a reader mapping a place back
         // to the text it was written in needs the position, which a name would
@@ -113,9 +117,9 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].reference")
         #expect(error?.message.contains("procedures.entry") == false)
-        #expect(error?.description.hasPrefix("procedures.entry.body.held[0].value: ") == true)
+        #expect(error?.description.hasPrefix("procedures.entry.body.held[0].reference: ") == true)
     }
 
     @Test("what the link refuses is placed the way what the load refuses is")
@@ -137,7 +141,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
+        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].dispatch")
     }
 
     @Test("the link narrows to the argument it refused, not to the call holding it")
@@ -177,7 +181,7 @@ struct PlaceTests {
 
         // Then
         #expect(
-            error?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.second"
+            error?.place?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.second"
         )
     }
 
@@ -228,8 +232,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
-        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.amount")
+        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.amount")
     }
 
     @Test("every walk that reports a place steps through the same slots to reach one")
@@ -243,7 +247,7 @@ struct PlaceTests {
         // a name nothing declares for the walk that checks the document against
         // itself, a word nothing declares for the walk that resolves names, a
         // claim the types already prove for the walk that reads them.
-        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].call"
+        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].dispatch"
 
         func module(sending selector: String, with argument: Warp.Expression) throws -> Module {
             try Module(
@@ -342,7 +346,7 @@ struct PlaceTests {
         // Then — the name rides beside the steps and is never one of them
         #expect(error?.place?.document == Place.Document(identity: reading, namespace: "wallet"))
         #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
-        #expect(error?.place?.rendered == "wallet@d0cf00/procedures.entry.body.sent[0].call")
+        #expect(error?.place?.rendered == "wallet@d0cf00/procedures.entry.body.sent[0].dispatch")
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
@@ -396,8 +400,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(charge?.place?.rendered == "wallet@01/procedures.charge.body.held[0].value")
-        #expect(refund?.place?.rendered == "wallet@02/procedures.refund.body.held[0].value")
+        #expect(charge?.place?.rendered == "wallet@01/procedures.charge.body.held[0].reference")
+        #expect(refund?.place?.rendered == "wallet@02/procedures.refund.body.held[0].reference")
     }
 
     @Test("a shape a named module declares is placed by the key it declared it under")
@@ -461,12 +465,16 @@ struct PlaceTests {
         )
 
         // Then — the word is spelled for the person reading the line
-        #expect(sut.rendered?.contains(".sent[0].call.") == true)
+        #expect(sut.rendered?.contains(".sent[0].dispatch.") == true)
 
-        // And carried as the language's, beside the keys that are the text's
-        #expect(sut.steps.contains(.landmark("call")))
-        #expect(sut.steps.contains(.key("call")) == false)
-        #expect(sut.steps.contains(.key("arguments")))
+        // And carried as the shape rather than as any word, so the side that
+        // spells it is the side that knows what its reader is looking at
+        #expect(sut.steps.contains(.construct(.dispatch)))
+        #expect(sut.steps.contains(.slot(.arguments)))
+
+        // What the author named is the one thing carried as it was typed
+        #expect(sut.steps.contains(.key("amount")))
+        #expect(sut.steps.contains(.key("dispatch")) == false)
     }
 
     @Test("what a return carries is checked, and placed where the return is")
@@ -484,7 +492,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body[0].return")
+        #expect(error?.place?.rendered == "procedures.entry.body[0].leave")
     }
 
     @Test("both stages point at the statement that leaves, not at what follows it")
@@ -530,8 +538,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(load?.place?.rendered == "procedures.entry.body[0].return")
-        #expect(link?.place?.rendered == "procedures.entry.body[0].call")
+        #expect(load?.place?.rendered == "procedures.entry.body[0].leave")
+        #expect(link?.place?.rendered == "procedures.entry.body[0].dispatch")
     }
 
     @Test("a name two documents declare is refused at the one that could not be added")
@@ -653,7 +661,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@d0cf00/const.alpha")
+        #expect(error?.place?.rendered == "pricing@d0cf00/constants.alpha")
         #expect(error?.message.contains("alpha, zebra") == true)
     }
 
@@ -681,7 +689,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@d0cf00/const.yak")
+        #expect(error?.place?.rendered == "pricing@d0cf00/constants.yak")
         #expect(error?.message.contains("yak, zebra") == true)
         #expect(error?.message.contains("aardvark") == false)
     }

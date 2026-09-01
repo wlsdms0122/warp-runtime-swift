@@ -1040,7 +1040,7 @@ extension Linker {
         case let .cast(value, type, optional):
             let inner = try inspected(
                 value,
-                at: place.slot(.of),
+                at: place.slot(.receiver),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1224,7 +1224,7 @@ extension Linker {
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
             if callee.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.slot(.procedure))
+                throw LinkError(Expression.constructInOperand, at: place.slot(.callee))
             }
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key })
@@ -1234,7 +1234,7 @@ extension Linker {
 
             let called = try inspected(
                 callee,
-                at: place.slot(.procedure),
+                at: place.slot(.callee),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1292,7 +1292,7 @@ extension Linker {
                         receiver: try dispatch.receiver.map { receiver in
                             try inspected(
                                 receiver,
-                                at: place.slot(.of),
+                                at: place.slot(.receiver),
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1307,7 +1307,7 @@ extension Linker {
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
             if dispatch.receiver?.holdsConstruct == true {
-                throw LinkError(Expression.constructInOperand, at: place.slot(.of))
+                throw LinkError(Expression.constructInOperand, at: place.slot(.receiver))
             }
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
@@ -1320,7 +1320,7 @@ extension Linker {
             if let written = dispatch.receiver {
                 receiver = try inspected(
                     written,
-                    at: place.slot(.of),
+                    at: place.slot(.receiver),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1391,7 +1391,7 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.when), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition), when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
@@ -1399,7 +1399,7 @@ extension Linker {
             // environment the branch stands in.
             let head = try inspected(
                 condition,
-                at: place.slot(.when),
+                at: place.slot(.condition),
                 in: environment,
                 with: frame,
                 ask: ask
