@@ -21,7 +21,7 @@ import Testing
 @Suite("A notation is what a document is read with")
 struct NotationTests {
     // MARK: - Property
-    private let canonical = Loader(notation: .canonical)
+    private let sut = Loader()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -30,8 +30,8 @@ struct NotationTests {
         // Given — a canonical notation offers no spellings and registers no
         // construct that lowers to a word, so every shape it can still write is
         // one the language already has, and it owes no vocabulary at all.
-        #expect(canonical.vocabulary.isEmpty)
-        #expect(!Loader(notation: .testing).vocabulary.isEmpty)
+        #expect(sut.vocabulary(of: .canonical).isEmpty)
+        #expect(!sut.vocabulary(of: .testing).isEmpty)
     }
 
     @Test("a spelling nobody reaches is not owed")
@@ -43,25 +43,25 @@ struct NotationTests {
             condition: WordedConditions(),
             interpolation: Interpolation(read: "text", joined: "joined")
         )
-        let sut = Loader(registry: try ConstructRegistry(forms: []), notation: notation)
+        let sut = Loader(registry: try ConstructRegistry(forms: []))
 
         // Then — what is left is what a template spends, which every slot can
         // hold and no registry decides
-        #expect(sut.vocabulary.isDisjoint(with: WordedConditions().vocabulary))
-        #expect(sut.vocabulary == notation.vocabulary)
+        #expect(sut.vocabulary(of: notation).isDisjoint(with: WordedConditions().vocabulary))
+        #expect(sut.vocabulary(of: notation) == notation.vocabulary)
     }
 
     @Test("what a condition spelling reaches is owed where a condition is read")
     func aConditionsWordsAreOwedByTheFormsThatReadOne() throws {
         // Given — the other half: register a form with a condition slot and the
         // words are owed again. Nothing in this package knows what they are.
-        let sut = Loader(
-            registry: try ConstructRegistry(forms: [BranchForm.self]),
-            notation: Notation(condition: WordedConditions())
-        )
+        let sut = Loader(registry: try ConstructRegistry(forms: [BranchForm.self]))
 
         // Then
-        #expect(sut.vocabulary == WordedConditions().vocabulary)
+        #expect(
+            sut.vocabulary(of: Notation(condition: WordedConditions()))
+                == WordedConditions().vocabulary
+        )
     }
 
     @Test("a canonical notation still writes every condition the language has")
@@ -69,7 +69,7 @@ struct NotationTests {
         // Given — this is what makes the spellings a layer rather than a part of
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
-        let sut = try canonical.loadDocument([
+        let module = try sut.loadDocument([
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
@@ -93,10 +93,10 @@ struct NotationTests {
                     "result": ["result": ["ref": "pick"]]
                 ]
             ]
-        ])
+        ], from: .canonical)
 
         // When
-        let outputs = try await run(sut, arguments: ["word": .string("hey")])
+        let outputs = try await run(module, arguments: ["word": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("matched"))
@@ -178,7 +178,7 @@ struct NotationTests {
 
         // When — written, and read back by a reader with no notation at all
         let written = try Writer().value(of: module)
-        let read = try canonical.load(written)
+        let read = try sut.load(written)
 
         // Then — the same record arrived, rather than a message
         guard
@@ -201,7 +201,7 @@ struct NotationTests {
         // document mean one thing here and another in the notation next door,
         // and nothing would say so.
         #expect {
-            try canonical.loadDocument([
+            try sut.loadDocument([
                 "imports": ["joined", "text"],
                 "procedures": [
                     "entry": [
@@ -214,7 +214,7 @@ struct NotationTests {
                         ]
                     ]
                 ]
-            ])
+            ], from: .canonical)
         } throws: { error in
             "\(error)".contains("does not spell a template")
         }
@@ -264,9 +264,9 @@ struct NotationTests {
         ]
 
         // Then — both readers arrive at the cast
-        for loader in [canonical, .testing] {
+        for notation in [Notation.canonical, .testing] {
             guard
-                case let .body(block) = try loader.loadProcedure(written)
+                case let .body(block) = try sut.loadProcedure(written, from: notation)
                     .procedures[entryName]?.implementation,
                 case let .conditional(condition, _, _) = block.body.first?.expression,
                 case .cast = condition
@@ -277,6 +277,40 @@ struct NotationTests {
             }
         }
     }
+
+    @Test("reading a document is not a place a notation can reach")
+    func readingCarriesNoNotation() throws {
+        // Given — the spelling these tests read with, left unlowered in a
+        // document. `load` takes a document, and a document has no spellings,
+        // so the record is the expression it is rather than the message some
+        // table would have made of it.
+        let module = try sut.load([
+            "warp": .int(Envelope.version),
+            "imports": [],
+            "procedures": [
+                "entry": [
+                    "parameters": ["word": "string"],
+                    "body": [
+                        ["id": "asked", "value": ["of": ["ref": "word"], "is": "hey"]]
+                    ],
+                    "result": ["ref": "asked"]
+                ]
+            ]
+        ])
+
+        // Then
+        guard
+            case let .body(block) = module.procedures[entryName]?.implementation,
+            case let .record(fields) = block.body.first?.expression
+        else {
+            Issue.record("a document read with no notation reads a record as a record")
+
+            return
+        }
+
+        #expect(Set(fields.keys) == ["of", "is"])
+    }
+
 
     // MARK: - Public
     // MARK: - Private

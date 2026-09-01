@@ -187,12 +187,12 @@ struct CanonicalTests {
         ]
 
         // When
-        let written = try loader.canonical(unsound)
+        let written = try loader.canonical(unsound, from: .testing)
 
         // Then — which document this is comes off the canonical writing, so the
         // same text twice is the same document
         #expect(written["name"] == .string("wallet"))
-        #expect(written == (try loader.canonical(unsound)))
+        #expect(written == (try loader.canonical(unsound, from: .testing)))
 
         // And the program is still refused when something asks whether it holds
         #expect(throws: ValidationError.self) {

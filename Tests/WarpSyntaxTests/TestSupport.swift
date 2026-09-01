@@ -116,8 +116,7 @@ extension Module {
 
 extension Loader {
     static let testing = Loader(
-        registry: try! ConstructRegistry.standard.registering(FailForm.self),
-        notation: .testing
+        registry: try! ConstructRegistry.standard.registering(FailForm.self)
     )
 }
 
@@ -136,23 +135,27 @@ extension Loader {
         try load(value, identity: nil)
     }
 
-    // A document with the version filled in, which nobody writes by hand. A
-    // fixture that sends words still writes its own `imports` — what a program
-    // takes from its link is the author's to say, and a helper that said it for
-    // them would make every fixture's list true by construction.
+    // A document as a front end hands one over: written in this notation's
+    // spellings, lowered, and only then read. The two calls are the two
+    // questions — what a text spells, and whether its program holds — and the
+    // reading is handed a document with no spellings left in it.
+    //
+    // The version is filled in, which nobody writes by hand. A fixture that
+    // sends words still writes its own `imports`: what a program takes from
+    // its link is the author's to say, and a helper that said it for them
+    // would make every fixture's list true by construction.
     //
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
-    func loadDocument(_ value: Value) throws -> Module {
+    func loadDocument(_ value: Value, from notation: Notation = .testing) throws -> Module {
         guard case let .object(fields) = value else { return try load(value, identity: nil) }
 
-        return try load(
-            .object(fields.merging([
-                Envelope.versionKey: .int(Envelope.version),
-                Envelope.importsKey: .array([])
-            ]) { written, _ in written }),
-            identity: nil
-        )
+        let written = Value.object(fields.merging([
+            Envelope.versionKey: .int(Envelope.version),
+            Envelope.importsKey: .array([])
+        ]) { written, _ in written })
+
+        return try load(try canonical(written, from: notation), identity: nil)
     }
 
     // Most tests here are about one construct or one reader, not about the
@@ -165,12 +168,16 @@ extension Loader {
     func loadProcedure(
         _ value: Value,
         named name: String = entryName,
-        importing imports: [String] = []
+        importing imports: [String] = [],
+        from notation: Notation = .testing
     ) throws -> Module {
-        try loadDocument([
-            "imports": .array(imports.map(Value.string)),
-            "procedures": [name: value]
-        ])
+        try loadDocument(
+            [
+                "imports": .array(imports.map(Value.string)),
+                "procedures": [name: value]
+            ],
+            from: notation
+        )
     }
 }
 

@@ -8,9 +8,12 @@
 import Foundation
 import Warp
 
-// The door a notation comes through: data in, IR out. It holds the one thing a
-// document needs and a procedure does not — the words its constructs are spelled
-// with.
+// Data in, IR out, and the two questions kept apart.
+//
+// Reading takes a document, which has no spellings — so nothing here holds a
+// notation, and a reader that did would be a reader with a notation's opinions
+// about a text that has none. Lowering takes a notation's own text and the
+// table it is written with, and answers with the document it spells.
 //
 // A front end with a document stops at `Value`. A YAML or JSON parser produces
 // data; turning that data into a procedure is this one path, and what every
@@ -21,32 +24,30 @@ import Warp
 public struct Loader: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
-    public let notation: Notation
 
     // MARK: - Initializer
-    public init(
-        registry: ConstructRegistry = .standard,
-        notation: Notation = .canonical
-    ) {
+    public init(registry: ConstructRegistry = .standard) {
         self.registry = registry
-        self.notation = notation
     }
 
-    // Every word this notation reaches on its own — from the readers that spell
-    // one, and from the forms registered here. A document written entirely in
-    // these spellings still needs them declared somewhere in its link, so a
-    // caller assembling a world can ask what it owes before assembling it.
+    // Every word a notation reaches on its own through this table — from the
+    // readers that spell one, and from the forms registered here. A document
+    // written entirely in these spellings still needs them declared somewhere
+    // in its link, so a caller assembling a world can ask what it owes before
+    // assembling it.
     //
-    // What this notation says with a word rather than a construct is a choice it
+    // What a notation says with a word rather than a construct is a choice it
     // made, so the debt is its own to state. Leaving it unstated would have the
     // bundles read as optional while the spellings quietly required them.
-    public var vocabulary: Set<String> {
+    public func vocabulary(of notation: Notation) -> Set<String> {
         registry.vocabulary(with: notation).union(notation.vocabulary)
     }
 
     // MARK: - Public
     // Loading is not decoding: decoding produces a fragment, and only this says
-    // the fragment is a module worth linking. It answers with a module rather
+    // the fragment is a module worth linking. It reads a document and nothing
+    // else — a spelling a notation offers has been spent by the time a document
+    // exists, so there is no table here to read one with. It answers with a module rather
     // than something runnable because a document is not runnable — what runs is
     // decided when this module is linked with the others.
     //
@@ -112,6 +113,11 @@ public struct Loader: Sendable {
     // The document a document is: what it spells, written back out the one way
     // a document is written, with the version filled in.
     //
+    // The notation is handed in rather than held, because it is an answer about
+    // the text going in and not about the document coming out. What is spelled
+    // one way here is spelled the one way afterwards, and the reading that
+    // takes the result is a reading with no notation at all.
+    //
     // What wants this is anything asking what a text *is* rather than whether
     // its program is any good — telling one document from another, which is
     // done on the canonical writing. A program with a name nothing declares is
@@ -131,14 +137,14 @@ public struct Loader: Sendable {
     // will not keep it the same way. A number the value already carries is left
     // alone: a document claiming a language this reader is not is refused, and
     // that refusal is the version's whole job.
-    public func canonical(_ value: Value) throws -> Value {
+    public func canonical(_ value: Value, from notation: Notation) throws -> Value {
         // The value that is read and the value a refusal about it is named
         // after are one value, held once. Two calls to `stamped` would be two
         // values that happen to agree today about the one field this reads.
         let stamped = stamped(value)
 
         return try Writer(registry: registry, readBy: .canonical)
-            .value(of: try spelled(stamped, in: document(of: stamped)))
+            .value(of: try spelled(stamped, in: document(of: stamped), from: notation))
     }
 
     // One procedure, for a caller holding a procedure's worth of data rather than a
@@ -149,8 +155,18 @@ public struct Loader: Sendable {
     // A fragment is in no document — what it will be part of is the caller's,
     // and a refusal from here says so rather than naming a document it cannot
     // know. The steps still lead to what was wrong inside what was handed in.
-    public func procedure(from value: Value) throws -> Procedure {
-        let procedure = try read(ProcedureReader.self, from: value, in: .assembled).procedure
+    //
+    // Which notation it is written in is the caller's to say, the same as it is
+    // for a whole text. A caller holding a fragment of a document says nothing
+    // and gets the document's reading.
+    public func procedure(from value: Value, in notation: Notation = .canonical) throws -> Procedure {
+        let procedure = try read(
+            ProcedureReader.self,
+            from: value,
+            in: .assembled,
+            from: notation
+        )
+        .procedure
 
         try written { try Validator().validate(procedure) }
 
@@ -161,16 +177,16 @@ public struct Loader: Sendable {
     // document. Deliberately not `load`: a fragment is not a module and carries
     // no signature of its own, so what comes back still has to reach a link
     // inside something that does.
-    public func statements(from value: Value) throws -> [Statement] {
-        try read(BodyReader.self, from: value, in: .assembled).statements
+    public func statements(from value: Value, in notation: Notation = .canonical) throws -> [Statement] {
+        try read(BodyReader.self, from: value, in: .assembled, from: notation).statements
     }
 
-    public func statement(from value: Value) throws -> Statement {
-        try read(StatementReader.self, from: value, in: .assembled).statement
+    public func statement(from value: Value, in notation: Notation = .canonical) throws -> Statement {
+        try read(StatementReader.self, from: value, in: .assembled, from: notation).statement
     }
 
-    public func expression(from value: Value) throws -> Expression {
-        try read(ExpressionReader.self, from: value, in: .assembled).expression
+    public func expression(from value: Value, in notation: Notation = .canonical) throws -> Expression {
+        try read(ExpressionReader.self, from: value, in: .assembled, from: notation).expression
     }
 
     // MARK: - Private
@@ -193,8 +209,12 @@ public struct Loader: Sendable {
 
     // What a document spells, unjudged. Not a door: nothing here has been held
     // to the language's rules, and `load` is the one that has.
-    private func spelled(_ value: Value, in document: Place.Document) throws -> Draft {
-        try read(ModuleReader.self, from: value, in: document).draft
+    private func spelled(
+        _ value: Value,
+        in document: Place.Document,
+        from notation: Notation = .canonical
+    ) throws -> Draft {
+        try read(ModuleReader.self, from: value, in: document, from: notation).draft
     }
 
     // What a value says it is called, as the document a refusal about reading it
@@ -229,7 +249,8 @@ public struct Loader: Sendable {
     private func read<T: Decodable>(
         _ type: T.Type,
         from value: Value,
-        in document: Place.Document
+        in document: Place.Document,
+        from notation: Notation = .canonical
     ) throws -> T {
         let userInfo: [CodingUserInfoKey: Any] = [
             .constructRegistry: registry,

@@ -90,7 +90,7 @@ struct WriterTests {
         // and a word that was written look the same on the way out. This one
         // spells `holds` and reaches `example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
-        let loader = Loader(notation: Notation(condition: WordedConditions()))
+        let loader = Loader()
         let module = try loader.loadProcedure([
             "parameters": ["ready": "bool"],
             "body": [
@@ -101,7 +101,7 @@ struct WriterTests {
                     ]
                 ]
             ]
-        ], importing: ["example.holds"])
+        ], importing: ["example.holds"], from: Notation(condition: WordedConditions()))
 
         // When
         let written = try sut.value(of: module)

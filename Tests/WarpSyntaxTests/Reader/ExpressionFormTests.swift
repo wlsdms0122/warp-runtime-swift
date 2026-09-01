@@ -118,7 +118,7 @@ struct ExpressionFormTests {
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
             "with": ["who": ["ref": "who"]]
-        ])
+        ], in: .testing)
 
         // Then — outward references are the binding expressions, never the template
         #expect(validates(reference, visible: ["who"]))
@@ -131,7 +131,7 @@ struct ExpressionFormTests {
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
             "with": ["who": ["ref": "name"]]
-        ])
+        ], in: .testing)
 
         // Then — nothing in the language knows what a template is: what is left
         // is an array written one after another, each value asked how it reads
@@ -167,7 +167,7 @@ struct ExpressionFormTests {
         let reference = try loader.expression(from: [
             "format": "at ${xs[i]}",
             "with": ["xs": ["ref": "items"], "i": ["ref": "cursor"]]
-        ])
+        ], in: .testing)
 
         // Then — the index must have been substituted too, or it resolves
         // against whatever scope the statement runs in
