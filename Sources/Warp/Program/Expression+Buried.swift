@@ -121,12 +121,13 @@ public extension Expression {
             block.buried(at: here, stepping: stepping)
 
         case let .conditional(condition, then, otherwise):
-            inner(condition, under: .condition)
+            inner(condition, under: .condition(of: .conditional))
                 + then.buried(at: stepping(here, .slot(.then)), stepping: stepping)
                 + (otherwise?.buried(at: stepping(here, .slot(.otherwise)), stepping: stepping) ?? [])
 
         case let .loop(condition, body, _):
-            inner(condition, under: .condition) + body.buried(at: here, stepping: stepping)
+            inner(condition, under: .condition(of: .loop))
+                + body.buried(at: here, stepping: stepping)
 
         case let .iteration(material, body, _):
             inner(material, under: .material)

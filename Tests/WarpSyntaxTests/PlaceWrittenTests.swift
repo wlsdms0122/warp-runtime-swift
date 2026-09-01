@@ -53,12 +53,12 @@ struct PlaceWrittenTests {
         let branch = Place.procedure(entryName, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition)
+            .slot(.condition(of: .conditional))
 
         let loop = Place.procedure(entryName, in: .assembled)
             .statement("spin", at: 0)
             .appending(.construct(.loop))
-            .slot(.condition)
+            .slot(.condition(of: .loop))
 
         // Then
         #expect(branch.written(by: .standard).rendered?.hasSuffix(".branch.when") == true)
@@ -78,7 +78,7 @@ struct PlaceWrittenTests {
         let sut = Place.procedure(entryName, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition)
+            .slot(.condition(of: .conditional))
 
         // Then
         #expect(sut.written(by: registry).rendered?.hasSuffix(".if.when") == true)
@@ -113,6 +113,49 @@ struct PlaceWrittenTests {
         }
 
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].dispatch")
+    }
+
+    @Test("a call and an invocation are written with the same two words")
+    func oneWordAnswersForBothForms() {
+        // Given — the place reading takes both from `CallForm`, which is right
+        // only while the two agree. If they ever part, this is what says so
+        // rather than a line number quietly going missing.
+        #expect(
+            CallForm.CodingKeys.procedure.stringValue
+                == InvokeForm.CodingKeys.procedure.stringValue
+        )
+        #expect(
+            CallForm.CodingKeys.arguments.stringValue
+                == InvokeForm.CodingKeys.arguments.stringValue
+        )
+    }
+
+    @Test("a construct in a slot no statement holds is still spelled for its own construct")
+    func aSlotOutsideAStatementKnowsItsOwner() throws {
+        // Given — a loop standing in a block's result. Nothing puts a construct
+        // step in front of it, so a reading that asked the steps around it
+        // would call a loop's condition `when`.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                namespace: "wallet",
+                procedures: [
+                    entryName: Procedure(
+                        body: [],
+                        result: .loop(
+                            while: .reference([.key("missing")]),
+                            body: Block(body: []),
+                            round: "spin"
+                        )
+                    )
+                ]
+            )
+        }
+
+        // Then
+        let place = try #require(error?.place)
+
+        #expect(place.rendered == "wallet/procedures.entry.result.condition")
+        #expect(place.written(by: .standard).rendered == "wallet/procedures.entry.result.where")
     }
 
     // MARK: - Public

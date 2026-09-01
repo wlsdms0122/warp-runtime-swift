@@ -209,14 +209,14 @@ extension Linker {
 
         case let .conditional(condition, then, otherwise):
             return .conditional(
-                try inner(condition, under: .condition),
+                try inner(condition, under: .condition(of: .conditional)),
                 then: try inner(then, under: .then),
                 else: try otherwise.map { otherwise in try inner(otherwise, under: .otherwise) }
             )
 
         case let .loop(condition, body, round):
             return .loop(
-                while: try inner(condition, under: .condition),
+                while: try inner(condition, under: .condition(of: .loop)),
                 body: try inner(body),
                 round: round
             )

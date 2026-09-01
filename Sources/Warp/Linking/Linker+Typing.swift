@@ -1391,7 +1391,7 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.condition), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .conditional)), when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
@@ -1399,7 +1399,7 @@ extension Linker {
             // environment the branch stands in.
             let head = try inspected(
                 condition,
-                at: place.slot(.condition),
+                at: place.slot(.condition(of: .conditional)),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1451,7 +1451,7 @@ extension Linker {
             // operand has — so a construct is refused there by the same
             // predicate, at the check and here alike.
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.condition), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .loop)), when: ask)
             }
 
             // The fixpoint probes the statements alone — the rounds are what
@@ -1485,7 +1485,7 @@ extension Linker {
 
             let head = try inspected(
                 condition,
-                at: place.slot(.condition),
+                at: place.slot(.condition(of: .loop)),
                 in: seeded,
                 with: frame,
                 ask: ask

@@ -451,13 +451,13 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(condition, at: place.slot(.condition))
+            try refuseConstructCondition(condition, at: place.slot(.condition(of: .conditional)))
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition)
+                at: place.slot(.condition(of: .conditional))
             )
             try validate(
                 then,
@@ -484,13 +484,13 @@ public struct Validator: Sendable {
 
             let inner = visible.union([round])
 
-            try refuseConstructCondition(condition, at: place.slot(.condition))
+            try refuseConstructCondition(condition, at: place.slot(.condition(of: .loop)))
             try validate(
                 condition,
                 visible: inner,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition)
+                at: place.slot(.condition(of: .loop))
             )
             try validate(
                 body,

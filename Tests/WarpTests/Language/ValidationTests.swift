@@ -470,6 +470,37 @@ struct ValidationTests {
         #expect(sut.imports.isEmpty)
     }
 
+    @Test("a module calling its own by the name the link knows it by imports nothing")
+    func aQualifiedSelfCallIsNotAnImport() throws {
+        // Given — a module may call a sibling by the bare name or by the one
+        // the link knows it as, and both reach the same declaration. A list
+        // that only knew the bare spelling would make this document declare a
+        // dependency on itself, and the honest empty list would be refused.
+        let sut = try Module(
+            namespace: "wallet",
+            imports: [],
+            procedures: [
+                "pay": Procedure(
+                    body: [
+                        Statement(
+                            id: "charged",
+                            expression: .dispatch(Dispatch(selector: "wallet.fee"))
+                        )
+                    ]
+                ),
+                "fee": Procedure(body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        // Then
+        #expect(sut.imports.isEmpty)
+
+        // And the link agrees the two spellings are one declaration
+        #expect(throws: Never.self) {
+            try Linker().link([sut], entry: "wallet.pay")
+        }
+    }
+
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() {
         // Given — the one value shape a program cannot carry. A closure is made

@@ -16,41 +16,33 @@ import Warp
 // spelled again here, and the word for a construct is asked of the registry —
 // a notation may have respelled one, and then that is the word its author is
 // looking at.
+//
+// Every step answers on its own. A slot whose word depends on the construct
+// holding it says which one, so nothing here reads the steps around it and
+// there is no step this can be handed without an answer.
 public extension Place {
     // The same address, walkable in the text. What a slot is written under
     // becomes a key; what a construct is written under becomes a landmark,
     // since a document may nest it under `value` or write it bare and both are
     // the same shape by the time anything here sees one.
     func written(by registry: ConstructRegistry) -> Place {
-        var written: [Step] = []
-
-        // Which construct the walk is inside, because one slot is not written
-        // under one key: a branch holds its condition under `when` and a loop
-        // under `where`, and the language calls both a condition.
-        var construct: Construct?
-
-        for step in steps {
-            switch step {
-            case let .slot(slot):
-                written.append(.key(Self.key(of: slot, in: construct)))
-
-            case let .construct(shape):
-                construct = shape
-                written.append(.landmark(Self.key(of: shape, by: registry)))
-
-            default:
-                written.append(step)
-            }
-        }
-
-        return Place(written, in: document)
+        Place(
+            steps.map { step in
+                switch step {
+                case let .slot(slot): .key(Self.key(of: slot))
+                case let .construct(shape): .landmark(Self.key(of: shape, by: registry))
+                default: step
+                }
+            },
+            in: document
+        )
     }
 
     // MARK: - Private
     // The key a document writes a slot under, from the reader that reads it
     // there. A word spelled here as well would be the second of two places
     // deciding what a document says, and the two meet only in stored text.
-    private static func key(of slot: Slot, in construct: Construct?) -> String {
+    private static func key(of slot: Slot) -> String {
         switch slot {
         case .procedures: ModuleReader.CodingKeys.procedures.stringValue
         case .constants: ModuleReader.CodingKeys.const.stringValue
@@ -69,22 +61,11 @@ public extension Place {
         // the expression grammar's rather than any one form's.
         case .receiver: ExpressionReader.subjectKey
 
-        // What is called and what it is called with, from the form that reads
-        // one. Two forms read a callee and they agree today; taking the word
-        // from the one being walked is what keeps that from being luck.
-        case .callee:
-            if case .invoke = construct {
-                InvokeForm.CodingKeys.procedure.stringValue
-            } else {
-                CallForm.CodingKeys.procedure.stringValue
-            }
-
-        case .arguments:
-            if case .invoke = construct {
-                InvokeForm.CodingKeys.arguments.stringValue
-            } else {
-                CallForm.CodingKeys.arguments.stringValue
-            }
+        // A call and an invocation are written with the same two words, which
+        // `PlaceWrittenTests` holds them to. So one of them answers for both,
+        // and the day they part is the day that test says so.
+        case .callee: CallForm.CodingKeys.procedure.stringValue
+        case .arguments: CallForm.CodingKeys.arguments.stringValue
 
         // A closure is written wherever data is, so its key is the expression
         // grammar's rather than any form's.
@@ -95,14 +76,12 @@ public extension Place {
         case .material: EachForm.CodingKeys.in.stringValue
         case .rescue: AttemptForm.CodingKeys.rescue.stringValue
 
-        // The one slot two constructs write differently. Outside either — a
-        // caller asking about a condition on its own — the branch's word is
-        // the one a reader meets first.
-        case .condition:
-            if case .loop = construct {
-                LoopForm.CodingKeys.where.stringValue
-            } else {
-                BranchForm.CodingKeys.when.stringValue
+        // The one slot two constructs write differently, which is why the slot
+        // says which one holds it.
+        case let .condition(construct):
+            switch construct {
+            case .loop: LoopForm.CodingKeys.where.stringValue
+            default: BranchForm.CodingKeys.when.stringValue
             }
         }
     }

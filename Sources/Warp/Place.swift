@@ -286,7 +286,12 @@ public extension Place {
         case arguments
         case closure
 
-        case condition
+        // A condition, and which construct holds it. The construct is carried
+        // because a document does not write the two under one word — a branch
+        // asks `when` and a loop asks `where` — and a slot that had to be told
+        // by whatever step came before it is a slot that can be reached from
+        // somewhere nobody remembered to tell.
+        case condition(of: Construct)
         case then
         case otherwise
         case material

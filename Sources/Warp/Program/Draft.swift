@@ -51,6 +51,20 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Public
+    // What a declaration of this module is called from outside it. A module
+    // with a namespace has everything it declares qualified by it, and one
+    // without declares into the shared space under the bare names.
+    //
+    // Written once and read wherever the joining is needed, since a namespace
+    // that joined two ways would make one declaration two names.
+    public static func qualified(_ name: String, in namespace: String?) -> String {
+        namespace.map { namespace in "\(namespace).\(name)" } ?? name
+    }
+
+    public func qualified(_ name: String) -> String {
+        Self.qualified(name, in: namespace)
+    }
+
     // The words this declares and does not itself declare a procedure for.
     //
     // Sent, not reached. A path reaches words too — `x.count` is one — but only
@@ -64,13 +78,19 @@ public struct Draft: Sendable {
         let held = constants.values.flatMap(\.buried)
             + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
 
+        // Its own by either spelling. A module may call a sibling by the bare
+        // name or by the one the link knows it as, and both reach the same
+        // declaration — so a list that only knew the bare one would make a
+        // document declare a dependency on itself.
+        let declared = Set(procedures.keys).union(procedures.keys.map(qualified))
+
         return held
             .reduce(into: Set()) { sent, expression in
                 guard case let .dispatch(dispatch) = expression else { return }
 
                 sent.insert(dispatch.selector)
             }
-            .subtracting(procedures.keys)
+            .subtracting(declared)
     }
 
     // MARK: - Private
