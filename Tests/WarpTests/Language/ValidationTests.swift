@@ -470,6 +470,44 @@ struct ValidationTests {
         #expect(sut.imports.isEmpty)
     }
 
+    @Test("a procedure is not data, so it cannot stand as a literal")
+    func aProcedureLiteralIsRefused() {
+        // Given — the one value shape a program cannot carry. A closure is made
+        // by running the expression that writes one, so a literal holding one
+        // is a program no text spells and nothing reads back. Only a caller
+        // assembling shapes in Swift can build it, and this is where that stops.
+        let carried = Value.procedure(
+            Closure(procedure: Procedure(body: []), captured: Scope())
+        )
+
+        // When / Then
+        #expect(throws: ValidationError.self) {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        body: [Statement(id: "held", expression: .literal(carried))]
+                    )
+                ]
+            )
+        }
+
+        // And a body a program carries is written the way one is written
+        #expect(throws: Never.self) {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "held",
+                                expression: .closure(Procedure(body: []))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
+    }
+
     @Test("a result expression is checked against what the body left visible")
     func resultsSeeTheWholeBody() throws {
         // Given

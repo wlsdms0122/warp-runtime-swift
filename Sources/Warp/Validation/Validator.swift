@@ -316,8 +316,19 @@ public struct Validator: Sendable {
         at place: Place
     ) throws {
         switch expression {
-        case .literal:
-            return
+        // A literal is data. One shape a value has is not data — a closure is
+        // made by running the expression that writes one — so a program
+        // carrying one as a literal is carrying something no text spells and
+        // nothing reads back. A caller assembling shapes in Swift is the only
+        // one that can build it, and this is the door it comes through.
+        case let .literal(value):
+            guard case .procedure = value else { return }
+
+            throw ValidationError(
+                "a procedure is not data, so it cannot stand as a literal"
+                    + " — a body a program carries is written as a closure",
+                at: place
+            )
 
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)

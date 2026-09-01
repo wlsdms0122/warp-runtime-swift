@@ -10,6 +10,12 @@ import Foundation
 // What a program computes over. Eight data shapes and one that is not data: a
 // procedure is a value here, so a body can be passed, kept and answered with.
 //
+// The ninth is made by running, never by reading: a closure comes out of the
+// expression that writes one, and a program carrying one as a literal is
+// refused where a module is made. So a text spells eight, and anything handed
+// data from outside a run is handed eight — which is why the writings say so
+// where a caller can reach them with the ninth directly.
+//
 // Equality is written by hand because a procedure has no honest one: two
 // procedures are never equal, and identity is not a question this language lets
 // you ask.
