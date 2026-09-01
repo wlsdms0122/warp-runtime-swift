@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 public struct ProcedureReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case description
         case parameters
         case receiver

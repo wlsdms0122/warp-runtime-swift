@@ -13,7 +13,7 @@ import Warp
 // `std.collection.map`'s to say, and an effectful round with something to keep
 // writes it to an outer variable.
 public struct EachForm: ConstructForm {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case `in`
         case body
     }

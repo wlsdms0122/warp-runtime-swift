@@ -12,7 +12,7 @@ import Warp
 // Nothing here bounds a body that never settles — an author bounds a loop with
 // a counter and a word, and a receiver stops one with cancellation.
 public struct LoopForm: ConstructForm {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case `where`
         case body
         case result

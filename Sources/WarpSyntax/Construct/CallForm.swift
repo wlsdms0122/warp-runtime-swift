@@ -24,7 +24,7 @@ import Warp
 // a call carries no body of its own kind. One channel, one rule: what crosses
 // into a word is isolated.
 public struct CallForm: ConstructForm {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure
         case of
         case arguments

@@ -82,7 +82,7 @@ public struct Loader: Sendable {
         // question below. A module is checked where it is made, so the stamp
         // goes in with what is being made rather than onto what came back — a
         // refusal is exactly the moment somebody wants the file it came from.
-        let module = try Module(try spelled(value, in: document), identity: identity)
+        let module = try written { try Module(try spelled(value, in: document), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so a
         // caller decides whether to grant before it decides whether to link. A
@@ -152,7 +152,7 @@ public struct Loader: Sendable {
     public func procedure(from value: Value) throws -> Procedure {
         let procedure = try read(ProcedureReader.self, from: value, in: .assembled).procedure
 
-        try Validator().validate(procedure)
+        try written { try Validator().validate(procedure) }
 
         return procedure
     }
@@ -174,6 +174,23 @@ public struct Loader: Sendable {
     }
 
     // MARK: - Private
+    // A refusal from the checking, addressed in the words the document uses.
+    //
+    // The checking is the language's and its address is the language's — a
+    // caller that assembled a program in Swift wrote no document, so no
+    // document's words would lead it anywhere. Here there is a document, and
+    // the author is holding it: `condition` is a slot they cannot look for and
+    // `where` is what they typed.
+    private func written<T>(_ checked: () throws -> T) throws -> T {
+        do {
+            return try checked()
+        } catch let refusal as ValidationError {
+            guard let place = refusal.place else { throw refusal }
+
+            throw ValidationError(refusal.message, at: place.written(by: registry))
+        }
+    }
+
     // What a document spells, unjudged. Not a door: nothing here has been held
     // to the language's rules, and `load` is the one that has.
     private func spelled(_ value: Value, in document: Place.Document) throws -> Draft {

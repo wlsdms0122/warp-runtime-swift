@@ -100,7 +100,7 @@ public extension Writer {
             return .object(try fields.mapValues { field in try value(of: field) })
 
         case let .closure(procedure):
-            return .object(["closure": try value(of: procedure)])
+            return .object([ExpressionReader.closureKey: try value(of: procedure)])
 
         // The mark rides on the key, the way `?.` rides on a segment: one
         // spelling says the mismatch refuses and the other says it reads as
