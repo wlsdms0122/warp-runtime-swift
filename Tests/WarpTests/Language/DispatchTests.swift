@@ -111,7 +111,7 @@ struct DispatchTests {
         // accident, and an implementation is not a namespace: a body and a
         // native answering one name collide the same way two bodies would
         let rival = try Module(
-            name: "std.collection",
+            namespace: "std.collection",
             procedures: [
                 "count": Procedure(
                     signature: Signature(returns: .int),

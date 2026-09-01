@@ -9,7 +9,7 @@ import Foundation
 
 public extension Module {
     static let math = try! Module(
-        name: "std.math",
+        namespace: "std.math",
         description: "Arithmetic, and the ordering of numbers and strings.",
         procedures: [
             "plus": Procedure(

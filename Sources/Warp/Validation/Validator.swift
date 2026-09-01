@@ -44,8 +44,8 @@ public struct Validator: Sendable {
         // writes the key and nothing in it has said it has a namespace and
         // named none — and a name nobody can type is a name no other document
         // can join, which is what a namespace is for.
-        if let name = module.name {
-            let here = Place([.slot(.name)], in: .of(module))
+        if let name = module.namespace {
+            let here = Place([.slot(.namespace)], in: .of(module))
 
             guard !name.isEmpty else {
                 throw ValidationError("a module that writes a name writes one", at: here)

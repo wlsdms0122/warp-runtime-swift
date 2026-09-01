@@ -9,7 +9,7 @@ import Foundation
 
 public extension Module {
     static let text = try! Module(
-        name: "std.text",
+        namespace: "std.text",
         description: "Words about strings.",
         procedures: [
             "decoded": Procedure(

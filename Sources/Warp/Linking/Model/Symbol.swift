@@ -29,7 +29,7 @@ struct Symbol: Sendable {
 
     let procedure: Procedure
 
-    // What this declaration is called across the whole link. `module.name`
+    // What this declaration is called across the whole link. `module.namespace`
     // where the module has a name, and the bare name where it has none — a
     // module the caller never named has nothing to qualify with, so it declares
     // into the shared space the way a translation unit without a namespace

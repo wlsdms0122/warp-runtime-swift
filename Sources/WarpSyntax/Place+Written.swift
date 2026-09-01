@@ -56,7 +56,7 @@ public extension Place {
         case .constants: ModuleReader.CodingKeys.const.stringValue
         case .types: ModuleReader.CodingKeys.types.stringValue
         case .constraints: ModuleReader.CodingKeys.constraints.stringValue
-        case .name: ModuleReader.CodingKeys.name.stringValue
+        case .namespace: ModuleReader.CodingKeys.name.stringValue
         case .imports: ModuleReader.CodingKeys.imports.stringValue
 
         case .parameters: ProcedureReader.CodingKeys.parameters.stringValue

@@ -12,7 +12,7 @@ public extension Module {
     // running things concurrently is something a caller grants by linking this
     // bundle — a program whose caller left it out cannot fan out at all.
     static let concurrent = try! Module(
-        name: "std.concurrent",
+        namespace: "std.concurrent",
         description: "Running closures at once.",
         procedures: [
             // Plain words — `all`, `first`, `map` — with the module carrying

@@ -160,7 +160,7 @@ func validates(body: [Statement], visible: Set<String> = []) -> Bool {
 // in the link.
 extension Module {
     static let shouting = try! Module(
-        name: "app",
+        namespace: "app",
         procedures: [
             "shout": Procedure(
                 signature: Signature(
@@ -173,7 +173,7 @@ extension Module {
     )
 
     static let failing = try! Module(
-        name: "app",
+        namespace: "app",
         procedures: [
             "fail": Procedure(
                 signature: Signature(

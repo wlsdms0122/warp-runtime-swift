@@ -12,7 +12,7 @@ public extension Module {
     // The other bundles are named for what they read — truths, numbers, text,
     // containers — and this one reads nothing.
     static let control = try! Module(
-        name: "std.control",
+        namespace: "std.control",
         description: "Leaving instead of answering.",
         procedures: [
             "abort": Procedure(

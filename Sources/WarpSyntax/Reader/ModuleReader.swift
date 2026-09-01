@@ -62,7 +62,7 @@ public struct ModuleReader: Decodable {
         }
 
         self.draft = Draft(
-            name: try container.decodeIfPresent(String.self, forKey: .name),
+            namespace: try container.decodeIfPresent(String.self, forKey: .name),
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
             types: try Self.record(TypeReader.self, in: container, forKey: .types)

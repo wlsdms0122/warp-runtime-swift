@@ -26,7 +26,7 @@ struct QualifiedNameTests {
         // Given — `Task` is declared by `store` alone, and the entry module
         // mentions it bare
         let store = try Module(
-            name: "store",
+            namespace: "store",
             types: ["Task": .record(["id": .string])],
             procedures: [
                 "keep": Procedure(
@@ -65,7 +65,7 @@ struct QualifiedNameTests {
         // Given — two modules declare `Limit`, and `mine` mentions it bare
         // from inside: its own is an int, the other module's is a string
         let mine = try Module(
-            name: "mine",
+            namespace: "mine",
             types: ["Limit": .int],
             procedures: [
                 entryName: Procedure(
@@ -76,7 +76,7 @@ struct QualifiedNameTests {
             ]
         )
         let theirs = try Module(
-            name: "theirs",
+            namespace: "theirs",
             types: ["Limit": .string],
             procedures: [
                 "unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -95,14 +95,14 @@ struct QualifiedNameTests {
         // Given — the mention lives in a third module that declares no `Limit`
         // of its own, so neither rule reaches a single answer
         let one = try Module(
-            name: "one",
+            namespace: "one",
             types: ["Limit": .int],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            name: "two",
+            namespace: "two",
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -133,14 +133,14 @@ struct QualifiedNameTests {
     func theQualifiedSpellingResolvesTheTie() async throws {
         // Given — the same tie, written through
         let one = try Module(
-            name: "one",
+            namespace: "one",
             types: ["Limit": .int],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            name: "two",
+            namespace: "two",
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -258,7 +258,7 @@ struct QualifiedNameTests {
             ]
         )
         let named = try Module(
-            name: "one",
+            namespace: "one",
             types: ["Limit": .string],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -315,7 +315,7 @@ struct QualifiedNameTests {
         // bare spelling. Picking either would be an order deciding a meaning,
         // so the tie refuses — and the exact spelling still says which.
         let sut = try Module(
-            name: "m",
+            namespace: "m",
             types: [
                 "Limit": .int,
                 "extra.Limit": .string
@@ -340,7 +340,7 @@ struct QualifiedNameTests {
 
         // The exact spelling resolves what the bare one cannot
         let spelled = try Module(
-            name: "m",
+            namespace: "m",
             types: [
                 "Limit": .int,
                 "extra.Limit": .string

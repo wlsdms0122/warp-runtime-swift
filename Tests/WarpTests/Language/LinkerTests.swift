@@ -23,7 +23,7 @@ struct LinkerTests {
         // Given — `greeting` names nothing that is missing, so the only reason
         // it fails is its own: `text` refuses to spell nothing
         let sut = try Module(
-            name: "app",
+            namespace: "app",
             constants: [
                 "greeting": .dispatch(Dispatch(receiver: .literal(.null), selector: "text"))
             ],
@@ -228,7 +228,7 @@ struct LinkerTests {
         // reads is settled before it because the order says so, not because
         // enough rounds happened.
         let sut = try Module(
-            name: "app",
+            namespace: "app",
             constants: [
                 "zebra": .literal(.int(2)),
                 "yak": .dispatch(
@@ -269,7 +269,7 @@ struct LinkerTests {
         // twice is a program whose meaning is in its names.
         func module(closure: String, reading constant: String) throws -> Module {
             try Module(
-                name: "app",
+                namespace: "app",
                 constants: [
                     closure: .closure(Procedure(body: [], result: reference(constant))),
                     constant: .literal(.int(3))
@@ -305,7 +305,7 @@ struct LinkerTests {
         // place.
         func module(introducing statement: Statement?) throws -> Module {
             try Module(
-                name: "app",
+                namespace: "app",
                 constants: [
                     "apply": .closure(Procedure(
                         signature: Signature(
@@ -338,7 +338,7 @@ struct LinkerTests {
         // closure is made. The spelling puts the closure first in name order,
         // which is the order it would settle in if nothing said otherwise.
         let sut = try Module(
-            name: "app",
+            namespace: "app",
             constants: [
                 "apply": .closure(Procedure(
                     signature: Signature(returns: .int),
@@ -378,7 +378,7 @@ struct LinkerTests {
         // so a closure nested in a record has the same demand on the order as
         // one written on its own.
         let sut = try Module(
-            name: "app",
+            namespace: "app",
             constants: [
                 "apply": .record([
                     "run": .closure(Procedure(
@@ -414,7 +414,7 @@ struct LinkerTests {
         // Given — folding happens after the words are known, so a constant that
         // interpolates is a constant that sends
         let sut = try Module(
-            name: "app",
+            namespace: "app",
             constants: [
                 "host": .literal(.string("warp.dev")),
                 "url": .dispatch(

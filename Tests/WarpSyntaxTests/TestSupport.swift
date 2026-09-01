@@ -102,7 +102,7 @@ func validates(
 // spells it, the other says what answers.
 extension Module {
     static let testing = try! Module(
-        name: "test",
+        namespace: "test",
         procedures: [
             "fail": Procedure(
                 signature: Signature(

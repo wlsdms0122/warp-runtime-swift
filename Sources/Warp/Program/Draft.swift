@@ -19,7 +19,7 @@ import Foundation
 // draft, and a text nobody can run still has a canonical form and an identity.
 public struct Draft: Sendable {
     // MARK: - Property
-    public let name: String?
+    public let namespace: String?
     public let description: String?
 
     // What the document said it imports, and nil where it said nothing. A
@@ -33,7 +33,7 @@ public struct Draft: Sendable {
 
     // MARK: - Initializer
     public init(
-        name: String? = nil,
+        namespace: String? = nil,
         description: String? = nil,
         imports: Set<String>? = nil,
         types: [String: TypeExpression] = [:],
@@ -41,7 +41,7 @@ public struct Draft: Sendable {
         constants: [String: Expression] = [:],
         procedures: [String: Procedure]
     ) {
-        self.name = name
+        self.namespace = namespace
         self.description = description
         self.imports = imports
         self.types = types

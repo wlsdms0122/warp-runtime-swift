@@ -25,7 +25,7 @@ struct ValidationTests {
         // able to see that the name was already taken.
         func module(introducing statement: Statement) throws -> Module {
             try Module(
-                name: "app",
+                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
@@ -60,7 +60,7 @@ struct ValidationTests {
         // When / Then
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                name: "app",
+                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
@@ -82,7 +82,7 @@ struct ValidationTests {
         // failure an attempt rescues.
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
-                name: "app",
+                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
@@ -115,7 +115,7 @@ struct ValidationTests {
         // which of the two the reader is standing in.
         func module(_ procedure: Procedure) throws -> Module {
             try Module(
-                name: "app",
+                namespace: "app",
                 constants: [
                     "apply": .closure(procedure),
                     "limit": .literal(.int(3))
@@ -148,7 +148,7 @@ struct ValidationTests {
         // a name nothing here settles, and the refusal stands on it.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                name: "pricing",
+                namespace: "pricing",
                 constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
                 procedures: [entryName: Procedure(body: [])],
                 identity: Identity([0x01])

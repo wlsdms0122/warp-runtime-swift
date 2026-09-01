@@ -220,7 +220,7 @@ public extension Place {
         }
 
         public static func of(_ module: Module) -> Document {
-            Document(identity: module.identity, namespace: module.name)
+            Document(identity: module.identity, namespace: module.namespace)
         }
 
         // How the document reads on its own, which is both halves where there
@@ -273,7 +273,7 @@ public extension Place {
         case constants
         case types
         case constraints
-        case name
+        case namespace
         case imports
 
         case parameters
@@ -299,7 +299,7 @@ public extension Place {
             case .constants: "constants"
             case .types: "types"
             case .constraints: "constraints"
-            case .name: "name"
+            case .namespace: "namespace"
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"

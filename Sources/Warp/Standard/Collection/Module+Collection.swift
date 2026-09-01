@@ -9,7 +9,7 @@ import Foundation
 
 public extension Module {
     static let collection = try! Module(
-        name: "std.collection",
+        namespace: "std.collection",
         description: "Words about arrays and objects. A string counts and contains too.",
         procedures: [
             "count": Procedure(

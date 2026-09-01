@@ -199,7 +199,7 @@ extension Linker {
 // calls it, and this is the joining that has to be undone.
 extension Module {
     func qualified(_ name: String) -> String {
-        self.name.map { module in "\(module).\(name)" } ?? name
+        namespace.map { namespace in "\(namespace).\(name)" } ?? name
     }
 }
 

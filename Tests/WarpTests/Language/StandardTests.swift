@@ -1041,7 +1041,7 @@ struct StandardTests {
         // Given — `returns: never` is what keeps the branch a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
-            name: "app",
+            namespace: "app",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ok": Parameter(type: .bool)]),

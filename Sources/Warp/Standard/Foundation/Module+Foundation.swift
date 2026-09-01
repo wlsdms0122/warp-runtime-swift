@@ -14,7 +14,7 @@ public extension Module {
     // bundle whose signatures mention these needs this module in the link,
     // which is the one dependency the standard modules have.
     static let foundation = try! Module(
-        name: "std",
+        namespace: "std",
         description: "The shared ground: what counts as a number, and what orders.",
         types: [
             // One element of bytes — a whole number a range refines, not a

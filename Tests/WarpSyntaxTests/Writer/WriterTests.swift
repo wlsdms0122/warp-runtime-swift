@@ -436,7 +436,7 @@ struct WriterTests {
         // the mapping a record is. A type written back as a string it cannot
         // be read from would survive neither direction.
         try! Module(
-            name: "casting",
+            namespace: "casting",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["payload": Parameter(type: .any)]),
@@ -465,7 +465,7 @@ struct WriterTests {
         // Messages nested inside other expressions, deeper than a document's
         // fixed shapes would ever place them
         try! Module(
-            name: "nested",
+            namespace: "nested",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),

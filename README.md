@@ -37,7 +37,7 @@ let greet = Procedure(
 )
 
 let image = try Linker().link(
-    [try Module(name: "hello", procedures: ["greet": greet])] + Module.standard,
+    [try Module(namespace: "hello", procedures: ["greet": greet])] + Module.standard,
     entry: "greet"
 )
 

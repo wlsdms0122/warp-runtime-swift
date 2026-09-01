@@ -24,7 +24,7 @@ struct VocabularyTests {
         // Given — `count` and `contains` are declarations, not language
         // structure; anyone adds their own the same way
         let extra = try Module(
-            name: "extra",
+            namespace: "extra",
             procedures: [
                 "head": Procedure(
                     signature: Signature(
@@ -96,7 +96,7 @@ struct VocabularyTests {
         // Given — `${x.count}` writes no module, so there is no spelling that
         // would tell two of them apart
         let rival = try Module(
-            name: "rival",
+            namespace: "rival",
             procedures: [
                 "count": Procedure(
                     signature: Signature(

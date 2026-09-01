@@ -143,7 +143,7 @@ struct NormalFormTests {
         }
 
         #expect {
-            try Module(name: "cafe\u{301}", procedures: ["entry": entry])
+            try Module(namespace: "cafe\u{301}", procedures: ["entry": entry])
         } throws: { error in
             denormal(error)
         }
@@ -194,7 +194,7 @@ struct NormalFormTests {
         // an empty name renders as, and they would not decide it the same way.
         #expect {
             try Module(
-                name: "",
+                namespace: "",
                 procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))]
             )
         } throws: { error in

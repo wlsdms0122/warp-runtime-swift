@@ -329,7 +329,7 @@ struct PlaceTests {
         // name is a field beside `procedures`, and what `procedures` holds is
         // the declared key alone.
         let sut = try Module(
-            name: "wallet",
+            namespace: "wallet",
             procedures: [
                 entryName: Procedure(body: [
                     Statement(id: "sent", expression: .dispatch(Dispatch(selector: "nowhere")))
@@ -380,7 +380,7 @@ struct PlaceTests {
         // has only the line — so the line has to say it too.
         func module(declaring name: String, as identity: Identity) throws -> Module {
             try Module(
-                name: "wallet",
+                namespace: "wallet",
                 procedures: [
                     name: Procedure(body: [
                         Statement(id: "held", expression: reference("missing"))
@@ -411,7 +411,7 @@ struct PlaceTests {
         // module's name twice and leads nowhere: `types.wallet.Coin` is not
         // what any document writes.
         let sut = try Module(
-            name: "wallet",
+            namespace: "wallet",
             types: ["Coin": .record(["amount": .named("Missing")])],
             procedures: [entryName: Procedure(body: [])],
             identity: reading,
@@ -432,7 +432,7 @@ struct PlaceTests {
         // membership admitting nothing is refused from the table alone, which
         // is the walk that has only the link's names to go on.
         let sut = try Module(
-            name: "wallet",
+            namespace: "wallet",
             constraints: ["Spendable": []],
             procedures: [entryName: Procedure(body: [])],
             identity: reading,
@@ -551,7 +551,7 @@ struct PlaceTests {
         // them.
         func declaring(_ procedure: String, as identity: Identity) throws -> Module {
             try Module(
-                name: "pricing",
+                namespace: "pricing",
                 procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))],
                 identity: identity,
             )
@@ -581,7 +581,7 @@ struct PlaceTests {
         // collision between two declarations, the sentence names the same
         // document on both sides and tells the caller nothing it can act on.
         let module = try Module(
-            name: "pricing",
+            namespace: "pricing",
             procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))],
             identity: Identity([0x01]),
         )
@@ -604,7 +604,7 @@ struct PlaceTests {
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
         func declaring(_ shape: TypeExpression, as identity: Identity) throws -> Module {
-            try Module(name: "pricing", types: ["Money": shape], procedures: [:], identity: identity)
+            try Module(namespace: "pricing", types: ["Money": shape], procedures: [:], identity: identity)
         }
 
         let held = try declaring(.int, as: Identity([0x01]))
@@ -626,9 +626,9 @@ struct PlaceTests {
         // Given — the two spaces held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
-        let shape = try Module(name: "pricing", types: ["Money": .int], procedures: [:], identity: Identity([0x01]))
+        let shape = try Module(namespace: "pricing", types: ["Money": .int], procedures: [:], identity: Identity([0x01]))
 
-        let membership = try Module(name: "pricing", constraints: ["Money": [.int]], procedures: [:], identity: Identity([0x02]))
+        let membership = try Module(namespace: "pricing", constraints: ["Money": [.int]], procedures: [:], identity: Identity([0x02]))
 
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
@@ -649,7 +649,7 @@ struct PlaceTests {
         // be a different constant per run, and the two below are written in the
         // order that makes an unsorted answer the likely one.
         let sut = try Module(
-            name: "pricing",
+            namespace: "pricing",
             constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
             procedures: [entryName: Procedure(body: [])],
             identity: reading,
@@ -673,7 +673,7 @@ struct PlaceTests {
         // what is wrong — and changing it would leave the ring exactly as it
         // is.
         let sut = try Module(
-            name: "pricing",
+            namespace: "pricing",
             constants: [
                 "aardvark": reference("zebra"),
                 "zebra": reference("yak"),
@@ -700,7 +700,7 @@ struct PlaceTests {
         // well, so the circle is the only thing wrong here. Narrowing by what
         // nothing reads keeps it anyway, because something does read it.
         let sut = try Module(
-            name: "pricing",
+            namespace: "pricing",
             constants: [
                 "beta": .dispatch(Dispatch(
                     receiver: reference("gamma"),
@@ -754,7 +754,7 @@ struct PlaceTests {
         // declaration, which makes a declaration the place to be sent to.
         func declaring(_ namespace: String, as identity: Identity) throws -> Module {
             try Module(
-                name: namespace,
+                namespace: namespace,
                 procedures: [
                     "discounted": Procedure(
                         signature: Signature(

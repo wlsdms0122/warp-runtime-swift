@@ -269,7 +269,7 @@ struct ConcurrencyTests {
             result: reference("either"),
             vocabulary: Module.standard + [
                 try Module(
-                    name: "app",
+                    namespace: "app",
                     procedures: [
                         "wait": Procedure(implementation: .effect(WaitEffect(watch: waiting)))
                     ]

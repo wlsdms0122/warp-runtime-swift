@@ -80,8 +80,8 @@ public struct Writer: Sendable {
             "procedures": .object(try draft.procedures.mapValues(value(of:)))
         ]
 
-        if let name = draft.name {
-            written["name"] = .string(name)
+        if let namespace = draft.namespace {
+            written[ModuleReader.CodingKeys.name.stringValue] = .string(namespace)
         }
 
         if let description = draft.description {

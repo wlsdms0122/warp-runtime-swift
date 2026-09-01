@@ -16,12 +16,15 @@ import Foundation
 // and no reserved name.
 public struct Module: Sendable {
     // MARK: - Property
-    // What the module's declarations are called across a link: a named module's
-    // procedures, types and constraints are qualified by this — `std.math`
+    // What the module's declarations are called across a link: a module with one
+    // has its procedures, types and constraints qualified by it — `std.math`
     // declaring `plus` declares `std.math.plus` — and a module without one
-    // declares into the shared space under the bare names. The description is
-    // metadata only.
-    public let name: String?
+    // declares into the shared space under the bare names.
+    //
+    // Not a name. Several documents may share one, since a module split across
+    // files is a thing this language allows, and which document a thing came
+    // out of is `identity`. The description is metadata only.
+    public let namespace: String?
     public let description: String?
 
     // The words this module sends and does not declare. Everything else here is
@@ -62,9 +65,9 @@ public struct Module: Sendable {
     // document back to its canonical bytes, which is not what reading a
     // document is for.
     //
-    // Not the name. `name` is the namespace this declares into and several
-    // documents may share one, since a module split across files is a thing
-    // this language allows; two documents named `wallet` are two documents.
+    // Not the namespace. That is what this declares into and several documents
+    // may share one, since a module split across files is a thing this language
+    // allows; two documents named `wallet` are two documents.
     public private(set) var identity: Identity?
 
     // MARK: - Initializer
@@ -87,7 +90,7 @@ public struct Module: Sendable {
     // nobody to disclose it to, so it says nothing and the module states the
     // fact instead. Either way `imports` afterwards is what the module sends.
     public init(
-        name: String? = nil,
+        namespace: String? = nil,
         description: String? = nil,
         imports: Set<String>? = nil,
         types: [String: TypeExpression] = [:],
@@ -98,7 +101,7 @@ public struct Module: Sendable {
     ) throws {
         try self.init(
             Draft(
-                name: name,
+                namespace: namespace,
                 description: description,
                 imports: imports,
                 types: types,
@@ -114,7 +117,7 @@ public struct Module: Sendable {
     // it: a draft is what a document declares, and which document that was is
     // the reader's to say.
     public init(_ draft: Draft, identity: Identity? = nil) throws {
-        self.name = draft.name
+        self.namespace = draft.namespace
         self.description = draft.description
         self.types = draft.types
         self.constraints = draft.constraints
@@ -159,7 +162,7 @@ public struct Module: Sendable {
     // the claim, since by now the two are the same.
     public var draft: Draft {
         Draft(
-            name: name,
+            namespace: namespace,
             description: description,
             imports: imports,
             types: types,
