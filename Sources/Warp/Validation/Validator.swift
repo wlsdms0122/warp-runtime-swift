@@ -127,11 +127,17 @@ public struct Validator: Sendable {
         let parameters = Set(procedure.signature.parameters.keys)
 
         for parameter in parameters.sorted() {
-            try introduced(
-                parameter,
-                beside: constants,
-                at: place.slot(.parameters).key(parameter)
-            )
+            let here = place.slot(.parameters).key(parameter)
+
+            try introduced(parameter, beside: constants, at: here)
+
+            // A default is a value a document writes, so it is held to what a
+            // document can hold. It reaches the wire without ever passing
+            // through a body, so a body's rules never see it.
+            guard procedure.signature.parameters[parameter]?.default?.holdsProcedure == true
+            else { continue }
+
+            throw ValidationError(Value.procedureIsNotData, at: here)
         }
 
         guard let block = procedure.block else { return }
@@ -322,13 +328,9 @@ public struct Validator: Sendable {
         // nothing reads back. A caller assembling shapes in Swift is the only
         // one that can build it, and this is the door it comes through.
         case let .literal(value):
-            guard case .procedure = value else { return }
+            guard value.holdsProcedure else { return }
 
-            throw ValidationError(
-                "a procedure is not data, so it cannot stand as a literal"
-                    + " — a body a program carries is written as a closure",
-                at: place
-            )
+            throw ValidationError(Value.procedureIsNotData, at: place)
 
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)

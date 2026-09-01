@@ -137,13 +137,18 @@ public struct Module: Sendable {
     // error but a fact quietly going missing. Nothing here enumerates, so a
     // field added to a module is carried through by every copy without this
     // having to be told about it.
+    //
+    // Back through the door and not around it. `imports` is what the module
+    // said and `sends` is what it does, and a copy that rewrote a body while
+    // keeping the old list would be a module holding the one disagreement the
+    // check exists to refuse — arrived at by a route the check never sees.
     func replacing(
         types: [String: TypeExpression]? = nil,
         constraints: [String: [TypeExpression]]? = nil,
         constants: [String: Expression]? = nil,
         procedures: [String: Procedure]? = nil,
         identity: Identity? = nil
-    ) -> Module {
+    ) throws -> Module {
         var copy = self
 
         if let types { copy.types = types }
@@ -152,7 +157,7 @@ public struct Module: Sendable {
         if let procedures { copy.procedures = procedures }
         if let identity { copy.identity = identity }
 
-        return copy
+        return try Module(copy.draft, identity: copy.identity)
     }
 
     // MARK: - Public

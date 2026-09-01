@@ -19,5 +19,9 @@ public struct ValidationError: WarpError {
     }
 
     // MARK: - Public
+    public func placed(_ place: Place) -> Self {
+        ValidationError(message, at: place)
+    }
+
     // MARK: - Private
 }

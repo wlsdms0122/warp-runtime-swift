@@ -64,9 +64,27 @@ public extension Place {
         case .body: BlockReader.CodingKeys.body.stringValue
         case .result: BlockReader.CodingKeys.result.stringValue
 
-        case .receiver: CallForm.CodingKeys.of.stringValue
-        case .callee: CallForm.CodingKeys.procedure.stringValue
-        case .arguments: CallForm.CodingKeys.arguments.stringValue
+        // A receiver is written the same word wherever one is — a message in
+        // statement position, a message in a value, a cast — so the word is
+        // the expression grammar's rather than any one form's.
+        case .receiver: ExpressionReader.subjectKey
+
+        // What is called and what it is called with, from the form that reads
+        // one. Two forms read a callee and they agree today; taking the word
+        // from the one being walked is what keeps that from being luck.
+        case .callee:
+            if case .invoke = construct {
+                InvokeForm.CodingKeys.procedure.stringValue
+            } else {
+                CallForm.CodingKeys.procedure.stringValue
+            }
+
+        case .arguments:
+            if case .invoke = construct {
+                InvokeForm.CodingKeys.arguments.stringValue
+            } else {
+                CallForm.CodingKeys.arguments.stringValue
+            }
 
         // A closure is written wherever data is, so its key is the expression
         // grammar's rather than any form's.

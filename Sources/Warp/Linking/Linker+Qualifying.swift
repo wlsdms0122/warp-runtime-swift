@@ -211,7 +211,7 @@ private extension Module {
         // Everything this does not name is carried through, which is the point
         // of going by way of the copy: renaming rewrites what declarations are
         // called across the link and changes nothing else about the module.
-        replacing(
+        try replacing(
             types: try self.types
                 .reduce(into: [:]) { renamed, entry in
                     renamed[qualified(entry.key)] = try entry.value

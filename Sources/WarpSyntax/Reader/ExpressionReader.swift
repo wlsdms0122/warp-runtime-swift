@@ -56,6 +56,11 @@ public struct ExpressionReader: Decodable {
     // word the two can come to disagree about.
     static let closureKey = "closure"
 
+    // What a cast reads and what a message is sent to are written under one
+    // key, and the two readers meet only in the text — so the word is here
+    // rather than in each of them.
+    static let subjectKey = "of"
+
     public let expression: Expression
 
     // MARK: - Initializer
@@ -178,7 +183,7 @@ public struct ExpressionReader: Decodable {
             let optional = object.keys.contains("as?")
             let key = optional ? "as?" : "as"
 
-            guard object.count == 2, let written = object[key], let read = object["of"] else {
+            guard object.count == 2, let written = object[key], let read = object[Self.subjectKey] else {
                 throw ExpressionFormError(
                     "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }"
                         + " — wrap it in { value: ... } if the keys are plain data"
@@ -217,7 +222,7 @@ public struct ExpressionReader: Decodable {
             }
 
             return .cast(
-                try Self.read(read, at: steps + [.key("of")], in: decoder),
+                try Self.read(read, at: steps + [.key(Self.subjectKey)], in: decoder),
                 as: type,
                 optional: optional
             )

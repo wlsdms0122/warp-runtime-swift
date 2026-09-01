@@ -28,6 +28,14 @@ public protocol WarpError: Error, Sendable, CustomStringConvertible {
     var place: Place? { get }
 
     func tracing(_ trace: Trace) -> Self
+
+    // The same refusal, addressed somewhere else. A place is spelled by the
+    // side reading it — the language names its own slots, a reading side names
+    // the keys a document writes — so a refusal has to be able to take the
+    // reading its reader is owed without losing what it is.
+    //
+    // The default answers with itself, for a refusal that names no place.
+    func placed(_ place: Place) -> Self
 }
 
 public extension WarpError {
@@ -52,4 +60,6 @@ public extension WarpError {
     var place: Place? { nil }
 
     func tracing(_ trace: Trace) -> Self { self }
+
+    func placed(_ place: Place) -> Self { self }
 }

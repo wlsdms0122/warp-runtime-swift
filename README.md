@@ -95,8 +95,10 @@ one.
 no document to hand to anything running elsewhere, and this is how it gets one.
 
 Whatever refuses somewhere says where. A refusal from the two stages that read
-a program before running it carries a `Place` — the path to it through the document,
-spelled from the keys the document itself writes, so
+a program before running it carries a `Place` — the path to it through the
+program, and each side reads it for the reader it has. The language names its
+own slots, which is what a caller that built the shapes in Swift can follow;
+`Loader.reading { }` reads the same place in the keys the document writes, so
 `procedures.greet.body.total[2].call.arguments.amount` is a line every word of
 which an author can follow in the text in front of them. It is steps rather
 than a sentence because a front end holding the file this was authored in has

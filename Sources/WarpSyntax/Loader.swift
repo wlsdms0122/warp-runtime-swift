@@ -83,7 +83,7 @@ public struct Loader: Sendable {
         // question below. A module is checked where it is made, so the stamp
         // goes in with what is being made rather than onto what came back — a
         // refusal is exactly the moment somebody wants the file it came from.
-        let module = try written { try Module(try spelled(value, in: document), identity: identity) }
+        let module = try reading { try Module(try spelled(value, in: document), identity: identity) }
 
         // What a document imports is read before the program it belongs to, so a
         // caller decides whether to grant before it decides whether to link. A
@@ -111,7 +111,8 @@ public struct Loader: Sendable {
     }
 
     // The document a document is: what it spells, written back out the one way
-    // a document is written, with the version filled in.
+    // a document is written, with the two things nobody writes by hand filled
+    // in — the version, and the imports where the text claimed none.
     //
     // The notation is handed in rather than held, because it is an answer about
     // the text going in and not about the document coming out. What is spelled
@@ -126,7 +127,12 @@ public struct Loader: Sendable {
     // It answers with a document and not with the module behind it: what is
     // being asked for is the text, and a module is the reading of one.
     //
-    // What comes back is stamped with the version, which nobody writes by hand.
+    // Filling the imports is what makes this a front end's call and not a
+    // reader's. A text in a notation has no author for that list — the words
+    // it sends are what the spellings lowered to, which the author never
+    // typed — so the side that lowered them is the side that can state them.
+    // A text that claimed a list keeps it, and is held to it on the way in.
+    //
     // So the way to make a document out of anything is this, and a caller that
     // then loads what it got is loading exactly what it will send.
     //
@@ -168,7 +174,7 @@ public struct Loader: Sendable {
         )
         .procedure
 
-        try written { try Validator().validate(procedure) }
+        try reading { try Validator().validate(procedure) }
 
         return procedure
     }
@@ -189,23 +195,32 @@ public struct Loader: Sendable {
         try read(ExpressionReader.self, from: value, in: .assembled, from: notation).expression
     }
 
-    // MARK: - Private
-    // A refusal from the checking, addressed in the words the document uses.
+    // Whatever this does, with anything it refuses addressed in the words the
+    // document uses.
     //
-    // The checking is the language's and its address is the language's — a
-    // caller that assembled a program in Swift wrote no document, so no
-    // document's words would lead it anywhere. Here there is a document, and
-    // the author is holding it: `condition` is a slot they cannot look for and
-    // `where` is what they typed.
-    private func written<T>(_ checked: () throws -> T) throws -> T {
+    // The language names its own slots, which is the reading a caller that
+    // assembled a program in Swift is owed: it wrote no document, so no
+    // document's words would lead it anywhere. A caller holding a text is owed
+    // the other reading — `condition` is a slot they cannot look for and
+    // `where` is what they typed — and this is where a stage that has no
+    // document of its own gets it.
+    //
+    //     let image = try loader.reading { try Linker().link(modules, entry: "greet") }
+    //
+    // The reading path takes it on its own; a link is the stage that does not,
+    // because what to link is the caller's statement and the modules in it may
+    // have come from anywhere.
+    public func reading<T>(_ refused: () throws -> T) throws -> T {
         do {
-            return try checked()
-        } catch let refusal as ValidationError {
+            return try refused()
+        } catch let refusal as any WarpError {
             guard let place = refusal.place else { throw refusal }
 
-            throw ValidationError(refusal.message, at: place.written(by: registry))
+            throw refusal.placed(place.written(by: registry))
         }
     }
+
+    // MARK: - Private
 
     // What a document spells, unjudged. Not a door: nothing here has been held
     // to the language's rules, and `load` is the one that has.

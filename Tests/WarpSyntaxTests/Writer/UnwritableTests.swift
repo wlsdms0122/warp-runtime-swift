@@ -34,16 +34,23 @@ struct UnwritableTests {
             Closure(procedure: Procedure(body: []), captured: Scope())
         )
 
-        // When / Then
+        // When / Then — a program carrying one never reaches a writing: making
+        // a module is checking one, and this is one of the things it is not
         #expect {
-            try sut.value(of: module(binding: .literal(held)))
+            try module(binding: .literal(held))
         } throws: { error in
             "\(error)".contains("not data")
         }
 
-        // And no deeper in either — a list of them is no more writable
-        #expect(throws: WritingError.self) {
-            try sut.value(of: module(binding: .literal(.array([held]))))
+        // And no deeper in either — a list of them is no more a program
+        #expect(throws: ValidationError.self) {
+            try module(binding: .literal(.array([held])))
+        }
+
+        // What a writing still turns away is one handed straight to it, which
+        // is its own boundary rather than a program's
+        #expect(throws: (any Error).self) {
+            try BinaryEncoding.data(from: held)
         }
     }
 

@@ -38,5 +38,9 @@ public struct LinkError: WarpError {
     }
 
     // MARK: - Public
+    public func placed(_ place: Place) -> Self {
+        LinkError(message, at: place)
+    }
+
     // MARK: - Private
 }

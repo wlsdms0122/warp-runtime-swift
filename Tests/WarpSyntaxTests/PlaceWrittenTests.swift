@@ -84,6 +84,37 @@ struct PlaceWrittenTests {
         #expect(sut.written(by: registry).rendered?.hasSuffix(".if.when") == true)
     }
 
+    @Test("a link refusal reads in the document's keys where a reader is asked for it")
+    func aLinkRefusalIsSpelledForTheAuthor() throws {
+        // Given — the stage that has no document of its own. What to link is
+        // the caller's statement, so a link cannot know which text a module
+        // came out of; the side that read the text can say.
+        let module = try loader.loadProcedure([
+            "body": [
+                [
+                    "id": "sent",
+                    "call": ["procedure": "nowhere", "of": 1]
+                ]
+            ]
+        ], importing: ["nowhere"])
+
+        // When
+        let error = #expect(throws: LinkError.self) {
+            try loader.reading { try Linker().link([module], entry: entryName) }
+        }
+
+        // Then — `call` is the word the author wrote, and `dispatch` is what
+        // the language calls the shape
+        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
+
+        // And unasked, the language answers in its own words
+        let untranslated = #expect(throws: LinkError.self) {
+            try Linker().link([module], entry: entryName)
+        }
+
+        #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].dispatch")
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

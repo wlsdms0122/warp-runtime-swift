@@ -108,7 +108,7 @@ public extension Writer {
         case let .cast(read, type, optional):
             return .object([
                 optional ? "as?" : "as": try value(of: type),
-                "of": try value(of: read),
+                ExpressionReader.subjectKey: try value(of: read),
             ])
 
         case let .dispatch(dispatch):
@@ -235,7 +235,7 @@ public extension Writer {
         var written: [String: Value] = ["procedure": .string(dispatch.selector)]
 
         if let receiver = dispatch.receiver {
-            written["of"] = try value(of: receiver)
+            written[ExpressionReader.subjectKey] = try value(of: receiver)
         }
 
         if !dispatch.arguments.isEmpty {
