@@ -32,6 +32,17 @@ struct TestConditions: ConditionSpelling {
     // for any other.
     let vocabulary: Set<String> = []
 
+    // The word a condition is spelled with, and the declaration it names.
+    static let words = [
+        "equal": "std.logic.equal",
+        "notEqual": "std.logic.notEqual",
+        "contains": "std.collection.contains",
+        "startsWith": "std.text.startsWith",
+        "lessThan": "std.math.lessThan",
+        "greaterThan": "std.math.greaterThan",
+        "longerThan": "extra.longerThan"
+    ]
+
     // MARK: - Initializer
     // MARK: - Public
     func condition(from decoder: Decoder) throws -> Warp.Expression {
@@ -57,7 +68,7 @@ struct TestConditions: ConditionSpelling {
                     forKey: AnyCodingKey(stringValue: Self.subjectKey)
                 )
                 .expression,
-                selector: word,
+                selector: Self.words[word] ?? word,
                 arguments: [
                     Self.operandKey: try container.decode(
                         ExpressionReader.self,
@@ -78,7 +89,7 @@ extension Notation {
     // knows anything about them.
     static let testing = Notation(
         condition: TestConditions(),
-        interpolation: Interpolation(read: "text", joined: "joined")
+        interpolation: Interpolation(read: "std.text.text", joined: "std.text.joined")
     )
 }
 

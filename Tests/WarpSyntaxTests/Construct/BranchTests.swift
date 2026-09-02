@@ -34,7 +34,7 @@ struct BranchTests {
                 ]
             ],
             "result": ["result": ["ref": "pick"]]
-        ], importing: ["equal"])
+        ], importing: ["std.logic.equal"])
 
         // When
         let thenOutputs = try await run(spec, arguments: ["kind": .string("a")])

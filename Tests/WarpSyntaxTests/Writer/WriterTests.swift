@@ -116,7 +116,7 @@ struct WriterTests {
         // Given — a fixed point says the writing settled, not that it kept
         // everything. Running both is what notices a slot dropped on the way out.
         let document: Value = [
-            "imports": ["equal", "joined", "plus", "text"],
+            "imports": ["std.logic.equal", "std.text.joined", "std.math.plus", "std.text.text"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>", "word": "string"],
@@ -139,7 +139,7 @@ struct WriterTests {
                                         "set": "walked",
                                         "call": [
                                             "of": ["ref": "walked"],
-                                            "procedure": "plus",
+                                            "procedure": "std.math.plus",
                                             "arguments": ["value": ["ref": "sized.item.count"]]
                                         ]
                                     ]
@@ -196,7 +196,7 @@ struct WriterTests {
                     ]
                 ]
             ]
-        ], importing: ["equal"])
+        ], importing: ["std.logic.equal"])
 
         // When
         let written = try sut.value(of: module)
@@ -212,7 +212,7 @@ struct WriterTests {
         }
 
         // The word the spelling reached, written as the message it always was.
-        #expect(message["procedure"] == .string("equal"))
+        #expect(message["procedure"] == .string("std.logic.equal"))
         #expect(message["of"]?["ref"] == .string("word"))
         #expect(message["arguments"]?["value"] == .string("hey"))
     }
@@ -478,12 +478,12 @@ struct WriterTests {
                                         .dispatch(
                                             Dispatch(
                                                 receiver: .reference([.key("word")]),
-                                                selector: "text"
+                                                selector: "std.text.text"
                                             )
                                         ),
                                         .literal(.string("!"))
                                     ]),
-                                    selector: "joined"
+                                    selector: "std.text.joined"
                                 )
                             )
                         ),
@@ -494,7 +494,7 @@ struct WriterTests {
                                 "size": .dispatch(
                                     Dispatch(
                                         receiver: .reference([.key("word")]),
-                                        selector: "count"
+                                        selector: "std.collection.count"
                                     )
                                 )
                             ])
@@ -535,7 +535,7 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "imports": ["plus", "std.logic.notEqual"],
+        "imports": ["std.logic.notEqual", "std.math.plus"],
         "name": "canonical",
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],
@@ -571,7 +571,7 @@ struct WriterTests {
                                 [
                                     "set": "seen",
                                     "call": [
-                                        "procedure": "plus",
+                                        "procedure": "std.math.plus",
                                         "of": ["ref": "seen"],
                                         "arguments": ["value": 1]
                                     ]
@@ -675,7 +675,7 @@ struct WriterTests {
         ],
         // Branch, group and the condition spellings
         [
-            "imports": ["and", "equal", "not"],
+            "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string", "ready": "bool"],
@@ -689,13 +689,13 @@ struct WriterTests {
                                 // writes it.
                                 "when": [
                                     "call": [
-                                        "procedure": "and",
+                                        "procedure": "std.logic.and",
                                         "of": [
                                             [
                                                 "closure": [
                                                     "result": [
                                                         "call": [
-                                                            "procedure": "equal",
+                                                            "procedure": "std.logic.equal",
                                                             "of": ["ref": "word"],
                                                             "arguments": ["value": "hey"]
                                                         ]
@@ -706,7 +706,7 @@ struct WriterTests {
                                                 "closure": [
                                                     "result": [
                                                         "call": [
-                                                            "procedure": "not",
+                                                            "procedure": "std.logic.not",
                                                             "of": ["ref": "ready"]
                                                         ]
                                                     ]
@@ -727,7 +727,7 @@ struct WriterTests {
         ],
         // Loop, each, attempt
         [
-            "imports": ["fail", "notEqual", "plus"],
+            "imports": ["test.fail", "std.logic.notEqual", "std.math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -741,7 +741,7 @@ struct WriterTests {
                                     [
                                         "set": "seen",
                                         "call": [
-                                            "procedure": "plus",
+                                            "procedure": "std.math.plus",
                                             "of": ["ref": "seen"],
                                             "arguments": ["value": 1]
                                         ]
@@ -812,7 +812,7 @@ struct WriterTests {
         ],
         // Messages: receivers, carried bodies, closures, invocation, templates
         [
-            "imports": ["filter", "joined", "notEqual", "text"],
+            "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string", "names": "array<string>"],
@@ -821,7 +821,7 @@ struct WriterTests {
                         [
                             "id": "kept",
                             "call": [
-                                "procedure": "filter",
+                                "procedure": "std.collection.filter",
                                 "of": ["ref": "names"],
                                 "arguments": [
                                     "by": [
@@ -830,7 +830,7 @@ struct WriterTests {
                                             "returns": "bool",
                                             "result": [
                                                 "call": [
-                                                    "procedure": "notEqual",
+                                                    "procedure": "std.logic.notEqual",
                                                     "of": ["ref": "item"],
                                                     "arguments": ["value": ""]
                                                 ]

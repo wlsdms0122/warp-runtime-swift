@@ -46,7 +46,7 @@ struct EachTests {
                 ]
             ],
             "result": ["seen": ["ref": "seen"]]
-        ], importing: ["joined", "text"])
+        ], importing: ["std.text.joined", "std.text.text"])
 
         // When
         let outputs = try await run(

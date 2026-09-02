@@ -202,7 +202,7 @@ struct NotationTests {
         // and nothing would say so.
         #expect {
             try sut.loadDocument([
-                "imports": ["joined", "text"],
+                "imports": ["std.text.joined", "std.text.text"],
                 "procedures": [
                     "entry": [
                         "parameters": ["word": "string"],
@@ -229,7 +229,7 @@ struct NotationTests {
             "body": [
                 ["id": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
-        ], importing: ["joined", "text"])
+        ], importing: ["std.text.joined", "std.text.text"])
 
         // Then
         guard

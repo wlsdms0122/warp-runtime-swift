@@ -59,7 +59,7 @@ struct VocabularyTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"], "head": ["ref": "names.first"]]
-        ], importing: ["longerThan"])
+        ], importing: ["extra.longerThan"])
 
         // When
         let outputs = try await run(
@@ -81,9 +81,9 @@ struct VocabularyTests {
             "parameters": ["names": "array<string>"],
             "body": [
                 ["id": "how_many", "value": ["ref": "names.count"]],
-                ["id": "said", "call": ["procedure": "count"]]
+                ["id": "said", "call": ["procedure": "std.collection.count"]]
             ]
-        ], importing: ["count"])
+        ], importing: ["std.collection.count"])
 
         // When / Then
         #expect(throws: LinkError.self) {

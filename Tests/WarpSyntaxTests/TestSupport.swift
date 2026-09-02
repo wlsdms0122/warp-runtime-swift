@@ -64,7 +64,7 @@ struct FailForm: ConstructForm {
     func expression(boundTo id: String?) -> Warp.Expression {
         .dispatch(
             Dispatch(
-                selector: "fail",
+                selector: "test.fail",
                 arguments: ["recoverable": .literal(.bool(recoverable))]
             )
         )
@@ -221,7 +221,17 @@ func run(
 // Every procedure a list of modules declares, under its bare name — what a
 // resolver's derivations table holds for the words a path may reach.
 extension [Module] {
+    // Every declaration by its qualified spelling, the way a selector names it.
     var procedures: [String: Procedure] {
+        reduce(into: [:]) { table, module in
+            for (name, procedure) in module.procedures {
+                table[Draft.qualified(name, in: module.namespace)] = procedure
+            }
+        }
+    }
+
+    // Every declaration by its bare name, the way a path segment names it.
+    var words: [String: Procedure] {
         reduce(into: [:]) { table, module in
             table.merge(module.procedures) { _, new in new }
         }
@@ -233,25 +243,25 @@ extension [Module] {
 // Equality and the connectives are words, so a test writing one writes the send
 // the reader lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "equal", arguments: ["value": operand]))
+    .dispatch(Dispatch(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "notEqual", arguments: ["value": operand]))
+    .dispatch(Dispatch(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
 }
 
 func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: condition, selector: "not"))
+    .dispatch(Dispatch(receiver: condition, selector: "std.logic.not"))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something that
 // has not been answered yet.
 func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("and", conditions)
+    chained("std.logic.and", conditions)
 }
 
 func some(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("or", conditions)
+    chained("std.logic.or", conditions)
 }
 
 private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> Warp.Expression {

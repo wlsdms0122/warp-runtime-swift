@@ -82,14 +82,14 @@ struct CallTests {
         }
     }
 
-    @Test("a call names a procedure and not the module that declares it")
+    @Test("a call names a word and not the document that declares it")
     func callNamesASymbol() async throws {
         // Given — the callee lives in a module the caller never mentions
         let caller = try loader.loadDocument([
-            "imports": ["greet"],
+            "imports": ["some-other-file.greet"],
             "procedures": [
                 "caller": [
-                    "body": [["id": "call", "call": ["procedure": "greet"]]],
+                    "body": [["id": "call", "call": ["procedure": "some-other-file.greet"]]],
                     "result": ["result": ["ref": "call.said"]]
                 ]
             ]
@@ -117,7 +117,7 @@ struct CallTests {
         // Given — `call` reaches a receiver the same way a spelling does, so a
         // document is not forced through `x.shout` to send to one
         let sut = try loader.loadDocument([
-            "imports": ["joined", "text"],
+            "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string"],

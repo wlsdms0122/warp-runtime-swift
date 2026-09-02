@@ -49,7 +49,7 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": [],
             "name": "wallet",
-            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "plus"]]]]]
+            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "std.math.plus"]]]]]
         ]
 
         // When
@@ -360,7 +360,7 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": .null,
             "name": "wallet",
-            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "plus"]]]]]
+            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "std.math.plus"]]]]]
         ]
 
         // When

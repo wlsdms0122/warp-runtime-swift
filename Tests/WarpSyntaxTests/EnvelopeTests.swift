@@ -91,14 +91,14 @@ struct EnvelopeTests {
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
         let module = try loader.loadDocument([
-            "imports": ["plus"],
+            "imports": ["std.math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
                     "body": [
                         [
                             "id": "many",
-                            "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+                            "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
                         ]
                     ],
                     "result": ["ref": "many"]
@@ -110,7 +110,7 @@ struct EnvelopeTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[Envelope.importsKey] == .array([.string("plus")]))
+        #expect(written[Envelope.importsKey] == .array([.string("std.math.plus")]))
     }
 
     @Test("a document that says nothing about what it imports is refused")
@@ -168,7 +168,7 @@ struct EnvelopeTests {
                         "body": [
                             [
                                 "id": "sum",
-                                "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+                                "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
                             ]
                         ],
                         "result": ["ref": "sum"]
@@ -176,7 +176,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("sends [\"plus\"], which it does not import")
+            "\(error)".contains("sends [\"std.math.plus\"], which it does not import")
         }
     }
 
@@ -187,13 +187,13 @@ struct EnvelopeTests {
         // never sent is a grant the program had no use for
         #expect {
             try loader.loadDocument([
-                "imports": ["plus", "minus"],
+                "imports": ["std.math.plus", "std.math.minus"],
                 "procedures": [
                     "entry": [
                         "body": [
                             [
                                 "id": "sum",
-                                "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+                                "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
                             ]
                         ],
                         "result": ["ref": "sum"]
@@ -201,7 +201,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("imports [\"minus\"], which it does not send")
+            "\(error)".contains("imports [\"std.math.minus\"], which it does not send")
         }
     }
 
@@ -212,17 +212,17 @@ struct EnvelopeTests {
         // what to allow, and would then be refused at the link by a word the
         // list never mentioned.
         let constant: Value = [
-            "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+            "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
         ]
 
         let module = try loader.loadDocument([
-            "imports": ["plus"],
+            "imports": ["std.math.plus"],
             "const": ["limit": constant],
             "procedures": ["entry": ["result": ["ref": "limit"]]]
         ])
 
         // Then
-        #expect(module.imports == ["plus"])
+        #expect(module.imports == ["std.math.plus"])
 
         // And a list that leaves the constant's word out is refused
         #expect {
@@ -232,7 +232,7 @@ struct EnvelopeTests {
                 "procedures": ["entry": ["result": ["ref": "limit"]]]
             ])
         } throws: { error in
-            "\(error)".contains("sends [\"plus\"]")
+            "\(error)".contains("sends [\"std.math.plus\"]")
         }
     }
 
