@@ -14,11 +14,8 @@ public extension Module {
     static let concurrent = try! Module(
         description: "Running closures at once.",
         procedures: [
-            // Plain words — `all`, `first`, `map` — with the module carrying
-            // the context, the way `Array.map` and `TaskGroup.next` lean on
-            // their types. A call site spells the module, so
             // `std.collection.first` and `std.concurrent.first` are two names
-            // in one link, and concurrency shows at the call site.
+            // in one link, so concurrency shows at the call site.
             //
             // `of` and what comes back are declared `any` because both take two
             // shapes — a record of closures or an array of them — and a union

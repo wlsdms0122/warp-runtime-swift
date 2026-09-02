@@ -96,16 +96,14 @@ struct TextEncodingTests {
     @Test("layout is the writer's and not the reader's: any layout reads to the one value")
     func anyLayoutReadsToTheOneValue() throws {
         // Given: the writer's text, and the same document laid out inline,
-        // over-indented, without the final newline, and with an escape for a
-        // character that needs none
+        // over-indented, and without the final newline
         let document = Value.object(["a": .int(1), "b": .string("A")])
         let canonical = try TextEncoding.text(from: document)
 
         for text in [
             "warpt 1\n{ a 1 b \"A\" }\n",
             "warpt 1\n{\n      a 1\n  b \"A\"\n    }\n",
-            "warpt 1\n{\n  a 1\n  b \"A\"\n}",
-            "warpt 1\n{\n  a 1\n  b \"\\u0041\"\n}\n"
+            "warpt 1\n{\n  a 1\n  b \"A\"\n}"
         ] {
             #expect(try TextEncoding.value(from: text) == document, "\(text)")
         }
@@ -256,9 +254,29 @@ struct TextEncodingTests {
             }
         }
 
-        // And a whole pair parses as one character, which the writer writes
+        // And a whole pair is refused too: the character it spells is written
         // as itself
-        #expect(try TextEncoding.value(from: "warpt 1\n\"\\ud83d\\ude00\"\n") == .string("😀"))
+        #expect(throws: (any Error).self) {
+            try TextEncoding.value(from: "warpt 1\n\"\\ud83d\\ude00\"\n")
+        }
+    }
+
+    @Test("an escape for a character that has a shorter spelling is refused")
+    func aLongEscapeIsRefused() throws {
+        // Given: a letter written raw, a newline with its own escape, and
+        // uppercase hex for a control character
+        for text in [
+            "warpt 1\n\"\\u0041\"\n",
+            "warpt 1\n\"\\u000a\"\n",
+            "warpt 1\n\"\\u001B\"\n"
+        ] {
+            #expect(throws: (any Error).self, "\(text)") {
+                try TextEncoding.value(from: text)
+            }
+        }
+
+        // And the one escape the writer does use reads
+        #expect(try TextEncoding.value(from: "warpt 1\n\"\\u001b\"\n") == .string("\u{1b}"))
     }
 
     @Test("a control character is carried as an escape, never raw")

@@ -16,7 +16,7 @@ import Warp
 // Procedures are named here and which one runs is said at link time, so a
 // document that declares three of them is ordinary rather than a special case.
 public struct ModuleReader: Decodable {
-    enum CodingKeys: String, CodingKey, CaseIterable {
+    public enum CodingKeys: String, CodingKey, CaseIterable {
         case warp
         case imports
         case description

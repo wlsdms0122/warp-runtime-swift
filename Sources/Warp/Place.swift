@@ -27,14 +27,11 @@ import Foundation
 // the reading side's, and a reading in lines and columns is the front end's.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
-    // Which document the steps are in. Not a step: `name` sits next to
-    // `procedures` rather than inside it, so no walk down the keys passes
-    // through it.
-    //
-    // It is here because a link holds several documents and the steps alone do
-    // not say which one — `std.collection` and `std.concurrent` both declare
-    // `first`, and a reader handed `procedures.first` with no document would
-    // point at whichever `first` it happened to be holding.
+    // Which document the steps are in. A declared spelling is unique across a
+    // link, so steps that reach a declaration already say which one; what
+    // only this answers is a refusal about a document as a whole, where the
+    // steps are empty, and a program a caller assembled, which no steps in
+    // any text lead to.
     public let document: Document
 
     public let steps: [Step]

@@ -37,8 +37,8 @@ let greet = Procedure(
 )
 
 let image = try Linker().link(
-    [try Module(namespace: "hello", procedures: ["greet": greet])] + Module.standard,
-    entry: "greet"
+    [try Module(procedures: ["hello.greet": greet])] + Module.standard,
+    entry: "hello.greet"
 )
 
 let value = try await Executor().run(
@@ -139,14 +139,11 @@ Going in rather than on the way out, because a refusal is exactly the moment
 somebody wants the file it came from — a module stamped afterwards would be
 stamped only when nothing was wrong with it.
 
-The name still rides beside the steps, because a person reading a refusal wants
-the word they typed — it takes no part in saying which document this is, and a
-module a caller built still says which namespace it declares into even though
-there is no text under it. Where there is both, a place reads
-`wallet@0da2e372bba7/procedures.charge…`: the name alone does not tell two
-halves of a split module apart, and the person holding only the line is the one
-reader who cannot check. What follows the `@` is `identity.short`, the first
-twelve hex digits of the identity.
+A place reads `0da2e372bba7/procedures.wallet.charge…`: the part before the
+slash is `identity.short`, the first twelve hex digits of the identity, and
+the steps after it are the document's own keys, the declared spelling among
+them. The side that handed the bytes in is the one that knows which file an
+identity came from, and it is the side that says so to a person.
 
 Whether a place has a text under it at all is `document.identity != nil`, and
 nothing to do with the name. A

@@ -199,32 +199,19 @@ public enum TextEncoding {
         case "t": return "\t"
 
         case "u":
-            let first = try hexadecimal(from: &reading)
+            // A value has one spelling. The writer escapes a control
+            // character this way and nothing else, so an escape for a character
+            // that is written raw, or that has a shorter escape, is a second
+            // text for one value. That rules out surrogate pairs as well: a
+            // character past the basic plane is written as itself.
+            let value = try hexadecimal(from: &reading)
 
-            // A surrogate pair is two escapes carrying one character
-            guard 0xd800...0xdbff ~= first else {
-                guard let scalar = Unicode.Scalar(first) else {
-                    throw refused("the escape names no character")
-                }
-
-                return scalar
+            guard value < 0x20 else {
+                throw refused("the escape spells a character that is written as itself")
             }
 
-            guard reading.first == "\\" else { throw refused("the escape names half a character") }
-
-            reading.removeFirst()
-
-            guard reading.first == "u" else { throw refused("the escape names half a character") }
-
-            reading.removeFirst()
-
-            let second = try hexadecimal(from: &reading)
-
-            guard 0xdc00...0xdfff ~= second,
-                  let scalar = Unicode.Scalar(
-                    0x10000 + ((first - 0xd800) << 10) + (second - 0xdc00)
-                  ) else {
-                throw refused("the escape names no character")
+            guard let scalar = Unicode.Scalar(value), !["\n", "\r", "\t"].contains(scalar) else {
+                throw refused("the escape spells a character that has a shorter escape")
             }
 
             return scalar
@@ -274,8 +261,9 @@ public enum TextEncoding {
         for _ in 0..<4 {
             guard let character = reading.first,
                   character.isASCII,
+                  !("A"..."F").contains(character),
                   let digit = UInt32(String(character), radix: 16) else {
-                throw refused("the escape is not four hexadecimal digits")
+                throw refused("the escape is not four lowercase hexadecimal digits")
             }
 
             value = value << 4 | digit
@@ -432,12 +420,13 @@ public enum TextEncoding {
     // refused where the record already holds it: two values under one key are
     // two documents, not one document twice.
     private static func expect(_ key: String, in held: [String: Value]) throws {
-        guard held[key] == nil else {
-            throw refused("the record writes '\(key)' twice")
-        }
-
         guard normal(key) else {
             throw refused("the field name is not in normal form C")
+        }
+
+        // Both sides are normal form C by now, so equal here is equal by bytes
+        guard held[key] == nil else {
+            throw refused("the record writes '\(key)' twice")
         }
     }
 
