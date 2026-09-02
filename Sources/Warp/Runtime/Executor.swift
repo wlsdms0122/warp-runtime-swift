@@ -341,12 +341,19 @@ public struct Executor: Sendable {
 
         case let .body(block):
             let resolver = resolver(in: scope)
+
+            // A parameter handed in place takes no value: it takes a hold on
+            // the caller's variable, and what the hold reaches is read only
+            // where the body reads it.
+            let handed = try handed(by: dispatch, to: procedure.signature, in: scope)
+
             // In name order, so the one order a program could observe — which
             // argument's refusal surfaces when two would refuse — is the
             // text's fact rather than a hash table's.
             var given: [String: Value] = [:]
 
-            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
+            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
+            where handed[name] == nil {
                 given[name] = try resolver.resolve(argument)
             }
 
@@ -357,7 +364,7 @@ public struct Executor: Sendable {
             var declared = procedure.signature.parameters
             var received: (String, Value)?
 
-            if let name = procedure.signature.receiver, let receiver = dispatch.receiver {
+            if let name = procedure.signature.receiver, let receiver = dispatch.receiver, handed[name] == nil {
                 declared[name] = nil
                 received = (
                     name,
@@ -368,15 +375,8 @@ public struct Executor: Sendable {
                 )
             }
 
-            // A parameter handed in place takes no value: it takes a hold on
-            // the caller's variable.
-            let handed = try handed(by: dispatch, to: procedure.signature, in: scope)
-
             for name in handed.keys {
                 declared[name] = nil
-                given[name] = nil
-
-                if received?.0 == name { received = nil }
             }
 
             var settled = try Signature(parameters: declared).settle(given, in: types)

@@ -215,6 +215,38 @@ struct InPlaceTests {
         }
     }
 
+    @Test("an entry not written yet is handed in place and made by the write")
+    func unwrittenEntryIsHandedInPlace() async throws {
+        // Given — the callee only writes its parameter, so the entry is
+        // never read before it is there
+        let sut = try Module(
+            imports: [],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .variable("table"),
+                            expression: .cast(.record([:]), as: .object(.int), optional: false)
+                        ),
+                        Statement(
+                            expression: .dispatch(Dispatch(selector: "fill", arguments: ["slot": reference("table", "k")]))
+                        )
+                    ],
+                    result: reference("table", "k")
+                ),
+                "fill": Procedure(
+                    signature: Signature(parameters: ["slot": Parameter(type: .inout(.int))]),
+                    body: [Statement(binding: .assignment([.key("slot")]), expression: .literal(.int(3)))],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .int(3))
+    }
+
     @Test("a part of a box handed in place is handed on like any local's")
     func aHandedBoxIsSplitOnwards() throws {
         // Given — a body handed `all` whole hands `all.items` on to another

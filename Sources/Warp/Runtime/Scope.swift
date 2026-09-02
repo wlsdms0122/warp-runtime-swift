@@ -32,7 +32,9 @@ public struct Scope: Sendable {
 
     init(bindings: [String: Value], variables: [String: Variable]) {
         self.bindings = bindings
-        self.variables = variables.mapValues { box in Handle(box: box, path: []) }
+        self.variables = variables.reduce(into: [:]) { held, entry in
+            held[entry.key] = Handle(head: entry.key, box: entry.value, path: [])
+        }
     }
 
     // MARK: - Public
@@ -40,7 +42,7 @@ public struct Scope: Sendable {
     // not in this environment at all. A variable held through a path is read
     // through it, and a path the box no longer holds refuses.
     public func value(of head: String) throws -> Value? {
-        if let handle = variables[head] { return try handle.value(under: head) }
+        if let handle = variables[head] { return try handle.value() }
 
         return bindings[head]
     }
@@ -69,7 +71,7 @@ public struct Scope: Sendable {
         var scope = self
 
         scope.bindings[id] = nil
-        scope.variables[id] = Handle(value)
+        scope.variables[id] = Handle(id, value)
 
         return scope
     }
@@ -89,7 +91,7 @@ public struct Scope: Sendable {
             )
         }
 
-        try handle.write(value, at: Array(path.dropFirst()), under: path.rendered)
+        try handle.write(value, at: Array(path.dropFirst()))
     }
 
     // The hold under a name, where the name is a variable. Handing a hold on
