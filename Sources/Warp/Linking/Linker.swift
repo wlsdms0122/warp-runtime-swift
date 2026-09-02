@@ -1273,10 +1273,10 @@ public struct Linker: Sendable {
 
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
-            let mentioned = mentions(of: expression)
+            for read in mentions(of: expression).sorted() {
+                // The walk goes only to names this module declared as constants.
+                guard let reading = constants[read] else { continue }
 
-            for (read, reading) in constants.sorted(by: { $0.key < $1.key })
-            where mentioned.contains(read) {
                 try place(read, reading: reading)
             }
 
