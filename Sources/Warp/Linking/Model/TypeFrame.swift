@@ -47,12 +47,9 @@ struct TypeFrame: Sendable {
     // time, worked out from the bodies the way purity is.
     let isolated: Set<String>
 
-    // Which names each document declares as module variables, by document.
-    let moduleVariables: [(document: Place.Document, names: Set<String>)]
-
-    func variables(of document: Place.Document) -> Set<String> {
-        moduleVariables.first { held in held.document == document }?.names ?? []
-    }
+    // Which names each module declares as variables, by the module's
+    // position in the link: two modules a caller built are still two modules.
+    let moduleVariables: [Int: Set<String>]
 
     // MARK: - Initializer
     // MARK: - Public

@@ -161,6 +161,64 @@ struct InPlaceTests {
         #expect(try await run(sut) == .int(5))
     }
 
+    @Test("a module variable goes whole to another module's body, and a part of it only to a native word")
+    func moduleVariableHandedAcrossModules() throws {
+        // Given — two modules a caller built, so neither has an identity
+        let sharing = try Module(
+            imports: ["other.take"],
+            variables: ["state": .record(["items": .array([.literal(.int(1))])])],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            expression: .dispatch(Dispatch(selector: "other.take", arguments: ["all": reference("state")]))
+                        )
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+        let partial = try Module(
+            imports: ["other.grow"],
+            variables: ["state": .record(["items": .array([.literal(.int(1))])])],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            expression: .dispatch(Dispatch(selector: "other.grow", arguments: ["list": reference("state", "items")]))
+                        )
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+        let other = try Module(
+            imports: [],
+            procedures: [
+                "other.take": Procedure(
+                    signature: Signature(parameters: ["all": Parameter(type: .inout(.record(["items": .array(.int)])))]),
+                    body: [],
+                    result: .literal(.null)
+                ),
+                "other.grow": Procedure(
+                    signature: Signature(parameters: ["list": Parameter(type: .inout(.array(.int)))]),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Linker().link([sharing, other] + Module.standard, entry: entryName)
+        }
+        #expect {
+            try Linker().link([partial, other] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("a part of a module variable is handed in place only to a native word")
+        }
+    }
+
     @Test("inout is written on a parameter and nowhere else")
     func inoutOutsideAParameterRefuses() throws {
         // Given — a declared type with an inout field

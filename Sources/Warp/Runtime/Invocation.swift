@@ -69,12 +69,12 @@ public struct Invocation: Sendable {
             )
         }
 
-        try scope.assign(path, to: value)
+        try scope.assign(try resolver.positioned(path), to: value)
     }
 
     // The expression handed under a parameter's name, receiver included.
     public func handed(_ name: String) -> Expression? {
-        Dispatch(receiver: receiver, selector: selector, arguments: arguments).handed(name, to: signature)
+        signature.handed(name, receiver: receiver, arguments: arguments)
     }
 
     // An argument settled in the sending scope. An argument that was not written

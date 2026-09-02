@@ -10,10 +10,11 @@ import Foundation
 extension Value {
     // This value with one part replaced: the part the path names, in a record
     // by key and in an array by position. The rest is kept as it was. The
-    // link judged the path against the value's declared shape, and the run
-    // resolved every index to a position before coming here, so a key not yet
-    // held is an entry of an object and is made, and a path that lands
-    // nowhere is one the link did not see.
+    // link judged the path against the value's declared shape, and every
+    // index was read to a position before this, so a key not yet held is an
+    // entry of an object and is made. A part the value does not hold below
+    // that is refused as what it is: an entry not written yet, or a shape
+    // with no such part.
     func writing(_ value: Value, at path: [PathSegment], under rendered: String) throws -> Value {
         guard let segment = path.first else { return value }
 
@@ -36,9 +37,15 @@ extension Value {
             written[index] = try elements[index].writing(value, at: rest, under: rendered)
             return .array(written)
 
+        case (.null, _):
+            throw ExecutionError(
+                "'\(rendered)' writes through \([segment].rendered), which holds nothing yet"
+                    + " — write the whole entry first"
+            )
+
         default:
             throw ExecutionError(
-                "'\(rendered)' writes into \(type) at \([segment].rendered), which the link did not judge"
+                "'\(rendered)' writes \([segment].rendered) into \(type), which has no such part"
             )
         }
     }

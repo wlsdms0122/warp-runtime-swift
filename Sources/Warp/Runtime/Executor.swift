@@ -167,7 +167,7 @@ public struct Executor: Sendable {
             // An assignment introduces nothing, so the scope is unchanged here
             // — the write went into a box the enclosing bodies also hold.
             case let .assignment(path)?:
-                try scope.assign(try positioned(path, in: scope), to: result)
+                try scope.assign(try resolver(in: scope).positioned(path), to: result)
 
             // A nameless statement ran for its effect, and the answer is
             // dropped — which is what leaving the name off said.
@@ -411,9 +411,20 @@ public struct Executor: Sendable {
                 answered = .failure(error)
             }
 
+            // Every box is written back, whichever refuses; what the call
+            // then reports is the body's own failure where it had one, and
+            // the first refused writing back otherwise.
+            var refused: [any Error] = []
+
             for (_, box) in handed.sorted(by: { $0.key < $1.key }) where box.path.count > 1 {
-                try scope.assign(box.path, to: box.box.value)
+                do {
+                    try scope.assign(box.path, to: box.box.value)
+                } catch {
+                    refused.append(error)
+                }
             }
+
+            if case .success = answered, let first = refused.first { throw first }
 
             return try answered.get()
         }
@@ -548,7 +559,7 @@ public struct Executor: Sendable {
             // the path reads, settled against the declaration the way a value
             // argument is; the position is fixed here, once, so the writing
             // back lands where the reading came from.
-            let path = try positioned(written, in: scope)
+            let path = try resolver(in: scope).positioned(written)
 
             guard path.count > 1 else {
                 handed[name] = (box, path)
@@ -565,23 +576,6 @@ public struct Executor: Sendable {
         }
 
         return handed
-    }
-
-    // The path with every index read to a position: an index written as a
-    // name is a reading in the scope the write stands in, and a write lands on
-    // one position.
-    private func positioned(_ path: [PathSegment], in scope: Scope) throws -> [PathSegment] {
-        try path.map { segment in
-            guard case let .indexRef(inner, optional) = segment else { return segment }
-
-            guard case let .int(index) = try resolver(in: scope).resolve(.reference(inner)) else {
-                throw ExecutionError(
-                    "'\(path.rendered)' indexes with '\(inner.rendered)', which is not an int"
-                )
-            }
-
-            return .index(index, optional: optional)
-        }
     }
 
     func resolve(_ name: String) throws -> Procedure {

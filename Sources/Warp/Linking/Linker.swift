@@ -138,7 +138,9 @@ public struct Linker: Sendable {
                 words: answeringWords,
                 pure: settled,
                 isolated: isolatedDeclarations,
-                moduleVariables: modules.map { module in (.of(module), Set(module.variables.keys)) }
+                moduleVariables: modules.enumerated().reduce(into: [:]) { table, entry in
+                    table[entry.offset] = Set(entry.element.variables.keys)
+                }
             )
         }
 
@@ -255,7 +257,8 @@ public struct Linker: Sendable {
                     at: symbol.place,
                     in: environment,
                     with: frame,
-                    folding: folding
+                    folding: folding,
+                    origin: symbol.origin
                 )
 
                 answer = (

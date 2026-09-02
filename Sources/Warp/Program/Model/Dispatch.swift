@@ -26,15 +26,6 @@ public struct Dispatch: Sendable {
     public let arguments: [String: Expression]
 
     // MARK: - Initializer
-    // The expression handed under a parameter's name: the argument written
-    // under it, or the receiver where the parameter is the receiver and the
-    // call wrote one in front. One rule, asked wherever a call is read.
-    public func handed(_ name: String, to signature: Signature) -> Expression? {
-        name == signature.receiver
-            ? receiver ?? arguments[name]
-            : arguments[name]
-    }
-
     public init(
         receiver: Expression? = nil,
         selector: String,
@@ -46,5 +37,10 @@ public struct Dispatch: Sendable {
     }
 
     // MARK: - Public
+    // The expression handed under a parameter's name, receiver included.
+    public func handed(_ name: String, to signature: Signature) -> Expression? {
+        signature.handed(name, receiver: receiver, arguments: arguments)
+    }
+
     // MARK: - Private
 }

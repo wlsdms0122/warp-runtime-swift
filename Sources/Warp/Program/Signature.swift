@@ -133,6 +133,20 @@ public struct Signature: Sendable, Equatable {
 
     // Inputs settle once at the scope boundary — inside the scope, references read
     // the settled values instead of re-evaluating.
+    // The expression a call hands under a parameter's name: the argument
+    // written under it, or the receiver where the parameter is the receiver
+    // and the call wrote one in front. One rule, asked wherever a call is
+    // read.
+    public func handed(
+        _ name: String,
+        receiver: Expression?,
+        arguments: [String: Expression]
+    ) -> Expression? {
+        name == self.receiver
+            ? receiver ?? arguments[name]
+            : arguments[name]
+    }
+
     public func settle(
         _ given: [String: Value],
         in types: TypeTable = TypeTable()

@@ -74,14 +74,15 @@ extension Linker {
         at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
-        folding: Resolver?
+        folding: Resolver?,
+        origin: Int? = nil
     ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
             block: block,
             at: place,
             in: environment,
             with: frame,
-            ask: .judging(folding: folding)
+            ask: .judging(folding: folding, origin: origin)
         )
 
         return (inner.block, inner.calls)
@@ -876,7 +877,10 @@ extension Linker {
     // where a walk per question would compound arm by arm into an
     // exponential reading of nothing new.
     private enum Ask {
-        case judging(folding: Resolver?)
+        // Judging carries which module the body being judged was declared
+        // in, where it was declared in one; a constant's expression has no
+        // module to read its variables by.
+        case judging(folding: Resolver?, origin: Int? = nil)
         case reading
 
         // Whether this ask keeps what the walk rebuilds. Reading reads a
@@ -985,7 +989,7 @@ extension Linker {
                 return Inspection(rewritten: expression, reading: .any)
 
             case let .reads(resolved, read):
-                guard case let .judging(folding) = ask else {
+                guard case let .judging(folding, _) = ask else {
                     return Inspection(rewritten: expression, reading: read)
                 }
 
@@ -1412,7 +1416,8 @@ extension Linker {
                 to: callee,
                 in: environment,
                 with: frame,
-                at: place
+                at: place,
+                when: ask
             )
 
             let rewritten = Dispatch(
@@ -2371,13 +2376,20 @@ extension Linker {
     // take, and no two `inout` parameters are handed one variable. The last is
     // static: two paths under one head may or may not meet, and the link
     // refuses the head rather than guessing.
-    func handedInPlace(
+    private func handedInPlace(
         by dispatch: Dispatch,
         to callee: Symbol,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
-        at place: Place
+        at place: Place,
+        when ask: Ask
     ) throws {
+        var moduleVariables: Set<String> = []
+
+        if case let .judging(_, origin?) = ask {
+            moduleVariables = frame.moduleVariables[origin] ?? []
+        }
+
         let signature = callee.procedure.signature
         var heads: [String: String] = [:]
 
@@ -2421,22 +2433,32 @@ extension Linker {
                 )
             }
 
-            // A module variable handed to a body declared beside it is the
-            // same variable reached twice: once through the parameter, and
-            // once by its own name in that body. The same rule as two
-            // parameters under one head, and the same answer.
-            if
-                callee.procedure.block != nil,
-                callee.document == place.document,
-                frame.variables(of: place.document).contains(head)
-            {
-                throw LinkError(
-                    "hands '\(head)' in place to '\(dispatch.selector)', which is"
-                        + " declared beside it and reads it by name — a module"
-                        + " variable is handed in place only to a body of another"
-                        + " document, or to a native word",
-                    at: at
-                )
+            // A module variable is one box every body of its module reads by
+            // name, and a body of another module reaches those bodies by
+            // calling them. So a written body is handed the whole variable
+            // only, sharing the one box, and never from the module that
+            // declares it; a part of the variable goes only to a native word,
+            // which reads no name.
+            if moduleVariables.contains(head), callee.procedure.block != nil {
+                if case let .judging(_, origin?) = ask, origin == callee.origin {
+                    throw LinkError(
+                        "hands '\(head)' in place to '\(dispatch.selector)', which is"
+                            + " declared beside it and reads it by name — a module"
+                            + " variable is handed in place only to a body of another"
+                            + " module, or to a native word",
+                        at: at
+                    )
+                }
+
+                if path.count > 1 {
+                    throw LinkError(
+                        "hands '\(path.rendered)' in place to '\(dispatch.selector)',"
+                            + " which is a written body — a part of a module variable is"
+                            + " handed in place only to a native word; a body takes the"
+                            + " whole variable, sharing its box",
+                        at: at
+                    )
+                }
             }
 
             heads[head] = name
