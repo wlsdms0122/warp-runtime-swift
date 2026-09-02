@@ -349,7 +349,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 )
             }
 
-            if isolation == .isolated, closure.isolation != .isolated {
+            if isolation == .isolated, closure.isolation != .isolated, closure.purity != .pure {
                 throw ArgumentError(
                     "\(path): expected \(rendered), got a procedure that writes"
                         + " what another body could touch"
@@ -692,6 +692,11 @@ extension TypeExpression {
 
     public var isInout: Bool {
         if case .inout = self { return true }
+        return false
+    }
+
+    public var isVariable: Bool {
+        if case .variable = self { return true }
         return false
     }
 
@@ -1115,10 +1120,13 @@ extension TypeExpression {
 
         case let (.procedure(required, wanted, wantedIsolation), .procedure(given, offered, offeredIsolation)):
             // A slot asking for purity takes only what says it is pure, and one
-            // asking for isolation only what says it is isolated. The other way
-            // round is free: what promises more stands anywhere less is wanted.
+            // asking for isolation only what says it is isolated — or pure,
+            // since what runs nothing touches nothing. The other way round is
+            // free: what promises more stands anywhere less is wanted.
             guard wanted != .pure || offered == .pure else { return false }
-            guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
+            guard wantedIsolation != .isolated || offeredIsolation == .isolated || offered == .pure else {
+                return false
+            }
 
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }

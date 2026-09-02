@@ -28,6 +28,12 @@ public struct Draft: Sendable {
     public let types: [String: TypeExpression]
     public let constraints: [String: [TypeExpression]]
     public let constants: [String: Expression]
+
+    // Names bound to boxes the document's procedures share, each holding what
+    // its expression settles to when a run starts. Declared like a constant
+    // and read by the same spelling; unlike a constant, a body may write one.
+    public let variables: [String: Expression]
+
     public let procedures: [String: Procedure]
 
     // MARK: - Initializer
@@ -37,6 +43,7 @@ public struct Draft: Sendable {
         types: [String: TypeExpression] = [:],
         constraints: [String: [TypeExpression]] = [:],
         constants: [String: Expression] = [:],
+        variables: [String: Expression] = [:],
         procedures: [String: Procedure]
     ) {
         self.description = description
@@ -44,6 +51,7 @@ public struct Draft: Sendable {
         self.types = types
         self.constraints = constraints
         self.constants = constants
+        self.variables = variables
         self.procedures = procedures
     }
 
@@ -58,6 +66,7 @@ public struct Draft: Sendable {
         // A constant is an expression, so it sends words like any other.
         // Missing them would understate what a program does.
         let held = constants.values.flatMap(\.buried)
+            + variables.values.flatMap(\.buried)
             + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
 
         // Its own by the spelling the link knows it as. A module names a

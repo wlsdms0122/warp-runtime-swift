@@ -60,7 +60,9 @@ public extension Module {
                                         "index": Parameter(type: .int)
                                     ],
                                     returns: .parameter(name: "Answer")
-                                )
+                                ),
+                                .unstated,
+                                .isolated
                             )
                         )
                     ],

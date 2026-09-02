@@ -92,6 +92,36 @@ public struct TypeReader: Decodable {
         // `array<int>?` is a nullable array, and what may be inside the
         // brackets never carries one — `?` speaks about a slot, and only the
         // whole spelling is one.
+        // `inout` and `var` stand in front of the whole type, including a
+        // trailing `?`, so they are read before anything else is.
+        for (word, wrap) in Self.slotWords {
+            guard let bare = text.dropPrefixed("\(word) ") else { continue }
+
+            let inner = try parse(String(bare))
+
+            if inner.isInout {
+                throw TypeFormError("type '\(text)' writes `inout` twice — once says it")
+            }
+
+            if case .variable = inner {
+                throw TypeFormError("type '\(text)' writes `var` twice — once says it")
+            }
+
+            return wrap(inner)
+        }
+
+        guard let (purity, isolation, rest) = Self.modifiers(of: text) else {
+            throw TypeFormError("type '\(text)' writes a word twice — once says it")
+        }
+
+        if purity == .pure || isolation == .isolated {
+            guard case let .procedure(signature, _, _) = try parse(rest) else {
+                throw TypeFormError("only a procedure is written pure or isolated")
+            }
+
+            return .procedure(signature, purity, isolation)
+        }
+
         if text.hasSuffix("?") {
             let inner = try parse(String(text.dropLast()))
 
@@ -152,31 +182,6 @@ public struct TypeReader: Decodable {
             return .parameter(name: bare)
         }
 
-        // `inout` and `var` stand in front of the whole type, including a
-        // trailing `?`, so they are read before anything else is.
-        for (word, wrap) in Self.slotWords {
-            guard let bare = text.dropPrefixed("\(word) ") else { continue }
-
-            let inner = try parse(String(bare))
-
-            if inner.isInout {
-                throw TypeFormError("type '\(text)' writes `inout` twice — once says it")
-            }
-
-            if case .variable = inner {
-                throw TypeFormError("type '\(text)' writes `var` twice — once says it")
-            }
-
-            return wrap(inner)
-        }
-
-        if let (purity, isolation, rest) = Self.modifiers(of: text), purity == .pure || isolation == .isolated {
-            guard case let .procedure(signature, _, _) = try parse(rest) else {
-                throw TypeFormError("only a procedure is written pure or isolated")
-            }
-
-            return .procedure(signature, purity, isolation)
-        }
 
         // A range is spelled into the name: `int(0...255)`, `double(0.0..<1.0)`
         // — either bound optional but not both, and `..<` leaving the far

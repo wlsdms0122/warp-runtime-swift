@@ -121,6 +121,10 @@ public struct Place: Sendable, Equatable {
         Place([.slot(.constants), .key(name)], in: document)
     }
 
+    public static func variable(_ name: String, in document: Document) -> Place {
+        Place([.slot(.variables), .key(name)], in: document)
+    }
+
     public static func type(_ name: String, in document: Document) -> Place {
         Place([.slot(.types), .key(name)], in: document)
     }
@@ -221,6 +225,7 @@ public extension Place {
     enum Slot: Sendable, Equatable {
         case procedures
         case constants
+        case variables
         case types
         case constraints
         case imports
@@ -255,6 +260,7 @@ public extension Place {
             switch self {
             case .procedures: "procedures"
             case .constants: "constants"
+            case .variables: "variables"
             case .types: "types"
             case .constraints: "constraints"
             case .imports: "imports"

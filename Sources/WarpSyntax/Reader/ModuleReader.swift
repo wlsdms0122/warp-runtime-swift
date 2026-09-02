@@ -23,6 +23,7 @@ public struct ModuleReader: Decodable {
         case types
         case constraints
         case const
+        case variables = "var"
         case procedures
     }
 
@@ -68,6 +69,8 @@ public struct ModuleReader: Decodable {
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
                 .mapValues { members in members.map(\.type) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
+                .mapValues(\.expression),
+            variables: try Self.record(ExpressionReader.self, in: container, forKey: .variables)
                 .mapValues(\.expression),
             procedures: procedures.mapValues(\.procedure)
         )

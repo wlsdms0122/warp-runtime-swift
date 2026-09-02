@@ -128,13 +128,16 @@ public struct Linker: Sendable {
             spellings[entry.value.declared, default: []].append(entry.key)
         }
 
+        let isolatedDeclarations = isolated(among: symbols, pure: settled, signatures: signatures)
+
         func frame() -> TypeFrame {
             TypeFrame(
                 symbols: space,
                 signatures: answeringSignatures,
                 types: types,
                 words: answeringWords,
-                pure: settled
+                pure: settled,
+                isolated: isolatedDeclarations
             )
         }
 
@@ -151,12 +154,28 @@ public struct Linker: Sendable {
             with: declaredFrame
         )
 
+        let variables = try variables(
+            of: modules,
+            beside: constants,
+            reaching: settling,
+            words: settlingWords,
+            in: types,
+            with: declaredFrame
+        )
+
         // The names in scope before a body's first statement: its parameters,
-        // and the constants its module declared beside them.
+        // the constants its module declared beside them, and the variables. A
+        // variable stands in the environment as a box whose type is fixed:
+        // what a write puts in it has to fit what it started as, because every
+        // body of the document reads it as that.
         func opening(_ symbol: Symbol, of signature: Signature) -> [String: TypeExpression] {
-            environment(of: signature).merging(
-                (constants[symbol.origin] ?? [:]).mapValues { value in type(of: value) }
-            ) { _, constant in constant }
+            environment(of: signature)
+                .merging(
+                    (constants[symbol.origin] ?? [:]).mapValues { value in type(of: value) }
+                ) { _, constant in constant }
+                .merging(
+                    (variables[symbol.origin] ?? [:]).mapValues { value in .inout(type(of: value)) }
+                ) { _, variable in variable }
         }
 
         // What every declaration whose `returns` nobody wrote answers, read
@@ -339,7 +358,10 @@ public struct Linker: Sendable {
             types: types,
             pure: settled,
             selectors: selectors,
-            words: pathWords
+            words: pathWords,
+            variables: variables,
+            origins: symbols.reduce(into: [:]) { table, symbol in table[symbol.declared] = symbol.origin },
+            entryOrigin: start.origin
         )
     }
 
@@ -1218,7 +1240,7 @@ public struct Linker: Sendable {
             // back up in the table the order was read from — everything this
             // one needs comes before it, and asking again is a second chance
             // to ask a different table.
-            for (name, expression) in try order(of: module) {
+            for (name, expression) in try order(module.constants, in: module) {
                 let resolver = Resolver(
                     scope: Scope(bindings: known),
                     selectors: selectors,
@@ -1256,11 +1278,63 @@ public struct Linker: Sendable {
         return settled
     }
 
+    // What each document's variables start a run holding. Settled the way a
+    // constant is, beside the constants, and from native words alone; the
+    // starting value is a fact the link reads, and a variable's type is the
+    // type of that value.
+    private func variables(
+        of modules: [Module],
+        beside constants: [Int: [String: Value]],
+        reaching selectors: [String: Procedure],
+        words: [String: Procedure],
+        in types: TypeTable,
+        with frame: TypeFrame
+    ) throws -> [Int: [String: Value]] {
+        var settled: [Int: [String: Value]] = [:]
+
+        for (origin, module) in modules.enumerated() where !module.variables.isEmpty {
+            let known = constants[origin] ?? [:]
+            var started: [String: Value] = [:]
+
+            for (name, expression) in try order(module.variables, in: module) {
+                let resolver = Resolver(
+                    scope: Scope(bindings: known),
+                    selectors: selectors,
+                    words: words,
+                    types: types
+                )
+
+                let (judged, calls) = try resolvedSites(
+                    in: expression,
+                    at: .variable(name, in: .of(module)),
+                    in: known.mapValues { value in type(of: value) },
+                    with: frame,
+                    folding: nil
+                )
+
+                try checked(calls, in: frame)
+
+                do {
+                    started[name] = try resolver.resolve(judged)
+                } catch {
+                    throw LinkError("\(error)", at: .variable(name, in: .of(module)))
+                }
+            }
+
+            settled[origin] = started
+        }
+
+        return settled
+    }
+
     // The order a module's constants settle in: what a constant reads comes
     // before it. Constants that wait on each other have no such order, and that
-    // is refused here, standing on one of them.
-    private func order(of module: Module) throws -> [(name: String, expression: Expression)] {
-        let constants = module.constants
+    // is refused here, standing on one of them. A module's variables settle by
+    // the same rule, beside the constants.
+    private func order(
+        _ constants: [String: Expression],
+        in module: Module
+    ) throws -> [(name: String, expression: Expression)] {
 
         var ordered: [(name: String, expression: Expression)] = []
         var settled: Set<String> = []

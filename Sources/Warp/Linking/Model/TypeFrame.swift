@@ -43,6 +43,10 @@ struct TypeFrame: Sendable {
     // decides whether it fits a slot asking for purity.
     let pure: Set<String>
 
+    // Which declarations touch no name another body could touch at the same
+    // time, worked out from the bodies the way purity is.
+    let isolated: Set<String>
+
     // MARK: - Initializer
     // MARK: - Public
     // The whole declaration, for the one send a path makes — and only where a

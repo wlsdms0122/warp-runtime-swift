@@ -110,11 +110,10 @@ this implementation's for a shape, since `{ call: … }` and `{ value: { call:
 … } }` arrive here as one. A refusal from a run carries a `Trace` instead —
 where the run had been, which is the other question.
 
-A module's name is never a step. A link calls a declaration `wallet.entry`, and
-no document writes that: `name` sits beside `procedures`, and what `procedures`
-holds is the declared key alone. So a place reads
-`wallet/procedures.entry.body.sent[0].call`, and the part before the slash is
-the only part that is not a key.
+A declaration's name is its key. A link calls a declaration `wallet.entry`
+because `wallet.entry` is the key the document wrote under `procedures`, dot
+and all. So a place reads `0da2e372bba7/procedures.wallet.entry.body.sent[0].call`,
+and the part before the slash is the only part that is not a key.
 
 **Which document a place is in is an `Identity`, and never a name.** A link
 holds several documents and the steps alone do not say which —

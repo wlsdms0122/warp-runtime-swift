@@ -55,6 +55,26 @@ public struct Invocation: Sendable {
     // reads as null, the same as a reference that names nothing — an effect
     // declares what it requires in its signature, and the linker is what
     // enforces it, so reaching here means the author was allowed to omit this.
+    // Writes a value back through the path an argument was handed as. A
+    // native word declaring a parameter `inout` answers into the caller's
+    // variable this way, and a word writing an argument that is not a path
+    // is a word the link should have refused.
+    public func write(_ name: String, _ value: Value) throws {
+        guard case let .reference(path)? = handed(name) else {
+            throw ExecutionError(
+                "'\(selector)' writes '\(name)' in place, and it was not handed a variable"
+            )
+        }
+
+        try scope.assign(path, to: value)
+    }
+
+    // The expression handed under a parameter's name: the argument written
+    // under it, or the receiver where the call wrote the receiver in front.
+    public func handed(_ name: String) -> Expression? {
+        arguments[name] ?? receiver
+    }
+
     public func resolve(_ name: String) throws -> Value {
         guard let argument = arguments[name] else { return .null }
 

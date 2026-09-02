@@ -103,6 +103,12 @@ public struct Writer: Sendable {
             )
         }
 
+        if !draft.variables.isEmpty {
+            written[ModuleReader.CodingKeys.variables.stringValue] = .object(
+                try draft.variables.mapValues { variable in try value(of: variable) }
+            )
+        }
+
         return .object(written)
     }
 

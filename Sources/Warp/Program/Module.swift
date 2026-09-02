@@ -48,6 +48,12 @@ public struct Module: Sendable {
     // record.
     public let constants: [String: Expression]
 
+    // Names bound to boxes this module's procedures share for one run. Private
+    // to the module the way a constant is, and for the same reason: a name is
+    // a scope question. Another module changes one only through a procedure
+    // declared beside it.
+    public let variables: [String: Expression]
+
     public let procedures: [String: Procedure]
 
     // Which document this was read out of, where it was read out of one.
@@ -84,6 +90,7 @@ public struct Module: Sendable {
         types: [String: TypeExpression] = [:],
         constraints: [String: [TypeExpression]] = [:],
         constants: [String: Expression] = [:],
+        variables: [String: Expression] = [:],
         procedures: [String: Procedure],
         identity: Identity? = nil
     ) throws {
@@ -94,6 +101,7 @@ public struct Module: Sendable {
                 types: types,
                 constraints: constraints,
                 constants: constants,
+                variables: variables,
                 procedures: procedures
             ),
             identity: identity
@@ -108,6 +116,7 @@ public struct Module: Sendable {
         self.types = draft.types
         self.constraints = draft.constraints
         self.constants = draft.constants
+        self.variables = draft.variables
         self.procedures = draft.procedures
         self.identity = identity
         self.imports = draft.imports ?? draft.sends
@@ -127,6 +136,7 @@ public struct Module: Sendable {
             types: types,
             constraints: constraints,
             constants: constants,
+            variables: variables,
             procedures: procedures
         )
     }

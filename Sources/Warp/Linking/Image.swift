@@ -39,6 +39,14 @@ public struct Image: Sendable {
     // for each other.
     public let words: [String: Procedure]
 
+    // What each document's variables start a run holding, by the document's
+    // position in the link, and which document each linked procedure was
+    // declared in. A run makes one box per variable from these, and a body
+    // reads the boxes of the document it was declared in.
+    public let variables: [Int: [String: Value]]
+    public let origins: [String: Int]
+    public let entryOrigin: Int
+
     // MARK: - Initializer
     init(
         entry: Procedure,
@@ -46,7 +54,10 @@ public struct Image: Sendable {
         types: TypeTable,
         pure: Set<String>,
         selectors: [String: Procedure],
-        words: [String: Procedure]
+        words: [String: Procedure],
+        variables: [Int: [String: Value]] = [:],
+        origins: [String: Int] = [:],
+        entryOrigin: Int = 0
     ) {
         self.entry = entry
         self.procedures = procedures
@@ -54,6 +65,9 @@ public struct Image: Sendable {
         self.pure = pure
         self.selectors = selectors
         self.words = words
+        self.variables = variables
+        self.origins = origins
+        self.entryOrigin = entryOrigin
     }
 
     // MARK: - Public

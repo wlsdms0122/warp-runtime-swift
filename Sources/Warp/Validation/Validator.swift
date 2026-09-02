@@ -40,6 +40,7 @@ public struct Validator: Sendable {
     // there is no other module in sight from inside one.
     public func validate(_ module: Module) throws {
         let constants = Set(module.constants.keys)
+        let variables = Set(module.variables.keys)
 
         // A constant sees no scope, so it may name another constant and nothing
         // else. Which is also why it is checked here rather than per procedure:
@@ -54,6 +55,28 @@ public struct Validator: Sendable {
             )
         }
 
+        // A variable's start is written like a constant and sees what a
+        // constant sees: the constants beside it, and no variable — a
+        // variable holds nothing until the run starts.
+        for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
+            try normal(name, at: .variable(name, in: .of(module)))
+
+            guard !constants.contains(name) else {
+                throw ValidationError(
+                    "'\(name)' is declared as a constant and as a variable, and"
+                        + " one name holds one thing",
+                    at: .variable(name, in: .of(module))
+                )
+            }
+
+            try validate(
+                expression,
+                visible: constants,
+                surroundings: .procedure(constants: constants),
+                at: .variable(name, in: .of(module))
+            )
+        }
+
         for name in module.procedures.keys.sorted() {
             try normal(name, at: .procedure(name, in: .of(module)))
         }
@@ -61,7 +84,12 @@ public struct Validator: Sendable {
         for name in module.procedures.keys.sorted() {
             guard let procedure = module.procedures[name] else { continue }
 
-            try validate(procedure, constants: constants, at: .procedure(name, in: .of(module)))
+            try validate(
+                procedure,
+                constants: constants,
+                variables: variables,
+                at: .procedure(name, in: .of(module))
+            )
         }
 
         // Last, because it is the least specific thing that can be wrong: a
@@ -74,8 +102,12 @@ public struct Validator: Sendable {
     // statement — and declared, so a statement cannot introduce it again. The
     // body and the signature are one scope, and a name is introduced once in a
     // scope.
-    public func validate(_ procedure: Procedure, constants: Set<String> = []) throws {
-        try validate(procedure, constants: constants, at: .given("procedure"))
+    public func validate(
+        _ procedure: Procedure,
+        constants: Set<String> = [],
+        variables: Set<String> = []
+    ) throws {
+        try validate(procedure, constants: constants, variables: variables, at: .given("procedure"))
     }
 
     // MARK: - Private
@@ -127,25 +159,38 @@ public struct Validator: Sendable {
         throw ValidationError(Value.procedureIsNotData, at: here)
     }
 
-    private func validate(_ procedure: Procedure, constants: Set<String>, at place: Place) throws {
+    private func validate(
+        _ procedure: Procedure,
+        constants: Set<String>,
+        variables: Set<String>,
+        at place: Place
+    ) throws {
         let parameters = Set(procedure.signature.parameters.keys)
+        let bound = constants.union(variables)
 
         for parameter in parameters.sorted() {
             try validate(
                 parameter,
                 of: procedure.signature,
-                beside: constants,
+                beside: bound,
                 at: place.slot(.parameters).key(parameter)
             )
         }
 
         guard let block = procedure.block else { return }
 
+        // A parameter handed in place is a variable in the body: the box is
+        // the caller's, and writing it is what the parameter is for.
+        let handed = parameters.filter { name in
+            procedure.signature.parameters[name]?.declared.isInout == true
+        }
+
         try validate(
             block,
-            visible: constants.union(parameters),
+            visible: bound.union(parameters),
+            variables: variables.subtracting(parameters).union(handed),
             declared: parameters,
-            surroundings: .procedure(constants: constants),
+            surroundings: .procedure(constants: bound),
             at: place
         )
     }

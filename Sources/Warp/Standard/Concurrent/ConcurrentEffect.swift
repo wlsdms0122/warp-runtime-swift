@@ -206,6 +206,15 @@ public struct ConcurrentEffect: Effect {
             )
         }
 
+        // The pieces arrive through `any`, so the slot could not ask; each
+        // piece is asked here, as it is started.
+        guard closure.isolation == .isolated else {
+            throw ExecutionError(
+                "\(name) runs isolated closures, and piece \(label) writes"
+                    + " what another body could touch"
+            )
+        }
+
         return closure
     }
 

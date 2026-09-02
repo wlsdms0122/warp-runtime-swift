@@ -11,6 +11,19 @@ public extension Module {
     static let collection = try! Module(
         description: "Words about arrays and objects. A string counts and contains too.",
         procedures: [
+            "std.collection.append": Procedure(
+                description: "Writes one element onto the end of the array a variable"
+                    + " holds, in place.",
+                signature: Signature(
+                    receiver: "to",
+                    parameters: [
+                        "to": Parameter(type: .inout(.array(.parameter(name: "Element")))),
+                        "value": Parameter(type: .parameter(name: "Element"))
+                    ],
+                    returns: .null
+                ),
+                implementation: .effect(AppendingEffect())
+            ),
             "std.collection.count": Procedure(
                 description: "How many, for a shape that has a count.",
                 signature: Signature(
