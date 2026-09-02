@@ -19,7 +19,7 @@ let greet = Procedure(
     ),
     body: [
         Statement(
-            id: "greeting",
+            binding: .constant("greeting"),
             expression: .dispatch(
                 Dispatch(
                     receiver: .array([
