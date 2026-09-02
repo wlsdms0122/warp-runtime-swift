@@ -161,10 +161,11 @@ struct InPlaceTests {
         #expect(try await run(sut) == .int(5))
     }
 
-    @Test("a module variable goes whole to another module's body, and a part of it only to a native word")
-    func moduleVariableHandedAcrossModules() throws {
-        // Given — two modules a caller built, so neither has an identity
-        let sharing = try Module(
+    @Test("a module variable is handed in place only to a native word")
+    func moduleVariableGoesOnlyToANativeWord() throws {
+        // Given — two modules a caller built; the first hands its variable,
+        // whole and in part, to the other's written bodies
+        let whole = try Module(
             imports: ["other.take"],
             variables: ["state": .record(["items": .array([.literal(.int(1))])])],
             procedures: [
@@ -178,7 +179,7 @@ struct InPlaceTests {
                 )
             ]
         )
-        let partial = try Module(
+        let part = try Module(
             imports: ["other.grow"],
             variables: ["state": .record(["items": .array([.literal(.int(1))])])],
             procedures: [
@@ -209,20 +210,20 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try Linker().link([sharing, other] + Module.standard, entry: entryName)
-        }
-        #expect {
-            try Linker().link([partial, other] + Module.standard, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("a part of a shared box is handed in place only to a native word")
+        for sut in [whole, part] {
+            #expect {
+                try Linker().link([sut, other] + Module.standard, entry: entryName)
+            } throws: { error in
+                "\(error)".contains("a module variable is handed in place only to a native word")
+            }
         }
     }
 
-    @Test("a part of a box handed in place is not handed on to a written body")
-    func aHandedBoxIsNotSplitOnwards() throws {
+    @Test("a part of a box handed in place is handed on like any local's")
+    func aHandedBoxIsSplitOnwards() throws {
         // Given — a body handed `all` whole hands `all.items` on to another
-        // written body, which could reach the declaring module by calling it
+        // written body; the box is rooted in a local variable somewhere up
+        // the calls, since a module variable never arrives this way
         let sut = try Module(
             imports: ["other.grow"],
             procedures: [
@@ -249,10 +250,8 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
+        #expect(throws: Never.self) {
             try Linker().link([sut, other] + Module.standard, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("a part of a shared box is handed in place only to a native word")
         }
     }
 

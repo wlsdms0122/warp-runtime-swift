@@ -2377,12 +2377,9 @@ extension Linker {
     // static: two paths under one head may or may not meet, and the link
     // refuses the head rather than guessing.
     //
-    // A shared box — a module variable, or a parameter this body was handed
-    // in place — is what the environment marks `inout`, and that mark is the
-    // whole of the judgement: a part of a shared box goes only to a native
-    // word, which reads no name, since a written body reaches the box's
-    // declaring module by calling it; and a module variable never goes to a
-    // body of the module that declares it, which reads it by name.
+    // A module variable goes in place only to a native word, which reads no
+    // name. A written body of any module reaches the variable's own module by
+    // calling it, and there the variable is read by name: one box, two ways.
     private func handedInPlace(
         by dispatch: Dispatch,
         to callee: Symbol,
@@ -2415,14 +2412,9 @@ extension Linker {
                 continue
             }
 
-            let shared: Bool
-
             switch environment[head] {
-            case .variable?:
-                shared = false
-
-            case .inout?:
-                shared = true
+            case .variable?, .inout?:
+                break
 
             default:
                 try refuse(
@@ -2447,28 +2439,15 @@ extension Linker {
                 )
             }
 
-            if shared, callee.procedure.block != nil {
-                if path.count > 1 {
-                    try refuse(
-                        "hands '\(path.rendered)' in place to '\(dispatch.selector)',"
-                            + " which is a written body — a part of a shared box is"
-                            + " handed in place only to a native word; a body takes the"
-                            + " whole variable, sharing its box",
-                        at: at,
-                        when: ask
-                    )
-                }
-
-                if moduleVariables.contains(head), origin == callee.origin {
-                    try refuse(
-                        "hands '\(head)' in place to '\(dispatch.selector)', which is"
-                            + " declared beside it and reads it by name — a module"
-                            + " variable is handed in place only to a body of another"
-                            + " module, or to a native word",
-                        at: at,
-                        when: ask
-                    )
-                }
+            if moduleVariables.contains(head), callee.procedure.block != nil {
+                try refuse(
+                    "hands '\(path.rendered)' in place to '\(dispatch.selector)', which is"
+                        + " a written body — a module variable is handed in place only to"
+                        + " a native word; a body changes it through a procedure declared"
+                        + " beside it",
+                    at: at,
+                    when: ask
+                )
             }
 
             heads[head] = name

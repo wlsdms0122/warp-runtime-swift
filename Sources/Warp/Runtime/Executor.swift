@@ -410,30 +410,22 @@ public struct Executor: Sendable {
                 answered = .failure(error)
             }
 
-            // Every box is written back, whichever refuses. A writing back
-            // that refuses is a path that no longer holds what it held when
-            // the call began, and that is reported over the body's own
-            // failure, naming it: an attempt around the call catches a body's
-            // failure and not a broken box.
-            var refused: [(path: [PathSegment], error: any Error)] = []
+            // Every box is written back, whichever refuses. What the call
+            // reports is the body's own failure, as the type it was, where
+            // the body failed: that is what an attempt around the call is
+            // written to catch. Where the body answered, the first writing
+            // back that refused is the fault reported.
+            var refused: [WriteBackRefused] = []
 
             for (_, box) in handed.sorted(by: { $0.key < $1.key }) where box.path.count > 1 {
                 do {
                     try scope.assign(box.path, to: box.box.value)
                 } catch {
-                    refused.append((box.path, error))
+                    refused.append(WriteBackRefused(path: box.path, selector: dispatch.selector, refusal: error))
                 }
             }
 
-            if let first = refused.first {
-                var reported = "writing '\(first.path.rendered)' back after '\(dispatch.selector)' refused: \(first.error)"
-
-                if case let .failure(failure) = answered {
-                    reported += " — and the body had failed: \(failure)"
-                }
-
-                throw ExecutionError(reported)
-            }
+            if case .success = answered, let first = refused.first { throw first }
 
             return try answered.get()
         }
