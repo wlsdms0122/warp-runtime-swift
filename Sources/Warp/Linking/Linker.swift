@@ -1273,10 +1273,11 @@ public struct Linker: Sendable {
 
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run — what a set hands back is seeded per process.
-            for read in mentions(of: expression).intersection(constants.keys).sorted() {
-                // Intersected with these keys, so the walk cannot be sent to a
-                // name that is not one of them.
-                try place(read, reading: constants[read]!)
+            let mentioned = mentions(of: expression)
+
+            for (read, reading) in constants.sorted(by: { $0.key < $1.key })
+            where mentioned.contains(read) {
+                try place(read, reading: reading)
             }
 
             walking.removeLast()
