@@ -12,33 +12,37 @@ warpt 1
           var "count"
         }
         {
-          id "round"
-          loop {
-            body [
-              {
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  set "count"
+                  value {
+                    call {
+                      arguments {
+                        value 1
+                      }
+                      of {
+                        ref "count"
+                      }
+                      procedure "std.math.plus"
+                    }
+                  }
+                }
+              ]
+              while {
                 call {
                   arguments {
-                    value 1
+                    value {
+                      ref "rounds"
+                    }
                   }
                   of {
-                    ref "count"
+                    ref "round.index"
                   }
-                  procedure "std.math.plus"
+                  procedure "std.math.lessThan"
                 }
-                set "count"
-              }
-            ]
-            where {
-              call {
-                arguments {
-                  value {
-                    ref "rounds"
-                  }
-                }
-                of {
-                  ref "round.index"
-                }
-                procedure "std.math.lessThan"
               }
             }
           }
@@ -53,5 +57,5 @@ warpt 1
       returns "int"
     }
   }
-  warp 1
+  warp 2
 }

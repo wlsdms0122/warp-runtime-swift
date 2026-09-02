@@ -7,25 +7,27 @@ warpt 1
     entry {
       body [
         {
-          id "round"
-          loop {
-            body [
-              {
-                id "seen"
-                value 1
-              }
-            ]
-            where {
-              call {
-                arguments {
-                  value {
-                    ref "rounds"
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  let "seen"
+                  value 1
+                }
+              ]
+              while {
+                call {
+                  arguments {
+                    value {
+                      ref "rounds"
+                    }
                   }
+                  of {
+                    ref "round.index"
+                  }
+                  procedure "std.math.lessThan"
                 }
-                of {
-                  ref "round.index"
-                }
-                procedure "std.math.lessThan"
               }
             }
           }
@@ -40,5 +42,5 @@ warpt 1
       returns "int"
     }
   }
-  warp 1
+  warp 2
 }
