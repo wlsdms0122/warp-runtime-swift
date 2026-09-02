@@ -11,7 +11,7 @@ import Foundation
 // needs beyond naming a head lives here — walking the rest of the path, and
 // sending a no-argument word to what the walk reached.
 //
-// `derivations` is what a selector may send without running: the link worked
+// `selectors` is what a selector may send without running: the link worked
 // out which declarations answer purely, and gave them back under the qualified
 // names a selector writes. `words` is the part of them a path segment may reach,
 // under the bare names a path writes. A resolver built without either reads
@@ -19,7 +19,7 @@ import Foundation
 public struct Resolver: Sendable {
     // MARK: - Property
     public let scope: Scope
-    public let derivations: [String: Procedure]
+    public let selectors: [String: Procedure]
 
     // The words a bare path spelling may send, apart from the selectors: one
     // key answering both questions let a declaration shadow another's path
@@ -30,12 +30,12 @@ public struct Resolver: Sendable {
     // MARK: - Initializer
     public init(
         scope: Scope,
-        derivations: [String: Procedure] = [:],
+        selectors: [String: Procedure] = [:],
         words: [String: Procedure] = [:],
         types: TypeTable = TypeTable()
     ) {
         self.scope = scope
-        self.derivations = derivations
+        self.selectors = selectors
         self.words = words
         self.types = types
     }
@@ -392,7 +392,7 @@ public struct Resolver: Sendable {
         // The spelling is the selector as the author wrote it, which is a
         // declared qualified name; a path word is reached by `derive`, never
         // by a send.
-        guard let procedure = derivations[dispatch.selector] else {
+        guard let procedure = selectors[dispatch.selector] else {
             throw ExecutionError(
                 "'\(dispatch.selector)' answers only by running, so it cannot be"
                     + " read as data here"
@@ -468,7 +468,7 @@ public struct Resolver: Sendable {
 
             let value = try Resolver(
                 scope: scope,
-                derivations: derivations,
+                selectors: selectors,
                 words: words,
                 types: types
             ).resolve(statement.expression)
@@ -482,7 +482,7 @@ public struct Resolver: Sendable {
 
         return try Resolver(
             scope: scope,
-            derivations: derivations,
+            selectors: selectors,
             words: words,
             types: types
         ).resolve(result)

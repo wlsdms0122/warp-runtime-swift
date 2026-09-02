@@ -198,7 +198,7 @@ public struct Linker: Sendable {
         // folding through a word would be a circle — so the stand-ins answer;
         // once the words are resolved, folding runs the same judged bodies a
         // run would, and the tables are swapped to say so.
-        var foldingDerivations = settling
+        var foldingSelectors = settling
         var foldingWords = settlingWords
 
         // A declaration, bound and dot-judged: selectors resolve to qualified
@@ -221,7 +221,7 @@ public struct Linker: Sendable {
             if let block = declared.block {
                 let folding = Resolver(
                     scope: Scope(bindings: constants[symbol.origin] ?? [:]),
-                    derivations: foldingDerivations,
+                    selectors: foldingSelectors,
                     words: foldingWords,
                     types: types
                 )
@@ -277,7 +277,7 @@ public struct Linker: Sendable {
         // declaration still meets a stand-in, the same circle guard by the
         // same rule.
         foldingWords = pathWords
-        foldingDerivations = settling.merging(
+        foldingSelectors = settling.merging(
             resolvedBodies.mapValues(\.procedure)
         ) { _, resolved in resolved }
 
@@ -331,10 +331,10 @@ public struct Linker: Sendable {
         // reported before one in a declaration nothing reaches; in name
         // order, so which unreached mistake comes first is a fact of the
         // text rather than of a hash seed.
-        var derivations: [String: Procedure] = [:]
+        var selectors: [String: Procedure] = [:]
 
         for (name, symbol) in selectorSymbols.sorted(by: { $0.key < $1.key }) {
-            derivations[name] = try resolved(symbol).procedure
+            selectors[name] = try resolved(symbol).procedure
         }
 
         return Image(
@@ -342,7 +342,7 @@ public struct Linker: Sendable {
             procedures: procedures,
             types: types,
             pure: settled,
-            derivations: derivations,
+            selectors: selectors,
             words: pathWords
         )
     }
@@ -1193,7 +1193,7 @@ public struct Linker: Sendable {
     // is the whole of finding it.
     private func constants(
         of modules: [Module],
-        reaching derivations: [String: Procedure],
+        reaching selectors: [String: Procedure],
         words: [String: Procedure],
         in types: TypeTable,
         with frame: TypeFrame,
@@ -1211,7 +1211,7 @@ public struct Linker: Sendable {
             for (name, expression) in try order(of: module) {
                 let resolver = Resolver(
                     scope: Scope(bindings: known),
-                    derivations: derivations,
+                    selectors: selectors,
                     words: words,
                     types: types
                 )

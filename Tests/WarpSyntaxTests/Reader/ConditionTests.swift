@@ -20,7 +20,7 @@ struct ConditionTests {
     @Test("predicates evaluate against scope values")
     func predicatesEvaluateAgainstScope() throws {
         // Given
-        let sut = Resolver(scope: scope, derivations: Module.standard.procedures, words: Module.standard.words)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
 
         // Then
         #expect(try sut.evaluate(
@@ -52,7 +52,7 @@ struct ConditionTests {
             "right": .string("same"),
             "candidates": .array([.string("same"), .string("other")])
         ]),
-            derivations: Module.standard.procedures, words: Module.standard.words
+            selectors: Module.standard.procedures, words: Module.standard.words
         )
 
         // Then — a reference compares against another reference
@@ -69,7 +69,7 @@ struct ConditionTests {
     @Test("numeric equality crosses int and double")
     func numericEqualityCrossesIntAndDouble() throws {
         // Given
-        let sut = Resolver(scope: scope, derivations: Module.standard.procedures, words: Module.standard.words)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
 
         // Then
         #expect(try sut.evaluate(
@@ -80,7 +80,7 @@ struct ConditionTests {
     @Test("combinators compose nested conditions")
     func combinatorsCompose() throws {
         // Given
-        let sut = Resolver(scope: scope, derivations: Module.standard.procedures, words: Module.standard.words)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
         let condition = every(
             equals(.reference(path("kind")), .literal(.string("a"))),
             negating(equals(.reference(path("n")), .literal(.int(4))))
@@ -99,7 +99,7 @@ struct ConditionTests {
             "tags": .array([.string("a"), .string("b")]),
             "n": .int(3)
         ]),
-            derivations: Module.standard.procedures, words: Module.standard.words
+            selectors: Module.standard.procedures, words: Module.standard.words
         )
 
         // Then
@@ -156,7 +156,7 @@ struct ConditionTests {
     @Test("shape misuse in a condition is unfit, not false")
     func conditionShapeMisuseThrowsUnfit() {
         // Given
-        let sut = Resolver(scope: scope, derivations: Module.standard.procedures, words: Module.standard.words)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
 
         // When / Then — a typo'd drill must not silently read as false
         #expect(throws: ReferenceUnfit.self) {

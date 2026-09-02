@@ -17,7 +17,7 @@ public struct Executor: Sendable {
     let procedures: [String: Procedure]
 
     // What a path segment may reach, worked out by the link.
-    let derivations: [String: Procedure]
+    let selectors: [String: Procedure]
     let words: [String: Procedure]
 
     // The shapes the link declared. A named type is answered here rather than
@@ -41,14 +41,14 @@ public struct Executor: Sendable {
         observer: (any ExecutionObserver)?,
         environment: (any Environment)?,
         procedures: [String: Procedure] = [:],
-        derivations: [String: Procedure] = [:],
+        selectors: [String: Procedure] = [:],
         words: [String: Procedure] = [:],
         types: TypeTable = TypeTable()
     ) {
         self.observer = observer
         self.environment = environment
         self.procedures = procedures
-        self.derivations = derivations
+        self.selectors = selectors
         self.words = words
         self.types = types
     }
@@ -64,7 +64,7 @@ public struct Executor: Sendable {
             observer: observer,
             environment: environment,
             procedures: image.procedures,
-            derivations: image.derivations,
+            selectors: image.selectors,
             words: image.words,
             types: image.types
         )
@@ -301,7 +301,7 @@ public struct Executor: Sendable {
         case .query:
             return try Resolver(
                 scope: scope,
-                derivations: derivations.merging([dispatch.selector: procedure]) { _, new in new },
+                selectors: selectors.merging([dispatch.selector: procedure]) { _, new in new },
                 words: words,
                 types: types
             )
@@ -463,7 +463,7 @@ public struct Executor: Sendable {
 
     // MARK: - Private
     private func resolver(in scope: Scope) -> Resolver {
-        Resolver(scope: scope, derivations: derivations, words: words, types: types)
+        Resolver(scope: scope, selectors: selectors, words: words, types: types)
     }
 
     private func run(

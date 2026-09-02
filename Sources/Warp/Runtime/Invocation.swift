@@ -77,7 +77,7 @@ public struct Invocation: Sendable {
     public func resolver(for scope: Scope) -> Resolver {
         Resolver(
             scope: scope,
-            derivations: executor.derivations,
+            selectors: executor.selectors,
             words: executor.words,
             types: executor.types
         )
