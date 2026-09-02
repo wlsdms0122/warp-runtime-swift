@@ -59,7 +59,7 @@ struct ClosureTests {
                 )
             ]
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "twice": twice,
                 entryName: Procedure(
@@ -72,7 +72,7 @@ struct ClosureTests {
                                         Statement(
                                             id: "said",
                                             expression: .dispatch(Dispatch(
-                                                selector: "shout",
+                                                selector: "app.shout",
                                                 arguments: ["text": .literal(.string("hi"))]
                                             ))
                                         )
@@ -95,7 +95,7 @@ struct ClosureTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link([sut, .shouting] + Module.standard, entry: entryName)
+            try Linker().link([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 
@@ -115,7 +115,7 @@ struct ClosureTests {
             ],
             result: reference("once")
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "twice": twice,
                 entryName: Procedure(

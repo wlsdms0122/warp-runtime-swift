@@ -20,7 +20,7 @@ struct ConditionTests {
     @Test("predicates evaluate against scope values")
     func predicatesEvaluateAgainstScope() throws {
         // Given
-        let sut = Resolver(scope: scope, words: Module.standard.procedures)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
 
         // Then
         #expect(try sut.evaluate(
@@ -30,7 +30,7 @@ struct ConditionTests {
             differs(.reference(path("kind")), .literal(.string("b")))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .array([.literal(.int(3)), .literal(.int(4))]), selector: "contains", arguments: ["value": .reference(path("n"))]))
+            .dispatch(Dispatch(receiver: .array([.literal(.int(3)), .literal(.int(4))]), selector: "std.collection.contains", arguments: ["value": .reference(path("n"))]))
         ))
         #expect(try sut.evaluate(
             differs(.reference(path("n")), .literal(.null))
@@ -52,7 +52,7 @@ struct ConditionTests {
             "right": .string("same"),
             "candidates": .array([.string("same"), .string("other")])
         ]),
-            words: Module.standard.procedures
+            selectors: Module.standard.procedures, words: Module.standard.words
         )
 
         // Then — a reference compares against another reference
@@ -62,14 +62,14 @@ struct ConditionTests {
 
         // And one_of can draw its candidates from the scope
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("candidates")), selector: "contains", arguments: ["value": .reference(path("left"))]))
+            .dispatch(Dispatch(receiver: .reference(path("candidates")), selector: "std.collection.contains", arguments: ["value": .reference(path("left"))]))
         ))
     }
 
     @Test("numeric equality crosses int and double")
     func numericEqualityCrossesIntAndDouble() throws {
         // Given
-        let sut = Resolver(scope: scope, words: Module.standard.procedures)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
 
         // Then
         #expect(try sut.evaluate(
@@ -80,7 +80,7 @@ struct ConditionTests {
     @Test("combinators compose nested conditions")
     func combinatorsCompose() throws {
         // Given
-        let sut = Resolver(scope: scope, words: Module.standard.procedures)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
         let condition = every(
             equals(.reference(path("kind")), .literal(.string("a"))),
             negating(equals(.reference(path("n")), .literal(.int(4))))
@@ -99,30 +99,30 @@ struct ConditionTests {
             "tags": .array([.string("a"), .string("b")]),
             "n": .int(3)
         ]),
-            words: Module.standard.procedures
+            selectors: Module.standard.procedures, words: Module.standard.words
         )
 
         // Then
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "contains", arguments: ["value": .literal(.string("spec"))]))
+            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "std.collection.contains", arguments: ["value": .literal(.string("spec"))]))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("tags")), selector: "contains", arguments: ["value": .literal(.string("b"))]))
+            .dispatch(Dispatch(receiver: .reference(path("tags")), selector: "std.collection.contains", arguments: ["value": .literal(.string("b"))]))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "startsWith", arguments: ["value": .literal(.string("hello"))]))
+            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("hello"))]))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "regex", arguments: ["value": .literal(.string("sp.c$"))]))
+            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "std.text.regex", arguments: ["value": .literal(.string("sp.c$"))]))
         ))
         #expect(try !sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("gone")), selector: "contains", arguments: ["value": .literal(.string("x"))]))
+            .dispatch(Dispatch(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
         ))
 
         // A text atom asking a number is shape misuse, not a false answer
         #expect(throws: ReferenceUnfit.self) {
             try sut.evaluate(
-                .dispatch(Dispatch(receiver: .reference(path("n")), selector: "startsWith", arguments: ["value": .literal(.string("3"))]))
+                .dispatch(Dispatch(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
             )
         }
     }
@@ -146,8 +146,8 @@ struct ConditionTests {
         // decoding would make the notation hold the vocabulary; it is checked
         // where names resolve.
         #expect(throws: LinkError.self) {
-            try Loader.testing.language.link(
-                [try Loader.testing.loadProcedure(fixture)] + Module.standard,
+            try Linker().link(
+                [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard,
                 entry: entryName
             )
         }
@@ -156,7 +156,7 @@ struct ConditionTests {
     @Test("shape misuse in a condition is unfit, not false")
     func conditionShapeMisuseThrowsUnfit() {
         // Given
-        let sut = Resolver(scope: scope, words: Module.standard.procedures)
+        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
 
         // When / Then — a typo'd drill must not silently read as false
         #expect(throws: ReferenceUnfit.self) {

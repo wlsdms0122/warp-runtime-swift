@@ -11,18 +11,15 @@ public extension Module {
     // Words that run closures at once. Vocabulary rather than grammar, so
     // running things concurrently is something a caller grants by linking this
     // bundle — a program whose caller left it out cannot fan out at all.
-    static let concurrent = Module(
-        name: "std.concurrent",
+    static let concurrent = try! Module(
+        namespace: "std.concurrent",
         description: "Running closures at once.",
         procedures: [
             // Plain words — `all`, `first`, `map` — with the module carrying
             // the context, the way `Array.map` and `TaskGroup.next` lean on
-            // their types. A bare name resolves only while exactly one linked
-            // module declares it, so a link that carries this bundle beside
-            // `std.collection` pays for `first` and `map` on *both* sides:
-            // every call site qualifies, the sequential ones included. That
-            // cost is taken knowingly — the qualified spelling is the meaning,
-            // and concurrency shows at the call site.
+            // their types. A call site spells the module, so
+            // `std.collection.first` and `std.concurrent.first` are two names
+            // in one link, and concurrency shows at the call site.
             //
             // `of` and what comes back are declared `any` because both take two
             // shapes — a record of closures or an array of them — and a union

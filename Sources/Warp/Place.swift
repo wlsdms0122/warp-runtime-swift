@@ -16,16 +16,15 @@ import Foundation
 // anything runs has only the first to give.
 //
 // The steps are kept rather than a string assembled from them, because a place
-// has two readers who want different things. A person wants a line to read. A
-// front end wants to point at the file the author actually typed — and to do
-// that it has to know which parts of the place are keys the document writes and
-// which are names the language gave to something the text left unnamed. A
-// string spells both the same way and neither can be recovered from it.
+// is read at more than one level and each spells it for its own reader. A slot
+// and a construct travel as themselves; the names an author gave things travel
+// as the words they typed. A string spells both the same way and neither can be
+// recovered from it.
 //
-// So the steps say what the document says, and are spelled from the document's
-// own keys: an author reading
-// `procedures.greet.body.total[2].call.arguments.amount` finds every one of
-// those words in front of them.
+// What is spelled here is the language's own reading, which is the one a caller
+// holding a program it assembled in Swift is owed — it wrote no document, so no
+// document's words would lead it anywhere. A reading in a document's words is
+// the reading side's, and a reading in lines and columns is the front end's.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
     // Which document the steps are in. Not a step: `name` sits next to
@@ -69,6 +68,12 @@ public struct Place: Sendable, Equatable {
             case let .key(name), let .landmark(name):
                 written += joined ? name : ".\(name)"
 
+            case let .slot(slot):
+                written += joined ? slot.rendered : ".\(slot.rendered)"
+
+            case let .construct(construct):
+                written += joined ? construct.rendered : ".\(construct.rendered)"
+
             case let .index(position):
                 written += "[\(position)]"
 
@@ -84,21 +89,7 @@ public struct Place: Sendable, Equatable {
             }
         }
 
-        // Both, where there are both. A person reading a refusal wants the word
-        // they typed, and the word alone does not tell two documents apart —
-        // two halves of a module split across files write one name between
-        // them, which is the case this exists to keep separate. Showing the
-        // name and hiding what makes it unambiguous would put that case back
-        // in front of the only reader who cannot check it.
-        // Absence stays absence rather than folding into an empty string and
-        // being read back out of one: a document that wrote its name as nothing
-        // would otherwise spell the same as a program nobody wrote down.
-        let named: String? = switch (document.namespace, document.identity) {
-        case let (namespace?, identity?): "\(namespace)@\(identity.short)"
-        case let (namespace?, nil): namespace
-        case let (nil, identity?): identity.short
-        case (nil, nil): nil
-        }
+        let named = document.rendered
 
         // The slash separates the document from an address inside it, so it is
         // written where there are both. What is refused about a document rather
@@ -121,24 +112,24 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // The four things a module declares, each under the key the document writes
-    // it under — which is what makes a place something an author can follow.
-    // Which document is stated and never defaulted, so that a caller meaning to
-    // say which text it was in cannot get "none" by saying nothing.
+    // The four things a module declares, each in the slot that holds it and
+    // then under the name the author gave it. Which document is stated and
+    // never defaulted, so that a caller meaning to say which text it was in
+    // cannot get "none" by saying nothing.
     public static func procedure(_ name: String, in document: Document) -> Place {
-        Place([.key("procedures"), .key(name)], in: document)
+        Place([.slot(.procedures), .key(name)], in: document)
     }
 
     public static func constant(_ name: String, in document: Document) -> Place {
-        Place([.key("const"), .key(name)], in: document)
+        Place([.slot(.constants), .key(name)], in: document)
     }
 
     public static func type(_ name: String, in document: Document) -> Place {
-        Place([.key("types"), .key(name)], in: document)
+        Place([.slot(.types), .key(name)], in: document)
     }
 
     public static func constraint(_ name: String, in document: Document) -> Place {
-        Place([.key("constraints"), .key(name)], in: document)
+        Place([.slot(.constraints), .key(name)], in: document)
     }
 
     // A caller holding a program it assembled itself, with no document under
@@ -151,13 +142,12 @@ public struct Place: Sendable, Equatable {
 
     public func key(_ name: String) -> Place { appending(.key(name)) }
 
-    // The slot a part of a program sits in, by the key a document writes it
-    // under. Four walks report places into these slots and each destructures
-    // the language for itself; spelling the keys here is what keeps them from
-    // disagreeing about where one thing is. What a walk cannot be stopped from
-    // doing is forgetting a slot, so the suite asks the four of them for the
-    // same place and compares.
-    public func slot(_ slot: Slot) -> Place { key(slot.rawValue) }
+    // The slot a part of a program sits in. Four walks report places into these
+    // slots and each destructures the language for itself; naming the slots
+    // here is what keeps them from disagreeing about where one thing is. What a
+    // walk cannot be stopped from doing is forgetting a slot, so the suite asks
+    // the four of them for the same place and compares.
+    public func slot(_ slot: Slot) -> Place { appending(.slot(slot)) }
 
     // What a call is written with. Two steps and not one — a document nests
     // them under a key of their own, and an argument named beside a statement
@@ -174,12 +164,10 @@ public struct Place: Sendable, Equatable {
     }
 
     // A statement and the construct it writes, which is how every walk reaches
-    // what one holds. The construct is a landmark and not a key: it is the word
-    // this implementation has for the shape, and two documents that write the
-    // shape differently arrive as one shape.
+    // what one holds.
     public func statement(_ statement: Statement, at position: Int) -> Place {
         self.statement(statement.id, at: position)
-            .appending(.landmark(statement.expression.constructKey))
+            .appending(.construct(statement.expression.construct))
     }
 
     public func appending(_ step: Step) -> Place {
@@ -232,39 +220,137 @@ public extension Place {
         }
 
         public static func of(_ module: Module) -> Document {
-            Document(identity: module.identity, namespace: module.name)
+            Document(identity: module.identity, namespace: module.namespace)
+        }
+
+        // How the document reads on its own, which is both halves where there
+        // are both. A person reading a refusal wants the word they typed, and
+        // the word alone does not tell two documents apart — two halves of a
+        // module split across files write one name between them, which is the
+        // case this exists to keep separate. Showing the name and hiding what
+        // makes it unambiguous would put that case back in front of the only
+        // reader who cannot check it.
+        //
+        // Absence stays absence rather than folding into an empty string and
+        // being read back out of one: a document that wrote its name as nothing
+        // would otherwise spell the same as a program nobody wrote down.
+        var rendered: String? {
+            switch (namespace, identity) {
+            case let (namespace?, identity?): "\(namespace)@\(identity.short)"
+            case let (namespace?, nil): namespace
+            case let (nil, identity?): identity.short
+            case (nil, nil): nil
+            }
+        }
+
+        // What a sentence calls this document when it names one among several.
+        //
+        // An identity tells one document from every other in a link, since a
+        // link refuses the same one twice, so where there is one nothing else
+        // is needed. Without one there is only the name, and
+        // two modules a caller built may write the same name or no name at all
+        // — so where the caller put it goes on as well. The caller counts its
+        // own modules, in the order it handed them over.
+        func spelled(at origin: Int) -> String {
+            if identity != nil, let rendered { return rendered }
+
+            let position = "the module at \(origin) in this link"
+
+            return namespace.map { namespace in "\(namespace), \(position)" } ?? position
         }
     }
 
-    // Every slot a document names, under the key it names it with. The
-    // spellings differ from the model's own names — a loop's condition is
-    // `where` and a walk's collection is `in` — and it is the document's that
-    // an author is reading.
-    enum Slot: String, Sendable {
+    // Every slot a program has, by the language's own name for it. No spelling
+    // rides along: what a document writes a slot under is the reading side's,
+    // and a word declared in two places is a word the two can come to disagree
+    // about with nothing going wrong loudly enough to notice.
+    //
+    // One case per slot and not per key. A branch and a loop both hold a
+    // condition; that a document writes the two under different words is a fact
+    // about the document.
+    enum Slot: Sendable, Equatable {
+        case procedures
+        case constants
+        case types
+        case constraints
+        case namespace
+        case imports
+
         case parameters
         case returns
         case body
         case result
 
-        case of
-        case procedure
+        case receiver
+        case callee
         case arguments
         case closure
 
-        case when
+        // A condition, and which construct holds it. The construct is carried
+        // because a document does not write the two under one word — a branch
+        // asks `when` and a loop asks `where` — and a slot that had to be told
+        // by whatever step came before it is a slot that can be reached from
+        // somewhere nobody remembered to tell.
+        //
+        // Only what can hold one, so a side spelling this has nothing to
+        // guess at and a construct added later cannot be spelled by a default
+        // arm that nobody looked at.
+        case condition(of: Conditional)
         case then
-        case otherwise = "else"
-        case condition = "where"
-        case material = "in"
+        case otherwise
+        case material
         case rescue
+
+        // What the language calls this slot.
+        var rendered: String {
+            switch self {
+            case .procedures: "procedures"
+            case .constants: "constants"
+            case .types: "types"
+            case .constraints: "constraints"
+            case .namespace: "namespace"
+            case .imports: "imports"
+            case .parameters: "parameters"
+            case .returns: "returns"
+            case .body: "body"
+            case .result: "result"
+            case .receiver: "receiver"
+            case .callee: "callee"
+            case .arguments: "arguments"
+            case .closure: "closure"
+            case .condition: "condition"
+            case .then: "then"
+            case .otherwise: "otherwise"
+            case .material: "material"
+            case .rescue: "rescue"
+            }
+        }
+    }
+
+    // A construct that holds a condition. Two of them, and a third would be a
+    // third here — which is the point: whoever spells a condition for a
+    // document is asked about every one of these by name.
+    enum Conditional: Sendable, Equatable {
+        case branch
+        case loop
     }
 
     // What one step of a place is. The cases divide on who chose the word,
     // because that is the division a reader that maps a place back to a file
     // has to make.
     enum Step: Sendable, Equatable {
-        // A key the document itself writes.
+        // A name the document itself writes: a procedure's, a field's, an
+        // argument's. The author typed it, so it is carried as it was typed.
         case key(String)
+
+        // A slot of the program, which every side names for itself. Carried as
+        // the slot and not as a word, so the side spelling it is the side that
+        // knows what its reader is looking at.
+        case slot(Slot)
+
+        // The shape a statement writes, carried the same way and for the same
+        // reason: two texts spelling one shape two ways arrive as one shape.
+        case construct(Construct)
 
         // A position in an array the document writes.
         case index(Int)
@@ -275,13 +361,11 @@ public extension Place {
         // alone finds nothing when a `var` and the `set` writing it share one.
         case statement(name: String?, at: Int)
 
-        // A word the language chose, where the document's own is not known: a
-        // statement's construct, which two texts spell two ways and one shape
-        // arrives as; a body a caller assembled and handed over, which has no
-        // document under it to have a key in. It renders like a key on purpose,
-        // since a person reading a line wants a line — what tells the two apart
-        // is this case, for the reader that has to know which of the words it
-        // may look for in a file.
+        // A body a caller assembled and handed over, which has no document
+        // under it to have a key in. It renders like a key on purpose, since a
+        // person reading a line wants a line — what tells the two apart is this
+        // case, for the reader that has to know which of the words it may look
+        // for in a file.
         case landmark(String)
 
         // A statement step, with a name written empty read as no name.

@@ -14,7 +14,7 @@ import Warp
 //
 // While the rescue runs, the failure is a value under the attempt's own name.
 public struct AttemptForm: ConstructForm {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case body
         case result
         case rescue

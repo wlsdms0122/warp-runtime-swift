@@ -23,8 +23,8 @@ struct VocabularyTests {
     func moduleAddsWords() async throws {
         // Given — `count` and `contains` are declarations, not language
         // structure; anyone adds their own the same way
-        let extra = Module(
-            name: "extra",
+        let extra = try Module(
+            namespace: "extra",
             procedures: [
                 "head": Procedure(
                     signature: Signature(
@@ -59,7 +59,7 @@ struct VocabularyTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"], "head": ["ref": "names.first"]]
-        ])
+        ], importing: ["extra.longerThan"])
 
         // When
         let outputs = try await run(
@@ -81,13 +81,13 @@ struct VocabularyTests {
             "parameters": ["names": "array<string>"],
             "body": [
                 ["id": "how_many", "value": ["ref": "names.count"]],
-                ["id": "said", "call": ["procedure": "count"]]
+                ["id": "said", "call": ["procedure": "std.collection.count"]]
             ]
-        ])
+        ], importing: ["std.collection.count"])
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try loader.language.link([sut], entry: entryName)
+            try Linker().link([sut], entry: entryName)
         }
     }
 
@@ -95,8 +95,8 @@ struct VocabularyTests {
     func ambiguousDerivationRefused() throws {
         // Given — `${x.count}` writes no module, so there is no spelling that
         // would tell two of them apart
-        let rival = Module(
-            name: "rival",
+        let rival = try Module(
+            namespace: "rival",
             procedures: [
                 "count": Procedure(
                     signature: Signature(
@@ -112,7 +112,7 @@ struct VocabularyTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try loader.language.link([sut] + Module.standard + [rival], entry: entryName)
+            try Linker().link([sut] + Module.standard + [rival], entry: entryName)
         }
     }
 

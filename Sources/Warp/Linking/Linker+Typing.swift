@@ -1040,7 +1040,7 @@ extension Linker {
         case let .cast(value, type, optional):
             let inner = try inspected(
                 value,
-                at: place.slot(.of),
+                at: place.slot(.receiver),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1202,7 +1202,7 @@ extension Linker {
                 )
             }
 
-            let pure = body.map { block in isPure(resolved: block, given: frame.pure) } ?? false
+            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
 
             return Inspection(
                 rewritten: rewritten,
@@ -1224,7 +1224,7 @@ extension Linker {
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
             if callee.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.slot(.procedure))
+                throw LinkError(Expression.constructInOperand, at: place.slot(.callee))
             }
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key })
@@ -1234,7 +1234,7 @@ extension Linker {
 
             let called = try inspected(
                 callee,
-                at: place.slot(.procedure),
+                at: place.slot(.callee),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1292,7 +1292,7 @@ extension Linker {
                         receiver: try dispatch.receiver.map { receiver in
                             try inspected(
                                 receiver,
-                                at: place.slot(.of),
+                                at: place.slot(.receiver),
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1303,11 +1303,22 @@ extension Linker {
                 )
             }
 
+            // A selector no module declares is refused where the walk meets
+            // it. Its answer is unknown, and a dot on an unknown answer would
+            // be refused first for what the dot reads, which is not what the
+            // author got wrong.
+            guard let callee = frame.symbols[dispatch.selector] else {
+                throw LinkError(
+                    "sends '\(dispatch.selector)', which no module in this link declares",
+                    at: place
+                )
+            }
+
             // The guard above already said judging, so this refusal has no
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
             if dispatch.receiver?.holdsConstruct == true {
-                throw LinkError(Expression.constructInOperand, at: place.slot(.of))
+                throw LinkError(Expression.constructInOperand, at: place.slot(.receiver))
             }
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
@@ -1320,7 +1331,7 @@ extension Linker {
             if let written = dispatch.receiver {
                 receiver = try inspected(
                     written,
-                    at: place.slot(.of),
+                    at: place.slot(.receiver),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1357,6 +1368,7 @@ extension Linker {
                     CallSite(
                         dispatch: rewritten,
                         place: place,
+                        callee: callee,
                         readings: sent,
                         received: receiver?.reading
                     )
@@ -1391,7 +1403,7 @@ extension Linker {
         // are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.when), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .branch)), when: ask)
             }
 
             // A condition is data and writes nothing — the construct rule
@@ -1399,7 +1411,7 @@ extension Linker {
             // environment the branch stands in.
             let head = try inspected(
                 condition,
-                at: place.slot(.when),
+                at: place.slot(.condition(of: .branch)),
                 in: environment,
                 with: frame,
                 ask: ask
@@ -1451,7 +1463,7 @@ extension Linker {
             // operand has — so a construct is refused there by the same
             // predicate, at the check and here alike.
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.condition), when: ask)
+                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .loop)), when: ask)
             }
 
             // The fixpoint probes the statements alone — the rounds are what
@@ -1485,7 +1497,7 @@ extension Linker {
 
             let head = try inspected(
                 condition,
-                at: place.slot(.condition),
+                at: place.slot(.condition(of: .loop)),
                 in: seeded,
                 with: frame,
                 ask: ask

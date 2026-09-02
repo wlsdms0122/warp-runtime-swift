@@ -37,7 +37,7 @@ struct CanonicalTests {
                     "branch": [
                         "when": [
                             "call": [
-                                "procedure": "equal",
+                                "procedure": "std.logic.equal",
                                 "of": ["ref": "count"],
                                 "arguments": ["value": 1]
                             ]
@@ -48,7 +48,7 @@ struct CanonicalTests {
                 ]
             ],
             "result": ["result": ["ref": "pick"]]
-        ])
+        ], importing: ["std.logic.equal"])
 
         // When
         let one = try await run(sut, arguments: ["count": .int(1)])
@@ -70,7 +70,7 @@ struct CanonicalTests {
                     "loop": [
                         "where": [
                             "call": [
-                                "procedure": "notEqual",
+                                "procedure": "std.logic.notEqual",
                                 "of": ["ref": "seen"],
                                 "arguments": ["value": 3]
                             ]
@@ -79,7 +79,7 @@ struct CanonicalTests {
                             [
                                 "set": "seen",
                                 "call": [
-                                    "procedure": "plus",
+                                    "procedure": "std.math.plus",
                                     "of": ["ref": "seen"],
                                     "arguments": ["value": 1]
                                 ]
@@ -89,7 +89,7 @@ struct CanonicalTests {
                 ]
             ],
             "result": ["result": ["ref": "seen"]]
-        ])
+        ], importing: ["std.logic.notEqual", "std.math.plus"])
 
         // When
         let outputs = try await run(sut)
@@ -117,13 +117,13 @@ struct CanonicalTests {
                     ]
                 ],
                 "result": ["result": ["ref": "pick"]]
-            ])
+            ], importing: ["std.logic.equal"])
         }
 
         let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
         let plainly = try picking(on: [
             "call": [
-                "procedure": "equal",
+                "procedure": "std.logic.equal",
                 "of": ["ref": "word"],
                 "arguments": ["value": "hey"]
             ]
@@ -171,6 +171,33 @@ struct CanonicalTests {
 
         // Then
         #expect(outputs["result"] == .string("go"))
+    }
+
+    @Test("a program that does not hold together is still one document")
+    func anUnsoundDocumentIsStillADocument() throws {
+        // Given — a name nothing declares. What a text *is* and whether its
+        // program is any good are two questions, and the first is the one a
+        // caller asks when it wants the file a refusal came from. Answering it
+        // only for the texts that had nothing wrong with them would take the
+        // answer away exactly where it is wanted.
+        let unsound: Value = [
+            "imports": [],
+            "name": "wallet",
+            "procedures": ["entry": ["result": ["ref": "missing"]]]
+        ]
+
+        // When
+        let written = try loader.canonical(unsound, from: .testing)
+
+        // Then — which document this is comes off the canonical writing, so the
+        // same text twice is the same document
+        #expect(written["name"] == .string("wallet"))
+        #expect(written == (try loader.canonical(unsound, from: .testing)))
+
+        // And the program is still refused when something asks whether it holds
+        #expect(throws: ValidationError.self) {
+            try loader.load(written, identity: nil)
+        }
     }
 
     // MARK: - Public

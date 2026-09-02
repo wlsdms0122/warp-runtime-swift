@@ -10,6 +10,12 @@ import Foundation
 // What a program computes over. Eight data shapes and one that is not data: a
 // procedure is a value here, so a body can be passed, kept and answered with.
 //
+// The ninth is made by running, never by reading: a closure comes out of the
+// expression that writes one, and a program carrying one as a literal is
+// refused where a module is made. So a text spells eight, and anything handed
+// data from outside a run is handed eight — which is why the writings say so
+// where a caller can reach them with the ninth directly.
+//
 // Equality is written by hand because a procedure has no honest one: two
 // procedures are never equal, and identity is not a question this language lets
 // you ask.
@@ -25,6 +31,27 @@ public indirect enum Value: Sendable, Equatable {
     case procedure(Closure)
 
     // MARK: - Property
+    // What is said wherever a value stands where a document can reach it. One
+    // sentence because it is one rule, and an author meeting it twice should
+    // not have to work out whether they are two.
+    public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
+        + " where a document reaches — a body a program carries is written as a closure"
+
+    // Whether a procedure is anywhere in here, however deep.
+    //
+    // The shapes nest, so the question does: a procedure one array inside a
+    // record is still a procedure this value holds, and a check that looked
+    // only at the outside would pass a program that carries one and refuse the
+    // same program written without the wrapper.
+    public var holdsProcedure: Bool {
+        switch self {
+        case .procedure: true
+        case let .array(items): items.contains { item in item.holdsProcedure }
+        case let .object(fields): fields.values.contains { field in field.holdsProcedure }
+        default: false
+        }
+    }
+
     public var type: ValueType {
         switch self {
         case .null:

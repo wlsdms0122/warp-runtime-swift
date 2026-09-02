@@ -9,8 +9,8 @@ import Foundation
 
 // Everything this language refuses with says one sentence about why. No area
 // owns that — validation, linking, the runtime and the notation reader all
-// declare it — so it sits at the root beside `Language` rather than being
-// filed under whichever of them is asked to keep it.
+// declare it — so it sits at the root rather than being filed under whichever
+// of them is asked to keep it.
 public protocol WarpError: Error, Sendable, CustomStringConvertible {
     var message: String { get }
 
@@ -28,6 +28,14 @@ public protocol WarpError: Error, Sendable, CustomStringConvertible {
     var place: Place? { get }
 
     func tracing(_ trace: Trace) -> Self
+
+    // The same refusal, addressed somewhere else. A place is spelled by the
+    // side reading it — the language names its own slots, a reading side names
+    // the keys a document writes — so a refusal has to be able to take the
+    // reading its reader is owed without losing what it is.
+    //
+    // The default answers with itself, for a refusal that names no place.
+    func placed(_ place: Place) -> Self
 }
 
 public extension WarpError {
@@ -52,4 +60,6 @@ public extension WarpError {
     var place: Place? { nil }
 
     func tracing(_ trace: Trace) -> Self { self }
+
+    func placed(_ place: Place) -> Self { self }
 }

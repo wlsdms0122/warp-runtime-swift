@@ -24,7 +24,7 @@ import Testing
 @Suite("The standard vocabulary at its edges")
 struct BoundaryTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -34,14 +34,14 @@ struct BoundaryTests {
         // of text was found by running it. In a language whose whole claim is
         // that what can be decided before running is, that was the claim not
         // holding in the most ordinary place a program has.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],
                     result: .dispatch(
                         Dispatch(
                             receiver: .literal(.int(1)),
-                            selector: "plus",
+                            selector: "std.math.plus",
                             arguments: ["value": .literal(.string("a"))]
                         )
                     )
@@ -51,7 +51,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect {
-            try language.link([module] + Module.standard, entry: "entry")
+            try linker.link([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("'N' is read as")
         }
@@ -63,7 +63,7 @@ struct BoundaryTests {
         // a declaration that only said "a number" would not fit anywhere asking
         // for one. Both sides and the answer are one reading, which is what a
         // language with overloading would need several declarations to say.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],
@@ -74,7 +74,7 @@ struct BoundaryTests {
                                 "it": .dispatch(
                                     Dispatch(
                                         receiver: .literal(.int(1)),
-                                        selector: "plus",
+                                        selector: "std.math.plus",
                                         arguments: ["value": .literal(.int(2))]
                                     )
                                 )
@@ -95,7 +95,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try language.link([module] + Module.standard, entry: "entry")
+            try linker.link([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -103,8 +103,8 @@ struct BoundaryTests {
     func orderingIsNotOnlyForNumbers() async throws {
         // Given — the words that order values order text too, so declaring them
         // as taking numbers said something the word does not mean
-        #expect(try await answering("lessThan", .string("a"), .string("b")) == .bool(true))
-        #expect(try await answering("lessThan", .int(1), .int(2)) == .bool(true))
+        #expect(try await answering("std.math.lessThan", .string("a"), .string("b")) == .bool(true))
+        #expect(try await answering("std.math.lessThan", .int(1), .int(2)) == .bool(true))
     }
 
     @Test("a slot that means either number takes either, and nothing else")
@@ -128,12 +128,12 @@ struct BoundaryTests {
     }
 
     @Test("a type parameter read two ways that do not fit is a refusal, not a shrug")
-    func aDisagreeingHoleIsRefused() {
+    func aDisagreeingHoleIsRefused() throws {
         // Given — appending a whole number to a list of text. The hole is read
         // as text by the list and as a number by what is being appended, and
         // widening to `any` was the checker announcing it had stopped checking
         // and announcing it silently: the call then went through.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
@@ -141,7 +141,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("names")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .literal(.int(1))]
                         )
                     )
@@ -151,7 +151,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect {
-            try language.link([module] + Module.standard, entry: "entry")
+            try linker.link([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("'Element' is read as")
                 && "\(error)".contains("int")
@@ -167,7 +167,7 @@ struct BoundaryTests {
         // yes both ways and whichever was read first would win. Reading it first
         // is what a receiver does, and that made a list of anything into a list
         // of whatever went in first.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(parameters: ["xs": Parameter(type: .array(.any))]),
@@ -177,7 +177,7 @@ struct BoundaryTests {
                             expression: .dispatch(
                                 Dispatch(
                                     receiver: .reference([.key("xs")]),
-                                    selector: "appending",
+                                    selector: "std.collection.appending",
                                     arguments: ["value": .literal(.int(1))]
                                 )
                             )
@@ -186,7 +186,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("one")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .literal(.string("a"))]
                         )
                     )
@@ -196,7 +196,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try language.link([module] + Module.standard, entry: "entry")
+            try linker.link([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -206,7 +206,7 @@ struct BoundaryTests {
         // call wrote. They are the same type, and calling them a disagreement
         // was asking the question without the table that answers it — the same
         // table the rest of the link uses.
-        let module = Module(
+        let module = try Module(
             types: ["Tree": .record(["a": .int])],
             procedures: [
                 "entry": Procedure(
@@ -217,7 +217,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("trees")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .record(["a": .literal(.int(1))])]
                         )
                     )
@@ -227,7 +227,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try language.link([module] + Module.standard, entry: "entry")
+            try linker.link([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -236,7 +236,7 @@ struct BoundaryTests {
         // Given — a list of numbers and a whole number are not a disagreement.
         // One reading takes the other, so the one that holds both is the answer,
         // and refusing here would refuse a program with nothing wrong with it.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(parameters: ["counts": Parameter(type: .array(.number))]),
@@ -244,7 +244,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("counts")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .literal(.int(1))]
                         )
                     )
@@ -254,7 +254,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try language.link([module] + Module.standard, entry: "entry")
+            try linker.link([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -264,9 +264,9 @@ struct BoundaryTests {
         // answer, and the language stops rather than wrapping or answering a
         // silent fraction.
         for (word, left, right) in [
-            ("plus", Int.max, 1),
-            ("minus", Int.min, 1),
-            ("times", Int.max, 2)
+            ("std.math.plus", Int.max, 1),
+            ("std.math.minus", Int.min, 1),
+            ("std.math.times", Int.max, 2)
         ] {
             // When / Then
             await #expect {
@@ -284,9 +284,9 @@ struct BoundaryTests {
         // to exactly the first place that tries to write it down. Found by
         // running `1e308 plus 1e308` and being answered inf.
         for (word, left, right) in [
-            ("plus", 1e308, 1e308),
-            ("minus", -1e308, 1e308),
-            ("times", 1e308, 10.0)
+            ("std.math.plus", 1e308, 1e308),
+            ("std.math.minus", -1e308, 1e308),
+            ("std.math.times", 1e308, 10.0)
         ] {
             // When / Then
             await #expect {
@@ -302,8 +302,8 @@ struct BoundaryTests {
         // Given — the alternative is two words, or one word whose answer type
         // depends on whether the division came out even. The second is not a
         // type a signature can hold.
-        #expect(try await answering("dividedBy", .int(7), .int(2)) == .double(3.5))
-        #expect(try await answering("dividedBy", .int(4), .int(2)) == .double(2))
+        #expect(try await answering("std.math.dividedBy", .int(7), .int(2)) == .double(3.5))
+        #expect(try await answering("std.math.dividedBy", .int(4), .int(2)) == .double(2))
     }
 
     @Test("division by zero refuses")
@@ -313,7 +313,7 @@ struct BoundaryTests {
         // check could talk about
         for (left, right) in [(Value.int(1), Value.int(0)), (.double(1), .double(0))] {
             await #expect {
-                try await answering("dividedBy", left, right)
+                try await answering("std.math.dividedBy", left, right)
             } throws: { error in
                 "\(error)".contains("zero")
             }
@@ -324,8 +324,8 @@ struct BoundaryTests {
     func wholeNumbersWiden() async throws {
         // Given — every whole number is a fraction and the reverse is false, so
         // the conversion that cannot lose anything is the one that happens
-        #expect(try await answering("plus", .int(1), .double(0.5)) == .double(1.5))
-        #expect(try await answering("plus", .double(0.5), .int(1)) == .double(1.5))
+        #expect(try await answering("std.math.plus", .int(1), .double(0.5)) == .double(1.5))
+        #expect(try await answering("std.math.plus", .double(0.5), .int(1)) == .double(1.5))
     }
 
     // MARK: - Public
@@ -337,7 +337,7 @@ struct BoundaryTests {
         _ receiver: Value,
         _ operand: Value
     ) async throws -> Value {
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [],
@@ -352,8 +352,7 @@ struct BoundaryTests {
             ]
         )
 
-        return try await language
-            .makeExecutor()
-            .run(try language.link([module] + Module.standard, entry: "entry"))
+        return try await Executor()
+            .run(try linker.link([module] + Module.standard, entry: "entry"))
     }
 }

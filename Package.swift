@@ -10,7 +10,6 @@ let package = Package(
     products: [
         .library(name: "Warp", targets: ["Warp"]),
         .library(name: "WarpSyntax", targets: ["WarpSyntax"]),
-        .library(name: "WarpSerialization", targets: ["WarpSerialization"]),
     ],
     targets: [
         // The language as Swift holds it: the shapes a program is made of, and
@@ -24,32 +23,24 @@ let package = Package(
         .target(
             name: "Warp"
         ),
-        // What the words mean: which key names which shape, the spellings a
-        // document may write instead, and the way back out. It takes the tree a
-        // serialization hands over and answers with the language's own shapes.
+        // What a document is: the bytes and the text one is carried in, which
+        // key names which shape, the spellings a notation may write instead,
+        // and the way back out. Data in, the language's own shapes out.
         //
         // Optional, and the dependency graph is where that is said rather than
         // claimed. A program only travels as a document, so this is what a
         // program has to come through to leave one machine and arrive at another
         // — and a program that stays where it was built never comes through here
         // at all.
+        //
+        // The wire is written and read without learning what the tree means, so
+        // an implementation in another language can speak it without also
+        // implementing what a procedure is. That is a fact about the format and
+        // it holds whatever this package is cut into: the one line worth cutting
+        // on is what a caller can leave out, and a caller that reads bytes needs
+        // all of this while a caller assembling shapes in Swift needs none of it.
         .target(
             name: "WarpSyntax",
-            dependencies: [
-                "Warp"
-            ]
-        ),
-        // A document written down, and read back. Warp's own bytes for carrying
-        // one, and the same document laid out for eyes — `.wasm` and `.wat`,
-        // one target because they are one job done twice.
-        //
-        // It depends on `Warp` and not on `WarpSyntax`, and that is the whole
-        // point: a serialization carries a tree of data and never learns what
-        // the tree means. So the wire does not move when the language does, and
-        // an implementation in another language can speak it without also
-        // implementing what a procedure is.
-        .target(
-            name: "WarpSerialization",
             dependencies: [
                 "Warp"
             ]
@@ -85,14 +76,7 @@ let package = Package(
             name: "WarpConformanceTests",
             dependencies: [
                 "Warp",
-                "WarpSyntax",
-                "WarpSerialization"
-            ]
-        ),
-        .testTarget(
-            name: "WarpSerializationTests",
-            dependencies: [
-                "WarpSerialization"
+                "WarpSyntax"
             ]
         ),
     ],

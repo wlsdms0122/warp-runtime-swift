@@ -16,7 +16,7 @@ import Testing
 @Suite
 struct RangeTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -73,7 +73,7 @@ struct RangeTests {
     @Test("an argument only the run sees is judged at the boundary")
     func aRuntimeValueIsJudgedAtTheBoundary() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -98,7 +98,7 @@ struct RangeTests {
     @Test("a constant argument is judged at the link")
     func aConstantArgumentIsJudgedAtTheLink() throws {
         // Given — the argument is text, so the miss is the link's to see
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "paint": Procedure(
                     signature: Signature(
@@ -119,7 +119,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("outside int(0...255)")
         }
@@ -128,7 +128,7 @@ struct RangeTests {
     @Test("a default outside its own range refuses at the link")
     func aDefaultOutsideTheRangeRefuses() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -147,7 +147,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("outside int(0...255)")
         }
@@ -156,7 +156,7 @@ struct RangeTests {
     @Test("a range that admits nothing refuses where it was written")
     func anEmptyRangeRefusesAtTheLink() throws {
         // Given — no whole number is at once at least 9 and at most 1
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -170,7 +170,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -180,8 +180,8 @@ struct RangeTests {
     func aOneOfOutsideTheRangeRefuses() throws {
         // Given — no candidate is a value the range could hold, so the
         // parameter fits no call: the same judgment an empty oneOf gets
-        func module(oneOf candidates: [String]) -> Module {
-            Module(
+        func module(oneOf candidates: [String]) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(
@@ -201,7 +201,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try language.link([module(oneOf: ["300", "999"])] + Module.standard, entry: entryName)
+            try linker.link([module(oneOf: ["300", "999"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -209,7 +209,7 @@ struct RangeTests {
         // A live candidate does not excuse a dead one: `300` is a member no
         // call could ever match, and the refusal names it.
         #expect {
-            try language.link([module(oneOf: ["0", "300"])] + Module.standard, entry: entryName)
+            try linker.link([module(oneOf: ["0", "300"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'300'")
         }
@@ -218,7 +218,7 @@ struct RangeTests {
         // numbers that already have one, so neither is a candidate an int
         // slot can spell — the oneOf admits nothing and refuses.
         #expect {
-            try language.link([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
+            try linker.link([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -227,11 +227,11 @@ struct RangeTests {
     @Test("std declares byte, and a name resolves to its range")
     func byteIsANamedRange() async throws {
         // Given — `byte = int(0...255)`, declared where every bundle can name it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .named("byte"))]
+                        parameters: ["value": Parameter(type: .named("std.byte"))]
                     ),
                     body: [],
                     result: reference("value")
@@ -252,7 +252,7 @@ struct RangeTests {
     @Test("a dot on a range is a word send, the way it is on an int")
     func aDotOnARangeSendsAWord() async throws {
         // Given — a range's value has no fields; the dot reaches vocabulary
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -271,7 +271,7 @@ struct RangeTests {
     @Test("what a range answers stays inside the wider slot it fills")
     func aRangeReadingFillsAnIntSlot() async throws {
         // Given — a byte-typed value handed to an int slot: provably inside
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(

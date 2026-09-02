@@ -16,33 +16,46 @@ import Foundation
 // and no reserved name.
 public struct Module: Sendable {
     // MARK: - Property
-    // What the module's declarations are called across a link: a named module's
-    // procedures, types and constraints are qualified by this — `std.math`
+    // What the module's declarations are called across a link: a module with one
+    // has its procedures, types and constraints qualified by it — `std.math`
     // declaring `plus` declares `std.math.plus` — and a module without one
-    // declares into the shared space under the bare names. The description is
-    // metadata only.
-    public let name: String?
+    // declares into the shared space under the bare names.
+    //
+    // Not a name. Several documents may share one, since a module split across
+    // files is a thing this language allows, and which document a thing came
+    // out of is `identity`. The description is metadata only.
+    public let namespace: String?
     public let description: String?
+
+    // The words this module sends and does not declare. Everything else here is
+    // what the module declares; this is what it asks of whatever it is linked
+    // with, and a link that does not declare all of them cannot run it.
+    //
+    // Exactly what it sends, always: a caller granting from this list would
+    // otherwise grant a word the program never uses, or link a program that
+    // sends one the list never mentioned. Which of those two the module is
+    // refused for is `Validator`'s to say.
+    public let imports: Set<String>
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type — a module declares, and what it declares differs only in
     // what kind of thing the name stands for.
-    public private(set) var types: [String: TypeExpression]
+    public let types: [String: TypeExpression]
 
     // Constraints this module declares: a name bound to the types a bounded
     // parameter under that name admits. Declared the same way a type is and
     // kept apart from the types, because nothing is ever *of* a constraint —
     // it bounds `some T`, and a slot cannot declare it directly.
-    public private(set) var constraints: [String: [TypeExpression]]
+    public let constraints: [String: [TypeExpression]]
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second namespace in path position
     // — where a qualified spelling cannot be told from drilling into a record.
-    public private(set) var constants: [String: Expression]
+    public let constants: [String: Expression]
 
-    public private(set) var procedures: [String: Procedure]
+    public let procedures: [String: Procedure]
 
     // Which document this was read out of, where it was read out of one.
     //
@@ -52,64 +65,89 @@ public struct Module: Sendable {
     // document back to its canonical bytes, which is not what reading a
     // document is for.
     //
-    // Not the name. `name` is the namespace this declares into and several
-    // documents may share one, since a module split across files is a thing
-    // this language allows; two documents named `wallet` are two documents.
-    public private(set) var identity: Identity?
+    // Not the namespace. That is what this declares into and several documents
+    // may share one, since a module split across files is a thing this language
+    // allows; two documents named `wallet` are two documents.
+    public let identity: Identity?
 
     // MARK: - Initializer
+    // Making one is checking one, so a module that exists has been checked
+    // against itself.
+    //
+    // A document arrives through a reader, a serialization or a caller
+    // assembling shapes in Swift, and each of those is a way in. A check that
+    // sat on one of them would leave the others open, and what comes through
+    // them is the same module. Here there is one way in.
+    //
+    // What linking then reads a body for is names across modules, and it reads
+    // one on the footing that a body introduces no name the module bound. That
+    // footing is this call.
+    //
+    // The imports are a claim, and nil is no claim. A document makes one — it
+    // travelled, and what it said about itself is the thing worth holding it to
+    // — so a reader hands over what the text wrote and a drifting list is
+    // refused. A caller assembling shapes in Swift has the module in hand and
+    // nobody to disclose it to, so it says nothing and the module states the
+    // fact instead. Either way `imports` afterwards is what the module sends.
     public init(
-        name: String? = nil,
+        namespace: String? = nil,
         description: String? = nil,
+        imports: Set<String>? = nil,
         types: [String: TypeExpression] = [:],
         constraints: [String: [TypeExpression]] = [:],
         constants: [String: Expression] = [:],
         procedures: [String: Procedure],
         identity: Identity? = nil
-    ) {
-        self.name = name
-        self.description = description
-        self.types = types
-        self.constraints = constraints
-        self.constants = constants
-        self.procedures = procedures
+    ) throws {
+        try self.init(
+            Draft(
+                namespace: namespace,
+                description: description,
+                imports: imports,
+                types: types,
+                constraints: constraints,
+                constants: constants,
+                procedures: procedures
+            ),
+            identity: identity
+        )
+    }
+
+    // A draft, checked. Which text it came out of is beside it rather than in
+    // it: a draft is what a document declares, and which document that was is
+    // the reader's to say.
+    public init(_ draft: Draft, identity: Identity? = nil) throws {
+        self.namespace = draft.namespace
+        self.description = draft.description
+        self.types = draft.types
+        self.constraints = draft.constraints
+        self.constants = draft.constants
+        self.procedures = draft.procedures
         self.identity = identity
-    }
+        self.imports = draft.imports ?? draft.sends
 
-    // The same module with something changed.
-    //
-    // A copy of the whole with the named parts written over, rather than a new
-    // module built field by field: a copy that lists what it carries keeps only
-    // what somebody remembered to list, and a field left off is not a compiler
-    // error but a fact quietly going missing. Nothing here enumerates, so a
-    // field added to a module is carried through by every copy without this
-    // having to be told about it.
-    func replacing(
-        types: [String: TypeExpression]? = nil,
-        constraints: [String: [TypeExpression]]? = nil,
-        constants: [String: Expression]? = nil,
-        procedures: [String: Procedure]? = nil,
-        identity: Identity? = nil
-    ) -> Module {
-        var copy = self
-
-        if let types { copy.types = types }
-        if let constraints { copy.constraints = constraints }
-        if let constants { copy.constants = constants }
-        if let procedures { copy.procedures = procedures }
-        if let identity { copy.identity = identity }
-
-        return copy
-    }
-
-    // The same module, told which document it was read out of. A reader is told
-    // that from outside, since working it out means writing the document back
-    // to its canonical bytes — so it is put on afterwards rather than passed
-    // inward through everything that builds a module up.
-    public func read(from identity: Identity) -> Module {
-        replacing(identity: identity)
+        try Validator().validate(self)
     }
 
     // MARK: - Public
+    // What this declares, on its own and without the checking. It is what a
+    // writing takes, so a module and a document that was never a module are
+    // written by one call — and `imports` here is the resolved list rather than
+    // the claim, since by now the two are the same.
+    public var draft: Draft {
+        Draft(
+            namespace: namespace,
+            description: description,
+            imports: imports,
+            types: types,
+            constraints: constraints,
+            constants: constants,
+            procedures: procedures
+        )
+    }
+
+    // MARK: - Internal
+    var sends: Set<String> { draft.sends }
+
     // MARK: - Private
 }

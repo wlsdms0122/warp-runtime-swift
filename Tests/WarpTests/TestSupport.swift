@@ -68,9 +68,8 @@ func reference(_ names: String...) -> Warp.Expression {
 // run starts from is an argument, so there is nothing special about this one.
 let entryName = "entry"
 
-// Validate every module, link the set, run. The way a caller does it, and the
-// way the model reads: the caller states its whole world, then names one
-// procedure in it.
+// Link the set and run. The way a caller does it, and the way the model reads:
+// the caller states its whole world, then names one procedure in it.
 func run(
     _ modules: [Module],
     entry: String = entryName,
@@ -78,15 +77,11 @@ func run(
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
-    let language = Language()
+    let linker = Linker()
 
-    for module in modules {
-        try language.validate(module)
-    }
+    let image = try linker.link(modules + vocabulary, entry: entry)
 
-    let image = try language.link(modules + vocabulary, entry: entry)
-
-    return try await language.makeExecutor(environment: environment)
+    return try await Executor(environment: environment)
         .run(image, arguments: arguments)
 }
 
@@ -115,7 +110,7 @@ func run(
     vocabulary: [Module] = Module.standard,
 ) async throws -> Value {
     try await run(
-        [Module(procedures: others.merging([entryName: procedure]) { _, new in new })],
+        [try Module(procedures: others.merging([entryName: procedure]) { _, new in new })],
         arguments: arguments,
         vocabulary: vocabulary,
     )
@@ -164,8 +159,8 @@ func validates(body: [Statement], visible: Set<String> = []) -> Bool {
 // Vocabulary is modules, so a test that needs a word declares one and puts it
 // in the link.
 extension Module {
-    static let shouting = Module(
-        name: "app",
+    static let shouting = try! Module(
+        namespace: "app",
         procedures: [
             "shout": Procedure(
                 signature: Signature(
@@ -177,8 +172,8 @@ extension Module {
         ]
     )
 
-    static let failing = Module(
-        name: "app",
+    static let failing = try! Module(
+        namespace: "app",
         procedures: [
             "fail": Procedure(
                 signature: Signature(
@@ -203,10 +198,20 @@ struct ShoutEffect: Effect {
 
 
 
-// Every procedure a list of modules declares, under its bare name — what a
-// resolver's derivations table holds for the words a path may reach.
+// Every procedure a list of modules declares, as two tables for two questions:
+// what a selector names, and what a path segment reaches.
 extension [Module] {
+    // Every declaration by its qualified spelling, the way a selector names it.
     var procedures: [String: Procedure] {
+        reduce(into: [:]) { table, module in
+            for (name, procedure) in module.procedures {
+                table[Draft.qualified(name, in: module.namespace)] = procedure
+            }
+        }
+    }
+
+    // Every declaration by its bare name, the way a path segment names it.
+    var words: [String: Procedure] {
         reduce(into: [:]) { table, module in
             table.merge(module.procedures) { _, new in new }
         }
@@ -218,25 +223,25 @@ extension [Module] {
 // Equality and the connectives are words, so a test writing one writes the send
 // the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "equal", arguments: ["value": operand]))
+    .dispatch(Dispatch(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "notEqual", arguments: ["value": operand]))
+    .dispatch(Dispatch(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
 }
 
 func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: condition, selector: "not"))
+    .dispatch(Dispatch(receiver: condition, selector: "std.logic.not"))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something that
 // has not been answered yet.
 func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("and", conditions)
+    chained("std.logic.and", conditions)
 }
 
 func some(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("or", conditions)
+    chained("std.logic.or", conditions)
 }
 
 private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> Warp.Expression {
@@ -258,7 +263,7 @@ private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> War
 // value asked how it reads. The notation spells this `{ format:, with: }` and
 // lowers it to exactly this.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: .array(pieces), selector: "joined"))
+    .dispatch(Dispatch(receiver: .array(pieces), selector: "std.text.joined"))
 }
 
 func literal(_ text: String) -> Warp.Expression {
@@ -266,11 +271,11 @@ func literal(_ text: String) -> Warp.Expression {
 }
 
 func spelling(_ value: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: value, selector: "text"))
+    .dispatch(Dispatch(receiver: value, selector: "std.text.text"))
 }
 
 // MARK: - Refusal
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: message, selector: "abort"))
+    .dispatch(Dispatch(receiver: message, selector: "std.control.abort"))
 }

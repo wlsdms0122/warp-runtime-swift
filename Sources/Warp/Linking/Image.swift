@@ -30,10 +30,9 @@ public struct Image: Sendable {
     // whole call graph has to be walked to know.
     public let pure: Set<String>
 
-    // What a path segment may reach, by the bare name a path writes. `x.count`
-    // names no module, so this is resolved by the run rather than by the link —
-    // and the link is where an ambiguity between two such names is refused.
-    public let derivations: [String: Procedure]
+    // What a selector may send without running, by the qualified spelling a
+    // selector writes: the pure declarations, bodies and native words alike.
+    public let selectors: [String: Procedure]
 
     // What a bare spelling a path writes may send — its own table, because a
     // selector and a path spelling are two questions one key must not answer
@@ -46,14 +45,14 @@ public struct Image: Sendable {
         procedures: [String: Procedure],
         types: TypeTable,
         pure: Set<String>,
-        derivations: [String: Procedure],
+        selectors: [String: Procedure],
         words: [String: Procedure]
     ) {
         self.entry = entry
         self.procedures = procedures
         self.types = types
         self.pure = pure
-        self.derivations = derivations
+        self.selectors = selectors
         self.words = words
     }
 

@@ -90,7 +90,7 @@ struct WriterTests {
         // and a word that was written look the same on the way out. This one
         // spells `holds` and reaches `example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
-        let loader = Loader(notation: Notation(condition: WordedConditions()))
+        let loader = Loader()
         let module = try loader.loadProcedure([
             "parameters": ["ready": "bool"],
             "body": [
@@ -101,7 +101,7 @@ struct WriterTests {
                     ]
                 ]
             ]
-        ])
+        ], importing: ["example.holds"], from: Notation(condition: WordedConditions()))
 
         // When
         let written = try sut.value(of: module)
@@ -116,7 +116,7 @@ struct WriterTests {
         // Given — a fixed point says the writing settled, not that it kept
         // everything. Running both is what notices a slot dropped on the way out.
         let document: Value = [
-            "needs": ["equal", "joined", "plus", "text"],
+            "imports": ["std.logic.equal", "std.text.joined", "std.math.plus", "std.text.text"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>", "word": "string"],
@@ -139,7 +139,7 @@ struct WriterTests {
                                         "set": "walked",
                                         "call": [
                                             "of": ["ref": "walked"],
-                                            "procedure": "plus",
+                                            "procedure": "std.math.plus",
                                             "arguments": ["value": ["ref": "sized.item.count"]]
                                         ]
                                     ]
@@ -196,7 +196,7 @@ struct WriterTests {
                     ]
                 ]
             ]
-        ])
+        ], importing: ["std.logic.equal"])
 
         // When
         let written = try sut.value(of: module)
@@ -212,7 +212,7 @@ struct WriterTests {
         }
 
         // The word the spelling reached, written as the message it always was.
-        #expect(message["procedure"] == .string("equal"))
+        #expect(message["procedure"] == .string("std.logic.equal"))
         #expect(message["of"]?["ref"] == .string("word"))
         #expect(message["arguments"]?["value"] == .string("hey"))
     }
@@ -221,7 +221,7 @@ struct WriterTests {
     func dataThatLooksLikeAFormIsQuoted() throws {
         // Given — a payload with a field called `ref` is not a reference, and
         // writing it bare would make a document that loads into something else
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -293,7 +293,7 @@ struct WriterTests {
             ],
             returns: .bool
         )
-        let module = Module(
+        let module = try Module(
             types: ["Predicate": .procedure(bounded, .unstated)],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -313,7 +313,7 @@ struct WriterTests {
         }
 
         // A bounded variable declared as a type directly refuses the same way
-        let variable = Module(
+        let variable = try Module(
             types: ["Loose": .variable(name: "T", constraint: "Scalar")],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -326,7 +326,7 @@ struct WriterTests {
 
         // And the same claim carried by a procedure's own slot is written —
         // once, as the declaring signature's `bounds`
-        let declaring = Module(
+        let declaring = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: bounded,
@@ -368,7 +368,7 @@ struct WriterTests {
         // language's shapes directly is under no such obligation, so this is
         // reachable and says so rather than writing a document that would load
         // into something else.
-        let module = Module(
+        let module = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
@@ -398,7 +398,7 @@ struct WriterTests {
         // Given — what a caller brings is declared where the run is assembled,
         // not carried in the program. Writing its name alone would make a
         // document that loads into a body nobody wrote.
-        let module = Module(procedures: Module.logic.procedures)
+        let module = try Module(procedures: Module.logic.procedures)
 
         // When / Then
         #expect(throws: WritingError.self) {
@@ -435,8 +435,8 @@ struct WriterTests {
         // Both cast spellings, over both ways a type is written — a name, and
         // the mapping a record is. A type written back as a string it cannot
         // be read from would survive neither direction.
-        Module(
-            name: "casting",
+        try! Module(
+            namespace: "casting",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["payload": Parameter(type: .any)]),
@@ -464,8 +464,8 @@ struct WriterTests {
         ),
         // Messages nested inside other expressions, deeper than a document's
         // fixed shapes would ever place them
-        Module(
-            name: "nested",
+        try! Module(
+            namespace: "nested",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),
@@ -478,12 +478,12 @@ struct WriterTests {
                                         .dispatch(
                                             Dispatch(
                                                 receiver: .reference([.key("word")]),
-                                                selector: "text"
+                                                selector: "std.text.text"
                                             )
                                         ),
                                         .literal(.string("!"))
                                     ]),
-                                    selector: "joined"
+                                    selector: "std.text.joined"
                                 )
                             )
                         ),
@@ -494,7 +494,7 @@ struct WriterTests {
                                 "size": .dispatch(
                                     Dispatch(
                                         receiver: .reference([.key("word")]),
-                                        selector: "count"
+                                        selector: "std.collection.count"
                                     )
                                 )
                             ])
@@ -505,7 +505,7 @@ struct WriterTests {
             ]
         ),
         // Data that would read as a form, quoted, and a variable written twice
-        Module(
+        try! Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -535,7 +535,7 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "needs": ["plus", "std.logic.notEqual"],
+        "imports": ["std.logic.notEqual", "std.math.plus"],
         "name": "canonical",
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],
@@ -571,7 +571,7 @@ struct WriterTests {
                                 [
                                     "set": "seen",
                                     "call": [
-                                        "procedure": "plus",
+                                        "procedure": "std.math.plus",
                                         "of": ["ref": "seen"],
                                         "arguments": ["value": 1]
                                     ]
@@ -675,6 +675,7 @@ struct WriterTests {
         ],
         // Branch, group and the condition spellings
         [
+            "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string", "ready": "bool"],
@@ -688,13 +689,13 @@ struct WriterTests {
                                 // writes it.
                                 "when": [
                                     "call": [
-                                        "procedure": "and",
+                                        "procedure": "std.logic.and",
                                         "of": [
                                             [
                                                 "closure": [
                                                     "result": [
                                                         "call": [
-                                                            "procedure": "equal",
+                                                            "procedure": "std.logic.equal",
                                                             "of": ["ref": "word"],
                                                             "arguments": ["value": "hey"]
                                                         ]
@@ -705,7 +706,7 @@ struct WriterTests {
                                                 "closure": [
                                                     "result": [
                                                         "call": [
-                                                            "procedure": "not",
+                                                            "procedure": "std.logic.not",
                                                             "of": ["ref": "ready"]
                                                         ]
                                                     ]
@@ -726,6 +727,7 @@ struct WriterTests {
         ],
         // Loop, each, attempt
         [
+            "imports": ["test.fail", "std.logic.notEqual", "std.math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -739,7 +741,7 @@ struct WriterTests {
                                     [
                                         "set": "seen",
                                         "call": [
-                                            "procedure": "plus",
+                                            "procedure": "std.math.plus",
                                             "of": ["ref": "seen"],
                                             "arguments": ["value": 1]
                                         ]
@@ -810,6 +812,7 @@ struct WriterTests {
         ],
         // Messages: receivers, carried bodies, closures, invocation, templates
         [
+            "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string", "names": "array<string>"],
@@ -818,7 +821,7 @@ struct WriterTests {
                         [
                             "id": "kept",
                             "call": [
-                                "procedure": "filter",
+                                "procedure": "std.collection.filter",
                                 "of": ["ref": "names"],
                                 "arguments": [
                                     "by": [
@@ -827,7 +830,7 @@ struct WriterTests {
                                             "returns": "bool",
                                             "result": [
                                                 "call": [
-                                                    "procedure": "notEqual",
+                                                    "procedure": "std.logic.notEqual",
                                                     "of": ["ref": "item"],
                                                     "arguments": ["value": ""]
                                                 ]

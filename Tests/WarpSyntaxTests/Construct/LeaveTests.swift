@@ -44,7 +44,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "early"]
-        ])
+        ], importing: ["std.logic.equal"])
 
         // When
         let stopped = try await answer(sut, ["word": .string("stop")])
@@ -71,7 +71,7 @@ struct LeaveTests {
                             [
                                 "set": "seen",
                                 "call": [
-                                    "procedure": "plus",
+                                    "procedure": "std.math.plus",
                                     "of": ["ref": "seen"],
                                     "arguments": ["value": 1]
                                 ]
@@ -88,7 +88,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "walked"]
-        ])
+        ], importing: ["std.logic.equal", "std.logic.notEqual", "std.math.plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(3))
@@ -128,7 +128,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "seen"]
-        ])
+        ], importing: ["std.logic.equal", "std.text.joined", "std.text.text"])
 
         // When
         let answered = try await answer(
@@ -161,7 +161,7 @@ struct LeaveTests {
                                         [
                                             "set": "count",
                                             "call": [
-                                                "procedure": "plus",
+                                                "procedure": "std.math.plus",
                                                 "of": ["ref": "count"],
                                                 "arguments": ["value": 1]
                                             ]
@@ -176,7 +176,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "outer"]
-        ])
+        ], importing: ["std.logic.notEqual", "std.math.plus"])
 
         // When / Then — one round of each, because the break left both
         #expect(try await answer(sut) == .int(1))
@@ -252,7 +252,7 @@ struct LeaveTests {
                                 [
                                     "id": "kept",
                                     "call": [
-                                        "procedure": "filter",
+                                        "procedure": "std.collection.filter",
                                         "of": ["ref": "names"],
                                         "arguments": [
                                             "by": [
@@ -340,7 +340,7 @@ struct LeaveTests {
 
         // When / Then
         #expect {
-            try loader.language.link(
+            try Linker().link(
                 [try loader.loadDocument(sut)] + Module.standard,
                 entry: entryName
             )
@@ -369,7 +369,7 @@ struct LeaveTests {
                                         [
                                             "set": "seen",
                                             "call": [
-                                                "procedure": "plus",
+                                                "procedure": "std.math.plus",
                                                 "of": ["ref": "seen"],
                                                 "arguments": ["value": 1]
                                             ]
@@ -385,7 +385,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "walked"]
-        ])
+        ], importing: ["std.math.plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(1))
@@ -407,7 +407,7 @@ struct LeaveTests {
                             [
                                 "set": "seen",
                                 "call": [
-                                    "procedure": "plus",
+                                    "procedure": "std.math.plus",
                                     "of": ["ref": "seen"],
                                     "arguments": ["value": 1]
                                 ]
@@ -419,7 +419,7 @@ struct LeaveTests {
                 ]
             ],
             "result": ["ref": "walked"]
-        ])
+        ], importing: ["std.logic.notEqual", "std.math.plus"])
 
         // When / Then — what the last round bound, not nothing
         #expect(try await answer(sut) == .int(2))
@@ -485,11 +485,11 @@ struct LeaveTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [String: Value] = [:]) async throws -> Value {
-        let image = try loader.language.link(
+        let image = try Linker().link(
             [module] + Module.standard + [.testing],
             entry: entryName
         )
 
-        return try await loader.language.makeExecutor().run(image, arguments: arguments)
+        return try await Executor().run(image, arguments: arguments)
     }
 }

@@ -13,8 +13,8 @@ public extension Module {
     // no procedures — what it gives a link is vocabulary, not words — and a
     // bundle whose signatures mention these needs this module in the link,
     // which is the one dependency the standard modules have.
-    static let foundation = Module(
-        name: "std",
+    static let foundation = try! Module(
+        namespace: "std",
         description: "The shared ground: what counts as a number, and what orders.",
         types: [
             // One element of bytes — a whole number a range refines, not a

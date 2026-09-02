@@ -8,8 +8,8 @@
 import Foundation
 
 public extension Module {
-    static let logic = Module(
-        name: "std.logic",
+    static let logic = try! Module(
+        namespace: "std.logic",
         description: "Equality, negation and the connectives.",
         procedures: [
             "equal": Procedure(

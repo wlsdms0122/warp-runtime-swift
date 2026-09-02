@@ -20,7 +20,7 @@ struct SwiftAuthoringTests {
     @Test("hello world needs no front end")
     func helloWorld() async throws {
         // Given
-        let sut = Language()
+        let linker = Linker()
         let procedure = Procedure(
             body: [
                 Statement(id: "greet", expression: .literal(.string("hello, world")))
@@ -29,11 +29,11 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try sut.link(
-            [Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
+        let image = try linker.link(
+            [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
-        let outputs = try await sut.makeExecutor().run(image)
+        let outputs = try await Executor().run(image)
 
         // Then
         #expect(outputs["greeting"] == .string("hello, world"))
@@ -42,7 +42,7 @@ struct SwiftAuthoringTests {
     @Test("control flow and the signature are reachable from Swift alone")
     func controlFlow() async throws {
         // Given
-        let sut = Language()
+        let linker = Linker()
         let index = Expression.reference([.key("counted"), .key("index")])
         let procedure = Procedure(
             signature: Signature(parameters: ["rounds": Parameter(type: .int)]),
@@ -89,11 +89,11 @@ struct SwiftAuthoringTests {
         // When
         // Comparing is a word, so this links the bundle that declares one — the
         // control flow beside it needs nothing.
-        let image = try sut.link(
-            [Module(procedures: ["entry": procedure]), .logic],
+        let image = try linker.link(
+            [try Module(procedures: ["entry": procedure]), .logic],
             entry: "entry"
         )
-        let outputs = try await sut.makeExecutor().run(
+        let outputs = try await Executor().run(
             image,
             arguments: ["rounds": .int(3)]
         )
@@ -105,14 +105,14 @@ struct SwiftAuthoringTests {
     @Test("a native effect needs no decoder to run")
     func hostEffectWithoutDecoder() async throws {
         // Given
-        let sut = Language()
+        let linker = Linker()
         let procedure = Procedure(
             body: [
                 Statement(
                     id: "shout",
                     expression: .dispatch(
                         Dispatch(
-                            selector: "shout",
+                            selector: "app.shout",
                             arguments: ["text": .literal(.string("hey"))]
                         )
                     )
@@ -122,11 +122,11 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try sut.link(
-            [Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
+        let image = try linker.link(
+            [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
-        let outputs = try await sut.makeExecutor().run(image)
+        let outputs = try await Executor().run(image)
 
         // Then
         #expect(outputs["shout"] == .string("HEY"))
@@ -136,20 +136,20 @@ struct SwiftAuthoringTests {
     func oneCallingShape() async throws {
         // Given — three selectors that are answered in three different places,
         // written identically. Where each is found is the runtime's business.
-        let sut = Language()
+        let linker = Linker()
         let procedure = Procedure(
             body: [
                 Statement(id: "names", expression: .literal(.array([.string("a")]))),
                 Statement(
                     id: "counted",
                     expression: .dispatch(
-                        Dispatch(receiver: .reference([.key("names")]), selector: "count")
+                        Dispatch(receiver: .reference([.key("names")]), selector: "std.collection.count")
                     )
                 ),
                 Statement(
                     id: "shouted",
                     expression: .dispatch(
-                        Dispatch(selector: "shout", arguments: ["text": .literal(.string("hi"))])
+                        Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                     )
                 ),
                 Statement(
@@ -177,11 +177,11 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try sut.link(
-            [Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
+        let image = try linker.link(
+            [try Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
             entry: "speak"
         )
-        let outputs = try await sut.makeExecutor().run(image)
+        let outputs = try await Executor().run(image)
 
         // Then
         #expect(outputs["counted"] == .int(1))

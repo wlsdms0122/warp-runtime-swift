@@ -35,7 +35,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"]]
-        ])
+        ], importing: ["std.logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
@@ -59,7 +59,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"]]
-        ])
+        ], importing: ["std.logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("b")])
@@ -106,7 +106,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "verdict"]]
-        ])
+        ], importing: ["std.logic.notEqual"])
 
         // When
         let outputs = try await run(sut)
@@ -179,7 +179,7 @@ struct VariableNotationTests {
                 [
                     "id": "both",
                     "call": [
-                        "procedure": "all",
+                        "procedure": "std.concurrent.all",
                         "of": [
                             "left": [
                                 "closure": [
@@ -200,7 +200,7 @@ struct VariableNotationTests {
                 ]
             ],
             "result": ["result": ["ref": "read.left"]]
-        ])
+        ], importing: ["std.concurrent.all"])
 
         // When
         let outputs = try await run(sut)

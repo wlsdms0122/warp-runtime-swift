@@ -15,6 +15,12 @@ import Foundation
 // sides.
 struct TypeFrame: Sendable {
     // MARK: - Property
+    // Every declaration under its qualified spelling, as the author wrote it.
+    // A walk that meets a send finds the declaration here, once, and hands it
+    // on with the call. The same spellings key `signatures`, where the link
+    // has filled in what each declaration answers.
+    let symbols: [String: Symbol]
+
     // Keyed by the resolved selector for a call — and by that alone: the
     // bare spelling a path writes lives in `words`, because the two spellings
     // ask two different questions.

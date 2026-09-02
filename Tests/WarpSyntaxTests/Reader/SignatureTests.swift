@@ -151,7 +151,7 @@ struct SignatureTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link([spec] + Module.standard, entry: entryName)
+            try Linker().link([spec] + Module.standard, entry: entryName)
         }
     }
 

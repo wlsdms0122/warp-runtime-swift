@@ -28,7 +28,7 @@ struct ConcurrentTests {
                 [
                     "id": "par",
                     "call": [
-                        "procedure": "all",
+                        "procedure": "std.concurrent.all",
                         "of": [
                             "left": ["closure": ["result": 1]],
                             "right": ["closure": ["result": 2]]
@@ -37,7 +37,7 @@ struct ConcurrentTests {
                 ]
             ],
             "result": ["result": ["ref": "par"]]
-        ])
+        ], importing: ["std.concurrent.all"])
         let boundary = IsolationBoundaryProbe()
 
         // When
@@ -60,7 +60,7 @@ struct ConcurrentTests {
                             [
                                 "id": "par",
                                 "call": [
-                                    "procedure": "all",
+                                    "procedure": "std.concurrent.all",
                                     "of": [
                                         "fine": ["closure": ["result": "ok"]],
                                         "fragile": [
@@ -81,7 +81,7 @@ struct ConcurrentTests {
                 ]
             ],
             "result": ["result": ["ref": "par"]]
-        ])
+        ], importing: ["std.concurrent.all", "test.fail"])
 
         // When
         let outputs = try await run(spec)
@@ -102,7 +102,7 @@ struct ConcurrentTests {
                             [
                                 "id": "par",
                                 "call": [
-                                    "procedure": "all",
+                                    "procedure": "std.concurrent.all",
                                     "of": [
                                         "fragile": [
                                             "closure": [
@@ -124,7 +124,7 @@ struct ConcurrentTests {
                     ]
                 ]
             ]
-        ])
+        ], importing: ["std.concurrent.all", "test.fail"])
 
         // When / Then
         await #expect(throws: TestFatalError.self) {
@@ -165,7 +165,7 @@ struct ConcurrentTests {
                 ]
             ],
             "result": ["result": ["ref": "greeted"]]
-        ])
+        ], importing: ["std.text.joined", "std.concurrent.map", "std.text.text"])
 
         // When
         let outputs = try await run(
@@ -199,7 +199,7 @@ struct ConcurrentTests {
                 ]
             ],
             "result": ["result": ["ref": "either"]]
-        ])
+        ], importing: ["test.fail", "std.concurrent.first"])
 
         // When
         let outputs = try await run(sut)

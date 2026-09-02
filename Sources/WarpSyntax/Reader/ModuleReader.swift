@@ -16,9 +16,9 @@ import Warp
 // Procedures are named here and which one runs is said at link time, so a
 // document that declares three of them is ordinary rather than a special case.
 public struct ModuleReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case warp
-        case needs
+        case imports
         case name
         case description
         case types
@@ -28,7 +28,11 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Property
-    public let module: Module
+    // What the document declares, unjudged. Reading and checking are two
+    // questions and only one of them is about the program: a text nobody can
+    // run is still a text, and still that one, so the reading answers for it
+    // and `Module` is where it is held to anything.
+    public let draft: Draft
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -57,9 +61,10 @@ public struct ModuleReader: Decodable {
             )
         }
 
-        let module = Module(
-            name: try container.decodeIfPresent(String.self, forKey: .name),
+        self.draft = Draft(
+            namespace: try container.decodeIfPresent(String.self, forKey: .name),
             description: try container.decodeIfPresent(String.self, forKey: .description),
+            imports: try Self.imports(in: container),
             types: try Self.record(TypeReader.self, in: container, forKey: .types)
                 .mapValues(\.type),
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
@@ -68,26 +73,6 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.expression),
             procedures: procedures.mapValues(\.procedure)
         )
-
-        // A document that lists what it needs is held to the list. A caller
-        // reads it to decide whether to run the program at all, so a list that
-        // was allowed to drift would be worse than none — it would be trusted
-        // and wrong.
-        if try Envelope.declaresNeeds(in: container, forKey: .needs) {
-            let listed = try container.superDecoder(forKey: .needs)
-            let claimed = try listed.read([String].self)
-            let sent = Envelope.needs(of: module)
-
-            guard Set(claimed) == sent else {
-                throw ReadingError(
-                    "this document says it needs"
-                        + " \(claimed.sorted()) and sends \(sent.sorted())",
-                    at: listed.steps
-                )
-            }
-        }
-
-        self.module = module
     }
 
     // MARK: - Public
@@ -118,6 +103,21 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Private
+    // What the document says it takes from its link, read and not judged. What
+    // it is held against is what the module sends, which is a fact about the
+    // module rather than about the text, so the refusal is the module's.
+    //
+    // Nothing written is nothing claimed, and a slot written as null says the
+    // same. Whether a document may leave it out at all is the door's, and the
+    // door sees the value rather than a container.
+    private static func imports(
+        in container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> Set<String>? {
+        guard try Envelope.declaresImports(in: container, forKey: .imports) else { return nil }
+
+        return Set(try container.superDecoder(forKey: .imports).read([String].self))
+    }
+
     // One of the slots a module declares a record of things under, read
     // standing on the slot so that what is refused inside it is addressed
     // there. Nothing written is nothing declared, which is what an absent slot

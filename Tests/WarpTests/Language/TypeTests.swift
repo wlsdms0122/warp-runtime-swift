@@ -113,9 +113,9 @@ struct TypeTests {
     }
 
     @Test("the linker refuses a signature that names a shape nobody declared")
-    func unknownTypeIsALinkError() {
+    func unknownTypeIsALinkError() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -128,7 +128,7 @@ struct TypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link([sut], entry: "entry")
+            try Linker().link([sut], entry: "entry")
         }
     }
 
@@ -171,8 +171,8 @@ struct TypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Language().link(
-                [Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
+            try Linker().link(
+                [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         }
@@ -207,8 +207,8 @@ struct TypeTests {
 
         // When / Then
         #expect {
-            try Language().link(
-                [Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
+            try Linker().link(
+                [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
         } throws: { error in
@@ -222,8 +222,8 @@ struct TypeTests {
             result: .dispatch(Dispatch(selector: "counts"))
         )
 
-        _ = try Language().link(
-            [Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
+        _ = try Linker().link(
+            [try Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
             entry: "entry"
         )
     }

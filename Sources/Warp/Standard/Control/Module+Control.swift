@@ -11,8 +11,8 @@ public extension Module {
     // Words about whether a body goes on, rather than about what it computes.
     // The other bundles are named for what they read — truths, numbers, text,
     // containers — and this one reads nothing.
-    static let control = Module(
-        name: "std.control",
+    static let control = try! Module(
+        namespace: "std.control",
         description: "Leaving instead of answering.",
         procedures: [
             "abort": Procedure(

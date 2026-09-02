@@ -20,7 +20,7 @@ import Testing
 // And both have to be answerable before it runs. Half-running a program is the
 // one outcome worse than refusing it, since what already happened cannot be
 // taken back.
-@Suite("A document says what it needs before it is read")
+@Suite("A document says what it imports before it is read")
 struct EnvelopeTests {
     // MARK: - Property
     private let loader = Loader.testing
@@ -46,7 +46,7 @@ struct EnvelopeTests {
         #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
-                "needs": [],
+                "imports": [],
                 "procedures": ["entry": ["result": "hello"]]
             ])
         }
@@ -85,19 +85,20 @@ struct EnvelopeTests {
         }
     }
 
-    @Test("what a document says it needs is what it sends")
+    @Test("what a document says it imports is what it sends")
     func theManifestIsTheTruth() throws {
         // Given — a caller reads this to decide whether to run the program at
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
         let module = try loader.loadDocument([
+            "imports": ["std.math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
                     "body": [
                         [
                             "id": "many",
-                            "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+                            "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
                         ]
                     ],
                     "result": ["ref": "many"]
@@ -109,10 +110,10 @@ struct EnvelopeTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[Envelope.needsKey] == .array([.string("plus")]))
+        #expect(written[Envelope.importsKey] == .array([.string("std.math.plus")]))
     }
 
-    @Test("a document that says nothing about what it needs is refused")
+    @Test("a document that says nothing about what it imports is refused")
     func aSilentManifestIsRefused() {
         // Given — silence is not a claim a caller can act on. The list is read
         // before the program and a grant is decided from it, so a document that
@@ -125,7 +126,7 @@ struct EnvelopeTests {
                 "procedures": ["entry": ["result": "hello"]]
             ])
         } throws: { error in
-            "\(error)".contains("says what it needs")
+            "\(error)".contains("says what it imports")
         }
 
         // And a program that sends nothing still says so, rather than saying
@@ -133,7 +134,7 @@ struct EnvelopeTests {
         #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
-                "needs": [],
+                "imports": [],
                 "procedures": ["entry": ["result": "hello"]]
             ])
         }
@@ -151,22 +152,23 @@ struct EnvelopeTests {
                 "procedures": ["entry": ["nonsense": "hello"]]
             ])
         } throws: { error in
-            "\(error)".contains("says what it needs") == false
+            "\(error)".contains("says what it imports") == false
         }
     }
 
-    @Test("a document that undersells what it needs is refused")
+    @Test("a document that undersells what it imports is refused")
     func anUntruthfulManifestIsRefused() {
-        // Given — the whole value of the list is that it can be believed
+        // Given — the whole value of the list is that it can be believed, and
+        // what is said back is the word that moved rather than both lists
         #expect {
             try loader.loadDocument([
-                "needs": [],
+                "imports": [],
                 "procedures": [
                     "entry": [
                         "body": [
                             [
                                 "id": "sum",
-                                "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+                                "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
                             ]
                         ],
                         "result": ["ref": "sum"]
@@ -174,24 +176,24 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("says it needs")
+            "\(error)".contains("sends [\"std.math.plus\"], which it does not import")
         }
     }
 
-    @Test("a document that oversells what it needs is refused the same way")
+    @Test("a document that oversells what it imports is refused the same way")
     func anOverstatedManifestIsRefused() {
         // Given — the list is the set of what the program sends, not a bound
         // around it: a caller grants from this list, and a word listed but
         // never sent is a grant the program had no use for
         #expect {
             try loader.loadDocument([
-                "needs": ["plus", "minus"],
+                "imports": ["std.math.plus", "std.math.minus"],
                 "procedures": [
                     "entry": [
                         "body": [
                             [
                                 "id": "sum",
-                                "call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]
+                                "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
                             ]
                         ],
                         "result": ["ref": "sum"]
@@ -199,23 +201,39 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("says it needs")
+            "\(error)".contains("imports [\"std.math.minus\"], which it does not send")
         }
     }
 
-    @Test("a word sent from a constant is needed like any other")
+    @Test("a word sent from a constant is imported like any other")
     func constantsSendWordsToo() throws {
         // Given — a constant is an expression, and understating what a program
-        // needs is worse than saying nothing: a caller decides from this list
+        // imports is worse than saying nothing: a caller decides from this list
         // what to allow, and would then be refused at the link by a word the
         // list never mentioned.
+        let constant: Value = [
+            "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+        ]
+
         let module = try loader.loadDocument([
-            "const": ["limit": ["call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]]],
+            "imports": ["std.math.plus"],
+            "const": ["limit": constant],
             "procedures": ["entry": ["result": ["ref": "limit"]]]
         ])
 
         // Then
-        #expect(Envelope.needs(of: module) == ["plus"])
+        #expect(module.imports == ["std.math.plus"])
+
+        // And a list that leaves the constant's word out is refused
+        #expect {
+            try loader.loadDocument([
+                "imports": [],
+                "const": ["limit": constant],
+                "procedures": ["entry": ["result": ["ref": "limit"]]]
+            ])
+        } throws: { error in
+            "\(error)".contains("sends [\"std.math.plus\"]")
+        }
     }
 
     @Test("a document claiming a version that never existed is refused")
@@ -251,7 +269,7 @@ struct EnvelopeTests {
         // anyone, which is the whole reason the number exists. Nothing has
         // shipped yet, so the two ends of the promise are one number for now.
         let sut = try loader.load([
-            "needs": [],
+            "imports": [],
             "warp": .int(Envelope.earliest),
             "procedures": ["entry": ["result": "hello"]]
         ])
@@ -260,8 +278,8 @@ struct EnvelopeTests {
         #expect(sut.procedures["entry"] != nil)
     }
 
-    @Test("a word a document declares itself is not something it needs")
-    func ownWordsAreNotNeeds() throws {
+    @Test("a word a document declares itself is not something it imports")
+    func ownWordsAreNotImports() throws {
         // Given — what a document brings with it is not what it asks for
         let module = try loader.loadDocument([
             "procedures": [
@@ -274,7 +292,7 @@ struct EnvelopeTests {
         ])
 
         // Then
-        #expect(Envelope.needs(of: module).isEmpty)
+        #expect(module.imports.isEmpty)
     }
 
     @Test("what a program can do to anything is what it sends")
@@ -295,11 +313,11 @@ struct EnvelopeTests {
         ])
 
         // Then
-        #expect(Envelope.needs(of: module).isEmpty)
+        #expect(module.imports.isEmpty)
 
         // And the link still holds it to that — the word has to be there
         #expect(throws: LinkError.self) {
-            try loader.language.link([module], entry: entryName)
+            try Linker().link([module], entry: entryName)
         }
     }
 
@@ -308,6 +326,7 @@ struct EnvelopeTests {
         // Given — a list that missed one would be a list nobody could rely on,
         // so every place a message can be written is walked
         let module = try loader.loadDocument([
+            "imports": ["inClosure", "inEach", "inBody", "inRescue", "inNestedData"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -348,7 +367,7 @@ struct EnvelopeTests {
 
         // Then
         #expect(
-            Envelope.needs(of: module)
+            module.imports
                 == ["inClosure", "inEach", "inBody", "inRescue", "inNestedData"]
         )
     }

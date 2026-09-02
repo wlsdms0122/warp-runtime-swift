@@ -78,17 +78,18 @@ struct CallTests {
         // When / Then — nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
         #expect(throws: LinkError.self) {
-            try loader.language.link([sut], entry: "caller")
+            try Linker().link([sut], entry: "caller")
         }
     }
 
-    @Test("a call names a procedure and not the module that declares it")
+    @Test("a call names a word and not the document that declares it")
     func callNamesASymbol() async throws {
         // Given — the callee lives in a module the caller never mentions
         let caller = try loader.loadDocument([
+            "imports": ["some-other-file.greet"],
             "procedures": [
                 "caller": [
-                    "body": [["id": "call", "call": ["procedure": "greet"]]],
+                    "body": [["id": "call", "call": ["procedure": "some-other-file.greet"]]],
                     "result": ["result": ["ref": "call.said"]]
                 ]
             ]
@@ -116,6 +117,7 @@ struct CallTests {
         // Given — `call` reaches a receiver the same way a spelling does, so a
         // document is not forced through `x.shout` to send to one
         let sut = try loader.loadDocument([
+            "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
                     "parameters": ["word": "string"],
@@ -181,8 +183,8 @@ struct CallTests {
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["body": [["id": "again", "call": ["procedure": "loopy"]]]]]
         ])
-        let image = try loader.language.link([module], entry: "loopy")
-        let sut = loader.language.makeExecutor()
+        let image = try Linker().link([module], entry: "loopy")
+        let sut = Executor()
 
         // When
         let task = Task {

@@ -12,8 +12,8 @@ import Foundation
 //
 // Three of them ask for exactly this and differ only in what they keep: the
 // declaration scan wants the closure literals a body buries, the same scan
-// wants the shapes its casts name, and an envelope wants the selectors a
-// module sends. Written out per collector, one shape of the language is
+// wants the shapes its casts name, and the check wants the selectors a module
+// sends. Written out per collector, one shape of the language is
 // written three times — and a case added to `Expression` reaches whichever
 // copies somebody remembered.
 //
@@ -61,11 +61,11 @@ public extension Expression {
         // A closure names its own place: the literal and the body it carries
         // are found under one name, so a report says which closure without
         // having to say it twice.
-        let here: Trail = if case .closure = self { stepping(trail, .key("closure")) } else { trail }
+        let here: Trail = if case .closure = self { stepping(trail, .slot(.closure)) } else { trail }
 
-        func inner(_ expression: Expression, under key: String? = nil) -> [(Trail, Expression)] {
+        func inner(_ expression: Expression, under slot: Place.Slot? = nil) -> [(Trail, Expression)] {
             expression.buried(
-                at: key.map { key in stepping(here, .key(key)) } ?? here,
+                at: slot.map { slot in stepping(here, .slot(slot)) } ?? here,
                 stepping: stepping
             )
         }
@@ -77,7 +77,7 @@ public extension Expression {
         // of the text. Its own place because two of them reported from the
         // same one would say a thing is wrong and not say which.
         func arguments(_ children: [String: Expression]) -> [(Trail, Expression)] {
-            named(children, under: stepping(here, .key("arguments")))
+            named(children, under: stepping(here, .slot(.arguments)))
         }
 
         func named(_ children: [String: Expression], under place: Trail) -> [(Trail, Expression)] {
@@ -95,9 +95,9 @@ public extension Expression {
             procedure.block?.buried(at: here, stepping: stepping) ?? []
 
         case let .cast(value, _, _):
-            inner(value, under: "of")
+            inner(value, under: .receiver)
 
-        // A leave writes what it carries directly under its own construct key,
+        // A leave writes what it carries directly under its own construct,
         // which the statement holding it already stepped into.
         case let .leave(leave):
             leave.value.map { value in inner(value) } ?? []
@@ -111,30 +111,31 @@ public extension Expression {
             named(record, under: here)
 
         case let .invoke(callee, written):
-            inner(callee, under: "procedure") + arguments(written)
+            inner(callee, under: .callee) + arguments(written)
 
         case let .dispatch(dispatch):
-            (dispatch.receiver.map { receiver in inner(receiver, under: "of") } ?? [])
+            (dispatch.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])
                 + arguments(dispatch.arguments)
 
         case let .block(block):
             block.buried(at: here, stepping: stepping)
 
         case let .conditional(condition, then, otherwise):
-            inner(condition, under: "when")
-                + then.buried(at: stepping(here, .key("then")), stepping: stepping)
-                + (otherwise?.buried(at: stepping(here, .key("else")), stepping: stepping) ?? [])
+            inner(condition, under: .condition(of: .branch))
+                + then.buried(at: stepping(here, .slot(.then)), stepping: stepping)
+                + (otherwise?.buried(at: stepping(here, .slot(.otherwise)), stepping: stepping) ?? [])
 
         case let .loop(condition, body, _):
-            inner(condition, under: "where") + body.buried(at: here, stepping: stepping)
+            inner(condition, under: .condition(of: .loop))
+                + body.buried(at: here, stepping: stepping)
 
         case let .iteration(material, body, _):
-            inner(material, under: "in")
-                + body.buried(at: stepping(here, .key("body")), stepping: stepping)
+            inner(material, under: .material)
+                + body.buried(at: stepping(here, .slot(.body)), stepping: stepping)
 
         case let .attempt(block, rescue, _):
             block.buried(at: here, stepping: stepping)
-                + rescue.buried(at: stepping(here, .key("rescue")), stepping: stepping)
+                + rescue.buried(at: stepping(here, .slot(.rescue)), stepping: stepping)
         }
 
         return [(here, self)] + held
@@ -146,9 +147,9 @@ public extension Block {
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Expression)] {
-        body.buried(at: stepping(trail, .key("body")), stepping: stepping)
+        body.buried(at: stepping(trail, .slot(.body)), stepping: stepping)
             + (result.map { result in
-                result.buried(at: stepping(trail, .key("result")), stepping: stepping)
+                result.buried(at: stepping(trail, .slot(.result)), stepping: stepping)
             } ?? [])
     }
 }
@@ -156,7 +157,7 @@ public extension Block {
 public extension [Statement] {
     // A statement is found under its own name — or, one run for its effect
     // alone, under its position, which is the only thing there is to call it —
-    // and then under the construct key it writes, the way a document nests it.
+    // and then under the construct it writes, the way a document nests it.
     func buried<Trail>(
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
@@ -165,7 +166,7 @@ public extension [Statement] {
             statement.expression.buried(
                 at: stepping(
                     stepping(trail, .statement(name: statement.id, at: position)),
-                    .landmark(statement.expression.constructKey)
+                    .construct(statement.expression.construct)
                 ),
                 stepping: stepping
             )

@@ -17,6 +17,153 @@ struct ValidationTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
+    @Test("a name the module bound is not introduced again at any depth")
+    func aBoundNameIsNotIntroducedAgainAtAnyDepth() {
+        // Given — linking folds a constant wherever its name is read, so a name
+        // introduced under that spelling would never be the one that answers.
+        // The rule is the whole body's: a sub scope is where a reader is least
+        // able to see that the name was already taken.
+        func module(introducing statement: Statement) throws -> Module {
+            try Module(
+                namespace: "app",
+                constants: ["limit": .literal(.int(3))],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "got",
+                                expression: .block(Block(
+                                    body: [statement],
+                                    result: reference("limit")
+                                ))
+                            )
+                        ],
+                        result: reference("got")
+                    )
+                ]
+            )
+        }
+
+        // When / Then
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(
+                module(introducing: Statement(id: "limit", expression: .literal(.int(9))))
+            )
+        }
+    }
+
+    @Test("but writing one is refused for what it is, not for introducing a name")
+    func writingABoundNameIsRefusedAsAWrite() throws {
+        // Given — an assignment names a name rather than introducing one, and
+        // the two mistakes have different fixes: one is to pick another
+        // spelling, the other is to declare a variable.
+        // When / Then
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                namespace: "app",
+                constants: ["limit": .literal(.int(3))],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(id: "limit", binding: .assignment, expression: .literal(.int(9)))
+                        ]
+                    )
+                ]
+            )
+        }
+
+        #expect(error?.message.contains("declare it as a variable to write it") == true)
+    }
+
+    @Test("nor by the name a construct hands its body")
+    func aBoundNameIsNotWhatAConstructHandsItsBody() {
+        // Given — the same rule where the name is the language's to introduce
+        // rather than a statement's: a walk's element, a loop's round, and the
+        // failure an attempt rescues.
+        func module(running expression: Warp.Expression) throws -> Module {
+            try Module(
+                namespace: "app",
+                constants: ["limit": .literal(.int(3))],
+                procedures: [
+                    entryName: Procedure(
+                        body: [Statement(id: "got", expression: expression)],
+                        result: reference("limit")
+                    )
+                ]
+            )
+        }
+
+        let body = Block(body: [Statement(expression: .literal(.null))])
+
+        // When / Then
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(running: .iteration(over: .array([]), body: body.body, element: "limit")))
+        }
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body, round: "limit")))
+        }
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(running: .attempt(body, rescue: body, failure: "limit")))
+        }
+    }
+
+    @Test("nor inside a closure a constant holds")
+    func aBoundNameIsNotIntroducedInsideAConstantsClosure() {
+        // Given — a constant's own expression is a body like any other. Read
+        // without this rule, a closure among the constants may introduce a name
+        // one of its siblings has, and what that name means then depends on
+        // which of the two the reader is standing in.
+        func module(_ procedure: Procedure) throws -> Module {
+            try Module(
+                namespace: "app",
+                constants: [
+                    "apply": .closure(procedure),
+                    "limit": .literal(.int(3))
+                ],
+                procedures: [entryName: Procedure(body: [])]
+            )
+        }
+
+        // When / Then — the two ways a closure introduces a name of its own
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(Procedure(
+                signature: Signature(parameters: ["limit": Parameter(type: .int)], returns: .int),
+                body: [],
+                result: reference("limit")
+            )))
+        }
+        #expect(throws: ValidationError.self) {
+            try Validator().validate(module(Procedure(
+                signature: Signature(returns: .int),
+                body: [Statement(id: "limit", expression: .literal(.int(9)))],
+                result: reference("limit")
+            )))
+        }
+    }
+
+    @Test("a constant sees the constants declared beside it and nothing else")
+    func aConstantReadsOnlyItsSiblings() throws {
+        // Given — a chain and not a circle. `aaa` reads `bbb`, declared right
+        // beside it, so nothing about `aaa` is wrong: `bbb` is the one reading
+        // a name nothing here settles, and the refusal stands on it.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                namespace: "pricing",
+                constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
+                procedures: [entryName: Procedure(body: [])],
+                identity: Identity([0x01])
+            )
+        }
+
+        // Then
+        #expect(error?.place?.rendered == "pricing@01/constants.bbb")
+        #expect(error?.message.contains("aaa") == false)
+
+        // And the name it reads is said, since that is the half of the mistake
+        // the place cannot point at
+        #expect(error?.message.contains("nowhere") == true)
+    }
+
     @Test("a construct in a call's operand is refused at the check")
     func aConstructInACallOperandIsRefused() {
         // Given — a document cannot even write one there, and the run would
@@ -27,7 +174,7 @@ struct ValidationTests {
             Statement(
                 id: "said",
                 expression: .dispatch(
-                    Dispatch(selector: "shout", arguments: [
+                    Dispatch(selector: "app.shout", arguments: [
                         "text": .conditional(.literal(.bool(true)), then: arm, else: nil)
                     ])
                 )
@@ -213,6 +360,183 @@ struct ValidationTests {
         }
 
         try Validator().validate(taken)
+    }
+
+    @Test("a module is held to the words it says it imports", arguments: [
+        [] as Set<String>,
+        ["std.collection.count", "std.math.plus"]
+    ])
+    func aModuleIsHeldToItsImports(_ claimed: Set<String>) {
+        // Given — a caller decides what to grant from this list and then links
+        // what it granted, so a list that says less than the program sends
+        // links a word nobody allowed, and one that says more takes a grant the
+        // program never uses
+        #expect(throws: ValidationError.self) {
+            try Module(
+                imports: claimed,
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "counted",
+                                expression: .dispatch(Dispatch(
+                                    receiver: .literal(.array([.int(1)])),
+                                    selector: "std.collection.count"
+                                ))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test("a list wrong in both directions says which words moved, not which lists")
+    func bothDifferencesAreSaidApart() {
+        // Given — a module sending thirty words would leave an author diffing
+        // two lists by eye, and the two differences are two mistakes with two
+        // fixes: one word is a grant nobody disclosed, the other is a grant
+        // nothing uses.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                imports: ["std.math.minus"],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "counted",
+                                expression: .dispatch(Dispatch(
+                                    receiver: .literal(.array([.int(1)])),
+                                    selector: "std.collection.count"
+                                ))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
+
+        // Then
+        #expect(
+            error?.message
+                == "sends [\"std.collection.count\"], which it does not import,"
+                    + " and imports [\"std.math.minus\"], which it does not send"
+        )
+    }
+
+    @Test("a module that claims nothing states what it sends")
+    func anUnclaimedModuleStatesWhatItSends() throws {
+        // Given — a caller assembling shapes in Swift holds the module and has
+        // nobody to disclose it to, so there is no claim to be held to. What
+        // travels is written from this, and what is written has to be true.
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "counted",
+                            expression: .dispatch(Dispatch(
+                                receiver: .literal(.array([.int(1)])),
+                                selector: "std.collection.count"
+                            ))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // Then
+        #expect(sut.imports == ["std.collection.count"])
+    }
+
+    @Test("a word the module declares itself is not one it imports")
+    func ownWordsAreNotImports() throws {
+        // Given — what a module brings with it is not what it asks for
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            id: "said",
+                            expression: .dispatch(Dispatch(selector: "greet"))
+                        )
+                    ]
+                ),
+                "greet": Procedure(body: [], result: .literal(.string("hello")))
+            ]
+        )
+
+        // Then
+        #expect(sut.imports.isEmpty)
+    }
+
+    @Test("a module calling its own by the name the link knows it by imports nothing")
+    func aQualifiedSelfCallIsNotAnImport() throws {
+        // Given — a module may call a sibling by the bare name or by the one
+        // the link knows it as, and both reach the same declaration. A list
+        // that only knew the bare spelling would make this document declare a
+        // dependency on itself, and the honest empty list would be refused.
+        let sut = try Module(
+            namespace: "wallet",
+            imports: [],
+            procedures: [
+                "pay": Procedure(
+                    body: [
+                        Statement(
+                            id: "charged",
+                            expression: .dispatch(Dispatch(selector: "wallet.fee"))
+                        )
+                    ]
+                ),
+                "fee": Procedure(body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        // Then
+        #expect(sut.imports.isEmpty)
+
+        // And the link agrees the two spellings are one declaration
+        #expect(throws: Never.self) {
+            try Linker().link([sut], entry: "wallet.pay")
+        }
+    }
+
+    @Test("a procedure is not data, so it cannot stand as a literal")
+    func aProcedureLiteralIsRefused() {
+        // Given — the one value shape a program cannot carry. A closure is made
+        // by running the expression that writes one, so a literal holding one
+        // is a program no text spells and nothing reads back. Only a caller
+        // assembling shapes in Swift can build it, and this is where that stops.
+        let carried = Value.procedure(
+            Closure(procedure: Procedure(body: []), captured: Scope())
+        )
+
+        // When / Then
+        #expect(throws: ValidationError.self) {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        body: [Statement(id: "held", expression: .literal(carried))]
+                    )
+                ]
+            )
+        }
+
+        // And a body a program carries is written the way one is written
+        #expect(throws: Never.self) {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                id: "held",
+                                expression: .closure(Procedure(body: []))
+                            )
+                        ]
+                    )
+                ]
+            )
+        }
     }
 
     @Test("a result expression is checked against what the body left visible")

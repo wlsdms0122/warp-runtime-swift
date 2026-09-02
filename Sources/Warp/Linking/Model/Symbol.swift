@@ -7,9 +7,9 @@
 
 import Foundation
 
-// One declaration, together with where it was declared. The linker needs the
-// second half: a name written inside a module means that module's declaration
-// first, so resolving a call takes the call's origin and not only its spelling.
+// One declaration, together with where it was declared. The second half says
+// which document a refusal points at, and which module's constants a body
+// reads beside its parameters.
 struct Symbol: Sendable {
     // MARK: - Property
     // The key this declaration is written under in its module, and the name
@@ -29,7 +29,7 @@ struct Symbol: Sendable {
 
     let procedure: Procedure
 
-    // What this declaration is called across the whole link. `module.name`
+    // What this declaration is called across the whole link. `module.namespace`
     // where the module has a name, and the bare name where it has none — a
     // module the caller never named has nothing to qualify with, so it declares
     // into the shared space the way a translation unit without a namespace
@@ -43,6 +43,11 @@ struct Symbol: Sendable {
 
     // Where this declaration's words are, in the document that wrote it.
     var place: Place { .procedure(declared, in: document) }
+
+    // What a sentence calls this declaration when it names one among several.
+    // The position is the document's discriminator where it has no identity,
+    // and this is the one place that holds both.
+    var spelled: String { document.spelled(at: origin) }
 
     // MARK: - Initializer
     // MARK: - Public

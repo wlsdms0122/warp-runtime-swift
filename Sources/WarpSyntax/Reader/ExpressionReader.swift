@@ -48,8 +48,18 @@ public struct ExpressionReader: Decodable {
     // document means different things in different notations, and the way an author
     // finds out is a payload silently becoming a reference.
     static let formKeys: Set<String> = [
-        "ref", "value", "format", "with", "closure", "call", "as", "as?",
+        "ref", "value", "format", "with", closureKey, "call", "as", "as?",
     ]
+
+    // The key a closure literal is written under. Named because a place read
+    // in a document's words asks for it, and a word spelled in two files is a
+    // word the two can come to disagree about.
+    static let closureKey = "closure"
+
+    // What a cast reads and what a message is sent to are written under one
+    // key, and the two readers meet only in the text — so the word is here
+    // rather than in each of them.
+    static let subjectKey = "of"
 
     public let expression: Expression
 
@@ -173,7 +183,7 @@ public struct ExpressionReader: Decodable {
             let optional = object.keys.contains("as?")
             let key = optional ? "as?" : "as"
 
-            guard object.count == 2, let written = object[key], let read = object["of"] else {
+            guard object.count == 2, let written = object[key], let read = object[Self.subjectKey] else {
                 throw ExpressionFormError(
                     "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }"
                         + " — wrap it in { value: ... } if the keys are plain data"
@@ -212,14 +222,14 @@ public struct ExpressionReader: Decodable {
             }
 
             return .cast(
-                try Self.read(read, at: steps + [.key("of")], in: decoder),
+                try Self.read(read, at: steps + [.key(Self.subjectKey)], in: decoder),
                 as: type,
                 optional: optional
             )
         }
 
-        if object.keys.contains("closure") {
-            guard object.count == 1, let written = object["closure"] else {
+        if object.keys.contains(Self.closureKey) {
+            guard object.count == 1, let written = object[Self.closureKey] else {
                 throw ExpressionFormError(
                     "a record with `closure` must be exactly { closure: <procedure> }"
                         + " (found keys: \(object.keys.sorted()))"
@@ -237,8 +247,8 @@ public struct ExpressionReader: Decodable {
                 return .closure(
                     try ProcedureReader(from: ValueDecoder(
                         value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "closure")],
-                        steps: steps + [.key("closure")],
+                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey)],
+                        steps: steps + [.key(Self.closureKey)],
                         userInfo: decoder.userInfo
                     ))
                     .procedure

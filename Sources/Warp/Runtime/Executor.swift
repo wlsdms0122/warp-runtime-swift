@@ -16,8 +16,11 @@ public struct Executor: Sendable {
     // until then, which is why nothing but `run(_ image:)` can start a run.
     let procedures: [String: Procedure]
 
-    // What a path segment may reach, worked out by the link.
-    let derivations: [String: Procedure]
+    // What a selector may send without running, by its qualified spelling,
+    // worked out by the link.
+    let selectors: [String: Procedure]
+
+    // What a path segment may reach, by the bare name a path writes.
     let words: [String: Procedure]
 
     // The shapes the link declared. A named type is answered here rather than
@@ -25,21 +28,30 @@ public struct Executor: Sendable {
     let types: TypeTable
 
     // MARK: - Initializer
-    // Deliberately not public. An executor may only be made by the `Language`
-    // that validated the procedure, so that the vocabulary which judged a procedure
-    // is the vocabulary that runs it — a contract rather than a habit.
+    // What a caller has to say to make one: who watches, and what the run may
+    // reach outside itself. The tables come from an image, so this is an
+    // executor with nothing to run yet.
+    public init(
+        observer: (any ExecutionObserver)? = nil,
+        environment: (any Environment)? = nil
+    ) {
+        self.init(observer: observer, environment: environment, procedures: [:])
+    }
+
+    // Seeded, and not public: the tables are the link's answer, so a caller
+    // that could write them would be running a program nothing linked.
     init(
         observer: (any ExecutionObserver)?,
         environment: (any Environment)?,
         procedures: [String: Procedure] = [:],
-        derivations: [String: Procedure] = [:],
+        selectors: [String: Procedure] = [:],
         words: [String: Procedure] = [:],
         types: TypeTable = TypeTable()
     ) {
         self.observer = observer
         self.environment = environment
         self.procedures = procedures
-        self.derivations = derivations
+        self.selectors = selectors
         self.words = words
         self.types = types
     }
@@ -55,7 +67,7 @@ public struct Executor: Sendable {
             observer: observer,
             environment: environment,
             procedures: image.procedures,
-            derivations: image.derivations,
+            selectors: image.selectors,
             words: image.words,
             types: image.types
         )
@@ -292,7 +304,7 @@ public struct Executor: Sendable {
         case .query:
             return try Resolver(
                 scope: scope,
-                derivations: derivations.merging([dispatch.selector: procedure]) { _, new in new },
+                selectors: selectors.merging([dispatch.selector: procedure]) { _, new in new },
                 words: words,
                 types: types
             )
@@ -454,7 +466,7 @@ public struct Executor: Sendable {
 
     // MARK: - Private
     private func resolver(in scope: Scope) -> Resolver {
-        Resolver(scope: scope, derivations: derivations, words: words, types: types)
+        Resolver(scope: scope, selectors: selectors, words: words, types: types)
     }
 
     private func run(

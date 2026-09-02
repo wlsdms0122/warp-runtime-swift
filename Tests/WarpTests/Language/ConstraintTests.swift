@@ -16,7 +16,7 @@ import Testing
 @Suite("What a bounded type parameter admits")
 struct ConstraintTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -24,7 +24,7 @@ struct ConstraintTests {
     func aReadingOutsideTheConstraintRefusesAtTheLink() throws {
         // Given — both sides of `lessThan` are booleans, and `Comparable` admits
         // none of them. The reading is a literal, so the link can see it.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .bool),
@@ -40,7 +40,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -50,7 +50,7 @@ struct ConstraintTests {
     func arithmeticOnTwoStringsRefusesAtTheLink() throws {
         // Given — the two sides agree, so the one type parameter reads one
         // thing. Agreement is not admission: `Numeric` does not admit text.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -66,7 +66,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -76,7 +76,7 @@ struct ConstraintTests {
     func aValueArrivingThroughAnyIsJudgedAtTheBoundary() async throws {
         // Given — the parameter is declared `any`, so the link reads nothing
         // and the membership is judged where the value arrives
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -105,7 +105,7 @@ struct ConstraintTests {
     func aModuleDeclaresAConstraintOfItsOwn() async throws {
         // Given — the membership lives in the declaration, so a signature
         // writes the name and the same judgment std's words get is this one's
-        let sut = Module(
+        let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
             procedures: [
                 "keep": Procedure(
@@ -137,7 +137,7 @@ struct ConstraintTests {
     @Test("a reading a declared constraint does not admit refuses at the link")
     func aDeclaredConstraintRefusesAtItsOwnBound() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
             procedures: [
                 "keep": Procedure(
@@ -161,7 +161,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'Scalar' does not admit")
         }
@@ -171,7 +171,7 @@ struct ConstraintTests {
     func anUndeclaredConstraintRefusesAtTheLink() throws {
         // Given — unreached code still has to compile, and a bound naming
         // nothing is a defect whether or not a call ever fills it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -191,7 +191,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("names constraint 'Sortable'")
         }
@@ -201,7 +201,7 @@ struct ConstraintTests {
     func twoBoundsOnOneParameterRefuseAtTheLink() throws {
         // Given — the bound is written inline, so two slots writing different
         // bounds for one name are two claims about one thing
-        let sut = Module(
+        let sut = try Module(
             constraints: ["A": [.int], "B": [.string]],
             procedures: [
                 "keep": Procedure(
@@ -224,7 +224,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("one parameter takes one constraint")
         }
@@ -234,7 +234,7 @@ struct ConstraintTests {
     func aBareMentionRidesTheBoundedOne() throws {
         // Given — a bounded `some T` in one slot and a bare one in another are one
         // parameter bounded once, so the bound judges both readings
-        let sut = Module(
+        let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
             procedures: [
                 "keep": Procedure(
@@ -263,7 +263,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'Scalar' does not admit")
         }
@@ -272,7 +272,7 @@ struct ConstraintTests {
     @Test("a name cannot be a type and a constraint at once")
     func aNameDeclaredAsTypeAndConstraintRefuses() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             types: ["Scalar": .int],
             constraints: ["Scalar": [.int, .string]],
             procedures: [
@@ -286,7 +286,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("both a type and a constraint")
@@ -297,7 +297,7 @@ struct ConstraintTests {
     func anEmptyConstraintRefusesAtTheLink() throws {
         // Given — no parameter it bounds could ever be filled, which is the
         // same fact an empty oneOf states
-        let sut = Module(
+        let sut = try Module(
             constraints: ["Nothing": []],
             procedures: [
                 entryName: Procedure(
@@ -310,7 +310,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -320,7 +320,7 @@ struct ConstraintTests {
     func aParameterInADeclaredTypeRefusesAtTheLink() throws {
         // Given — a declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
-        let sut = Module(
+        let sut = try Module(
             types: ["Weird": .variable(name: "T", constraint: "Sortable")],
             procedures: [
                 "keep": Procedure(
@@ -340,7 +340,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("a type parameter lives in a signature")
         }
@@ -351,7 +351,7 @@ struct ConstraintTests {
         // Given — a declared type is not a filling site however deep the
         // parameter hides: nothing ever binds it, so the claim would go
         // unjudged everywhere
-        let sut = Module(
+        let sut = try Module(
             types: [
                 "Callback": .procedure(
                     Signature(
@@ -371,7 +371,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("a type parameter lives in a signature")
         }
@@ -387,7 +387,7 @@ struct ConstraintTests {
         ]
 
         for types in cycles {
-            let sut = Module(
+            let sut = try Module(
                 types: types,
                 procedures: [
                     entryName: Procedure(
@@ -400,14 +400,14 @@ struct ConstraintTests {
 
             // When / Then
             #expect {
-                try language.link([sut] + Module.standard, entry: entryName)
+                try linker.link([sut] + Module.standard, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("through nothing but names")
             }
         }
 
         // A recursive shape passes: the name reaches a shape on the way back.
-        let tree = Module(
+        let tree = try Module(
             types: ["Tree": .record(["children": .array(.named("Tree"))])],
             procedures: [
                 entryName: Procedure(
@@ -419,7 +419,7 @@ struct ConstraintTests {
         )
 
         #expect(throws: Never.self) {
-            try language.link([tree] + Module.standard, entry: entryName)
+            try linker.link([tree] + Module.standard, entry: entryName)
         }
     }
 
@@ -428,7 +428,7 @@ struct ConstraintTests {
         // Given — `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
         for member in [TypeExpression.variable(name: "S", constraint: "Loop"), .any, .never] {
-            let sut = Module(
+            let sut = try Module(
                 constraints: ["Loop": [member]],
                 procedures: [
                     entryName: Procedure(
@@ -441,7 +441,7 @@ struct ConstraintTests {
 
             // When / Then
             #expect {
-                try language.link([sut] + Module.standard, entry: entryName)
+                try linker.link([sut] + Module.standard, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("a member is a concrete shape")
             }
@@ -452,13 +452,13 @@ struct ConstraintTests {
     func aOneOfOutsideTheBoundRefusesAtTheLink() throws {
         // Given — words on a Numeric slot: no member of the constraint can
         // spell them, so no call could ever fit this parameter
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "pick": Procedure(
                     signature: Signature(
                         parameters: [
                             "speed": Parameter(
-                                type: .variable(name: "N", constraint: "Numeric"),
+                                type: .variable(name: "N", constraint: "std.Numeric"),
                                 oneOf: ["fast", "slow"]
                             )
                         ]
@@ -476,7 +476,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("oneOf admits nothing")
         }
@@ -487,8 +487,8 @@ struct ConstraintTests {
         // Given — a fraction spells with its point, so `1` on a double slot
         // is the int's spelling and a member no fraction could ever match,
         // and `1e0`/`1.00` are second spellings of a fraction that has one
-        func module(oneOf candidates: [String]) -> Module {
-            Module(
+        func module(oneOf candidates: [String]) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(
@@ -505,7 +505,7 @@ struct ConstraintTests {
 
         for dead in ["1", "1e0", "1.50", "1e-5"] {
             #expect("\(dead)") {
-                try language.link([module(oneOf: ["2.0", dead])] + Module.standard, entry: entryName)
+                try linker.link([module(oneOf: ["2.0", dead])] + Module.standard, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("'\(dead)'")
             }
@@ -514,7 +514,7 @@ struct ConstraintTests {
         // The spellings a document itself writes are alive — the exponent
         // form included, sign and padding and all.
         #expect(throws: Never.self) {
-            try language.link([module(oneOf: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
+            try linker.link([module(oneOf: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
         }
     }
 
@@ -522,7 +522,7 @@ struct ConstraintTests {
     func aOneOfMeetsANumberByWorth() async throws {
         // Given — the two zeros are one worth in the language's own order,
         // so a list that writes one admits the other
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -550,13 +550,13 @@ struct ConstraintTests {
         // alike, so `"1"` is a live member and worth carries across kinds:
         // the same rule `number` takes, pinned so the link's candidate judge
         // and this boundary cannot drift apart
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
                         parameters: [
                             "level": Parameter(
-                                type: .variable(name: "N", constraint: "Numeric"),
+                                type: .variable(name: "N", constraint: "std.Numeric"),
                                 oneOf: ["1", "2.5"]
                             )
                         ]
@@ -581,7 +581,7 @@ struct ConstraintTests {
     func aMemberBehindANameIsJudgedResolved() throws {
         // Given — an alias is a name for a shape, so what the shape may not be
         // the alias may not be either
-        let sut = Module(
+        let sut = try Module(
             types: ["Anything": .any],
             constraints: ["Loose": [.named("Anything")]],
             procedures: [
@@ -595,7 +595,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("a member is a concrete shape")
         }
@@ -610,7 +610,7 @@ struct ConstraintTests {
         // When / Then
         #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
 
-        let sut = Module(
+        let sut = try Module(
             types: ["Node": .record(["value": .int, "next": .any])],
             procedures: [
                 "read": Procedure(
@@ -636,7 +636,7 @@ struct ConstraintTests {
         )
 
         #expect(throws: Never.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -644,7 +644,7 @@ struct ConstraintTests {
     func aPathReceiverIsJudgedAtTheLink() throws {
         // Given — `"abc".absolute` and `absolute(of: "abc")` mean the same
         // send, so they refuse on the same surface
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -658,7 +658,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -669,7 +669,7 @@ struct ConstraintTests {
         // Given — the receiver's procedure shape fills one parameter twice,
         // and a parameter read as a whole number and as text has no answer on
         // the path surface any more than on the written one
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "summed": Procedure(
                     signature: Signature(
@@ -677,12 +677,12 @@ struct ConstraintTests {
                         parameters: [
                             "of": Parameter(type: .procedure(Signature(
                                 parameters: [
-                                    "seed": Parameter(type: .variable(name: "N", constraint: "Numeric"))
+                                    "seed": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                                 ],
-                                returns: .variable(name: "N", constraint: "Numeric")
+                                returns: .variable(name: "N", constraint: "std.Numeric")
                             )))
                         ],
-                        returns: .variable(name: "N", constraint: "Numeric")
+                        returns: .variable(name: "N", constraint: "std.Numeric")
                     ),
                     body: [],
                     result: .literal(.int(0))
@@ -709,7 +709,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("is read as int and as string")
         }
@@ -719,7 +719,7 @@ struct ConstraintTests {
     func aPathDoesNotReachAReceiverlessWord() throws {
         // Given — a pure word without a receiver leaves a path nothing to
         // fill, so the link refuses where the run would have found nothing
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "helper": Procedure(
                     signature: Signature(returns: .int),
@@ -738,7 +738,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no word by that name")
         }
@@ -749,7 +749,7 @@ struct ConstraintTests {
         // Given — text has no fields, so the name is a word, and the word's
         // bounded receiver refuses the text's reading the way the written
         // call would
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -766,7 +766,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("which 'std.Numeric' does not admit")
         }
@@ -777,7 +777,7 @@ struct ConstraintTests {
         // Given — the record does not declare the name, and a shape with
         // fields reads fields alone: the word by that name is not consulted,
         // and the refusal says to write the call
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -794,7 +794,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("does not declare")
@@ -807,7 +807,7 @@ struct ConstraintTests {
         // Given — the dot writes the receiver and the arguments write `of`
         // again; both readings land in one slot, so they are judged together
         // rather than one quietly replacing the other
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -823,7 +823,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("is read as")
         }
@@ -833,7 +833,7 @@ struct ConstraintTests {
     func aClosureSignatureIsJudgedAtTheLink() throws {
         // Given — unreached code still has to compile, and a signature written
         // inline is a declaration however deep a body buries it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -858,7 +858,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("names constraint 'Nope'")
         }
@@ -868,7 +868,7 @@ struct ConstraintTests {
     func aReceiverNamingNoParameterRefuses() throws {
         // Given — the declaration states a fact about its own parameters, and
         // a name pointing at none of them is judged where it is written
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "shout": Procedure(
                     signature: Signature(
@@ -888,7 +888,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("receiver names 'of'")
         }
@@ -899,7 +899,7 @@ struct ConstraintTests {
         // Given — an unnamed module's `first` lives among the selectors and
         // std's `first` among the path words; one spelling, two questions,
         // two tables
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "first": Procedure(
                     signature: Signature(
@@ -936,7 +936,7 @@ struct ConstraintTests {
         // which is the one door outside the executor's own resolvers. The
         // receiver's path ends in a word, so a resolver assembled without the
         // word table would read absence where the link approved a send.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -991,7 +991,7 @@ struct ConstraintTests {
     func aConstrainedReadingFitsALooserBound() throws {
         // Given — inside a generic body the argument reads as the enclosing
         // parameter, and its membership is a subset of what the callee asks
-        let sut = Module(
+        let sut = try Module(
             constraints: ["Exact": [.int]],
             procedures: [
                 "smallest": Procedure(
@@ -1025,7 +1025,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 }

@@ -13,7 +13,7 @@ import Warp
 // writes to an outer variable, and a value leaves through `return` — so there
 // is no name to bind and the form takes none.
 public struct BranchForm: ConstructForm {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case when
         case then
         case `else`

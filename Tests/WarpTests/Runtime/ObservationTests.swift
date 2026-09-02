@@ -18,7 +18,7 @@ import Testing
 @Suite("What a run reports while it runs")
 struct ObservationTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -26,7 +26,7 @@ struct ObservationTests {
     func statementsAreAnnounced() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -39,9 +39,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events == [
@@ -56,7 +56,7 @@ struct ObservationTests {
     func nestedStatementsAreAnnounced() async throws {
         // Given — observation follows the run, not the top level of the text
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -78,9 +78,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.started("outer.inner")))
@@ -91,7 +91,7 @@ struct ObservationTests {
     func roundsAreToldApart() async throws {
         // Given — the text says `step` once, and the run reaches it once a round
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -114,9 +114,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.completed("walk[0].step", .int(1))))
@@ -127,7 +127,7 @@ struct ObservationTests {
     func piecesAreToldApart() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -162,9 +162,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.completed("both[0].step", .int(1))))
@@ -175,7 +175,7 @@ struct ObservationTests {
     func aCallPushesRatherThanReplaces() async throws {
         // Given — a place is how the run got here, not where it ended up
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -195,9 +195,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
-        _ = try await language.makeExecutor(observer: observer).run(image)
+        _ = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(await observer.events.contains(.completed("said.helper.inner", .int(7))))
@@ -206,7 +206,7 @@ struct ObservationTests {
     @Test("a refusal carries the place it happened, not the one it passed through")
     func aRefusalCarriesItsInnermostPlace() async throws {
         // Given — the mistake is inside the body, two statements deep
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -230,15 +230,15 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
         await #expect(throws: Aborted.self) {
-            try await language.makeExecutor().run(image)
+            try await Executor().run(image)
         }
 
         do {
-            _ = try await language.makeExecutor().run(image)
+            _ = try await Executor().run(image)
         } catch let error as Aborted {
             #expect(error.trace?.rendered == "[0].helper.[0]")
             #expect("\(error)" == "[0].helper.[0]: no")
@@ -249,13 +249,13 @@ struct ObservationTests {
     func failureIsAnnounced() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
                         Statement(
                             id: "doomed",
-                            expression: .dispatch(Dispatch(selector: "fail"))
+                            expression: .dispatch(Dispatch(selector: "app.fail"))
                         )
                     ]
                 )
@@ -263,9 +263,9 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
 
-        _ = try? await language.makeExecutor(observer: observer).run(image)
+        _ = try? await Executor(observer: observer).run(image)
 
         // Then
         let events = await observer.events
@@ -282,7 +282,7 @@ struct ObservationTests {
     func rescueIsAnnounced() async throws {
         // Given
         let observer = RecordingObserver()
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -295,7 +295,7 @@ struct ObservationTests {
                                             id: "doomed",
                                             expression: .dispatch(
                                                 Dispatch(
-                                                    selector: "fail",
+                                                    selector: "app.fail",
                                                     arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]
@@ -315,8 +315,8 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard + [.failing], entry: entryName)
-        let answer = try await language.makeExecutor(observer: observer).run(image)
+        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let answer = try await Executor(observer: observer).run(image)
 
         // Then
         #expect(answer == .string("caught"))
@@ -326,7 +326,7 @@ struct ObservationTests {
     @Test("a run with no observer is the same run")
     func observationIsOptional() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [Statement(id: "only", expression: .literal(.int(1)))],
@@ -336,8 +336,8 @@ struct ObservationTests {
         )
 
         // When
-        let image = try language.link([sut] + Module.standard, entry: entryName)
-        let answer = try await language.makeExecutor().run(image)
+        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let answer = try await Executor().run(image)
 
         // Then
         #expect(answer == .int(1))

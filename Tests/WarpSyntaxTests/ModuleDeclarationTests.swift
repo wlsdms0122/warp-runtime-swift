@@ -20,14 +20,15 @@ struct ModuleDeclarationTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a name written inside a module means that module's declaration")
-    func ownDeclarationWins() async throws {
-        // Given — both modules declare `helper`, and both call it unqualified
+    @Test("a name written inside a module is spelled with the module's name")
+    func ownDeclarationIsSpelledQualified() async throws {
+        // Given — `first` calls its own `helper` as `first.helper`, and
+        // `second` declares a `helper` of its own, which is `second.helper`
         let first = try loader.loadDocument([
             "name": "first",
             "procedures": [
                 "entry": [
-                    "body": [["id": "said", "call": ["procedure": "helper"]]],
+                    "body": [["id": "said", "call": ["procedure": "first.helper"]]],
                     "result": ["result": ["ref": "said"]]
                 ],
                 "helper": [
@@ -53,10 +54,11 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .object(["said": .string("from first")]))
     }
 
-    @Test("a name only one module declares needs no qualifying")
-    func uniqueNameNeedsNoQualifying() async throws {
+    @Test("a bare name for another module's word is refused at the link")
+    func aBareNameForAnotherModulesWordIsRefused() throws {
         // Given
         let caller = try loader.loadDocument([
+            "imports": ["greet"],
             "name": "caller",
             "procedures": [
                 "entry": [
@@ -75,32 +77,11 @@ struct ModuleDeclarationTests {
             ]
         ])
 
-        // When
-        let outputs = try await run([caller, library], entry: "caller.entry")
-
-        // Then
-        #expect(outputs["result"] == .object(["said": .string("hello")]))
-    }
-
-    @Test("a name two other modules declare must be qualified")
-    func ambiguousNameIsRefused() throws {
-        // Given
-        let caller = try loader.loadDocument([
-            "name": "caller",
-            "procedures": ["entry": ["body": [["id": "said", "call": ["procedure": "helper"]]]]]
-        ])
-        let first = try loader.loadDocument([
-            "name": "first",
-            "procedures": ["helper": ["body": [["id": "done", "value": "a"]]]]
-        ])
-        let second = try loader.loadDocument([
-            "name": "second",
-            "procedures": ["helper": ["body": [["id": "done", "value": "b"]]]]
-        ])
-
         // When / Then
-        #expect(throws: LinkError.self) {
-            try loader.language.link([caller, first, second], entry: "caller.entry")
+        #expect {
+            try Linker().link([caller, library], entry: "caller.entry")
+        } throws: { error in
+            "\(error)".contains("sends 'greet', which no module in this link declares")
         }
     }
 
@@ -108,6 +89,7 @@ struct ModuleDeclarationTests {
     func qualifiedNameReachesAcross() async throws {
         // Given — `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
+            "imports": ["second.helper"],
             "name": "first",
             "procedures": [
                 "entry": [
@@ -162,6 +144,7 @@ struct ModuleDeclarationTests {
     func constantsMayComposeButNotCycle() async throws {
         // Given
         let composed = try loader.loadDocument([
+            "imports": ["std.text.joined", "std.text.text"],
             "const": [
                 "host": "example.com",
                 "url": ["format": "https://${host}/api", "with": ["host": ["ref": "host"]]]
@@ -184,7 +167,7 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .string("https://example.com/api"))
 
         #expect(throws: LinkError.self) {
-            try loader.language.link([cyclic], entry: entryName)
+            try Linker().link([cyclic], entry: entryName)
         }
     }
 

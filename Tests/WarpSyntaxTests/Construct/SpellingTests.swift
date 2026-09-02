@@ -26,8 +26,7 @@ struct SpellingTests {
             registry: try ConstructRegistry.standard.registering(
                 BranchForm.self,
                 as: "unless"
-            ),
-            notation: .testing
+            )
         )
         let sut = try loader.loadProcedure([
             "parameters": ["kind": "string"],
@@ -42,7 +41,7 @@ struct SpellingTests {
                 ]
             ],
             "result": ["result": ["ref": "pick"]]
-        ])
+        ], importing: ["std.logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])

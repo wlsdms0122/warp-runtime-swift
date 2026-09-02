@@ -54,40 +54,56 @@ public struct Writer: Sendable {
 
     // MARK: - Public
     public func value(of module: Module) throws -> Value {
+        try value(of: module.draft)
+    }
+
+    // A draft and not only a module, because what a document *is* is answered by
+    // writing it back out, and that answer is owed for a text whose program does
+    // not hold together. Nothing here judges.
+    public func value(of draft: Draft) throws -> Value {
         // Written every time, because a document that travels is the only kind
         // worth writing and neither question can be asked of it later. What it
         // costs is two keys; what it buys is that a reader too old for it, or
         // without the words it calls, says so instead of finding out part of the
         // way through.
+        //
+        // The version is this writer's and the imports are the program's: which
+        // shapes were used is a fact about the writing, and what a program takes
+        // from its link is a fact about the program. A draft that claimed
+        // nothing is written with what it sends, since a document that says
+        // nothing is not one and there is nobody left to ask.
         var written: [String: Value] = [
             Envelope.versionKey: .int(Envelope.version),
-            Envelope.needsKey: .array(Envelope.needs(of: module).sorted().map(Value.string)),
-            "procedures": .object(try module.procedures.mapValues(value(of:)))
+            Envelope.importsKey: .array(
+                (draft.imports ?? draft.sends).sorted().map(Value.string)
+            ),
+            ModuleReader.CodingKeys.procedures.stringValue:
+                .object(try draft.procedures.mapValues(value(of:)))
         ]
 
-        if let name = module.name {
-            written["name"] = .string(name)
+        if let namespace = draft.namespace {
+            written[ModuleReader.CodingKeys.name.stringValue] = .string(namespace)
         }
 
-        if let description = module.description {
-            written["description"] = .string(description)
+        if let description = draft.description {
+            written[ModuleReader.CodingKeys.description.stringValue] = .string(description)
         }
 
-        if !module.types.isEmpty {
-            written["types"] = .object(try module.types.mapValues(value(of:)))
+        if !draft.types.isEmpty {
+            written[ModuleReader.CodingKeys.types.stringValue] = .object(try draft.types.mapValues(value(of:)))
         }
 
-        if !module.constraints.isEmpty {
-            written["constraints"] = .object(
-                try module.constraints.mapValues { members in
+        if !draft.constraints.isEmpty {
+            written[ModuleReader.CodingKeys.constraints.stringValue] = .object(
+                try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
             )
         }
 
-        if !module.constants.isEmpty {
-            written["const"] = .object(
-                try module.constants.mapValues { constant in try value(of: constant) }
+        if !draft.constants.isEmpty {
+            written[ModuleReader.CodingKeys.const.stringValue] = .object(
+                try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
 
@@ -108,7 +124,7 @@ public struct Writer: Sendable {
         var written: [String: Value] = [:]
 
         if let description = procedure.description {
-            written["description"] = .string(description)
+            written[ProcedureReader.CodingKeys.description.stringValue] = .string(description)
         }
 
         // Stripped here, at the declaration, because this is the one place a

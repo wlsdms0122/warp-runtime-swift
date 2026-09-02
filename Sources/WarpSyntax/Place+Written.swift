@@ -1,0 +1,116 @@
+//
+//  Place+Written.swift
+//  WarpSyntax
+//
+//  Created by JSilver
+//
+
+import Foundation
+import Warp
+
+// A place in the words a document writes it with.
+//
+// `Place` carries a slot and a construct as themselves, because the language
+// has no opinion about what a text calls them. This is the side that does: the
+// keys are the readers' own, taken from where they are declared rather than
+// spelled again here, and the word for a construct is asked of the registry —
+// a notation may have respelled one, and then that is the word its author is
+// looking at.
+//
+// Every step answers on its own. A slot whose word depends on the construct
+// holding it says which one, so nothing here reads the steps around it and
+// there is no step this can be handed without an answer.
+public extension Place {
+    // The same address, walkable in the text. What a slot is written under
+    // becomes a key; what a construct is written under becomes a landmark,
+    // since a document may nest it under `value` or write it bare and both are
+    // the same shape by the time anything here sees one.
+    func written(by registry: ConstructRegistry) -> Place {
+        Place(
+            steps.map { step in
+                switch step {
+                case let .slot(slot): .key(Self.key(of: slot))
+                case let .construct(shape): .landmark(Self.key(of: shape, by: registry))
+                default: step
+                }
+            },
+            in: document
+        )
+    }
+
+    // MARK: - Private
+    // The key a document writes a slot under, from the reader that reads it
+    // there. A word spelled here as well would be the second of two places
+    // deciding what a document says, and the two meet only in stored text.
+    private static func key(of slot: Slot) -> String {
+        switch slot {
+        case .procedures: ModuleReader.CodingKeys.procedures.stringValue
+        case .constants: ModuleReader.CodingKeys.const.stringValue
+        case .types: ModuleReader.CodingKeys.types.stringValue
+        case .constraints: ModuleReader.CodingKeys.constraints.stringValue
+        case .namespace: ModuleReader.CodingKeys.name.stringValue
+        case .imports: ModuleReader.CodingKeys.imports.stringValue
+
+        case .parameters: ProcedureReader.CodingKeys.parameters.stringValue
+        case .returns: ProcedureReader.CodingKeys.returns.stringValue
+        case .body: BlockReader.CodingKeys.body.stringValue
+        case .result: BlockReader.CodingKeys.result.stringValue
+
+        // A receiver is written the same word wherever one is — a message in
+        // statement position, a message in a value, a cast — so the word is
+        // the expression grammar's rather than any one form's.
+        case .receiver: ExpressionReader.subjectKey
+
+        // A call and an invocation are written with the same two words, which
+        // `PlaceWrittenTests` holds them to. So one of them answers for both,
+        // and the day they part is the day that test says so.
+        case .callee: CallForm.CodingKeys.procedure.stringValue
+        case .arguments: CallForm.CodingKeys.arguments.stringValue
+
+        // A closure is written wherever data is, so its key is the expression
+        // grammar's rather than any form's.
+        case .closure: ExpressionReader.closureKey
+
+        case .then: BranchForm.CodingKeys.then.stringValue
+        case .otherwise: BranchForm.CodingKeys.else.stringValue
+        case .material: EachForm.CodingKeys.in.stringValue
+        case .rescue: AttemptForm.CodingKeys.rescue.stringValue
+
+        // The one slot two constructs write differently, which is why the slot
+        // says which one holds it. Answered by name and not by a default, so a
+        // third construct that holds a condition arrives here as a compiler
+        // error rather than as a word nobody chose.
+        case let .condition(construct):
+            switch construct {
+            case .branch: BranchForm.CodingKeys.when.stringValue
+            case .loop: LoopForm.CodingKeys.where.stringValue
+            }
+        }
+    }
+
+    // The word this notation writes a shape under. Asked of the registry
+    // because a caller registers the forms it likes under the spellings it
+    // likes, and a shape whose word was given up has none to offer — the
+    // language's own name stands in there, which is what a place said before
+    // anybody asked a document.
+    private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
+        let form: any ConstructForm.Type = switch construct {
+        case .literal, .reference, .array, .record, .closure, .cast: ValueForm.self
+        case .invoke: InvokeForm.self
+        case .block: GroupForm.self
+        case .conditional: BranchForm.self
+        case .loop: LoopForm.self
+        case .iteration: EachForm.self
+        case .attempt: AttemptForm.self
+        case .dispatch: CallForm.self
+        case let .leave(reach):
+            switch reach {
+            case .procedure: ReturnForm.self
+            case .construct: BreakForm.self
+            case .round: ContinueForm.self
+            }
+        }
+
+        return registry.key(for: form) ?? construct.rendered
+    }
+}

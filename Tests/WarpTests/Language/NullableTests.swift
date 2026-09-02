@@ -13,7 +13,7 @@ import Testing
 @Suite
 struct NullableTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -43,7 +43,7 @@ struct NullableTests {
     @Test("a nullable reading is refused where the plain type is declared")
     func aNullableReadingIsRefusedAtACall() throws {
         // Given — the `?.` path answers `int?`, and the callee declares `int`
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "half": Procedure(
                     signature: Signature(
@@ -78,7 +78,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("holds int?")
         }
@@ -88,7 +88,7 @@ struct NullableTests {
     func anOptionalDotOverANullable() async throws {
         // Given — the receiver may be null, so `?.` is the only spelling that
         // links; what it answers is the field or null
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -116,7 +116,7 @@ struct NullableTests {
     func aStaticNullRefusesTheRead() throws {
         // Given — the binding holds null and nothing else, so every dot after
         // it reads through null and the link says so
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -130,7 +130,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("reads through null")
         }
@@ -140,7 +140,7 @@ struct NullableTests {
     func anOptionalWordOverANullable() async throws {
         // Given — text or null; `?.count` counts the text that arrived and
         // answers null for the null
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -164,7 +164,7 @@ struct NullableTests {
     func aNullableParameterTakesNullByType() async throws {
         // Given — `T?` says null is a value, so the boundary lets it in the
         // way the link does: no `default: null` crutch required
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -184,7 +184,7 @@ struct NullableTests {
         #expect(try await run(sut) == .null)
 
         // A plain typed parameter still means "give me something".
-        let plain = Module(
+        let plain = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -206,7 +206,7 @@ struct NullableTests {
     func mustBeGivenIsOneAnswer() async throws {
         // Given — "must this be written" is one question: the call check, the
         // boundary and path reachability all read the type's null
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "labelled": Procedure(
                     signature: Signature(
@@ -251,7 +251,7 @@ struct NullableTests {
     func aConstantPathIsJudged() throws {
         // Given — the constant is a record, so a field it does not carry is
         // the link's refusal, not a run's surprise
-        let sut = Module(
+        let sut = try Module(
             constants: ["config": .record(["host": .literal(.string("a"))])],
             procedures: [
                 entryName: Procedure(
@@ -263,14 +263,14 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("does not declare")
         }
 
         // And a `?.` that could not have read past anything refuses on a
         // constant exactly as on any other name.
-        let needless = Module(
+        let needless = try Module(
             constants: ["word": .literal(.string("hey"))],
             procedures: [
                 entryName: Procedure(
@@ -282,7 +282,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([needless] + Module.standard, entry: entryName)
+            try linker.link([needless] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("never null")
         }
@@ -292,7 +292,7 @@ struct NullableTests {
     func aNeedlessNullableBehindAnAliasIsRefused() throws {
         // Given — the reader refuses `any?` by spelling; a name may hide the
         // same shape, and the rule is the model's, held where names resolve
-        let hidingAny = Module(
+        let hidingAny = try Module(
             types: ["Loose": .any],
             procedures: [
                 entryName: Procedure(
@@ -308,14 +308,14 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([hidingAny] + Module.standard, entry: entryName)
+            try linker.link([hidingAny] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("writes `?`")
         }
 
         // And a nullable behind the name — `B = int?`, then `B?` — is the
         // doubled `?` by another spelling.
-        let hidingNullable = Module(
+        let hidingNullable = try Module(
             types: ["Maybe": .nullable(.int)],
             procedures: [
                 entryName: Procedure(
@@ -331,7 +331,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([hidingNullable] + Module.standard, entry: entryName)
+            try linker.link([hidingNullable] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("writes `?`")
         }
@@ -342,7 +342,7 @@ struct NullableTests {
         // Given — `Task?` unwraps to a declared record through its name, and
         // the record's rules hold after the unwrap: the declared field reads,
         // the undeclared one refuses
-        let sut = Module(
+        let sut = try Module(
             types: ["Task": .record(["name": .string])],
             procedures: [
                 entryName: Procedure(
@@ -375,7 +375,7 @@ struct NullableTests {
     func aNeedlessOptionalDotIsRefused() throws {
         // Given — the field is proven present, so the spelling that expects
         // absence says nothing, the way `int??` says nothing on a type
-        let onAField = Module(
+        let onAField = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -390,14 +390,14 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([onAField] + Module.standard, entry: entryName)
+            try linker.link([onAField] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("read with `.`")
         }
 
         // A word's receiver is proven non-null by the time the send is
         // judged, so the same rule holds on the word surface.
-        let onAWord = Module(
+        let onAWord = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -410,7 +410,7 @@ struct NullableTests {
         )
 
         #expect {
-            try language.link([onAWord] + Module.standard, entry: entryName)
+            try linker.link([onAWord] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("never null")
         }
@@ -420,7 +420,7 @@ struct NullableTests {
     func aPlainIndexIntoANullableRefuses() throws {
         // Given — the array may be null, and `[` does not read absence; the
         // refusal points at the spelling that does
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -436,7 +436,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("absence is read with `?[`")
@@ -447,7 +447,7 @@ struct NullableTests {
     func anOptionalIndexOverANullable() async throws {
         // Given — an array or null; `?[0]` reads the element that arrived
         // and answers null for the null, so the path's answer is nullable
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -474,7 +474,7 @@ struct NullableTests {
     func anOptionalIndexStillRefusesPastTheEnd() async throws {
         // Given — `?[` expects the array's absence, not the element's: past
         // the end is a defect the array's own length proves, `?[` or not
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -499,7 +499,7 @@ struct NullableTests {
     func aNeedlessOptionalIndexRefuses() throws {
         // Given — the array is proven non-null, so `?[` claims an absence
         // the types rule out, the way a needless `?.` does
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -518,7 +518,7 @@ struct NullableTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("never null")
         }
@@ -529,26 +529,25 @@ struct NullableTests {
         // Given — the head is a name a scope holds, so there is nothing
         // before it that could have been absent; a document never spells
         // this, and a frontend that builds segments directly is told so
-        let sut = Module(
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "items": Parameter(
-                                type: .array(.string),
-                                default: .array([.string("one")])
-                            )
-                        ]
-                    ),
-                    body: [],
-                    result: .reference([.key("items", optional: true), .index(0)])
-                )
-            ]
-        )
-
-        // When / Then — the validation layer meets it first
+        // When / Then — the check meets it first, so there is no such module
+        // to take to a link
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        signature: Signature(
+                            parameters: [
+                                "items": Parameter(
+                                    type: .array(.string),
+                                    default: .array([.string("one")])
+                                )
+                            ]
+                        ),
+                        body: [],
+                        result: .reference([.key("items", optional: true), .index(0)])
+                    )
+                ]
+            )
         } throws: { error in
             "\(error)".contains("marks the head optional")
         }
@@ -567,7 +566,7 @@ struct NullableTests {
     func anOptionalIndexReferenceOverANullable() async throws {
         // Given — `items?[i]`: the index is a name the run settles, and the
         // null that short-circuits before it never reads the name at all
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -600,7 +599,7 @@ struct NullableTests {
 @Suite
 struct IndexReferenceJudgmentTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -609,7 +608,7 @@ struct IndexReferenceJudgmentTests {
         // Given — `shout` has a written body, still being resolved beside the
         // constants it may read; a constant that runs it is a circle with no
         // start, refused out loud
-        let sut = Module(
+        let sut = try Module(
             constants: [
                 "loud": .dispatch(Dispatch(
                     selector: "shout",
@@ -636,7 +635,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("native words alone")
         }
@@ -647,7 +646,7 @@ struct IndexReferenceJudgmentTests {
         // Given — the constants are settled and the words resolved by the
         // time a body folds, so a constant-headed path may run a written
         // word: the circle the settling refuses is the constants' own
-        let sut = Module(
+        let sut = try Module(
             constants: ["greeting": .literal(.string("hi"))],
             procedures: [
                 "shout": Procedure(
@@ -708,7 +707,7 @@ struct IndexReferenceJudgmentTests {
             )
         ]
 
-        let sut = Module(
+        let sut = try Module(
             constants: ["greeting": .literal(.string("hi"))],
             procedures: procedures
         )
@@ -720,7 +719,7 @@ struct IndexReferenceJudgmentTests {
         without["loud"] = nil
 
         #expect(
-            try await run(Module(
+            try await run(try Module(
                 constants: ["greeting": .literal(.string("hi"))],
                 procedures: without
             )) == .int(2)
@@ -732,31 +731,30 @@ struct IndexReferenceJudgmentTests {
         // Given — linking folds a constant wherever its name is read, so a
         // closure parameter under that name would never be the one that
         // answers; refused where the top-level signature's is
-        let sut = Module(
-            constants: ["greeting": .literal(.string("hi"))],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(),
-                    body: [
-                        Statement(
-                            id: "f",
-                            expression: .closure(Procedure(
-                                signature: Signature(
-                                    parameters: ["greeting": Parameter(type: .string)]
-                                ),
-                                body: [],
-                                result: .reference([.key("greeting")])
-                            ))
-                        )
-                    ],
-                    result: .literal(.int(1))
+        let procedure = Procedure(
+            signature: Signature(),
+            body: [
+                Statement(
+                    id: "f",
+                    expression: .closure(Procedure(
+                        signature: Signature(
+                            parameters: ["greeting": Parameter(type: .string)]
+                        ),
+                        body: [],
+                        result: .reference([.key("greeting")])
+                    ))
                 )
-            ]
+            ],
+            result: .literal(.int(1))
         )
 
-        // When / Then
+        // When / Then — there is no such module to hand anywhere: making one
+        // is what refuses
         #expect {
-            try language.validate(sut)
+            try Module(
+                constants: ["greeting": .literal(.string("hi"))],
+                procedures: [entryName: procedure]
+            )
         } throws: { error in
             "\(error)".contains("take the place of")
         }
@@ -767,7 +765,7 @@ struct IndexReferenceJudgmentTests {
         // Given — the closure runs later, so evaluating the constant proves
         // nothing about the send inside it; the gate every gathered send
         // passes catches the argument nobody declares
-        let sut = Module(
+        let sut = try Module(
             constants: [
                 "f": .closure(Procedure(
                     signature: Signature(returns: .string),
@@ -792,7 +790,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("loudly")
         }
@@ -802,7 +800,7 @@ struct IndexReferenceJudgmentTests {
     func nestedConstantIndexReferencesFold() async throws {
         // Given — `items[names[C]]`: the inner index reads a constant, and no
         // constant name survives into the image at any depth
-        let sut = Module(
+        let sut = try Module(
             constants: ["C": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(
@@ -837,7 +835,7 @@ struct IndexReferenceJudgmentTests {
     @Test("a word behind an index reference is judged and rewritten")
     func aWordBehindAnIndexReferenceIsJudged() async throws {
         // Given — `items[i].count` must mean what `items[0].count` means
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -870,7 +868,7 @@ struct IndexReferenceJudgmentTests {
     func anUndeclaredFieldBehindAnIndexReferenceRefuses() throws {
         // Given — the element type is known whatever the index is, so the
         // absent field is the link's to refuse
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -891,7 +889,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("does not declare")
         }
@@ -901,7 +899,7 @@ struct IndexReferenceJudgmentTests {
     func anIndexReferenceReadingIsJudged() throws {
         // Given — `name` is text, and an index is a whole number; the text
         // proves the defect, so the link refuses it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -918,7 +916,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("expected int")
         }
@@ -929,7 +927,7 @@ struct IndexReferenceJudgmentTests {
         // Given — `shout` is derivable, so its body lands in the image and
         // runs whenever a path reaches it; a send it writes wrongly is the
         // link's to refuse whether or not the entry ever mentions it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "shout": Procedure(
                     signature: Signature(
@@ -956,7 +954,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then — `loudly` names no parameter of uppercased
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("loudly")
         }
@@ -965,7 +963,7 @@ struct IndexReferenceJudgmentTests {
     @Test("an index reference into what is not an array refuses like an index")
     func anIndexReferenceNeedsAnArray() throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -982,7 +980,7 @@ struct IndexReferenceJudgmentTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("only an array is indexed")
         }
@@ -994,7 +992,7 @@ struct IndexReferenceJudgmentTests {
 @Suite
 struct ParameterReceiverTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Test
     @Test("a dot on some T reads the field the call filled in")
@@ -1002,7 +1000,7 @@ struct ParameterReceiverTests {
         // Given — the word's body reads `of.count`; the call fills T with a
         // record carrying `count`, and the field wins because nothing here
         // ever judged the dot a word
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1034,7 +1032,7 @@ struct ParameterReceiverTests {
         // Given — `of.inner.count` written as two statements. The step is a
         // shape the call decides, the way the parameter is, so the dot after
         // it stands as written and the call's value answers it
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1069,7 +1067,7 @@ struct ParameterReceiverTests {
     }
 
     @Test("what was read out of a parameter is not the parameter")
-    func aStepIsNotTheParameterItCameThrough() {
+    func aStepIsNotTheParameterItCameThrough() throws {
         // Given — one name written twice: once the parameter, once a field of
         // it. They are two unknowns, not one — `of` is the shape the call
         // filled in and `of.inner` is a field of that shape — so the name
@@ -1079,7 +1077,7 @@ struct ParameterReceiverTests {
         // T` was proven, which is the impersonation. A bound would have ridden
         // along with it — `some N: Comparable` proving `of.inner` comparable
         // on nothing but where it was read from.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1127,7 +1125,7 @@ struct ParameterReceiverTests {
 
         // When / Then
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("which declares nothing")
         }
@@ -1144,8 +1142,8 @@ struct ParameterReceiverTests {
         // and `of?.inner` spell apart, and a name would have made one field
         // into two unknowns that never meet — the dot after them refused, for
         // no reason an author could see.
-        func module(marking: Bool) -> Module {
-            Module(
+        func module(marking: Bool) throws -> Module {
+            try Module(
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -1197,7 +1195,7 @@ struct ParameterReceiverTests {
 
         // When / Then — written the same way twice, and written two ways, link alike
         for marking in [false, true] {
-            _ = try language.link([module(marking: marking)] + Module.standard, entry: entryName)
+            _ = try linker.link([module(marking: marking)] + Module.standard, entry: entryName)
         }
     }
 
@@ -1212,7 +1210,7 @@ struct ParameterReceiverTests {
         // unknowns: the pair met at a join, held neither, and the dot after
         // was refused. The root is the parameter, so a name in between changes
         // nothing about where the walk landed.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1258,7 +1256,7 @@ struct ParameterReceiverTests {
         )
 
         // When / Then
-        _ = try language.link([sut] + Module.standard, entry: entryName)
+        _ = try linker.link([sut] + Module.standard, entry: entryName)
     }
 
     @Test("one unknown is one unknown, whichever parameter it was read through")
@@ -1266,7 +1264,7 @@ struct ParameterReceiverTests {
         // Given — two parameters of the same type parameter. A call fills `T`
         // once, so they hold one shape, and the same field of it read through
         // either name is the same field.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1311,11 +1309,11 @@ struct ParameterReceiverTests {
         )
 
         // When / Then
-        _ = try language.link([sut] + Module.standard, entry: entryName)
+        _ = try linker.link([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a shape read out of a body is not a declaration anybody can write")
-    func aReadingIsRefusedWhereADeclarationGoes() {
+    func aReadingIsRefusedWhereADeclarationGoes() throws {
         // Given — a declaration assembled in the host claiming what only a
         // walk produces. No document spells one, and the link refuses it where
         // it was written rather than letting it stand: a declaration says what
@@ -1323,7 +1321,7 @@ struct ParameterReceiverTests {
         //
         // The two are apart in the type, so this is a refusal about what was
         // written and not a name that happened to collide.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -1338,7 +1336,7 @@ struct ParameterReceiverTests {
         )
 
         #expect {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("read out of a body")
         }

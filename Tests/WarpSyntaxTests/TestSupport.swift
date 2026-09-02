@@ -64,7 +64,7 @@ struct FailForm: ConstructForm {
     func expression(boundTo id: String?) -> Warp.Expression {
         .dispatch(
             Dispatch(
-                selector: "fail",
+                selector: "test.fail",
                 arguments: ["recoverable": .literal(.bool(recoverable))]
             )
         )
@@ -101,8 +101,8 @@ func validates(
 // declaration in a module. The split is the point — one says how a document
 // spells it, the other says what answers.
 extension Module {
-    static let testing = Module(
-        name: "test",
+    static let testing = try! Module(
+        namespace: "test",
         procedures: [
             "fail": Procedure(
                 signature: Signature(
@@ -116,8 +116,7 @@ extension Module {
 
 extension Loader {
     static let testing = Loader(
-        registry: try! ConstructRegistry.standard.registering(FailForm.self),
-        notation: .testing
+        registry: try! ConstructRegistry.standard.registering(FailForm.self)
     )
 }
 
@@ -136,34 +135,27 @@ extension Loader {
         try load(value, identity: nil)
     }
 
-    // A document as a front end hands one over, which is the only way one is
-    // ever made: written back out the one way a document is written, with the
-    // version and the needs list filled in. No author writes either — a fixture
-    // spelling them out in every test would be writing the two parts of a
-    // document nobody writes.
+    // A document as a front end hands one over: written in this notation's
+    // spellings, lowered, and only then read. The two calls are the two
+    // questions — what a text spells, and whether its program holds — and the
+    // reading is handed a document with no spellings left in it.
+    //
+    // The version is filled in, which nobody writes by hand. A fixture that
+    // sends words still writes its own `imports`: what a program takes from
+    // its link is the author's to say, and a helper that said it for them
+    // would make every fixture's list true by construction.
     //
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
-    func loadDocument(_ value: Value) throws -> Module {
+    func loadDocument(_ value: Value, from notation: Notation = .testing) throws -> Module {
         guard case let .object(fields) = value else { return try load(value, identity: nil) }
 
-        let stamped = Value.object(fields.merging(
-            [Envelope.versionKey: .int(Envelope.version)]
-        ) { written, _ in written })
+        let written = Value.object(fields.merging([
+            Envelope.versionKey: .int(Envelope.version),
+            Envelope.importsKey: .array([])
+        ]) { written, _ in written })
 
-        // The list is borrowed from the canonical writing rather than worked
-        // out again here, and only the list — what these fixtures write is the
-        // subject, so they are loaded as they were written.
-        guard case let .object(sealed) = try canonical(stamped),
-              let needs = sealed[Envelope.needsKey]
-        else { return try load(stamped, identity: nil) }
-
-        guard case let .object(fields) = stamped else { return try load(stamped, identity: nil) }
-
-        return try load(
-            .object(fields.merging([Envelope.needsKey: needs]) { written, _ in written }),
-            identity: nil
-        )
+        return try load(try canonical(written, from: notation), identity: nil)
     }
 
     // Most tests here are about one construct or one reader, not about the
@@ -173,23 +165,32 @@ extension Loader {
     // The fixture is a `Value` because that is what a loader takes. Writing YAML
     // here would import a front end, and then a parser bug could fail a reader's
     // test — the imports are supposed to say which layer a test is about.
-    func loadProcedure(_ value: Value, named name: String = entryName) throws -> Module {
-        try loadDocument(["procedures": [name: value]])
+    func loadProcedure(
+        _ value: Value,
+        named name: String = entryName,
+        importing imports: [String] = [],
+        from notation: Notation = .testing
+    ) throws -> Module {
+        try loadDocument(
+            [
+                "imports": .array(imports.map(Value.string)),
+                "procedures": [name: value]
+            ],
+            from: notation
+        )
     }
 }
 
 func run(
     _ modules: [Module],
     entry: String = entryName,
-    language: Language = Loader.testing.language,
     arguments: [String: Value] = [:],
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
 ) async throws -> [String: Value] {
-    let image = try language.link(modules + vocabulary, entry: entry)
+    let image = try Linker().link(modules + vocabulary, entry: entry)
 
-    let answer = try await language
-        .makeExecutor(environment: environment)
+    let answer = try await Executor(environment: environment)
         .run(image, arguments: arguments)
 
     // This notation spells several named outputs, which the reader lowers to one
@@ -204,7 +205,6 @@ func run(
 func run(
     _ module: Module,
     entry: String = entryName,
-    language: Language = Loader.testing.language,
     arguments: [String: Value] = [:],
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
@@ -212,17 +212,26 @@ func run(
     try await run(
         [module],
         entry: entry,
-        language: language,
         arguments: arguments,
         vocabulary: vocabulary,
         environment: environment
     )
 }
 
-// Every procedure a list of modules declares, under its bare name — what a
-// resolver's derivations table holds for the words a path may reach.
+// Every procedure a list of modules declares, as two tables for two questions:
+// what a selector names, and what a path segment reaches.
 extension [Module] {
+    // Every declaration by its qualified spelling, the way a selector names it.
     var procedures: [String: Procedure] {
+        reduce(into: [:]) { table, module in
+            for (name, procedure) in module.procedures {
+                table[Draft.qualified(name, in: module.namespace)] = procedure
+            }
+        }
+    }
+
+    // Every declaration by its bare name, the way a path segment names it.
+    var words: [String: Procedure] {
         reduce(into: [:]) { table, module in
             table.merge(module.procedures) { _, new in new }
         }
@@ -234,25 +243,25 @@ extension [Module] {
 // Equality and the connectives are words, so a test writing one writes the send
 // the reader lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "equal", arguments: ["value": operand]))
+    .dispatch(Dispatch(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "notEqual", arguments: ["value": operand]))
+    .dispatch(Dispatch(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
 }
 
 func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: condition, selector: "not"))
+    .dispatch(Dispatch(receiver: condition, selector: "std.logic.not"))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something that
 // has not been answered yet.
 func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("and", conditions)
+    chained("std.logic.and", conditions)
 }
 
 func some(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("or", conditions)
+    chained("std.logic.or", conditions)
 }
 
 private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> Warp.Expression {

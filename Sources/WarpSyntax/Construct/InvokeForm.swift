@@ -21,7 +21,7 @@ import Warp
 // between two notations is the wrong layer twice over, and `apply` is already an
 // operator application in the IR.
 public struct InvokeForm: ConstructForm {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure
         case arguments
     }

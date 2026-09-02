@@ -12,8 +12,6 @@ it is what a program that stays where it was built looks like.
 ```swift
 import Warp
 
-let language = Language()
-
 let greet = Procedure(
     signature: Signature(
         parameters: ["name": Parameter(type: .string)],
@@ -38,12 +36,12 @@ let greet = Procedure(
     result: .reference([.key("greeting")])
 )
 
-let image = try language.link(
-    [Module(name: "hello", procedures: ["greet": greet])] + Module.standard,
+let image = try Linker().link(
+    [try Module(namespace: "hello", procedures: ["greet": greet])] + Module.standard,
     entry: "greet"
 )
 
-let value = try await language.makeExecutor().run(
+let value = try await Executor().run(
     image,
     arguments: ["name": .string("warp")]
 )
@@ -56,28 +54,30 @@ let value = try await language.makeExecutor().run(
 | product | what | depends on |
 |---|---|---|
 | `Warp` | the shapes, checking, linking, running, and the standard vocabulary | nothing |
-| `WarpSyntax` | a document read into shapes, and shapes written back out | `Warp` |
-| `WarpSerialization` | a document written down — Warp's own bytes to carry it, text to read it | `Warp` |
+| `WarpSyntax` | a document: the bytes and text one is carried in, read into shapes and written back out | `Warp` |
 
-The arrows are the architecture. A serialization carries a tree of data and
-never learns what the tree means, so it sees `Warp`'s `Value` and nothing of
-`WarpSyntax`. `WarpSyntax` is optional in the honest sense: a program that
-never travels never links it.
+The arrow is the architecture, and it is the one line worth cutting on: what a
+caller can leave out. A caller that reads bytes needs all of this, and a caller
+assembling shapes in Swift needs none of it — so `WarpSyntax` is optional in the
+honest sense, and a program that never travels never links it.
+
+Inside it the wire is still written and read without learning what the tree
+means, which is why an implementation in another language can speak the format
+without also implementing what a procedure is.
 
 ## An arriving program
 
 ```swift
 import Warp
 import WarpSyntax
-import WarpSerialization
 
 let document = try BinaryEncoding.value(from: bytes)   // bytes → tree, or refused
 let module = try Loader().load(                        // tree → module, or refused
     document,
     identity: try Identity.of(document)                // which document, for refusals
 )
-let image = try Language().link([module] + Module.standard, entry: "entry")
-let answer = try await Language().makeExecutor().run(image)
+let image = try Linker().link([module] + Module.standard, entry: "entry")
+let answer = try await Executor().run(image)
 ```
 
 Each step refuses rather than guesses, and everything refusable is refused
@@ -95,8 +95,10 @@ one.
 no document to hand to anything running elsewhere, and this is how it gets one.
 
 Whatever refuses somewhere says where. A refusal from the two stages that read
-a program before running it carries a `Place` — the path to it through the document,
-spelled from the keys the document itself writes, so
+a program before running it carries a `Place` — the path to it through the
+program, and each side reads it for the reader it has. The language names its
+own slots, which is what a caller that built the shapes in Swift can follow;
+`Loader.reading { }` reads the same place in the keys the document writes, so
 `procedures.greet.body.total[2].call.arguments.amount` is a line every word of
 which an author can follow in the text in front of them. It is steps rather
 than a sentence because a front end holding the file this was authored in has
@@ -121,7 +123,7 @@ settle it either: `name` is the namespace a module declares into, two documents
 may write `name: wallet` between them (splitting a module across files is
 allowed), and a document may write no name at all. So identity is derived from
 the document itself — the digest of its canonical bytes, worked out by
-`WarpSerialization` and never written down by anybody. Nothing to declare means
+`WarpSyntax` and never written down by anybody. Nothing to declare means
 nothing to declare wrongly, and two callers holding one document arrive at one
 answer without having agreed on anything.
 

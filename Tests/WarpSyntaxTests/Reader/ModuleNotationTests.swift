@@ -35,7 +35,7 @@ struct ModuleNotationTests {
         ])
 
         // Then
-        #expect(sut.name == "deploy")
+        #expect(sut.namespace == "deploy")
         #expect(Set(sut.procedures.keys) == ["verify", "report"])
     }
 

@@ -29,7 +29,7 @@ struct ConcurrencyTests {
                         "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                         "right": .closure(Procedure(body: [], result: .literal(.int(2))))
                     ]),
-                    selector: "all"
+                    selector: "std.concurrent.all"
                 )
             )
         )
@@ -53,7 +53,7 @@ struct ConcurrencyTests {
                         .closure(Procedure(body: [], result: .literal(.int(2)))),
                         .closure(Procedure(body: [], result: .literal(.int(3))))
                     ]),
-                    selector: "all"
+                    selector: "std.concurrent.all"
                 )
             )
         )
@@ -207,7 +207,7 @@ struct ConcurrencyTests {
                                         id: "doomed",
                                         expression: .dispatch(
                                             Dispatch(
-                                                selector: "fail",
+                                                selector: "app.fail",
                                                 arguments: ["recoverable": .literal(.bool(true))]
                                             )
                                         )
@@ -251,7 +251,7 @@ struct ConcurrencyTests {
                                 body: [
                                     Statement(
                                         id: "slow",
-                                        expression: .dispatch(Dispatch(selector: "wait"))
+                                        expression: .dispatch(Dispatch(selector: "app.wait"))
                                     )
                                 ],
                                 result: reference("slow")
@@ -268,8 +268,8 @@ struct ConcurrencyTests {
             of: [sut],
             result: reference("either"),
             vocabulary: Module.standard + [
-                Module(
-                    name: "app",
+                try Module(
+                    namespace: "app",
                     procedures: [
                         "wait": Procedure(implementation: .effect(WaitEffect(watch: waiting)))
                     ]
@@ -297,7 +297,7 @@ struct ConcurrencyTests {
                                         id: "doomed",
                                         expression: .dispatch(
                                             Dispatch(
-                                                selector: "fail",
+                                                selector: "app.fail",
                                                 arguments: ["recoverable": .literal(.bool(true))]
                                             )
                                         )
@@ -333,7 +333,7 @@ struct ConcurrencyTests {
                         id: "doomed",
                         expression: .dispatch(
                             Dispatch(
-                                selector: "fail",
+                                selector: "app.fail",
                                 arguments: ["recoverable": .literal(.bool(true))]
                             )
                         )
@@ -347,7 +347,7 @@ struct ConcurrencyTests {
             expression: .dispatch(
                 Dispatch(
                     receiver: .record(["first": doomed, "second": doomed]),
-                    selector: "all"
+                    selector: "std.concurrent.all"
                 )
             )
         )
@@ -377,7 +377,7 @@ struct ConcurrencyTests {
                         .closure(Procedure(body: [], result: .literal(.int(1)))),
                         .literal(.int(2))
                     ]),
-                    selector: "all"
+                    selector: "std.concurrent.all"
                 )
             )
         )

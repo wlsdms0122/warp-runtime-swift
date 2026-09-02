@@ -8,8 +8,8 @@
 import Foundation
 
 public extension Module {
-    static let collection = Module(
-        name: "std.collection",
+    static let collection = try! Module(
+        namespace: "std.collection",
         description: "Words about arrays and objects. A string counts and contains too.",
         procedures: [
             "count": Procedure(

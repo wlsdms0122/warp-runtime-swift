@@ -10,10 +10,11 @@ import Foundation
 // Takes every module this run was given and one name to start from, and answers
 // with an image — or refuses.
 //
-// A link is handed its whole world at once, and no module says anything about
-// the others: what to link is the caller's statement, and joining the names up
-// is this. So a module declares no imports, and the entry is an argument rather
-// than a name written into a document.
+// A link is handed its whole world at once. The words a program can send are
+// the words the caller put in front of it, so what to link is the caller's
+// statement and joining the names up is this. A module's `imports` says what it
+// asks for and never where to find it, and the entry is an argument rather than
+// a name written into a document.
 //
 // Unreached code is checked too. A misspelled procedure in a branch today's
 // arguments never take is a defect whether or not this run walks that way, so
@@ -25,11 +26,12 @@ import Foundation
 // the signature came from — the installed table, or another module in the same
 // link.
 //
-// Names resolve, and resolving is a rewrite. A call site says `helper`, and what
-// it means depends on where it was written; the image the executor runs is
-// spelled in resolved names, so a run never has to ask again. That is also why
-// constants disappear here — a name bound to a value at load has nothing left to
-// do at run time, so linking folds it into the literal it always was.
+// A name is its declared spelling and nothing else. A call site says
+// `std.math.plus`, and that is the one declaration it can mean, wherever it was
+// written; the image the executor runs is spelled the way the documents were,
+// so a run never has to ask again. Constants do change here: a name bound to a
+// value at load has nothing left to do at run time, so linking folds it into
+// the literal it always was.
 //
 // What it can promise is narrower than "nothing unresolved remains": arguments
 // are mostly references that settle at run time, so this checks names, arity and
@@ -42,12 +44,23 @@ public struct Linker: Sendable {
     }
 
     // MARK: - Public
+    // The second judgement, and the one a module cannot make about itself: a
+    // module is checked against itself, an image is checked across every module
+    // given.
+    //
+    // What to link is the caller's statement — the whole world at once — and
+    // `entry` names which declaration this run starts from. There is no default:
+    // guessing which procedure was meant would be an opinion nobody gave.
+    //
+    // A bundled vocabulary is one of those modules, and a caller that leaves it
+    // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: String) throws -> Image {
-        // Type and constraint mentions first, because everything after this
-        // reads type expressions and one spelling has to mean one thing. The
-        // spaces come back gathered — the qualifying pass owns their
-        // uniqueness, so it hands over the tables that fact was proved on.
-        let (modules, declaredTypes, declaredConstraints) = try qualified(modules)
+        // Type and constraint declarations first, because everything after
+        // this reads type expressions against them. The qualifying pass owns
+        // their uniqueness, so it hands over the tables that fact was proved on.
+        try once(modules)
+
+        let (declaredTypes, declaredConstraints) = try qualified(modules)
 
         let types = try types(
             of: modules,
@@ -56,38 +69,21 @@ public struct Linker: Sendable {
         )
         let symbols = try symbols(of: modules)
 
-        // The namespace, prepared once — every dispatch in every body asks it,
-        // and the purity fixed point asks again per round.
-        let space = SymbolSpace(symbols)
+        // Every declaration under its qualified spelling. The spellings are
+        // unique, since the symbol gathering refused a double, and every send
+        // in every body asks this table.
+        let space = symbols.reduce(into: [String: Symbol]()) { table, symbol in
+            table[symbol.qualified] = symbol
+        }
 
-        // The rule's two failures kept apart: a name nobody declares and a
-        // name two modules declare are different mistakes, and the second has
-        // a different fix — the qualified spelling.
-        let start: Symbol
-
-        switch space.resolution(of: entry, from: nil) {
-        case let .resolved(qualified):
-            guard let symbol = space.symbol(spelled: qualified) else {
-                throw LinkError(
-                    "entry '\(entry)' is not declared by any module in this link"
-                        + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
-                    at: nil
-                )
-            }
-
-            start = symbol
-
-        case let .ambiguous(candidates):
+        // A name is its declared spelling and nothing else, so the entry is
+        // looked up as the caller wrote it, the module's name in front where
+        // the module has one.
+        guard let start = space[entry] else {
             throw LinkError(
-                "entry '\(entry)' is declared by more than one module —"
-                    + " \(candidates.joined(separator: " and ")) — name the one you meant",
-                at: nil
-            )
-
-        case .unresolved:
-            throw LinkError(
-                "entry '\(entry)' is not declared by any module in this link"
-                    + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                "entry '\(entry)' is not declared by any module in this link."
+                    + " A name is its declared spelling, the module's name in front where"
+                    + " it has one — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
                 at: nil
             )
         }
@@ -101,7 +97,7 @@ public struct Linker: Sendable {
 
         // Purity is worked out over every declaration rather than the reached
         // ones: a path names a word the call graph never mentions.
-        let settled = pure(among: symbols, in: space)
+        let settled = pure(among: symbols)
         let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: types)
 
         // The tables as the author spelled them, and the form the link's own
@@ -115,7 +111,7 @@ public struct Linker: Sendable {
         let settlingWords = settleable(wordsWritten)
 
         // Selectors and path words are two tables, because they are two
-        // questions: what a resolved call reaches, and what a bare spelling a
+        // questions: what a selector reaches, and what a bare spelling a
         // walk writes may send. One table masked by a set let one spelling
         // answer with the other question's declaration.
         //
@@ -135,6 +131,7 @@ public struct Linker: Sendable {
 
         func frame() -> TypeFrame {
             TypeFrame(
+                symbols: space,
                 signatures: answeringSignatures,
                 types: types,
                 words: answeringWords,
@@ -152,28 +149,8 @@ public struct Linker: Sendable {
             reaching: settling,
             words: settlingWords,
             in: types,
-            with: declaredFrame,
-            symbols: space
+            with: declaredFrame
         )
-
-        // A declaration binds once, whichever pass asks — the answer reading
-        // before the walk, and the walk itself.
-        var boundBodies: [String: Procedure] = [:]
-
-        func bound(_ symbol: Symbol) throws -> Procedure {
-            if let done = boundBodies[symbol.qualified] { return done }
-
-            let bound = try bind(
-                symbol.procedure,
-                within: symbol.origin,
-                symbols: space,
-                at: symbol.place
-            )
-
-            boundBodies[symbol.qualified] = bound
-
-            return bound
-        }
 
         // The names in scope before a body's first statement: its parameters,
         // and the constants its module declared beside them.
@@ -184,20 +161,18 @@ public struct Linker: Sendable {
         }
 
         // What every declaration whose `returns` nobody wrote answers, read
-        // off its body. A body that will not even bind says nothing here and
-        // is refused where the walk reaches it, in that pass's own words.
+        // off its body.
         answers(
             of: symbols.compactMap { symbol -> Unsaid? in
                 guard
                     symbol.procedure.signature.returns == nil,
-                    let bound = try? bound(symbol),
-                    let block = bound.block
+                    let block = symbol.procedure.block
                 else { return nil }
 
                 return Unsaid(
                     symbol: symbol,
                     block: block,
-                    environment: opening(symbol, of: bound.signature),
+                    environment: opening(symbol, of: symbol.procedure.signature),
                     sends: sent(in: block, reaching: wordSymbols)
                 )
             },
@@ -223,7 +198,7 @@ public struct Linker: Sendable {
         // folding through a word would be a circle — so the stand-ins answer;
         // once the words are resolved, folding runs the same judged bodies a
         // run would, and the tables are swapped to say so.
-        var foldingDerivations = settling
+        var foldingSelectors = settling
         var foldingWords = settlingWords
 
         // A declaration, bound and dot-judged: selectors resolve to qualified
@@ -239,14 +214,14 @@ public struct Linker: Sendable {
         func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite]) {
             if let done = resolvedBodies[symbol.qualified] { return done }
 
-            let bound = try bound(symbol)
+            let declared = symbol.procedure
 
-            var answer = (procedure: bound, calls: [CallSite]())
+            var answer = (procedure: declared, calls: [CallSite]())
 
-            if let block = bound.block {
+            if let block = declared.block {
                 let folding = Resolver(
                     scope: Scope(bindings: constants[symbol.origin] ?? [:]),
-                    derivations: foldingDerivations,
+                    selectors: foldingSelectors,
                     words: foldingWords,
                     types: types
                 )
@@ -254,7 +229,7 @@ public struct Linker: Sendable {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let environment = opening(symbol, of: bound.signature)
+                let environment = opening(symbol, of: declared.signature)
 
                 let (rewritten, gathered) = try resolvedSites(
                     in: block,
@@ -266,8 +241,8 @@ public struct Linker: Sendable {
 
                 answer = (
                     procedure: Procedure(
-                        description: bound.description,
-                        signature: bound.signature,
+                        description: declared.description,
+                        signature: declared.signature,
                         implementation: .body(rewritten)
                     ),
                     calls: gathered
@@ -276,7 +251,7 @@ public struct Linker: Sendable {
 
             resolvedBodies[symbol.qualified] = answer
 
-            try checked(answer.calls, in: frame, symbols: space)
+            try checked(answer.calls, in: frame)
 
             return answer
         }
@@ -302,7 +277,7 @@ public struct Linker: Sendable {
         // declaration still meets a stand-in, the same circle guard by the
         // same rule.
         foldingWords = pathWords
-        foldingDerivations = settling.merging(
+        foldingSelectors = settling.merging(
             resolvedBodies.mapValues(\.procedure)
         ) { _, resolved in resolved }
 
@@ -343,10 +318,7 @@ public struct Linker: Sendable {
             }
 
             for call in calls {
-                // Checked inside `resolved` — reaching here only walks on.
-                guard let callee = space.symbol(spelled: call.dispatch.selector) else { continue }
-
-                frontier.append(callee)
+                frontier.append(call.callee)
             }
         }
 
@@ -356,10 +328,10 @@ public struct Linker: Sendable {
         // reported before one in a declaration nothing reaches; in name
         // order, so which unreached mistake comes first is a fact of the
         // text rather than of a hash seed.
-        var derivations: [String: Procedure] = [:]
+        var selectors: [String: Procedure] = [:]
 
         for (name, symbol) in selectorSymbols.sorted(by: { $0.key < $1.key }) {
-            derivations[name] = try resolved(symbol).procedure
+            selectors[name] = try resolved(symbol).procedure
         }
 
         return Image(
@@ -367,32 +339,40 @@ public struct Linker: Sendable {
             procedures: procedures,
             types: types,
             pure: settled,
-            derivations: derivations,
+            selectors: selectors,
             words: pathWords
         )
     }
 
     // MARK: - Private
-    // The one gate every gathered send passes, wherever its body sits — a
-    // procedure, a word, a constant's closure. The callee is found by the
-    // spelling the rewrite settled on, and the call is judged against it.
-    private func checked(
-        _ calls: [CallSite],
-        in frame: TypeFrame,
-        symbols space: SymbolSpace
-    ) throws {
-        for call in calls {
-            let selector = call.dispatch.selector
+    // No document twice. An identity is derived from the text, so two copies of
+    // one are one document, and every name in it collides with itself.
+    //
+    // Refused here rather than left to the collision, because the collision has
+    // nothing to say: both sides of its sentence are the same document, and the
+    // fix is not a spelling but a caller holding what it already had.
+    private func once(_ modules: [Module]) throws {
+        var held: Set<Identity> = []
 
-            guard let callee = space.symbol(spelled: selector) else {
+        for module in modules {
+            guard let identity = module.identity else { continue }
+            guard held.insert(identity).inserted else {
                 throw LinkError(
-                    "sends '\(selector)', which no module in"
-                        + " this link declares",
-                    at: call.place
+                    "this document was handed to the link twice — a link states"
+                        + " its whole world once, so a document already in it is"
+                        + " not something to add",
+                    at: Place(in: .of(module))
                 )
             }
+        }
+    }
 
-            try check(call, against: callee.procedure, with: frame)
+    // The one gate every gathered send passes, wherever its body sits — a
+    // procedure, a word, a constant's closure. The call carries the
+    // declaration the walk found for it, and is judged against that.
+    private func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
+        for call in calls {
+            try check(call, against: call.callee.procedure, with: frame)
         }
     }
 
@@ -419,9 +399,9 @@ public struct Linker: Sendable {
     // is struck out when something it reaches is not pure. Starting from "impure
     // until proven" would make two procedures that call each other permanently
     // impure, which is a fact about the algorithm rather than about the code.
-    private func pure(among symbols: [Symbol], in space: SymbolSpace) -> Set<String> {
-        let bodies = symbols.reduce(into: [String: (Block?, Int)]()) { table, symbol in
-            table[symbol.qualified] = (symbol.procedure.block, symbol.origin)
+    private func pure(among symbols: [Symbol]) -> Set<String> {
+        let bodies = symbols.reduce(into: [String: Block?]()) { table, symbol in
+            table[symbol.qualified] = symbol.procedure.block
         }
 
         var pure = Set(
@@ -432,9 +412,9 @@ public struct Linker: Sendable {
 
         while true {
             let struck = pure.filter { name in
-                guard let (block, origin) = bodies[name], let block else { return false }
+                guard let block = bodies[name], let block else { return false }
 
-                return !isPure(written: block, given: pure, within: origin, in: space)
+                return !isPure(block, given: pure)
             }
 
             guard !struck.isEmpty else { return pure }
@@ -446,48 +426,19 @@ public struct Linker: Sendable {
     // A block answers without running when every part of it is something the
     // pure evaluator can answer, and every name it sends to is pure. Control
     // flow is not in that set — not because running a branch is impure, but
-    // because the surface that answers purely does not run bodies at all.
-    // A body whose selectors are still the spellings an author wrote. What one
-    // means depends on where it was written, so this needs the module it came
-    // from and everything the link declares.
-    func isPure(
-        written block: Block,
-        given pure: Set<String>,
-        within origin: Int,
-        in space: SymbolSpace
-    ) -> Bool {
-        isPure(block, given: pure, within: origin, in: space)
-    }
-
-    // A body binding already rewrote, so every selector in it is the name it
-    // resolved to. Nothing is left to look up.
-    func isPure(resolved block: Block, given pure: Set<String>) -> Bool {
-        isPure(block, given: pure, within: nil, in: .empty)
-    }
-
-    private func isPure(
-        _ block: Block,
-        given pure: Set<String>,
-        within origin: Int?,
-        in space: SymbolSpace
-    ) -> Bool {
+    // because the surface that answers purely does not run bodies at all. A
+    // selector is the declared spelling it names, so the table is asked by the
+    // selector as written.
+    func isPure(_ block: Block, given pure: Set<String>) -> Bool {
         block.body.allSatisfy { statement in
-            statement.binding == .constant
-                && isPure(statement.expression, given: pure, within: origin, in: space)
+            statement.binding == .constant && isPure(statement.expression, given: pure)
         }
-            && (block.result.map { result in
-                isPure(result, given: pure, within: origin, in: space)
-            } ?? true)
+            && (block.result.map { result in isPure(result, given: pure) } ?? true)
     }
 
-    private func isPure(
-        _ expression: Expression,
-        given pure: Set<String>,
-        within origin: Int?,
-        in space: SymbolSpace
-    ) -> Bool {
+    private func isPure(_ expression: Expression, given pure: Set<String>) -> Bool {
         func isPure(_ inner: Expression) -> Bool {
-            self.isPure(inner, given: pure, within: origin, in: space)
+            self.isPure(inner, given: pure)
         }
 
         switch expression {
@@ -512,14 +463,8 @@ public struct Linker: Sendable {
         case let .record(record):
             return record.values.allSatisfy(isPure)
 
-        // The selector is what the author wrote, and what it means depends on
-        // where it was written — the same question binding answers. Asking the
-        // unresolved spelling would call every call impure, because the table is
-        // keyed by what a name resolves to.
         case let .dispatch(dispatch):
-            let callee = space.resolve(dispatch.selector, from: origin)?.qualified
-
-            return pure.contains(callee ?? dispatch.selector)
+            return pure.contains(dispatch.selector)
                 && (dispatch.receiver.map(isPure) ?? true)
                 && dispatch.arguments.values.allSatisfy(isPure)
 
@@ -552,15 +497,21 @@ public struct Linker: Sendable {
     ) throws -> (selectors: [String: Symbol], words: [String: Symbol]) {
         var selectors: [String: Symbol] = [:]
         var words: [String: Symbol] = [:]
-        var ambiguous: Set<String> = []
+        // Every declaration that contests a name, and not only that one is
+        // contested. Nothing a path writes can tell them apart, so the fix is
+        // on a declaration — which makes all of them something a reader has to
+        // be able to reach. A slot holding the latest collision would keep the
+        // newest two and drop whoever took the name first, so a third arrival
+        // hides the declaration the other two are colliding with.
+        var contested: [String: [Symbol]] = [:]
 
         // Two tables, because a name answers two different questions — what a
-        // resolved selector reaches, and what a bare spelling a path writes
-        // may send. One table held both and let a declaration whose qualified
-        // name matched another's bare spelling quietly answer the wrong
-        // question. Symbols rather than procedures, because the bodies still
-        // resolve — the caller reads them through the same resolution every
-        // reached body takes.
+        // selector reaches, and what a bare spelling a path writes may send.
+        // One table held both and let a declaration whose qualified name
+        // matched another's bare spelling quietly answer the wrong question.
+        // Symbols rather than procedures, because the bodies are still to be
+        // read: the caller reads them through the same judgment every reached
+        // body takes.
         for symbol in symbols.sorted(by: { $0.qualified < $1.qualified }) {
             guard pure.contains(symbol.qualified) else { continue }
 
@@ -574,17 +525,34 @@ public struct Linker: Sendable {
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
             // question, so it is not competing for the name.
-            if words.updateValue(symbol, forKey: bare) != nil {
-                ambiguous.insert(bare)
+            if let first = words.updateValue(symbol, forKey: bare) {
+                contested[bare, default: [first]].append(symbol)
             }
         }
 
-        guard ambiguous.isEmpty else {
+        // The place is one declaration and the sentence names every contested
+        // word, so the name that is walked to is picked in sorted order — the
+        // order a dictionary hands its keys back is seeded per process, and
+        // which declaration an author is sent to would change between runs.
+        //
+        // The second is what is walked to, the way it is wherever two
+        // declarations collide. A name reaches this table only by colliding,
+        // so there are always at least two.
+        if let (word, declarations) = contested.min(by: { one, other in one.key < other.key }) {
+            // In the order the caller handed the modules over, which is the
+            // order every collision refusal is read in: the second is the one
+            // that could not be added. Gathered in name order above, because
+            // that is the order the tables are built in, so the two are sorted
+            // apart here rather than one being made to serve for both.
+            let ranked = declarations.sorted { one, other in one.origin < other.origin }
+
             throw LinkError(
-                "\(ambiguous.sorted().joined(separator: ", ")) is declared by more than"
-                    + " one module as something a path may reach — a path segment names"
-                    + " no module, so there is no spelling that would tell them apart",
-                at: nil
+                "\(contested.keys.sorted().joined(separator: ", ")) is declared by more"
+                    + " than one module as something a path may reach — '\(word)' by"
+                    + " \(ranked.map(\.qualified).joined(separator: ", "))"
+                    + " — a path segment names no module, so there is no spelling that"
+                    + " would tell them apart",
+                at: ranked[1].place
             )
         }
 
@@ -597,7 +565,13 @@ public struct Linker: Sendable {
     // cannot both define a symbol.
     private func symbols(of modules: [Module]) throws -> [Symbol] {
         var symbols: [Symbol] = []
-        var claimed: Set<String> = []
+
+        // The declaration that took each name, rather than only that the name
+        // is taken. A refusal about a name declared twice is addressed to the
+        // declaration that cannot be added and names both in the sentence — a
+        // set answers neither half, and the place alone answers neither when
+        // the two documents were never written down.
+        var claimed: [String: Symbol] = [:]
 
         for (origin, module) in modules.enumerated() {
             for name in module.procedures.keys.sorted() {
@@ -605,79 +579,29 @@ public struct Linker: Sendable {
 
                 let qualified = module.qualified(name)
 
-                guard claimed.insert(qualified).inserted else {
+                let symbol = Symbol(
+                    declared: name,
+                    document: .of(module),
+                    origin: origin,
+                    procedure: procedure
+                )
+
+                if let first = claimed[qualified] {
                     throw LinkError(
-                        "'\(qualified)' is declared more than once in this link"
-                            + " — two declarations of a name have no way to be told apart",
-                        at: nil
+                        "'\(qualified)' is declared more than once in this link — by"
+                            + " \(first.spelled) and \(symbol.spelled) — two declarations"
+                            + " of a name have no way to be told apart",
+                        at: symbol.place
                     )
                 }
 
-                symbols.append(
-                    Symbol(
-                        declared: name,
-                        document: .of(module),
-                        origin: origin,
-                        procedure: procedure
-                    )
-                )
+                claimed[qualified] = symbol
+
+                symbols.append(symbol)
             }
         }
 
         return symbols
-    }
-
-    // The one rule a spelling resolves by, whatever the namespace — procedure,
-    // type or constraint. Written once so the spaces cannot drift apart: the
-    // writing module's own declaration first — a name never changes meaning
-    // because some other module in the link grew one, and a module that
-    // declares a name means its own by it — then the exact declared spelling,
-    // and past that, the one declaration in the link that answers to the
-    // spelling.
-    //
-    // Own before exact, because they collide in one case: a shared-space
-    // module's declaration is spelled bare, so its exact spelling is the same
-    // text as another module's bare mention of its own name — and exact-first
-    // would hand that module's own name to a stranger.
-    //
-    // The own step refuses a tie instead of picking: a module whose two
-    // declarations both answer one spelling is the same fact the cross-module
-    // step refuses, and any pick would be an order deciding a meaning. The
-    // qualified spelling still says which — the exact step reads it.
-    static func resolution(
-        of name: String,
-        owned: [String],
-        among declared: Set<String>
-    ) -> Resolution {
-        let own = owned.filter { candidate in candidate.answers(to: name) }
-
-        switch own.count {
-        case 0:
-            break
-
-        case 1:
-            return own.first.map(Resolution.resolved) ?? .unresolved
-
-        default:
-            return .ambiguous(own.sorted())
-        }
-
-        if declared.contains(name) { return .resolved(name) }
-
-        let candidates = declared
-            .filter { candidate in candidate.answers(to: name) }
-            .sorted()
-
-        switch candidates.count {
-        case 0:
-            return .unresolved
-
-        case 1:
-            return candidates.first.map(Resolution.resolved) ?? .unresolved
-
-        default:
-            return .ambiguous(candidates)
-        }
     }
 
     // Every shape the modules declared, and the check that each name a
@@ -1254,89 +1178,55 @@ public struct Linker: Sendable {
     // nothing about them left for a run to do: a constant sees no scope, so what
     // it will be is knowable the moment the document is read.
     //
-    // One may name another declared beside it, which is why this repeats until it
-    // stops learning — and why a name that never settles is a cycle rather than a
-    // typo, and says so.
+    // One may name another declared beside it, so they are settled in the order
+    // they read each other and that order is worked out first. What is wrong
+    // with a set of constants is a fact about that order, and asking the order
+    // is the whole of finding it.
     private func constants(
         of modules: [Module],
-        reaching derivations: [String: Procedure],
+        reaching selectors: [String: Procedure],
         words: [String: Procedure],
         in types: TypeTable,
-        with frame: TypeFrame,
-        symbols space: SymbolSpace
+        with frame: TypeFrame
     ) throws -> [Int: [String: Value]] {
         var settled: [Int: [String: Value]] = [:]
 
         for (origin, module) in modules.enumerated() where !module.constants.isEmpty {
             var known: [String: Value] = [:]
-            var pending = module.constants
 
-            while !pending.isEmpty {
-                var progressed = false
+            // Handed over with what each one reads, so nothing looks a name
+            // back up in the table the order was read from — everything this
+            // one needs comes before it, and asking again is a second chance
+            // to ask a different table.
+            for (name, expression) in try order(of: module) {
+                let resolver = Resolver(
+                    scope: Scope(bindings: known),
+                    selectors: selectors,
+                    words: words,
+                    types: types
+                )
 
-                for (name, expression) in pending.sorted(by: { $0.key < $1.key }) {
-                    // Every constant this one reads must already be settled.
-                    // Without the check a name that is not settled yet would
-                    // resolve to null — the reading a scope gives an absent
-                    // name — and a cycle would quietly become two nulls.
-                    guard heads(of: expression).isSubset(of: Set(known.keys)) else { continue }
+                // A constant's dots are judged before it settles, the way a
+                // body's are: the settled neighbours' types are the
+                // environment, so an absent field or a needless `?.` refuses
+                // here by the one rule, and carries its own place.
+                let (judged, calls) = try resolvedSites(
+                    in: expression,
+                    at: .constant(name, in: .of(module)),
+                    in: known.mapValues { value in type(of: value) },
+                    with: frame,
+                    folding: nil
+                )
 
-                    let resolver = Resolver(
-                        scope: Scope(bindings: known),
-                        derivations: derivations,
-                        words: words,
-                        types: types
-                    )
+                // A closure a constant holds runs later, so evaluating
+                // the constant proves nothing about the sends inside it —
+                // they pass the same gate every gathered send does.
+                try checked(calls, in: frame)
 
-                    // A constant's selectors resolve the way a body's do —
-                    // the constant belongs to a module, and its sends mean
-                    // what that module sees.
-                    let bound = try bind(
-                        expression,
-                        within: origin,
-                        symbols: space,
-                        at: .constant(name, in: .of(module))
-                    )
-
-                    // Everything this constant reads is settled, so a refusal
-                    // here is the expression's own and not a dependency waiting
-                    // its turn. Swallowing it would report the one thing it is
-                    // not — a cycle — and leave the author nothing to act on.
-                    // A constant's dots are judged before it settles, the way
-                    // a body's are: the settled neighbours' types are the
-                    // environment, so an absent field or a needless `?.`
-                    // refuses here by the one rule — and carries its own
-                    // place, so only the settling refusal below needs one.
-                    let (judged, calls) = try resolvedSites(
-                        in: bound,
-                        at: .constant(name, in: .of(module)),
-                        in: known.mapValues { value in type(of: value) },
-                        with: frame,
-                        folding: nil
-                    )
-
-                    // A closure a constant holds runs later, so evaluating
-                    // the constant proves nothing about the sends inside it —
-                    // they pass the same gate every gathered send does.
-                    try checked(calls, in: frame, symbols: space)
-
-                    do {
-                        known[name] = try resolver.resolve(judged)
-                    } catch {
-                        throw LinkError("\(error)", at: .constant(name, in: .of(module)))
-                    }
-
-                    pending[name] = nil
-                    progressed = true
-                }
-
-                guard progressed else {
-                    throw LinkError(
-                        "constants \(pending.keys.sorted().joined(separator: ", ")) cannot"
-                            + " be settled — a constant may name another declared beside it,"
-                            + " but not one that names it back",
-                        at: nil
-                    )
+                do {
+                    known[name] = try resolver.resolve(judged)
+                } catch {
+                    throw LinkError("\(error)", at: .constant(name, in: .of(module)))
                 }
             }
 
@@ -1346,50 +1236,75 @@ public struct Linker: Sendable {
         return settled
     }
 
-    // The names an expression reads from the scope around it. A closure's body
-    // is skipped: what it reads is answered where it is called, from the scope
-    // it captured, so requiring those names to be settled first would be asking
-    // the wrong question.
-    private func heads(of expression: Expression) -> Set<String> {
-        switch expression {
-        case .literal, .closure:
-            return []
+    // The order a module's constants settle in: what a constant reads comes
+    // before it. Constants that wait on each other have no such order, and that
+    // is refused here, standing on one of them.
+    private func order(of module: Module) throws -> [(name: String, expression: Expression)] {
+        let constants = module.constants
 
-        case let .leave(leave):
-            return leave.value.map(heads(of:)) ?? []
+        var ordered: [(name: String, expression: Expression)] = []
+        var settled: Set<String> = []
 
-        case let .reference(path):
-            return Set(path.expandingIndexReferences.compactMap(\.head))
+        // What the walk is standing on, root first. Where it meets a name
+        // already on it, everything from that name down is the circle — and
+        // nothing above it is, which is the difference between what names
+        // itself back and what merely waits on something that does.
+        var walking: [String] = []
 
-        case let .cast(value, _, _):
-            return heads(of: value)
+        func place(_ name: String, reading expression: Expression) throws {
+            guard !settled.contains(name) else { return }
 
-        case let .array(array):
-            return array.reduce(into: Set()) { names, element in
-                names.formUnion(heads(of: element))
+            if let met = walking.firstIndex(of: name) {
+                let circle = walking[met...].sorted()
+
+                throw LinkError(
+                    "constants \(circle.joined(separator: ", ")) name each other in a"
+                        + " circle — a constant may name another declared beside it, but"
+                        + " not one that names it back",
+                    // Any of them is where the fix can be made, so the one
+                    // walked to is the first in sorted order: a circle has no
+                    // first member, and reading one off the walk would name a
+                    // different constant depending on where the walk started.
+                    at: .constant(circle[0], in: .of(module))
+                )
             }
 
-        case let .record(record):
-            return record.values.reduce(into: Set()) { names, field in
-                names.formUnion(heads(of: field))
+            walking.append(name)
+
+            // Sorted, so a module with two mistakes in it refuses the same one
+            // every run — what a set hands back is seeded per process.
+            for read in mentions(of: expression).sorted() {
+                // The walk goes only to names this module declared as constants.
+                guard let reading = constants[read] else { continue }
+
+                try place(read, reading: reading)
             }
 
-        case let .invoke(callee, arguments):
-            return arguments.values.reduce(into: heads(of: callee)) { names, argument in
-                names.formUnion(heads(of: argument))
-            }
+            walking.removeLast()
+            settled.insert(name)
+            ordered.append((name, expression))
+        }
 
-        case let .dispatch(dispatch):
-            return dispatch.arguments.values.reduce(
-                into: dispatch.receiver.map(heads(of:)) ?? []
-            ) { names, argument in
-                names.formUnion(heads(of: argument))
-            }
+        for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
+            try place(name, reading: expression)
+        }
 
-        // A constant sees no scope, so nothing that runs a body can be one —
-        // the validator refuses these before linking ever asks.
-        case .block, .conditional, .loop, .iteration, .attempt:
-            return []
+        return ordered
+    }
+
+    // Every constant this expression names, at whatever depth.
+    //
+    // Flat, because nothing in here can mean anything but a constant: a body
+    // may not introduce a name the module bound, which is settled where a
+    // module is made, so no scope between a mention and this one can have taken
+    // the spelling. A closure's body is walked with
+    // the rest — making one captures the scope it was written in, so a sibling
+    // it reads has to be settled by then.
+    private func mentions(of expression: Expression) -> Set<String> {
+        expression.buried.reduce(into: Set<String>()) { names, held in
+            guard case let .reference(path) = held else { return }
+
+            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
         }
     }
 
@@ -1535,7 +1450,7 @@ public struct Linker: Sendable {
                 throw LinkError(
                     "sending '\(dispatch.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",
-                    at: site.place.slot(.of)
+                    at: site.place.slot(.receiver)
                 )
             }
         }

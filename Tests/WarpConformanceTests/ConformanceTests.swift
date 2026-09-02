@@ -9,7 +9,6 @@ import Foundation
 import Testing
 import Warp
 import WarpSyntax
-import WarpSerialization
 
 // The specification's cases, run against this implementation.
 //
@@ -55,19 +54,25 @@ struct ConformanceTests {
 
     // MARK: - Public
     // MARK: - Private
-    private func run(_ sut: Case) async throws -> Value {
-        let language = Language()
-        let module = try Loader().load(sut.program, identity: nil)
-        let image = try language.link([module] + Module.standard, entry: "entry")
+    // A case starts from `entry`, spelled the way the document declares it:
+    // the document's name in front where it has one.
+    private static func entry(of module: Module) -> String {
+        Draft.qualified("entry", in: module.namespace)
+    }
 
-        return try await language.makeExecutor().run(image, arguments: sut.arguments)
+    private func run(_ sut: Case) async throws -> Value {
+        let linker = Linker()
+        let module = try Loader().load(sut.program, identity: nil)
+        let image = try linker.link([module] + Module.standard, entry: Self.entry(of: module))
+
+        return try await Executor().run(image, arguments: sut.arguments)
     }
 
     // How far a case got before it was refused. The stage is part of the answer:
     // stopping at a run what another implementation stops at a link means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async -> Case.Stage? {
-        let language = Language()
+        let linker = Linker()
         let module: Module
 
         do {
@@ -79,13 +84,13 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try language.link([module] + Module.standard, entry: "entry")
+            image = try linker.link([module] + Module.standard, entry: Self.entry(of: module))
         } catch {
             return .link
         }
 
         do {
-            _ = try await language.makeExecutor().run(image, arguments: sut.arguments)
+            _ = try await Executor().run(image, arguments: sut.arguments)
         } catch {
             return .run
         }

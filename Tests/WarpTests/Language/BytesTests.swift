@@ -16,7 +16,7 @@ import Testing
 @Suite
 struct BytesTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
     private let entryName = "entry"
 
     // MARK: - Test
@@ -182,7 +182,7 @@ struct BytesTests {
     @Test("an index reads one byte out as the int it is")
     func anIndexReadsAByte() async throws {
         // Given — the path is judged at the link, drilled at the run
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -211,7 +211,7 @@ struct BytesTests {
             (
                 .dispatch(Dispatch(
                     receiver: reference("data"),
-                    selector: "count"
+                    selector: "std.collection.count"
                 )),
                 .int(2)
             ),
@@ -225,7 +225,7 @@ struct BytesTests {
             (
                 .dispatch(Dispatch(
                     receiver: reference("data"),
-                    selector: "reversed"
+                    selector: "std.collection.reversed"
                 )),
                 // The receiver's own elements, in the other order — so the
                 // spelling they arrived in is the spelling they leave in.
@@ -234,7 +234,7 @@ struct BytesTests {
             (
                 .dispatch(Dispatch(
                     receiver: reference("data"),
-                    selector: "contains",
+                    selector: "std.collection.contains",
                     arguments: ["value": .literal(.int(105))]
                 )),
                 .bool(true)
@@ -242,7 +242,7 @@ struct BytesTests {
         ]
 
         for (expression, answer) in asks {
-            let sut = Module(
+            let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(
@@ -268,7 +268,7 @@ struct BytesTests {
         //
         // This is why a word whose elements no byte can be still asks for the
         // `.array` case: a bytes value never reaches it.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -277,7 +277,7 @@ struct BytesTests {
                     body: [],
                     result: .dispatch(Dispatch(
                         receiver: reference("data"),
-                        selector: "joined"
+                        selector: "std.text.joined"
                     ))
                 )
             ]
@@ -297,7 +297,7 @@ struct BytesTests {
     func aWalkIteratesBytes() async throws {
         // Given — the material is bytes, and each round's element is the
         // ordinary int one byte is
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -318,7 +318,7 @@ struct BytesTests {
                                         binding: .assignment,
                                         expression: .dispatch(Dispatch(
                                             receiver: reference("sum"),
-                                            selector: "plus",
+                                            selector: "std.math.plus",
                                             arguments: ["value": reference("element", "item")]
                                         ))
                                     )
@@ -339,8 +339,8 @@ struct BytesTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func word(_ selector: String, on receiver: Value) -> Module {
-            Module(
+        func word(_ selector: String, on receiver: Value) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -354,13 +354,13 @@ struct BytesTests {
         }
 
         // When / Then
-        #expect(try await run(word("decoded", on: .bytes([104, 105]))) == .string("hi"))
-        #expect(try await run(word("encoded", on: .string("hi"))) == .bytes([104, 105]))
+        #expect(try await run(word("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
+        #expect(try await run(word("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
 
         // Bytes carry no promise of being text, and a completed guess is a
         // text nobody sent.
         await #expect {
-            try await run(word("decoded", on: .bytes([0xff])))
+            try await run(word("std.text.decoded", on: .bytes([0xff])))
         } throws: { error in
             "\(error)".contains("not utf8 text")
         }
@@ -370,13 +370,13 @@ struct BytesTests {
     func anUnknownEncodingRefuses() throws {
         // Given — the oneOf names the encodings, and a constant is judged at
         // the link
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [],
                     result: .dispatch(Dispatch(
                         receiver: .literal(.bytes([104])),
-                        selector: "decoded",
+                        selector: "std.text.decoded",
                         arguments: ["encoding": .literal(.string("utf16"))]
                     ))
                 )
@@ -385,7 +385,7 @@ struct BytesTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -393,7 +393,7 @@ struct BytesTests {
     func aMixedLiteralJoinsByTheEquation() async throws {
         // Given — the elements spell one type two ways, so the list's element
         // type is that type and the call is judged, not waved through as any
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -469,7 +469,7 @@ struct BytesTests {
     func aBytesConstantFillsAnArraySlot() async throws {
         // Given — the equation is read at the link, and the boundary has
         // nothing to settle: the slot asked for an array and bytes are one
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(

@@ -15,7 +15,7 @@ import Testing
 @Suite("The standard vocabulary")
 struct StandardTests {
     // MARK: - Property
-    private let language = Language()
+    private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -23,7 +23,7 @@ struct StandardTests {
     func aBundleLeftOutDoesNotResolve() throws {
         // Given — a program that only counts, linked without the bundle that
         // declares counting
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -31,7 +31,7 @@ struct StandardTests {
                             id: "many",
                             expression: .dispatch(Dispatch(
                                 receiver: .literal(.array([.int(1)])),
-                                selector: "count"
+                                selector: "std.collection.count"
                             ))
                         )
                     ]
@@ -41,11 +41,11 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut, .math, .text, .foundation], entry: entryName)
+            try linker.link([sut, .math, .text, .foundation], entry: entryName)
         }
 
         #expect(throws: Never.self) {
-            try language.link([sut, .collection, .foundation], entry: entryName)
+            try linker.link([sut, .collection, .foundation], entry: entryName)
         }
     }
 
@@ -53,7 +53,7 @@ struct StandardTests {
     func connectivesShortCircuit() async throws {
         // Given — the later side divides by zero, which refuses when it is
         // asked. `all` is settled by the first false, so it never is
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
@@ -64,7 +64,7 @@ struct StandardTests {
                                 equals(
                                     .dispatch(Dispatch(
                                         receiver: .literal(.int(1)),
-                                        selector: "dividedBy",
+                                        selector: "std.math.dividedBy",
                                         arguments: ["value": .literal(.int(0))]
                                     )),
                                     .literal(.int(0))
@@ -90,7 +90,7 @@ struct StandardTests {
             body: [],
             result: .dispatch(Dispatch(
                 receiver: reference("item"),
-                selector: "times",
+                selector: "std.math.times",
                 arguments: ["value": .literal(.int(2))]
             ))
         )
@@ -101,7 +101,7 @@ struct StandardTests {
                     id: "left",
                     expression: .dispatch(Dispatch(
                         receiver: reference("item"),
-                        selector: "remainder",
+                        selector: "std.math.remainder",
                         arguments: ["value": .literal(.int(2))]
                     ))
                 )
@@ -119,12 +119,12 @@ struct StandardTests {
             body: [],
             result: .dispatch(Dispatch(
                 receiver: reference("carried"),
-                selector: "plus",
+                selector: "std.math.plus",
                 arguments: ["value": reference("item")]
             ))
         )
 
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
@@ -141,7 +141,7 @@ struct StandardTests {
                             id: "kept",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
-                                selector: "filter",
+                                selector: "std.collection.filter",
                                 arguments: ["value": .closure(odd)]
                             ))
                         ),
@@ -149,7 +149,7 @@ struct StandardTests {
                             id: "total",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
-                                selector: "reduce",
+                                selector: "std.collection.reduce",
                                 arguments: [
                                     "from": .literal(.int(0)),
                                     "value": .closure(adding)
@@ -195,18 +195,18 @@ struct StandardTests {
             body: [],
             result: .dispatch(Dispatch(
                 receiver: reference("carried"),
-                selector: "plus",
+                selector: "std.math.plus",
                 arguments: ["value": .literal(.int(1))]
             ))
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
                     body: [],
                     result: .dispatch(Dispatch(
                         receiver: reference("ns"),
-                        selector: "reduce",
+                        selector: "std.collection.reduce",
                         arguments: [
                             "from": .literal(.int(0)),
                             "value": .closure(counting)
@@ -234,11 +234,11 @@ struct StandardTests {
             signature: Signature(parameters: ["item": Parameter(type: .string)]),
             body: [],
             result: .dispatch(Dispatch(
-                selector: "shout",
+                selector: "app.shout",
                 arguments: ["text": reference("item")]
             ))
         )
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
@@ -254,7 +254,7 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut, .shouting] + Module.standard, entry: entryName)
+            try linker.link([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 
@@ -263,12 +263,12 @@ struct StandardTests {
         // Given — both are Swift traps if the answer is taken rather than
         // judged, and each arrives at run time
         let asks: [(String, Value, Value)] = [
-            ("remainder", .int(5), .int(0)),
-            ("dividedBy", .int(5), .int(0))
+            ("std.math.remainder", .int(5), .int(0)),
+            ("std.math.dividedBy", .int(5), .int(0))
         ]
 
         for (word, receiver, operand) in asks {
-            let sut = Module(
+            let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -294,13 +294,13 @@ struct StandardTests {
         // the language stops rather than answering a number the digits do not
         // say
         let asks: [(String, Value, Value)] = [
-            ("times", .int(Int.max), .int(2)),
-            ("plus", .int(Int.max), .int(1)),
-            ("minus", .int(Int.min), .int(1))
+            ("std.math.times", .int(Int.max), .int(2)),
+            ("std.math.plus", .int(Int.max), .int(1)),
+            ("std.math.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ word: String, _ receiver: Value, _ operand: Value) -> Module {
-            Module(
+        func asking(_ word: String, _ receiver: Value, _ operand: Value) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -323,21 +323,21 @@ struct StandardTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0 — an answer the word holds, so it answers.
-        #expect(try await run(asking("remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("a quotient is a fraction even between wholes")
     func aQuotientIsAFraction() async throws {
         // Given — dividedBy never answers an int; `floored` is where a whole
         // division's whole half is read back
-        func divided(_ left: Int, _ right: Int) -> Module {
-            Module(
+        func divided(_ left: Int, _ right: Int) throws -> Module {
+            try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
                         result: .dispatch(Dispatch(
                             receiver: .literal(.int(left)),
-                            selector: "dividedBy",
+                            selector: "std.math.dividedBy",
                             arguments: ["value": .literal(.int(right))]
                         ))
                     )
@@ -389,7 +389,7 @@ struct StandardTests {
     func textSpellsWholeNumbersUniformly() async throws {
         // Given — the quotes must not change with the value's size: a number
         // is a number wherever it sits, and only text wears quotes
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [],
@@ -399,7 +399,7 @@ struct StandardTests {
                             .int(Int.max),
                             .string("9223372036854775807")
                         ])),
-                        selector: "text"
+                        selector: "std.text.text"
                     ))
                 )
             ]
@@ -419,13 +419,13 @@ struct StandardTests {
         // holds. The refusal names the overflow, not a missing whole answer —
         // the two reasons are different facts.
         let asks: [(String, Value)] = [
-            ("floored", .double(1e30)),
-            ("rounded", .double(1e30)),
-            ("absolute", .int(Int.min))
+            ("std.math.floored", .double(1e30)),
+            ("std.math.rounded", .double(1e30)),
+            ("std.math.absolute", .int(Int.min))
         ]
 
         for (word, receiver) in asks {
-            let sut = Module(
+            let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -450,7 +450,7 @@ struct StandardTests {
     func wholeDivisionIsWritable() async throws {
         // Given — `dividedBy` always answers a double, so a whole division is
         // that floored, and what it left over is `remainder`
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["n": Parameter(type: .int)]),
@@ -459,7 +459,7 @@ struct StandardTests {
                             id: "quotient",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("n"),
-                                selector: "dividedBy",
+                                selector: "std.math.dividedBy",
                                 arguments: ["value": .literal(.int(4))]
                             ))
                         ),
@@ -467,14 +467,14 @@ struct StandardTests {
                             id: "whole",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("quotient"),
-                                selector: "floored"
+                                selector: "std.math.floored"
                             ))
                         ),
                         Statement(
                             id: "left",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("n"),
-                                selector: "remainder",
+                                selector: "std.math.remainder",
                                 arguments: ["value": .literal(.int(4))]
                             ))
                         )
@@ -500,7 +500,7 @@ struct StandardTests {
         // takes it on and lets its own end go. Nothing here is a length the
         // author could have counted, and `each` cannot write it because `each`
         // answers one element for every element it was given.
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -515,7 +515,7 @@ struct StandardTests {
                             id: "stepped",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("head"),
-                                selector: "plus",
+                                selector: "std.math.plus",
                                 arguments: ["value": .literal(.int(1))]
                             ))
                         ),
@@ -523,7 +523,7 @@ struct StandardTests {
                             id: "wrapped",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("stepped"),
-                                selector: "remainder",
+                                selector: "std.math.remainder",
                                 arguments: ["value": reference("side")]
                             ))
                         ),
@@ -531,7 +531,7 @@ struct StandardTests {
                             id: "grown",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("trail"),
-                                selector: "prepending",
+                                selector: "std.collection.prepending",
                                 arguments: ["value": reference("wrapped")]
                             ))
                         ),
@@ -539,7 +539,7 @@ struct StandardTests {
                             id: "moved",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("grown"),
-                                selector: "dropLast"
+                                selector: "std.collection.dropLast"
                             ))
                         )
                     ],
@@ -573,7 +573,7 @@ struct StandardTests {
     @Test("an object is walked and rebuilt without naming its fields")
     func anObjectIsDataRatherThanAShape() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["counts": Parameter(type: .object(.int))]),
@@ -582,21 +582,21 @@ struct StandardTests {
                             id: "named",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
-                                selector: "keys"
+                                selector: "std.collection.keys"
                             ))
                         ),
                         Statement(
                             id: "held",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
-                                selector: "values"
+                                selector: "std.collection.values"
                             ))
                         ),
                         Statement(
                             id: "changed",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
-                                selector: "setting",
+                                selector: "std.collection.setting",
                                 arguments: [
                                     "key": .literal(.string("b")),
                                     "value": .literal(.int(9))
@@ -632,27 +632,27 @@ struct StandardTests {
     @Test("whole numbers stay whole, and a quotient does not")
     func arithmeticKeepsItsRepresentation() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
                         Statement(
                             id: "sum",
-                            expression: .dispatch(Dispatch(selector: "plus", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.plus", arguments: [
                                         "of": .literal(.int(2)),
                                         "value": .literal(.int(3))
                                     ]))
                         ),
                         Statement(
                             id: "product",
-                            expression: .dispatch(Dispatch(selector: "times", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.times", arguments: [
                                         "of": .literal(.int(4)),
                                         "value": .literal(.double(2.5))
                                     ]))
                         ),
                         Statement(
                             id: "quotient",
-                            expression: .dispatch(Dispatch(selector: "dividedBy", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
                                         "of": .literal(.int(7)),
                                         "value": .literal(.int(2))
                                     ]))
@@ -679,13 +679,13 @@ struct StandardTests {
     @Test("dividing by zero is refused rather than answered")
     func divisionByZeroFails() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     body: [
                         Statement(
                             id: "gone",
-                            expression: .dispatch(Dispatch(selector: "dividedBy", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
                                         "of": .literal(.int(1)),
                                         "value": .literal(.int(0))
                                     ]))
@@ -705,7 +705,7 @@ struct StandardTests {
     func comparisonReadsAsACondition() async throws {
         // Given — `{ of: x, lessThan: y }` is the condition grammar sending a
         // word, so ordering needed no grammar of its own
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -720,7 +720,7 @@ struct StandardTests {
                             expression: .literal(.string(""))
                         ),
                         Statement(
-                            expression: .conditional(.dispatch(Dispatch(receiver: .reference([.key("n")]), selector: "lessThan", arguments: [
+                            expression: .conditional(.dispatch(Dispatch(receiver: .reference([.key("n")]), selector: "std.math.lessThan", arguments: [
                                             "value": .literal(.int(10))
                                         ])), then: [
                                         Statement(
@@ -752,7 +752,7 @@ struct StandardTests {
     @Test("a word that needs nothing is reachable from a path")
     func nilaryWordsAreReachableFromPaths() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -793,7 +793,7 @@ struct StandardTests {
     @Test("text words compose the way a document writes them")
     func textWordsCompose() async throws {
         // Given
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -804,21 +804,21 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "parts",
-                            expression: .dispatch(Dispatch(selector: "split", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
                                         "of": .reference([.key("line")]),
                                         "value": .literal(.string(","))
                                     ]))
                         ),
                         Statement(
                             id: "rejoined",
-                            expression: .dispatch(Dispatch(selector: "joined", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.joined", arguments: [
                                         "of": .reference([.key("parts")]),
                                         "value": .literal(.string(" / "))
                                     ]))
                         ),
                         Statement(
                             id: "fixed",
-                            expression: .dispatch(Dispatch(selector: "replacing", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.replacing", arguments: [
                                         "of": .reference([.key("rejoined")]),
                                         "value": .literal(.string("b")),
                                         "with": .literal(.string("B"))
@@ -843,7 +843,7 @@ struct StandardTests {
     func standardAnswersAreDeclared() throws {
         // Given — `count` declares that it answers an int, and `split` declares
         // that it is sent a string
-        let sut = Module(
+        let sut = try Module(
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -854,13 +854,13 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "many",
-                            expression: .dispatch(Dispatch(selector: "count", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.collection.count", arguments: [
                                         "of": .reference([.key("items")])
                                     ]))
                         ),
                         Statement(
                             id: "said",
-                            expression: .dispatch(Dispatch(selector: "split", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
                                         "of": .reference([.key("many")]),
                                         "value": .literal(.string(","))
                                     ]))
@@ -872,7 +872,7 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -884,7 +884,7 @@ struct StandardTests {
         let sut = Warp.Expression.dispatch(
             Dispatch(
                 receiver: .literal(.bytes([0x01])),
-                selector: "lessThan",
+                selector: "std.math.lessThan",
                 arguments: ["value": .literal(.bytes([0x02]))]
             )
         )
@@ -938,7 +938,7 @@ struct StandardTests {
         let sut = Warp.Expression.dispatch(
             Dispatch(
                 receiver: .literal(.string("caf\u{E9}")),
-                selector: "equal",
+                selector: "std.logic.equal",
                 arguments: ["value": .literal(.string("cafe\u{301}"))]
             )
         )
@@ -1040,8 +1040,8 @@ struct StandardTests {
     func refusalDoesNotWidenTheOtherArm() throws {
         // Given — `returns: never` is what keeps the branch a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
-        let sut = Module(
-            name: "app",
+        let sut = try Module(
+            namespace: "app",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ok": Parameter(type: .bool)]),
@@ -1081,7 +1081,7 @@ struct StandardTests {
 
         // When / Then — the branch holds a string, and `wants` declares an int
         #expect(throws: LinkError.self) {
-            try language.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
     }
 }

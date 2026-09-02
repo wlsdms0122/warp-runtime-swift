@@ -44,8 +44,8 @@ public struct Validator: Sendable {
         // writes the key and nothing in it has said it has a namespace and
         // named none — and a name nobody can type is a name no other document
         // can join, which is what a namespace is for.
-        if let name = module.name {
-            let here = Place([.key("name")], in: .of(module))
+        if let name = module.namespace {
+            let here = Place([.slot(.namespace)], in: .of(module))
 
             guard !name.isEmpty else {
                 throw ValidationError("a module that writes a name writes one", at: here)
@@ -61,7 +61,12 @@ public struct Validator: Sendable {
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { $0.key < $1.key }) {
             try normal(name, at: .constant(name, in: .of(module)))
-            try validate(expression, visible: constants, at: .constant(name, in: .of(module)))
+            try validate(
+                expression,
+                visible: constants,
+                surroundings: .procedure(constants: constants),
+                at: .constant(name, in: .of(module))
+            )
         }
 
         for name in module.procedures.keys.sorted() {
@@ -73,6 +78,11 @@ public struct Validator: Sendable {
 
             try validate(procedure, constants: constants, at: .procedure(name, in: .of(module)))
         }
+
+        // Last, because it is the least specific thing that can be wrong: a
+        // module whose bodies do not even check is refused for that, and going
+        // first would make the list the only thing an author ever heard about.
+        try declared(module)
     }
 
     // A parameter is a name the body can read, so it is visible from the first
@@ -84,32 +94,72 @@ public struct Validator: Sendable {
     }
 
     // MARK: - Private
+    // What a module says it imports against what it sends. A caller reads the
+    // list to decide whether to grant the words before it links anything, so a
+    // list allowed to drift would be worse than none: it would be trusted and
+    // wrong.
+    private func declared(_ module: Module) throws {
+        let sends = module.sends
+
+        guard sends != module.imports else { return }
+
+        // The two differences and not the two lists. They are different
+        // mistakes with different fixes — a word sent and not listed is the
+        // grant the list existed to disclose, and a word listed and not sent
+        // asks for one the program has no use for — and a module sending
+        // thirty words would otherwise leave an author diffing two of them by
+        // eye to find the one that moved.
+        let undisclosed = sends.subtracting(module.imports).sorted()
+        let unspent = module.imports.subtracting(sends).sorted()
+
+        let said = [
+            undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
+            unspent.isEmpty ? nil : "imports \(unspent), which it does not send"
+        ]
+
+        throw ValidationError(
+            said.compactMap { said in said }.joined(separator: ", and "),
+            at: Place([.slot(.imports)], in: .of(module))
+        )
+    }
+
+    // One parameter, and everything a parameter is held to. Two walks meet a
+    // signature — a procedure's and a closure's — and a rule written at one of
+    // them is a rule the other does not have.
+    private func validate(
+        _ parameter: String,
+        of signature: Signature,
+        beside constants: Set<String>,
+        at here: Place
+    ) throws {
+        try introduced(parameter, beside: constants, at: here)
+
+        // A default is a value a document writes, so it is held to what a
+        // document can hold. It reaches the wire without ever passing through
+        // a body, so a body's rules never see it.
+        guard signature.parameters[parameter]?.default?.holdsProcedure == true else { return }
+
+        throw ValidationError(Value.procedureIsNotData, at: here)
+    }
+
     private func validate(_ procedure: Procedure, constants: Set<String>, at place: Place) throws {
         let parameters = Set(procedure.signature.parameters.keys)
 
         for parameter in parameters.sorted() {
-            try normal(parameter, at: place.slot(.parameters).key(parameter))
-        }
-        let colliding = parameters.intersection(constants).sorted()
-
-        guard colliding.isEmpty else {
-            throw ValidationError(
-                "\(colliding.joined(separator: ", ")) collides with a name"
-                    + " the module bound, which it would take the place of",
-                at: place.slot(.parameters)
+            try validate(
+                parameter,
+                of: procedure.signature,
+                beside: constants,
+                at: place.slot(.parameters).key(parameter)
             )
         }
 
-        // A constant is declared, not merely visible: linking folds a reference
-        // to one into the value it holds, so a statement that reintroduced the
-        // name would leave two readings of the same spelling and only one of
-        // them true.
         guard let block = procedure.block else { return }
 
         try validate(
             block,
             visible: constants.union(parameters),
-            declared: parameters.union(constants),
+            declared: parameters,
             surroundings: .procedure(constants: constants),
             at: place
         )
@@ -150,7 +200,13 @@ public struct Validator: Sendable {
                     throw ValidationError("statement with empty id", at: here)
                 }
 
-                try normal(id, at: here)
+                // An assignment names a name rather than introducing one, so
+                // what it may write is the assignment rule's to answer below.
+                if case .assignment = statement.binding {
+                    try normal(id, at: here)
+                } else {
+                    try introduced(id, beside: surroundings.constants, at: here)
+                }
 
                 // The leave rules reach through structure, because the fact
                 // does: every way through a leaving statement leaves, so its
@@ -280,8 +336,15 @@ public struct Validator: Sendable {
         at place: Place
     ) throws {
         switch expression {
-        case .literal:
-            return
+        // A literal is data. One shape a value has is not data — a closure is
+        // made by running the expression that writes one — so a program
+        // carrying one as a literal is carrying something no text spells and
+        // nothing reads back. A caller assembling shapes in Swift is the only
+        // one that can build it, and this is the door it comes through.
+        case let .literal(value):
+            guard value.holdsProcedure else { return }
+
+            throw ValidationError(Value.procedureIsNotData, at: place)
 
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)
@@ -310,13 +373,13 @@ public struct Validator: Sendable {
         // link's to resolve, so the check has only the value to walk, exactly
         // as it walks any other operand.
         case let .cast(value, _, _):
-            try refuseAnswerless(value, at: place.slot(.of))
+            try refuseAnswerless(value, at: place.slot(.receiver))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.of)
+                at: place.slot(.receiver)
             )
 
         // A closure sees where it was written plus what it declares, which is
@@ -357,20 +420,11 @@ public struct Validator: Sendable {
             // The same rule the top-level signature gets — a closure's
             // parameter is a name a body reads, wherever the signature sits.
             for parameter in parameters.sorted() {
-                try normal(parameter, at: inside.slot(.parameters).key(parameter))
-            }
-
-            // And the same collision rule: linking folds a constant wherever
-            // its name is read, so a parameter under that name would never be
-            // the one that answers — inside a closure as much as at the top.
-            let colliding = parameters.intersection(surroundings.constants).sorted()
-
-            guard colliding.isEmpty else {
-                throw ValidationError(
-                    "parameters \(colliding.joined(separator: ", "))"
-                        + " collides with a name the module bound, which it"
-                        + " would take the place of",
-                    at: inside
+                try validate(
+                    parameter,
+                    of: procedure.signature,
+                    beside: surroundings.constants,
+                    at: inside.slot(.parameters).key(parameter)
                 )
             }
 
@@ -385,13 +439,13 @@ public struct Validator: Sendable {
             )
 
         case let .invoke(callee, arguments):
-            try refuseConstruct(callee, at: place.slot(.procedure))
+            try refuseConstruct(callee, at: place.slot(.callee))
             try validate(
                 callee,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.procedure)
+                at: place.slot(.callee)
             )
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
@@ -412,13 +466,13 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(condition, at: place.slot(.when))
+            try refuseConstructCondition(condition, at: place.slot(.condition(of: .branch)))
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.when)
+                at: place.slot(.condition(of: .branch))
             )
             try validate(
                 then,
@@ -441,17 +495,17 @@ public struct Validator: Sendable {
         // The round state is bound before the condition is asked, which is what
         // lets `where` read how many rounds have passed.
         case let .loop(condition, body, round):
-            try normal(round, at: place)
+            try introduced(round, beside: surroundings.constants, at: place)
 
             let inner = visible.union([round])
 
-            try refuseConstructCondition(condition, at: place.slot(.condition))
+            try refuseConstructCondition(condition, at: place.slot(.condition(of: .loop)))
             try validate(
                 condition,
                 visible: inner,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition)
+                at: place.slot(.condition(of: .loop))
             )
             try validate(
                 body,
@@ -462,7 +516,7 @@ public struct Validator: Sendable {
             )
 
         case let .iteration(material, body, element):
-            try normal(element, at: place)
+            try introduced(element, beside: surroundings.constants, at: place)
 
             try validate(
                 material,
@@ -481,7 +535,7 @@ public struct Validator: Sendable {
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
-            try normal(failure, at: place)
+            try introduced(failure, beside: surroundings.constants, at: place)
 
             try validate(
                 block,
@@ -508,13 +562,13 @@ public struct Validator: Sendable {
 
         case let .dispatch(dispatch):
             if let receiver = dispatch.receiver {
-                try refuseConstruct(receiver, at: place.slot(.of))
+                try refuseConstruct(receiver, at: place.slot(.receiver))
                 try validate(
                     receiver,
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.slot(.of)
+                    at: place.slot(.receiver)
                 )
             }
 
@@ -705,6 +759,29 @@ public struct Validator: Sendable {
                 at: place
             )
         }
+    }
+
+    // A name a body introduces: a parameter, a statement's id, or the one a
+    // construct hands its body. Every such name passes here, so the module's
+    // bound names are checked at whatever depth the name appears — a sub scope
+    // is where a reader is least able to see that the spelling was taken.
+    //
+    // Linking folds a constant wherever its name is read, so a name introduced
+    // under that spelling would never be the one that answers.
+    private func introduced(
+        _ name: String,
+        beside constants: Set<String>,
+        at place: Place
+    ) throws {
+        try normal(name, at: place)
+
+        guard constants.contains(name) else { return }
+
+        throw ValidationError(
+            "'\(name)' collides with a name the module bound, which it would"
+                + " take the place of",
+            at: place
+        )
     }
 }
 

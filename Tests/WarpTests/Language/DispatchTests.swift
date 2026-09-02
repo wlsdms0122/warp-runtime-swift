@@ -32,13 +32,13 @@ struct DispatchTests {
             Statement(
                 id: "counted",
                 expression: .dispatch(
-                    Dispatch(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "count")
+                    Dispatch(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "std.collection.count")
                 )
             ),
             Statement(
                 id: "shouted",
                 expression: .dispatch(
-                    Dispatch(selector: "shout", arguments: ["text": .literal(.string("hi"))])
+                    Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                 )
             ),
             Statement(
@@ -74,7 +74,7 @@ struct DispatchTests {
         // Given — `count` has nothing to say about an int, and a word saying
         // nothing is the same answer as a field nobody set
         let sut = Warp.Expression.dispatch(
-            Dispatch(receiver: .literal(.int(7)), selector: "count")
+            Dispatch(receiver: .literal(.int(7)), selector: "std.collection.count")
         )
 
         // When
@@ -110,8 +110,8 @@ struct DispatchTests {
         // Given / When / Then — which one runs must never be a link-order
         // accident, and an implementation is not a namespace: a body and a
         // native answering one name collide the same way two bodies would
-        let rival = Module(
-            name: "std.collection",
+        let rival = try Module(
+            namespace: "std.collection",
             procedures: [
                 "count": Procedure(
                     signature: Signature(returns: .int),
@@ -121,8 +121,8 @@ struct DispatchTests {
         )
 
         #expect(throws: LinkError.self) {
-            try Language().link(
-                [Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
+            try Linker().link(
+                [try Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
                 entry: "entry"
             )
         }
@@ -138,7 +138,7 @@ struct DispatchTests {
                     id: "shouted",
                     expression: .dispatch(
                         Dispatch(
-                            selector: "shout",
+                            selector: "app.shout",
                             arguments: [
                                 "text": .literal(.string("hi")),
                                 "volume": .literal(.int(11))
@@ -162,7 +162,7 @@ struct DispatchTests {
             body: [
                 Statement(
                     id: "shouted",
-                    expression: .dispatch(Dispatch(selector: "shout"))
+                    expression: .dispatch(Dispatch(selector: "app.shout"))
                 )
             ]
         )
@@ -182,7 +182,7 @@ struct DispatchTests {
                 Statement(
                     id: "shouted",
                     expression: .dispatch(
-                        Dispatch(selector: "shout", arguments: ["text": .literal(.int(7))])
+                        Dispatch(selector: "app.shout", arguments: ["text": .literal(.int(7))])
                     )
                 )
             ]

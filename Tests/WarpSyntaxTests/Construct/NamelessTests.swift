@@ -25,11 +25,12 @@ struct NamelessTests {
     func aNamelessStatementRunsForItsEffect() async throws {
         // Given — a call whose answer nothing keeps, then an answer of its own
         let sut = try loader.loadDocument([
+            "imports": ["std.math.plus"],
             "procedures": [
                 "entry": [
                     "returns": "int",
                     "body": [
-                        ["call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]],
+                        ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]],
                         ["id": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]
@@ -170,11 +171,12 @@ struct NamelessTests {
         // Given — the reader's set of legal documents and the writer's must be
         // one set; a document that reads but does not write back broke that
         let document: Value = [
+            "imports": ["std.math.plus"],
             "procedures": [
                 "entry": [
                     "returns": "int",
                     "body": [
-                        ["call": ["procedure": "plus", "of": 1, "arguments": ["value": 2]]],
+                        ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]],
                         ["id": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]
@@ -205,8 +207,8 @@ struct NamelessTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [String: Value] = [:]) async throws -> Value {
-        let image = try loader.language.link([module] + Module.standard, entry: "entry")
+        let image = try Linker().link([module] + Module.standard, entry: "entry")
 
-        return try await loader.language.makeExecutor().run(image, arguments: arguments)
+        return try await Executor().run(image, arguments: arguments)
     }
 }

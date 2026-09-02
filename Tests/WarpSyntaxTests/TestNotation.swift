@@ -13,11 +13,11 @@ import WarpSyntax
 // it, `{ of: <expression>, <word>: <expression> }`, and the operand lands under
 // `value`.
 //
-// There is no table. A key here *is* the word it names, so nothing in this
-// package has to know which words a notation might spell — which is the point of
-// these tests using one at all. What a real notation does with the same hole —
-// `is` reaching `std.logic.equal`, a connective wrapping its sides, a spelling
-// that takes no subject — is that notation's, and it is tested where it lives.
+// The table is one line per word: a key is the bare name of the declaration it
+// reaches, and a key not in the table is sent as written. What a real notation
+// does with the same hole, `is` reaching `std.logic.equal`, a connective
+// wrapping its sides, a spelling that takes no subject, is that notation's, and
+// it is tested where it lives.
 struct TestConditions: ConditionSpelling {
     // MARK: - Property
     static let subjectKey = "of"
@@ -27,10 +27,19 @@ struct TestConditions: ConditionSpelling {
     // that is not is the expression it is.
     let keys: Set<String> = [subjectKey]
 
-    // Nothing stood in for, so nothing owed. Every word this spells is a word
-    // the document named itself, and the link asks for those the way it asks
-    // for any other.
-    let vocabulary: Set<String> = []
+    // What the table stands in for, and so what this spelling owes the link.
+    var vocabulary: Set<String> { Set(Self.words.values) }
+
+    // The word a condition is spelled with, and the declaration it names.
+    static let words = [
+        "equal": "std.logic.equal",
+        "notEqual": "std.logic.notEqual",
+        "contains": "std.collection.contains",
+        "startsWith": "std.text.startsWith",
+        "lessThan": "std.math.lessThan",
+        "greaterThan": "std.math.greaterThan",
+        "longerThan": "extra.longerThan"
+    ]
 
     // MARK: - Initializer
     // MARK: - Public
@@ -57,7 +66,7 @@ struct TestConditions: ConditionSpelling {
                     forKey: AnyCodingKey(stringValue: Self.subjectKey)
                 )
                 .expression,
-                selector: word,
+                selector: Self.words[word] ?? word,
                 arguments: [
                     Self.operandKey: try container.decode(
                         ExpressionReader.self,
@@ -78,13 +87,13 @@ extension Notation {
     // knows anything about them.
     static let testing = Notation(
         condition: TestConditions(),
-        interpolation: Interpolation(read: "text", joined: "joined")
+        interpolation: Interpolation(read: "std.text.text", joined: "std.text.joined")
     )
 }
 
-// A condition spelling whose keys reach words other than themselves, which is
-// what makes its vocabulary observable at all. `TestConditions` names the word
-// in the document, so it owes nothing.
+// A condition spelling with one key of its own, `holds`, reaching a word no
+// standard bundle declares, so what it owes is told apart from what the
+// standard table owes.
 struct WordedConditions: ConditionSpelling {
     // MARK: - Property
     let keys: Set<String> = ["holds"]

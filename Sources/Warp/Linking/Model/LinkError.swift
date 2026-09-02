@@ -16,16 +16,30 @@ public struct LinkError: WarpError {
     public let place: Place?
 
     // MARK: - Initializer
-    // The place is stated and never defaulted. Most of what this refuses is
-    // somewhere — and the few that are not are facts about the link rather
-    // than about a document: two modules declaring one name is two places, and
-    // an entry nobody declares is none. Saying `nil` out loud is how those
-    // stay distinguishable from a place somebody forgot to carry.
+    // The place is stated and never defaulted, and what it says is where the
+    // fix goes.
+    //
+    // Two modules declaring one name is two places, and the refusal is
+    // addressed to the second — the declaration that cannot be added — with the
+    // first named in the sentence. A link holds several documents and only the
+    // caller knows which file each arrived in, so a refusal that named neither
+    // would send it opening all of them.
+    //
+    // A document and no steps is what is wrong with a document rather than with
+    // anything in it: the same text handed over twice.
+    //
+    // Nil is for what no address is known for, said out loud rather than left
+    // to a default — the entry, which is an argument to linking and written in
+    // no text.
     public init(_ message: String, at place: Place?) {
         self.message = message
         self.place = place
     }
 
     // MARK: - Public
+    public func placed(_ place: Place) -> Self {
+        LinkError(message, at: place)
+    }
+
     // MARK: - Private
 }

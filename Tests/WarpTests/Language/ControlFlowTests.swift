@@ -207,7 +207,7 @@ struct ControlFlowTests {
             while: .dispatch(
                 Dispatch(
                     receiver: reference("round", "index"),
-                    selector: "lessThan",
+                    selector: "std.math.lessThan",
                     arguments: ["value": .literal(.int(3))]
                 )
             ),
@@ -217,7 +217,7 @@ struct ControlFlowTests {
                         .dispatch(
                             Dispatch(
                                 receiver: reference("round", "index"),
-                                selector: "equal",
+                                selector: "std.logic.equal",
                                 arguments: ["value": .literal(.int(2))]
                             )
                         ),
@@ -226,7 +226,7 @@ struct ControlFlowTests {
                                 expression: .dispatch(
                                     Dispatch(
                                         receiver: .literal(.string("too many rounds")),
-                                        selector: "abort"
+                                        selector: "std.control.abort"
                                     )
                                 )
                             )
@@ -260,7 +260,7 @@ struct ControlFlowTests {
                     expression: .dispatch(
                         Dispatch(
                             receiver: reference("sum"),
-                            selector: "plus",
+                            selector: "std.math.plus",
                             arguments: ["value": reference("element", "item")]
                         )
                     )
@@ -328,7 +328,7 @@ struct ControlFlowTests {
                     id: "boom",
                     expression: .dispatch(
                         Dispatch(
-                            selector: "fail",
+                            selector: "app.fail",
                             arguments: ["recoverable": .literal(.bool(true))]
                         )
                     )
@@ -359,7 +359,7 @@ struct ControlFlowTests {
                     id: "boom",
                     expression: .dispatch(
                         Dispatch(
-                            selector: "fail",
+                            selector: "app.fail",
                             arguments: ["recoverable": .literal(.bool(false))]
                         )
                     )

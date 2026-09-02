@@ -10,7 +10,7 @@ import Warp
 
 // `body:` and `result:` — the pair every construct that runs a body writes.
 public struct BlockReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case body
         case result
     }
