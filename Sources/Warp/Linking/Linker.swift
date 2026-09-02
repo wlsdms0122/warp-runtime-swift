@@ -640,7 +640,7 @@ public struct Linker: Sendable {
             }
         }
 
-        for (name, declaration) in members.sorted(by: { $0.key < $1.key }) {
+        for (_, declaration) in members.sorted(by: { $0.key < $1.key }) {
             let admitted = declaration.held
 
             guard !admitted.isEmpty else {
