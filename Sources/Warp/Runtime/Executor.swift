@@ -394,8 +394,7 @@ public struct Executor: Sendable {
 
             // A box handed for a path into a variable is written back when
             // the call ends, whether it answered or failed: a box written
-            // halfway is still written. What the writing back refuses is
-            // refused out loud.
+            // halfway is still written.
             let answered: Result<Value, any Error>
 
             do {
@@ -411,20 +410,30 @@ public struct Executor: Sendable {
                 answered = .failure(error)
             }
 
-            // Every box is written back, whichever refuses; what the call
-            // then reports is the body's own failure where it had one, and
-            // the first refused writing back otherwise.
-            var refused: [any Error] = []
+            // Every box is written back, whichever refuses. A writing back
+            // that refuses is a path that no longer holds what it held when
+            // the call began, and that is reported over the body's own
+            // failure, naming it: an attempt around the call catches a body's
+            // failure and not a broken box.
+            var refused: [(path: [PathSegment], error: any Error)] = []
 
             for (_, box) in handed.sorted(by: { $0.key < $1.key }) where box.path.count > 1 {
                 do {
                     try scope.assign(box.path, to: box.box.value)
                 } catch {
-                    refused.append(error)
+                    refused.append((box.path, error))
                 }
             }
 
-            if case .success = answered, let first = refused.first { throw first }
+            if let first = refused.first {
+                var reported = "writing '\(first.path.rendered)' back after '\(dispatch.selector)' refused: \(first.error)"
+
+                if case let .failure(failure) = answered {
+                    reported += " — and the body had failed: \(failure)"
+                }
+
+                throw ExecutionError(reported)
+            }
 
             return try answered.get()
         }

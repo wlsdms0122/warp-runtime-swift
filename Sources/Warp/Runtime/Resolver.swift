@@ -111,9 +111,6 @@ public struct Resolver: Sendable {
         Rendering(value).text()
     }
 
-    // What a reference names, walked to the end. The scope answers the head;
-    // every segment after it is drilling into a value, and a segment that names
-    // no field is a message sent to what the walk has reached so far.
     // The path with every index read to a position: an index written as a
     // name is a reading in this scope, and a write lands on one position.
     // Every write goes through here before it reaches a box.
@@ -131,6 +128,9 @@ public struct Resolver: Sendable {
         }
     }
 
+    // What a reference names, walked to the end. The scope answers the head;
+    // every segment after it is drilling into a value, and a segment that names
+    // no field is a message sent to what the walk has reached so far.
     public func lookup(_ path: [PathSegment]) -> Lookup {
         // A mark on the head expects the scope to be missing a name, which is
         // not absence but a reading gone wrong — the link says so where the

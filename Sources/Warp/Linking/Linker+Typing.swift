@@ -2376,6 +2376,13 @@ extension Linker {
     // take, and no two `inout` parameters are handed one variable. The last is
     // static: two paths under one head may or may not meet, and the link
     // refuses the head rather than guessing.
+    //
+    // A shared box — a module variable, or a parameter this body was handed
+    // in place — is what the environment marks `inout`, and that mark is the
+    // whole of the judgement: a part of a shared box goes only to a native
+    // word, which reads no name, since a written body reaches the box's
+    // declaring module by calling it; and a module variable never goes to a
+    // body of the module that declares it, which reads it by name.
     private func handedInPlace(
         by dispatch: Dispatch,
         to callee: Symbol,
@@ -2384,12 +2391,9 @@ extension Linker {
         at place: Place,
         when ask: Ask
     ) throws {
-        var moduleVariables: Set<String> = []
+        guard case let .judging(_, origin) = ask else { return }
 
-        if case let .judging(_, origin?) = ask {
-            moduleVariables = frame.moduleVariables[origin] ?? []
-        }
-
+        let moduleVariables = origin.flatMap { origin in frame.moduleVariables[origin] } ?? []
         let signature = callee.procedure.signature
         var heads: [String: String] = [:]
 
@@ -2402,61 +2406,67 @@ extension Linker {
                 : place.argument(name)
 
             guard case let .reference(path) = argument, let head = path.head else {
-                throw LinkError(
+                try refuse(
                     "hands '\(name)' in place, and what is handed in place is a"
                         + " variable's path — this argument is not one",
-                    at: at
+                    at: at,
+                    when: ask
                 )
+                continue
             }
 
+            let shared: Bool
+
             switch environment[head] {
-            case .variable?, .inout?:
-                break
+            case .variable?:
+                shared = false
+
+            case .inout?:
+                shared = true
 
             default:
-                throw LinkError(
+                try refuse(
                     "hands '\(head)' in place, which is a fixed name here — a"
                         + " variable is handed in place",
-                    at: at
+                    at: at,
+                    when: ask
                 )
+                continue
             }
 
             if case let .refused(reason) = writable(path, in: environment, with: frame) {
-                throw LinkError("hands '\(name)' in place, and \(reason)", at: at)
+                try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
 
             if let earlier = heads[head] {
-                throw LinkError(
+                try refuse(
                     "hands '\(head)' in place twice, to '\(earlier)' and to"
                         + " '\(name)' — one call hands one variable to one parameter",
-                    at: at
+                    at: at,
+                    when: ask
                 )
             }
 
-            // A module variable is one box every body of its module reads by
-            // name, and a body of another module reaches those bodies by
-            // calling them. So a written body is handed the whole variable
-            // only, sharing the one box, and never from the module that
-            // declares it; a part of the variable goes only to a native word,
-            // which reads no name.
-            if moduleVariables.contains(head), callee.procedure.block != nil {
-                if case let .judging(_, origin?) = ask, origin == callee.origin {
-                    throw LinkError(
+            if shared, callee.procedure.block != nil {
+                if path.count > 1 {
+                    try refuse(
+                        "hands '\(path.rendered)' in place to '\(dispatch.selector)',"
+                            + " which is a written body — a part of a shared box is"
+                            + " handed in place only to a native word; a body takes the"
+                            + " whole variable, sharing its box",
+                        at: at,
+                        when: ask
+                    )
+                }
+
+                if moduleVariables.contains(head), origin == callee.origin {
+                    try refuse(
                         "hands '\(head)' in place to '\(dispatch.selector)', which is"
                             + " declared beside it and reads it by name — a module"
                             + " variable is handed in place only to a body of another"
                             + " module, or to a native word",
-                        at: at
-                    )
-                }
-
-                if path.count > 1 {
-                    throw LinkError(
-                        "hands '\(path.rendered)' in place to '\(dispatch.selector)',"
-                            + " which is a written body — a part of a module variable is"
-                            + " handed in place only to a native word; a body takes the"
-                            + " whole variable, sharing its box",
-                        at: at
+                        at: at,
+                        when: ask
                     )
                 }
             }
@@ -2465,7 +2475,6 @@ extension Linker {
         }
     }
 
-    // MARK: - Private
     private func refuseUnfit(
         _ written: TypeExpression,
         writtenTo path: [PathSegment],
