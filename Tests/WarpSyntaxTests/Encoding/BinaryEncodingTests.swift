@@ -147,7 +147,7 @@ struct BinaryEncodingTests {
 
     @Test("a tag the format never assigned is refused")
     func anUnknownTagIsRefused() {
-        let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x09])
+        let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x0a])
 
         #expect {
             try BinaryEncoding.value(from: bytes)

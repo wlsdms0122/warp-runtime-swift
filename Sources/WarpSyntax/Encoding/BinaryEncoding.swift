@@ -48,6 +48,7 @@ public enum BinaryEncoding {
         case array = 0x06
         case record = 0x07
         case bytes = 0x08
+        case namedRecord = 0x09
     }
 
     // MARK: - Public
@@ -155,8 +156,15 @@ public enum BinaryEncoding {
         // Sorted by their UTF-8 bytes, so that the same document is the same
         // bytes in every implementation. A language's own string ordering is
         // whatever that language decided, and the wire cannot depend on it.
-        case let .record(_, object):
-            bytes.append(Tag.record.rawValue)
+        // A record under a name is written under its own tag with the name in
+        // front, so a reader that met the tag knows a name follows.
+        case let .record(name, object):
+            if let name {
+                bytes.append(Tag.namedRecord.rawValue)
+                write(Array(name.utf8), into: &bytes)
+            } else {
+                bytes.append(Tag.record.rawValue)
+            }
 
             write(UInt64(object.count), into: &bytes)
 
@@ -221,7 +229,7 @@ public enum BinaryEncoding {
     // code has to promise never to reach.
     private enum Opened {
         case array(expecting: Int, held: [Value])
-        case record(expecting: Int, held: [String: Value], key: String, previous: [UInt8])
+        case record(expecting: Int, held: [String: Value], key: String, previous: [UInt8], name: String?)
     }
 
     // One pass over the bytes with an explicit stack, because the depth of a
@@ -301,11 +309,12 @@ public enum BinaryEncoding {
                     opened.append(.array(expecting: count, held: held))
                 }
 
-            case .record:
+            case .record, .namedRecord:
+                let name = tag == .namedRecord ? try text(from: &reading) : nil
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
-                    settled = .object([:])
+                    settled = .record(name: name, fields: [:])
                 } else {
                     var held: [String: Value] = [:]
 
@@ -313,7 +322,7 @@ public enum BinaryEncoding {
 
                     let (key, raw) = try field(from: &reading, after: nil)
 
-                    opened.append(.record(expecting: count, held: held, key: key, previous: raw))
+                    opened.append(.record(expecting: count, held: held, key: key, previous: raw, name: name))
                 }
             }
 
@@ -334,19 +343,19 @@ public enum BinaryEncoding {
                         opened.append(.array(expecting: expecting - 1, held: held))
                     }
 
-                case .record(let expecting, var held, let key, let previous):
+                case .record(let expecting, var held, let key, let previous, let name):
                     // Unique because the keys arrived strictly ascending and
                     // in NFC: byte order refuses a byte-equal duplicate, and
                     // NFC leaves one name one byte spelling to be equal in.
                     held[key] = value
 
                     if expecting == 1 {
-                        settled = .object(held)
+                        settled = .record(name: name, fields: held)
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 
                         opened.append(
-                            .record(expecting: expecting - 1, held: held, key: next, previous: raw)
+                            .record(expecting: expecting - 1, held: held, key: next, previous: raw, name: name)
                         )
                     }
                 }

@@ -1100,7 +1100,13 @@ extension Linker {
                 ? TypeExpression.nullable(type)
                 : type
 
-            if !settled.couldBothHold(read, in: frame.types) {
+            // A declared record is a name as well as a shape: reading a
+            // nameless record as one attaches the name, so it is never a
+            // cast of what the value already is. Two names never hold one
+            // value, and the unresolved types are asked so that is seen.
+            let nominal = type.declaresRecord(in: frame.types)
+
+            if !type.couldBothHold(inner.reading, in: frame.types) {
                 // Neither could ever be the other, and the reading proves what
                 // it is — so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
@@ -1114,7 +1120,8 @@ extension Linker {
                     at: place,
                     when: ask
                 )
-            } else if settled == read || handed.resolved(in: frame.types) == read {
+            } else if inner.reading == type
+                || (!nominal && (settled == read || handed.resolved(in: frame.types) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe` — the same shape by two spellings,
@@ -2203,8 +2210,10 @@ extension Linker {
                     .reduce(nil) { joined, next in join(joined, next) } ?? .any
             )
 
-        case let .record(_, fields):
-            return .record(fields.mapValues(type(of:)))
+        // A record under a name reads as that name; the shape is the
+        // declaration's, and the name is what the value fits.
+        case let .record(name, fields):
+            return name.map { name in .named(name) } ?? .record(fields.mapValues(type(of:)))
         }
     }
 

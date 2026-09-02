@@ -82,7 +82,7 @@ struct TypeTests {
         )
 
         // Then
-        #expect(settled == .array([.object(["id": .string("a")])]))
+        #expect(settled == .array([.record(name: "Task", fields: ["id": .string("a")])]))
 
         #expect(throws: ArgumentError.self) {
             try sut.settling(.array([.object(["id": .int(1)])]), at: "tasks", in: types)

@@ -104,7 +104,7 @@ public enum TextEncoding {
     // for its next field name.
     private enum Opened {
         case array([Value])
-        case record(held: [String: Value], key: String?)
+        case record(held: [String: Value], key: String?, name: String?)
     }
 
     private static func tokenized(_ text: String) throws -> [Token] {
@@ -290,24 +290,24 @@ public enum TextEncoding {
 
             // A record waits for a key where everything else waits for a value,
             // and a closing brace is only honest in that position
-            if case .record(let held, .none) = opened.last {
+            if case .record(let held, .none, let name) = opened.last {
                 switch token {
                 case .recordClose:
                     opened.removeLast()
 
-                    settled = .object(held)
+                    settled = .record(name: name, fields: held)
 
-                case let .bare(name) where identifier(name):
-                    try expect(name, in: held)
+                case let .bare(key) where identifier(key):
+                    try expect(key, in: held)
 
-                    opened[opened.count - 1] = .record(held: held, key: name)
+                    opened[opened.count - 1] = .record(held: held, key: key, name: name)
 
                     continue
 
-                case let .string(name):
-                    try expect(name, in: held)
+                case let .string(key):
+                    try expect(key, in: held)
 
-                    opened[opened.count - 1] = .record(held: held, key: name)
+                    opened[opened.count - 1] = .record(held: held, key: key, name: name)
 
                     continue
 
@@ -322,7 +322,7 @@ public enum TextEncoding {
                     continue
 
                 case .recordOpen:
-                    opened.append(.record(held: [:], key: nil))
+                    opened.append(.record(held: [:], key: nil, name: nil))
 
                     continue
 
@@ -344,7 +344,16 @@ public enum TextEncoding {
                 case let .bytes(bytes):
                     settled = .bytes(bytes)
 
+                // A bare word in front of a record is the record's name: the
+                // declared type the value settled to.
                 case let .bare(bare):
+                    if tokens.first == .recordOpen, !isScalar(bare) {
+                        tokens.removeFirst()
+                        opened.append(.record(held: [:], key: nil, name: bare))
+
+                        continue
+                    }
+
                     settled = try scalar(from: bare)
                 }
             }
@@ -360,17 +369,17 @@ public enum TextEncoding {
 
                     opened.append(.array(held))
 
-                case .record(var held, let key?):
+                case .record(var held, let key?, let name):
                     // Unique because the keys arrived strictly ascending and
                     // in NFC: byte order refuses a byte-equal duplicate, and
                     // NFC leaves one name one byte spelling to be equal in.
                     held[key] = value
 
-                    opened.append(.record(held: held, key: nil))
+                    opened.append(.record(held: held, key: nil, name: name))
 
                 // A record with no key is waiting for a field name, and every
                 // token it could meet in that state was answered above
-                case .record(_, .none):
+                case .record(_, .none, _):
                     throw refused("a record writes a field name here")
                 }
             }
@@ -380,6 +389,10 @@ public enum TextEncoding {
     // What a bare token names. Everything unquoted is one of five things, and a
     // number is whole or a fraction by grammar — a point or an exponent, not a
     // reader's guess.
+    private static func isScalar(_ bare: String) -> Bool {
+        (try? scalar(from: bare)) != nil
+    }
+
     private static func scalar(from bare: String) throws -> Value {
         switch bare {
         case "null": return .null
@@ -521,7 +534,11 @@ public enum TextEncoding {
 
             text += String(repeating: "  ", count: indent) + "]"
 
-        case let .record(_, object):
+        case let .record(name, object):
+            if let name {
+                text += name + " "
+            }
+
             guard !object.isEmpty else {
                 text += "{}"
 

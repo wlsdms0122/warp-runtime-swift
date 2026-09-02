@@ -21,10 +21,10 @@ extension Value {
         let rest = Array(path.dropFirst())
 
         switch (self, segment) {
-        case let (.record(_, fields), .key(name, _)):
+        case let (.record(tag, fields), .key(name, _)):
             var written = fields
             written[name] = try (fields[name] ?? .null).writing(value, at: rest, under: rendered)
-            return .object(written)
+            return .record(name: tag, fields: written)
 
         case let (.array(elements), .index(index, _)):
             guard elements.indices.contains(index) else {
