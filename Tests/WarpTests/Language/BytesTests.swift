@@ -304,19 +304,13 @@ struct BytesTests {
                         parameters: ["data": Parameter(type: .bytes)]
                     ),
                     body: [
-                        Statement(
-                            id: "sum",
-                            binding: .variable,
-                            expression: .literal(.int(0))
+                        Statement(binding: .variable("sum"), expression: .literal(.int(0))
                         ),
                         Statement(
                             expression: .iteration(
                                 over: reference("data"),
                                 body: [
-                                    Statement(
-                                        id: "sum",
-                                        binding: .assignment,
-                                        expression: .dispatch(Dispatch(
+                                    Statement(binding: .assignment([.key("sum")]), expression: .dispatch(Dispatch(
                                             receiver: reference("sum"),
                                             selector: "std.math.plus",
                                             arguments: ["value": reference("element", "item")]

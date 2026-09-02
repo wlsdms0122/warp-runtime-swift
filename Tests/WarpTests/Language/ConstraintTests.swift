@@ -690,9 +690,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "pair",
-                            expression: .closure(Procedure(
+                        Statement(binding: .constant("pair"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: ["seed": Parameter(type: .int)],
                                     returns: .string
@@ -754,9 +752,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "task",
-                            expression: .literal(.string("a"))
+                        Statement(binding: .constant("task"), expression: .literal(.string("a"))
                         )
                     ],
                     result: .reference([.key("task"), .key("absolute")])
@@ -782,9 +778,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "task",
-                            expression: .record(["id": .literal(.string("a"))])
+                        Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))])
                         )
                     ],
                     result: .reference([.key("task"), .key("absolute")])
@@ -838,9 +832,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "kept",
-                            expression: .closure(Procedure(
+                        Statement(binding: .constant("kept"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
                                         "it": Parameter(type: .parameter(name: "T", constraint: "Nope"))

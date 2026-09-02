@@ -30,6 +30,11 @@ public struct Scope: Sendable {
         self.variables = [:]
     }
 
+    init(bindings: [String: Value], variables: [String: Variable]) {
+        self.bindings = bindings
+        self.variables = variables
+    }
+
     // MARK: - Public
     // What a reference's first segment names here. Nil is absence — the name is
     // not in this environment at all.
@@ -69,8 +74,37 @@ public struct Scope: Sendable {
     //
     // A name that is not a variable here cannot reach this: the validator
     // proves every assignment names one before the program runs.
-    public func assign(_ id: String, to value: Value) {
-        variables[id]?.value = value
+    // A write through a path: the head names the box, and the rest of the
+    // path says where inside its value the new value goes. The box is read
+    // once, rewritten, and stored once, so nothing observes the value halfway.
+    public func assign(_ path: [PathSegment], to value: Value) throws {
+        guard let head = path.head, let box = variables[head] else {
+            throw ExecutionError(
+                "'\(path.rendered)' writes a name that is not a variable here"
+            )
+        }
+
+        guard path.count > 1 else {
+            box.value = value
+            return
+        }
+
+        box.value = try box.value.writing(value, at: Array(path.dropFirst()), under: path.rendered)
+    }
+
+    // The box under a name, where the name is a variable. Handing a box on is
+    // how a call shares a variable with its callee.
+    func box(of name: String) -> Variable? {
+        variables[name]
+    }
+
+    // The same scope holding a box under a name — what a callee reads its
+    // `inout` parameter through.
+    func sharing(_ box: Variable, as name: String) -> Scope {
+        var scope = self
+        scope.bindings[name] = nil
+        scope.variables[name] = box
+        return scope
     }
 
     // MARK: - Private

@@ -344,9 +344,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(returns: .string),
                     body: [
-                        Statement(
-                            id: "kept",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("kept"), expression: .dispatch(Dispatch(
                                 selector: "keep",
                                 arguments: ["value": .literal(.string("a"))]
                             ))

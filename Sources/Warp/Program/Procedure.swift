@@ -24,6 +24,13 @@ public struct Procedure: Sendable {
     public let signature: Signature
     public let implementation: Implementation
 
+    // What the link derived about this body, where the link has seen it: a
+    // closure literal is rewritten by the link to carry both, and the closure
+    // value made from it carries them on into a slot that asks. A procedure a
+    // caller assembles claims nothing.
+    public let purity: Purity
+    public let isolation: Isolation
+
     public var block: Block? { implementation.block }
     public var body: [Statement] { block?.body ?? [] }
     public var result: Expression? { block?.result }
@@ -32,11 +39,15 @@ public struct Procedure: Sendable {
     public init(
         description: String? = nil,
         signature: Signature = Signature(),
-        implementation: Implementation
+        implementation: Implementation,
+        purity: Purity = .unstated,
+        isolation: Isolation = .unstated
     ) {
         self.description = description
         self.signature = signature
         self.implementation = implementation
+        self.purity = purity
+        self.isolation = isolation
     }
 
     // A procedure written in the language. The common case, and the one a

@@ -260,7 +260,7 @@ struct TypeNotationTests {
                 == .array(.parameter(name: "Element", constraint: "Comparable"))
         )
 
-        guard case let .procedure(.some(inner), _) = parameters?["by"]?.type else {
+        guard case let .procedure(.some(inner), _, _) = parameters?["by"]?.type else {
             Issue.record("the procedure type did not survive reading")
 
             return

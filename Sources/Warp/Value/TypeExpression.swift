@@ -80,10 +80,23 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // the way `any` is for a value, and it is accepted by anything for the same
     // reason.
     //
-    // Purity is a requirement rather than a claim. A declaration never states
-    // its own — the linker derives that from what a body calls — so what is
-    // written here is what a slot asks of whatever fills it.
-    case procedure(Signature?, Purity = .unstated)
+    // Purity and isolation are requirements rather than claims. A declaration
+    // never states its own — the linker derives both from what a body does —
+    // so what is written here is what a slot asks of whatever fills it.
+    case procedure(Signature?, Purity = .unstated, Isolation = .unstated)
+
+    // A field that a path may write through. Only a declared type's field is
+    // one: `var int` in a type declaration says a `set` or an `inout` path may
+    // pass this field, and a field written without it stops such a path at the
+    // link. What the value holds is the inner type; this is a fact about the
+    // slot and never about a value.
+    case variable(TypeExpression)
+
+    // A parameter the call hands a variable to, in place: the callee writes the
+    // caller's box, and the caller reads what was written when the call
+    // returns. Only a parameter's type is one. The argument is a path headed by
+    // a variable, and what arrives is the inner type.
+    case `inout`(TypeExpression)
 
     // The declared type, or null — the one union the language has, and it is
     // null-only on purpose. `?.` answers this, and a parameter declaring it may
@@ -318,11 +331,31 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
             return settled.isEmpty ? .object([:]) : .object(settled)
 
-        // Purity is not checked here. What a closure calls is a fact about the
-        // text it was written in, which the link read and this cannot — a value
-        // in hand carries a body, not the judgement made about it.
-        case let .procedure(required, _):
+        // A slot writes `var` or `inout` about itself; what stands in it is a
+        // value of the inner type.
+        case let .variable(inner), let .inout(inner):
+            return try inner.settling(value, at: path, in: types, assuming: assuming)
+
+        // A closure carries what the link derived about its text — its purity
+        // and its isolation — and a slot that asks for either reads the carried
+        // fact. A closure that reached here through `any` or through an
+        // undeclared field is judged here for the first time.
+        case let .procedure(required, purity, isolation):
             guard case let .procedure(closure) = value else { throw mismatch(value, at: path) }
+
+            if purity == .pure, closure.purity != .pure {
+                throw ArgumentError(
+                    "\(path): expected \(rendered), got a procedure that runs"
+                )
+            }
+
+            if isolation == .isolated, closure.isolation != .isolated {
+                throw ArgumentError(
+                    "\(path): expected \(rendered), got a procedure that writes"
+                        + " what another body could touch"
+                )
+            }
+
             guard let required else { return value }
 
             guard required.accepts(closure.procedure.signature, in: types) else {
@@ -448,8 +481,20 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .reading(of, path):
             return "some \(([PathSegment.key(of)] + path).rendered)"
 
-        case let .procedure(signature, purity):
-            let word = purity == .pure ? "pure procedure" : "procedure"
+        case let .variable(inner):
+            return "var \(inner.rendered)"
+
+        case let .inout(inner):
+            return "inout \(inner.rendered)"
+
+        case let .procedure(signature, purity, isolation):
+            let word = [
+                purity == .pure ? "pure" : nil,
+                isolation == .isolated ? "isolated" : nil,
+                "procedure"
+            ]
+            .compactMap { part in part }
+            .joined(separator: " ")
 
             guard let signature else { return word }
 
@@ -551,6 +596,13 @@ extension TypeExpression {
         case .any, .int, .number, .reading:
             return true
 
+        case let .variable(inner), let .inout(inner):
+            return inner.holdsEveryByte(
+                in: types,
+                namedAssuming: namedAssuming,
+                boundAssuming: boundAssuming
+            )
+
         // A parameter stands for what arrived and does not settle it. A bounded
         // one still asks each value for its membership — and a member that
         // takes every byte answers that question for all of them at once, so
@@ -630,6 +682,25 @@ extension TypeExpression {
     // is deliberately not a gate for `accepts` and `settling`: those exist to
     // read exactly what dropping erases — the bounds, and which spelling a
     // slot settles to.
+    // The type a parameter hands in place, where it does; otherwise the type
+    // itself. What arrives through `inout` is the inner type, and every
+    // question about what fits asks that.
+    public var inoutUnwrapped: TypeExpression {
+        if case let .inout(inner) = self { return inner }
+        return self
+    }
+
+    public var isInout: Bool {
+        if case .inout = self { return true }
+        return false
+    }
+
+    // The type a field holds, whether or not a path may write through it.
+    public var fieldUnwrapped: TypeExpression {
+        if case let .variable(inner) = self { return inner }
+        return self
+    }
+
     var unrefined: TypeExpression {
         switch self {
         case let .ranged(refinement):
@@ -974,6 +1045,14 @@ extension TypeExpression {
         case (.parameter, _), (_, .parameter), (.reading, _), (_, .reading):
             return true
 
+        // `var` and `inout` are facts about a slot, and fitting is asked of the
+        // inner type on either side.
+        case let (.variable(inner), _), let (.inout(inner), _):
+            return inner.accepts(other, in: types, assuming: assuming)
+
+        case let (_, .variable(inner)), let (_, .inout(inner)):
+            return accepts(inner, in: types, assuming: assuming)
+
         case (.any, _), (_, .any):
             return true
 
@@ -1034,12 +1113,12 @@ extension TypeExpression {
                 } ?? false
             }
 
-        case let (.procedure(required, wanted), .procedure(given, offered)):
-            // A slot asking for purity takes only what says it is pure. The
-            // other way round is free: a pure procedure stands anywhere one is
-            // wanted, because answering without running is a promise nothing
-            // needs relieving of.
+        case let (.procedure(required, wanted, wantedIsolation), .procedure(given, offered, offeredIsolation)):
+            // A slot asking for purity takes only what says it is pure, and one
+            // asking for isolation only what says it is isolated. The other way
+            // round is free: what promises more stands anywhere less is wanted.
             guard wanted != .pure || offered == .pure else { return false }
+            guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
 
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }

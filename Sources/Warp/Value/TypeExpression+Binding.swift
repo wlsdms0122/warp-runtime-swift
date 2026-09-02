@@ -109,7 +109,13 @@ public extension TypeExpression {
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: types)
             }
 
-        case let (.procedure(.some(mine), _), .procedure(.some(theirs), _)):
+        case let (.variable(mine), _), let (.inout(mine), _):
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: types)
+
+        case let (_, .variable(theirs)), let (_, .inout(theirs)):
+            binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: types)
+
+        case let (.procedure(.some(mine), _, _), .procedure(.some(theirs), _, _)):
             for (name, parameter) in mine.parameters.sorted(by: { $0.key < $1.key }) {
                 guard let opposite = theirs.parameters[name] else { continue }
 
@@ -147,8 +153,14 @@ public extension TypeExpression {
         case let .record(fields):
             return .record(fields.mapValues { field in field.filling(bound) })
 
-        case let .procedure(signature, purity):
-            return .procedure(signature?.filling(bound), purity)
+        case let .procedure(signature, purity, isolation):
+            return .procedure(signature?.filling(bound), purity, isolation)
+
+        case let .variable(inner):
+            return .variable(inner.filling(bound))
+
+        case let .inout(inner):
+            return .inout(inner.filling(bound))
 
         case let .nullable(inner):
             return .nullable(inner.filling(bound))
@@ -182,8 +194,11 @@ public extension TypeExpression {
                 field.parameterConstraints(into: &table)
             }
 
-        case let .procedure(signature, _):
+        case let .procedure(signature, _, _):
             signature?.parameterConstraints(into: &table)
+
+        case let .variable(inner), let .inout(inner):
+            inner.parameterConstraints(into: &table)
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return
@@ -206,8 +221,11 @@ public extension TypeExpression {
         case let .record(fields):
             return fields.values.contains { field in field.isGeneric }
 
-        case let .procedure(signature, _):
+        case let .procedure(signature, _, _):
             return signature?.isGeneric ?? false
+
+        case let .variable(inner), let .inout(inner):
+            return inner.isGeneric
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return false
@@ -301,11 +319,17 @@ public extension TypeExpression {
         case let .record(fields):
             return .record(fields.mapValues { field in field.bounded(by: bounds) })
 
-        case let .procedure(signature, purity):
-            return .procedure(signature?.bounded(by: bounds), purity)
+        case let .procedure(signature, purity, isolation):
+            return .procedure(signature?.bounded(by: bounds), purity, isolation)
 
         case let .nullable(inner):
             return .nullable(inner.bounded(by: bounds))
+
+        case let .variable(inner):
+            return .variable(inner.bounded(by: bounds))
+
+        case let .inout(inner):
+            return .inout(inner.bounded(by: bounds))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return self

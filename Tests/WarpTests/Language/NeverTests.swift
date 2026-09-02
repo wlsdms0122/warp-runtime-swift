@@ -29,7 +29,7 @@ struct NeverTests {
 
         #expect(Block(body: [Statement(expression: leave)], result: .literal(.int(2))).alwaysLeaves)
         #expect(Block(
-            body: [Statement(expression: leave), Statement(id: "after", expression: .literal(.int(3)))]
+            body: [Statement(expression: leave), Statement(binding: .constant("after"), expression: .literal(.int(3)))]
         ).alwaysLeaves)
         #expect(!Block(body: [], result: .literal(.int(1))).alwaysLeaves)
     }
@@ -43,7 +43,7 @@ struct NeverTests {
                 entryName: Procedure(
                     body: [
                         Statement(expression: refusing(literal("done"))),
-                        Statement(id: "after", expression: .literal(.int(1)))
+                        Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ],
                     result: .reference([.key("after")])
                 )
@@ -66,7 +66,7 @@ struct NeverTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "gone", expression: refusing(literal("done")))
+                        Statement(binding: .constant("gone"), expression: refusing(literal("done")))
                     ],
                     result: .literal(.int(1))
                 )
@@ -92,7 +92,7 @@ struct NeverTests {
             while: .literal(.bool(false)),
             body: Block(
                 body: [
-                    Statement(id: "x", binding: .assignment, expression: .literal(.string("s")))
+                    Statement(binding: .assignment([.key("x")]), expression: .literal(.string("s")))
                 ],
                 result: reference("x")
             ),
@@ -103,11 +103,9 @@ struct NeverTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "x", binding: .variable, expression: .literal(.int(1))),
-                        Statement(id: "kept", expression: loop),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .variable("x"), expression: .literal(.int(1))),
+                        Statement(binding: .constant("kept"), expression: loop),
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                 "count": .reference([.key("kept")])
                             ]))
                         )
@@ -138,10 +136,7 @@ struct NeverTests {
                 result: .block(
                     Block(
                         body: [
-                            Statement(
-                                id: "y",
-                                binding: .assignment,
-                                expression: .literal(.string("s"))
+                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s"))
                             )
                         ],
                         result: reference("y")
@@ -155,11 +150,9 @@ struct NeverTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "y", binding: .variable, expression: .literal(.int(1))),
-                        Statement(id: "kept", expression: loop),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
+                        Statement(binding: .constant("kept"), expression: loop),
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                 "word": .reference([.key("y")])
                             ]))
                         )
@@ -182,11 +175,9 @@ struct NeverTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "y", binding: .variable, expression: .literal(.int(1))),
-                        Statement(id: "kept", expression: loop),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
+                        Statement(binding: .constant("kept"), expression: loop),
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                 "count": .reference([.key("y")])
                             ]))
                         )
@@ -237,9 +228,7 @@ struct NeverTests {
         // finishes or leaves
         let sut = Procedure(
             body: [
-                Statement(
-                    id: "items",
-                    expression: .array([.literal(.int(1)), .literal(.int(2))])
+                Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])
                 ),
                 Statement(
                     expression: .leave(
@@ -275,7 +264,7 @@ struct NeverTests {
         )
 
         let sut = Procedure(
-            body: [Statement(id: "kept", expression: loop)],
+            body: [Statement(binding: .constant("kept"), expression: loop)],
             result: reference("kept")
         )
 
@@ -301,10 +290,8 @@ struct NeverTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "kept", expression: loop),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("kept"), expression: loop),
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                 "count": .reference([.key("kept")])
                             ]))
                         )
@@ -366,7 +353,7 @@ struct NeverTests {
         // When / Then
         #expect(!validates(body: [
             Statement(expression: branch),
-            Statement(id: "after", expression: .literal(.int(3)))
+            Statement(binding: .constant("after"), expression: .literal(.int(3)))
         ]))
     }
 
@@ -385,7 +372,7 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect(!validates(body: [Statement(id: "gone", expression: branch)]))
+        #expect(!validates(body: [Statement(binding: .constant("gone"), expression: branch)]))
     }
 
     @Test("an arm that leaves inside a group is still a leaving arm")
@@ -412,7 +399,7 @@ struct NeverTests {
         // When / Then
         #expect(!validates(body: [
             Statement(expression: branch),
-            Statement(id: "after", expression: .literal(.int(3)))
+            Statement(binding: .constant("after"), expression: .literal(.int(3)))
         ]))
     }
 
@@ -431,7 +418,7 @@ struct NeverTests {
         // When / Then
         #expect(validates(body: [
             Statement(expression: branch),
-            Statement(id: "after", expression: .literal(.int(3)))
+            Statement(binding: .constant("after"), expression: .literal(.int(3)))
         ]))
     }
 

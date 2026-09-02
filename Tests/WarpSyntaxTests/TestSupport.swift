@@ -87,7 +87,7 @@ func validates(
 ) -> Bool {
     do {
         try Validator().validate(
-            body: [Statement(id: "probe", expression: expression)],
+            body: [Statement(binding: .constant("probe"), expression: expression)],
             visible: visible
         )
 
@@ -268,7 +268,12 @@ private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> War
         Dispatch(
             receiver: .array(
                 conditions.map { condition in
-                    .closure(Procedure(body: [], result: condition))
+                    .closure(
+                        Procedure(
+                            implementation: .body(Block(body: [], result: condition)),
+                            purity: .pure
+                        )
+                    )
                 }
             ),
             selector: selector

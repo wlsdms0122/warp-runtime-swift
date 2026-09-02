@@ -31,9 +31,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "shout", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "shout", arguments: [
                                         "of": .reference([.key("word")])
                                     ]))
                         )
@@ -51,9 +49,7 @@ struct ReceiverTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(
-                            id: "loud",
-                            expression: interpolated(
+                        Statement(binding: .constant("loud"), expression: interpolated(
                                 spelling(reference("of")),
                                 literal("!")
                             )
@@ -78,9 +74,7 @@ struct ReceiverTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("end"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("end"))
                         )
                     ]
                 ),
@@ -93,9 +87,7 @@ struct ReceiverTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(
-                            id: "loud",
-                            expression: .reference([.key("of")])
+                        Statement(binding: .constant("loud"), expression: .reference([.key("of")])
                         )
                     ]
                 )
@@ -128,9 +120,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .reference([.key("names"), .key("count")])
+                        Statement(binding: .constant("many"), expression: .reference([.key("names"), .key("count")])
                         )
                     ],
                     result: .record([
@@ -157,17 +147,13 @@ struct ReceiverTests {
             procedures: [
                 "clean": Procedure(
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.int(1))
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))
                         )
                     ]
                 ),
                 "dirty": Procedure(
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("done"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(true))
                                     ]))
                         )
@@ -175,13 +161,9 @@ struct ReceiverTests {
                 ),
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "a",
-                            expression: .dispatch(Dispatch(selector: "clean"))
+                        Statement(binding: .constant("a"), expression: .dispatch(Dispatch(selector: "clean"))
                         ),
-                        Statement(
-                            id: "b",
-                            expression: .dispatch(Dispatch(selector: "dirty"))
+                        Statement(binding: .constant("b"), expression: .dispatch(Dispatch(selector: "dirty"))
                         )
                     ]
                 )
@@ -248,9 +230,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("tasks"), .key("summarize")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("tasks"), .key("summarize")])
                         )
                     ],
                     result: .record([
@@ -266,13 +246,9 @@ struct ReceiverTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(
-                            id: "how_many",
-                            expression: .reference([.key("of"), .key("count")])
+                        Statement(binding: .constant("how_many"), expression: .reference([.key("of"), .key("count")])
                         ),
-                        Statement(
-                            id: "line",
-                            expression: interpolated(
+                        Statement(binding: .constant("line"), expression: interpolated(
                                 spelling(reference("how_many")),
                                 literal(" tasks")
                             )
@@ -305,9 +281,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .literal(.string("nothing reaches it"))
+                        Statement(binding: .constant("said"), expression: .literal(.string("nothing reaches it"))
                         )
                     ]
                 ),
@@ -319,9 +293,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "boom",
-                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("boom"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(false))
                                     ]))
                         )
@@ -350,9 +322,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("tasks"), .key("summarize")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("tasks"), .key("summarize")])
                         )
                     ]
                 ),
@@ -364,9 +334,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "boom",
-                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("boom"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(false))
                                     ]))
                         )
@@ -479,9 +447,7 @@ struct ReceiverTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .reference([.key("of"), .key("count")])
+                        Statement(binding: .constant("many"), expression: .reference([.key("of"), .key("count")])
                         )
                     ],
                     result: interpolated(
@@ -514,7 +480,7 @@ struct ReceiverTests {
         // When / Then
         await #expect {
             try await answer(
-                of: [Statement(id: "probe", expression: sut)],
+                of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: reference("probe"),
                 arguments: ["x": .double(.nan)],
                 signature: Signature(parameters: ["x": Parameter(type: .double)])

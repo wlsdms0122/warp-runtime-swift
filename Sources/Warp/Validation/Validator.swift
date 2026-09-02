@@ -169,34 +169,7 @@ public struct Validator: Sendable {
             // time is what a place is for.
             let here = place.statement(statement, at: position)
 
-            // A binding with no name is a write that goes nowhere. The document
-            // reader cannot produce one — the binding comes from the naming key
-            // — so this guards the caller that builds statements directly.
-            if statement.id == nil, statement.binding != .constant {
-                throw ValidationError(
-                    "writes no name, and a \(statement.binding)"
-                        + " is a statement about its name",
-                    at: here
-                )
-            }
-
-            if let id = statement.id {
-                guard !id.isEmpty else {
-                    throw ValidationError("statement with empty id", at: here)
-                }
-
-                // An assignment names a name rather than introducing one, so
-                // what it may write is the assignment rule's to answer below.
-                if case .assignment = statement.binding {
-                    try normal(id, at: here)
-                } else {
-                    try introduced(id, beside: surroundings.constants, at: here)
-                }
-
-                // The leave rules reach through structure, because the fact
-                // does: every way through a leaving statement leaves, so its
-                // name could never bind — refused before any question about
-                // which name it is.
+            if let binding = statement.binding {
                 if statement.expression.alwaysLeaves {
                     throw ValidationError(
                         "every way through this statement"
@@ -206,10 +179,7 @@ public struct Validator: Sendable {
                     )
                 }
 
-                // A walk answers nothing, so a `var` or `set` on one is a write
-                // whose value could only ever be null. The plain name stands
-                // for the element inside the body, and that is all it is.
-                if statement.binding != .constant, isIteration(statement.expression) {
+                if !binding.isConstant, isIteration(statement.expression) {
                     throw ValidationError(
                         "a walk answers nothing, so its name"
                             + " binds the element and no value — it is not"
@@ -218,9 +188,6 @@ public struct Validator: Sendable {
                     )
                 }
 
-                // A branch answers nothing and binds nothing inside either, so
-                // it takes no name at all: what an arm keeps it writes to an
-                // outer variable, and a value leaves through `return`.
                 if statement.expression.takesNoName {
                     throw ValidationError(
                         "a branch answers nothing, so its name"
@@ -229,43 +196,49 @@ public struct Validator: Sendable {
                     )
                 }
 
-                // An assignment is checked before the expression, because what
-                // it may write is a fact about the name and not about the value.
-                if case .assignment = statement.binding {
-                    guard variables.contains(id) else {
-                        // The most specific truth wins: a name that is visible
-                        // but unwritable across a boundary is refused for the
-                        // boundary, not for its binding.
-                        let reason = if visible.contains(id), let boundary = surroundings.boundary {
-                            boundary
-                        } else if visible.contains(id) {
+                switch binding {
+                case let .constant(name), let .variable(name):
+                    guard !name.isEmpty else {
+                        throw ValidationError("statement with empty id", at: here)
+                    }
+
+                    try introduced(name, beside: surroundings.constants, at: here)
+
+                    guard !declared.contains(name) else {
+                        throw ValidationError("duplicate statement id '\(name)'", at: here)
+                    }
+
+                    declared.insert(name)
+
+                // A write names a path, and the head of the path is the
+                // variable it writes. The rest of the path is judged at the
+                // link, where the variable's shape is known.
+                case let .assignment(path):
+                    if let refusal = path.markedHead {
+                        throw ValidationError(refusal, at: here)
+                    }
+
+                    guard let head = path.head, !head.isEmpty else {
+                        throw ValidationError(
+                            "writes a path headed by no name — a write starts at a variable",
+                            at: here
+                        )
+                    }
+
+                    try normal(head, at: here)
+
+                    guard variables.contains(head) else {
+                        let reason = if visible.contains(head) {
                             "which is a fixed name here — declare it as a variable to write it"
                         } else {
                             "which is not visible here — declare it earlier or check the spelling"
                         }
 
-                        throw ValidationError(
-                            "assigns '\(id)', \(reason)",
-                            at: here
-                        )
+                        throw ValidationError("assigns '\(head)', \(reason)", at: here)
                     }
-                }
-
-                // Sub scopes restart declaration tracking, so an inner statement
-                // may introduce a name an outer body also has — that is
-                // shadowing, and it is a different name. Only same-level
-                // duplicates are ambiguous.
-                if case .assignment = statement.binding {} else {
-                    guard !declared.contains(id) else {
-                        throw ValidationError("duplicate statement id '\(id)'", at: here)
-                    }
-
-                    declared.insert(id)
                 }
             }
 
-            // Nothing runs after a statement that leaves — through structure
-            // too: a branch both of whose arms leave never finishes either.
             if statement.expression.alwaysLeaves, position != body.count - 1 {
                 throw ValidationError(
                     "every way through this"
@@ -283,23 +256,23 @@ public struct Validator: Sendable {
                 at: here
             )
 
-            switch (statement.binding, statement.id) {
+            switch statement.binding {
             // A walk answers nothing, so its name is the element's — alive
             // inside the body as `item` and `index`, and nothing afterwards.
             // Leaving it visible would let what follows read a name whose only
             // value could ever be null, silently.
-            case (.constant, _?) where isIteration(statement.expression):
+            case .constant? where isIteration(statement.expression):
                 break
 
-            case let (.constant, id?):
+            case let .constant(id)?:
                 visible.insert(id)
                 variables.remove(id)
 
-            case let (.variable, id?):
+            case let .variable(id)?:
                 visible.insert(id)
                 variables.insert(id)
 
-            default:
+            case .assignment?, nil:
                 break
             }
         }
@@ -418,6 +391,7 @@ public struct Validator: Sendable {
             try validate(
                 block,
                 visible: visible.union(parameters),
+                variables: variables.subtracting(parameters),
                 declared: parameters,
                 surroundings: surroundings.enclosed,
                 at: inside
@@ -772,25 +746,14 @@ public struct Validator: Sendable {
 
 // Where a body is, as far as leaving it is concerned.
 //
-// It is one value rather than a parameter each, because the parameters were
-// individually forgettable and forgetting one was not an error — a body checked
-// without its loops read as a body outside any loop, and a body checked without
-// its boundary read as one whose outward writes were ordinary. Both of those
-// were real: a `break` inside an `attempt` inside a loop was refused though it
-// ran, and a closure's write to a captured name was nearly accepted.
-//
-// So the shape of this type is the point. Carrying it is the default, and every
-// place that breaks it has to say so.
+// One value rather than a parameter each: a body checked without its loops
+// reads as a body outside any loop, so carrying the whole is the default and
+// every place that breaks it has to say so.
 private struct Surroundings: Sendable {
     // MARK: - Property
     // The loops around here, nearest last. A name reaches past the nearer ones,
     // and nothing here means there is no loop to end.
     let rounds: [String]
-
-    // Why a variable from outside cannot be written here, when it cannot — the
-    // sentence the refusal says instead of "fixed name", which would be true
-    // and useless. Nil where writing outward is ordinary.
-    let boundary: String?
 
     // The module's bound names, carried so every signature met on the way —
     // a closure's included — refuses a parameter that would take one's
@@ -798,28 +761,25 @@ private struct Surroundings: Sendable {
     // parameter under that name would never be the one that answers.
     let constants: Set<String>
 
-    // A procedure's own body: no loop yet, nothing fenced.
-    static let procedure = Surroundings(rounds: [], boundary: nil, constants: [])
+    // A procedure's own body: no loop yet.
+    static let procedure = Surroundings(rounds: [], constants: [])
 
     static func procedure(constants: Set<String>) -> Surroundings {
-        Surroundings(rounds: [], boundary: nil, constants: constants)
+        Surroundings(rounds: [], constants: constants)
     }
 
     // MARK: - Public
     func inside(_ round: String) -> Surroundings {
-        Surroundings(rounds: rounds + [round], boundary: boundary, constants: constants)
+        Surroundings(rounds: rounds + [round], constants: constants)
     }
 
     // A procedure written inside another. It may be called anywhere and long
     // after, so the loops around where it was *written* are not around where it
-    // runs — and its own answer is its own.
+    // runs — and its own answer is its own. What it captured it may write: a
+    // variable's box is one thing under one name everywhere the name is
+    // visible, and this body is one of those places.
     var enclosed: Surroundings {
-        Surroundings(
-            rounds: [],
-            boundary: "which lives outside this closure — a closure captures"
-                + " values, and a name it captured is a value it captured",
-            constants: constants
-        )
+        Surroundings(rounds: [], constants: constants)
     }
 
     // MARK: - Private

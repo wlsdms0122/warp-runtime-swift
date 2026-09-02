@@ -141,21 +141,21 @@ public struct Executor: Sendable {
 
             let result = try await run(statement, at: position, in: scope, at: trace)
 
-            switch (statement.binding, statement.id) {
-            case let (.constant, id?):
+            switch statement.binding {
+            case let .constant(id)?:
                 scope = scope.binding(id, to: result)
 
-            case let (.variable, id?):
+            case let .variable(id)?:
                 scope = scope.declaring(id, as: result)
 
             // An assignment introduces nothing, so the scope is unchanged here
             // — the write went into a box the enclosing bodies also hold.
-            case let (.assignment, id?):
-                scope.assign(id, to: result)
+            case let .assignment(path)?:
+                try scope.assign(path, to: result)
 
             // A nameless statement ran for its effect, and the answer is
             // dropped — which is what leaving the name off said.
-            case (_, nil):
+            case nil:
                 break
             }
 
@@ -477,7 +477,7 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         // The same notation the validator uses for a nameless statement, and
         // one an author's own name can never collide with — `_` is a name.
-        let inside = trace.appending(.statement(statement.id ?? "[\(position)]"))
+        let inside = trace.appending(.statement(statement.name ?? "[\(position)]"))
 
         await observer?.statementStarted(at: inside, expression: statement.expression)
 

@@ -7,11 +7,12 @@
 
 import Foundation
 
-// Running closures at once. A closure is the one body that is safe to run
-// beside another — it captured values rather than bindings, writes no name it
-// did not declare, and cannot leave past its own edge — so "run these
-// concurrently" is a thing a word can be handed, and the grammar does not need
-// a construct to say it.
+// Running closures at once. An isolated closure is a body that is safe to run
+// beside another — it writes no name it captured, touches no module variable
+// and cannot leave past its own edge — so "run these concurrently" is a thing
+// a word can be handed, and the grammar does not need a construct to say it.
+// Which closures are isolated the link derived, and each piece is asked as it
+// is started.
 //
 // Three words over one machine:
 //

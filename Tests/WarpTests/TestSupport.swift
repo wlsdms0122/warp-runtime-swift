@@ -140,7 +140,7 @@ func validates(
     _ expression: Warp.Expression,
     visible: Set<String> = []
 ) -> Bool {
-    validates(body: [Statement(id: "probe", expression: expression)], visible: visible)
+    validates(body: [Statement(binding: .constant("probe"), expression: expression)], visible: visible)
 }
 
 func validates(body: [Statement], visible: Set<String> = []) -> Bool {
@@ -249,7 +249,12 @@ private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> War
         Dispatch(
             receiver: .array(
                 conditions.map { condition in
-                    .closure(Procedure(body: [], result: condition))
+                    .closure(
+                        Procedure(
+                            implementation: .body(Block(body: [], result: condition)),
+                            purity: .pure
+                        )
+                    )
                 }
             ),
             selector: selector

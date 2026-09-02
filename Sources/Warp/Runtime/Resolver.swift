@@ -68,7 +68,14 @@ public struct Resolver: Sendable {
         // this scope. Which is why it belongs to the pure half and a condition
         // may hand one to a word.
         case let .closure(procedure):
-            return .procedure(Closure(procedure: procedure, captured: scope))
+            return .procedure(
+                Closure(
+                    procedure: procedure,
+                    captured: scope,
+                    purity: procedure.purity,
+                    isolation: procedure.isolation
+                )
+            )
 
         case let .dispatch(dispatch):
             return try send(dispatch)
@@ -459,9 +466,9 @@ public struct Resolver: Sendable {
         var scope = outer
 
         for (position, statement) in block.body.enumerated() {
-            guard statement.binding == .constant else {
+            guard statement.binding?.isConstant != false else {
                 throw ExecutionError(
-                    "'\(statement.id ?? "[\(position)]")' writes a name, and what answers"
+                    "'\(statement.name ?? "[\(position)]")' writes a name, and what answers"
                         + " without running only binds"
                 )
             }
@@ -473,7 +480,7 @@ public struct Resolver: Sendable {
                 types: types
             ).resolve(statement.expression)
 
-            if let id = statement.id {
+            if let id = statement.binding?.introduced {
                 scope = scope.binding(id, to: value)
             }
         }

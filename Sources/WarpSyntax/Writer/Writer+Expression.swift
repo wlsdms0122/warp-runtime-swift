@@ -15,18 +15,11 @@ import Warp
 public extension Writer {
     // MARK: - Public
     func value(of statement: Statement) throws -> Value {
-        // The reader cannot produce either shape — a nameless write, or a
-        // named branch — so both guard the caller that builds statements
-        // directly, with the validator's own words: writing one silently
-        // would make a document that reads back as something else.
-        if statement.id == nil, statement.binding != .constant {
-            throw WritingError(
-                "writes no name, and a \(statement.binding) is a statement"
-                    + " about its name"
-            )
-        }
-
-        if statement.id != nil, statement.expression.takesNoName {
+        // The reader cannot produce a named branch, so this guards the caller
+        // that builds statements directly, with the validator's own words:
+        // writing one silently would make a document that reads back as
+        // something else.
+        if statement.binding != nil, statement.expression.takesNoName {
             throw WritingError(
                 "a branch answers nothing, so its name could never bind"
                     + " — it takes no name"
@@ -35,20 +28,20 @@ public extension Writer {
 
         var written: [String: Value] = [:]
 
-        if let id = statement.id {
-            written[binding(of: statement.binding)] = .string(id)
+        if let binding = statement.binding {
+            written[key(of: binding)] = .string(binding.spelled)
         }
 
         // A variable holding null is what a bare `var` introduces, and the bare
         // spelling is the one canonical writing of that fact.
         if
-            case .variable = statement.binding,
+            case .variable? = statement.binding,
             case .literal(.null) = statement.expression
         {
             return .object(written)
         }
 
-        let (key, body) = try construct(of: statement.expression, named: statement.id)
+        let (key, body) = try construct(of: statement.expression, named: statement.binding?.spelled)
 
         written[key] = body
 
@@ -305,7 +298,7 @@ public extension Writer {
         )
     }
 
-    private func binding(of binding: Statement.Binding) -> String {
+    private func key(of binding: Statement.Binding) -> String {
         switch binding {
         case .constant: "id"
         case .variable: "var"

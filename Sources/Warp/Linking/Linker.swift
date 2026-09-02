@@ -430,7 +430,7 @@ public struct Linker: Sendable {
     // selector as written.
     func isPure(_ block: Block, given pure: Set<String>) -> Bool {
         block.body.allSatisfy { statement in
-            statement.binding == .constant && isPure(statement.expression, given: pure)
+            statement.binding?.isConstant != false && isPure(statement.expression, given: pure)
         }
             && (block.result.map { result in isPure(result, given: pure) } ?? true)
     }
@@ -763,7 +763,7 @@ public struct Linker: Sendable {
     ) throws {
         for (input, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
             try mentioned(
-                in: parameter.declared,
+                in: parameter.declared.inoutUnwrapped,
                 at: place.slot(.parameters).key(input),
                 parameterized: true,
                 resolve: table
@@ -939,12 +939,12 @@ public struct Linker: Sendable {
         // type is not a filling site — a parameter written there is never
         // bound at any call, so the bound it claims would be a claim nothing
         // judges.
-        case let .procedure(signature, _):
+        case let .procedure(signature, _, _):
             guard let signature else { return }
 
             for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
-                    in: parameter.declared,
+                    in: parameter.declared.inoutUnwrapped,
                     at: place.key(name),
                     parameterized: parameterized,
                     resolve: table
@@ -1001,15 +1001,38 @@ public struct Linker: Sendable {
 
             try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
 
+        // A field written `var` is a fact about a declared type: a path may
+        // write through it. A record written inline in a signature declares no
+        // type, so it has no field to make writable.
         case let .record(fields):
             for (name, field) in fields.sorted(by: { $0.key < $1.key }) {
+                var held = field
+
+                if case let .variable(inner) = field, !parameterized {
+                    held = inner
+                }
+
                 try mentioned(
-                    in: field,
+                    in: held,
                     at: place.key(name),
                     parameterized: parameterized,
                     resolve: table
                 )
             }
+
+        case .inout:
+            throw LinkError(
+                "writes `\(type.rendered)`, and only a parameter is handed a"
+                    + " variable in place — `inout` is written on a parameter's type",
+                at: place
+            )
+
+        case .variable:
+            throw LinkError(
+                "writes `\(type.rendered)`, and only a field of a declared type"
+                    + " is written through — `var` is written on a field in `types`",
+                at: place
+            )
         }
     }
 
@@ -1145,7 +1168,7 @@ public struct Linker: Sendable {
 
         // A candidate spells a value, and null is not one a `oneOf` lists — so
         // a nullable slot's candidates are the declared half's.
-        case let .nullable(inner):
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
             return spellable(candidate, as: inner, resolve: table)
 
         case .null, .never, .bytes, .array, .object, .record, .procedure:

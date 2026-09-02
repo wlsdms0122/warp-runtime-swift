@@ -63,9 +63,7 @@ struct NullableTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .reference([.key("task"), .key("size", optional: true)])
+                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)])
                         )
                     ],
                     result: .dispatch(Dispatch(
@@ -121,7 +119,7 @@ struct NullableTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(id: "gone", expression: .literal(.null))
+                        Statement(binding: .constant("gone"), expression: .literal(.null))
                     ],
                     result: .reference([.key("gone"), .key("name")])
                 )
@@ -228,9 +226,7 @@ struct NullableTests {
                     body: [
                         // The written call omits `limit`; the type answers the
                         // omission with null, so the link takes the call.
-                        Statement(
-                            id: "called",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("called"), expression: .dispatch(Dispatch(
                                 selector: "labelled",
                                 arguments: ["of": .reference([.key("word")])]
                             ))
@@ -734,9 +730,7 @@ struct IndexReferenceJudgmentTests {
         let procedure = Procedure(
             signature: Signature(),
             body: [
-                Statement(
-                    id: "f",
-                    expression: .closure(Procedure(
+                Statement(binding: .constant("f"), expression: .closure(Procedure(
                         signature: Signature(
                             parameters: ["greeting": Parameter(type: .string)]
                         ),
@@ -1041,9 +1035,7 @@ struct ParameterReceiverTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(
-                            id: "held",
-                            expression: .reference([.key("of"), .key("inner")])
+                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")])
                         )
                     ],
                     result: .reference([.key("held"), .key("count")])
@@ -1088,19 +1080,13 @@ struct ParameterReceiverTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .reference([.key("of")])
+                        Statement(binding: .variable("held"), expression: .reference([.key("of")])
                         ),
                         Statement(
                             expression: .conditional(
                                 equals(.reference([.key("flag")]), .literal(.bool(true))),
                                 then: [
-                                    Statement(
-                                        id: "held",
-                                        binding: .assignment,
-                                        expression: .reference([.key("of"), .key("inner")])
+                                    Statement(binding: .assignment([.key("held")]), expression: .reference([.key("of"), .key("inner")])
                                     )
                                 ],
                                 else: nil
@@ -1154,19 +1140,13 @@ struct ParameterReceiverTests {
                             returns: .any
                         ),
                         body: [
-                            Statement(
-                                id: "held",
-                                binding: .variable,
-                                expression: .reference([.key("of"), .key("inner")])
+                            Statement(binding: .variable("held"), expression: .reference([.key("of"), .key("inner")])
                             ),
                             Statement(
                                 expression: .conditional(
                                     equals(.reference([.key("flag")]), .literal(.bool(true))),
                                     then: [
-                                        Statement(
-                                            id: "held",
-                                            binding: .assignment,
-                                            expression: .reference([
+                                        Statement(binding: .assignment([.key("held")]), expression: .reference([
                                                 .key("of"),
                                                 .key("inner", optional: marking)
                                             ])
@@ -1221,18 +1201,12 @@ struct ParameterReceiverTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(id: "held", expression: .reference([.key("of"), .key("inner")])),
-                        Statement(
-                            id: "seen",
-                            binding: .variable,
-                            expression: .reference([.key("of"), .key("inner"), .key("count")])
+                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")])),
+                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner"), .key("count")])
                         ),
                         Statement(expression: .conditional(
                             equals(.reference([.key("flag")]), .literal(.bool(true))),
-                            then: [Statement(
-                                id: "seen",
-                                binding: .assignment,
-                                expression: .reference([.key("held"), .key("count")])
+                            then: [Statement(binding: .assignment([.key("seen")]), expression: .reference([.key("held"), .key("count")])
                             )],
                             else: nil
                         ))
@@ -1276,17 +1250,11 @@ struct ParameterReceiverTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(
-                            id: "seen",
-                            binding: .variable,
-                            expression: .reference([.key("of"), .key("inner")])
+                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner")])
                         ),
                         Statement(expression: .conditional(
                             equals(.reference([.key("flag")]), .literal(.bool(true))),
-                            then: [Statement(
-                                id: "seen",
-                                binding: .assignment,
-                                expression: .reference([.key("also"), .key("inner")])
+                            then: [Statement(binding: .assignment([.key("seen")]), expression: .reference([.key("also"), .key("inner")])
                             )],
                             else: nil
                         ))

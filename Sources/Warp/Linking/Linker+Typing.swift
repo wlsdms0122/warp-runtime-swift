@@ -1169,7 +1169,8 @@ extension Linker {
             )
 
         // A closure literal carries the signature it declared, and running
-        // one is not this flow's business — it writes no name from out here.
+        // one is not this flow's business — what it writes it writes when it
+        // is called, and the flow here is the flow of the making.
         // Judging still follows the body even though nothing can say whether
         // it is ever called: the warrant is compilation, and a body that
         // never runs still has to compile. It sees what surrounds it plus
@@ -1193,16 +1194,20 @@ extension Linker {
 
                 body = inner.block
                 calls = inner.calls
+            }
+
+            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
+
+            if case .judging = ask, let body {
                 rewritten = .closure(
                     Procedure(
                         description: procedure.description,
                         signature: procedure.signature,
-                        implementation: .body(inner.block)
+                        implementation: .body(body),
+                        purity: pure ? .pure : .unstated
                     )
                 )
             }
-
-            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
 
             return Inspection(
                 rewritten: rewritten,
@@ -1747,7 +1752,7 @@ extension Linker {
             )
 
             rewritten.append(
-                Statement(id: statement.id, binding: statement.binding, expression: inner.rewritten)
+                Statement(binding: statement.binding, expression: inner.rewritten)
             )
             calls += inner.calls
 
@@ -1775,7 +1780,7 @@ extension Linker {
             // never run. What the syntactic leaves get at reading, a call
             // gets here, where the signature is known.
             if inner.flow.leaves || inner.reading == .never {
-                if statement.id != nil {
+                if statement.binding != nil {
                     try refuseNeverBinding(at: here, when: ask)
                 }
 
@@ -1802,21 +1807,30 @@ extension Linker {
                 )
             }
 
-            switch (statement.binding, statement.id) {
-            case let (.constant, id?), let (.variable, id?):
+            switch statement.binding {
+            case let .constant(id)?, let .variable(id)?:
                 locals.insert(id)
                 environment[id] = inner.reading
 
-            case let (.assignment, id?):
-                environment[id] = inner.reading
+            // A write to a whole variable retypes it, the way a declaration
+            // did. A write through a path leaves the variable's type as it was:
+            // the path was judged against that type, so the shape still holds.
+            case let .assignment(path)?:
+                guard let id = path.head else { break }
 
-                if !locals.contains(id) {
-                    flowed.written[id] = merged(flowed.written[id], with: (inner.reading, true))
+                if path.count == 1 {
+                    environment[id] = inner.reading
+
+                    if !locals.contains(id) {
+                        flowed.written[id] = merged(flowed.written[id], with: (inner.reading, true))
+                    }
+                } else if !locals.contains(id), let current = environment[id] {
+                    flowed.written[id] = merged(flowed.written[id], with: (current, true))
                 }
 
             // A nameless statement writes no name for a later reading to
             // find.
-            case (_, nil):
+            case nil:
                 break
             }
         }
@@ -2125,12 +2139,13 @@ extension Linker {
         // a list of them pass a slot that asked for none, because `any` is
         // accepted everywhere.
         if
-            case let .procedure(mine, wanted) = left,
-            case let .procedure(theirs, offered) = right
+            case let .procedure(mine, wanted, wantedIsolation) = left,
+            case let .procedure(theirs, offered, offeredIsolation) = right
         {
             return .procedure(
                 mine == theirs ? mine : nil,
-                wanted == .pure && offered == .pure ? .pure : .unstated
+                wanted == .pure && offered == .pure ? .pure : .unstated,
+                wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
             )
         }
 

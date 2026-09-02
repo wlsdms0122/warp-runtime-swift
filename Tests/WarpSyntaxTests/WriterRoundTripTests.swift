@@ -43,7 +43,7 @@ struct WriterRoundTripTests {
 
         for (name, expression) in constructs {
             let module = try Module(
-                procedures: [entryName: Procedure(body: [Statement(id: name, expression: expression)])]
+                procedures: [entryName: Procedure(body: [Statement(binding: .constant(name), expression: expression)])]
             )
 
             // When

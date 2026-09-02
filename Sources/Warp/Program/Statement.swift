@@ -7,53 +7,92 @@
 
 import Foundation
 
-// A binding: `id = expression`. That is the only statement the language has,
+// A binding and an expression. That is the only statement the language has,
 // because everything else is an expression — `when` is a conditional, `rescue`
 // is an attempt, and both are things you bind rather than modifiers you attach
 // to an envelope.
 //
-// What the binding *does* to the name is the second thing a statement says, and
-// it is a property of the name rather than a modifier on the statement: a name
-// is either fixed, or it is a variable, or this is a write to a variable
-// declared earlier.
+// What the binding *does* to its name is the second thing a statement says: a
+// name is fixed, or it is a variable, or this is a write into a variable
+// declared earlier. A statement with no binding runs for its effect and drops
+// the answer.
 public struct Statement: Sendable {
-    // A name is introduced once and never written again, unless it was
-    // introduced as a variable — in which case a later statement may write it,
-    // and that write outlives the block it was written in.
-    //
-    // Keeping the three apart is what lets a body be read: a reader can see
-    // which names in it can change, without following every branch to find out.
-    public enum Binding: Sendable {
-        case constant
-        case variable
-        case assignment
+    // The name is inside the case, so a variable without a name is not a value
+    // this type can hold. A write names a path rather than a name: `set` reaches
+    // into a variable through its fields and elements, and the head of the path
+    // is the variable it writes.
+    public enum Binding: Sendable, Equatable {
+        case constant(String)
+        case variable(String)
+        case assignment([PathSegment])
+
+        // The name a statement introduces, where it introduces one. A write
+        // introduces nothing.
+        public var introduced: String? {
+            switch self {
+            case let .constant(name), let .variable(name):
+                return name
+
+            case .assignment:
+                return nil
+            }
+        }
+
+        // What the statement is called by: the name it binds, or the head of
+        // the path it writes.
+        public var name: String? {
+            switch self {
+            case let .constant(name), let .variable(name):
+                return name
+
+            case let .assignment(path):
+                return path.head
+            }
+        }
+
+        // The text a document writes under the naming key: the name, or the
+        // path as one string.
+        public var spelled: String {
+            switch self {
+            case let .constant(name), let .variable(name):
+                return name
+
+            case let .assignment(path):
+                return path.rendered
+            }
+        }
+
+        public var isConstant: Bool {
+            if case .constant = self { return true }
+            return false
+        }
+
+        public var isAssignment: Bool {
+            if case .assignment = self { return true }
+            return false
+        }
     }
 
     // MARK: - Property
-    // Nil is a statement run for its effect alone: the construct runs and the
-    // answer is dropped. A leaving statement never finishes, so it never has a
-    // name — a name that could not bind would be a promise the reader has to
-    // remember is false.
-    public let id: String?
-    public let binding: Binding
+    public let binding: Binding?
     public let expression: Expression
 
     // MARK: - Initializer
-    public init(id: String? = nil, binding: Binding = .constant, expression: Expression) {
-        self.id = id
+    public init(binding: Binding? = nil, expression: Expression) {
         self.binding = binding
         self.expression = expression
     }
 
     // MARK: - Public
+    // The name a statement is called by, for a place that points at it.
+    public var name: String? { binding?.name }
+
     // MARK: - Private
 }
 
 extension [Statement] {
-    // Whether every way through this body leaves — true of the body alone,
-    // validated or not: nothing after a leaving statement runs, so one
-    // anywhere is enough. (That anything *follows* one is separately refused
-    // where the body is read and where it is validated.)
+    // Whether every way through this sequence leaves. A sequence leaves when
+    // one of its statements always leaves, because nothing after that one runs.
     public var alwaysLeaves: Bool {
         contains { statement in statement.expression.alwaysLeaves }
     }

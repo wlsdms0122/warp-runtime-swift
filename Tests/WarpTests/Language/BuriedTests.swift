@@ -36,7 +36,7 @@ struct BuriedTests {
             .leave(Leave(reach: .procedure, value: marker("leave value"))),
             .record(["field": marker("record field")]),
             .closure(Procedure(
-                body: [Statement(id: "inside", expression: marker("closure body"))],
+                body: [Statement(binding: .constant("inside"), expression: marker("closure body"))],
                 result: marker("closure result")
             )),
             .invoke(marker("invoke callee"), arguments: ["to": marker("invoke argument")]),
@@ -46,7 +46,7 @@ struct BuriedTests {
                 arguments: ["with": marker("dispatch argument")]
             )),
             .block(Block(
-                body: [Statement(id: "held", expression: marker("block body"))],
+                body: [Statement(binding: .constant("held"), expression: marker("block body"))],
                 result: marker("block result")
             )),
             .conditional(
@@ -98,9 +98,7 @@ struct BuriedTests {
         // it carries answer under one name, so a refusal says which closure
         // without having to say it twice.
         let sut = Block(
-            body: [Statement(
-                id: "held",
-                expression: .closure(Procedure(
+            body: [Statement(binding: .constant("held"), expression: .closure(Procedure(
                     body: [],
                     result: .cast(.literal(.int(1)), as: .int, optional: false)
                 ))

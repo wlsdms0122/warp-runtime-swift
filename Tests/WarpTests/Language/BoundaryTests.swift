@@ -172,9 +172,7 @@ struct BoundaryTests {
                 "entry": Procedure(
                     signature: Signature(parameters: ["xs": Parameter(type: .array(.any))]),
                     body: [
-                        Statement(
-                            id: "one",
-                            expression: .dispatch(
+                        Statement(binding: .constant("one"), expression: .dispatch(
                                 Dispatch(
                                     receiver: .reference([.key("xs")]),
                                     selector: "std.collection.appending",

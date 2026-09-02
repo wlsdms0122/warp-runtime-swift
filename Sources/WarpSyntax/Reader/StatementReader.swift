@@ -32,11 +32,22 @@ public struct StatementReader: Decodable {
         case variable = "var"
         case assignment = "set"
 
-        var binding: Statement.Binding {
+        // The binding the key spells, given what it was written with: a name
+        // under `id` and `var`, a path under `set`.
+        func binding(_ written: String) throws -> Statement.Binding {
             switch self {
-            case .id: .constant
-            case .variable: .variable
-            case .assignment: .assignment
+            case .id:
+                return .constant(written)
+
+            case .variable:
+                return .variable(written)
+
+            case .assignment:
+                do {
+                    return .assignment(try TemplateParser().parseRefPath(written))
+                } catch {
+                    throw ReadingError("set \(written) — \(error)", at: [])
+                }
             }
         }
     }
@@ -138,8 +149,7 @@ public struct StatementReader: Decodable {
         // one-name rule above has already spoken, so "alone" is one question.
         if found.isEmpty, names == [.variable] {
             return Statement(
-                id: try Self.name(.variable, in: envelope),
-                binding: .variable,
+                binding: .variable(try Self.name(.variable, in: envelope)),
                 expression: .literal(.null)
             )
         }
@@ -162,6 +172,13 @@ public struct StatementReader: Decodable {
 
         let name = names.first
         let id = try name.map { name in try Self.name(name, in: envelope) }
+        let binding: Statement.Binding?
+
+        do {
+            binding = try name.map { name in try name.binding(try Self.name(name, in: envelope)) }
+        } catch let refusal as ReadingError {
+            throw refusal.asked(at: decoder.steps)
+        }
         let inside = try container.superDecoder(forKey: AnyCodingKey(stringValue: key))
         let built: any ConstructForm
         let expression: Expression
@@ -211,10 +228,6 @@ public struct StatementReader: Decodable {
             )
         }
 
-        return Statement(
-            id: id,
-            binding: name?.binding ?? .constant,
-            expression: expression
-        )
+        return Statement(binding: binding, expression: expression)
     }
 }

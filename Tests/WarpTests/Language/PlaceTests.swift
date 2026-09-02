@@ -30,9 +30,7 @@ struct PlaceTests {
         // condition is `where` in a document and a walk's collection is `in`,
         // and neither word appears in what a caller assembling this wrote.
         let spin = place(
-            refusing: Statement(
-                id: "spin",
-                expression: .loop(
+            refusing: Statement(binding: .constant("spin"), expression: .loop(
                     while: .block(Block(body: [], result: .literal(.bool(true)))),
                     body: Block(body: []),
                     round: "spin"
@@ -41,9 +39,7 @@ struct PlaceTests {
         )
 
         let walk = place(
-            refusing: Statement(
-                id: "walk",
-                expression: .iteration(over: reference("missing"), body: [], element: "walk")
+            refusing: Statement(binding: .constant("walk"), expression: .iteration(over: reference("missing"), body: [], element: "walk")
             )
         )
 
@@ -57,9 +53,7 @@ struct PlaceTests {
         // Given — an argument reported from the statement's own place says a
         // thing is wrong and does not say which of the several written there.
         let sut = place(
-            refusing: Statement(
-                id: "sent",
-                expression: .dispatch(
+            refusing: Statement(binding: .constant("sent"), expression: .dispatch(
                     Dispatch(selector: "send", arguments: ["amount": reference("missing")])
                 )
             )
@@ -73,7 +67,7 @@ struct PlaceTests {
     func aStatementIsFoundByWhicheverItHas() {
         // Given — a statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
-        let named = place(refusing: Statement(id: "held", expression: reference("missing")))
+        let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
@@ -113,7 +107,7 @@ struct PlaceTests {
         // walk the steps to point at the line, and a sentence has no steps.
         // When
         let error = #expect(throws: ValidationError.self) {
-            try module(refusing: Statement(id: "held", expression: reference("missing")))
+            try module(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         }
 
         // Then
@@ -130,7 +124,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(id: "sent", expression: .dispatch(Dispatch(selector: "nowhere")))
+                    Statement(binding: .constant("sent"), expression: .dispatch(Dispatch(selector: "nowhere")))
                 ])
             ]
         )
@@ -152,9 +146,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(
-                        id: "sent",
-                        expression: .dispatch(
+                    Statement(binding: .constant("sent"), expression: .dispatch(
                             Dispatch(selector: "helper", arguments: [
                                 "first": .literal(.int(1)),
                                 "second": .literal(.string("two")),
@@ -194,9 +186,7 @@ struct PlaceTests {
         let linked = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(
-                        id: "sent",
-                        expression: .dispatch(
+                    Statement(binding: .constant("sent"), expression: .dispatch(
                             Dispatch(selector: "helper", arguments: ["amount": .literal(.string("x"))])
                         )
                     )
@@ -213,9 +203,7 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     entryName: Procedure(body: [
-                        Statement(
-                            id: "sent",
-                            expression: .dispatch(
+                        Statement(binding: .constant("sent"), expression: .dispatch(
                                 Dispatch(
                                     selector: "helper",
                                     arguments: ["amount": reference("missing")]
@@ -253,14 +241,10 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     entryName: Procedure(body: [
-                        Statement(
-                            id: "guarded",
-                            expression: .attempt(
+                        Statement(binding: .constant("guarded"), expression: .attempt(
                                 Block(body: []),
                                 rescue: Block(body: [
-                                    Statement(
-                                        id: "sent",
-                                        expression: .dispatch(
+                                    Statement(binding: .constant("sent"), expression: .dispatch(
                                             Dispatch(
                                                 selector: selector,
                                                 arguments: ["amount": argument]
@@ -330,7 +314,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 "wallet.entry": Procedure(body: [
-                    Statement(id: "sent", expression: .dispatch(Dispatch(selector: "nowhere")))
+                    Statement(binding: .constant("sent"), expression: .dispatch(Dispatch(selector: "nowhere")))
                 ])
             ],
             identity: reading,
@@ -379,7 +363,7 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     name: Procedure(body: [
-                        Statement(id: "held", expression: reference("missing"))
+                        Statement(binding: .constant("held"), expression: reference("missing"))
                     ])
                 ],
                 identity: identity,
@@ -447,9 +431,7 @@ struct PlaceTests {
         // something a reader may go looking for in a file.
         let sut = try #require(
             place(
-                refusing: Statement(
-                    id: "sent",
-                    expression: .dispatch(
+                refusing: Statement(binding: .constant("sent"), expression: .dispatch(
                         Dispatch(selector: "send", arguments: ["amount": reference("missing")])
                     )
                 )
@@ -501,7 +483,7 @@ struct PlaceTests {
                             Dispatch(selector: "stop", arguments: ["message": .literal(.string("x"))])
                         )
                     ),
-                    Statement(id: "after", expression: .literal(.int(1)))
+                    Statement(binding: .constant("after"), expression: .literal(.int(1)))
                 ]),
                 "stop": Procedure(
                     signature: Signature(
@@ -519,7 +501,7 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(body: [
                         Statement(expression: .leave(Leave(reach: .procedure))),
-                        Statement(id: "after", expression: .literal(.int(1)))
+                        Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ])
                 ]
             )

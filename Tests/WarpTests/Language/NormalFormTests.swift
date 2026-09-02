@@ -27,10 +27,10 @@ struct NormalFormTests {
     @Test("a statement id outside normal form C is refused")
     func aDenormalIdIsRefused() {
         #expect(!validates(body: [
-            Statement(id: denormal, expression: .literal(.int(1)))
+            Statement(binding: .constant(denormal), expression: .literal(.int(1)))
         ]))
         #expect(validates(body: [
-            Statement(id: normal, expression: .literal(.int(1)))
+            Statement(binding: .constant(normal), expression: .literal(.int(1)))
         ]))
     }
 
@@ -60,8 +60,8 @@ struct NormalFormTests {
         // refused as a spelling problem, which is what it is.
         #expect {
             try Validator().validate(
-                body: [Statement(id: normal, expression: .literal(.int(1)))]
-                    + [Statement(id: "read", expression: .reference([.key(denormal)]))],
+                body: [Statement(binding: .constant(normal), expression: .literal(.int(1)))]
+                    + [Statement(binding: .constant("read"), expression: .reference([.key(denormal)]))],
                 visible: []
             )
         } throws: { error in

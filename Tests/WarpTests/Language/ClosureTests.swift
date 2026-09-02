@@ -21,20 +21,16 @@ struct ClosureTests {
         // Given — `made` is written where `outer` says "written"; the call site
         // has an `outer` of its own saying something else
         let sut = [
-            Statement(id: "outer", expression: .literal(.string("written"))),
-            Statement(
-                id: "made",
-                expression: .closure(Procedure(body: [], result: reference("outer")))
+            Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
+            Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer")))
             )
         ]
 
         // When
         let answer = try await answer(
             of: sut + [
-                Statement(id: "shadow", expression: .literal(.string("called"))),
-                Statement(
-                    id: "said",
-                    expression: .invoke(reference("made"), arguments: [:])
+                Statement(binding: .constant("shadow"), expression: .literal(.string("called"))),
+                Statement(binding: .constant("said"), expression: .invoke(reference("made"), arguments: [:])
                 )
             ],
             result: reference("said")
@@ -53,9 +49,7 @@ struct ClosureTests {
                 parameters: ["body": Parameter(type: .procedure(nil, .pure))]
             ),
             body: [
-                Statement(
-                    id: "once",
-                    expression: .invoke(reference("body"), arguments: [:])
+                Statement(binding: .constant("once"), expression: .invoke(reference("body"), arguments: [:])
                 )
             ]
         )
@@ -64,14 +58,10 @@ struct ClosureTests {
                 "twice": twice,
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "loud",
-                            expression: .closure(
+                        Statement(binding: .constant("loud"), expression: .closure(
                                 Procedure(
                                     body: [
-                                        Statement(
-                                            id: "said",
-                                            expression: .dispatch(Dispatch(
+                                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(
                                                 selector: "app.shout",
                                                 arguments: ["text": .literal(.string("hi"))]
                                             ))
@@ -81,9 +71,7 @@ struct ClosureTests {
                                 )
                             )
                         ),
-                        Statement(
-                            id: "ran",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("ran"), expression: .dispatch(Dispatch(
                                 selector: "twice",
                                 arguments: ["body": reference("loud")]
                             ))
@@ -108,9 +96,7 @@ struct ClosureTests {
                 returns: .string
             ),
             body: [
-                Statement(
-                    id: "once",
-                    expression: .invoke(reference("body"), arguments: [:])
+                Statement(binding: .constant("once"), expression: .invoke(reference("body"), arguments: [:])
                 )
             ],
             result: reference("once")
@@ -120,9 +106,7 @@ struct ClosureTests {
                 "twice": twice,
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "quiet",
-                            expression: .closure(
+                        Statement(binding: .constant("quiet"), expression: .closure(
                                 Procedure(body: [], result: .literal(.string("read")))
                             )
                         )
@@ -150,13 +134,9 @@ struct ClosureTests {
         let twice = Procedure(
             signature: Signature(parameters: ["body": Parameter(type: .procedure(nil))]),
             body: [
-                Statement(
-                    id: "first",
-                    expression: .invoke(reference("body"), arguments: [:])
+                Statement(binding: .constant("first"), expression: .invoke(reference("body"), arguments: [:])
                 ),
-                Statement(
-                    id: "second",
-                    expression: .invoke(reference("body"), arguments: [:])
+                Statement(binding: .constant("second"), expression: .invoke(reference("body"), arguments: [:])
                 )
             ],
             result: .array([reference("first"), reference("second")])
@@ -165,9 +145,7 @@ struct ClosureTests {
         // When
         let answer = try await answer(
             of: [
-                Statement(
-                    id: "ran",
-                    expression: .dispatch(
+                Statement(binding: .constant("ran"), expression: .dispatch(
                         Dispatch(
                             selector: "twice",
                             arguments: [
@@ -206,18 +184,14 @@ struct ClosureTests {
         // When
         let answer = try await answer(
             of: [
-                Statement(
-                    id: "hello",
-                    expression: .dispatch(
+                Statement(binding: .constant("hello"), expression: .dispatch(
                         Dispatch(
                             selector: "makeGreeter",
                             arguments: ["greeting": .literal(.string("hello"))]
                         )
                     )
                 ),
-                Statement(
-                    id: "said",
-                    expression: .invoke(
+                Statement(binding: .constant("said"), expression: .invoke(
                         reference("hello"),
                         arguments: ["name": .literal(.string("warp"))]
                     )
@@ -235,16 +209,12 @@ struct ClosureTests {
     func closuresTravelInStructures() async throws {
         // Given
         let sut = [
-            Statement(
-                id: "table",
-                expression: .record([
+            Statement(binding: .constant("table"), expression: .record([
                     "yes": .closure(Procedure(body: [], result: .literal(.string("y")))),
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
                 ])
             ),
-            Statement(
-                id: "picked",
-                expression: .invoke(reference("table", "yes"), arguments: [:])
+            Statement(binding: .constant("picked"), expression: .invoke(reference("table", "yes"), arguments: [:])
             )
         ]
 
@@ -259,10 +229,8 @@ struct ClosureTests {
     func callingNonProcedureFails() async {
         // Given
         let sut = [
-            Statement(id: "notCallable", expression: .literal(.int(1))),
-            Statement(
-                id: "called",
-                expression: .invoke(reference("notCallable"), arguments: [:])
+            Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
+            Statement(binding: .constant("called"), expression: .invoke(reference("notCallable"), arguments: [:])
             )
         ]
 

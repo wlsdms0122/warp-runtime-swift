@@ -23,10 +23,25 @@ public struct Closure: Sendable {
     public let procedure: Procedure
     public let captured: Scope
 
+    // What the link derived about the literal's text, carried with the value so
+    // a slot the link could not see — one reached through `any`, or through a
+    // field no declaration named — still asks it. A closure a caller assembles
+    // claims nothing, and claims nothing is what fits only a slot that asks
+    // nothing.
+    public let purity: Purity
+    public let isolation: Isolation
+
     // MARK: - Initializer
-    public init(procedure: Procedure, captured: Scope) {
+    public init(
+        procedure: Procedure,
+        captured: Scope,
+        purity: Purity = .unstated,
+        isolation: Isolation = .unstated
+    ) {
         self.procedure = procedure
         self.captured = captured
+        self.purity = purity
+        self.isolation = isolation
     }
 
     // MARK: - Public

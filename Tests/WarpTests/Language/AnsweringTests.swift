@@ -41,9 +41,7 @@ struct AnsweringTests {
                 ),
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "counts"))
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "counts"))
                         )
                     ],
                     result: .reference([.key("said"), .key("total")])
@@ -69,9 +67,7 @@ struct AnsweringTests {
                 ),
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "middle"))
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "middle"))
                         )
                     ],
                     result: .reference([.key("said"), .key("total")])
@@ -120,9 +116,7 @@ struct AnsweringTests {
                     ),
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "said",
-                                expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("said"), expression: .dispatch(Dispatch(
                                     selector: "counts",
                                     arguments: ["flag": .literal(.bool(true))]
                                 ))
@@ -157,9 +151,7 @@ struct AnsweringTests {
                 "pong": Procedure(body: [], result: .dispatch(Dispatch(selector: "ping"))),
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "ping"))
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "ping"))
                         )
                     ],
                     result: .literal(.null)
@@ -185,9 +177,7 @@ struct AnsweringTests {
                     ),
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "said",
-                                expression: .dispatch(Dispatch(selector: "ping"))
+                            Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "ping"))
                             )
                         ],
                         result: .reference([.key("said"), .key("total")])
@@ -223,9 +213,7 @@ struct AnsweringTests {
                     ),
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "said",
-                                expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("said"), expression: .dispatch(Dispatch(
                                     selector: "peek",
                                     arguments: [
                                         "of": .record(["inner": .literal(.int(1))])
