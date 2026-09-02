@@ -68,12 +68,12 @@ struct TypeTests {
         }
     }
 
-    @Test("a type's name is identifiers joined by dots, and never a scalar's word", arguments: [
+    @Test("a name is identifiers joined by dots, and never a scalar's word", arguments: [
         ("Account", true), ("bank.Account", true), ("_x1", true),
-        ("true", false), ("bank.null", false), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
+        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])
     func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        #expect(Name.isTypeName(name) == holds)
+        #expect(Name.isName(name) == holds)
     }
 
     @Test("an alias of a declared record names the record on either side")

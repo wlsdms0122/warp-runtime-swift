@@ -160,7 +160,7 @@ public enum BinaryEncoding {
         // front, so a reader that met the tag knows a name follows.
         case let .record(name, object):
             if let name {
-                guard Name.isTypeName(name) else {
+                guard Name.isName(name) else {
                     throw EncodingError.invalidValue(
                         Value.string(name),
                         .init(codingPath: [], debugDescription: "the record's name is not a type's name")
@@ -182,7 +182,7 @@ public enum BinaryEncoding {
                 // A name outside NFC would give one name several byte
                 // spellings, and byte order would stop being an order on
                 // names — refused on the way out exactly as on the way in.
-                guard normal(key) else {
+                guard Name.isNormal(key) else {
                     throw EncodingError.invalidValue(
                         Value.string(key),
                         .init(
@@ -319,7 +319,7 @@ public enum BinaryEncoding {
             case .record, .namedRecord:
                 let name = tag == .namedRecord ? try text(from: &reading) : nil
 
-                if let name, !Name.isTypeName(name) {
+                if let name, !Name.isName(name) {
                     throw refused("the record's name is not a type's name")
                 }
                 let count = try length(from: &reading, of: "a record", costing: 2)
@@ -389,16 +389,13 @@ public enum BinaryEncoding {
             throw refused("the record's keys are not written in order")
         }
 
-        guard normal(key) else {
+        guard Name.isNormal(key) else {
             throw refused("the field name is not in normal form C")
         }
 
         return (key, raw)
     }
 
-    private static func normal(_ name: String) -> Bool {
-        Name.isNormal(name)
-    }
 
     private static func text(from reading: inout Cursor) throws -> String {
         let count = try length(from: &reading, of: "text", costing: 1)

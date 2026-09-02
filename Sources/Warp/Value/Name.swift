@@ -42,13 +42,23 @@ public enum Name {
         return name.allSatisfy { character in word(character, first: false) }
     }
 
-    // A declared type's name, and so a record's: identifiers joined by dots.
-    // A scalar's word is no name: a bare `true` in front of a record would be
-    // read as the record's name, and the value would be gone.
-    public static func isTypeName(_ name: String) -> Bool {
-        name.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { segment in
-            isIdentifier(String(segment)) && !["null", "true", "false"].contains(String(segment))
-        }
+    // The words the text encoding reads bare as values, and what each one
+    // is. A name is never one of them: a bare `true` in front of a record
+    // would otherwise be read as the record's name, and the value would be
+    // gone.
+    public static let scalarWords: [String: Value] = [
+        "null": .null,
+        "true": .bool(true),
+        "false": .bool(false)
+    ]
+
+    // A name as a declaration, a notation's prefix and a record's name all
+    // spell it: identifiers joined by dots, and not a scalar's word.
+    public static func isName(_ name: String) -> Bool {
+        scalarWords[name] == nil
+            && name.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { segment in
+                isIdentifier(String(segment))
+            }
     }
 
     // MARK: - Private

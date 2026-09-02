@@ -297,7 +297,7 @@ public enum TextEncoding {
 
                     settled = .record(name: name, fields: held)
 
-                case let .bare(key) where identifier(key):
+                case let .bare(key) where Name.isIdentifier(key):
                     try expect(key, in: held)
 
                     opened[opened.count - 1] = .record(held: held, key: key, name: name)
@@ -347,7 +347,7 @@ public enum TextEncoding {
                 // A bare word in front of a record is the record's name: the
                 // declared type the value settled to.
                 case let .bare(bare):
-                    if tokens.first == .recordOpen, Name.isTypeName(bare) {
+                    if tokens.first == .recordOpen, Name.isName(bare) {
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: bare))
 
@@ -390,12 +390,9 @@ public enum TextEncoding {
     // number is whole or a fraction by grammar — a point or an exponent, not a
     // reader's guess.
     private static func scalar(from bare: String) throws -> Value {
-        switch bare {
-        case "null": return .null
-        case "true": return .bool(true)
-        case "false": return .bool(false)
+        if let word = Name.scalarWords[bare] { return word }
 
-        default:
+        do {
             guard let first = bare.first, first == "-" || first.isNumber else {
                 throw refused("nothing is written \(bare)")
             }
@@ -429,7 +426,7 @@ public enum TextEncoding {
     // refused where the record already holds it: two values under one key are
     // two documents, not one document twice.
     private static func expect(_ key: String, in held: [String: Value]) throws {
-        guard normal(key) else {
+        guard Name.isNormal(key) else {
             throw refused("the field name is not in normal form C")
         }
 
@@ -439,15 +436,6 @@ public enum TextEncoding {
         }
     }
 
-    private static func normal(_ name: String) -> Bool {
-        Name.isNormal(name)
-    }
-
-    // A key written bare, which is a key spelled as an identifier; any other
-    // key is quoted, which every implementation spells the same way.
-    private static func identifier(_ name: String) -> Bool {
-        Name.isIdentifier(name)
-    }
 
     private static func write(
         _ value: Value,
@@ -519,7 +507,7 @@ public enum TextEncoding {
 
         case let .record(name, object):
             if let name {
-                guard Name.isTypeName(name) else {
+                guard Name.isName(name) else {
                     throw EncodingError.invalidValue(
                         Value.string(name),
                         .init(codingPath: [], debugDescription: "the record's name is not a type's name")
@@ -542,7 +530,7 @@ public enum TextEncoding {
 
             for (_, key, value) in fields {
                 // The same rule the reader holds: one name, one byte spelling
-                guard normal(key) else {
+                guard Name.isNormal(key) else {
                     throw EncodingError.invalidValue(
                         Value.string(key),
                         .init(
@@ -554,7 +542,7 @@ public enum TextEncoding {
 
                 text += String(repeating: "  ", count: indent + 1)
 
-                if identifier(key) {
+                if Name.isIdentifier(key) {
                     text += key
                 } else {
                     write(key, into: &text)

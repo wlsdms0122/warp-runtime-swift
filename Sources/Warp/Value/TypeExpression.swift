@@ -246,7 +246,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
             // The value's name is read the same way the slot's is: an alias
             // written on either side names the record it stands for.
-            if let tag, TypeExpression.recordName(of: tag, in: types) != nominal {
+            if let tag, TypeExpression.named(tag).recordName(in: types) != nominal {
                 throw ArgumentError("\(path): is a \(tag), and the slot declares \(nominal)")
             }
 
@@ -721,10 +721,6 @@ extension TypeExpression {
     // way to a record shape, so an alias of a declared record is that record
     // and not a second type. Nil where this stands for no record, or for a
     // name that leads back to itself.
-    static func recordName(of tag: String, in types: TypeTable) -> String? {
-        TypeExpression.named(tag).recordName(in: types)
-    }
-
     func recordName(in types: TypeTable) -> String? {
         var current = self
         var last: String?

@@ -37,13 +37,6 @@ public struct ConstructRegistry: Sendable {
 
     public var keys: [String] { forms.keys.sorted() }
 
-    // Every key a record of data cannot carry bare directly under a
-    // statement's `value`: the constructs this registry reads there, and the
-    // forms an expression reads anywhere. The writer quotes a record carrying
-    // one in that slot; deeper, only the forms are reserved.
-    public var escapedKeys: Set<String> {
-        Set(keys).union(ExpressionReader.formKeys)
-    }
 
     // What the registered forms send, and what their slots spend on their
     // behalf. Dropping a form drops what it required, which is the point of the
