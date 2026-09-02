@@ -11,10 +11,11 @@ import Foundation
 // needs beyond naming a head lives here — walking the rest of the path, and
 // sending a no-argument word to what the walk reached.
 //
-// `derivations` is what a path segment may reach: the link worked out which
-// declarations answer without running and take a receiver, and gave them back
-// under the bare names a path writes. A resolver built without one reads paths
-// and nothing else, which is what a constant or a closed template wants.
+// `derivations` is what a selector may send without running: the link worked
+// out which declarations answer purely, and gave them back under the qualified
+// names a selector writes. `words` is the part of them a path segment may reach,
+// under the bare names a path writes. A resolver built without either reads
+// paths and nothing else, which is what a constant or a closed template wants.
 public struct Resolver: Sendable {
     // MARK: - Property
     public let scope: Scope
@@ -389,9 +390,9 @@ public struct Resolver: Sendable {
     // something in the middle of a comparison.
     private func send(_ dispatch: Dispatch) throws -> Value {
         // The spelling is the selector as the author wrote it, which is a
-        // declared qualified name, and a bare spelling not among the selectors
-        // may still be a path word.
-        guard let procedure = derivations[dispatch.selector] ?? words[dispatch.selector] else {
+        // declared qualified name; a path word is reached by `derive`, never
+        // by a send.
+        guard let procedure = derivations[dispatch.selector] else {
             throw ExecutionError(
                 "'\(dispatch.selector)' answers only by running, so it cannot be"
                     + " read as data here"
