@@ -1,0 +1,62 @@
+warpt 1
+{
+  imports [
+    "std.math.lessThan"
+  ]
+  procedures {
+    entry {
+      body [
+        {
+          value 0
+          var "seen"
+        }
+        {
+          id "round"
+          loop {
+            body [
+              {
+                call {
+                  arguments {
+                    value 1
+                  }
+                  procedure "identity"
+                }
+                set "seen"
+              }
+            ]
+            where {
+              call {
+                arguments {
+                  value {
+                    ref "rounds"
+                  }
+                }
+                of {
+                  ref "round.index"
+                }
+                procedure "std.math.lessThan"
+              }
+            }
+          }
+        }
+      ]
+      parameters {
+        rounds "int"
+      }
+      result {
+        ref "seen"
+      }
+      returns "int"
+    }
+    identity {
+      parameters {
+        value "int"
+      }
+      result {
+        ref "value"
+      }
+      returns "int"
+    }
+  }
+  warp 1
+}
