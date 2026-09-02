@@ -16,8 +16,11 @@ public struct Executor: Sendable {
     // until then, which is why nothing but `run(_ image:)` can start a run.
     let procedures: [String: Procedure]
 
-    // What a path segment may reach, worked out by the link.
+    // What a selector may send without running, by its qualified spelling,
+    // worked out by the link.
     let selectors: [String: Procedure]
+
+    // What a path segment may reach, by the bare name a path writes.
     let words: [String: Procedure]
 
     // The shapes the link declared. A named type is answered here rather than
