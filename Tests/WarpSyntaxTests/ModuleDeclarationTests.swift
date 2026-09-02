@@ -22,7 +22,8 @@ struct ModuleDeclarationTests {
     // MARK: - Test
     @Test("a name written inside a module is spelled with the module's name")
     func ownDeclarationIsSpelledQualified() async throws {
-        // Given — both modules declare `helper`, and both call it unqualified
+        // Given — `first` calls its own `helper` as `first.helper`, and
+        // `second` declares a `helper` of its own, which is `second.helper`
         let first = try loader.loadDocument([
             "name": "first",
             "procedures": [

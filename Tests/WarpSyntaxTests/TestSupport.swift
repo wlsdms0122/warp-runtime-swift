@@ -218,8 +218,8 @@ func run(
     )
 }
 
-// Every procedure a list of modules declares, under its bare name — what a
-// resolver's derivations table holds for the words a path may reach.
+// Every procedure a list of modules declares, as two tables for two questions:
+// what a selector names, and what a path segment reaches.
 extension [Module] {
     // Every declaration by its qualified spelling, the way a selector names it.
     var procedures: [String: Procedure] {
