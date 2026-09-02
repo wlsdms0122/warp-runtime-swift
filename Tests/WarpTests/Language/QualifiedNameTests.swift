@@ -10,10 +10,10 @@ import Testing
 @testable import Warp
 
 // Type and constraint names carry their module the way procedure names do, and
-// a mention resolves the same way: the exact spelling, then the module's own
-// declaration, then the one declaration answering to the bare name. These are
-// the places that rule decides something — and the one place it refuses,
-// because a bare name two modules declare has no rule that could pick.
+// a mention is the declared spelling, written out: `store.Task` inside `store`
+// too, and `Task` only for a declaration in the shared space. These are the
+// places that rule decides something, and the places it refuses, because a
+// spelling no module declares names nothing.
 @Suite("A type name carries its module")
 struct QualifiedNameTests {
     // MARK: - Property
@@ -23,8 +23,8 @@ struct QualifiedNameTests {
     // MARK: - Test
     @Test("a type name is its qualified spelling, in the declaring module too")
     func aTypeNameIsItsQualifiedSpelling() async throws {
-        // Given — `Task` is declared by `store` alone, and the entry module
-        // mentions it bare
+        // Given — `store` declares `Task`, and both `store` and the entry
+        // module mention it as `store.Task`
         let store = try Module(
             namespace: "store",
             types: ["Task": .record(["id": .string])],
@@ -55,15 +55,15 @@ struct QualifiedNameTests {
         // When
         let image = try linker.link([sut, store] + Module.standard, entry: entryName)
 
-        // Then — the mention resolved to the qualified declaration
+        // Then — the declaration is under the qualified spelling alone
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
         #expect(image.types.resolve("Task") == nil)
     }
 
     @Test("a module names its own type by its qualified spelling")
     func ownTypeIsNamedQualified() async throws {
-        // Given — two modules declare `Limit`, and `mine` mentions it bare
-        // from inside: its own is an int, the other module's is a string
+        // Given — two modules declare `Limit`, and `mine` mentions its own as
+        // `mine.Limit` from inside: an int, where the other module's is a string
         let mine = try Module(
             namespace: "mine",
             types: ["Limit": .int],
@@ -83,8 +83,7 @@ struct QualifiedNameTests {
             ]
         )
 
-        // When / Then — `mine.entry` answers an int, which only its own
-        // `Limit` admits; the other reading would refuse at the link
+        // When / Then — `mine.entry` answers an int, which `mine.Limit` admits
         let answer = try await run([mine, theirs], entry: "mine.\(entryName)")
 
         #expect(answer == .int(3))
@@ -92,8 +91,8 @@ struct QualifiedNameTests {
 
     @Test("a bare name is not a spelling of any qualified declaration")
     func aBareNameSpellsNoQualifiedDeclaration() throws {
-        // Given — the mention lives in a third module that declares no `Limit`
-        // of its own, so neither rule reaches a single answer
+        // Given — two modules declare `one.Limit` and `two.Limit`, and a third
+        // mentions `Limit`, which neither of those spellings is
         let one = try Module(
             namespace: "one",
             types: ["Limit": .int],
@@ -129,7 +128,7 @@ struct QualifiedNameTests {
 
     @Test("the qualified spelling says which, where the bare one cannot")
     func theQualifiedSpellingResolvesTheTie() async throws {
-        // Given — the same tie, written through
+        // Given — the same link, with the mention spelled out
         let one = try Module(
             namespace: "one",
             types: ["Limit": .int],
@@ -187,8 +186,8 @@ struct QualifiedNameTests {
 
     @Test("a constraint is named by its qualified spelling")
     func aConstraintIsNamedQualified() async throws {
-        // Given — `Comparable` is declared by std alone, and a document-shaped
-        // module bounds its own parameter with the bare name
+        // Given — `std` declares `Comparable`, and a document-shaped module
+        // bounds its own parameter with that spelling, `std.Comparable`
         let sut = try Module(
             procedures: [
                 "keep": Procedure(
@@ -246,9 +245,8 @@ struct QualifiedNameTests {
     @Test("a shared-space declaration's bare name is its qualified spelling")
     func aSharedSpaceDeclarationAnswersExactly() async throws {
         // Given — an unnamed module declares `Limit` into the shared space, a
-        // named module declares its own, and a third module mentions the bare
-        // name: the shared declaration is the exact spelling, so it wins the
-        // way an unnamed module's procedure does
+        // named module declares `one.Limit`, and a third module mentions
+        // `Limit`: the shared declaration's spelling, and nothing else's
         let shared = try Module(
             types: ["Limit": .int],
             procedures: [
@@ -304,55 +302,6 @@ struct QualifiedNameTests {
             try await run(sut)
         } throws: { error in
             "\(error)".contains("nothing arrived to order")
-        }
-    }
-
-    @Test("a module's own bare name is not a spelling of its qualified declaration")
-    func ownBareNameSpellsNothing() throws {
-        // Given — `m` declares `Limit` and `extra.Limit`, and both answer the
-        // bare spelling. Picking either would be an order deciding a meaning,
-        // so the tie refuses — and the exact spelling still says which.
-        let sut = try Module(
-            namespace: "m",
-            types: [
-                "Limit": .int,
-                "extra.Limit": .string
-            ],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(returns: .named("Limit")),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try linker.link([sut], entry: "m.\(entryName)")
-        } throws: { error in
-            error is LinkError
-                && "\(error)".contains("names type 'Limit', which no module in this link declares")
-        }
-
-        // The exact spelling resolves what the bare one cannot
-        let spelled = try Module(
-            namespace: "m",
-            types: [
-                "Limit": .int,
-                "extra.Limit": .string
-            ],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(returns: .named("m.Limit")),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        #expect(throws: Never.self) {
-            try linker.link([spelled], entry: "m.\(entryName)")
         }
     }
 
