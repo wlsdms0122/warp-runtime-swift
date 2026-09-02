@@ -26,12 +26,12 @@ struct BranchTests {
             "body": [
                 ["var": "pick"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "pick"]]
         ], importing: ["std.logic.equal"])
@@ -52,12 +52,12 @@ struct BranchTests {
             try loader.loadProcedure([
                 "body": [
                     [
-                        "id": "pick",
-                        "branch": [
+                        "let": "pick",
+                        "value": ["branch": [
                             "when": true,
-                            "then": [["id": "kept", "value": "yes"]]
+                            "then": [["let": "kept", "value": "yes"]]
                         ]
-                    ]
+                    ]]
                 ]
             ])
         } throws: { error in

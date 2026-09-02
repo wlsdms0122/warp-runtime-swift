@@ -26,15 +26,15 @@ struct ConcurrentTests {
         let spec = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "par",
-                    "call": [
+                    "let": "par",
+                    "value": ["call": [
                         "procedure": "std.concurrent.all",
                         "of": [
                             "left": ["closure": ["result": 1]],
                             "right": ["closure": ["result": 2]]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "par"]]
         ], importing: ["std.concurrent.all"])
@@ -54,31 +54,31 @@ struct ConcurrentTests {
         let spec = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "par",
-                    "attempt": [
+                    "let": "par",
+                    "value": ["attempt": [
                         "body": [
                             [
-                                "id": "par",
-                                "call": [
+                                "let": "par",
+                                "value": ["call": [
                                     "procedure": "std.concurrent.all",
                                     "of": [
                                         "fine": ["closure": ["result": "ok"]],
                                         "fragile": [
                                             "closure": [
-                                                "body": [["id": "boom", "fail": true]],
+                                                "body": [["let": "boom", "value": ["fail": true]]],
                                                 "result": ["ref": "boom"]
                                             ]
                                         ]
                                     ]
                                 ]
-                            ]
+                            ]]
                         ],
                         "rescue": [
-                            "body": [["id": "recovery", "value": "recovered"]],
+                            "body": [["let": "recovery", "value": "recovered"]],
                             "result": ["ref": "recovery"]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "par"]]
         ], importing: ["std.concurrent.all", "test.fail"])
@@ -96,33 +96,33 @@ struct ConcurrentTests {
         let spec = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "par",
-                    "attempt": [
+                    "let": "par",
+                    "value": ["attempt": [
                         "body": [
                             [
-                                "id": "par",
-                                "call": [
+                                "let": "par",
+                                "value": ["call": [
                                     "procedure": "std.concurrent.all",
                                     "of": [
                                         "fragile": [
                                             "closure": [
-                                                "body": [["id": "boom", "fail": true]],
+                                                "body": [["let": "boom", "value": ["fail": true]]],
                                                 "result": ["ref": "boom"]
                                             ]
                                         ],
                                         "broken": [
                                             "closure": [
-                                                "body": [["id": "boom", "fail": false]],
+                                                "body": [["let": "boom", "value": ["fail": false]]],
                                                 "result": ["ref": "boom"]
                                             ]
                                         ]
                                     ]
                                 ]
-                            ]
+                            ]]
                         ],
-                        "rescue": ["body": [["id": "recovery", "value": "recovered"]]]
+                        "rescue": ["body": [["let": "recovery", "value": "recovered"]]]
                     ]
-                ]
+                ]]
             ]
         ], importing: ["std.concurrent.all", "test.fail"])
 
@@ -140,8 +140,8 @@ struct ConcurrentTests {
             "parameters": ["names": "array<string>"],
             "body": [
                 [
-                    "id": "greeted",
-                    "call": [
+                    "let": "greeted",
+                    "value": ["call": [
                         "procedure": "std.concurrent.map",
                         "of": ["ref": "names"],
                         "arguments": [
@@ -150,7 +150,7 @@ struct ConcurrentTests {
                                     "parameters": ["item": "string"],
                                     "body": [
                                         [
-                                            "id": "line",
+                                            "let": "line",
                                             "value": [
                                                 "format": "hello, ${who}",
                                                 "with": ["who": ["ref": "item"]]
@@ -162,7 +162,7 @@ struct ConcurrentTests {
                             ]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "greeted"]]
         ], importing: ["std.text.joined", "std.concurrent.map", "std.text.text"])
@@ -183,20 +183,20 @@ struct ConcurrentTests {
         let sut = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "either",
-                    "call": [
+                    "let": "either",
+                    "value": ["call": [
                         "procedure": "std.concurrent.first",
                         "of": [
                             [
                                 "closure": [
-                                    "body": [["id": "boom", "fail": true]],
+                                    "body": [["let": "boom", "value": ["fail": true]]],
                                     "result": ["ref": "boom"]
                                 ]
                             ],
                             ["closure": ["result": "answered"]]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "either"]]
         ], importing: ["test.fail", "std.concurrent.first"])

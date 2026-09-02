@@ -28,11 +28,11 @@ struct VariableNotationTests {
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "verdict"]]
         ], importing: ["std.logic.equal"])
@@ -52,11 +52,11 @@ struct VariableNotationTests {
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "verdict"]]
         ], importing: ["std.logic.equal"])
@@ -74,13 +74,13 @@ struct VariableNotationTests {
         // a branch introduces a name that dies with the branch
         let fixture: Value = [
             "body": [
-                ["id": "seed", "value": 1],
+                ["let": "seed", "value": 1],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "seed"], "notEqual": .null],
                         "then": [["var": "inner", "value": 1]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "inner"]]
         ]
@@ -99,11 +99,11 @@ struct VariableNotationTests {
             "body": [
                 ["var": "verdict", "value": "outer"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "verdict"], "notEqual": .null],
                         "then": [["var": "verdict", "value": "inner"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "verdict"]]
         ], importing: ["std.logic.notEqual"])
@@ -120,7 +120,7 @@ struct VariableNotationTests {
         // Given — `id` means the name is fixed, and the refusal says which of
         // the two mistakes this is
         let fixture: Value = [
-            "body": [["id": "verdict", "value": "first"], ["set": "verdict", "value": "second"]],
+            "body": [["let": "verdict", "value": "first"], ["set": "verdict", "value": "second"]],
             "result": ["result": ["ref": "verdict"]]
         ]
 
@@ -152,7 +152,7 @@ struct VariableNotationTests {
             "body": [
                 ["var": "tally", "value": 0],
                 [
-                    "id": "later",
+                    "let": "later",
                     "value": [
                         "closure": [
                             "body": [["set": "tally", "value": 1]],
@@ -176,8 +176,8 @@ struct VariableNotationTests {
         let sut = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "both",
-                    "call": [
+                    "let": "both",
+                    "value": ["call": [
                         "procedure": "std.concurrent.all",
                         "of": [
                             "left": [
@@ -192,9 +192,9 @@ struct VariableNotationTests {
                             "right": ["closure": ["result": 2]]
                         ]
                     ]
-                ],
+                ]],
                 [
-                    "id": "read",
+                    "let": "read",
                     "value": ["as": ["left": "int"], "of": ["ref": "both"]]
                 ]
             ],
@@ -212,7 +212,7 @@ struct VariableNotationTests {
     func doubleNameKeyRejected() throws {
         // Given — `id`/`var`/`set` are one slot spelled three ways, not three
         // keys that may combine
-        let fixture: Value = ["body": [["id": "verdict", "var": "verdict", "value": "x"]]]
+        let fixture: Value = ["body": [["let": "verdict", "var": "verdict", "value": "x"]]]
 
         // When / Then
         #expect(throws: ReadingError.self) {

@@ -306,7 +306,7 @@ struct ValueDecoder: Decoder {
     // MARK: - Initializer
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .object(object) = value else {
+        guard case let .record(_, object) = value else {
             throw ReadingError("expected object, found \(value.type)", at: steps)
         }
 

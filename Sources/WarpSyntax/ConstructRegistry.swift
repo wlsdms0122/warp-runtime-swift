@@ -23,7 +23,6 @@ public struct ConstructRegistry: Sendable {
     // The built-in set is a compile-time constant with unique keys — a throw here
     // would be a kernel bug, so the forced try is the honest reaction.
     public static let standard = try! ConstructRegistry(forms: [
-        ValueForm.self,
         BranchForm.self,
         LoopForm.self,
         EachForm.self,
@@ -37,6 +36,7 @@ public struct ConstructRegistry: Sendable {
     ])
 
     public var keys: [String] { forms.keys.sorted() }
+
 
     // What the registered forms send, and what their slots spend on their
     // behalf. Dropping a form drops what it required, which is the point of the
@@ -136,6 +136,17 @@ public struct ConstructRegistry: Sendable {
             // A registry is assembled by a caller and not read out of a
             // document, so there is no place in one to point at.
             throw ValidationError("construct key '\(key)' is already registered", at: nil)
+        }
+
+        // `value` is the word an expression quotes a literal under, read
+        // wherever an expression is, so a construct registered under it would
+        // never be reached: the statement reader passes that word by.
+        guard key != StatementReader.valueKey else {
+            throw ValidationError(
+                "construct key '\(key)' is the word a statement writes its expression under,"
+                    + " and no construct sits under it",
+                at: nil
+            )
         }
 
         forms[key] = form

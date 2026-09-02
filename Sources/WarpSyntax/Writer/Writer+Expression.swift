@@ -43,7 +43,7 @@ public extension Writer {
 
         let (key, body) = try construct(of: statement.expression, named: statement.binding?.spelled)
 
-        written[key] = body
+        written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .object([key: body])
 
         return .object(written)
     }
@@ -59,14 +59,24 @@ public extension Writer {
     // like any other, and `.canonical` reserves nothing there. It stops being
     // empty exactly when the reading side is a notation, and then this is the
     // only thing standing between a record and a message.
-    func value(of expression: Expression, reserving reserved: Set<String> = []) throws -> Value {
+    //
+    // `constructs` names the keys a record standing directly in this slot
+    // would be read as a construct under, which is only ever a statement's
+    // `value`: the reader takes a record there as a construct when it has
+    // exactly one key and that key is a construct's, and reads nothing that
+    // way deeper down. What `reserving` names is read at every depth.
+    func value(
+        of expression: Expression,
+        reserving reserved: Set<String> = [],
+        constructs: Set<String> = []
+    ) throws -> Value {
         let reserved = reserved.union(ExpressionReader.formKeys)
 
         switch expression {
         // Data that happens to look like a form has to say it is data, and data
         // that could not be mistaken for one says nothing.
         case let .literal(value):
-            switch try Self.spelling(of: value, reserving: reserved) {
+            switch try Self.spelling(of: value, reserving: reserved, constructs: constructs) {
             case .plainly: return value
             case .quoted: return .object(["value": value])
             }
@@ -82,10 +92,11 @@ public extension Writer {
         // evaluate. A record whose own field names are read as a form here has
         // no document, and saying so beats writing one that means something else.
         case let .record(fields):
-            guard Set(fields.keys).isDisjoint(with: reserved) else {
+            let taken = Self.taken(Set(fields.keys), reserving: reserved, constructs: constructs)
+
+            guard taken.isEmpty else {
                 throw WritingError(
-                    "a record with the field(s) "
-                        + "\(Set(fields.keys).intersection(reserved).sorted()) is read as a form"
+                    "a record with the field(s) \(taken.sorted()) is read as a form"
                         + " where it is written, and a record of expressions cannot be quoted"
                 )
             }
@@ -172,7 +183,7 @@ public extension Writer {
             try named(round, matches: id, in: "loop", binding: "round")
 
             var written: [String: Value] = [
-                "where": try value(of: condition, reserving: conditionKeys)
+                "while": try value(of: condition, reserving: conditionKeys)
             ]
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
@@ -220,7 +231,7 @@ public extension Writer {
         // Whatever is left needs no name, so it is written as the expression it
         // is under the word that says "this statement is just a value".
         default:
-            return (try spelling(ValueForm.self), try value(of: expression))
+            return (StatementReader.valueKey, try value(of: expression, constructs: Set(registry.keys)))
         }
     }
 
@@ -300,7 +311,7 @@ public extension Writer {
 
     private func key(of binding: Statement.Binding) -> String {
         switch binding {
-        case .constant: "id"
+        case .constant: "let"
         case .variable: "var"
         case .assignment: "set"
         }
@@ -318,9 +329,28 @@ public extension Writer {
         case quoted
     }
 
+    // The keys under which a record with these fields would be read as
+    // something other than a record: a reserved key wherever it stands, and a
+    // construct's key where the record is the one field under a statement's
+    // `value` — the reader's own two conditions, asked here as the writer.
+    private static func taken(
+        _ keys: Set<String>,
+        reserving reserved: Set<String>,
+        constructs: Set<String>
+    ) -> Set<String> {
+        var taken = keys.intersection(reserved)
+
+        if keys.count == 1 {
+            taken.formUnion(keys.intersection(constructs))
+        }
+
+        return taken
+    }
+
     private static func spelling(
         of value: Value,
-        reserving reserved: Set<String>
+        reserving reserved: Set<String>,
+        constructs: Set<String> = []
     ) throws -> Spelling {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
@@ -331,8 +361,10 @@ public extension Writer {
                 try spelling(of: element, reserving: reserved) == .plainly ? carried : .quoted
             }
 
-        case let .object(fields):
-            guard Set(fields.keys).isDisjoint(with: reserved) else { return .quoted }
+        case let .record(_, fields):
+            guard taken(Set(fields.keys), reserving: reserved, constructs: constructs).isEmpty else {
+                return .quoted
+            }
 
             return try fields.values.reduce(.plainly) { carried, field in
                 try spelling(of: field, reserving: reserved) == .plainly ? carried : .quoted

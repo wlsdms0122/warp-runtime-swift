@@ -32,6 +32,9 @@ struct CastAgreementTests {
     private let types = TypeTable(
         types: [
             "Person": .record(["name": .string]),
+            // A name standing for another declared record, so an alias meets
+            // the record it names in every pair.
+            "Someone": .named("Person"),
             "Byte": .ranged(.whole(from: 0, to: .through(255))),
             "Ratio": .ranged(.fraction(from: 0, to: .upTo(1))),
             "Maybe": .nullable(.int),

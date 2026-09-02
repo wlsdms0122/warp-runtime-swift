@@ -28,9 +28,9 @@ struct CallTests {
                 "caller": [
                     "body": [
                         [
-                            "id": "call",
-                            "call": ["procedure": "callee", "arguments": ["base": 41]]
-                        ]
+                            "let": "call",
+                            "value": ["call": ["procedure": "callee", "arguments": ["base": 41]]
+                        ]]
                     ],
                     "result": ["result": ["ref": "call.pair"]]
                 ],
@@ -38,7 +38,7 @@ struct CallTests {
                     "parameters": ["base": "int", "bump": ["type": "int", "default": 1]],
                     "body": [
                         [
-                            "id": "echo",
+                            "let": "echo",
                             "value": ["base": ["ref": "base"], "bump": ["ref": "bump"]]
                         ]
                     ],
@@ -63,14 +63,14 @@ struct CallTests {
                 "caller": [
                     "body": [
                         [
-                            "id": "call",
-                            "call": ["procedure": "callee", "arguments": ["base": "not-a-number"]]
-                        ]
+                            "let": "call",
+                            "value": ["call": ["procedure": "callee", "arguments": ["base": "not-a-number"]]
+                        ]]
                     ]
                 ],
                 "callee": [
                     "parameters": ["base": "int"],
-                    "body": [["id": "echo", "value": ["ref": "base"]]]
+                    "body": [["let": "echo", "value": ["ref": "base"]]]
                 ]
             ]
         ])
@@ -89,7 +89,7 @@ struct CallTests {
             "imports": ["some-other-file.greet"],
             "procedures": [
                 "caller": [
-                    "body": [["id": "call", "call": ["procedure": "some-other-file.greet"]]],
+                    "body": [["let": "call", "value": ["call": ["procedure": "some-other-file.greet"]]]],
                     "result": ["result": ["ref": "call.said"]]
                 ]
             ]
@@ -97,7 +97,7 @@ struct CallTests {
         let elsewhere = try loader.loadDocument([
             "procedures": [
                 "some-other-file.greet": [
-                    "body": [["id": "word", "value": "hello"]],
+                    "body": [["let": "word", "value": "hello"]],
                     "result": ["said": ["ref": "word"]],
                     "returns": ["said": "string"]
                 ]
@@ -122,9 +122,9 @@ struct CallTests {
                     "parameters": ["word": "string"],
                     "body": [
                         [
-                            "id": "said",
-                            "call": ["procedure": "shout", "of": ["ref": "word"]]
-                        ]
+                            "let": "said",
+                            "value": ["call": ["procedure": "shout", "of": ["ref": "word"]]
+                        ]]
                     ],
                     "result": ["result": ["ref": "said"]]
                 ],
@@ -155,12 +155,12 @@ struct CallTests {
                 "entry": [
                     "body": [
                         [
-                            "id": "walked",
-                            "call": [
+                            "let": "walked",
+                            "value": ["call": [
                                 "procedure": "helper",
-                                "blocks": ["body": ["body": [["id": "step", "value": 1]]]]
+                                "blocks": ["body": ["body": [["let": "step", "value": 1]]]]
                             ]
-                        ]
+                        ]]
                     ]
                 ]
             ]
@@ -180,7 +180,7 @@ struct CallTests {
         // a cycle oracle); runaway calls end by caller cancellation, which must
         // propagate through the call chain
         let module = try loader.loadDocument([
-            "procedures": ["loopy": ["body": [["id": "again", "call": ["procedure": "loopy"]]]]]
+            "procedures": ["loopy": ["body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])
         let image = try Linker().link([module], entry: "loopy")
         let sut = Executor()

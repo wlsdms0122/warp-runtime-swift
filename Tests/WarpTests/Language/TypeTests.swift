@@ -68,6 +68,31 @@ struct TypeTests {
         }
     }
 
+    @Test("a name is identifiers joined by dots, and never a scalar's word", arguments: [
+        ("Account", true), ("bank.Account", true), ("_x1", true),
+        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
+    ])
+    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
+        #expect(Name.isName(name) == holds)
+    }
+
+    @Test("an alias of a declared record names the record on either side")
+    func anAliasNamesTheRecordItStandsFor() throws {
+        // Given
+        let types = TypeTable(types: ["Person": .record(["name": .string]), "Someone": .named("Person")])
+        let sut = TypeExpression.named("Someone")
+
+        // When
+        let bare = try sut.settling(.object(["name": .string("a")]), at: "who", in: types)
+        let aliased = try sut.settling(.record(name: "Someone", fields: ["name": .string("a")]), at: "who", in: types)
+        let named = try sut.settling(.record(name: "Person", fields: ["name": .string("a")]), at: "who", in: types)
+
+        // Then — every one settles under the record's own name
+        #expect(bare == .record(name: "Person", fields: ["name": .string("a")]))
+        #expect(aliased == bare)
+        #expect(named == bare)
+    }
+
     @Test("a named type resolves through the table it was declared in")
     func namedTypeResolves() throws {
         // Given
@@ -82,7 +107,7 @@ struct TypeTests {
         )
 
         // Then
-        #expect(settled == .array([.object(["id": .string("a")])]))
+        #expect(settled == .array([.record(name: "Task", fields: ["id": .string("a")])]))
 
         #expect(throws: ArgumentError.self) {
             try sut.settling(.array([.object(["id": .int(1)])]), at: "tasks", in: types)

@@ -27,8 +27,30 @@ public indirect enum Value: Sendable, Equatable {
     case string(String)
     case bytes([UInt8])
     case array([Value])
-    case object([String: Value])
+
+    // Fields under keys, and the name of the declared type the record settled
+    // to, where it has. A record made by a literal, answered by a native word
+    // or read out of a document has no name; it takes one the first time it
+    // settles into a slot that declares a type, and from then on it fits only
+    // that name. Two records of one shape under two names are two values.
+    case record(name: String?, fields: [String: Value])
+
     case procedure(Closure)
+
+    // A record with no name: what a literal, a native word and a document
+    // make. The one spelling for it, so a caller never writes the nil.
+    public static func object(_ fields: [String: Value]) -> Value {
+        .record(name: nil, fields: fields)
+    }
+
+    // This record with other fields and the same name, or any other value as
+    // it is. Rewriting fields goes through here so a name is kept without
+    // each caller remembering to.
+    public func replacingFields(_ rewrite: ([String: Value]) throws -> [String: Value]) rethrows -> Value {
+        guard case let .record(name, fields) = self else { return self }
+
+        return .record(name: name, fields: try rewrite(fields))
+    }
 
     // MARK: - Property
     // What is said wherever a value stands where a document can reach it. One
@@ -47,7 +69,7 @@ public indirect enum Value: Sendable, Equatable {
         switch self {
         case .procedure: true
         case let .array(items): items.contains { item in item.holdsProcedure }
-        case let .object(fields): fields.values.contains { field in field.holdsProcedure }
+        case let .record(_, fields): fields.values.contains { field in field.holdsProcedure }
         default: false
         }
     }
@@ -75,7 +97,7 @@ public indirect enum Value: Sendable, Equatable {
         case .array:
             return .array
 
-        case .object:
+        case .record:
             return .object
 
         case .procedure:
@@ -87,9 +109,9 @@ public indirect enum Value: Sendable, Equatable {
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a caller does with what a run gave it.
     public subscript(field: String) -> Value? {
-        guard case let .object(object) = self else { return nil }
+        guard case let .record(_, fields) = self else { return nil }
 
-        return object[field]
+        return fields[field]
     }
 
     // The elements a value is indexed by, and nil for what has none. This is
@@ -231,8 +253,8 @@ public indirect enum Value: Sendable, Equatable {
         case let (.array(left), .array(right)):
             return left == right
 
-        case let (.object(left), .object(right)):
-            return left == right
+        case let (.record(leftName, left), .record(rightName, right)):
+            return leftName == rightName && left == right
 
         // Two procedures are never equal. Structural equality would compare
         // bodies, which says nothing an author asked about, and reference
@@ -337,8 +359,9 @@ public indirect enum Value: Sendable, Equatable {
             return left.count == right.count
                 && zip(left, right).allSatisfy { pair in pair.0.matches(pair.1) }
 
-        case let (.object(left), .object(right)):
-            return left.count == right.count
+        case let (.record(leftName, left), .record(rightName, right)):
+            return leftName == rightName
+                && left.count == right.count
                 && left.allSatisfy { key, value in
                     right[key].map { other in value.matches(other) } ?? false
                 }

@@ -111,7 +111,7 @@ public struct ExpressionReader: Decodable {
                     }
                 )
 
-            case let .object(object):
+            case let .record(_, object):
                 return try read(object: object, at: steps, in: decoder)
 
             // A document is text. Nothing it parses to is ever a procedure, so
@@ -348,7 +348,7 @@ public struct ExpressionReader: Decodable {
         case nil:
             bindings = [:]
 
-        case let .object(withObject)?:
+        case let .record(_, withObject)?:
             bindings = try withObject.keys.sorted().reduce(into: [String: Expression]()) { bound, key in
                 bound[key] = try read(
                     withObject[key] ?? .null,

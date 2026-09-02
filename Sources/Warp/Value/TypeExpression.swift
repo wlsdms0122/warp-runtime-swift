@@ -228,6 +228,11 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 throw mismatch(value, at: path)
             }
 
+        // A declared record is nominal. A record arriving without a name
+        // settles to the declared shape and takes the name; one arriving
+        // under this name is settled again and keeps it; one arriving under
+        // another name is refused, whatever its shape. A declared name that is
+        // not a record shape settles as the shape it stands for.
         case let .named(name):
             guard let declared = types.resolve(name) else {
                 throw UndeclaredTypeError(
@@ -235,7 +240,21 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 )
             }
 
-            return try declared.settling(value, at: path, in: types, assuming: assuming)
+            guard case let .record(tag, _) = value, let nominal = recordName(in: types) else {
+                return try declared.settling(value, at: path, in: types, assuming: assuming)
+            }
+
+            // The value's name is read the same way the slot's is: an alias
+            // written on either side names the record it stands for.
+            if let tag, TypeExpression.named(tag).recordName(in: types) != nominal {
+                throw ArgumentError("\(path): is a \(tag), and the slot declares \(nominal)")
+            }
+
+            guard case let .record(_, fields) = try declared.settling(value, at: path, in: types, assuming: assuming) else {
+                throw mismatch(value, at: path)
+            }
+
+            return .record(name: nominal, fields: fields)
 
         // Null arrives as itself; anything else is held to the declared half.
         case let .nullable(inner):
@@ -303,16 +322,19 @@ public indirect enum TypeExpression: Sendable, Equatable {
             )
 
         case let .object(entry):
-            guard case let .object(object) = value else { throw mismatch(value, at: path) }
+            guard case let .record(tag, object) = value else { throw mismatch(value, at: path) }
 
-            return .object(
-                try object.mapValues { item in
+            return .record(
+                name: tag,
+                fields: try object.mapValues { item in
                     try entry.settling(item, at: path, in: types, assuming: assuming)
                 }
             )
 
+        // An inline record is structural: a record under any name fits it by
+        // shape and keeps the name it came with.
         case let .record(fields):
-            guard case let .object(object) = value else { throw mismatch(value, at: path) }
+            guard case let .record(tag, object) = value else { throw mismatch(value, at: path) }
 
             var settled = object
 
@@ -329,7 +351,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 )
             }
 
-            return settled.isEmpty ? .object([:]) : .object(settled)
+            return .record(name: tag, fields: settled)
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
@@ -695,6 +717,27 @@ extension TypeExpression {
         return false
     }
 
+    // The name a record settled here carries: the last declared name on the
+    // way to a record shape, so an alias of a declared record is that record
+    // and not a second type. Nil where this stands for no record, or for a
+    // name that leads back to itself.
+    func recordName(in types: TypeTable) -> String? {
+        var current = self
+        var last: String?
+        var visited: Set<String> = []
+
+        while case let .named(name) = current {
+            guard !visited.contains(name), let declared = types.resolve(name) else { return nil }
+
+            visited.insert(name)
+            last = name
+            current = declared
+        }
+
+        if case .record = current { return last }
+        return nil
+    }
+
     public var isVariable: Bool {
         if case .variable = self { return true }
         return false
@@ -832,6 +875,16 @@ extension TypeExpression {
         in types: TypeTable,
         assuming: Set<String>
     ) -> Bool {
+        if
+            case .named = self,
+            case .named = other,
+            let mine = recordName(in: types),
+            let theirs = other.recordName(in: types),
+            mine != theirs
+        {
+            return false
+        }
+
         if case let .named(name) = self {
             guard !assuming.contains(name), let declared = types.resolve(name) else { return true }
 
@@ -1034,6 +1087,18 @@ extension TypeExpression {
         in types: TypeTable,
         assuming: Set<String>
     ) -> Bool {
+        // Two declared records under two names are two types, whatever their
+        // shapes: a value settled under one name fits only that name.
+        if
+            case .named = self,
+            case .named = other,
+            let mine = recordName(in: types),
+            let theirs = other.recordName(in: types),
+            mine != theirs
+        {
+            return false
+        }
+
         switch (self, other) {
         // What answers `never` never arrives, so it cannot be the value that
         // disagrees with a declaration — it fits everywhere. The other way round

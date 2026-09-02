@@ -37,11 +37,11 @@ struct LeaveTests {
             "body": [
                 ["var": "early", "value": "kept going"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "word"], "equal": "stop"],
-                        "then": [["return": "left early"]]
+                        "then": [["value": ["return": "left early"]]]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "early"]
         ], importing: ["std.logic.equal"])
@@ -64,28 +64,28 @@ struct LeaveTests {
             "body": [
                 ["var": "seen", "value": 0],
                 [
-                    "id": "walked",
-                    "loop": [
-                        "where": ["of": ["ref": "seen"], "notEqual": 10],
+                    "let": "walked",
+                    "value": ["loop": [
+                        "while": ["of": ["ref": "seen"], "notEqual": 10],
                         "body": [
                             [
                                 "set": "seen",
-                                "call": [
+                                "value": ["call": [
                                     "procedure": "std.math.plus",
                                     "of": ["ref": "seen"],
                                     "arguments": ["value": 1]
                                 ]
-                            ],
+                            ]],
                             [
-                                "branch": [
+                                "value": ["branch": [
                                     "when": ["of": ["ref": "seen"], "equal": 3],
-                                    "then": [["break": Value.null]]
+                                    "then": [["value": ["break": Value.null]]]
                                 ]
-                            ]
+                            ]]
                         ],
                         "result": ["ref": "seen"]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "walked"]
         ], importing: ["std.logic.equal", "std.logic.notEqual", "std.math.plus"])
@@ -103,16 +103,16 @@ struct LeaveTests {
             "body": [
                 ["var": "seen", "value": ""],
                 [
-                    "id": "kept",
-                    "each": [
+                    "let": "kept",
+                    "value": ["each": [
                         "in": ["ref": "names"],
                         "body": [
                             [
-                                "branch": [
+                                "value": ["branch": [
                                     "when": ["of": ["ref": "kept.item"], "equal": "skip"],
-                                    "then": [["continue": Value.null]]
+                                    "then": [["value": ["continue": Value.null]]]
                                 ]
-                            ],
+                            ]],
                             [
                                 "set": "seen",
                                 "value": [
@@ -125,7 +125,7 @@ struct LeaveTests {
                             ]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "seen"]
         ], importing: ["std.logic.equal", "std.text.joined", "std.text.text"])
@@ -149,31 +149,31 @@ struct LeaveTests {
             "body": [
                 ["var": "count", "value": 0],
                 [
-                    "id": "outer",
-                    "loop": [
-                        "where": ["of": ["ref": "count"], "notEqual": 100],
+                    "let": "outer",
+                    "value": ["loop": [
+                        "while": ["of": ["ref": "count"], "notEqual": 100],
                         "body": [
                             [
-                                "id": "inner",
-                                "loop": [
-                                    "where": true,
+                                "let": "inner",
+                                "value": ["loop": [
+                                    "while": true,
                                     "body": [
                                         [
                                             "set": "count",
-                                            "call": [
+                                            "value": ["call": [
                                                 "procedure": "std.math.plus",
                                                 "of": ["ref": "count"],
                                                 "arguments": ["value": 1]
                                             ]
-                                        ],
-                                        ["break": "outer"]
+                                        ]],
+                                        ["value": ["break": "outer"]]
                                     ]
                                 ]
-                            ]
+                            ]]
                         ],
                         "result": ["ref": "count"]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "outer"]
         ], importing: ["std.logic.notEqual", "std.math.plus"])
@@ -192,12 +192,12 @@ struct LeaveTests {
             "returns": "string",
             "body": [
                 [
-                    "id": "tried",
-                    "attempt": [
-                        "body": [["return": "left from inside"]],
+                    "let": "tried",
+                    "value": ["attempt": [
+                        "body": [["value": ["return": "left from inside"]]],
                         "rescue": ["result": "the rescue ran"]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "tried"]
         ])
@@ -212,7 +212,7 @@ struct LeaveTests {
         // is a procedure and runs wherever it is called from
         #expect {
             try loader.loadProcedure([
-                "body": [["break": Value.null]]
+                "body": [["value": ["break": Value.null]]]
             ])
         } throws: { error in
             "\(error)".contains("no loop here to leave")
@@ -222,12 +222,12 @@ struct LeaveTests {
             try loader.loadProcedure([
                 "body": [
                     [
-                        "id": "walked",
-                        "loop": [
-                            "where": false,
-                            "body": [["break": "somewhereElse"]]
+                        "let": "walked",
+                        "value": ["loop": [
+                            "while": false,
+                            "body": [["value": ["break": "somewhereElse"]]]
                         ]
-                    ]
+                    ]]
                 ]
             ])
         } throws: { error in
@@ -245,28 +245,28 @@ struct LeaveTests {
                 "parameters": ["names": "array<string>"],
                 "body": [
                     [
-                        "id": "walked",
-                        "loop": [
-                            "where": false,
+                        "let": "walked",
+                        "value": ["loop": [
+                            "while": false,
                             "body": [
                                 [
-                                    "id": "kept",
-                                    "call": [
+                                    "let": "kept",
+                                    "value": ["call": [
                                         "procedure": "std.collection.filter",
                                         "of": ["ref": "names"],
                                         "arguments": [
                                             "by": [
                                                 "closure": [
                                                     "parameters": ["item": "string"],
-                                                    "body": [["break": Value.null]]
+                                                    "body": [["value": ["break": Value.null]]]
                                                 ]
                                             ]
                                         ]
                                     ]
-                                ]
+                                ]]
                             ]
                         ]
-                    ]
+                    ]]
                 ]
             ])
         } throws: { error in
@@ -286,24 +286,24 @@ struct LeaveTests {
                 "entry": [
                     "returns": "string",
                     "body": [
-                        ["id": "said", "call": ["procedure": "helper"]],
+                        ["let": "said", "value": ["call": ["procedure": "helper"]]],
                         [
-                            "id": "invoked",
-                            "invoke": [
+                            "let": "invoked",
+                            "value": ["invoke": [
                                 "procedure": [
                                     "closure": [
                                         "returns": "string",
-                                        "body": [["return": "from the closure"]]
+                                        "body": [["value": ["return": "from the closure"]]]
                                     ]
                                 ]
                             ]
-                        ]
+                        ]]
                     ],
                     "result": "the outer answer"
                 ],
                 "helper": [
                     "returns": "string",
-                    "body": [["return": "from the word"]]
+                    "body": [["value": ["return": "from the word"]]]
                 ]
             ]
         ])
@@ -323,14 +323,14 @@ struct LeaveTests {
             "procedures": [
                 "entry": [
                     "body": [
-                        ["id": "grouped", "group": ["body": [["id": "inner", "value": 3]]]],
+                        ["let": "grouped", "value": ["group": ["body": [["let": "inner", "value": 3]]]]],
                         [
-                            "id": "used",
-                            "call": [
+                            "let": "used",
+                            "value": ["call": [
                                 "procedure": "wants",
                                 "arguments": ["it": ["ref": "grouped"]]
                             ]
-                        ]
+                        ]]
                     ],
                     "result": ["ref": "used"]
                 ],
@@ -358,31 +358,31 @@ struct LeaveTests {
             "body": [
                 ["var": "seen", "value": 0],
                 [
-                    "id": "walked",
-                    "loop": [
-                        "where": true,
+                    "let": "walked",
+                    "value": ["loop": [
+                        "while": true,
                         "body": [
                             [
-                                "id": "tried",
-                                "attempt": [
+                                "let": "tried",
+                                "value": ["attempt": [
                                     "body": [
                                         [
                                             "set": "seen",
-                                            "call": [
+                                            "value": ["call": [
                                                 "procedure": "std.math.plus",
                                                 "of": ["ref": "seen"],
                                                 "arguments": ["value": 1]
                                             ]
-                                        ],
-                                        ["break": Value.null]
+                                        ]],
+                                        ["value": ["break": Value.null]]
                                     ],
                                     "rescue": ["result": "the rescue ran"]
                                 ]
-                            ]
+                            ]]
                         ],
                         "result": ["ref": "seen"]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "walked"]
         ], importing: ["std.math.plus"])
@@ -400,23 +400,23 @@ struct LeaveTests {
             "body": [
                 ["var": "seen", "value": 0],
                 [
-                    "id": "walked",
-                    "loop": [
-                        "where": ["of": ["ref": "seen"], "notEqual": 2],
+                    "let": "walked",
+                    "value": ["loop": [
+                        "while": ["of": ["ref": "seen"], "notEqual": 2],
                         "body": [
                             [
                                 "set": "seen",
-                                "call": [
+                                "value": ["call": [
                                     "procedure": "std.math.plus",
                                     "of": ["ref": "seen"],
                                     "arguments": ["value": 1]
                                 ]
-                            ],
-                            ["id": "noted", "value": ["ref": "seen"]]
+                            ]],
+                            ["let": "noted", "value": ["ref": "seen"]]
                         ],
                         "result": ["ref": "noted"]
                     ]
-                ]
+                ]]
             ],
             "result": ["ref": "walked"]
         ], importing: ["std.logic.notEqual", "std.math.plus"])
@@ -432,10 +432,10 @@ struct LeaveTests {
         // assembles it, validation or no validation to follow
         #expect {
             try loader.statement(from: [
-                "group": [
-                    "body": [["return": 1]],
+                "value": ["group": [
+                    "body": [["value": ["return": 1]]],
                     "result": ["value": 2]
-                ]
+                ]]
             ])
         } throws: { error in
             "\(error)".contains("would never be reached")
@@ -451,8 +451,8 @@ struct LeaveTests {
             try loader.loadProcedure([
                 "returns": "string",
                 "body": [
-                    ["return": "here"],
-                    ["id": "unreachable", "value": "never"]
+                    ["value": ["return": "here"]],
+                    ["let": "unreachable", "value": "never"]
                 ]
             ])
         } throws: { error in
@@ -468,9 +468,9 @@ struct LeaveTests {
         let sut: Value = [
             "body": [
                 [
-                    "id": "walked",
-                    "loop": ["where": false, "body": [["break": 5]]]
-                ]
+                    "let": "walked",
+                    "value": ["loop": ["while": false, "body": [["value": ["break": 5]]]]
+                ]]
             ]
         ]
 

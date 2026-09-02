@@ -97,7 +97,7 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        guard case let .object(fields) = value,
+        guard case let .record(_, fields) = value,
             Envelope.declaresImports(fields[Envelope.importsKey])
         else {
             throw ReadingError(
@@ -202,7 +202,7 @@ public struct Loader: Sendable {
     // assembled a program in Swift is owed: it wrote no document, so no
     // document's words would lead it anywhere. A caller holding a text is owed
     // the other reading — `condition` is a slot they cannot look for and
-    // `where` is what they typed — and this is where a stage that has no
+    // `while` is what they typed — and this is where a stage that has no
     // document of its own gets it.
     //
     //     let image = try loader.reading { try Linker().link(modules, entry: "greet") }
@@ -245,11 +245,9 @@ public struct Loader: Sendable {
     // it says which reader the document is written for, and that is an answer
     // about the writing rather than about the program.
     private func stamped(_ value: Value) -> Value {
-        guard case let .object(fields) = value else { return value }
-
-        return .object(fields.merging(
-            [Envelope.versionKey: .int(Envelope.version)]
-        ) { written, _ in written })
+        value.replacingFields { fields in
+            fields.merging([Envelope.versionKey: .int(Envelope.version)]) { written, _ in written }
+        }
     }
 
     // Every reading goes through here, and so does every refusal one raises.

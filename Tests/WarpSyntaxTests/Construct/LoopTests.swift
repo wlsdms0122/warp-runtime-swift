@@ -25,13 +25,13 @@ struct LoopTests {
             "body": [
                 ["var": "latest", "value": 0],
                 [
-                    "id": "gate",
-                    "loop": [
-                        "where": ["of": ["ref": "gate.index"], "notEqual": 3],
+                    "let": "gate",
+                    "value": ["loop": [
+                        "while": ["of": ["ref": "gate.index"], "notEqual": 3],
                         "body": [["set": "latest", "value": ["ref": "gate.index"]]],
                         "result": ["ref": "latest"]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "gate"]]
         ], importing: ["std.logic.notEqual"])
@@ -51,13 +51,13 @@ struct LoopTests {
             "body": [
                 ["var": "latest", "value": 0],
                 [
-                    "id": "gate",
-                    "loop": [
-                        "where": ["of": ["ref": "gate.index"], "notEqual": 7],
+                    "let": "gate",
+                    "value": ["loop": [
+                        "while": ["of": ["ref": "gate.index"], "notEqual": 7],
                         "body": [["set": "latest", "value": ["ref": "gate.index"]]],
                         "result": ["ref": "latest"]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "gate"]]
         ], importing: ["std.logic.notEqual"])
@@ -78,13 +78,13 @@ struct LoopTests {
             try loader.loadProcedure([
                 "body": [
                     [
-                        "id": "gate",
-                        "loop": [
-                            "where": ["of": ["ref": "gate.index"], "notEqual": 3],
-                            "body": [["id": "noop", "value": "again"]],
+                        "let": "gate",
+                        "value": ["loop": [
+                            "while": ["of": ["ref": "gate.index"], "notEqual": 3],
+                            "body": [["let": "noop", "value": "again"]],
                             "guard": 2
                         ]
-                    ]
+                    ]]
                 ]
             ])
         }
@@ -97,9 +97,9 @@ struct LoopTests {
         let spec = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "gate",
-                    "loop": ["where": ["of": ["ref": "gate.index"], "notEqual": .null], "body": []]
-                ]
+                    "let": "gate",
+                    "value": ["loop": ["while": ["of": ["ref": "gate.index"], "notEqual": .null], "body": []]
+                ]]
             ]
         ], importing: ["std.logic.notEqual"])
 
@@ -122,14 +122,14 @@ struct LoopTests {
         // Given — the retry-loop idiom rebinds an outer id inside loop steps
         let fixture: Value = [
             "body": [
-                ["id": "format", "value": "first"],
+                ["let": "format", "value": "first"],
                 [
-                    "id": "gate",
-                    "loop": [
-                        "where": ["of": ["ref": "gate.index"], "equal": 0],
-                        "body": [["id": "format", "value": "retried"]],
+                    "let": "gate",
+                    "value": ["loop": [
+                        "while": ["of": ["ref": "gate.index"], "equal": 0],
+                        "body": [["let": "format", "value": "retried"]],
                     ]
-                ]
+                ]]
             ]
         ]
 

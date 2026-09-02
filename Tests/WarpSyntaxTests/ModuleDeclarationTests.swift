@@ -27,11 +27,11 @@ struct ModuleDeclarationTests {
         let first = try loader.loadDocument([
             "procedures": [
                 "first.entry": [
-                    "body": [["id": "said", "call": ["procedure": "first.helper"]]],
+                    "body": [["let": "said", "value": ["call": ["procedure": "first.helper"]]]],
                     "result": ["result": ["ref": "said"]]
                 ],
                 "first.helper": [
-                    "body": [["id": "done", "value": "from first"]],
+                    "body": [["let": "done", "value": "from first"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
@@ -39,7 +39,7 @@ struct ModuleDeclarationTests {
         let second = try loader.loadDocument([
             "procedures": [
                 "second.helper": [
-                    "body": [["id": "done", "value": "from second"]],
+                    "body": [["let": "done", "value": "from second"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
@@ -59,7 +59,7 @@ struct ModuleDeclarationTests {
             "imports": ["greet"],
             "procedures": [
                 "caller.entry": [
-                    "body": [["id": "said", "call": ["procedure": "greet"]]],
+                    "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
                     "result": ["result": ["ref": "said"]]
                 ]
             ]
@@ -67,7 +67,7 @@ struct ModuleDeclarationTests {
         let library = try loader.loadDocument([
             "procedures": [
                 "greeting.greet": [
-                    "body": [["id": "done", "value": "hello"]],
+                    "body": [["let": "done", "value": "hello"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
@@ -88,11 +88,11 @@ struct ModuleDeclarationTests {
             "imports": ["second.helper"],
             "procedures": [
                 "first.entry": [
-                    "body": [["id": "said", "call": ["procedure": "second.helper"]]],
+                    "body": [["let": "said", "value": ["call": ["procedure": "second.helper"]]]],
                     "result": ["result": ["ref": "said"]]
                 ],
                 "first.helper": [
-                    "body": [["id": "done", "value": "from first"]],
+                    "body": [["let": "done", "value": "from first"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
@@ -100,7 +100,7 @@ struct ModuleDeclarationTests {
         let second = try loader.loadDocument([
             "procedures": [
                 "second.helper": [
-                    "body": [["id": "done", "value": "from second"]],
+                    "body": [["let": "done", "value": "from second"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
@@ -120,7 +120,7 @@ struct ModuleDeclarationTests {
             "const": ["greeting": "hello", "limit": 3],
             "procedures": [
                 "entry": [
-                    "body": [["id": "said", "value": ["ref": "greeting"]]],
+                    "body": [["let": "said", "value": ["ref": "greeting"]]],
                     "result": ["result": ["ref": "said"], "cap": ["ref": "limit"]]
                 ]
             ]
@@ -145,14 +145,14 @@ struct ModuleDeclarationTests {
             ],
             "procedures": [
                 "entry": [
-                    "body": [["id": "seen", "value": ["ref": "url"]]],
+                    "body": [["let": "seen", "value": ["ref": "url"]]],
                     "result": ["result": ["ref": "seen"]]
                 ]
             ]
         ])
         let cyclic = try loader.loadDocument([
             "const": ["a": ["ref": "b"], "b": ["ref": "a"]],
-            "procedures": ["entry": ["body": [["id": "seen", "value": ["ref": "a"]]]]]
+            "procedures": ["entry": ["body": [["let": "seen", "value": ["ref": "a"]]]]]
         ])
 
         // When / Then
@@ -171,7 +171,7 @@ struct ModuleDeclarationTests {
         // second reading of the same spelling could never be true
         let fixture: Value = [
             "const": ["limit": 3],
-            "procedures": ["entry": ["body": [["id": "limit", "value": 4]]]]
+            "procedures": ["entry": ["body": [["let": "limit", "value": 4]]]]
         ]
 
         // When / Then

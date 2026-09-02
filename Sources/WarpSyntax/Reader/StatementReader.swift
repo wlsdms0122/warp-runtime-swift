@@ -28,15 +28,15 @@ import Warp
 // the name could never bind.
 public struct StatementReader: Decodable {
     private enum EnvelopeKeys: String, CodingKey, CaseIterable {
-        case id
+        case constant = "let"
         case variable = "var"
         case assignment = "set"
 
         // The binding the key spells, given what it was written with: a name
-        // under `id` and `var`, a path under `set`.
+        // under `let` and `var`, a path under `set`.
         func binding(_ written: String) throws -> Statement.Binding {
             switch self {
-            case .id:
+            case .constant:
                 return .constant(written)
 
             case .variable:
@@ -52,7 +52,10 @@ public struct StatementReader: Decodable {
         }
     }
 
-    // MARK: - Property
+    // The one key a statement writes its expression under. A construct sits
+    // inside it under the construct's own key.
+    public static let valueKey = "value"
+
     public let statement: Statement
 
     // MARK: - Initializer
@@ -121,19 +124,13 @@ public struct StatementReader: Decodable {
 
         try KeyGate().rejectUnknownKeys(
             in: decoder,
-            known: EnvelopeKeys.allCases.map(\.stringValue) + registry.keys,
+            known: EnvelopeKeys.allCases.map(\.stringValue) + [Self.valueKey],
             context: "statement"
         )
 
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
-        let found = registry.keys.filter { key in
-            container.contains(AnyCodingKey(stringValue: key))
-        }
+        let valueKey = AnyCodingKey(stringValue: Self.valueKey)
 
-        // The naming keys were read by presence and not by decoding — `id:
-        // null` is a key written with no name in it, and reading it as "no
-        // naming key" would make a failed name and an omitted one the same
-        // document.
         guard names.count <= 1 else {
             throw ReadingError(
                 "a statement names itself at most once with"
@@ -143,35 +140,7 @@ public struct StatementReader: Decodable {
             )
         }
 
-        // A `var` may stand alone: it introduces a name with nothing in it
-        // yet, and a name holding nothing holds null. The other spellings say
-        // something about a construct, so they still require one — and the
-        // one-name rule above has already spoken, so "alone" is one question.
-        if found.isEmpty, names == [.variable] {
-            return Statement(
-                binding: .variable(try Self.name(.variable, in: envelope)),
-                expression: .literal(.null)
-            )
-        }
-
-        guard found.count == 1, let key = found.first else {
-            throw ReadingError(
-                "a statement must declare exactly one construct key"
-                    + " (\(registry.keys.joined(separator: "/")));"
-                    + " found: \(found)",
-                at: decoder.steps
-            )
-        }
-
-        guard let form = registry.form(for: key) else {
-            throw ReadingError(
-                "no construct registered for key '\(key)'",
-                at: decoder.steps
-            )
-        }
-
         let name = names.first
-        let id = try name.map { name in try Self.name(name, in: envelope) }
         let binding: Statement.Binding?
 
         do {
@@ -179,36 +148,27 @@ public struct StatementReader: Decodable {
         } catch let refusal as ReadingError {
             throw refusal.asked(at: decoder.steps)
         }
-        let inside = try container.superDecoder(forKey: AnyCodingKey(stringValue: key))
-        let built: any ConstructForm
-        let expression: Expression
 
-        do {
-            built = try form.init(from: inside)
-        } catch let refusal as DecodingError {
-            // A form written outside this package reads with `Codable`'s
-            // refusal, which carries `Codable`'s address. The walk's own is
-            // right here, so it is put on rather than the one a coding key
-            // would spell.
-            throw ReadingError(refusal, at: inside.steps)
+        // A variable holding nothing yet is written as the name alone.
+        guard container.contains(valueKey) else {
+            if case .variable? = binding {
+                return Statement(binding: binding, expression: .literal(.null))
+            }
+
+            throw ReadingError(
+                "a statement writes its expression under '\(Self.valueKey)'",
+                at: decoder.steps
+            )
         }
 
-        do {
-            expression = try built.expression(boundTo: id)
-        } catch let refusal as ReadingError {
-            // A form lowering what it read is past every decoder, so a refusal
-            // from there says nothing about where it is. This statement is
-            // where it is, and this is what is holding that.
-            throw refusal.asked(at: decoder.steps)
-        }
+        let inside = try container.superDecoder(forKey: valueKey)
+        let expression = try Self.expression(
+            in: inside,
+            registry: registry,
+            boundTo: binding?.spelled
+        )
 
-        // A statement that leaves never finishes, so a name on one promises a
-        // binding that cannot happen. Only the structure a document shows is
-        // judged here — a call whose word never answers is a fact about the
-        // link, and the linker refuses it where the signature is known. The
-        // sentence is the Validator's, word for word: one rule, one wording,
-        // whichever door a statement came through.
-        if id != nil, expression.alwaysLeaves {
+        if binding != nil, expression.alwaysLeaves {
             throw ReadingError(
                 "every way through this statement leaves,"
                     + " so its name could never bind — it takes no name",
@@ -216,10 +176,7 @@ public struct StatementReader: Decodable {
             )
         }
 
-        // The other nameless family, held here for every form that builds a
-        // branch — a notation's own spelling included — so no form has to
-        // remember the rule itself.
-        if id != nil, expression.takesNoName {
+        if binding != nil, expression.takesNoName {
             throw ReadingError(
                 "a branch answers nothing, so its name"
                     + " could never bind — it takes no name; what an arm"
@@ -229,5 +186,39 @@ public struct StatementReader: Decodable {
         }
 
         return Statement(binding: binding, expression: expression)
+    }
+
+    // What stands under `value`: a construct, where the record's one key is a
+    // construct's, and an expression otherwise. A construct that binds through
+    // the statement's name is handed that name.
+    private static func expression(
+        in decoder: Decoder,
+        registry: ConstructRegistry,
+        boundTo name: String?
+    ) throws -> Expression {
+        if
+            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
+            keyed.allKeys.count == 1,
+            let key = keyed.allKeys.first?.stringValue,
+            key != Self.valueKey,
+            let form = registry.form(for: key)
+        {
+            let inside = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: key))
+            let built: any ConstructForm
+
+            do {
+                built = try form.init(from: inside)
+            } catch let refusal as DecodingError {
+                throw ReadingError(refusal, at: inside.steps)
+            }
+
+            do {
+                return try built.expression(boundTo: name)
+            } catch let refusal as ReadingError {
+                throw refusal.asked(at: decoder.steps)
+            }
+        }
+
+        return try ExpressionReader(from: decoder).expression
     }
 }

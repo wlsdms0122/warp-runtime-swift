@@ -77,6 +77,15 @@ public struct Validator: Sendable {
             )
         }
 
+        // A declared type's name is a record's name in every encoding, so it
+        // is held to the one grammar those encodings write bare.
+        for name in module.types.keys.sorted() where !Name.isName(name) {
+            throw ValidationError(
+                "'\(name)' is not a type's name — a type is named by identifiers joined by dots",
+                at: .type(name, in: .of(module))
+            )
+        }
+
         for name in module.procedures.keys.sorted() {
             try normal(name, at: .procedure(name, in: .of(module)))
         }
@@ -500,7 +509,7 @@ public struct Validator: Sendable {
             }
 
         // The round state is bound before the condition is asked, which is what
-        // lets `where` read how many rounds have passed.
+        // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
             try introduced(round, beside: surroundings.constants, at: place)
 

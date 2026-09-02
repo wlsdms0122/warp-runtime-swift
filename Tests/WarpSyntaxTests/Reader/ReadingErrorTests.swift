@@ -26,7 +26,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["id": "sent", "var": "again", "value": 1]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "var": "again", "value": 1]]]]
         ]
 
         // When
@@ -46,7 +46,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "std.math.plus"]]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "std.math.plus"]]]]]]
         ]
 
         // When
@@ -67,7 +67,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]]
+            "procedures": ["entry": ["body": [["let": "broken", "value": "x", "fallbck": "y"]]]]
         ]
 
         // When
@@ -87,7 +87,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["12": ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]]
+            "procedures": ["12": ["body": [["let": "broken", "value": "x", "fallbck": "y"]]]]
         ]
 
         // When
@@ -106,7 +106,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["id": "", "value": "x", "fallbck": "y"]]]]
+            "procedures": ["entry": ["body": [["let": "", "value": "x", "fallbck": "y"]]]]
         ]
 
         // When
@@ -126,7 +126,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["return": ["ref": [1]]]]]]
+            "procedures": ["entry": ["body": [["value": ["return": ["ref": [1]]]]]]]
         ]
 
         // When
@@ -136,7 +136,7 @@ struct ReadingErrorTests {
 
         // Then
         #expect(error?.place?.document.identity == identity)
-        #expect(error?.place?.rendered == "abababababab/procedures.entry.body[0].return")
+        #expect(error?.place?.rendered == "abababababab/procedures.entry.body[0].value.return")
     }
 
     @Test("a document refused for the list it does not write is refused about itself")
@@ -205,7 +205,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["id": "held", "var": "kept", "value": "x"]]]]
+            "procedures": ["entry": ["body": [["let": "held", "var": "kept", "value": "x"]]]]
         ]
 
         // When
@@ -226,7 +226,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["id": 12, "value": "x"]]]]
+            "procedures": ["entry": ["body": [["let": 12, "value": "x"]]]]
         ]
 
         // When
@@ -249,8 +249,8 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
-                "id": "helper",
-                "value": ["closure": ["body": [["id": "inner", "value": "x", "fallbck": "y"]]]]
+                "let": "helper",
+                "value": ["closure": ["body": [["let": "inner", "value": "x", "fallbck": "y"]]]]
             ]]]]
         ]
 
@@ -275,7 +275,7 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
-                "id": "held",
+                "let": "held",
                 "value": ["first": "a", "second": ["ref": [1]]]
             ]]]]
         ]
@@ -299,7 +299,7 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
-                "id": "held",
+                "let": "held",
                 "value": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]
             ]]]]
         ]
@@ -322,7 +322,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": .null,
-            "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "std.math.plus"]]]]]
+            "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "std.math.plus"]]]]]]
         ]
 
         // When

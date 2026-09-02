@@ -30,7 +30,7 @@ public struct MappingQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
-        guard case let .object(fields) = question.receiver else { return nil }
+        guard case let .record(_, fields) = question.receiver else { return nil }
 
         switch reading {
         // Sorted, because an object holds no order of its own and a walk that

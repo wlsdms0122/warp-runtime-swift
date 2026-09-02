@@ -34,7 +34,7 @@ struct CanonicalTests {
             "body": [
                 ["var": "pick"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": [
                             "call": [
                                 "procedure": "std.logic.equal",
@@ -45,7 +45,7 @@ struct CanonicalTests {
                         "then": [["set": "pick", "value": "one"]],
                         "else": [["set": "pick", "value": "more"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "pick"]]
         ], importing: ["std.logic.equal"])
@@ -66,9 +66,9 @@ struct CanonicalTests {
             "body": [
                 ["var": "seen", "value": 0],
                 [
-                    "id": "walked",
-                    "loop": [
-                        "where": [
+                    "let": "walked",
+                    "value": ["loop": [
+                        "while": [
                             "call": [
                                 "procedure": "std.logic.notEqual",
                                 "of": ["ref": "seen"],
@@ -78,15 +78,15 @@ struct CanonicalTests {
                         "body": [
                             [
                                 "set": "seen",
-                                "call": [
+                                "value": ["call": [
                                     "procedure": "std.math.plus",
                                     "of": ["ref": "seen"],
                                     "arguments": ["value": 1]
                                 ]
-                            ]
+                            ]]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "seen"]]
         ], importing: ["std.logic.notEqual", "std.math.plus"])
@@ -109,12 +109,12 @@ struct CanonicalTests {
                 "body": [
                     ["var": "pick"],
                     [
-                        "branch": [
+                        "value": ["branch": [
                             "when": condition,
                             "then": [["set": "pick", "value": "matched"]],
                             "else": [["set": "pick", "value": "missed"]]
                         ]
-                    ]
+                    ]]
                 ],
                 "result": ["result": ["ref": "pick"]]
             ], importing: ["std.logic.equal"])
@@ -156,12 +156,12 @@ struct CanonicalTests {
             "body": [
                 ["var": "pick"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["ref": "ready"],
                         "then": [["set": "pick", "value": "go"]],
                         "else": [["set": "pick", "value": "wait"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "pick"]]
         ])

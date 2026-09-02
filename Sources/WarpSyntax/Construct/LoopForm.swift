@@ -8,12 +8,12 @@
 import Foundation
 import Warp
 
-// Repetition governed by a condition: the body runs while `where` holds.
+// Repetition governed by a condition: the body runs while `while` holds.
 // Nothing here bounds a body that never settles — an author bounds a loop with
 // a counter and a word, and a receiver stops one with cancellation.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case `where`
+        case `while`
         case body
         case result
     }
@@ -39,7 +39,7 @@ public struct LoopForm: ConstructForm {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.condition = try container.decode(ConditionReader.self, forKey: .where).condition
+        self.condition = try container.decode(ConditionReader.self, forKey: .while).condition
         self.body = try .reading(
             body: try container.decode(BodyReader.self, forKey: .body).statements,
             result: try container.decodeIfPresent(ExpressionReader.self, forKey: .result)?

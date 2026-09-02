@@ -97,9 +97,9 @@ struct EnvelopeTests {
                     "parameters": ["names": "array<string>"],
                     "body": [
                         [
-                            "id": "many",
-                            "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
-                        ]
+                            "let": "many",
+                            "value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+                        ]]
                     ],
                     "result": ["ref": "many"]
                 ]
@@ -167,9 +167,9 @@ struct EnvelopeTests {
                     "entry": [
                         "body": [
                             [
-                                "id": "sum",
-                                "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
-                            ]
+                                "let": "sum",
+                                "value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+                            ]]
                         ],
                         "result": ["ref": "sum"]
                     ]
@@ -192,9 +192,9 @@ struct EnvelopeTests {
                     "entry": [
                         "body": [
                             [
-                                "id": "sum",
-                                "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
-                            ]
+                                "let": "sum",
+                                "value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
+                            ]]
                         ],
                         "result": ["ref": "sum"]
                     ]
@@ -284,7 +284,7 @@ struct EnvelopeTests {
         let module = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "body": [["id": "said", "call": ["procedure": "greet"]]],
+                    "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
                     "result": ["ref": "said"]
                 ],
                 "greet": ["result": "hello"]
@@ -306,7 +306,7 @@ struct EnvelopeTests {
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
-                    "body": [["id": "many", "value": ["ref": "names.count"]]],
+                    "body": [["let": "many", "value": ["ref": "names.count"]]],
                     "result": ["ref": "many"]
                 ]
             ]
@@ -332,31 +332,31 @@ struct EnvelopeTests {
                     "parameters": ["names": "array<string>"],
                     "body": [
                         [
-                            "id": "held",
+                            "let": "held",
                             "value": [
                                 "closure": ["result": ["call": ["procedure": "inClosure"]]]
                             ]
                         ],
                         [
-                            "id": "walked",
-                            "each": [
+                            "let": "walked",
+                            "value": ["each": [
                                 "in": ["ref": "names"],
-                                "body": [["id": "seen", "call": ["procedure": "inEach"]]]
+                                "body": [["let": "seen", "value": ["call": ["procedure": "inEach"]]]]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "tried",
-                            "attempt": [
-                                "body": [["id": "risky", "call": ["procedure": "inBody"]]],
+                            "let": "tried",
+                            "value": ["attempt": [
+                                "body": [["let": "risky", "value": ["call": ["procedure": "inBody"]]]],
                                 "result": ["ref": "risky"],
                                 "rescue": [
-                                    "body": [["id": "back", "call": ["procedure": "inRescue"]]],
+                                    "body": [["let": "back", "value": ["call": ["procedure": "inRescue"]]]],
                                     "result": ["ref": "back"]
                                 ]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "deep",
+                            "let": "deep",
                             "value": ["a": [["call": ["procedure": "inNestedData"]]]]
                         ]
                     ],

@@ -24,24 +24,24 @@ struct GroupTests {
             "parameters": ["who": "string"],
             "body": [
                 [
-                    "id": "greet",
-                    "group": [
+                    "let": "greet",
+                    "value": ["group": [
                         "body": [
                             [
-                                "id": "base",
+                                "let": "base",
                                 "value": [
                                     "format": "hello, ${who}",
                                     "with": ["who": ["ref": "who"]]
                                 ]
                             ],
                             [
-                                "id": "loud",
+                                "let": "loud",
                                 "value": ["format": "${text}!", "with": ["text": ["ref": "base"]]]
                             ]
                         ],
                         "result": ["ref": "loud"]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "greet"]]
         ], importing: ["std.text.joined", "std.text.text"])
@@ -61,11 +61,11 @@ struct GroupTests {
         let spec = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "block",
-                    "group": [
-                        "body": [["id": "first", "value": "a"], ["id": "second", "value": "b"]]
+                    "let": "block",
+                    "value": ["group": [
+                        "body": [["let": "first", "value": "a"], ["let": "second", "value": "b"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "block"]]
         ])
@@ -81,7 +81,7 @@ struct GroupTests {
     func groupSelfReadRejected() {
         // Given — group binds nothing for its body; `${g.x}` inside it is a typo
         let fixture: Value = [
-            "body": [["id": "g", "group": ["body": [["id": "inner", "value": ["ref": "g.x"]]]]]]
+            "body": [["let": "g", "value": ["group": ["body": [["let": "inner", "value": ["ref": "g.x"]]]]]]]
         ]
 
         // When / Then

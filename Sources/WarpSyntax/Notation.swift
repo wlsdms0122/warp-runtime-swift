@@ -54,7 +54,7 @@ public struct Notation: Sendable {
     // these wherever the notation is used.
     //
     // A condition's words are not here: a condition is read through `when` and
-    // `where`, so a notation with neither spends nothing on them however many it
+    // `while`, so a notation with neither spends nothing on them however many it
     // offers. The forms that read one ask for them by name, below.
     public var vocabulary: Set<String> {
         guard let interpolation else { return [] }

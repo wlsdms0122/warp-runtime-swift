@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A condition slot. In a document it holds an expression that must answer a
-// bool, and that is the whole of it — `when` and `where` take what any value
+// bool, and that is the whole of it — `when` and `while` take what any value
 // slot takes, and nothing about a condition is written differently from
 // anything else.
 //
@@ -52,7 +52,7 @@ public struct ConditionReader: Decodable {
         // message nobody wrote. The same document would be a cast in one
         // notation and a send in the next.
         guard
-            case let .object(written) = try ValueReader(from: decoder).value,
+            case let .record(_, written) = try ValueReader(from: decoder).value,
             Set(written.keys).isDisjoint(with: ExpressionReader.formKeys),
             !Set(written.keys).isDisjoint(with: spelling.keys)
         else {

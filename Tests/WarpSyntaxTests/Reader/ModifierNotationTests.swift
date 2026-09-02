@@ -62,6 +62,35 @@ struct ModifierNotationTests {
         }
     }
 
+    @Test("a record field named like a construct is data on the way out and back")
+    func aFieldNamedLikeAConstructStaysData() throws {
+        // Given — a statement whose value is a record literal with one field
+        // spelled like a construct key
+        let loader = Loader()
+        let module = try Module(
+            imports: [],
+            procedures: [
+                "entry": Procedure(
+                    body: [Statement(binding: .constant("x"), expression: .literal(.object(["loop": .int(1)])))],
+                    result: .reference([.key("x")])
+                )
+            ]
+        )
+
+        // When
+        let written = try Writer(registry: loader.registry).value(of: module)
+        let read = try loader.load(written)
+
+        // Then — quoted under `value`, and read back as the record it was
+        guard case let .array(body)? = written["procedures"]?["entry"]?["body"] else {
+            Issue.record("the body was not written as an array")
+            return
+        }
+
+        #expect(body.first?["value"] == .object(["value": .object(["loop": 1])]))
+        #expect(read.procedures["entry"]?.body.first?.expression.constantValue == .object(["loop": .int(1)]))
+    }
+
     @Test("a module's var and a set path survive the round trip")
     func moduleVariableAndSetPathRoundTrip() throws {
         // Given
