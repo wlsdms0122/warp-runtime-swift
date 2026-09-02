@@ -27,9 +27,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("many"), expression: .dispatch(Dispatch(
                                 receiver: .literal(.array([.int(1)])),
                                 selector: "std.collection.count"
                             ))
@@ -57,9 +55,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "verdict",
-                            expression: every(
+                        Statement(binding: .constant("verdict"), expression: every(
                                 equals(.literal(.int(1)), .literal(.int(2))),
                                 equals(
                                     .dispatch(Dispatch(
@@ -97,9 +93,7 @@ struct StandardTests {
         let odd = Procedure(
             signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .bool),
             body: [
-                Statement(
-                    id: "left",
-                    expression: .dispatch(Dispatch(
+                Statement(binding: .constant("left"), expression: .dispatch(Dispatch(
                         receiver: reference("item"),
                         selector: "std.math.remainder",
                         arguments: ["value": .literal(.int(2))]
@@ -129,25 +123,19 @@ struct StandardTests {
                 entryName: Procedure(
                     signature: Signature(parameters: ["ns": Parameter(type: .array(.int))]),
                     body: [
-                        Statement(
-                            id: "doubled",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("doubled"), expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
                                 selector: "std.collection.map",
                                 arguments: ["value": .closure(doubling)]
                             ))
                         ),
-                        Statement(
-                            id: "kept",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("kept"), expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
                                 selector: "std.collection.filter",
                                 arguments: ["value": .closure(odd)]
                             ))
                         ),
-                        Statement(
-                            id: "total",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("total"), expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
                                 selector: "std.collection.reduce",
                                 arguments: [
@@ -455,24 +443,18 @@ struct StandardTests {
                 entryName: Procedure(
                     signature: Signature(parameters: ["n": Parameter(type: .int)]),
                     body: [
-                        Statement(
-                            id: "quotient",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("quotient"), expression: .dispatch(Dispatch(
                                 receiver: reference("n"),
                                 selector: "std.math.dividedBy",
                                 arguments: ["value": .literal(.int(4))]
                             ))
                         ),
-                        Statement(
-                            id: "whole",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("whole"), expression: .dispatch(Dispatch(
                                 receiver: reference("quotient"),
                                 selector: "std.math.floored"
                             ))
                         ),
-                        Statement(
-                            id: "left",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("left"), expression: .dispatch(Dispatch(
                                 receiver: reference("n"),
                                 selector: "std.math.remainder",
                                 arguments: ["value": .literal(.int(4))]
@@ -511,33 +493,25 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "stepped",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("stepped"), expression: .dispatch(Dispatch(
                                 receiver: reference("head"),
                                 selector: "std.math.plus",
                                 arguments: ["value": .literal(.int(1))]
                             ))
                         ),
-                        Statement(
-                            id: "wrapped",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("wrapped"), expression: .dispatch(Dispatch(
                                 receiver: reference("stepped"),
                                 selector: "std.math.remainder",
                                 arguments: ["value": reference("side")]
                             ))
                         ),
-                        Statement(
-                            id: "grown",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("grown"), expression: .dispatch(Dispatch(
                                 receiver: reference("trail"),
                                 selector: "std.collection.prepending",
                                 arguments: ["value": reference("wrapped")]
                             ))
                         ),
-                        Statement(
-                            id: "moved",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("moved"), expression: .dispatch(Dispatch(
                                 receiver: reference("grown"),
                                 selector: "std.collection.dropLast"
                             ))
@@ -578,23 +552,17 @@ struct StandardTests {
                 entryName: Procedure(
                     signature: Signature(parameters: ["counts": Parameter(type: .object(.int))]),
                     body: [
-                        Statement(
-                            id: "named",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("named"), expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
                                 selector: "std.collection.keys"
                             ))
                         ),
-                        Statement(
-                            id: "held",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("held"), expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
                                 selector: "std.collection.values"
                             ))
                         ),
-                        Statement(
-                            id: "changed",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("changed"), expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
                                 selector: "std.collection.setting",
                                 arguments: [
@@ -636,23 +604,17 @@ struct StandardTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "sum",
-                            expression: .dispatch(Dispatch(selector: "std.math.plus", arguments: [
+                        Statement(binding: .constant("sum"), expression: .dispatch(Dispatch(selector: "std.math.plus", arguments: [
                                         "of": .literal(.int(2)),
                                         "value": .literal(.int(3))
                                     ]))
                         ),
-                        Statement(
-                            id: "product",
-                            expression: .dispatch(Dispatch(selector: "std.math.times", arguments: [
+                        Statement(binding: .constant("product"), expression: .dispatch(Dispatch(selector: "std.math.times", arguments: [
                                         "of": .literal(.int(4)),
                                         "value": .literal(.double(2.5))
                                     ]))
                         ),
-                        Statement(
-                            id: "quotient",
-                            expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
+                        Statement(binding: .constant("quotient"), expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
                                         "of": .literal(.int(7)),
                                         "value": .literal(.int(2))
                                     ]))
@@ -683,9 +645,7 @@ struct StandardTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "gone",
-                            expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
+                        Statement(binding: .constant("gone"), expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
                                         "of": .literal(.int(1)),
                                         "value": .literal(.int(0))
                                     ]))
@@ -714,25 +674,16 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "verdict",
-                            binding: .variable,
-                            expression: .literal(.string(""))
+                        Statement(binding: .variable("verdict"), expression: .literal(.string(""))
                         ),
                         Statement(
                             expression: .conditional(.dispatch(Dispatch(receiver: .reference([.key("n")]), selector: "std.math.lessThan", arguments: [
                                             "value": .literal(.int(10))
                                         ])), then: [
-                                        Statement(
-                                            id: "verdict",
-                                            binding: .assignment,
-                                            expression: .literal(.string("small"))
+                                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("small"))
                                         )
                                     ], else: [
-                                        Statement(
-                                            id: "verdict",
-                                            binding: .assignment,
-                                            expression: .literal(.string("large"))
+                                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("large"))
                                         )
                                     ])
                         )
@@ -802,23 +753,17 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "parts",
-                            expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
+                        Statement(binding: .constant("parts"), expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
                                         "of": .reference([.key("line")]),
                                         "value": .literal(.string(","))
                                     ]))
                         ),
-                        Statement(
-                            id: "rejoined",
-                            expression: .dispatch(Dispatch(selector: "std.text.joined", arguments: [
+                        Statement(binding: .constant("rejoined"), expression: .dispatch(Dispatch(selector: "std.text.joined", arguments: [
                                         "of": .reference([.key("parts")]),
                                         "value": .literal(.string(" / "))
                                     ]))
                         ),
-                        Statement(
-                            id: "fixed",
-                            expression: .dispatch(Dispatch(selector: "std.text.replacing", arguments: [
+                        Statement(binding: .constant("fixed"), expression: .dispatch(Dispatch(selector: "std.text.replacing", arguments: [
                                         "of": .reference([.key("rejoined")]),
                                         "value": .literal(.string("b")),
                                         "with": .literal(.string("B"))
@@ -852,15 +797,11 @@ struct StandardTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .dispatch(Dispatch(selector: "std.collection.count", arguments: [
+                        Statement(binding: .constant("many"), expression: .dispatch(Dispatch(selector: "std.collection.count", arguments: [
                                         "of": .reference([.key("items")])
                                     ]))
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
                                         "of": .reference([.key("many")]),
                                         "value": .literal(.string(","))
                                     ]))
@@ -891,7 +832,7 @@ struct StandardTests {
 
         // When / Then
         await #expect {
-            try await answer(of: [Statement(id: "probe", expression: sut)], result: reference("probe"))
+            try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], result: reference("probe"))
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -921,7 +862,7 @@ struct StandardTests {
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -945,7 +886,7 @@ struct StandardTests {
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -1028,7 +969,7 @@ struct StandardTests {
 
         // When
         let answered = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -1041,38 +982,29 @@ struct StandardTests {
         // Given — `returns: never` is what keeps the branch a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
-            namespace: "app",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["ok": Parameter(type: .bool)]),
                     body: [
-                        Statement(
-                            id: "either",
-                            binding: .variable,
-                            expression: .literal(.null)
+                        Statement(binding: .variable("either"), expression: .literal(.null)
                         ),
                         Statement(
                             expression: .conditional(
                                 reference("ok"),
                                 then: [
-                                    Statement(
-                                        id: "either",
-                                        binding: .assignment,
-                                        expression: .literal(.string("here"))
+                                    Statement(binding: .assignment([.key("either")]), expression: .literal(.string("here"))
                                     )
                                 ],
                                 else: [Statement(expression: refusing(literal("gone")))]
                             )
                         ),
-                        Statement(
-                            id: "used",
-                            expression: .dispatch(
+                        Statement(binding: .constant("used"), expression: .dispatch(
                                 Dispatch(selector: "wants", arguments: ["it": reference("either")])
                             )
                         )
                     ],
                 ),
-                "wants": Procedure(
+                "app.wants": Procedure(
                     signature: Signature(parameters: ["it": Parameter(type: .int)]),
                     body: []
                 )

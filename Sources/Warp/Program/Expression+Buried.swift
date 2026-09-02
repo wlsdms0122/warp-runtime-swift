@@ -165,7 +165,7 @@ public extension [Statement] {
         enumerated().flatMap { position, statement in
             statement.expression.buried(
                 at: stepping(
-                    stepping(trail, .statement(name: statement.id, at: position)),
+                    stepping(trail, .statement(name: statement.name, at: position)),
                     .construct(statement.expression.construct)
                 ),
                 stepping: stepping

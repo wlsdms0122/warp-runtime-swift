@@ -23,7 +23,7 @@ struct SwiftAuthoringTests {
         let linker = Linker()
         let procedure = Procedure(
             body: [
-                Statement(id: "greet", expression: .literal(.string("hello, world")))
+                Statement(binding: .constant("greet"), expression: .literal(.string("hello, world")))
             ],
             result: .record(["greeting": .reference([.key("greet")])])
         )
@@ -47,24 +47,19 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             signature: Signature(parameters: ["rounds": Parameter(type: .int)]),
             body: [
-                Statement(
-                    id: "counted",
-                    expression: .loop(
+                Statement(binding: .constant("counted"), expression: .loop(
                         while: differs(
                             index,
                             .reference([.key("rounds")])
                             ),
                         body: Block(
-                            body: [Statement(id: "tick", expression: index)],
+                            body: [Statement(binding: .constant("tick"), expression: index)],
                             result: index
                         ),
                         round: "counted"
                     )
                 ),
-                Statement(
-                    id: "verdict",
-                    binding: .variable,
-                    expression: .literal(.string("counted otherwise"))
+                Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))
                 ),
                 Statement(
                     expression: .conditional(
@@ -73,10 +68,7 @@ struct SwiftAuthoringTests {
                             .literal(.int(3))
                             ),
                         then: [
-                            Statement(
-                                id: "verdict",
-                                binding: .assignment,
-                                expression: .literal(.string("counted to three"))
+                            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("counted to three"))
                             )
                         ],
                         else: nil
@@ -108,9 +100,7 @@ struct SwiftAuthoringTests {
         let linker = Linker()
         let procedure = Procedure(
             body: [
-                Statement(
-                    id: "shout",
-                    expression: .dispatch(
+                Statement(binding: .constant("shout"), expression: .dispatch(
                         Dispatch(
                             selector: "app.shout",
                             arguments: ["text": .literal(.string("hey"))]
@@ -139,22 +129,16 @@ struct SwiftAuthoringTests {
         let linker = Linker()
         let procedure = Procedure(
             body: [
-                Statement(id: "names", expression: .literal(.array([.string("a")]))),
-                Statement(
-                    id: "counted",
-                    expression: .dispatch(
+                Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
+                Statement(binding: .constant("counted"), expression: .dispatch(
                         Dispatch(receiver: .reference([.key("names")]), selector: "std.collection.count")
                     )
                 ),
-                Statement(
-                    id: "shouted",
-                    expression: .dispatch(
+                Statement(binding: .constant("shouted"), expression: .dispatch(
                         Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                     )
                 ),
-                Statement(
-                    id: "called",
-                    expression: .dispatch(
+                Statement(binding: .constant("called"), expression: .dispatch(
                         Dispatch(selector: "echo", arguments: ["word": .literal(.string("yo"))])
                     )
                 )

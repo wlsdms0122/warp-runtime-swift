@@ -18,7 +18,7 @@ import Foundation
 // Qualified names are what these should be, though nothing here checks it. A
 // name is its declared spelling: `std.text.text` names one declaration wherever
 // a template is written, and a document declaring a `text` of its own declares
-// a different name. Two modules claiming one qualified name is a refused link
+// a different name. Two modules claiming one spelling is a refused link
 // instead of a silent winner.
 public struct Interpolation: Sendable, Equatable {
     // MARK: - Property

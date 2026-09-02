@@ -225,9 +225,7 @@ struct WriterTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "payload",
-                            expression: .literal(.object(["ref": .string("not-a-path")]))
+                        Statement(binding: .constant("payload"), expression: .literal(.object(["ref": .string("not-a-path")]))
                         )
                     ]
                 )
@@ -289,7 +287,7 @@ struct WriterTests {
         // bare would be a document that reads back meaning something else.
         let bounded = Signature(
             parameters: [
-                "item": Parameter(type: .variable(name: "T", constraint: "Scalar"))
+                "item": Parameter(type: .parameter(name: "T", constraint: "Scalar"))
             ],
             returns: .bool
         )
@@ -309,12 +307,12 @@ struct WriterTests {
         // the declaring procedure answers the same way, whichever entry the
         // caller came through
         #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(type: .variable(name: "T", constraint: "Scalar")))
+            try sut.value(of: Parameter(type: .parameter(name: "T", constraint: "Scalar")))
         }
 
         // A bounded variable declared as a type directly refuses the same way
         let variable = try Module(
-            types: ["Loose": .variable(name: "T", constraint: "Scalar")],
+            types: ["Loose": .parameter(name: "T", constraint: "Scalar")],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -372,11 +370,9 @@ struct WriterTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "walked",
-                            expression: .loop(
+                        Statement(binding: .constant("walked"), expression: .loop(
                                 while: .literal(.bool(false)),
-                                body: Block(body: [Statement(id: "step", expression: .literal(.int(1)))]),
+                                body: Block(body: [Statement(binding: .constant("step"), expression: .literal(.int(1)))]),
                                 round: "somethingElse"
                             )
                         )
@@ -436,22 +432,17 @@ struct WriterTests {
         // the mapping a record is. A type written back as a string it cannot
         // be read from would survive neither direction.
         try! Module(
-            namespace: "casting",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["payload": Parameter(type: .any)]),
                     body: [
-                        Statement(
-                            id: "named",
-                            expression: .cast(
+                        Statement(binding: .constant("named"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .record(["count": .int]),
                                 optional: false
                             )
                         ),
-                        Statement(
-                            id: "asked",
-                            expression: .cast(
+                        Statement(binding: .constant("asked"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .array(.string),
                                 optional: true
@@ -465,14 +456,11 @@ struct WriterTests {
         // Messages nested inside other expressions, deeper than a document's
         // fixed shapes would ever place them
         try! Module(
-            namespace: "nested",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),
                     body: [
-                        Statement(
-                            id: "joined",
-                            expression: .dispatch(
+                        Statement(binding: .constant("joined"), expression: .dispatch(
                                 Dispatch(
                                     receiver: .array([
                                         .dispatch(
@@ -487,9 +475,7 @@ struct WriterTests {
                                 )
                             )
                         ),
-                        Statement(
-                            id: "held",
-                            expression: .record([
+                        Statement(binding: .constant("held"), expression: .record([
                                 "line": .reference([.key("joined")]),
                                 "size": .dispatch(
                                     Dispatch(
@@ -509,16 +495,14 @@ struct WriterTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "payload",
-                            expression: .literal(
+                        Statement(binding: .constant("payload"), expression: .literal(
                                 .object(["ref": .string("not-a-path"), "deep": .array([
                                     .object(["value": .int(1)])
                                 ])])
                             )
                         ),
-                        Statement(id: "count", binding: .variable, expression: .literal(.int(0))),
-                        Statement(id: "count", binding: .assignment, expression: .literal(.int(1)))
+                        Statement(binding: .variable("count"), expression: .literal(.int(0))),
+                        Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))
                     ],
                     result: .reference([.key("payload")])
                 )
@@ -536,7 +520,6 @@ struct WriterTests {
     private static let canonical: Value = [
         "warp": 1,
         "imports": ["std.logic.notEqual", "std.math.plus"],
-        "name": "canonical",
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],
         "constraints": ["Scalar": ["int", "string"]],
@@ -650,7 +633,6 @@ struct WriterTests {
     static let corpus: [Value] = [
         // Literals, references, records, arrays and quoting
         [
-            "name": "plain",
             "description": "the shapes that need no name",
             "types": ["Task": ["id": "string", "done": "bool"]],
             "const": ["limit": 10],

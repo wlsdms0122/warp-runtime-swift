@@ -10,9 +10,10 @@ import Testing
 import Warp
 @testable import WarpSyntax
 
-// The readable projection, held to the whole of the canonical promise: one
-// document, one text, and a text that is not the canonical writing is not a
-// document — spelling included.
+// The readable projection. The writer has one layout, sorted keys and two
+// spaces an indent, and the reader takes any layout that spells the same value:
+// what a document is comes off the canonical writing, not off the text it
+// arrived in.
 @Suite("The text encoding")
 struct TextEncodingTests {
     // MARK: - Property
@@ -76,16 +77,13 @@ struct TextEncodingTests {
         #expect(try TextEncoding.value(from: "warpt 1\n-3\n") == .int(-3))
     }
 
-    @Test("a second spelling for one document is refused")
-    func aSecondSpellingIsRefused() {
-        // Given — each of these parses to a value the writer spells another
-        // way, which is exactly what one-document-one-text forbids
+    @Test("a number has one spelling, and the grammar holds it")
+    func aSecondNumberSpellingIsRefused() {
+        // Given: each of these parses to a number the writer spells another
+        // way. Layout is free. What a number is written as is not.
         for text in [
-            "warpt 1\n1.50\n",             // a longer fraction
-            "warpt 1\n1e2\n",              // an exponent the writer does not use here
-            "warpt 1\n{ a 1 }\n",          // a record laid out inline
-            "warpt 1\n1",                  // the final newline missing
-            "warpt 1\n\"\\u0041\"\n"      // an escape for a character that needs none
+            "warpt 1\n1.50\n",  // a longer fraction
+            "warpt 1\n1e2\n"    // an exponent the writer does not use here
         ] {
             #expect {
                 try TextEncoding.value(from: text)
@@ -95,18 +93,36 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("keys out of order are refused by the grammar, not the comparison")
-    func aShuffledKeyIsRefused() {
-        #expect {
-            try TextEncoding.value(from: "warpt 1\n{\n  b 1\n  a 2\n}\n")
-        } throws: { error in
-            "\(error)".contains("order")
+    @Test("layout is the writer's and not the reader's: any layout reads to the one value")
+    func anyLayoutReadsToTheOneValue() throws {
+        // Given: the writer's text, and the same document laid out inline,
+        // over-indented, and without the final newline
+        let document = Value.object(["a": .int(1), "b": .string("A")])
+        let canonical = try TextEncoding.text(from: document)
+
+        for text in [
+            "warpt 1\n{ a 1 b \"A\" }\n",
+            "warpt 1\n{\n      a 1\n  b \"A\"\n    }\n",
+            "warpt 1\n{\n  a 1\n  b \"A\"\n}"
+        ] {
+            #expect(try TextEncoding.value(from: text) == document, "\(text)")
         }
+
+        // And writing any of them back is the one text
+        #expect(try TextEncoding.text(from: try TextEncoding.value(from: "warpt 1\n{ a 1 b \"A\" }\n")) == canonical)
+    }
+
+    @Test("keys read in any order, and a key written twice is refused")
+    func aShuffledKeyReads() throws {
+        #expect(
+            try TextEncoding.value(from: "warpt 1\n{\n  b 1\n  a 2\n}\n")
+                == .object(["a": .int(2), "b": .int(1)])
+        )
 
         #expect {
             try TextEncoding.value(from: "warpt 1\n{\n  a 1\n  a 2\n}\n")
         } throws: { error in
-            "\(error)".contains("order")
+            "\(error)".contains("twice")
         }
     }
 
@@ -238,13 +254,29 @@ struct TextEncodingTests {
             }
         }
 
-        // And a whole pair parses as one character — and is then refused,
-        // because the canonical writer writes the character itself
-        #expect {
+        // And a whole pair is refused too: the character it spells is written
+        // as itself
+        #expect(throws: (any Error).self) {
             try TextEncoding.value(from: "warpt 1\n\"\\ud83d\\ude00\"\n")
-        } throws: { error in
-            "\(error)".contains("one writing")
         }
+    }
+
+    @Test("an escape for a character that has a shorter spelling is refused")
+    func aLongEscapeIsRefused() throws {
+        // Given: a letter written raw, a newline with its own escape, and
+        // uppercase hex for a control character
+        for text in [
+            "warpt 1\n\"\\u0041\"\n",
+            "warpt 1\n\"\\u000a\"\n",
+            "warpt 1\n\"\\u001B\"\n"
+        ] {
+            #expect(throws: (any Error).self, "\(text)") {
+                try TextEncoding.value(from: text)
+            }
+        }
+
+        // And the one escape the writer does use reads
+        #expect(try TextEncoding.value(from: "warpt 1\n\"\\u001b\"\n") == .string("\u{1b}"))
     }
 
     @Test("a control character is carried as an escape, never raw")

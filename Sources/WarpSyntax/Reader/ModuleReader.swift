@@ -16,14 +16,14 @@ import Warp
 // Procedures are named here and which one runs is said at link time, so a
 // document that declares three of them is ordinary rather than a special case.
 public struct ModuleReader: Decodable {
-    enum CodingKeys: String, CodingKey, CaseIterable {
+    public enum CodingKeys: String, CodingKey, CaseIterable {
         case warp
         case imports
-        case name
         case description
         case types
         case constraints
         case const
+        case variables = "var"
         case procedures
     }
 
@@ -62,7 +62,6 @@ public struct ModuleReader: Decodable {
         }
 
         self.draft = Draft(
-            namespace: try container.decodeIfPresent(String.self, forKey: .name),
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
             types: try Self.record(TypeReader.self, in: container, forKey: .types)
@@ -71,37 +70,14 @@ public struct ModuleReader: Decodable {
                 .mapValues { members in members.map(\.type) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
+            variables: try Self.record(ExpressionReader.self, in: container, forKey: .variables)
+                .mapValues(\.expression),
             procedures: procedures.mapValues(\.procedure)
         )
     }
 
     // MARK: - Public
     // MARK: - Internal
-    // What the document calls itself, without reading the document.
-    //
-    // A refusal from the reading says which document it is about, and the
-    // reading is the thing that failed — so the one key that answer needs is
-    // read here, where a module's keys are, rather than spelled a second time
-    // wherever the refusal is assembled.
-    //
-    // It answers where `init(from:)` refuses. They are two questions: whether
-    // this document may be read at all, and what to call the document a
-    // refusal is about. So a `name` that is not text is nothing to call it by,
-    // and the refusal for writing one is the reading's — this one going first
-    // would answer every refusal about the name key by refusing again.
-    //
-    // A name written empty is no name, and that rule is `Place.Document`'s.
-    // What is answered here is only what the document wrote, since keeping the
-    // rule as well would be the second of two places that decide what an empty
-    // name means.
-    static func namespace(of value: Value) -> String? {
-        guard case let .object(fields) = value,
-            case let .string(name)? = fields[CodingKeys.name.stringValue]
-        else { return nil }
-
-        return name
-    }
-
     // MARK: - Private
     // What the document says it takes from its link, read and not judged. What
     // it is held against is what the module sends, which is a fact about the

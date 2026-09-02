@@ -26,10 +26,7 @@ struct Workload {
         let module = try Loader().load(try TextEncoding.value(from: text), identity: nil)
 
         self.name = url.deletingPathExtension().lastPathComponent
-        self.image = try Linker().link(
-            [module] + Module.standard,
-            entry: Draft.qualified("entry", in: module.namespace)
-        )
+        self.image = try Linker().link([module] + Module.standard, entry: "entry")
     }
 
     // MARK: - Public

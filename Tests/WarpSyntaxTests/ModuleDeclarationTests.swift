@@ -20,27 +20,25 @@ struct ModuleDeclarationTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a name written inside a module is spelled with the module's name")
+    @Test("a spelling names the declaration written under it, in its own document too")
     func ownDeclarationIsSpelledQualified() async throws {
         // Given — `first` calls its own `helper` as `first.helper`, and
         // `second` declares a `helper` of its own, which is `second.helper`
         let first = try loader.loadDocument([
-            "name": "first",
             "procedures": [
-                "entry": [
+                "first.entry": [
                     "body": [["id": "said", "call": ["procedure": "first.helper"]]],
                     "result": ["result": ["ref": "said"]]
                 ],
-                "helper": [
+                "first.helper": [
                     "body": [["id": "done", "value": "from first"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
         ])
         let second = try loader.loadDocument([
-            "name": "second",
             "procedures": [
-                "helper": [
+                "second.helper": [
                     "body": [["id": "done", "value": "from second"]],
                     "result": ["said": ["ref": "done"]]
                 ]
@@ -59,18 +57,16 @@ struct ModuleDeclarationTests {
         // Given
         let caller = try loader.loadDocument([
             "imports": ["greet"],
-            "name": "caller",
             "procedures": [
-                "entry": [
+                "caller.entry": [
                     "body": [["id": "said", "call": ["procedure": "greet"]]],
                     "result": ["result": ["ref": "said"]]
                 ]
             ]
         ])
         let library = try loader.loadDocument([
-            "name": "greeting",
             "procedures": [
-                "greet": [
+                "greeting.greet": [
                     "body": [["id": "done", "value": "hello"]],
                     "result": ["said": ["ref": "done"]]
                 ]
@@ -85,27 +81,25 @@ struct ModuleDeclarationTests {
         }
     }
 
-    @Test("a qualified name reaches past what the writing module declares")
+    @Test("a spelling reaches the declaration under it, whichever document wrote it")
     func qualifiedNameReachesAcross() async throws {
         // Given — `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
             "imports": ["second.helper"],
-            "name": "first",
             "procedures": [
-                "entry": [
+                "first.entry": [
                     "body": [["id": "said", "call": ["procedure": "second.helper"]]],
                     "result": ["result": ["ref": "said"]]
                 ],
-                "helper": [
+                "first.helper": [
                     "body": [["id": "done", "value": "from first"]],
                     "result": ["said": ["ref": "done"]]
                 ]
             ]
         ])
         let second = try loader.loadDocument([
-            "name": "second",
             "procedures": [
-                "helper": [
+                "second.helper": [
                     "body": [["id": "done", "value": "from second"]],
                     "result": ["said": ["ref": "done"]]
                 ]

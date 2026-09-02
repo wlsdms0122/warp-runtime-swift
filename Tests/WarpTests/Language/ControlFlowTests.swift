@@ -24,14 +24,14 @@ struct ControlFlowTests {
         // nothing that says so.
         let sut = Warp.Expression.block(
             Block(body: [
-                Statement(id: "first", expression: .literal(.int(1))),
-                Statement(id: "second", expression: .literal(.int(2)))
+                Statement(binding: .constant("first"), expression: .literal(.int(1))),
+                Statement(binding: .constant("second"), expression: .literal(.int(2)))
             ])
         )
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -45,8 +45,8 @@ struct ControlFlowTests {
         let sut = Warp.Expression.block(
             Block(
                 body: [
-                    Statement(id: "first", expression: .literal(.int(1))),
-                    Statement(id: "second", expression: .literal(.int(2)))
+                    Statement(binding: .constant("first"), expression: .literal(.int(1))),
+                    Statement(binding: .constant("second"), expression: .literal(.int(2)))
                 ],
                 result: reference("first")
             )
@@ -54,7 +54,7 @@ struct ControlFlowTests {
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -66,13 +66,11 @@ struct ControlFlowTests {
     func blockBindingsDoNotEscape() {
         // Given
         let sut: [Statement] = [
-            Statement(
-                id: "probe",
-                expression: .block(
-                    Block(body: [Statement(id: "inner", expression: .literal(.int(1)))])
+            Statement(binding: .constant("probe"), expression: .block(
+                    Block(body: [Statement(binding: .constant("inner"), expression: .literal(.int(1)))])
                 )
             ),
-            Statement(id: "read", expression: reference("inner"))
+            Statement(binding: .constant("read"), expression: reference("inner"))
         ]
 
         // When / Then
@@ -88,17 +86,11 @@ struct ControlFlowTests {
             Warp.Expression.conditional(
                 .literal(.bool(take)),
                 then: [
-                    Statement(
-                        id: "kept",
-                        binding: .assignment,
-                        expression: .literal(.string("then"))
+                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then"))
                     )
                 ],
                 else: [
-                    Statement(
-                        id: "kept",
-                        binding: .assignment,
-                        expression: .literal(.string("else"))
+                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else"))
                     )
                 ]
             )
@@ -107,14 +99,14 @@ struct ControlFlowTests {
         // When
         let taken = try await answer(
             of: [
-                Statement(id: "kept", binding: .variable, expression: .literal(.string(""))),
+                Statement(binding: .variable("kept"), expression: .literal(.string(""))),
                 Statement(expression: sut(true))
             ],
             result: reference("kept")
         )
         let untaken = try await answer(
             of: [
-                Statement(id: "kept", binding: .variable, expression: .literal(.string(""))),
+                Statement(binding: .variable("kept"), expression: .literal(.string(""))),
                 Statement(expression: sut(false))
             ],
             result: reference("kept")
@@ -132,7 +124,7 @@ struct ControlFlowTests {
         let sut = Warp.Expression.conditional(
             .literal(.bool(false)),
             then: [
-                Statement(id: "kept", binding: .assignment, expression: .literal(.string("then")))
+                Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
             ],
             else: nil
         )
@@ -140,7 +132,7 @@ struct ControlFlowTests {
         // When
         let answer = try await answer(
             of: [
-                Statement(id: "kept", binding: .variable, expression: .literal(.null)),
+                Statement(binding: .variable("kept"), expression: .literal(.null)),
                 Statement(expression: sut)
             ],
             result: reference("kept")
@@ -160,12 +152,12 @@ struct ControlFlowTests {
         )
 
         // When / Then — under any of the three spellings
-        #expect(!validates(body: [Statement(id: "probe", expression: sut)]))
-        #expect(!validates(body: [Statement(id: "probe", binding: .variable, expression: sut)]))
+        #expect(!validates(body: [Statement(binding: .constant("probe"), expression: sut)]))
+        #expect(!validates(body: [Statement(binding: .variable("probe"), expression: sut)]))
         #expect(
             !validates(body: [
-                Statement(id: "probe", binding: .variable, expression: .literal(.int(0))),
-                Statement(id: "probe", binding: .assignment, expression: sut)
+                Statement(binding: .variable("probe"), expression: .literal(.int(0))),
+                Statement(binding: .assignment([.key("probe")]), expression: sut)
             ])
         )
     }
@@ -175,13 +167,13 @@ struct ControlFlowTests {
         // Given
         let sut = Warp.Expression.loop(
             while: differs(reference("round", "index"), .literal(.int(3))),
-            body: Block(body: [Statement(id: "tick", expression: reference("round", "index"))]),
+            body: Block(body: [Statement(binding: .constant("tick"), expression: reference("round", "index"))]),
             round: "round"
         )
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -191,8 +183,8 @@ struct ControlFlowTests {
         #expect(
             !validates(
                 body: [
-                    Statement(id: "probe", expression: sut),
-                    Statement(id: "rounds", expression: reference("round", "index"))
+                    Statement(binding: .constant("probe"), expression: sut),
+                    Statement(binding: .constant("rounds"), expression: reference("round", "index"))
                 ]
             )
         )
@@ -241,7 +233,7 @@ struct ControlFlowTests {
         // When / Then
         await #expect(throws: Aborted.self) {
             try await answer(
-                of: [Statement(id: "probe", expression: sut)],
+                of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: reference("probe")
             )
         }
@@ -254,10 +246,7 @@ struct ControlFlowTests {
         let sut = Warp.Expression.iteration(
             over: .array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]),
             body: [
-                Statement(
-                    id: "sum",
-                    binding: .assignment,
-                    expression: .dispatch(
+                Statement(binding: .assignment([.key("sum")]), expression: .dispatch(
                         Dispatch(
                             receiver: reference("sum"),
                             selector: "std.math.plus",
@@ -272,8 +261,8 @@ struct ControlFlowTests {
         // When
         let answer = try await answer(
             of: [
-                Statement(id: "sum", binding: .variable, expression: .literal(.int(0))),
-                Statement(id: "walk", expression: sut)
+                Statement(binding: .variable("sum"), expression: .literal(.int(0))),
+                Statement(binding: .constant("walk"), expression: sut)
             ],
             result: reference("sum")
         )
@@ -287,15 +276,13 @@ struct ControlFlowTests {
         // Given — the walk answers nothing, so a later read of its name could
         // only ever see null. Refused at the check rather than answered silently.
         #expect(!validates(body: [
-            Statement(
-                id: "walk",
-                expression: .iteration(
+            Statement(binding: .constant("walk"), expression: .iteration(
                     over: .array([.literal(.int(1))]),
                     body: [],
                     element: "walk"
                 )
             ),
-            Statement(id: "read", expression: reference("walk"))
+            Statement(binding: .constant("read"), expression: reference("walk"))
         ]))
     }
 
@@ -311,7 +298,7 @@ struct ControlFlowTests {
         // When / Then
         await #expect(throws: ReferenceUnfit.self) {
             try await answer(
-                of: [Statement(id: "probe", expression: sut)],
+                of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: .literal(.null),
                 arguments: ["material": .string("not an array")],
                 signature: Signature(parameters: ["material": Parameter(type: .string)])
@@ -324,9 +311,7 @@ struct ControlFlowTests {
         // Given
         let sut = Warp.Expression.attempt(
             Block(body: [
-                Statement(
-                    id: "boom",
-                    expression: .dispatch(
+                Statement(binding: .constant("boom"), expression: .dispatch(
                         Dispatch(
                             selector: "app.fail",
                             arguments: ["recoverable": .literal(.bool(true))]
@@ -340,7 +325,7 @@ struct ControlFlowTests {
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe"),
             vocabulary: Module.standard + [.failing]
         )
@@ -355,9 +340,7 @@ struct ControlFlowTests {
         // procedure that is wrong
         let sut = Warp.Expression.attempt(
             Block(body: [
-                Statement(
-                    id: "boom",
-                    expression: .dispatch(
+                Statement(binding: .constant("boom"), expression: .dispatch(
                         Dispatch(
                             selector: "app.fail",
                             arguments: ["recoverable": .literal(.bool(false))]
@@ -372,7 +355,7 @@ struct ControlFlowTests {
         // When / Then
         await #expect(throws: TestFatalError.self) {
             try await answer(
-                of: [Statement(id: "probe", expression: sut)],
+                of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: reference("probe"),
                 vocabulary: Module.standard + [.failing]
             )
@@ -384,7 +367,7 @@ struct ControlFlowTests {
         // Given — a rescue that produces nothing swallows a failure into null
         // without a trace
         let sut = Warp.Expression.attempt(
-            Block(body: [Statement(id: "work", expression: .literal(.int(1)))]),
+            Block(body: [Statement(binding: .constant("work"), expression: .literal(.int(1)))]),
             rescue: Block(body: []),
             failure: "failure"
         )

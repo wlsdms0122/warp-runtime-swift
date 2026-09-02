@@ -57,12 +57,12 @@ extension Linker {
         recording: (String, TypeExpression) -> Void
     ) {
         let declared = Dictionary(
-            unsaid.map { one in (one.symbol.qualified, one) },
+            unsaid.map { one in (one.symbol.declared, one) },
             uniquingKeysWith: { first, _ in first }
         )
 
         let edges = Dictionary(
-            unsaid.map { one in (one.symbol.qualified, one.sends.sorted()) },
+            unsaid.map { one in (one.symbol.declared, one.sends.sorted()) },
             uniquingKeysWith: { first, _ in first }
         )
 
@@ -73,7 +73,7 @@ extension Linker {
             guard
                 circle.count == 1,
                 let only = circle.first.flatMap({ name in declared[name] }),
-                !only.sends.contains(only.symbol.qualified)
+                !only.sends.contains(only.symbol.declared)
             else {
                 for name in circle { recording(name, .any) }
 
@@ -101,7 +101,7 @@ extension Linker {
             // parameter reaches, named for the path that reached it) fills
             // with nothing, which is `any`. One rule, and the useful half
             // comes for free.
-            recording(only.symbol.qualified, read ?? .any)
+            recording(only.symbol.declared, read ?? .any)
         }
     }
 
@@ -120,7 +120,7 @@ extension Linker {
         func gather(_ path: [PathSegment]) {
             for segment in path {
                 if let name = segment.named, let word = words[name] {
-                    sent.insert(word.qualified)
+                    sent.insert(word.declared)
                 }
 
                 guard case let .indexRef(inner, _) = segment else { continue }

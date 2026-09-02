@@ -7,11 +7,12 @@
 
 import Foundation
 
-// Running closures at once. A closure is the one body that is safe to run
-// beside another — it captured values rather than bindings, writes no name it
-// did not declare, and cannot leave past its own edge — so "run these
-// concurrently" is a thing a word can be handed, and the grammar does not need
-// a construct to say it.
+// Running closures at once. An isolated closure is a body that is safe to run
+// beside another — it writes no name it captured, touches no module variable
+// and cannot leave past its own edge — so "run these concurrently" is a thing
+// a word can be handed, and the grammar does not need a construct to say it.
+// Which closures are isolated the link derived, and each piece is asked as it
+// is started.
 //
 // Three words over one machine:
 //
@@ -205,10 +206,19 @@ public struct ConcurrentEffect: Effect {
             )
         }
 
+        // The pieces arrive through `any`, so the slot could not ask; each
+        // piece is asked here, as it is started.
+        guard closure.runsBeside else {
+            throw ExecutionError(
+                "\(name) runs isolated closures, and piece \(label) writes"
+                    + " what another body could touch"
+            )
+        }
+
         return closure
     }
 
-    // The qualified spelling, because `first` and `map` are also collection
+    // The declared spelling, because `first` and `map` are also collection
     // words — a refusal that says which module's word refused is the one a
     // caller can act on.
     private var name: String {

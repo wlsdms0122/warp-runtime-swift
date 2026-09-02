@@ -17,12 +17,19 @@ import Foundation
 // A signature and an implementation, and nothing else. The implementation is a
 // body of statements or native code, and that axis is the only thing that used
 // to separate this from a "library word" — which is why there is no library any
-// more, and no second namespace, and no second lookup order.
+// more, and no second name table, and no second lookup order.
 public struct Procedure: Sendable {
     // MARK: - Property
     public let description: String?
     public let signature: Signature
     public let implementation: Implementation
+
+    // What the link derived about this body, where the link has seen it: a
+    // closure literal is rewritten by the link to carry both, and the closure
+    // value made from it carries them on into a slot that asks. A procedure a
+    // caller assembles claims nothing.
+    public let purity: Purity
+    public let isolation: Isolation
 
     public var block: Block? { implementation.block }
     public var body: [Statement] { block?.body ?? [] }
@@ -32,11 +39,15 @@ public struct Procedure: Sendable {
     public init(
         description: String? = nil,
         signature: Signature = Signature(),
-        implementation: Implementation
+        implementation: Implementation,
+        purity: Purity = .unstated,
+        isolation: Isolation = .unstated
     ) {
         self.description = description
         self.signature = signature
         self.implementation = implementation
+        self.purity = purity
+        self.isolation = isolation
     }
 
     // A procedure written in the language. The common case, and the one a

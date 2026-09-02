@@ -110,8 +110,8 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .variable(name: "T", constraint: "Scalar"))],
-                        returns: .variable(name: "T", constraint: "Scalar")
+                        parameters: ["value": Parameter(type: .parameter(name: "T", constraint: "Scalar"))],
+                        returns: .parameter(name: "T", constraint: "Scalar")
                     ),
                     body: [],
                     result: reference("value")
@@ -142,8 +142,8 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .variable(name: "T", constraint: "Scalar"))],
-                        returns: .variable(name: "T", constraint: "Scalar")
+                        parameters: ["value": Parameter(type: .parameter(name: "T", constraint: "Scalar"))],
+                        returns: .parameter(name: "T", constraint: "Scalar")
                     ),
                     body: [],
                     result: reference("value")
@@ -175,8 +175,8 @@ struct ConstraintTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .variable(name: "T", constraint: "Sortable"))],
-                        returns: .variable(name: "T", constraint: "Sortable")
+                        parameters: ["value": Parameter(type: .parameter(name: "T", constraint: "Sortable"))],
+                        returns: .parameter(name: "T", constraint: "Sortable")
                     ),
                     body: [],
                     result: reference("value")
@@ -207,8 +207,8 @@ struct ConstraintTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .variable(name: "T", constraint: "A")),
-                            "right": Parameter(type: .variable(name: "T", constraint: "B"))
+                            "left": Parameter(type: .parameter(name: "T", constraint: "A")),
+                            "right": Parameter(type: .parameter(name: "T", constraint: "B"))
                         ]
                     ),
                     body: [],
@@ -240,8 +240,8 @@ struct ConstraintTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .variable(name: "T", constraint: "Scalar")),
-                            "right": Parameter(type: .variable(name: "T"))
+                            "left": Parameter(type: .parameter(name: "T", constraint: "Scalar")),
+                            "right": Parameter(type: .parameter(name: "T"))
                         ]
                     ),
                     body: [],
@@ -321,7 +321,7 @@ struct ConstraintTests {
         // Given — a declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
         let sut = try Module(
-            types: ["Weird": .variable(name: "T", constraint: "Sortable")],
+            types: ["Weird": .parameter(name: "T", constraint: "Sortable")],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
@@ -355,7 +355,7 @@ struct ConstraintTests {
             types: [
                 "Callback": .procedure(
                     Signature(
-                        parameters: ["it": Parameter(type: .variable(name: "T", constraint: "Scalar"))]
+                        parameters: ["it": Parameter(type: .parameter(name: "T", constraint: "Scalar"))]
                     )
                 )
             ],
@@ -427,7 +427,7 @@ struct ConstraintTests {
     func aConstraintMemberMustBeConcrete() throws {
         // Given — `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
-        for member in [TypeExpression.variable(name: "S", constraint: "Loop"), .any, .never] {
+        for member in [TypeExpression.parameter(name: "S", constraint: "Loop"), .any, .never] {
             let sut = try Module(
                 constraints: ["Loop": [member]],
                 procedures: [
@@ -458,7 +458,7 @@ struct ConstraintTests {
                     signature: Signature(
                         parameters: [
                             "speed": Parameter(
-                                type: .variable(name: "N", constraint: "std.Numeric"),
+                                type: .parameter(name: "N", constraint: "std.Numeric"),
                                 oneOf: ["fast", "slow"]
                             )
                         ]
@@ -556,7 +556,7 @@ struct ConstraintTests {
                     signature: Signature(
                         parameters: [
                             "level": Parameter(
-                                type: .variable(name: "N", constraint: "std.Numeric"),
+                                type: .parameter(name: "N", constraint: "std.Numeric"),
                                 oneOf: ["1", "2.5"]
                             )
                         ]
@@ -677,12 +677,12 @@ struct ConstraintTests {
                         parameters: [
                             "of": Parameter(type: .procedure(Signature(
                                 parameters: [
-                                    "seed": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
+                                    "seed": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
                                 ],
-                                returns: .variable(name: "N", constraint: "std.Numeric")
+                                returns: .parameter(name: "N", constraint: "std.Numeric")
                             )))
                         ],
-                        returns: .variable(name: "N", constraint: "std.Numeric")
+                        returns: .parameter(name: "N", constraint: "std.Numeric")
                     ),
                     body: [],
                     result: .literal(.int(0))
@@ -690,9 +690,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "pair",
-                            expression: .closure(Procedure(
+                        Statement(binding: .constant("pair"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: ["seed": Parameter(type: .int)],
                                     returns: .string
@@ -754,9 +752,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "task",
-                            expression: .literal(.string("a"))
+                        Statement(binding: .constant("task"), expression: .literal(.string("a"))
                         )
                     ],
                     result: .reference([.key("task"), .key("absolute")])
@@ -782,9 +778,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "task",
-                            expression: .record(["id": .literal(.string("a"))])
+                        Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))])
                         )
                     ],
                     result: .reference([.key("task"), .key("absolute")])
@@ -838,12 +832,10 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [
-                        Statement(
-                            id: "kept",
-                            expression: .closure(Procedure(
+                        Statement(binding: .constant("kept"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        "it": Parameter(type: .variable(name: "T", constraint: "Nope"))
+                                        "it": Parameter(type: .parameter(name: "T", constraint: "Nope"))
                                     ]
                                 ),
                                 body: [],
@@ -896,7 +888,7 @@ struct ConstraintTests {
 
     @Test("a declaration sharing a word's bare spelling does not shadow the path")
     func aDeclarationDoesNotShadowAPathWord() async throws {
-        // Given — an unnamed module's `first` lives among the selectors and
+        // Given — a module's bare `first` lives among the selectors and
         // std's `first` among the path words; one spelling, two questions,
         // two tables
         let sut = try Module(
@@ -974,14 +966,14 @@ struct ConstraintTests {
         // Given — a table nothing linked, holding the declaration the link
         // would have refused; the table answers rather than chasing it
         let sut = TypeTable(
-            constraints: ["Loop": [.variable(name: "S", constraint: "Loop")]]
+            constraints: ["Loop": [.parameter(name: "S", constraint: "Loop")]]
         )
 
         // When / Then
         #expect(
             sut.admits(
                 constraint: "Loop",
-                reading: .variable(name: "T", constraint: "Loop")
+                reading: .parameter(name: "T", constraint: "Loop")
             ) == true
         )
         #expect(sut.admits(constraint: "Loop", value: .int(1)) == true)
@@ -997,8 +989,8 @@ struct ConstraintTests {
                 "smallest": Procedure(
                     signature: Signature(
                         parameters: [
-                            "left": Parameter(type: .variable(name: "T", constraint: "Exact")),
-                            "right": Parameter(type: .variable(name: "T", constraint: "Exact"))
+                            "left": Parameter(type: .parameter(name: "T", constraint: "Exact")),
+                            "right": Parameter(type: .parameter(name: "T", constraint: "Exact"))
                         ],
                         returns: .bool
                     ),

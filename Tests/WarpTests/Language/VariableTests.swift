@@ -21,15 +21,12 @@ struct VariableTests {
     func assignmentOutlivesItsBlock() async throws {
         // Given — the one thing a constant binding cannot do
         let sut: [Statement] = [
-            Statement(id: "verdict", binding: .variable, expression: .literal(.string("untouched"))),
+            Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
             Statement(
                 expression: .conditional(
                     .literal(.bool(true)),
                     then: [
-                        Statement(
-                            id: "verdict",
-                            binding: .assignment,
-                            expression: .literal(.string("touched"))
+                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("touched"))
                         )
                     ],
                     else: nil
@@ -48,15 +45,12 @@ struct VariableTests {
     func untakenBlockWritesNothing() async throws {
         // Given
         let sut: [Statement] = [
-            Statement(id: "verdict", binding: .variable, expression: .literal(.string("untouched"))),
+            Statement(binding: .variable("verdict"), expression: .literal(.string("untouched"))),
             Statement(
                 expression: .conditional(
                     .literal(.bool(false)),
                     then: [
-                        Statement(
-                            id: "verdict",
-                            binding: .assignment,
-                            expression: .literal(.string("touched"))
+                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("touched"))
                         )
                     ],
                     else: nil
@@ -79,12 +73,12 @@ struct VariableTests {
                 expression: .conditional(
                     .literal(.bool(true)),
                     then: [
-                        Statement(id: "inner", binding: .variable, expression: .literal(.int(1)))
+                        Statement(binding: .variable("inner"), expression: .literal(.int(1)))
                     ],
                     else: nil
                     )
             ),
-            Statement(id: "read", expression: reference("inner"))
+            Statement(binding: .constant("read"), expression: reference("inner"))
         ]
 
         // When / Then
@@ -96,15 +90,12 @@ struct VariableTests {
         // Given — a declaration always introduces, so the inner name has a box
         // of its own
         let sut: [Statement] = [
-            Statement(id: "verdict", binding: .variable, expression: .literal(.string("outer"))),
+            Statement(binding: .variable("verdict"), expression: .literal(.string("outer"))),
             Statement(
                 expression: .conditional(
                     .literal(.bool(true)),
                     then: [
-                        Statement(
-                            id: "verdict",
-                            binding: .variable,
-                            expression: .literal(.string("inner"))
+                        Statement(binding: .variable("verdict"), expression: .literal(.string("inner"))
                         )
                     ],
                     else: nil
@@ -123,9 +114,9 @@ struct VariableTests {
     func variableReadsBackLastWrite() async throws {
         // Given
         let sut: [Statement] = [
-            Statement(id: "tally", binding: .variable, expression: .literal(.int(1))),
-            Statement(id: "tally", binding: .assignment, expression: .literal(.int(2))),
-            Statement(id: "tally", binding: .assignment, expression: .literal(.int(3)))
+            Statement(binding: .variable("tally"), expression: .literal(.int(1))),
+            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(2))),
+            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(3)))
         ]
 
         // When
@@ -140,11 +131,8 @@ struct VariableTests {
         // Given — the expression is settled before the write lands, which is
         // what makes an accumulator work at all
         let sut: [Statement] = [
-            Statement(id: "text", binding: .variable, expression: .literal(.string("a"))),
-            Statement(
-                id: "text",
-                binding: .assignment,
-                expression: interpolated(literal("<"), spelling(reference("text")), literal(">"))
+            Statement(binding: .variable("text"), expression: .literal(.string("a"))),
+            Statement(binding: .assignment([.key("text")]), expression: interpolated(literal("<"), spelling(reference("text")), literal(">"))
             )
         ]
 
@@ -159,8 +147,8 @@ struct VariableTests {
     func writingConstantRefused() {
         // Given
         let sut: [Statement] = [
-            Statement(id: "verdict", expression: .literal(.string("first"))),
-            Statement(id: "verdict", binding: .assignment, expression: .literal(.string("second")))
+            Statement(binding: .constant("verdict"), expression: .literal(.string("first"))),
+            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("second")))
         ]
 
         // When / Then
@@ -171,7 +159,7 @@ struct VariableTests {
     func writingUndeclaredRefused() {
         // Given
         let sut = [
-            Statement(id: "verdict", binding: .assignment, expression: .literal(.string("x")))
+            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("x")))
         ]
 
         // When / Then
@@ -184,16 +172,11 @@ struct VariableTests {
         // is a different, fixed name, and the outer box is not reachable
         // through it
         let sut: [Statement] = [
-            Statement(id: "verdict", binding: .variable, expression: .literal(.int(1))),
-            Statement(
-                id: "gate",
-                expression: .block(
+            Statement(binding: .variable("verdict"), expression: .literal(.int(1))),
+            Statement(binding: .constant("gate"), expression: .block(
                     Block(body: [
-                        Statement(id: "verdict", expression: .literal(.int(2))),
-                        Statement(
-                            id: "verdict",
-                            binding: .assignment,
-                            expression: .literal(.int(3))
+                        Statement(binding: .constant("verdict"), expression: .literal(.int(2))),
+                        Statement(binding: .assignment([.key("verdict")]), expression: .literal(.int(3))
                         )
                     ])
                 )
@@ -204,21 +187,16 @@ struct VariableTests {
         #expect(!validates(body: sut))
     }
 
-    @Test("a closure may not write a variable from outside")
-    func closureWriteOutwardRefused() {
-        // Given — a closure may run beside another or long after this body, so
-        // this is the ordering nothing can supply
+    @Test("a closure may write a variable it captured")
+    func closureWritesWhatItCaptured() {
+        // Given — a variable's box is one thing under one name everywhere the
+        // name is visible, and the closure's body is one of those places
         let sut: [Statement] = [
-            Statement(id: "tally", binding: .variable, expression: .literal(.int(0))),
-            Statement(
-                id: "later",
-                expression: .closure(
+            Statement(binding: .variable("tally"), expression: .literal(.int(0))),
+            Statement(binding: .constant("later"), expression: .closure(
                     Procedure(
                         body: [
-                            Statement(
-                                id: "tally",
-                                binding: .assignment,
-                                expression: .literal(.int(1))
+                            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1))
                             )
                         ],
                         result: reference("tally")
@@ -228,30 +206,22 @@ struct VariableTests {
         ]
 
         // When / Then
-        #expect(!validates(body: sut))
+        #expect(validates(body: sut))
     }
 
     @Test("a closure owns the variables it declares")
     func closureOwnsItsVariables() async throws {
         // Given — what is refused is reaching outward, not variables
         let sut = [
-            Statement(
-                id: "both",
-                expression: .dispatch(
+            Statement(binding: .constant("both"), expression: .dispatch(
                     Dispatch(
                         receiver: .record([
                             "left": .closure(
                                 Procedure(
                                     body: [
-                                        Statement(
-                                            id: "tally",
-                                            binding: .variable,
-                                            expression: .literal(.int(0))
+                                        Statement(binding: .variable("tally"), expression: .literal(.int(0))
                                         ),
-                                        Statement(
-                                            id: "tally",
-                                            binding: .assignment,
-                                            expression: .literal(.int(1))
+                                        Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1))
                                         )
                                     ],
                                     result: reference("tally")
@@ -269,9 +239,7 @@ struct VariableTests {
         // author expects is named before a dot reads it
         let answer = try await answer(
             of: sut + [
-                Statement(
-                    id: "read",
-                    expression: .cast(
+                Statement(binding: .constant("read"), expression: .cast(
                         reference("both"),
                         as: .record(["left": .int]),
                         optional: false
@@ -290,14 +258,12 @@ struct VariableTests {
         // Given — the round writes a variable declared outside it and binds a
         // constant that must not survive the round
         let sut: [Statement] = [
-            Statement(id: "latest", binding: .variable, expression: .literal(.int(0))),
-            Statement(
-                id: "gate",
-                expression: .loop(
+            Statement(binding: .variable("latest"), expression: .literal(.int(0))),
+            Statement(binding: .constant("gate"), expression: .loop(
                     while: differs(reference("round", "index"), .literal(.int(3))),
                     body: Block(body: [
-                        Statement(id: "transient", expression: reference("round", "index")),
-                        Statement(id: "latest", binding: .assignment, expression: reference("transient"))
+                        Statement(binding: .constant("transient"), expression: reference("round", "index")),
+                        Statement(binding: .assignment([.key("latest")]), expression: reference("transient"))
                     ]),
                     round: "round"
                 )
@@ -309,6 +275,6 @@ struct VariableTests {
 
         // Then — rounds 0/1/2 ran, and only `latest` came out
         #expect(answer == .int(2))
-        #expect(!validates(body: sut + [Statement(id: "read", expression: reference("transient"))]))
+        #expect(!validates(body: sut + [Statement(binding: .constant("read"), expression: reference("transient"))]))
     }
 }

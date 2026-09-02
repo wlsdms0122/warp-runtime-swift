@@ -16,7 +16,7 @@ public struct Executor: Sendable {
     // until then, which is why nothing but `run(_ image:)` can start a run.
     let procedures: [String: Procedure]
 
-    // What a selector may send without running, by its qualified spelling,
+    // What a selector may send without running, by its declared spelling,
     // worked out by the link.
     let selectors: [String: Procedure]
 
@@ -26,6 +26,12 @@ public struct Executor: Sendable {
     // The shapes the link declared. A named type is answered here rather than
     // expanded at link, so every boundary that settles arguments needs it.
     let types: TypeTable
+
+    // One box per module variable, made when the run starts, by the document
+    // that declared it; and which document each procedure reads its boxes
+    // from. A closure carries the boxes in the scope it captured.
+    let boxes: [Int: [String: Variable]]
+    let origins: [String: Int]
 
     // MARK: - Initializer
     // What a caller has to say to make one: who watches, and what the run may
@@ -46,7 +52,9 @@ public struct Executor: Sendable {
         procedures: [String: Procedure] = [:],
         selectors: [String: Procedure] = [:],
         words: [String: Procedure] = [:],
-        types: TypeTable = TypeTable()
+        types: TypeTable = TypeTable(),
+        boxes: [Int: [String: Variable]] = [:],
+        origins: [String: Int] = [:]
     ) {
         self.observer = observer
         self.environment = environment
@@ -54,6 +62,8 @@ public struct Executor: Sendable {
         self.selectors = selectors
         self.words = words
         self.types = types
+        self.boxes = boxes
+        self.origins = origins
     }
 
     // MARK: - Public
@@ -69,15 +79,18 @@ public struct Executor: Sendable {
             procedures: image.procedures,
             selectors: image.selectors,
             words: image.words,
-            types: image.types
+            types: image.types,
+            boxes: image.variables.mapValues { started in started.mapValues(Variable.init) },
+            origins: image.origins
         )
-        .run(image.entry, arguments: arguments)
+        .run(image.entry, arguments: arguments, boxes: image.entryOrigin)
     }
 
     // MARK: - Private
     func run(
         _ procedure: Procedure,
         arguments: [String: Value] = [:],
+        boxes origin: Int? = nil,
         at trace: Trace = Trace()
     ) async throws -> Value {
         guard let block = procedure.block else {
@@ -87,7 +100,10 @@ public struct Executor: Sendable {
         return try await answer(
             block,
             of: procedure.signature,
-            in: Scope(bindings: try procedure.signature.settle(arguments, in: types)),
+            in: Scope(
+                bindings: try procedure.signature.settle(arguments, in: types),
+                variables: origin.flatMap { origin in boxes[origin] } ?? [:]
+            ),
             at: trace
         )
     }
@@ -141,21 +157,21 @@ public struct Executor: Sendable {
 
             let result = try await run(statement, at: position, in: scope, at: trace)
 
-            switch (statement.binding, statement.id) {
-            case let (.constant, id?):
+            switch statement.binding {
+            case let .constant(id)?:
                 scope = scope.binding(id, to: result)
 
-            case let (.variable, id?):
+            case let .variable(id)?:
                 scope = scope.declaring(id, as: result)
 
             // An assignment introduces nothing, so the scope is unchanged here
             // — the write went into a box the enclosing bodies also hold.
-            case let (.assignment, id?):
-                scope.assign(id, to: result)
+            case let .assignment(path)?:
+                try scope.assign(try resolver(in: scope).positioned(path), to: result)
 
             // A nameless statement ran for its effect, and the answer is
             // dropped — which is what leaving the name off said.
-            case (_, nil):
+            case nil:
                 break
             }
 
@@ -314,6 +330,7 @@ public struct Executor: Sendable {
             return try await effect.run(
                 Invocation(
                     selector: dispatch.selector,
+                    signature: procedure.signature,
                     receiver: dispatch.receiver,
                     arguments: dispatch.arguments,
                     trace: trace,
@@ -351,16 +368,66 @@ public struct Executor: Sendable {
                 )
             }
 
+            // A parameter handed in place takes no value: it takes the
+            // caller's box, or a box the caller's path is written back from.
+            let handed = try handed(by: dispatch, to: procedure.signature, in: scope)
+
+            for name in handed.keys {
+                declared[name] = nil
+                given[name] = nil
+
+                if received?.0 == name { received = nil }
+            }
+
             var settled = try Signature(parameters: declared).settle(given, in: types)
 
             if let received { settled[received.0] = received.1 }
 
-            return try await answer(
-                block,
-                of: procedure.signature,
-                in: Scope(bindings: settled),
-                at: trace.appending(.procedure(dispatch.selector))
+            var inner = Scope(
+                bindings: settled,
+                variables: origins[dispatch.selector].flatMap { origin in boxes[origin] } ?? [:]
             )
+
+            for (name, box) in handed.sorted(by: { $0.key < $1.key }) {
+                inner = inner.sharing(box.box, as: name)
+            }
+
+            // A box handed for a path into a variable is written back when
+            // the call ends, whether it answered or failed: a box written
+            // halfway is still written.
+            let answered: Result<Value, any Error>
+
+            do {
+                answered = .success(
+                    try await answer(
+                        block,
+                        of: procedure.signature,
+                        in: inner,
+                        at: trace.appending(.procedure(dispatch.selector))
+                    )
+                )
+            } catch {
+                answered = .failure(error)
+            }
+
+            // Every box is written back, whichever refuses. What the call
+            // reports is the body's own failure, as the type it was, where
+            // the body failed: that is what an attempt around the call is
+            // written to catch. Where the body answered, the first writing
+            // back that refused is the fault reported.
+            var refused: [WriteBackRefused] = []
+
+            for (_, box) in handed.sorted(by: { $0.key < $1.key }) where box.path.count > 1 {
+                do {
+                    try scope.assign(box.path, to: box.box.value)
+                } catch {
+                    refused.append(WriteBackRefused(path: box.path, selector: dispatch.selector, refusal: error))
+                }
+            }
+
+            if case .success = answered, let first = refused.first { throw first }
+
+            return try answered.get()
         }
     }
 
@@ -449,13 +516,69 @@ public struct Executor: Sendable {
         // which propagate here through task cancellation.
         let procedure = try resolve(name)
 
-        return try await run(procedure, arguments: arguments, at: Trace(frames: [.procedure(name)]))
+        return try await run(
+            procedure,
+            arguments: arguments,
+            boxes: origins[name],
+            at: Trace(frames: [.procedure(name)])
+        )
     }
 
     // Linking put every name the document spells in this table, so there is
     // nowhere else for a name to be. A door for names the link never saw would
     // be a second way to call, and one that nothing checked — the promise this
     // language makes is that reaching a run means the reaching was settled.
+    // The boxes a call hands in place, by parameter. A path that is a whole
+    // variable hands the variable's own box, so every write lands in it as it
+    // is made. A path into a variable hands a fresh box holding what the path
+    // reads, and the call writes it back along the path when it ends — by
+    // answering or by failing, since a box written halfway is still written.
+    // What arrives is settled against the declaration first, the way a value
+    // argument is.
+    private func handed(
+        by dispatch: Dispatch,
+        to signature: Signature,
+        in scope: Scope
+    ) throws -> [String: (box: Variable, path: [PathSegment])] {
+        var handed: [String: (box: Variable, path: [PathSegment])] = [:]
+
+        for (name, parameter) in signature.parameters where parameter.declared.isInout {
+            guard case let .reference(written)? = dispatch.handed(name, to: signature), let head = written.head else {
+                throw ExecutionError(
+                    "'\(dispatch.selector)' takes '\(name)' in place, and was not handed a variable"
+                )
+            }
+
+            guard let box = scope.box(of: head) else {
+                throw ExecutionError(
+                    "'\(dispatch.selector)' takes '\(name)' in place, and '\(head)' is not a variable here"
+                )
+            }
+
+            // A whole variable hands its own box, and what it holds was settled
+            // when it was written. A path into one hands a box holding what
+            // the path reads, settled against the declaration the way a value
+            // argument is; the position is fixed here, once, so the writing
+            // back lands where the reading came from.
+            let path = try resolver(in: scope).positioned(written)
+
+            guard path.count > 1 else {
+                handed[name] = (box, path)
+                continue
+            }
+
+            let settled = try parameter.declared.inoutUnwrapped.settling(
+                try resolver(in: scope).resolve(.reference(path)),
+                at: "input '\(name)'",
+                in: types
+            )
+
+            handed[name] = (Variable(settled), path)
+        }
+
+        return handed
+    }
+
     func resolve(_ name: String) throws -> Procedure {
         guard let linked = procedures[name] else {
             throw ExecutionError("procedure '\(name)' was not linked into this image")
@@ -477,7 +600,7 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         // The same notation the validator uses for a nameless statement, and
         // one an author's own name can never collide with — `_` is a name.
-        let inside = trace.appending(.statement(statement.id ?? "[\(position)]"))
+        let inside = trace.appending(.statement(statement.name ?? "[\(position)]"))
 
         await observer?.statementStarted(at: inside, expression: statement.expression)
 

@@ -25,14 +25,11 @@ struct ValidationTests {
         // able to see that the name was already taken.
         func module(introducing statement: Statement) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "got",
-                                expression: .block(Block(
+                            Statement(binding: .constant("got"), expression: .block(Block(
                                     body: [statement],
                                     result: reference("limit")
                                 ))
@@ -47,7 +44,7 @@ struct ValidationTests {
         // When / Then
         #expect(throws: ValidationError.self) {
             try Validator().validate(
-                module(introducing: Statement(id: "limit", expression: .literal(.int(9))))
+                module(introducing: Statement(binding: .constant("limit"), expression: .literal(.int(9))))
             )
         }
     }
@@ -60,12 +57,11 @@ struct ValidationTests {
         // When / Then
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(id: "limit", binding: .assignment, expression: .literal(.int(9)))
+                            Statement(binding: .assignment([.key("limit")]), expression: .literal(.int(9)))
                         ]
                     )
                 ]
@@ -82,11 +78,10 @@ struct ValidationTests {
         // failure an attempt rescues.
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
-                        body: [Statement(id: "got", expression: expression)],
+                        body: [Statement(binding: .constant("got"), expression: expression)],
                         result: reference("limit")
                     )
                 ]
@@ -115,7 +110,6 @@ struct ValidationTests {
         // which of the two the reader is standing in.
         func module(_ procedure: Procedure) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: [
                     "apply": .closure(procedure),
                     "limit": .literal(.int(3))
@@ -135,7 +129,7 @@ struct ValidationTests {
         #expect(throws: ValidationError.self) {
             try Validator().validate(module(Procedure(
                 signature: Signature(returns: .int),
-                body: [Statement(id: "limit", expression: .literal(.int(9)))],
+                body: [Statement(binding: .constant("limit"), expression: .literal(.int(9)))],
                 result: reference("limit")
             )))
         }
@@ -148,7 +142,6 @@ struct ValidationTests {
         // a name nothing here settles, and the refusal stands on it.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                namespace: "pricing",
                 constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
                 procedures: [entryName: Procedure(body: [])],
                 identity: Identity([0x01])
@@ -156,7 +149,7 @@ struct ValidationTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@01/constants.bbb")
+        #expect(error?.place?.rendered == "01/constants.bbb")
         #expect(error?.message.contains("aaa") == false)
 
         // And the name it reads is said, since that is the half of the mistake
@@ -169,11 +162,9 @@ struct ValidationTests {
         // Given — a document cannot even write one there, and the run would
         // refuse it; a program assembled directly meets the same rule before
         // anything runs. The body a word is to run travels as a closure.
-        let arm = [Statement(id: "kept", expression: .literal(.int(1)))]
+        let arm = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
         let sut = [
-            Statement(
-                id: "said",
-                expression: .dispatch(
+            Statement(binding: .constant("said"), expression: .dispatch(
                     Dispatch(selector: "app.shout", arguments: [
                         "text": .conditional(.literal(.bool(true)), then: arm, else: nil)
                     ])
@@ -185,9 +176,7 @@ struct ValidationTests {
         #expect(!validates(body: sut))
         #expect(
             !validates(body: [
-                Statement(
-                    id: "said",
-                    expression: .invoke(
+                Statement(binding: .constant("said"), expression: .invoke(
                         .closure(Procedure(body: [])),
                         arguments: [
                             "value": .array([
@@ -232,18 +221,18 @@ struct ValidationTests {
         // rather than as a null that fails to fit downstream
         let branch = Warp.Expression.conditional(
             .literal(.bool(true)),
-            then: [Statement(id: "kept", expression: .literal(.int(1)))],
+            then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
             else: nil
         )
 
         // When / Then — a result slot, an array element, a record field
         #expect(
             !validates(
-                body: [Statement(id: "grouped", expression: .block(Block(body: [], result: branch)))]
+                body: [Statement(binding: .constant("grouped"), expression: .block(Block(body: [], result: branch)))]
             )
         )
-        #expect(!validates(body: [Statement(id: "list", expression: .array([branch]))]))
-        #expect(!validates(body: [Statement(id: "pair", expression: .record(["a": branch]))]))
+        #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([branch]))]))
+        #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": branch]))]))
     }
 
     @Test("a walk where a value is wanted is refused at the check")
@@ -257,20 +246,20 @@ struct ValidationTests {
         )
 
         // When / Then
-        #expect(!validates(body: [Statement(id: "list", expression: .array([walk]))]))
-        #expect(!validates(body: [Statement(id: "pair", expression: .record(["a": walk]))]))
+        #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([walk]))]))
+        #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": walk]))]))
     }
 
     @Test("a name is visible only after the statement that introduced it")
     func namesAreVisibleAfterTheirStatement() {
         // Given
         let forward = [
-            Statement(id: "first", expression: reference("second")),
-            Statement(id: "second", expression: .literal(.int(1)))
+            Statement(binding: .constant("first"), expression: reference("second")),
+            Statement(binding: .constant("second"), expression: .literal(.int(1)))
         ]
         let backward = [
-            Statement(id: "first", expression: .literal(.int(1))),
-            Statement(id: "second", expression: reference("first"))
+            Statement(binding: .constant("first"), expression: .literal(.int(1))),
+            Statement(binding: .constant("second"), expression: reference("first"))
         ]
 
         // When / Then
@@ -282,8 +271,8 @@ struct ValidationTests {
     func siblingNamesMustDiffer() {
         // Given
         let sut = [
-            Statement(id: "same", expression: .literal(.int(1))),
-            Statement(id: "same", expression: .literal(.int(2)))
+            Statement(binding: .constant("same"), expression: .literal(.int(1))),
+            Statement(binding: .constant("same"), expression: .literal(.int(2)))
         ]
 
         // When / Then
@@ -297,11 +286,11 @@ struct ValidationTests {
         // introduced once
         let readsIt = Procedure(
             signature: Signature(parameters: ["name": Parameter(type: .string)]),
-            body: [Statement(id: "greeting", expression: reference("name"))]
+            body: [Statement(binding: .constant("greeting"), expression: reference("name"))]
         )
         let redeclaresIt = Procedure(
             signature: Signature(parameters: ["name": Parameter(type: .string)]),
-            body: [Statement(id: "name", expression: .literal(.string("other")))]
+            body: [Statement(binding: .constant("name"), expression: .literal(.string("other")))]
         )
 
         // When / Then
@@ -348,10 +337,10 @@ struct ValidationTests {
     func undeclaredNamesAreNotVisible() throws {
         // Given — there is one way a name gets here, and it is being declared.
         // A run's own values arrive as arguments like everything else.
-        let read = Procedure(body: [Statement(id: "read", expression: reference("run", "id"))])
+        let read = Procedure(body: [Statement(binding: .constant("read"), expression: reference("run", "id"))])
         let taken = Procedure(
             signature: Signature(parameters: ["run": Parameter(type: .object(.any))]),
-            body: [Statement(id: "read", expression: reference("run", "id"))]
+            body: [Statement(binding: .constant("read"), expression: reference("run", "id"))]
         )
 
         // When / Then
@@ -377,9 +366,7 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "counted",
-                                expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("counted"), expression: .dispatch(Dispatch(
                                     receiver: .literal(.array([.int(1)])),
                                     selector: "std.collection.count"
                                 ))
@@ -403,9 +390,7 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "counted",
-                                expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("counted"), expression: .dispatch(Dispatch(
                                     receiver: .literal(.array([.int(1)])),
                                     selector: "std.collection.count"
                                 ))
@@ -433,9 +418,7 @@ struct ValidationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "counted",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("counted"), expression: .dispatch(Dispatch(
                                 receiver: .literal(.array([.int(1)])),
                                 selector: "std.collection.count"
                             ))
@@ -456,9 +439,7 @@ struct ValidationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "greet"))
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "greet"))
                         )
                     ]
                 ),
@@ -471,24 +452,20 @@ struct ValidationTests {
     }
 
     @Test("a module calling its own by the name the link knows it by imports nothing")
-    func aQualifiedSelfCallIsNotAnImport() throws {
-        // Given — a module may call a sibling by the bare name or by the one
-        // the link knows it as, and both reach the same declaration. A list
-        // that only knew the bare spelling would make this document declare a
-        // dependency on itself, and the honest empty list would be refused.
+    func aSiblingCallIsNotAnImport() throws {
+        // Given — a module calls a sibling by its declared spelling, and a
+        // spelling this document declares is not an import. The honest empty
+        // list is accepted.
         let sut = try Module(
-            namespace: "wallet",
             imports: [],
             procedures: [
-                "pay": Procedure(
+                "wallet.pay": Procedure(
                     body: [
-                        Statement(
-                            id: "charged",
-                            expression: .dispatch(Dispatch(selector: "wallet.fee"))
+                        Statement(binding: .constant("charged"), expression: .dispatch(Dispatch(selector: "wallet.fee"))
                         )
                     ]
                 ),
-                "fee": Procedure(body: [], result: .literal(.int(1)))
+                "wallet.fee": Procedure(body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -516,7 +493,7 @@ struct ValidationTests {
             try Module(
                 procedures: [
                     entryName: Procedure(
-                        body: [Statement(id: "held", expression: .literal(carried))]
+                        body: [Statement(binding: .constant("held"), expression: .literal(carried))]
                     )
                 ]
             )
@@ -528,9 +505,7 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(
-                                id: "held",
-                                expression: .closure(Procedure(body: []))
+                            Statement(binding: .constant("held"), expression: .closure(Procedure(body: []))
                             )
                         ]
                     )
@@ -543,7 +518,7 @@ struct ValidationTests {
     func resultsSeeTheWholeBody() throws {
         // Given
         let sut = Procedure(
-            body: [Statement(id: "made", expression: .literal(.int(1)))],
+            body: [Statement(binding: .constant("made"), expression: .literal(.int(1)))],
             result: .record(["ok": reference("made"), "bad": reference("never")])
         )
 

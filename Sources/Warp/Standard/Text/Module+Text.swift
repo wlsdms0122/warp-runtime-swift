@@ -9,10 +9,9 @@ import Foundation
 
 public extension Module {
     static let text = try! Module(
-        namespace: "std.text",
         description: "Words about strings.",
         procedures: [
-            "decoded": Procedure(
+            "std.text.decoded": Procedure(
                 description: "The bytes read as text in a named encoding.",
                 signature: Signature(
                     receiver: "of",
@@ -28,7 +27,7 @@ public extension Module {
                 ),
                 implementation: .query(CodecQuery(.decoded))
             ),
-            "encoded": Procedure(
+            "std.text.encoded": Procedure(
                 description: "The text written out as bytes in a named encoding.",
                 signature: Signature(
                     receiver: "of",
@@ -44,7 +43,7 @@ public extension Module {
                 ),
                 implementation: .query(CodecQuery(.encoded))
             ),
-            "text": Procedure(
+            "std.text.text": Procedure(
                 description: "How a value reads as text.",
                 signature: Signature(
                     receiver: "of",
@@ -53,7 +52,7 @@ public extension Module {
                 ),
                 implementation: .query(SpellingQuery())
             ),
-            "startsWith": Procedure(
+            "std.text.startsWith": Procedure(
                 description: "Whether a string begins with another.",
                 signature: Signature(
                     receiver: "of",
@@ -65,7 +64,7 @@ public extension Module {
                 ),
                 implementation: .query(StartsWithQuery())
             ),
-            "regex": Procedure(
+            "std.text.regex": Procedure(
                 description: "Whether a string matches a pattern.",
                 signature: Signature(
                     receiver: "of",
@@ -77,7 +76,7 @@ public extension Module {
                 ),
                 implementation: .query(RegexQuery())
             ),
-            "uppercased": Procedure(
+            "std.text.uppercased": Procedure(
                 description: "The text in upper case.",
                 signature: Signature(
                     receiver: "of",
@@ -88,7 +87,7 @@ public extension Module {
                 ),
                 implementation: .query(TextQuery(.uppercased))
             ),
-            "lowercased": Procedure(
+            "std.text.lowercased": Procedure(
                 description: "The text in lower case.",
                 signature: Signature(
                     receiver: "of",
@@ -99,7 +98,7 @@ public extension Module {
                 ),
                 implementation: .query(TextQuery(.lowercased))
             ),
-            "trimmed": Procedure(
+            "std.text.trimmed": Procedure(
                 description: "The text without surrounding whitespace.",
                 signature: Signature(
                     receiver: "of",
@@ -110,7 +109,7 @@ public extension Module {
                 ),
                 implementation: .query(TextQuery(.trimmed))
             ),
-            "split": Procedure(
+            "std.text.split": Procedure(
                 description: "The text cut on a separator.",
                 signature: Signature(
                     receiver: "of",
@@ -122,7 +121,7 @@ public extension Module {
                 ),
                 implementation: .query(SplitQuery())
             ),
-            "joined": Procedure(
+            "std.text.joined": Procedure(
                 description: "The strings written one after another.",
                 signature: Signature(
                     receiver: "of",
@@ -134,7 +133,7 @@ public extension Module {
                 ),
                 implementation: .query(JoinedQuery())
             ),
-            "replacing": Procedure(
+            "std.text.replacing": Procedure(
                 description: "Every occurrence of a piece swapped for another.",
                 signature: Signature(
                     receiver: "of",

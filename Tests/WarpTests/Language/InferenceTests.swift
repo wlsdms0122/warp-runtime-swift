@@ -36,16 +36,12 @@ struct InferenceTests {
                         parameters: ["names": Parameter(type: .array(.string))]
                     ),
                     body: [
-                        Statement(
-                            id: "head",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("head"), expression: .dispatch(Dispatch(
                                 receiver: reference("names"),
                                 selector: "std.collection.first"
                             ))
                         ),
-                        Statement(
-                            id: "asked",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("asked"), expression: .dispatch(Dispatch(
                                 selector: "wants",
                                 arguments: ["word": reference("head")]
                             ))
@@ -76,16 +72,12 @@ struct InferenceTests {
                         parameters: ["counts": Parameter(type: .array(.int))]
                     ),
                     body: [
-                        Statement(
-                            id: "head",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("head"), expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
                                 selector: "std.collection.first"
                             ))
                         ),
-                        Statement(
-                            id: "asked",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("asked"), expression: .dispatch(Dispatch(
                                 selector: "wants",
                                 arguments: ["word": reference("head")]
                             ))
@@ -126,17 +118,13 @@ struct InferenceTests {
                         parameters: ["names": Parameter(type: .array(.string))]
                     ),
                     body: [
-                        Statement(
-                            id: "sizes",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("sizes"), expression: .dispatch(Dispatch(
                                 receiver: reference("names"),
                                 selector: "std.collection.map",
                                 arguments: ["value": .closure(counting)]
                             ))
                         ),
-                        Statement(
-                            id: "asked",
-                            expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("asked"), expression: .dispatch(Dispatch(
                                 selector: "wants",
                                 arguments: ["ns": reference("sizes")]
                             ))
@@ -163,7 +151,7 @@ struct InferenceTests {
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
-                body: [Statement(id: "tick", expression: .literal(.int(7)))],
+                body: [Statement(binding: .constant("tick"), expression: .literal(.int(7)))],
                 result: reference("tick")
             ),
             round: "walked"
@@ -173,10 +161,8 @@ struct InferenceTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "kept", expression: loop),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("kept"), expression: loop),
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                 "word": .reference([.key("kept")])
                             ]))
                         )
@@ -201,13 +187,11 @@ struct InferenceTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "kept",
-                            expression: .loop(
+                        Statement(binding: .constant("kept"), expression: .loop(
                                 while: .literal(.bool(false)),
                                 body: Block(
                                     body: [
-                                        Statement(id: "tick", expression: .literal(.int(7)))
+                                        Statement(binding: .constant("tick"), expression: .literal(.int(7)))
                                     ],
                                     result: reference("tick")
                                 ),
@@ -232,9 +216,7 @@ struct InferenceTests {
             while: .literal(.bool(false)),
             body: Block(
                 body: [
-                    Statement(
-                        id: "used",
-                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                    Statement(binding: .constant("used"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                             "count": .reference([.key("y")])
                         ]))
                     )
@@ -242,10 +224,7 @@ struct InferenceTests {
                 result: .block(
                     Block(
                         body: [
-                            Statement(
-                                id: "y",
-                                binding: .assignment,
-                                expression: .literal(.string("s"))
+                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s"))
                             )
                         ],
                         result: reference("y")
@@ -259,8 +238,8 @@ struct InferenceTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "y", binding: .variable, expression: .literal(.int(1))),
-                        Statement(id: "kept", expression: loop)
+                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
+                        Statement(binding: .constant("kept"), expression: loop)
                     ],
                     result: reference("y")
                 ),
@@ -285,21 +264,15 @@ struct InferenceTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.int(1))
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))
                         )
                     ]
                 ),
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .dispatch(Dispatch(selector: "counts"))
+                        Statement(binding: .constant("many"), expression: .dispatch(Dispatch(selector: "counts"))
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("many")])
                                     ]))
                         )
@@ -312,9 +285,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -345,9 +316,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("task"), .key("done")])
                                     ]))
                         )
@@ -360,9 +329,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -389,9 +356,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("names"), .key("count")])
                                     ]))
                         )
@@ -404,9 +369,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -431,12 +394,8 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "round",
-                            expression: .iteration(over: .reference([.key("counts")]), body: [
-                                        Statement(
-                                            id: "said",
-                                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("round"), expression: .iteration(over: .reference([.key("counts")]), body: [
+                                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                                         "word": .reference([.key("round"), .key("item")])
                                                     ]))
                                         )
@@ -451,9 +410,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -479,26 +436,18 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.int(1))
+                        Statement(binding: .variable("held"), expression: .literal(.int(1))
                         ),
                         Statement(
                             expression: .conditional(equals(
                                         .reference([.key("flag")]),
                                         .literal(.bool(true))
                                         ), then: [
-                                        Statement(
-                                            id: "held",
-                                            binding: .assignment,
-                                            expression: .literal(.string("text"))
+                                        Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text"))
                                         )
                                     ], else: nil)
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("held")])
                                     ]))
                         )
@@ -511,9 +460,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -534,9 +481,7 @@ struct InferenceTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.int(1))
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))
                         )
                     ]
                 ),
@@ -547,13 +492,9 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .dispatch(Dispatch(selector: "counts"))
+                        Statement(binding: .constant("many"), expression: .dispatch(Dispatch(selector: "counts"))
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("many")])
                                     ]))
                         )
@@ -566,9 +507,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -588,9 +527,7 @@ struct InferenceTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "kept",
-                            expression: .dispatch(
+                        Statement(binding: .constant("kept"), expression: .dispatch(
                                 Dispatch(
                                     receiver: .literal(.array([.int(1), .int(2)])),
                                     selector: "std.concurrent.map",
@@ -609,9 +546,7 @@ struct InferenceTests {
                                 )
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(
+                        Statement(binding: .constant("said"), expression: .dispatch(
                                 Dispatch(
                                     selector: "wants",
                                     arguments: ["words": reference("kept")]
@@ -625,7 +560,7 @@ struct InferenceTests {
                         parameters: ["words": Parameter(type: .array(.string))]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -651,27 +586,19 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "many",
-                            binding: .variable,
-                            expression: .literal(.null)
+                        Statement(binding: .variable("many"), expression: .literal(.null)
                         ),
                         Statement(
                             expression: .conditional(
                                 .reference([.key("ready")]),
                                 then: [
-                                    Statement(
-                                        id: "many",
-                                        binding: .assignment,
-                                        expression: .literal(.string("no"))
+                                    Statement(binding: .assignment([.key("many")]), expression: .literal(.string("no"))
                                     )
                                 ],
                                 else: nil
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("many")])
                                     ]))
                         )
@@ -684,9 +611,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -711,9 +636,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("count"), .key("nope")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("count"), .key("nope")])
                         )
                     ]
                 )
@@ -738,9 +661,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("name"), .index(0)])
+                        Statement(binding: .constant("said"), expression: .reference([.key("name"), .index(0)])
                         )
                     ]
                 )
@@ -765,9 +686,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("names"), .key("count")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("names"), .key("count")])
                         )
                     ]
                 )
@@ -790,9 +709,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("payload"), .key("whatever")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("payload"), .key("whatever")])
                         )
                     ]
                 )
@@ -852,9 +769,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .cast(
+                        Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .any,
                                 optional: false
@@ -888,9 +803,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "reason",
-                            expression: .cast(
+                        Statement(binding: .constant("reason"), expression: .cast(
                                 .reference([.key("failed")]),
                                 as: .record(["failures": .object(.string)]),
                                 optional: false
@@ -922,9 +835,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "tree",
-                            expression: .cast(
+                        Statement(binding: .constant("tree"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .named("Tree"),
                                 optional: true
@@ -982,17 +893,13 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "once",
-                            expression: .cast(
+                        Statement(binding: .constant("once"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .int,
                                 optional: true
                             )
                         ),
-                        Statement(
-                            id: "twice",
-                            expression: .cast(
+                        Statement(binding: .constant("twice"), expression: .cast(
                                 .reference([.key("once")]),
                                 as: .int,
                                 optional: true
@@ -1060,17 +967,13 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "once",
-                            expression: .cast(
+                        Statement(binding: .constant("once"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .named("Maybe"),
                                 optional: true
                             )
                         ),
-                        Statement(
-                            id: "twice",
-                            expression: .cast(
+                        Statement(binding: .constant("twice"), expression: .cast(
                                 .reference([.key("once")]),
                                 as: .named("Maybe"),
                                 optional: true
@@ -1204,9 +1107,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .cast(
+                        Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .record(["a": .string]),
                                 optional: false
@@ -1240,17 +1141,13 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .cast(
+                        Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         ),
-                        Statement(
-                            id: "again",
-                            expression: .cast(
+                        Statement(binding: .constant("again"), expression: .cast(
                                 .reference([.key("read")]),
                                 as: .named("Person"),
                                 optional: false
@@ -1285,9 +1182,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "tree",
-                            expression: .cast(
+                        Statement(binding: .constant("tree"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .named("Tree"),
                                 optional: false
@@ -1340,11 +1235,11 @@ struct InferenceTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .variable(name: "T"))],
+                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [
-                        Statement(id: "held", expression: .reference([.key("of"), .key("a")]))
+                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("a")]))
                     ],
                     result: .reference([.key("held"), .key("b")])
                 ),
@@ -1406,9 +1301,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "rows",
-                            expression: .cast(
+                        Statement(binding: .constant("rows"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .array(.any),
                                 optional: false
@@ -1439,9 +1332,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .cast(
+                        Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .record(["data": .record(["name": .string])]),
                                 optional: false
@@ -1472,9 +1363,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .cast(
+                        Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .named("Person"),
                                 optional: false
@@ -1490,7 +1379,7 @@ struct InferenceTests {
         let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
-        let read = image.entry.block?.body.first { statement in statement.id == "read" }
+        let read = image.entry.block?.body.first { statement in statement.name == "read" }
 
         guard case let .cast(_, type, _)? = read?.expression else {
             Issue.record("the cast did not survive the link")
@@ -1515,17 +1404,13 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "read",
-                            expression: .cast(
+                        Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
                                 as: .record(["whatever": .string]),
                                 optional: false
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("read"), .key("whatever")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("read"), .key("whatever")])
                         )
                     ]
                 )
@@ -1550,9 +1435,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("task"), .key("done")])
+                        Statement(binding: .constant("said"), expression: .reference([.key("task"), .key("done")])
                         )
                     ]
                 )
@@ -1576,9 +1459,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .reference([.key("task"), .key("done", optional: true)])
+                        Statement(binding: .constant("said"), expression: .reference([.key("task"), .key("done", optional: true)])
                         )
                     ]
                 )
@@ -1609,24 +1490,16 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.string("seed"))
+                        Statement(binding: .variable("held"), expression: .literal(.string("seed"))
                         ),
-                        Statement(
-                            id: "spin",
-                            expression: .loop(
+                        Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.key("ready")]),
                                 body: Block(body: [
                                     Statement(
                                         expression: .conditional(
                                             .reference([.key("ready")]),
                                             then: [
-                                                Statement(
-                                                    id: "held",
-                                                    binding: .assignment,
-                                                    expression: .literal(.null)
+                                                Statement(binding: .assignment([.key("held")]), expression: .literal(.null)
                                                 ),
                                                 Statement(
                                                     expression: .leave(
@@ -1641,9 +1514,7 @@ struct InferenceTests {
                                 round: "spin"
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("held")])
                                     ]))
                         )
@@ -1656,7 +1527,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -1678,21 +1549,13 @@ struct InferenceTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.null)
+                        Statement(binding: .variable("held"), expression: .literal(.null)
                         ),
-                        Statement(
-                            id: "made",
-                            expression: .record([
+                        Statement(binding: .constant("made"), expression: .record([
                                 "a": .block(
                                     Block(
                                         body: [
-                                            Statement(
-                                                id: "held",
-                                                binding: .assignment,
-                                                expression: .literal(.int(1))
+                                            Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1))
                                             )
                                         ],
                                         result: .literal(.int(0))
@@ -1701,9 +1564,7 @@ struct InferenceTests {
                                 "b": .reference([.key("held")])
                             ])
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("made"), .key("b")])
                                     ]))
                         )
@@ -1716,7 +1577,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -1736,30 +1597,20 @@ struct InferenceTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.string("seed"))
+                        Statement(binding: .variable("held"), expression: .literal(.string("seed"))
                         ),
                         Statement(
                             expression: .attempt(
                                 Block(body: [
-                                    Statement(
-                                        id: "held",
-                                        binding: .assignment,
-                                        expression: .literal(.null)
+                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null)
                                     ),
-                                    Statement(
-                                        id: "risky",
-                                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                    Statement(binding: .constant("risky"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                                     "word": .literal(.string("x"))
                                                 ]))
                                     )
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(
-                                        id: "saidInside",
-                                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                    Statement(binding: .constant("saidInside"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                                     "word": .reference([.key("held")])
                                                 ]))
                                     )
@@ -1776,7 +1627,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -1804,26 +1655,16 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.string("seed"))
+                        Statement(binding: .variable("held"), expression: .literal(.string("seed"))
                         ),
-                        Statement(
-                            id: "spin",
-                            expression: .loop(
+                        Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.key("ready")]),
                                 body: Block(body: [
-                                    Statement(
-                                        id: "said",
-                                        expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                                    Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                                     "word": .reference([.key("held")])
                                                 ]))
                                     ),
-                                    Statement(
-                                        id: "held",
-                                        binding: .assignment,
-                                        expression: .literal(.null)
+                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null)
                                     )
                                 ]),
                                 round: "spin"
@@ -1838,7 +1679,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -1858,8 +1699,8 @@ struct InferenceTests {
         // still plain and link a lie.
         let names = ["a", "b", "c", "d", "e", "f"]
         let chain: [Statement] = zip(names, names.dropFirst()).map { name, next in
-            Statement(id: name, binding: .assignment, expression: .reference([.key(next)]))
-        } + [Statement(id: "f", binding: .assignment, expression: .literal(.null))]
+            Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
+        } + [Statement(binding: .assignment([.key("f")]), expression: .literal(.null))]
 
         let sut = try Module(
             procedures: [
@@ -1870,19 +1711,15 @@ struct InferenceTests {
                         ]
                     ),
                     body: names.map { name in
-                        Statement(id: name, binding: .variable, expression: .literal(.string("s")))
+                        Statement(binding: .variable(name), expression: .literal(.string("s")))
                     } + [
-                        Statement(
-                            id: "spin",
-                            expression: .loop(
+                        Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.key("ready")]),
                                 body: Block(body: chain),
                                 round: "spin"
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("a")])
                                     ]))
                         )
@@ -1895,7 +1732,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -1918,17 +1755,12 @@ struct InferenceTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.string("seed"))
+                        Statement(binding: .variable("held"), expression: .literal(.string("seed"))
                         ),
                         Statement(
                             expression: .attempt(
                                 Block(body: [
-                                    Statement(
-                                        id: "risky",
-                                        expression: .dispatch(
+                                    Statement(binding: .constant("risky"), expression: .dispatch(
                                             Dispatch(
                                                 receiver: .literal(.string("hey")),
                                                 selector: "wants",
@@ -1941,18 +1773,13 @@ struct InferenceTests {
                                     )
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(
-                                        id: "held",
-                                        binding: .assignment,
-                                        expression: .literal(.null)
+                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null)
                                     )
                                 ], result: .literal(.string("rescued"))),
                                 failure: "why"
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("held")])
                                     ]))
                         )
@@ -1967,7 +1794,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -1990,33 +1817,22 @@ struct InferenceTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "held",
-                            binding: .variable,
-                            expression: .literal(.null)
+                        Statement(binding: .variable("held"), expression: .literal(.null)
                         ),
                         Statement(
                             expression: .attempt(
                                 Block(body: [
-                                    Statement(
-                                        id: "held",
-                                        binding: .assignment,
-                                        expression: .literal(.string("text"))
+                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text"))
                                     )
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(
-                                        id: "held",
-                                        binding: .assignment,
-                                        expression: .literal(.int(1))
+                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1))
                                     )
                                 ], result: .literal(.string("rescued"))),
                                 failure: "why"
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("held")])
                                     ]))
                         )
@@ -2029,7 +1845,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(id: "done", expression: .literal(.string("ok")))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
                     ]
                 )
             ]
@@ -2053,27 +1869,19 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "many",
-                            binding: .variable,
-                            expression: .literal(.null)
+                        Statement(binding: .variable("many"), expression: .literal(.null)
                         ),
                         Statement(
                             expression: .conditional(
                                 .reference([.key("ready")]),
                                 then: [
-                                    Statement(
-                                        id: "many",
-                                        binding: .assignment,
-                                        expression: .literal(.int(1))
+                                    Statement(binding: .assignment([.key("many")]), expression: .literal(.int(1))
                                     )
                                 ],
                                 else: [Statement(expression: refusing(literal("no")))]
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("many")])
                                     ]))
                         )
@@ -2086,9 +1894,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -2108,17 +1914,13 @@ struct InferenceTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .attempt(
+                        Statement(binding: .constant("many"), expression: .attempt(
                                 Block(body: [], result: refusing(literal("no"))),
                                 rescue: Block(body: [], result: .literal(.string("fallback"))),
                                 failure: "why"
                             )
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("many")])
                                     ]))
                         )
@@ -2131,9 +1933,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )
@@ -2158,21 +1958,15 @@ struct InferenceTests {
                         returns: .never
                     ),
                     body: [
-                        Statement(
-                            id: "no",
-                            expression: refusing(literal("no"))
+                        Statement(binding: .constant("no"), expression: refusing(literal("no"))
                         )
                     ]
                 ),
                 "entry": Procedure(
                     body: [
-                        Statement(
-                            id: "many",
-                            expression: .dispatch(Dispatch(selector: "gives_up"))
+                        Statement(binding: .constant("many"), expression: .dispatch(Dispatch(selector: "gives_up"))
                         ),
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
                                         "word": .reference([.key("many")])
                                     ]))
                         )
@@ -2185,9 +1979,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.string("ok"))
+                        Statement(binding: .constant("done"), expression: .literal(.string("ok"))
                         )
                     ]
                 )

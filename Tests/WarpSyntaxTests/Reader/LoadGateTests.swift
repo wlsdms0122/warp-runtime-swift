@@ -180,7 +180,7 @@ struct LoadGateTests {
 
         // Then
         #expect(statements.count == 1)
-        #expect(statements[0].id == "greet")
+        #expect(statements[0].binding == .constant("greet"))
         #expect(statements[0].expression.constantValue == .string("hello there"))
     }
 

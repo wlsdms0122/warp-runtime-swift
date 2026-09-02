@@ -30,8 +30,8 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(id: "first", expression: .literal(.int(1))),
-                        Statement(id: "second", expression: .literal(.int(2)))
+                        Statement(binding: .constant("first"), expression: .literal(.int(1))),
+                        Statement(binding: .constant("second"), expression: .literal(.int(2)))
                     ],
                     result: reference("second")
                 )
@@ -60,12 +60,10 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "outer",
-                            expression: .block(
+                        Statement(binding: .constant("outer"), expression: .block(
                                 Block(
                                     body: [
-                                        Statement(id: "inner", expression: .literal(.int(7)))
+                                        Statement(binding: .constant("inner"), expression: .literal(.int(7)))
                                     ],
                                     result: reference("inner")
                                 )
@@ -95,14 +93,10 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "walk",
-                            expression: .iteration(
+                        Statement(binding: .constant("walk"), expression: .iteration(
                                 over: .literal(.array([.int(1), .int(2)])),
                                 body: [
-                                    Statement(
-                                        id: "step",
-                                        expression: reference("each", "item")
+                                    Statement(binding: .constant("step"), expression: reference("each", "item")
                                     )
                                 ],
                                 element: "each"
@@ -131,9 +125,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "both",
-                            expression: .dispatch(
+                        Statement(binding: .constant("both"), expression: .dispatch(
                                 Dispatch(
                                     receiver: .literal(.array([.int(1), .int(2)])),
                                     selector: "std.concurrent.map",
@@ -144,9 +136,7 @@ struct ObservationTests {
                                                     parameters: ["item": Parameter(type: .any)]
                                                 ),
                                                 body: [
-                                                    Statement(
-                                                        id: "step",
-                                                        expression: reference("item")
+                                                    Statement(binding: .constant("step"), expression: reference("item")
                                                     )
                                                 ],
                                                 result: reference("step")
@@ -179,15 +169,13 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "said",
-                            expression: .dispatch(Dispatch(selector: "helper"))
+                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "helper"))
                         )
                     ]
                 ),
                 "helper": Procedure(
                     body: [
-                        Statement(id: "inner", expression: .literal(.int(7)))
+                        Statement(binding: .constant("inner"), expression: .literal(.int(7)))
                     ],
                     result: reference("inner")
                 )
@@ -253,9 +241,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "doomed",
-                            expression: .dispatch(Dispatch(selector: "app.fail"))
+                        Statement(binding: .constant("doomed"), expression: .dispatch(Dispatch(selector: "app.fail"))
                         )
                     ]
                 )
@@ -286,14 +272,10 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(
-                            id: "fragile",
-                            expression: .attempt(
+                        Statement(binding: .constant("fragile"), expression: .attempt(
                                 Block(
                                     body: [
-                                        Statement(
-                                            id: "doomed",
-                                            expression: .dispatch(
+                                        Statement(binding: .constant("doomed"), expression: .dispatch(
                                                 Dispatch(
                                                     selector: "app.fail",
                                                     arguments: [
@@ -329,7 +311,7 @@ struct ObservationTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
-                    body: [Statement(id: "only", expression: .literal(.int(1)))],
+                    body: [Statement(binding: .constant("only"), expression: .literal(.int(1)))],
                     result: reference("only")
                 )
             ]

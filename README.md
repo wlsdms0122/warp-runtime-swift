@@ -37,8 +37,8 @@ let greet = Procedure(
 )
 
 let image = try Linker().link(
-    [try Module(namespace: "hello", procedures: ["greet": greet])] + Module.standard,
-    entry: "greet"
+    [try Module(procedures: ["hello.greet": greet])] + Module.standard,
+    entry: "hello.greet"
 )
 
 let value = try await Executor().run(
@@ -110,18 +110,17 @@ this implementation's for a shape, since `{ call: … }` and `{ value: { call:
 … } }` arrive here as one. A refusal from a run carries a `Trace` instead —
 where the run had been, which is the other question.
 
-A module's name is never a step. A link calls a declaration `wallet.entry`, and
-no document writes that: `name` sits beside `procedures`, and what `procedures`
-holds is the declared key alone. So a place reads
-`wallet/procedures.entry.body.sent[0].call`, and the part before the slash is
-the only part that is not a key.
+A declaration's name is its key. A link calls a declaration `wallet.entry`
+because `wallet.entry` is the key the document wrote under `procedures`, dot
+and all. So a place reads `0da2e372bba7/procedures.wallet.entry.body.sent[0].call`,
+and the part before the slash is the only part that is not a key.
 
 **Which document a place is in is an `Identity`, and never a name.** A link
 holds several documents and the steps alone do not say which —
-`std.collection` and `std.concurrent` both declare `first`. A name cannot
-settle it either: `name` is the namespace a module declares into, two documents
-may write `name: wallet` between them (splitting a module across files is
-allowed), and a document may write no name at all. So identity is derived from
+`std.collection.first` and `wallet.first` are two declarations that may sit in
+two documents or in one. Nothing a document says about itself can settle it:
+what a document writes is declarations, and a program split across files
+declares spellings under one prefix from several documents. So identity is derived from
 the document itself — the digest of its canonical bytes, worked out by
 `WarpSyntax` and never written down by anybody. Nothing to declare means
 nothing to declare wrongly, and two callers holding one document arrive at one
@@ -139,14 +138,11 @@ Going in rather than on the way out, because a refusal is exactly the moment
 somebody wants the file it came from — a module stamped afterwards would be
 stamped only when nothing was wrong with it.
 
-The name still rides beside the steps, because a person reading a refusal wants
-the word they typed — it takes no part in saying which document this is, and a
-module a caller built still says which namespace it declares into even though
-there is no text under it. Where there is both, a place reads
-`wallet@0da2e372bba7/procedures.charge…`: the name alone does not tell two
-halves of a split module apart, and the person holding only the line is the one
-reader who cannot check. What follows the `@` is `identity.short`, the first
-twelve hex digits of the identity.
+A place reads `0da2e372bba7/procedures.wallet.charge…`: the part before the
+slash is `identity.short`, the first twelve hex digits of the identity, and
+the steps after it are the document's own keys, the declared spelling among
+them. The side that handed the bytes in is the one that knows which file an
+identity came from, and it is the side that says so to a person.
 
 Whether a place has a text under it at all is `document.identity != nil`, and
 nothing to do with the name. A
@@ -178,9 +174,8 @@ struct ShoutQuery: Query {
 }
 
 let vocabulary = Module(
-    name: "app",
     procedures: [
-        "shout": Procedure(
+        "app.shout": Procedure(
             signature: Signature(
                 receiver: "of",
                 parameters: ["of": Parameter(type: .string)],
@@ -192,10 +187,10 @@ let vocabulary = Module(
 )
 ```
 
-Link it beside `Module.standard` and a document may write `name.shout` — and a
+Link it beside `Module.standard` and a document may send `app.shout`, and a
 document that sends a word nobody linked is refused by name before anything
 runs. The standard vocabulary ships the same way: bundles a caller takes what
-it wants from, no second namespace and no second lookup order.
+it wants from, no second name table and no second lookup order.
 
 ## Stopping and watching
 

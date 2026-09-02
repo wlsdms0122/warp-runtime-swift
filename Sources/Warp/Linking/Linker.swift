@@ -60,7 +60,7 @@ public struct Linker: Sendable {
         // their uniqueness, so it hands over the tables that fact was proved on.
         try once(modules)
 
-        let (declaredTypes, declaredConstraints) = try qualified(modules)
+        let (declaredTypes, declaredConstraints) = try declared(in: modules)
 
         let types = try types(
             of: modules,
@@ -69,21 +69,20 @@ public struct Linker: Sendable {
         )
         let symbols = try symbols(of: modules)
 
-        // Every declaration under its qualified spelling. The spellings are
+        // Every declaration under its declared spelling. The spellings are
         // unique, since the symbol gathering refused a double, and every send
         // in every body asks this table.
         let space = symbols.reduce(into: [String: Symbol]()) { table, symbol in
-            table[symbol.qualified] = symbol
+            table[symbol.declared] = symbol
         }
 
         // A name is its declared spelling and nothing else, so the entry is
-        // looked up as the caller wrote it, the module's name in front where
-        // the module has one.
+        // looked up as the caller wrote it.
         guard let start = space[entry] else {
             throw LinkError(
                 "entry '\(entry)' is not declared by any module in this link."
-                    + " A name is its declared spelling, the module's name in front where"
-                    + " it has one — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                    + " A name is its declared spelling. Declared:"
+                    + " \(symbols.map(\.declared).sorted().joined(separator: ", "))",
                 at: nil
             )
         }
@@ -92,7 +91,7 @@ public struct Linker: Sendable {
         // uses. Built before the walk so a call can be judged against a callee
         // the walk has not reached yet.
         let signatures = symbols.reduce(into: [String: Signature]()) { table, symbol in
-            table[symbol.qualified] = symbol.procedure.signature
+            table[symbol.declared] = symbol.procedure.signature
         }
 
         // Purity is worked out over every declaration rather than the reached
@@ -126,8 +125,10 @@ public struct Linker: Sendable {
         // reachable under more than one, and an answer worked out for it is
         // that declaration's however a walk spelled it.
         let wordSpellings = wordSymbols.reduce(into: [String: [String]]()) { spellings, entry in
-            spellings[entry.value.qualified, default: []].append(entry.key)
+            spellings[entry.value.declared, default: []].append(entry.key)
         }
+
+        let isolatedDeclarations = isolated(among: symbols, pure: settled, signatures: signatures)
 
         func frame() -> TypeFrame {
             TypeFrame(
@@ -135,7 +136,11 @@ public struct Linker: Sendable {
                 signatures: answeringSignatures,
                 types: types,
                 words: answeringWords,
-                pure: settled
+                pure: settled,
+                isolated: isolatedDeclarations,
+                moduleVariables: modules.enumerated().reduce(into: [:]) { table, entry in
+                    table[entry.offset] = Set(entry.element.variables.keys)
+                }
             )
         }
 
@@ -152,12 +157,28 @@ public struct Linker: Sendable {
             with: declaredFrame
         )
 
+        let variables = try variables(
+            of: modules,
+            beside: constants,
+            reaching: settling,
+            words: settlingWords,
+            in: types,
+            with: declaredFrame
+        )
+
         // The names in scope before a body's first statement: its parameters,
-        // and the constants its module declared beside them.
+        // the constants its module declared beside them, and the variables. A
+        // variable stands in the environment as a box whose type is fixed:
+        // what a write puts in it has to fit what it started as, because every
+        // body of the document reads it as that.
         func opening(_ symbol: Symbol, of signature: Signature) -> [String: TypeExpression] {
-            environment(of: signature).merging(
-                (constants[symbol.origin] ?? [:]).mapValues { value in type(of: value) }
-            ) { _, constant in constant }
+            environment(of: signature)
+                .merging(
+                    (constants[symbol.origin] ?? [:]).mapValues { value in type(of: value) }
+                ) { _, constant in constant }
+                .merging(
+                    (variables[symbol.origin] ?? [:]).mapValues { value in .inout(type(of: value)) }
+                ) { _, variable in variable }
         }
 
         // What every declaration whose `returns` nobody wrote answers, read
@@ -201,7 +222,7 @@ public struct Linker: Sendable {
         var foldingSelectors = settling
         var foldingWords = settlingWords
 
-        // A declaration, bound and dot-judged: selectors resolve to qualified
+        // A declaration, bound and dot-judged: selectors resolve to declared
         // spellings, every dot in the body is spelled as what the types say
         // it means, and a constant-headed path — judged first, like any path
         // — folds to the value it is. The image holds only this form, so a
@@ -212,7 +233,7 @@ public struct Linker: Sendable {
         // callee declared, arguments taken — is kept per body rather than per
         // reachability.
         func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite]) {
-            if let done = resolvedBodies[symbol.qualified] { return done }
+            if let done = resolvedBodies[symbol.declared] { return done }
 
             let declared = symbol.procedure
 
@@ -236,7 +257,8 @@ public struct Linker: Sendable {
                     at: symbol.place,
                     in: environment,
                     with: frame,
-                    folding: folding
+                    folding: folding,
+                    origin: symbol.origin
                 )
 
                 answer = (
@@ -249,7 +271,7 @@ public struct Linker: Sendable {
                 )
             }
 
-            resolvedBodies[symbol.qualified] = answer
+            resolvedBodies[symbol.declared] = answer
 
             try checked(answer.calls, in: frame)
 
@@ -287,19 +309,19 @@ public struct Linker: Sendable {
         var linked: Procedure?
 
         // Breadth over the frontier, so the first refusal an author sees is the
-        // first mistake they wrote. Memoising by qualified name is what makes a
+        // first mistake they wrote. Memoising by declared spelling is what makes a
         // recursive procedure link once instead of forever.
         while index < frontier.count {
             let symbol = frontier[index]
             index += 1
 
-            if procedures[symbol.qualified] != nil { continue }
+            if procedures[symbol.declared] != nil { continue }
 
             let (resolved, calls) = try resolved(symbol)
 
-            procedures[symbol.qualified] = resolved
+            procedures[symbol.declared] = resolved
 
-            if symbol.qualified == start.qualified { linked = resolved }
+            if symbol.declared == start.declared { linked = resolved }
 
             // A constant answer is knowable from the text, so it is held to the
             // declaration here, the way a constant argument is. An answer only
@@ -340,7 +362,10 @@ public struct Linker: Sendable {
             types: types,
             pure: settled,
             selectors: selectors,
-            words: pathWords
+            words: pathWords,
+            variables: variables,
+            origins: symbols.reduce(into: [:]) { table, symbol in table[symbol.declared] = symbol.origin },
+            entryOrigin: start.origin
         )
     }
 
@@ -401,13 +426,13 @@ public struct Linker: Sendable {
     // impure, which is a fact about the algorithm rather than about the code.
     private func pure(among symbols: [Symbol]) -> Set<String> {
         let bodies = symbols.reduce(into: [String: Block?]()) { table, symbol in
-            table[symbol.qualified] = symbol.procedure.block
+            table[symbol.declared] = symbol.procedure.block
         }
 
         var pure = Set(
             symbols
                 .filter { symbol in symbol.procedure.implementation.isNativelyPure != false }
-                .map(\.qualified)
+                .map(\.declared)
         )
 
         while true {
@@ -431,7 +456,7 @@ public struct Linker: Sendable {
     // selector as written.
     func isPure(_ block: Block, given pure: Set<String>) -> Bool {
         block.body.allSatisfy { statement in
-            statement.binding == .constant && isPure(statement.expression, given: pure)
+            statement.binding?.isConstant != false && isPure(statement.expression, given: pure)
         }
             && (block.result.map { result in isPure(result, given: pure) } ?? true)
     }
@@ -507,20 +532,20 @@ public struct Linker: Sendable {
 
         // Two tables, because a name answers two different questions — what a
         // selector reaches, and what a bare spelling a path writes may send.
-        // One table held both and let a declaration whose qualified name
-        // matched another's bare spelling quietly answer the wrong question.
+        // One table held both and let a declaration whose declared spelling
+        // matched another's bare last segment quietly answer the wrong question.
         // Symbols rather than procedures, because the bodies are still to be
         // read: the caller reads them through the same judgment every reached
         // body takes.
-        for symbol in symbols.sorted(by: { $0.qualified < $1.qualified }) {
-            guard pure.contains(symbol.qualified) else { continue }
+        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
+            guard pure.contains(symbol.declared) else { continue }
 
-            selectors[symbol.qualified] = symbol
+            selectors[symbol.declared] = symbol
 
             guard symbol.procedure.signature.isDerivable(in: types) else { continue }
 
-            let bare = symbol.qualified.split(separator: ".").last.map(String.init)
-                ?? symbol.qualified
+            let bare = symbol.declared.split(separator: ".").last.map(String.init)
+                ?? symbol.declared
 
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
@@ -549,7 +574,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "\(contested.keys.sorted().joined(separator: ", ")) is declared by more"
                     + " than one module as something a path may reach — '\(word)' by"
-                    + " \(ranked.map(\.qualified).joined(separator: ", "))"
+                    + " \(ranked.map(\.declared).joined(separator: ", "))"
                     + " — a path segment names no module, so there is no spelling that"
                     + " would tell them apart",
                 at: ranked[1].place
@@ -559,9 +584,8 @@ public struct Linker: Sendable {
         return (selectors, words)
     }
 
-    // Every declaration, qualified. A module with a name declares into that
-    // name; a module without one declares into the shared space, and two of
-    // those cannot both declare a name for the same reason two `.c` files
+    // Every declaration under the spelling it was declared by. Two modules
+    // cannot both declare one spelling, for the same reason two `.c` files
     // cannot both define a symbol.
     private func symbols(of modules: [Module]) throws -> [Symbol] {
         var symbols: [Symbol] = []
@@ -577,7 +601,6 @@ public struct Linker: Sendable {
             for name in module.procedures.keys.sorted() {
                 guard let procedure = module.procedures[name] else { continue }
 
-                let qualified = module.qualified(name)
 
                 let symbol = Symbol(
                     declared: name,
@@ -586,16 +609,16 @@ public struct Linker: Sendable {
                     procedure: procedure
                 )
 
-                if let first = claimed[qualified] {
+                if let first = claimed[name] {
                     throw LinkError(
-                        "'\(qualified)' is declared more than once in this link — by"
+                        "'\(name)' is declared more than once in this link — by"
                             + " \(first.spelled) and \(symbol.spelled) — two declarations"
                             + " of a name have no way to be told apart",
                         at: symbol.place
                     )
                 }
 
-                claimed[qualified] = symbol
+                claimed[name] = symbol
 
                 symbols.append(symbol)
             }
@@ -668,7 +691,7 @@ public struct Linker: Sendable {
                 }
 
                 switch resolved {
-                case .variable, .any, .never:
+                case .parameter, .any, .never:
                     throw LinkError(
                         "a member is a concrete shape"
                             + " — `\(member.rendered)` says nothing a"
@@ -766,7 +789,7 @@ public struct Linker: Sendable {
     ) throws {
         for (input, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
             try mentioned(
-                in: parameter.declared,
+                in: parameter.declared.inoutUnwrapped,
                 at: place.slot(.parameters).key(input),
                 parameterized: true,
                 resolve: table
@@ -928,7 +951,7 @@ public struct Linker: Sendable {
 
             return
 
-        case .variable:
+        case .parameter:
             guard parameterized else {
                 throw LinkError(
                     "writes `\(type.rendered)`, and nothing here is"
@@ -942,12 +965,12 @@ public struct Linker: Sendable {
         // type is not a filling site — a parameter written there is never
         // bound at any call, so the bound it claims would be a claim nothing
         // judges.
-        case let .procedure(signature, _):
+        case let .procedure(signature, _, _):
             guard let signature else { return }
 
             for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
                 try mentioned(
-                    in: parameter.declared,
+                    in: parameter.declared.inoutUnwrapped,
                     at: place.key(name),
                     parameterized: parameterized,
                     resolve: table
@@ -989,7 +1012,7 @@ public struct Linker: Sendable {
             }
 
             switch resolved {
-            case .any, .null, .never, .variable, .nullable:
+            case .any, .null, .never, .parameter, .nullable:
                 throw LinkError(
                     "writes `?` on \(inner.rendered), which"
                         + " stands for `\(resolved.rendered)` — a `?` says"
@@ -1004,15 +1027,38 @@ public struct Linker: Sendable {
 
             try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
 
+        // A field written `var` is a fact about a declared type: a path may
+        // write through it. A record written inline in a signature declares no
+        // type, so it has no field to make writable.
         case let .record(fields):
             for (name, field) in fields.sorted(by: { $0.key < $1.key }) {
+                var held = field
+
+                if case let .variable(inner) = field, !parameterized {
+                    held = inner
+                }
+
                 try mentioned(
-                    in: field,
+                    in: held,
                     at: place.key(name),
                     parameterized: parameterized,
                     resolve: table
                 )
             }
+
+        case .inout:
+            throw LinkError(
+                "writes `\(type.rendered)`, and only a parameter is handed a"
+                    + " variable in place — `inout` is written on a parameter's type",
+                at: place
+            )
+
+        case .variable:
+            throw LinkError(
+                "writes `\(type.rendered)`, and only a field of a declared type"
+                    + " is written through — `var` is written on a field in `types`",
+                at: place
+            )
         }
     }
 
@@ -1132,7 +1178,7 @@ public struct Linker: Sendable {
         // member of its constraint could spell — a `oneOf` of words on a
         // Numeric slot fits no call, and that is knowable where the parameter
         // is declared.
-        case let .variable(_, constraint):
+        case let .parameter(_, constraint):
             guard let constraint, let members = table.constraint(constraint) else {
                 return true
             }
@@ -1148,7 +1194,7 @@ public struct Linker: Sendable {
 
         // A candidate spells a value, and null is not one a `oneOf` lists — so
         // a nullable slot's candidates are the declared half's.
-        case let .nullable(inner):
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
             return spellable(candidate, as: inner, resolve: table)
 
         case .null, .never, .bytes, .array, .object, .record, .procedure:
@@ -1198,7 +1244,7 @@ public struct Linker: Sendable {
             // back up in the table the order was read from — everything this
             // one needs comes before it, and asking again is a second chance
             // to ask a different table.
-            for (name, expression) in try order(of: module) {
+            for (name, expression) in try order(module.constants, in: module) {
                 let resolver = Resolver(
                     scope: Scope(bindings: known),
                     selectors: selectors,
@@ -1236,11 +1282,62 @@ public struct Linker: Sendable {
         return settled
     }
 
+    // What each document's variables start a run holding. Settled the way a
+    // constant is, from native words alone, reading the constants beside it
+    // and no variable; the starting value is a fact the link reads, and a
+    // variable's type is the type of that value.
+    private func variables(
+        of modules: [Module],
+        beside constants: [Int: [String: Value]],
+        reaching selectors: [String: Procedure],
+        words: [String: Procedure],
+        in types: TypeTable,
+        with frame: TypeFrame
+    ) throws -> [Int: [String: Value]] {
+        var settled: [Int: [String: Value]] = [:]
+
+        for (origin, module) in modules.enumerated() where !module.variables.isEmpty {
+            let known = constants[origin] ?? [:]
+            var started: [String: Value] = [:]
+
+            for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
+                let resolver = Resolver(
+                    scope: Scope(bindings: known),
+                    selectors: selectors,
+                    words: words,
+                    types: types
+                )
+
+                let (judged, calls) = try resolvedSites(
+                    in: expression,
+                    at: .variable(name, in: .of(module)),
+                    in: known.mapValues { value in type(of: value) },
+                    with: frame,
+                    folding: nil
+                )
+
+                try checked(calls, in: frame)
+
+                do {
+                    started[name] = try resolver.resolve(judged)
+                } catch {
+                    throw LinkError("\(error)", at: .variable(name, in: .of(module)))
+                }
+            }
+
+            settled[origin] = started
+        }
+
+        return settled
+    }
+
     // The order a module's constants settle in: what a constant reads comes
     // before it. Constants that wait on each other have no such order, and that
     // is refused here, standing on one of them.
-    private func order(of module: Module) throws -> [(name: String, expression: Expression)] {
-        let constants = module.constants
+    private func order(
+        _ constants: [String: Expression],
+        in module: Module
+    ) throws -> [(name: String, expression: Expression)] {
 
         var ordered: [(name: String, expression: Expression)] = []
         var settled: Set<String> = []

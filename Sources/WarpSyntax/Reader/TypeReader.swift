@@ -53,11 +53,11 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            let purity = Self.purities[key.stringValue]
+            let (wrap, purity, isolation) = Self.procedureWords(of: key.stringValue)
         {
             let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
 
-            self.type = .procedure(signature.signature, purity)
+            self.type = wrap(.procedure(signature.signature, purity, isolation))
 
             return
         }
@@ -89,6 +89,36 @@ public struct TypeReader: Decodable {
         // `array<int>?` is a nullable array, and what may be inside the
         // brackets never carries one — `?` speaks about a slot, and only the
         // whole spelling is one.
+        // `inout` and `var` stand in front of the whole type, including a
+        // trailing `?`, so they are read before anything else is.
+        for (word, wrap) in Self.slotWords {
+            guard let bare = text.dropPrefixed("\(word) ") else { continue }
+
+            let inner = try parse(String(bare))
+
+            if inner.isInout {
+                throw TypeFormError("type '\(text)' writes `inout` twice — once says it")
+            }
+
+            if case .variable = inner {
+                throw TypeFormError("type '\(text)' writes `var` twice — once says it")
+            }
+
+            return wrap(inner)
+        }
+
+        guard let (purity, isolation, rest) = Self.modifiers(of: text) else {
+            throw TypeFormError("type '\(text)' writes a word twice — once says it")
+        }
+
+        if purity == .pure || isolation == .isolated {
+            guard case let .procedure(signature, _, _) = try parse(rest) else {
+                throw TypeFormError("only a procedure is written pure or isolated")
+            }
+
+            return .procedure(signature, purity, isolation)
+        }
+
         if text.hasSuffix("?") {
             let inner = try parse(String(text.dropLast()))
 
@@ -111,7 +141,7 @@ public struct TypeReader: Decodable {
             // A type parameter stands for what the call puts there, and what
             // the call puts there is a type of its own — nullability rides on
             // the filling, not on the mention.
-            case .variable:
+            case .parameter:
                 throw TypeFormError(
                     "type '\(text)' writes `?` on a type parameter — a"
                         + " parameter stands for the whole type the call fills in"
@@ -146,16 +176,9 @@ public struct TypeReader: Decodable {
                 )
             }
 
-            return .variable(name: bare)
+            return .parameter(name: bare)
         }
 
-        if let bare = text.dropPrefixed("pure ") {
-            guard case let .procedure(signature, _) = try parse(String(bare)) else {
-                throw TypeFormError("only a procedure is written pure")
-            }
-
-            return .procedure(signature, .pure)
-        }
 
         // A range is spelled into the name: `int(0...255)`, `double(0.0..<1.0)`
         // — either bound optional but not both, and `..<` leaving the far
@@ -241,7 +264,72 @@ public struct TypeReader: Decodable {
     // make a mapping a procedure rather than a record. Both are read here and
     // both decide what a document *cannot* say, so writing one asks for them.
     public static var builtinNames: Set<String> { Set(builtins.keys) }
-    public static var procedureKeys: Set<String> { Set(purities.keys) }
+    // The keys a procedure form may sit under, in the writer's spelling: a
+    // slot word or none, then the modifiers, then `procedure`.
+    public static var procedureKeys: Set<String> {
+        let words = [(Purity.unstated, Isolation.unstated), (.pure, .unstated), (.unstated, .isolated), (.pure, .isolated)]
+            .map { purity, isolation in procedureWord(purity, isolation) }
+
+        return Set(words + slotWords.flatMap { slot, _ in words.map { word in "\(slot) \(word)" } })
+    }
+
+    // What a procedure form's key says, read front to back: a slot word if
+    // one is written, the modifiers in either order, and `procedure`. Nil
+    // where the key is not a procedure form's.
+    static func procedureWords(
+        of key: String
+    ) -> (wrap: (TypeExpression) -> TypeExpression, purity: Purity, isolation: Isolation)? {
+        var rest = key
+        var wrap: (TypeExpression) -> TypeExpression = { inner in inner }
+
+        for (word, wrapping) in slotWords {
+            guard let bare = rest.dropPrefixed("\(word) ") else { continue }
+
+            rest = String(bare)
+            wrap = wrapping
+            break
+        }
+
+        guard let (purity, isolation, word) = modifiers(of: rest), word == "procedure" else { return nil }
+
+        return (wrap, purity, isolation)
+    }
+
+    // The one spelling of a procedure type's word: `pure` before `isolated`,
+    // both before `procedure`.
+    public static func procedureWord(_ purity: Purity, _ isolation: Isolation) -> String {
+        [purity == .pure ? "pure" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
+            .compactMap { part in part }
+            .joined(separator: " ")
+    }
+
+    // The modifiers at the front of a type's text, in either order, and the
+    // text left after them. Nil where a word is written twice.
+    static func modifiers(of text: String) -> (Purity, Isolation, String)? {
+        var rest = text
+        var purity = Purity.unstated
+        var isolation = Isolation.unstated
+
+        while true {
+            if let bare = rest.dropPrefixed("pure ") {
+                guard purity == .unstated else { return nil }
+                purity = .pure
+                rest = String(bare)
+            } else if let bare = rest.dropPrefixed("isolated ") {
+                guard isolation == .unstated else { return nil }
+                isolation = .isolated
+                rest = String(bare)
+            } else {
+                return (purity, isolation, rest)
+            }
+        }
+    }
+
+    // The words a slot writes about itself, and what each wraps.
+    static let slotWords: [(String, @Sendable (TypeExpression) -> TypeExpression)] = [
+        ("inout", { inner in .inout(inner) }),
+        ("var", { inner in .variable(inner) })
+    ]
 
     // One word with nothing structural in it — what a type parameter's
     // spelling has to be, and what a `bounds` value has to be: the two halves
@@ -323,11 +411,6 @@ public struct TypeReader: Decodable {
         "procedure": .procedure(nil)
     ]
 
-    // The two spellings of the procedure form, and what each asks for.
-    private static let purities: [String: Purity] = [
-        "procedure": .unstated,
-        "pure procedure": .pure
-    ]
 }
 
 private extension String {
@@ -343,7 +426,7 @@ private extension String {
 private struct SignatureFormReader: Decodable {
     // No `bounds` here on purpose: a nested signature's parameters are the
     // declaring procedure's own slots, so the declaring signature owns every
-    // bound — two `bounds` records binding one namespace would be two claims
+    // bound — two `bounds` records binding one name would be two claims
     // about one thing, written a document apart.
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters

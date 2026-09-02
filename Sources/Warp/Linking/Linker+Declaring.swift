@@ -1,5 +1,5 @@
 //
-//  Linker+Qualifying.swift
+//  Linker+Declaring.swift
 //  Warp
 //
 //  Created by JSilver on 8/23/26.
@@ -7,16 +7,13 @@
 
 import Foundation
 
-// Type and constraint names carry their module the way procedure names do: a
-// module named `m` declaring `T` declares `m.T`, and a mention is that
-// spelling, written out. The standard bundles write their shared vocabulary
-// so (`std.Numeric`), and a document declaring a bare `Numeric` of its own
-// declares a different name.
+// Type and constraint names are their declared spelling, the way procedure
+// names are: the standard bundles declare `std.Numeric` under that key, and a
+// document declaring a bare `Numeric` of its own declares a different name.
 extension Linker {
     // A declaration's place together with where the caller put the module that
     // wrote it. The position is what tells two documents apart when neither was
-    // read from anything, since a module a caller built has no identity and two
-    // of them may declare into one namespace or into none.
+    // read from anything, since a module a caller built has no identity.
     struct Declaration {
         let place: Place
         let origin: Int
@@ -29,7 +26,7 @@ extension Linker {
     // table is filled as its space is walked. A mention nothing declares is
     // refused by the judgment that owns undeclared names, which says where the
     // mention lives.
-    func qualified(_ modules: [Module]) throws -> (
+    func declared(in modules: [Module]) throws -> (
         types: [String: Declared<TypeExpression>],
         constraints: [String: Declared<[TypeExpression]>]
     ) {
@@ -54,35 +51,33 @@ extension Linker {
 
         for (origin, module) in modules.enumerated() {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
-                let qualified = module.qualified(name)
                 let declaration = Declaration(place: .type(name, in: .of(module)), origin: origin)
 
                 // Read before written. Written first, the entry that says what
                 // this collides with is the one this call overwrote.
-                if let first = typePlaces[qualified] {
+                if let first = typePlaces[name] {
                     throw LinkError(
-                        "type '\(qualified)' is declared more than once in this link — by"
+                        "type '\(name)' is declared more than once in this link — by"
                             + " \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
                     )
                 }
 
-                typePlaces[qualified] = declaration
-                declaredTypes[qualified] = Declared(type, at: declaration.place)
+                typePlaces[name] = declaration
+                declaredTypes[name] = Declared(type, at: declaration.place)
             }
         }
 
         for (origin, module) in modules.enumerated() {
             for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
-                let qualified = module.qualified(name)
                 let declaration = Declaration(
                     place: .constraint(name, in: .of(module)),
                     origin: origin
                 )
 
-                if let declared = typePlaces[qualified] {
+                if let declared = typePlaces[name] {
                     throw LinkError(
-                        "'\(qualified)' is declared as both a type and a constraint in"
+                        "'\(name)' is declared as both a type and a constraint in"
                             + " this link — as a type by \(declared.spelled) and as a"
                             + " constraint by \(declaration.spelled) — one name cannot"
                             + " stand for a shape and a membership at once",
@@ -90,28 +85,19 @@ extension Linker {
                     )
                 }
 
-                if let first = constraintPlaces[qualified] {
+                if let first = constraintPlaces[name] {
                     throw LinkError(
-                        "constraint '\(qualified)' is declared more than once in this"
+                        "constraint '\(name)' is declared more than once in this"
                             + " link — by \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
                     )
                 }
 
-                constraintPlaces[qualified] = declaration
-                declaredConstraints[qualified] = Declared(members, at: declaration.place)
+                constraintPlaces[name] = declaration
+                declaredConstraints[name] = Declared(members, at: declaration.place)
             }
         }
 
         return (declaredTypes, declaredConstraints)
-    }
-}
-
-// Named across the link. Reachable past this file because a refusal keyed by
-// what the link calls a declaration has to be walked back to what the document
-// calls it, and this is the joining that has to be undone.
-extension Module {
-    func qualified(_ name: String) -> String {
-        Draft.qualified(name, in: namespace)
     }
 }

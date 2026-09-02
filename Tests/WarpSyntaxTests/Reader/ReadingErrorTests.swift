@@ -26,7 +26,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": "sent", "var": "again", "value": 1]]]]
         ]
 
@@ -37,7 +36,6 @@ struct ReadingErrorTests {
 
         // Then
         #expect(error?.place?.document.identity == identity)
-        #expect(error?.place?.document.namespace == "wallet")
     }
 
     @Test("a document refused for what it says about itself says which document it was")
@@ -48,7 +46,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "std.math.plus"]]]]]
         ]
 
@@ -59,7 +56,6 @@ struct ReadingErrorTests {
 
         // Then
         #expect(error?.place?.document.identity == identity)
-        #expect(error?.place?.document.namespace == "wallet")
     }
 
     @Test("the steps of a reading's refusal are the document's own keys")
@@ -71,7 +67,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]]
         ]
 
@@ -81,7 +76,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body.broken[0].fallbck")
+        #expect(error?.place?.rendered == "abababababab/procedures.entry.body.broken[0].fallbck")
     }
 
     @Test("a declared name that reads as a number is a key and not a position")
@@ -92,7 +87,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["12": ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]]
         ]
 
@@ -102,7 +96,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.12.body.broken[0].fallbck")
+        #expect(error?.place?.rendered == "procedures.12.body.broken[0].fallbck")
     }
 
     @Test("a statement that writes an empty name is a statement with no name")
@@ -112,7 +106,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": "", "value": "x", "fallbck": "y"]]]]
         ]
 
@@ -122,28 +115,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.entry.body[0].fallbck")
-    }
-
-    @Test("a document that writes an empty name is a document with no name")
-    func anEmptyNamespaceIsNoNamespace() throws {
-        // Given — the same rule one step out. What spells the document is
-        // assembled at every stage, and an empty name is not one of them.
-        let fixture: Value = [
-            "warp": 1,
-            "imports": [],
-            "name": "",
-            "procedures": ["entry": ["body": [["id": "sent", "value": "x", "fallbck": "y"]]]]
-        ]
-
-        // When
-        let error = #expect(throws: ReadingError.self) {
-            try loader.load(fixture, identity: identity)
-        }
-
-        // Then
-        #expect(error?.place?.document.namespace == nil)
-        #expect(error?.place?.rendered == "abababababab/procedures.entry.body.sent[0].fallbck")
+        #expect(error?.place?.rendered == "procedures.entry.body[0].fallbck")
     }
 
     @Test("a form that refuses in its own words still says which document")
@@ -154,7 +126,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["return": ["ref": [1]]]]]]
         ]
 
@@ -165,7 +136,7 @@ struct ReadingErrorTests {
 
         // Then
         #expect(error?.place?.document.identity == identity)
-        #expect(error?.place?.rendered == "wallet@abababababab/procedures.entry.body[0].return")
+        #expect(error?.place?.rendered == "abababababab/procedures.entry.body[0].return")
     }
 
     @Test("a document refused for the list it does not write is refused about itself")
@@ -174,7 +145,6 @@ struct ReadingErrorTests {
         // walk and the document alone is the whole address
         let fixture: Value = [
             "warp": 1,
-            "name": "wallet",
             "procedures": ["entry": ["result": "hello"]]
         ]
 
@@ -185,7 +155,7 @@ struct ReadingErrorTests {
 
         // Then
         #expect(error?.place?.steps.isEmpty == true)
-        #expect(error?.description.hasPrefix("wallet@abababababab: ") == true)
+        #expect(error?.description.hasPrefix("abababababab: ") == true)
     }
 
     @Test("a refusal about a key the document writes is addressed to that key")
@@ -196,7 +166,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": [:]
         ]
 
@@ -206,7 +175,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures")
+        #expect(error?.place?.rendered == "procedures")
     }
 
     @Test("a document written for another warp is refused at the word that says so")
@@ -216,7 +185,6 @@ struct ReadingErrorTests {
         // is written there to look at.
         let fixture: Value = [
             "warp": 99,
-            "name": "wallet",
             "procedures": ["entry": ["result": "hello"]]
         ]
 
@@ -226,7 +194,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/warp")
+        #expect(error?.place?.rendered == "warp")
     }
 
     @Test("a statement that names itself twice is called by neither name")
@@ -237,7 +205,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": "held", "var": "kept", "value": "x"]]]]
         ]
 
@@ -247,7 +214,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.entry.body[0]")
+        #expect(error?.place?.rendered == "procedures.entry.body[0]")
         #expect(error?.message.contains("at most once") == true)
     }
 
@@ -259,7 +226,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": 12, "value": "x"]]]]
         ]
 
@@ -269,7 +235,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered?.hasPrefix("wallet/procedures.entry.body[0]") == true)
+        #expect(error?.place?.rendered?.hasPrefix("procedures.entry.body[0]") == true)
     }
 
     @Test("a reading inside a closure keeps the address it reached")
@@ -282,7 +248,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [[
                 "id": "helper",
                 "value": ["closure": ["body": [["id": "inner", "value": "x", "fallbck": "y"]]]]
@@ -297,7 +262,7 @@ struct ReadingErrorTests {
         // Then
         #expect(
             error?.place?.rendered
-                == "wallet/procedures.entry.body.helper[0].value.closure.body.inner[0].fallbck"
+                == "procedures.entry.body.helper[0].value.closure.body.inner[0].fallbck"
         )
     }
 
@@ -309,7 +274,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [[
                 "id": "held",
                 "value": ["first": "a", "second": ["ref": [1]]]
@@ -322,7 +286,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.entry.body.held[0].value.second")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.second")
     }
 
     @Test("a record with two things wrong refuses the same one every time")
@@ -334,7 +298,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["body": [[
                 "id": "held",
                 "value": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]
@@ -347,7 +310,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet/procedures.entry.body.held[0].value.alpha")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.alpha")
     }
 
     @Test("a document that writes its imports as nothing has not written them")
@@ -359,7 +322,6 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": .null,
-            "name": "wallet",
             "procedures": ["entry": ["body": [["id": "sent", "call": ["procedure": "std.math.plus"]]]]]
         ]
 

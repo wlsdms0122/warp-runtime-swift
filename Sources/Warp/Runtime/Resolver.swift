@@ -12,8 +12,8 @@ import Foundation
 // sending a no-argument word to what the walk reached.
 //
 // `selectors` is what a selector may send without running: the link worked
-// out which declarations answer purely, and gave them back under the qualified
-// names a selector writes. `words` is the part of them a path segment may reach,
+// out which declarations answer purely, and gave them back under the declared
+// spellings a selector writes. `words` is the part of them a path segment may reach,
 // under the bare names a path writes. A resolver built without either reads
 // paths and nothing else, which is what a constant or a closed template wants.
 public struct Resolver: Sendable {
@@ -68,7 +68,14 @@ public struct Resolver: Sendable {
         // this scope. Which is why it belongs to the pure half and a condition
         // may hand one to a word.
         case let .closure(procedure):
-            return .procedure(Closure(procedure: procedure, captured: scope))
+            return .procedure(
+                Closure(
+                    procedure: procedure,
+                    captured: scope,
+                    purity: procedure.purity,
+                    isolation: procedure.isolation
+                )
+            )
 
         case let .dispatch(dispatch):
             return try send(dispatch)
@@ -102,6 +109,23 @@ public struct Resolver: Sendable {
 
     public func stringify(_ value: Value) -> String {
         Rendering(value).text()
+    }
+
+    // The path with every index read to a position: an index written as a
+    // name is a reading in this scope, and a write lands on one position.
+    // Every write goes through here before it reaches a box.
+    public func positioned(_ path: [PathSegment]) throws -> [PathSegment] {
+        try path.map { segment in
+            guard case let .indexRef(inner, optional) = segment else { return segment }
+
+            guard case let .int(index) = try resolve(.reference(inner)) else {
+                throw ExecutionError(
+                    "'\(path.rendered)' indexes with '\(inner.rendered)', which is not an int"
+                )
+            }
+
+            return .index(index, optional: optional)
+        }
     }
 
     // What a reference names, walked to the end. The scope answers the head;
@@ -390,7 +414,7 @@ public struct Resolver: Sendable {
     // something in the middle of a comparison.
     private func send(_ dispatch: Dispatch) throws -> Value {
         // The spelling is the selector as the author wrote it, which is a
-        // declared qualified name; a path word is reached by `derive`, never
+        // declared spelling; a path word is reached by `derive`, never
         // by a send.
         guard let procedure = selectors[dispatch.selector] else {
             throw ExecutionError(
@@ -459,9 +483,9 @@ public struct Resolver: Sendable {
         var scope = outer
 
         for (position, statement) in block.body.enumerated() {
-            guard statement.binding == .constant else {
+            guard statement.binding?.isConstant != false else {
                 throw ExecutionError(
-                    "'\(statement.id ?? "[\(position)]")' writes a name, and what answers"
+                    "'\(statement.name ?? "[\(position)]")' writes a name, and what answers"
                         + " without running only binds"
                 )
             }
@@ -473,7 +497,7 @@ public struct Resolver: Sendable {
                 types: types
             ).resolve(statement.expression)
 
-            if let id = statement.id {
+            if let id = statement.binding?.introduced {
                 scope = scope.binding(id, to: value)
             }
         }

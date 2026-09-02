@@ -29,9 +29,7 @@ struct ReturnTypeTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(
-                            id: "counted",
-                            expression: .literal(.int(3))
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))
                         )
                     ],
                     result: .reference([.key("counted")])
@@ -52,7 +50,7 @@ struct ReturnTypeTests {
             procedures: [
                 "entry": Procedure(
                     signature: Signature(returns: .int),
-                    body: [Statement(id: "counted", expression: .literal(.double(3)))],
+                    body: [Statement(binding: .constant("counted"), expression: .literal(.double(3)))],
                     result: .reference([.key("counted")])
                 )
             ]
@@ -74,9 +72,7 @@ struct ReturnTypeTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(
-                            id: "counted",
-                            expression: .literal(.int(3))
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))
                         )
                     ]
                 )
@@ -106,9 +102,7 @@ struct ReturnTypeTests {
                         returns: .array(.named("Task"))
                     ),
                     body: [
-                        Statement(
-                            id: "made",
-                            expression: .array([
+                        Statement(binding: .constant("made"), expression: .array([
                                     .record([
                                             "id": .literal(.string("a"))
                                         ])
@@ -138,9 +132,7 @@ struct ReturnTypeTests {
                         returns: .named("Nowhere")
                     ),
                     body: [
-                        Statement(
-                            id: "done",
-                            expression: .literal(.int(1))
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))
                         )
                     ]
                 )

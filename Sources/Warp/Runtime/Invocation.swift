@@ -16,6 +16,11 @@ import Foundation
 public struct Invocation: Sendable {
     // MARK: - Property
     public let selector: String
+
+    // The declaration being sent, so a word reads its arguments by the names
+    // the declaration gave them, receiver included.
+    public let signature: Signature
+
     public let receiver: Expression?
     public let arguments: [String: Expression]
 
@@ -36,6 +41,7 @@ public struct Invocation: Sendable {
     // MARK: - Initializer
     init(
         selector: String,
+        signature: Signature,
         receiver: Expression?,
         arguments: [String: Expression],
         trace: Trace,
@@ -43,6 +49,7 @@ public struct Invocation: Sendable {
         executor: Executor
     ) {
         self.selector = selector
+        self.signature = signature
         self.receiver = receiver
         self.arguments = arguments
         self.trace = trace
@@ -51,6 +58,25 @@ public struct Invocation: Sendable {
     }
 
     // MARK: - Public
+    // Writes a value back through the path an argument was handed as. A
+    // native word declaring a parameter `inout` answers into the caller's
+    // variable this way, and a word writing an argument that is not a path
+    // is a word the link should have refused.
+    public func write(_ name: String, _ value: Value) throws {
+        guard case let .reference(path)? = handed(name) else {
+            throw ExecutionError(
+                "'\(selector)' writes '\(name)' in place, and it was not handed a variable"
+            )
+        }
+
+        try scope.assign(try resolver.positioned(path), to: value)
+    }
+
+    // The expression handed under a parameter's name, receiver included.
+    public func handed(_ name: String) -> Expression? {
+        signature.handed(name, receiver: receiver, arguments: arguments)
+    }
+
     // An argument settled in the sending scope. An argument that was not written
     // reads as null, the same as a reference that names nothing — an effect
     // declares what it requires in its signature, and the linker is what

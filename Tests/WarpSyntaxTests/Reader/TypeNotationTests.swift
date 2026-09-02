@@ -125,8 +125,8 @@ struct TypeNotationTests {
     @Test("a type parameter is written some, and is not a declared name")
     func typeParametersAreWrittenAndRead() throws {
         // Given / When / Then
-        #expect(try TypeReader.parse("some Element") == .variable(name: "Element"))
-        #expect(try TypeReader.parse("array<some Element>") == .array(.variable(name: "Element")))
+        #expect(try TypeReader.parse("some Element") == .parameter(name: "Element"))
+        #expect(try TypeReader.parse("array<some Element>") == .array(.parameter(name: "Element")))
 
         // A bare name is looked up in the table of declared types; only `some`
         // says the call decides.
@@ -176,13 +176,13 @@ struct TypeNotationTests {
 
         #expect(
             signature?.parameters["of"]?.type
-                == .variable(name: "T", constraint: "Comparable")
+                == .parameter(name: "T", constraint: "Comparable")
         )
         #expect(
             signature?.parameters["value"]?.type
-                == .variable(name: "T", constraint: "Comparable")
+                == .parameter(name: "T", constraint: "Comparable")
         )
-        #expect(signature?.returns == .variable(name: "T", constraint: "Comparable"))
+        #expect(signature?.returns == .parameter(name: "T", constraint: "Comparable"))
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
@@ -257,10 +257,10 @@ struct TypeNotationTests {
 
         #expect(
             parameters?["of"]?.type
-                == .array(.variable(name: "Element", constraint: "Comparable"))
+                == .array(.parameter(name: "Element", constraint: "Comparable"))
         )
 
-        guard case let .procedure(.some(inner), _) = parameters?["by"]?.type else {
+        guard case let .procedure(.some(inner), _, _) = parameters?["by"]?.type else {
             Issue.record("the procedure type did not survive reading")
 
             return
@@ -268,7 +268,7 @@ struct TypeNotationTests {
 
         #expect(
             inner.parameters["item"]?.type
-                == .variable(name: "Element", constraint: "Comparable")
+                == .parameter(name: "Element", constraint: "Comparable")
         )
     }
 

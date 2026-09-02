@@ -144,11 +144,10 @@ struct VariableNotationTests {
         }
     }
 
-    @Test("a closure may not write a variable from outside")
-    func closureCannotWriteOuterVariable() throws {
-        // Given — a closure may run beside another or long after this body, so
-        // a write out of it is the one ordering nothing can supply. Refused at
-        // load rather than raced at run time.
+    @Test("a closure may write a variable it captured")
+    func closureWritesWhatItCaptured() throws {
+        // Given — a variable's box is one thing under one name everywhere the
+        // name is visible, and the closure's body is one of those places
         let fixture: Value = [
             "body": [
                 ["var": "tally", "value": 0],
@@ -166,7 +165,7 @@ struct VariableNotationTests {
         ]
 
         // When / Then
-        #expect(throws: ValidationError.self) {
+        #expect(throws: Never.self) {
             try loader.loadProcedure(fixture)
         }
     }

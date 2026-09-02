@@ -81,10 +81,6 @@ public struct Writer: Sendable {
                 .object(try draft.procedures.mapValues(value(of:)))
         ]
 
-        if let namespace = draft.namespace {
-            written[ModuleReader.CodingKeys.name.stringValue] = .string(namespace)
-        }
-
         if let description = draft.description {
             written[ModuleReader.CodingKeys.description.stringValue] = .string(description)
         }
@@ -104,6 +100,12 @@ public struct Writer: Sendable {
         if !draft.constants.isEmpty {
             written[ModuleReader.CodingKeys.const.stringValue] = .object(
                 try draft.constants.mapValues { constant in try value(of: constant) }
+            )
+        }
+
+        if !draft.variables.isEmpty {
+            written[ModuleReader.CodingKeys.variables.stringValue] = .object(
+                try draft.variables.mapValues { variable in try value(of: variable) }
             )
         }
 
@@ -199,7 +201,7 @@ public struct Writer: Sendable {
                     + " fills"
             )
 
-        case let .variable(name, constraint):
+        case let .parameter(name, constraint):
             guard constraint == nil else {
                 throw WritingError(
                     "'some \(name)' is bounded by '\(constraint ?? "")', and nothing"
@@ -238,13 +240,35 @@ public struct Writer: Sendable {
 
             return .object(try fields.mapValues(value(of:)))
 
-        case let .procedure(signature, purity):
-            let word = purity == .pure ? "pure procedure" : "procedure"
+        // A slot's `var` or `inout` is written in front of the inner type,
+        // whichever form the inner type takes: a bare name, or a procedure
+        // form under its one key. An inline record has no front to write it
+        // on, and a declaration's field is the one place the words go anyway.
+        case let .variable(inner), let .inout(inner):
+            let word = type.isInout ? "inout" : "var"
+
+            switch try value(of: inner) {
+            case let .string(written):
+                return .string("\(word) \(written)")
+
+            case let .object(form) where form.count == 1 && TypeReader.procedureKeys.contains(form.keys.first!):
+                return .object(["\(word) \(form.keys.first!)": form.values.first!])
+
+            default:
+                throw WritingError(
+                    "`\(word)` is written in front of a type name, and"
+                        + " \(inner.rendered) is written as a record — declare the"
+                        + " record under a name and write `\(word)` on the name"
+                )
+            }
+
+        case let .procedure(signature, purity, isolation):
+            let word = TypeReader.procedureWord(purity, isolation)
 
             guard let signature else { return .string(word) }
 
             // No bound check of its own: a procedure type written as a type
-            // has no `bounds` surface, and the `.variable` case refuses any
+            // has no `bounds` surface, and the `.parameter` case refuses any
             // bound the walk below meets — one guard, wherever the walk
             // started.
             return .object([word: .object(try fields(of: signature))])
@@ -307,8 +331,8 @@ public struct Writer: Sendable {
     // every occurrence in them.
     private func stripped(_ type: TypeExpression) -> TypeExpression {
         switch type {
-        case let .variable(name, _):
-            return .variable(name: name)
+        case let .parameter(name, _):
+            return .parameter(name: name)
 
         // Carries no bound to strip.
         case .reading:
@@ -323,11 +347,17 @@ public struct Writer: Sendable {
         case let .record(fields):
             return .record(fields.mapValues(stripped))
 
-        case let .procedure(signature, purity):
-            return .procedure(signature.map(stripped), purity)
+        case let .procedure(signature, purity, isolation):
+            return .procedure(signature.map(stripped), purity, isolation)
 
         case let .nullable(inner):
             return .nullable(stripped(inner))
+
+        case let .variable(inner):
+            return .variable(stripped(inner))
+
+        case let .inout(inner):
+            return .inout(stripped(inner))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return type

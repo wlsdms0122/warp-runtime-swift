@@ -30,9 +30,7 @@ struct PlaceTests {
         // condition is `where` in a document and a walk's collection is `in`,
         // and neither word appears in what a caller assembling this wrote.
         let spin = place(
-            refusing: Statement(
-                id: "spin",
-                expression: .loop(
+            refusing: Statement(binding: .constant("spin"), expression: .loop(
                     while: .block(Block(body: [], result: .literal(.bool(true)))),
                     body: Block(body: []),
                     round: "spin"
@@ -41,9 +39,7 @@ struct PlaceTests {
         )
 
         let walk = place(
-            refusing: Statement(
-                id: "walk",
-                expression: .iteration(over: reference("missing"), body: [], element: "walk")
+            refusing: Statement(binding: .constant("walk"), expression: .iteration(over: reference("missing"), body: [], element: "walk")
             )
         )
 
@@ -57,9 +53,7 @@ struct PlaceTests {
         // Given — an argument reported from the statement's own place says a
         // thing is wrong and does not say which of the several written there.
         let sut = place(
-            refusing: Statement(
-                id: "sent",
-                expression: .dispatch(
+            refusing: Statement(binding: .constant("sent"), expression: .dispatch(
                     Dispatch(selector: "send", arguments: ["amount": reference("missing")])
                 )
             )
@@ -73,7 +67,7 @@ struct PlaceTests {
     func aStatementIsFoundByWhicheverItHas() {
         // Given — a statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
-        let named = place(refusing: Statement(id: "held", expression: reference("missing")))
+        let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         let bare = place(refusing: Statement(expression: reference("missing")))
 
         // Then
@@ -113,7 +107,7 @@ struct PlaceTests {
         // walk the steps to point at the line, and a sentence has no steps.
         // When
         let error = #expect(throws: ValidationError.self) {
-            try module(refusing: Statement(id: "held", expression: reference("missing")))
+            try module(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         }
 
         // Then
@@ -130,7 +124,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(id: "sent", expression: .dispatch(Dispatch(selector: "nowhere")))
+                    Statement(binding: .constant("sent"), expression: .dispatch(Dispatch(selector: "nowhere")))
                 ])
             ]
         )
@@ -152,9 +146,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(
-                        id: "sent",
-                        expression: .dispatch(
+                    Statement(binding: .constant("sent"), expression: .dispatch(
                             Dispatch(selector: "helper", arguments: [
                                 "first": .literal(.int(1)),
                                 "second": .literal(.string("two")),
@@ -194,9 +186,7 @@ struct PlaceTests {
         let linked = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(
-                        id: "sent",
-                        expression: .dispatch(
+                    Statement(binding: .constant("sent"), expression: .dispatch(
                             Dispatch(selector: "helper", arguments: ["amount": .literal(.string("x"))])
                         )
                     )
@@ -213,9 +203,7 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     entryName: Procedure(body: [
-                        Statement(
-                            id: "sent",
-                            expression: .dispatch(
+                        Statement(binding: .constant("sent"), expression: .dispatch(
                                 Dispatch(
                                     selector: "helper",
                                     arguments: ["amount": reference("missing")]
@@ -253,14 +241,10 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     entryName: Procedure(body: [
-                        Statement(
-                            id: "guarded",
-                            expression: .attempt(
+                        Statement(binding: .constant("guarded"), expression: .attempt(
                                 Block(body: []),
                                 rescue: Block(body: [
-                                    Statement(
-                                        id: "sent",
-                                        expression: .dispatch(
+                                    Statement(binding: .constant("sent"), expression: .dispatch(
                                             Dispatch(
                                                 selector: selector,
                                                 arguments: ["amount": argument]
@@ -322,17 +306,15 @@ struct PlaceTests {
         #expect(gathered.0.rendered == reached)
     }
 
-    @Test("a named module does not put its name in the place")
-    func aModuleNameIsNotADocumentKey() throws {
-        // Given — the same refusal from a module that has a name. A link calls
-        // this declaration `wallet.entry`, and no document writes that: the
-        // name is a field beside `procedures`, and what `procedures` holds is
-        // the declared key alone.
+    @Test("a declared spelling with a dot in it is one key in the place")
+    func aDottedSpellingIsOneKey() throws {
+        // Given — the same refusal from a declaration spelled `wallet.entry`.
+        // The dot is part of the key the document wrote, so the place holds
+        // that key whole rather than two steps.
         let sut = try Module(
-            namespace: "wallet",
             procedures: [
-                entryName: Procedure(body: [
-                    Statement(id: "sent", expression: .dispatch(Dispatch(selector: "nowhere")))
+                "wallet.entry": Procedure(body: [
+                    Statement(binding: .constant("sent"), expression: .dispatch(Dispatch(selector: "nowhere")))
                 ])
             ],
             identity: reading,
@@ -343,10 +325,10 @@ struct PlaceTests {
             try Linker().link([sut] + Module.standard, entry: "wallet.entry")
         }
 
-        // Then — the name rides beside the steps and is never one of them
-        #expect(error?.place?.document == Place.Document(identity: reading, namespace: "wallet"))
-        #expect(error?.place?.steps.contains(.key("wallet.entry")) == false)
-        #expect(error?.place?.rendered == "wallet@d0cf00/procedures.entry.body.sent[0].dispatch")
+        // Then
+        #expect(error?.place?.document == Place.Document(identity: reading))
+        #expect(error?.place?.steps.contains(.key("wallet.entry")) == true)
+        #expect(error?.place?.rendered == "d0cf00/procedures.wallet.entry.body.sent[0].dispatch")
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
@@ -369,21 +351,19 @@ struct PlaceTests {
 
         // Then
         #expect(assembled?.place?.document == .assembled)
-        #expect(read?.place?.document == Place.Document(identity: reading, namespace: nil))
+        #expect(read?.place?.document == Place.Document(identity: reading))
     }
 
-    @Test("two halves of a split module do not read as one, to a person either")
-    func oneNameIsTwoDocumentsInTheLineToo() {
-        // Given — one module written across two files, which is a thing a link
-        // allows: both write `name: wallet`. A reader with the documents in
-        // hand tells them apart by identity, and the person reading the line
-        // has only the line — so the line has to say it too.
+    @Test("two documents are told apart by identity in the line too")
+    func twoDocumentsAreToldApartInTheLine() {
+        // Given — two documents. A reader with them in hand tells them apart
+        // by identity, and the person reading the line has only the line, so
+        // the line says it too.
         func module(declaring name: String, as identity: Identity) throws -> Module {
             try Module(
-                namespace: "wallet",
                 procedures: [
                     name: Procedure(body: [
-                        Statement(id: "held", expression: reference("missing"))
+                        Statement(binding: .constant("held"), expression: reference("missing"))
                     ])
                 ],
                 identity: identity,
@@ -400,51 +380,47 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(charge?.place?.rendered == "wallet@01/procedures.charge.body.held[0].reference")
-        #expect(refund?.place?.rendered == "wallet@02/procedures.refund.body.held[0].reference")
+        #expect(charge?.place?.rendered == "01/procedures.charge.body.held[0].reference")
+        #expect(refund?.place?.rendered == "02/procedures.refund.body.held[0].reference")
     }
 
-    @Test("a shape a named module declares is placed by the key it declared it under")
-    func aTypeInANamedModuleIsPlacedByItsDeclaredKey() throws {
-        // Given — a named module, whose type keys the link rewrites into the
-        // names it calls them by. A place spelled from one of those carries the
-        // module's name twice and leads nowhere: `types.wallet.Coin` is not
-        // what any document writes.
+    @Test("a shape is placed by the key it was declared under, dot and all")
+    func aTypeIsPlacedByItsDeclaredKey() throws {
+        // Given — a type declared as `wallet.Coin`. The place is spelled from
+        // that key, which is what the document writes.
         let sut = try Module(
-            namespace: "wallet",
-            types: ["Coin": .record(["amount": .named("Missing")])],
+            types: ["wallet.Coin": .record(["amount": .named("Missing")])],
             procedures: [entryName: Procedure(body: [])],
             identity: reading,
         )
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: "wallet.entry")
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet@d0cf00/types.Coin.amount")
+        #expect(error?.place?.rendered == "d0cf00/types.wallet.Coin.amount")
     }
 
-    @Test("a membership a named module declares is placed the same way")
-    func aConstraintInANamedModuleIsPlacedByItsDeclaredKey() throws {
-        // Given — the other space the qualifying pass rewrites keys in. A
-        // membership admitting nothing is refused from the table alone, which
-        // is the walk that has only the link's names to go on.
+    @Test("a membership is placed the same way")
+    func aConstraintIsPlacedByItsDeclaredKey() throws {
+        // Given — the other space. A membership admitting nothing is refused
+        // from the table alone, which is the walk that has only the declared
+        // keys to go on.
         let sut = try Module(
-            namespace: "wallet",
-            constraints: ["Spendable": []],
+            constraints: ["wallet.Spendable": []],
             procedures: [entryName: Procedure(body: [])],
             identity: reading,
         )
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: "wallet.entry")
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
-        #expect(error?.place?.rendered == "wallet@d0cf00/constraints.Spendable")
+        #expect(error?.place?.rendered == "d0cf00/constraints.wallet.Spendable")
     }
 
     @Test("a statement's construct is the language's word, and says so")
@@ -455,9 +431,7 @@ struct PlaceTests {
         // something a reader may go looking for in a file.
         let sut = try #require(
             place(
-                refusing: Statement(
-                    id: "sent",
-                    expression: .dispatch(
+                refusing: Statement(binding: .constant("sent"), expression: .dispatch(
                         Dispatch(selector: "send", arguments: ["amount": reference("missing")])
                     )
                 )
@@ -509,7 +483,7 @@ struct PlaceTests {
                             Dispatch(selector: "stop", arguments: ["message": .literal(.string("x"))])
                         )
                     ),
-                    Statement(id: "after", expression: .literal(.int(1)))
+                    Statement(binding: .constant("after"), expression: .literal(.int(1)))
                 ]),
                 "stop": Procedure(
                     signature: Signature(
@@ -527,7 +501,7 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(body: [
                         Statement(expression: .leave(Leave(reach: .procedure))),
-                        Statement(id: "after", expression: .literal(.int(1)))
+                        Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ])
                 ]
             )
@@ -551,7 +525,6 @@ struct PlaceTests {
         // them.
         func declaring(_ procedure: String, as identity: Identity) throws -> Module {
             try Module(
-                namespace: "pricing",
                 procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))],
                 identity: identity,
             )
@@ -567,10 +540,10 @@ struct PlaceTests {
         }
 
         // Then — the place is the declaration that cannot be added
-        #expect(error?.place?.rendered == "pricing@02/procedures.taxed")
+        #expect(error?.place?.rendered == "02/procedures.taxed")
 
         // And the one it collides with is named, since a place says one thing
-        #expect(error?.message.contains("pricing@01") == true)
+        #expect(error?.message.contains("by 01") == true)
     }
 
     @Test("the same document handed to one link twice is refused as that")
@@ -581,8 +554,7 @@ struct PlaceTests {
         // collision between two declarations, the sentence names the same
         // document on both sides and tells the caller nothing it can act on.
         let module = try Module(
-            namespace: "pricing",
-            procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))],
+            procedures: ["pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
             identity: Identity([0x01]),
         )
 
@@ -594,7 +566,7 @@ struct PlaceTests {
         }
 
         // Then — what is wrong is the second copy, not anything inside it
-        #expect(error?.place?.rendered == "pricing@01")
+        #expect(error?.place?.rendered == "01")
         #expect(error?.message.contains("twice") == true)
     }
 
@@ -604,7 +576,7 @@ struct PlaceTests {
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
         func declaring(_ shape: TypeExpression, as identity: Identity) throws -> Module {
-            try Module(namespace: "pricing", types: ["Money": shape], procedures: [:], identity: identity)
+            try Module(types: ["pricing.Money": shape], procedures: [:], identity: identity)
         }
 
         let held = try declaring(.int, as: Identity([0x01]))
@@ -617,8 +589,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@02/types.Money")
-        #expect(error?.message.contains("pricing@01") == true)
+        #expect(error?.place?.rendered == "02/types.pricing.Money")
+        #expect(error?.message.contains("by 01") == true)
     }
 
     @Test("a name written as a shape in one document and a membership in another")
@@ -626,9 +598,9 @@ struct PlaceTests {
         // Given — the two spaces held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
-        let shape = try Module(namespace: "pricing", types: ["Money": .int], procedures: [:], identity: Identity([0x01]))
+        let shape = try Module(types: ["pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
 
-        let membership = try Module(namespace: "pricing", constraints: ["Money": [.int]], procedures: [:], identity: Identity([0x02]))
+        let membership = try Module(constraints: ["pricing.Money": [.int]], procedures: [:], identity: Identity([0x02]))
 
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
@@ -638,8 +610,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@02/constraints.Money")
-        #expect(error?.message.contains("pricing@01") == true)
+        #expect(error?.place?.rendered == "02/constraints.pricing.Money")
+        #expect(error?.message.contains("01") == true)
     }
 
     @Test("constants that name each other are placed at one of the ring, and the same one")
@@ -649,7 +621,6 @@ struct PlaceTests {
         // be a different constant per run, and the two below are written in the
         // order that makes an unsorted answer the likely one.
         let sut = try Module(
-            namespace: "pricing",
             constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
             procedures: [entryName: Procedure(body: [])],
             identity: reading,
@@ -657,11 +628,11 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: "pricing.entry")
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@d0cf00/constants.alpha")
+        #expect(error?.place?.rendered == "d0cf00/constants.alpha")
         #expect(error?.message.contains("alpha, zebra") == true)
     }
 
@@ -673,7 +644,6 @@ struct PlaceTests {
         // what is wrong — and changing it would leave the ring exactly as it
         // is.
         let sut = try Module(
-            namespace: "pricing",
             constants: [
                 "aardvark": reference("zebra"),
                 "zebra": reference("yak"),
@@ -685,11 +655,11 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: "pricing.entry")
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@d0cf00/constants.yak")
+        #expect(error?.place?.rendered == "d0cf00/constants.yak")
         #expect(error?.message.contains("yak, zebra") == true)
         #expect(error?.message.contains("aardvark") == false)
     }
@@ -700,7 +670,6 @@ struct PlaceTests {
         // well, so the circle is the only thing wrong here. Narrowing by what
         // nothing reads keeps it anyway, because something does read it.
         let sut = try Module(
-            namespace: "pricing",
             constants: [
                 "beta": .dispatch(Dispatch(
                     receiver: reference("gamma"),
@@ -717,7 +686,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: "pricing.entry")
+            try Linker().link([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -752,11 +721,10 @@ struct PlaceTests {
         // Given — a path segment names no module, so no spelling an author
         // could write would say which of these is meant. The fix is on a
         // declaration, which makes a declaration the place to be sent to.
-        func declaring(_ namespace: String, as identity: Identity) throws -> Module {
+        func declaring(_ prefix: String, as identity: Identity) throws -> Module {
             try Module(
-                namespace: namespace,
                 procedures: [
-                    "discounted": Procedure(
+                    "\(prefix).discounted": Procedure(
                         signature: Signature(
                             receiver: "of",
                             parameters: ["of": Parameter(type: .int)],
@@ -791,7 +759,7 @@ struct PlaceTests {
 
         // Then — `catalog` is the second the caller handed over, whatever the
         // three names sort as
-        #expect(error?.place?.rendered == "catalog@01/procedures.discounted")
+        #expect(error?.place?.rendered == "01/procedures.catalog.discounted")
 
         // And every one of them is named, the first included
         #expect(error?.message.contains("catalog.discounted") == true)

@@ -140,7 +140,7 @@ func validates(
     _ expression: Warp.Expression,
     visible: Set<String> = []
 ) -> Bool {
-    validates(body: [Statement(id: "probe", expression: expression)], visible: visible)
+    validates(body: [Statement(binding: .constant("probe"), expression: expression)], visible: visible)
 }
 
 func validates(body: [Statement], visible: Set<String> = []) -> Bool {
@@ -160,9 +160,8 @@ func validates(body: [Statement], visible: Set<String> = []) -> Bool {
 // in the link.
 extension Module {
     static let shouting = try! Module(
-        namespace: "app",
         procedures: [
-            "shout": Procedure(
+            "app.shout": Procedure(
                 signature: Signature(
                     parameters: ["text": Parameter(type: .string)],
                     returns: .string
@@ -173,9 +172,8 @@ extension Module {
     )
 
     static let failing = try! Module(
-        namespace: "app",
         procedures: [
-            "fail": Procedure(
+            "app.fail": Procedure(
                 signature: Signature(
                     parameters: ["recoverable": Parameter(type: .bool, default: .bool(false))]
                 ),
@@ -201,19 +199,21 @@ struct ShoutEffect: Effect {
 // Every procedure a list of modules declares, as two tables for two questions:
 // what a selector names, and what a path segment reaches.
 extension [Module] {
-    // Every declaration by its qualified spelling, the way a selector names it.
+    // Every declaration by its spelling, the way a selector names it.
     var procedures: [String: Procedure] {
         reduce(into: [:]) { table, module in
             for (name, procedure) in module.procedures {
-                table[Draft.qualified(name, in: module.namespace)] = procedure
+                table[name] = procedure
             }
         }
     }
 
-    // Every declaration by its bare name, the way a path segment names it.
+    // Every declaration by its last segment, the way a path segment names it.
     var words: [String: Procedure] {
         reduce(into: [:]) { table, module in
-            table.merge(module.procedures) { _, new in new }
+            for (name, procedure) in module.procedures {
+                table[name.split(separator: ".").last.map(String.init) ?? name] = procedure
+            }
         }
     }
 }
@@ -249,7 +249,12 @@ private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> War
         Dispatch(
             receiver: .array(
                 conditions.map { condition in
-                    .closure(Procedure(body: [], result: condition))
+                    .closure(
+                        Procedure(
+                            implementation: .body(Block(body: [], result: condition)),
+                            purity: .pure
+                        )
+                    )
                 }
             ),
             selector: selector

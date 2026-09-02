@@ -23,7 +23,6 @@ struct ModuleNotationTests {
     func documentDeclaresProcedures() throws {
         // Given / When
         let sut = try loader.loadDocument([
-            "name": "deploy",
             "description": "a document is a module",
             "procedures": [
                 "verify": [
@@ -35,7 +34,6 @@ struct ModuleNotationTests {
         ])
 
         // Then
-        #expect(sut.namespace == "deploy")
         #expect(Set(sut.procedures.keys) == ["verify", "report"])
     }
 
@@ -44,7 +42,7 @@ struct ModuleNotationTests {
         // Given — this was the whole shape of a document once, and it made
         // every document an entry point with no way to write one that only
         // declares
-        let fixture: Value = ["name": "legacy", "body": [["id": "done", "value": "end"]]]
+        let fixture: Value = ["body": [["id": "done", "value": "end"]]]
 
         // When / Then
         #expect(throws: ReadingError.self) {
@@ -55,11 +53,28 @@ struct ModuleNotationTests {
     @Test("a module that declares nothing is rejected")
     func emptyModuleRejected() {
         // Given — it could never be linked into anything
-        let fixture: Value = ["name": "empty", "procedures": [:]]
+        let fixture: Value = ["procedures": [:]]
 
         // When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadDocument(fixture)
+        }
+    }
+
+    @Test("a document carries no name of its own")
+    func aDocumentIsNotNamed() {
+        // Given: a declaration is named by its key, and a document is what
+        // it declares. A key naming the document is a key nothing reads.
+        let fixture: Value = [
+            "name": "deploy",
+            "procedures": ["verify": ["body": [["id": "done", "value": "end"]]]]
+        ]
+
+        // When / Then
+        #expect {
+            try loader.loadDocument(fixture)
+        } throws: { error in
+            "\(error)".contains("unknown key(s) name")
         }
     }
 

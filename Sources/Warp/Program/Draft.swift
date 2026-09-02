@@ -19,7 +19,6 @@ import Foundation
 // draft, and a text nobody can run still has a canonical form and an identity.
 public struct Draft: Sendable {
     // MARK: - Property
-    public let namespace: String?
     public let description: String?
 
     // What the document said it imports, and nil where it said nothing. A
@@ -29,40 +28,31 @@ public struct Draft: Sendable {
     public let types: [String: TypeExpression]
     public let constraints: [String: [TypeExpression]]
     public let constants: [String: Expression]
+
+    // Names bound to boxes the document's procedures share, each holding what
+    // its expression settles to when a run starts. Declared like a constant
+    // and read by the same spelling; unlike a constant, a body may write one.
+    public let variables: [String: Expression]
+
     public let procedures: [String: Procedure]
 
     // MARK: - Initializer
     public init(
-        namespace: String? = nil,
         description: String? = nil,
         imports: Set<String>? = nil,
         types: [String: TypeExpression] = [:],
         constraints: [String: [TypeExpression]] = [:],
         constants: [String: Expression] = [:],
+        variables: [String: Expression] = [:],
         procedures: [String: Procedure]
     ) {
-        self.namespace = namespace
         self.description = description
         self.imports = imports
         self.types = types
         self.constraints = constraints
         self.constants = constants
+        self.variables = variables
         self.procedures = procedures
-    }
-
-    // MARK: - Public
-    // What a declaration of this module is called from outside it. A module
-    // with a namespace has everything it declares qualified by it, and one
-    // without declares into the shared space under the bare names.
-    //
-    // Written once and read wherever the joining is needed, since a namespace
-    // that joined two ways would make one declaration two names.
-    public static func qualified(_ name: String, in namespace: String?) -> String {
-        namespace.map { namespace in "\(namespace).\(name)" } ?? name
-    }
-
-    public func qualified(_ name: String) -> String {
-        Self.qualified(name, in: namespace)
     }
 
     // The words this declares and does not itself declare a procedure for.
@@ -76,12 +66,13 @@ public struct Draft: Sendable {
         // A constant is an expression, so it sends words like any other.
         // Missing them would understate what a program does.
         let held = constants.values.flatMap(\.buried)
+            + variables.values.flatMap(\.buried)
             + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
 
         // Its own by the spelling the link knows it as. A module names a
         // sibling the way any other module does, so what it declares is not
         // something it imports.
-        let declared = Set(procedures.keys.map(qualified))
+        let declared = Set(procedures.keys)
 
         return held
             .reduce(into: Set()) { sent, expression in

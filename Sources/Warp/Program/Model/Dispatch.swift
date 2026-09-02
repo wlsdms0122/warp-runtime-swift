@@ -37,5 +37,10 @@ public struct Dispatch: Sendable {
     }
 
     // MARK: - Public
+    // The expression handed under a parameter's name, receiver included.
+    public func handed(_ name: String, to signature: Signature) -> Expression? {
+        signature.handed(name, receiver: receiver, arguments: arguments)
+    }
+
     // MARK: - Private
 }

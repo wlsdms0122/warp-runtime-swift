@@ -14,20 +14,19 @@ public extension Module {
     // bundle whose signatures mention these needs this module in the link,
     // which is the one dependency the standard modules have.
     static let foundation = try! Module(
-        namespace: "std",
         description: "The shared ground: what counts as a number, and what orders.",
         types: [
             // One element of bytes — a whole number a range refines, not a
             // kind of its own. Declared here so `bytes` and `array<byte>` can
             // say they are the same thing in one vocabulary.
-            "byte": .byteElement
+            "std.byte": .byteElement
         ],
         constraints: [
             // What arithmetic ranges over.
-            "Numeric": [.int, .double],
+            "std.Numeric": [.int, .double],
             // What may stand left and right of an ordering — numbers among
             // themselves, and strings among themselves.
-            "Comparable": [.int, .double, .string]
+            "std.Comparable": [.int, .double, .string]
         ],
         procedures: [:]
     )

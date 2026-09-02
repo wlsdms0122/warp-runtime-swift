@@ -155,9 +155,7 @@ struct TypeTests {
         )
         let entry = Procedure(
             body: [
-                Statement(
-                    id: "said",
-                    expression: .dispatch(
+                Statement(binding: .constant("said"), expression: .dispatch(
                         Dispatch(
                             selector: "wants",
                             arguments: [
@@ -191,9 +189,7 @@ struct TypeTests {
         )
         let entry = Procedure(
             body: [
-                Statement(
-                    id: "said",
-                    expression: .dispatch(
+                Statement(binding: .constant("said"), expression: .dispatch(
                         Dispatch(
                             selector: "wants",
                             arguments: [

@@ -128,10 +128,7 @@ struct NamelessTests {
         // Given — a caller assembling statements directly, with a `set` naming
         // a leave: that the statement takes no name at all comes before any
         // question about which name it is — visibility included
-        let statement = Statement(
-            id: "past",
-            binding: .assignment,
-            expression: .leave(Leave(reach: .procedure, value: .literal(.int(1))))
+        let statement = Statement(binding: .assignment([.key("past")]), expression: .leave(Leave(reach: .procedure, value: .literal(.int(1))))
         )
 
         #expect {
@@ -188,20 +185,6 @@ struct NamelessTests {
         let written = try Writer(registry: loader.registry).value(of: loaded)
 
         #expect(try Writer(registry: loader.registry).value(of: try loader.load(written)) == written)
-    }
-
-    @Test("a binding with no name is refused when statements are built directly")
-    func aNamelessWriteIsRefusedFailLoud() {
-        // Given — the document reader cannot produce this pair; a caller
-        // assembling statements directly can, and silence would be a write
-        // that goes nowhere
-        let statement = Statement(binding: .assignment, expression: .literal(.int(1)))
-
-        #expect {
-            try Validator().validate(body: [statement], visible: [])
-        } throws: { error in
-            "\(error)".contains("writes no name")
-        }
     }
 
     // MARK: - Public

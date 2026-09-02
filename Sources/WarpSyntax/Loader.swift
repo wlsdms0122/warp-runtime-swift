@@ -232,16 +232,12 @@ public struct Loader: Sendable {
         try read(ModuleReader.self, from: value, in: document, from: notation).draft
     }
 
-    // What a value says it is called, as the document a refusal about reading it
-    // is in.
-    //
-    // The identity is handed in where there is one and left out where there is
-    // not: what a document *is* is worked out from its canonical writing, so a
-    // value on its way to being written has none yet. One assembly rather than
-    // one per door, because the namespace rule is the same rule at every door
-    // and a second copy of it is a second answer waiting to happen.
+    // The document a refusal about reading this value is in. The identity is
+    // handed in where there is one and left out where there is not: what a
+    // document *is* is worked out from its canonical writing, so a value on its
+    // way to being written has none yet.
     private func document(of value: Value, identity: Identity? = nil) -> Place.Document {
-        Place.Document(identity: identity, namespace: ModuleReader.namespace(of: value))
+        Place.Document(identity: identity)
     }
 
     // The value with this reader's version on it, where it does not say. What a

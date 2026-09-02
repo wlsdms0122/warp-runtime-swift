@@ -83,16 +83,6 @@ public enum TextEncoding {
             throw refused("the document ended and the text did not")
         }
 
-        // The half of canonical the grammar cannot see: spelling. Writing the
-        // value back out and comparing bytes is the whole check — a fraction
-        // written long, an escape written the four-digit way, an indent of
-        // three spaces are each a second text for one document, and one
-        // document has one text. Bytes, because Swift's own `==` compares
-        // text under canonical equivalence and this rule is about spelling.
-        guard let written = try? Self.text(from: value), written.utf8.elementsEqual(text.utf8) else {
-            throw refused("the text is not the document's one writing")
-        }
-
         return value
     }
 
@@ -114,7 +104,7 @@ public enum TextEncoding {
     // for its next field name.
     private enum Opened {
         case array([Value])
-        case record(held: [String: Value], key: String?, previous: [UInt8]?)
+        case record(held: [String: Value], key: String?)
     }
 
     private static func tokenized(_ text: String) throws -> [Token] {
@@ -209,32 +199,19 @@ public enum TextEncoding {
         case "t": return "\t"
 
         case "u":
-            let first = try hexadecimal(from: &reading)
+            // A value has one spelling. The writer escapes a control
+            // character this way and nothing else, so an escape for a character
+            // that is written raw, or that has a shorter escape, is a second
+            // text for one value. That rules out surrogate pairs as well: a
+            // character past the basic plane is written as itself.
+            let value = try hexadecimal(from: &reading)
 
-            // A surrogate pair is two escapes carrying one character
-            guard 0xd800...0xdbff ~= first else {
-                guard let scalar = Unicode.Scalar(first) else {
-                    throw refused("the escape names no character")
-                }
-
-                return scalar
+            guard value < 0x20 else {
+                throw refused("the escape spells a character that is written as itself")
             }
 
-            guard reading.first == "\\" else { throw refused("the escape names half a character") }
-
-            reading.removeFirst()
-
-            guard reading.first == "u" else { throw refused("the escape names half a character") }
-
-            reading.removeFirst()
-
-            let second = try hexadecimal(from: &reading)
-
-            guard 0xdc00...0xdfff ~= second,
-                  let scalar = Unicode.Scalar(
-                    0x10000 + ((first - 0xd800) << 10) + (second - 0xdc00)
-                  ) else {
-                throw refused("the escape names no character")
+            guard let scalar = Unicode.Scalar(value), !["\n", "\r", "\t"].contains(scalar) else {
+                throw refused("the escape spells a character that has a shorter escape")
             }
 
             return scalar
@@ -284,8 +261,9 @@ public enum TextEncoding {
         for _ in 0..<4 {
             guard let character = reading.first,
                   character.isASCII,
+                  !("A"..."F").contains(character),
                   let digit = UInt32(String(character), radix: 16) else {
-                throw refused("the escape is not four hexadecimal digits")
+                throw refused("the escape is not four lowercase hexadecimal digits")
             }
 
             value = value << 4 | digit
@@ -312,7 +290,7 @@ public enum TextEncoding {
 
             // A record waits for a key where everything else waits for a value,
             // and a closing brace is only honest in that position
-            if case .record(let held, .none, let previous) = opened.last {
+            if case .record(let held, .none) = opened.last {
                 switch token {
                 case .recordClose:
                     opened.removeLast()
@@ -320,20 +298,16 @@ public enum TextEncoding {
                     settled = .object(held)
 
                 case let .bare(name) where identifier(name):
-                    opened[opened.count - 1] = .record(
-                        held: held,
-                        key: name,
-                        previous: try expect(name, after: previous)
-                    )
+                    try expect(name, in: held)
+
+                    opened[opened.count - 1] = .record(held: held, key: name)
 
                     continue
 
                 case let .string(name):
-                    opened[opened.count - 1] = .record(
-                        held: held,
-                        key: name,
-                        previous: try expect(name, after: previous)
-                    )
+                    try expect(name, in: held)
+
+                    opened[opened.count - 1] = .record(held: held, key: name)
 
                     continue
 
@@ -348,7 +322,7 @@ public enum TextEncoding {
                     continue
 
                 case .recordOpen:
-                    opened.append(.record(held: [:], key: nil, previous: nil))
+                    opened.append(.record(held: [:], key: nil))
 
                     continue
 
@@ -386,17 +360,17 @@ public enum TextEncoding {
 
                     opened.append(.array(held))
 
-                case .record(var held, let key?, let previous):
+                case .record(var held, let key?):
                     // Unique because the keys arrived strictly ascending and
                     // in NFC: byte order refuses a byte-equal duplicate, and
                     // NFC leaves one name one byte spelling to be equal in.
                     held[key] = value
 
-                    opened.append(.record(held: held, key: nil, previous: previous))
+                    opened.append(.record(held: held, key: nil))
 
                 // A record with no key is waiting for a field name, and every
                 // token it could meet in that state was answered above
-                case .record(_, .none, _):
+                case .record(_, .none):
                     throw refused("a record writes a field name here")
                 }
             }
@@ -442,18 +416,18 @@ public enum TextEncoding {
         }
     }
 
-    private static func expect(_ key: String, after previous: [UInt8]?) throws -> [UInt8] {
-        let raw = Array(key.utf8)
-
-        if let previous, !previous.lexicographicallyPrecedes(raw) {
-            throw refused("the record's keys are not written in order")
-        }
-
+    // A field name is read in any position, since layout is the writer's, and
+    // refused where the record already holds it: two values under one key are
+    // two documents, not one document twice.
+    private static func expect(_ key: String, in held: [String: Value]) throws {
         guard normal(key) else {
             throw refused("the field name is not in normal form C")
         }
 
-        return raw
+        // Both sides are normal form C by now, so equal here is equal by bytes
+        guard held[key] == nil else {
+            throw refused("the record writes '\(key)' twice")
+        }
     }
 
     // Whether a name is its own NFC form, by bytes — Swift's own `==` compares

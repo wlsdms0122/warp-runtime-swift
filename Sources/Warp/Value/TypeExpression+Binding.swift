@@ -38,7 +38,7 @@ public extension TypeExpression {
         in types: TypeTable = TypeTable()
     ) {
         switch (self, given) {
-        case let (.variable(name, _), _):
+        case let (.parameter(name, _), _):
             guard let already = bound[name] else {
                 bound[name] = given
 
@@ -109,7 +109,13 @@ public extension TypeExpression {
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: types)
             }
 
-        case let (.procedure(.some(mine), _), .procedure(.some(theirs), _)):
+        case let (.variable(mine), _), let (.inout(mine), _):
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: types)
+
+        case let (_, .variable(theirs)), let (_, .inout(theirs)):
+            binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: types)
+
+        case let (.procedure(.some(mine), _, _), .procedure(.some(theirs), _, _)):
             for (name, parameter) in mine.parameters.sorted(by: { $0.key < $1.key }) {
                 guard let opposite = theirs.parameters[name] else { continue }
 
@@ -128,7 +134,7 @@ public extension TypeExpression {
     // when it says nothing.
     func filling(_ bound: [String: TypeExpression]) -> TypeExpression {
         switch self {
-        case let .variable(name, _):
+        case let .parameter(name, _):
             return bound[name] ?? .any
 
         // Nothing fills a walk through a parameter — it is named for a path
@@ -147,8 +153,14 @@ public extension TypeExpression {
         case let .record(fields):
             return .record(fields.mapValues { field in field.filling(bound) })
 
-        case let .procedure(signature, purity):
-            return .procedure(signature?.filling(bound), purity)
+        case let .procedure(signature, purity, isolation):
+            return .procedure(signature?.filling(bound), purity, isolation)
+
+        case let .variable(inner):
+            return .variable(inner.filling(bound))
+
+        case let .inout(inner):
+            return .inout(inner.filling(bound))
 
         case let .nullable(inner):
             return .nullable(inner.filling(bound))
@@ -166,7 +178,7 @@ public extension TypeExpression {
     // refuses rather than picks from.
     func parameterConstraints(into table: inout [String: Set<String>]) {
         switch self {
-        case let .variable(name, constraint):
+        case let .parameter(name, constraint):
             table[name, default: []].formUnion(constraint.map { bound in [bound] } ?? [])
 
         // Not a slot a signature declares, and it carries no bound to claim
@@ -182,8 +194,11 @@ public extension TypeExpression {
                 field.parameterConstraints(into: &table)
             }
 
-        case let .procedure(signature, _):
+        case let .procedure(signature, _, _):
             signature?.parameterConstraints(into: &table)
+
+        case let .variable(inner), let .inout(inner):
+            inner.parameterConstraints(into: &table)
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return
@@ -197,7 +212,7 @@ public extension TypeExpression {
         switch self {
         // Both are shapes a call decides, and the deep question is only
         // whether this declaration has to be filled at all.
-        case .variable, .reading:
+        case .parameter, .reading:
             return true
 
         case let .array(element), let .object(element), let .nullable(element):
@@ -206,8 +221,11 @@ public extension TypeExpression {
         case let .record(fields):
             return fields.values.contains { field in field.isGeneric }
 
-        case let .procedure(signature, _):
+        case let .procedure(signature, _, _):
             return signature?.isGeneric ?? false
+
+        case let .variable(inner), let .inout(inner):
+            return inner.isGeneric
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return false
@@ -286,8 +304,8 @@ public extension TypeExpression {
     // included, because they are the outer signature's own slots.
     func bounded(by bounds: [String: String]) -> TypeExpression {
         switch self {
-        case let .variable(name, constraint):
-            return .variable(name: name, constraint: constraint ?? bounds[name])
+        case let .parameter(name, constraint):
+            return .parameter(name: name, constraint: constraint ?? bounds[name])
 
         case .reading:
             return self
@@ -301,11 +319,17 @@ public extension TypeExpression {
         case let .record(fields):
             return .record(fields.mapValues { field in field.bounded(by: bounds) })
 
-        case let .procedure(signature, purity):
-            return .procedure(signature?.bounded(by: bounds), purity)
+        case let .procedure(signature, purity, isolation):
+            return .procedure(signature?.bounded(by: bounds), purity, isolation)
 
         case let .nullable(inner):
             return .nullable(inner.bounded(by: bounds))
+
+        case let .variable(inner):
+            return .variable(inner.bounded(by: bounds))
+
+        case let .inout(inner):
+            return .inout(inner.bounded(by: bounds))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return self

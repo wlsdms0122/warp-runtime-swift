@@ -15,7 +15,7 @@ import Foundation
 // sides.
 struct TypeFrame: Sendable {
     // MARK: - Property
-    // Every declaration under its qualified spelling, as the author wrote it.
+    // Every declaration under its declared spelling, as the author wrote it.
     // A walk that meets a send finds the declaration here, once, and hands it
     // on with the call. The same spellings key `signatures`, where the link
     // has filled in what each declaration answers.
@@ -42,6 +42,14 @@ struct TypeFrame: Sendable {
     // closure literal is judged against this, so what a body is written to call
     // decides whether it fits a slot asking for purity.
     let pure: Set<String>
+
+    // Which declarations touch no name another body could touch at the same
+    // time, worked out from the bodies the way purity is.
+    let isolated: Set<String>
+
+    // Which names each module declares as variables, by the module's
+    // position in the link: two modules a caller built are still two modules.
+    let moduleVariables: [Int: Set<String>]
 
     // MARK: - Initializer
     // MARK: - Public

@@ -182,7 +182,6 @@ struct CanonicalTests {
         // answer away exactly where it is wanted.
         let unsound: Value = [
             "imports": [],
-            "name": "wallet",
             "procedures": ["entry": ["result": ["ref": "missing"]]]
         ]
 
@@ -191,7 +190,6 @@ struct CanonicalTests {
 
         // Then — which document this is comes off the canonical writing, so the
         // same text twice is the same document
-        #expect(written["name"] == .string("wallet"))
         #expect(written == (try loader.canonical(unsound, from: .testing)))
 
         // And the program is still refused when something asks whether it holds

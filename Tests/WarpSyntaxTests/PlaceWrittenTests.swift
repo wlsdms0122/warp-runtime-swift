@@ -137,7 +137,6 @@ struct PlaceWrittenTests {
         // would call a loop's condition `when`.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                namespace: "wallet",
                 procedures: [
                     entryName: Procedure(
                         body: [],
@@ -154,8 +153,8 @@ struct PlaceWrittenTests {
         // Then
         let place = try #require(error?.place)
 
-        #expect(place.rendered == "wallet/procedures.entry.result.condition")
-        #expect(place.written(by: .standard).rendered == "wallet/procedures.entry.result.where")
+        #expect(place.rendered == "procedures.entry.result.condition")
+        #expect(place.written(by: .standard).rendered == "procedures.entry.result.where")
     }
 
     // MARK: - Public

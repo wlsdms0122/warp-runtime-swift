@@ -74,14 +74,15 @@ extension Linker {
         at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
-        folding: Resolver?
+        folding: Resolver?,
+        origin: Int? = nil
     ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
             block: block,
             at: place,
             in: environment,
             with: frame,
-            ask: .judging(folding: folding)
+            ask: .judging(folding: folding, origin: origin)
         )
 
         return (inner.block, inner.calls)
@@ -288,6 +289,10 @@ extension Linker {
         guard case let .key(head, _)? = path.first, var current = environment[head] else {
             return asWritten(path, in: environment, with: frame)
         }
+
+        // A box stands in the environment marked as one; what is read out of
+        // it is what it holds.
+        current = current.fieldUnwrapped.inoutUnwrapped
 
         var resolved: [PathSegment] = [.key(head)]
         var walked: [PathSegment] = [.key(head)]
@@ -532,7 +537,7 @@ extension Linker {
 
                 if let refusal = needless(.field(key)) { return refusal }
 
-                current = field
+                current = field.fieldUnwrapped
                 resolved.append(segment)
 
             // An object holds entries of one shape under names that are data,
@@ -627,7 +632,7 @@ extension Linker {
 
         case let .reads(innerResolved, innerType):
             switch frame.resolve(innerType) {
-            case .int, .ranged, .double, .number, .any, .never, .variable:
+            case .int, .ranged, .double, .number, .any, .never, .parameter:
                 return .judged(innerResolved)
 
             default:
@@ -843,9 +848,21 @@ extension Linker {
 
     private func apply(_ flowed: Flow, to environment: inout [String: TypeExpression]) {
         for (name, write) in flowed.written {
-            environment[name] = write.definite
+            // A box whose type is fixed was checked where it was written, and
+            // a write into it changes nothing about what it holds.
+            if case .inout? = environment[name] { continue }
+
+            let held = environment[name]?.fieldUnwrapped
+
+            let retyped = write.definite
                 ? write.type
-                : join(environment[name], write.type)
+                : join(held, write.type)
+
+            if case .variable? = environment[name] {
+                environment[name] = .variable(retyped)
+            } else {
+                environment[name] = retyped
+            }
         }
     }
 
@@ -860,7 +877,10 @@ extension Linker {
     // where a walk per question would compound arm by arm into an
     // exponential reading of nothing new.
     private enum Ask {
-        case judging(folding: Resolver?)
+        // Judging carries which module the body being judged was declared
+        // in, where it was declared in one; a constant's expression has no
+        // module to read its variables by.
+        case judging(folding: Resolver?, origin: Int? = nil)
         case reading
 
         // Whether this ask keeps what the walk rebuilds. Reading reads a
@@ -969,7 +989,7 @@ extension Linker {
                 return Inspection(rewritten: expression, reading: .any)
 
             case let .reads(resolved, read):
-                guard case let .judging(folding) = ask else {
+                guard case let .judging(folding, _) = ask else {
                     return Inspection(rewritten: expression, reading: read)
                 }
 
@@ -1169,7 +1189,8 @@ extension Linker {
             )
 
         // A closure literal carries the signature it declared, and running
-        // one is not this flow's business — it writes no name from out here.
+        // one is not this flow's business — what it writes it writes when it
+        // is called, and the flow here is the flow of the making.
         // Judging still follows the body even though nothing can say whether
         // it is ever called: the warrant is compilation, and a body that
         // never runs still has to compile. It sees what surrounds it plus
@@ -1191,23 +1212,57 @@ extension Linker {
                     ask: ask
                 )
 
+                // What the closure writes into a name it captured has to fit
+                // what the name holds: the closure runs when it is called,
+                // and the body that declared the variable reads it as the
+                // type it gave it. A write here retypes nothing outside.
+                for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
+                    guard let held = environment[name]?.fieldUnwrapped.inoutUnwrapped else { continue }
+
+                    guard held.accepts(write.type, in: frame.types) else {
+                        throw LinkError(
+                            "writes '\(name)', which it captured, as"
+                                + " \(write.type.rendered) — the body it captured"
+                                + " from holds it as \(held.rendered)",
+                            at: place.slot(.closure)
+                        )
+                    }
+                }
+
                 body = inner.block
                 calls = inner.calls
+            }
+
+            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
+            let isolated = pure || (body.map { block in
+                isIsolated(
+                    block,
+                    declaring: Set(procedure.signature.parameters.keys),
+                    given: frame.isolated,
+                    signatures: frame.signatures
+                )
+            } ?? false)
+
+            if case .judging = ask, let body {
                 rewritten = .closure(
                     Procedure(
                         description: procedure.description,
                         signature: procedure.signature,
-                        implementation: .body(inner.block)
+                        implementation: .body(body),
+                        purity: pure ? .pure : .unstated,
+                        isolation: isolated ? .isolated : .unstated
                     )
                 )
             }
 
-            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
-
             return Inspection(
                 rewritten: rewritten,
                 calls: calls,
-                reading: .procedure(procedure.signature, pure ? .pure : .unstated)
+                reading: .procedure(
+                    procedure.signature,
+                    pure ? .pure : .unstated,
+                    isolated ? .isolated : .unstated
+                )
             )
 
         // Which value is called is settled at run time, so nothing here can
@@ -1355,6 +1410,15 @@ extension Linker {
                 sent[name] = inner.reading
                 calls += inner.calls
             }
+
+            try handedInPlace(
+                by: dispatch,
+                to: callee,
+                in: environment,
+                with: frame,
+                at: place,
+                when: ask
+            )
 
             let rewritten = Dispatch(
                 receiver: receiver?.rewritten,
@@ -1747,7 +1811,7 @@ extension Linker {
             )
 
             rewritten.append(
-                Statement(id: statement.id, binding: statement.binding, expression: inner.rewritten)
+                Statement(binding: statement.binding, expression: inner.rewritten)
             )
             calls += inner.calls
 
@@ -1775,7 +1839,7 @@ extension Linker {
             // never run. What the syntactic leaves get at reading, a call
             // gets here, where the signature is known.
             if inner.flow.leaves || inner.reading == .never {
-                if statement.id != nil {
+                if statement.binding != nil {
                     try refuseNeverBinding(at: here, when: ask)
                 }
 
@@ -1802,21 +1866,71 @@ extension Linker {
                 )
             }
 
-            switch (statement.binding, statement.id) {
-            case let (.constant, id?), let (.variable, id?):
+            switch statement.binding {
+            case let .constant(id)?:
                 locals.insert(id)
                 environment[id] = inner.reading
 
-            case let (.assignment, id?):
-                environment[id] = inner.reading
+            // A variable stands in the environment as a box, so a later
+            // write can tell it from a fixed name.
+            case let .variable(id)?:
+                locals.insert(id)
+                environment[id] = .variable(inner.reading)
 
-                if !locals.contains(id) {
-                    flowed.written[id] = merged(flowed.written[id], with: (inner.reading, true))
+            // A write to a whole variable retypes it, the way a declaration
+            // did — unless the box's type is fixed elsewhere, in which case
+            // what is written has to fit. A write through a path is judged
+            // against the shape the path reaches, and leaves the variable's
+            // type as it was.
+            case let .assignment(path)?:
+                guard let id = path.head else { break }
+
+                switch environment[id] {
+                case let .inout(fixed)?:
+                    try refuseUnfit(
+                        inner.reading,
+                        writtenTo: path,
+                        holding: fixed,
+                        in: environment,
+                        with: frame,
+                        at: here,
+                        when: ask
+                    )
+
+                case .variable?:
+                    if path.count == 1 {
+                        environment[id] = .variable(inner.reading)
+
+                        if !locals.contains(id) {
+                            flowed.written[id] = merged(flowed.written[id], with: (inner.reading, true))
+                        }
+                    } else {
+                        try refuseUnfit(
+                            inner.reading,
+                            writtenTo: path,
+                            holding: nil,
+                            in: environment,
+                            with: frame,
+                            at: here,
+                            when: ask
+                        )
+
+                        if !locals.contains(id), let current = environment[id]?.fieldUnwrapped {
+                            flowed.written[id] = merged(flowed.written[id], with: (current, true))
+                        }
+                    }
+
+                default:
+                    try refuse(
+                        "writes '\(id)', which is not a variable here",
+                        at: here,
+                        when: ask
+                    )
                 }
 
             // A nameless statement writes no name for a later reading to
             // find.
-            case (_, nil):
+            case nil:
                 break
             }
         }
@@ -2125,12 +2239,13 @@ extension Linker {
         // a list of them pass a slot that asked for none, because `any` is
         // accepted everywhere.
         if
-            case let .procedure(mine, wanted) = left,
-            case let .procedure(theirs, offered) = right
+            case let .procedure(mine, wanted, wantedIsolation) = left,
+            case let .procedure(theirs, offered, offeredIsolation) = right
         {
             return .procedure(
                 mine == theirs ? mine : nil,
-                wanted == .pure && offered == .pure ? .pure : .unstated
+                wanted == .pure && offered == .pure ? .pure : .unstated,
+                wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
             )
         }
 
@@ -2148,5 +2263,229 @@ extension Linker {
         }
 
         return mine == theirs ? mine : .any
+    }
+}
+
+extension Linker {
+    // Where a write lands, or why it lands nowhere.
+    enum Writable {
+        case reaches(TypeExpression)
+        case refused(String)
+    }
+
+    // MARK: - Internal
+    // What a path write reaches, or why it may not. The head is a box; each
+    // field on the way is one a declared type wrote `var`, or a field of a
+    // shape no declaration named; an element is written through its index. A
+    // shape that may be null is not written into, and neither is `any`.
+    func writable(
+        _ path: [PathSegment],
+        in environment: [String: TypeExpression],
+        with frame: TypeFrame
+    ) -> Writable {
+        guard case let .key(head, _)? = path.first, let box = environment[head] else {
+            return .refused("writes '\(path.rendered)', and its head is not a name here")
+        }
+
+        var current = box.fieldUnwrapped.inoutUnwrapped
+        var walked: [PathSegment] = [.key(head)]
+
+        for segment in path.dropFirst() {
+            walked.append(segment)
+
+            if segment.optional {
+                return .refused(
+                    "\(walked.rendered) writes through `\(segment.mark)`, and a write"
+                        + " reads no absence — write the whole, or write what is there"
+                )
+            }
+
+            // Whether the container being entered is a declared type's, which
+            // is asked of this segment alone: a record written inline under a
+            // `var` field is nobody's declaration.
+            var declared = false
+
+            if case .named = current {
+                declared = true
+            }
+
+            if case let .indexRef(inner, _) = segment {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: frame) {
+                    return .refused(reason)
+                }
+            }
+
+            current = frame.resolve(current)
+
+            switch (segment, current) {
+            case let (.key(key, _), .record(fields)):
+                guard let field = fields[key] else {
+                    return .refused(
+                        "\(walked.rendered) names '\(key)', which \(current.rendered)"
+                            + " does not declare"
+                    )
+                }
+
+                if declared, !field.isVariable {
+                    return .refused(
+                        "\(walked.rendered) writes through '\(key)', which the type"
+                            + " declares without `var` — a field a path may write"
+                            + " through is declared `var`"
+                    )
+                }
+
+                current = field.fieldUnwrapped
+
+            case let (.key, .object(entry)):
+                current = entry
+
+            case let (.index, .array(element)), let (.indexRef, .array(element)):
+                current = element
+
+            case (.key, .any), (.index, .any), (.indexRef, .any):
+                return .refused(
+                    "\(walked.rendered) writes into \(current.rendered), which"
+                        + " declares nothing — a shape is written by naming it"
+                )
+
+            case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):
+                return .refused(
+                    "\(walked.rendered) writes into \(current.rendered), which may"
+                        + " be null — write the whole first"
+                )
+
+            case (.key, _):
+                return .refused(
+                    "\(walked.rendered) writes a field into \(current.rendered),"
+                        + " which has none"
+                )
+
+            case (.index, _), (.indexRef, _), (.word, _):
+                return .refused(
+                    "\(walked.rendered) writes an element into \(current.rendered),"
+                        + " and only an array is written by position"
+                )
+            }
+        }
+
+        return .reaches(current)
+    }
+
+    // The rules a call handing variables in place is held to: the argument is
+    // a path, the path's head is a variable here, the path is one a write may
+    // take, and no two `inout` parameters are handed one variable. The last is
+    // static: two paths under one head may or may not meet, and the link
+    // refuses the head rather than guessing.
+    //
+    // A module variable goes in place only to a native word, which reads no
+    // name. A written body of any module reaches the variable's own module by
+    // calling it, and there the variable is read by name: one box, two ways.
+    private func handedInPlace(
+        by dispatch: Dispatch,
+        to callee: Symbol,
+        in environment: [String: TypeExpression],
+        with frame: TypeFrame,
+        at place: Place,
+        when ask: Ask
+    ) throws {
+        guard case let .judging(_, origin) = ask else { return }
+
+        let moduleVariables = origin.flatMap { origin in frame.moduleVariables[origin] } ?? []
+        let signature = callee.procedure.signature
+        var heads: [String: String] = [:]
+
+        for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key })
+        where parameter.declared.isInout {
+            guard let argument = dispatch.handed(name, to: signature) else { continue }
+
+            let at = name == signature.receiver && dispatch.receiver != nil
+                ? place.slot(.receiver)
+                : place.argument(name)
+
+            guard case let .reference(path) = argument, let head = path.head else {
+                try refuse(
+                    "hands '\(name)' in place, and what is handed in place is a"
+                        + " variable's path — this argument is not one",
+                    at: at,
+                    when: ask
+                )
+                continue
+            }
+
+            switch environment[head] {
+            case .variable?, .inout?:
+                break
+
+            default:
+                try refuse(
+                    "hands '\(head)' in place, which is a fixed name here — a"
+                        + " variable is handed in place",
+                    at: at,
+                    when: ask
+                )
+                continue
+            }
+
+            if case let .refused(reason) = writable(path, in: environment, with: frame) {
+                try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
+            }
+
+            if let earlier = heads[head] {
+                try refuse(
+                    "hands '\(head)' in place twice, to '\(earlier)' and to"
+                        + " '\(name)' — one call hands one variable to one parameter",
+                    at: at,
+                    when: ask
+                )
+            }
+
+            if moduleVariables.contains(head), callee.procedure.block != nil {
+                try refuse(
+                    "hands '\(path.rendered)' in place to '\(dispatch.selector)', which is"
+                        + " a written body — a module variable is handed in place only to"
+                        + " a native word; a body changes it through a procedure declared"
+                        + " beside it",
+                    at: at,
+                    when: ask
+                )
+            }
+
+            heads[head] = name
+        }
+    }
+
+    private func refuseUnfit(
+        _ written: TypeExpression,
+        writtenTo path: [PathSegment],
+        holding fixed: TypeExpression?,
+        in environment: [String: TypeExpression],
+        with frame: TypeFrame,
+        at place: Place,
+        when ask: Ask
+    ) throws {
+        let slot: TypeExpression
+
+        if path.count == 1, let fixed {
+            slot = fixed
+        } else {
+            switch writable(path, in: environment, with: frame) {
+            case let .refused(reason):
+                try refuse(reason, at: place, when: ask)
+                return
+
+            case let .reaches(reached):
+                slot = reached
+            }
+        }
+
+        guard slot.accepts(written, in: frame.types) else {
+            try refuse(
+                "writes '\(path.rendered)' as \(written.rendered), and it holds"
+                    + " \(slot.rendered)",
+                at: place,
+                when: ask
+            )
+            return
+        }
     }
 }

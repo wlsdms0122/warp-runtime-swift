@@ -46,9 +46,9 @@ public extension Place {
         switch slot {
         case .procedures: ModuleReader.CodingKeys.procedures.stringValue
         case .constants: ModuleReader.CodingKeys.const.stringValue
+        case .variables: ModuleReader.CodingKeys.variables.stringValue
         case .types: ModuleReader.CodingKeys.types.stringValue
         case .constraints: ModuleReader.CodingKeys.constraints.stringValue
-        case .namespace: ModuleReader.CodingKeys.name.stringValue
         case .imports: ModuleReader.CodingKeys.imports.stringValue
 
         case .parameters: ProcedureReader.CodingKeys.parameters.stringValue

@@ -29,21 +29,15 @@ struct DispatchTests {
             result: .record(["said": reference("text")])
         )
         let sut: [Statement] = [
-            Statement(
-                id: "counted",
-                expression: .dispatch(
+            Statement(binding: .constant("counted"), expression: .dispatch(
                     Dispatch(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "std.collection.count")
                 )
             ),
-            Statement(
-                id: "shouted",
-                expression: .dispatch(
+            Statement(binding: .constant("shouted"), expression: .dispatch(
                     Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                 )
             ),
-            Statement(
-                id: "echoed",
-                expression: .dispatch(
+            Statement(binding: .constant("echoed"), expression: .dispatch(
                     Dispatch(selector: "echo", arguments: ["text": .literal(.string("back"))])
                 )
             )
@@ -79,7 +73,7 @@ struct DispatchTests {
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe")
         )
 
@@ -95,7 +89,7 @@ struct DispatchTests {
 
         // When
         let answer = try await answer(
-            of: [Statement(id: "probe", expression: sut)],
+            of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe"),
             arguments: ["items": .array([.int(1), .int(2), .int(3)])],
             signature: Signature(parameters: ["items": Parameter(type: .array(.any))])
@@ -105,15 +99,14 @@ struct DispatchTests {
         #expect(answer == .int(3))
     }
 
-    @Test("two declarations of one qualified name are refused at link")
+    @Test("two declarations of one spelling are refused at link")
     func oneNameIsDeclaredOnce() throws {
         // Given / When / Then — which one runs must never be a link-order
-        // accident, and an implementation is not a namespace: a body and a
+        // accident, and an implementation is not a spelling: a body and a
         // native answering one name collide the same way two bodies would
         let rival = try Module(
-            namespace: "std.collection",
             procedures: [
-                "count": Procedure(
+                "std.collection.count": Procedure(
                     signature: Signature(returns: .int),
                     implementation: .effect(ShoutEffect())
                 )
@@ -134,9 +127,7 @@ struct DispatchTests {
         // while an effect was an opaque Swift value.
         let sut = Procedure(
             body: [
-                Statement(
-                    id: "shouted",
-                    expression: .dispatch(
+                Statement(binding: .constant("shouted"), expression: .dispatch(
                         Dispatch(
                             selector: "app.shout",
                             arguments: [
@@ -160,9 +151,7 @@ struct DispatchTests {
         // Given
         let sut = Procedure(
             body: [
-                Statement(
-                    id: "shouted",
-                    expression: .dispatch(Dispatch(selector: "app.shout"))
+                Statement(binding: .constant("shouted"), expression: .dispatch(Dispatch(selector: "app.shout"))
                 )
             ]
         )
@@ -179,9 +168,7 @@ struct DispatchTests {
         // judged here, and a constant is one
         let sut = Procedure(
             body: [
-                Statement(
-                    id: "shouted",
-                    expression: .dispatch(
+                Statement(binding: .constant("shouted"), expression: .dispatch(
                         Dispatch(selector: "app.shout", arguments: ["text": .literal(.int(7))])
                     )
                 )
@@ -199,7 +186,7 @@ struct DispatchTests {
         // Given — a self-contained procedure that calls something should be told
         // it had nowhere to look, rather than handed an empty answer
         let sut = Procedure(
-            body: [Statement(id: "gone", expression: .dispatch(Dispatch(selector: "nowhere")))]
+            body: [Statement(binding: .constant("gone"), expression: .dispatch(Dispatch(selector: "nowhere")))]
         )
 
         // When / Then
@@ -218,9 +205,7 @@ struct DispatchTests {
                     expression: .conditional(
                         .literal(.bool(false)),
                         then: [
-                            Statement(
-                                id: "gone",
-                                expression: .dispatch(Dispatch(selector: "nowhere"))
+                            Statement(binding: .constant("gone"), expression: .dispatch(Dispatch(selector: "nowhere"))
                             )
                         ],
                         else: nil
@@ -248,9 +233,7 @@ struct DispatchTests {
                         expression: .conditional(
                             differs(reference("n"), .literal(.int(0))),
                             then: [
-                                Statement(
-                                    id: "recur",
-                                    expression: .dispatch(
+                                Statement(binding: .constant("recur"), expression: .dispatch(
                                         Dispatch(
                                             selector: "countdown",
                                             arguments: ["n": .literal(.int(0))]
@@ -266,9 +249,7 @@ struct DispatchTests {
         )
         let sut = Procedure(
             body: [
-                Statement(
-                    id: "run",
-                    expression: .dispatch(
+                Statement(binding: .constant("run"), expression: .dispatch(
                         Dispatch(selector: "countdown", arguments: ["n": .literal(.int(1))])
                     )
                 )

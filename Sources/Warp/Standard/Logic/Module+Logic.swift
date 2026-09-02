@@ -9,10 +9,9 @@ import Foundation
 
 public extension Module {
     static let logic = try! Module(
-        namespace: "std.logic",
         description: "Equality, negation and the connectives.",
         procedures: [
-            "equal": Procedure(
+            "std.logic.equal": Procedure(
                 description: "Whether two values are the same.",
                 signature: Signature(
                     receiver: "of",
@@ -27,7 +26,7 @@ public extension Module {
                 ),
                 implementation: .query(EqualityQuery(.same))
             ),
-            "notEqual": Procedure(
+            "std.logic.notEqual": Procedure(
                 description: "Whether two values differ.",
                 signature: Signature(
                     receiver: "of",
@@ -42,7 +41,7 @@ public extension Module {
                 ),
                 implementation: .query(EqualityQuery(.different))
             ),
-            "not": Procedure(
+            "std.logic.not": Procedure(
                 description: "The opposite of a truth.",
                 signature: Signature(
                     receiver: "of",
@@ -54,7 +53,7 @@ public extension Module {
             // `and`/`or` rather than `all`/`any`: the connectives' universal
             // names, and they leave `all` free for `std.concurrent`, whose
             // meaning is the one everybody else calls `all`.
-            "and": Procedure(
+            "std.logic.and": Procedure(
                 description: "Whether every one answers true, asked until one does not.",
                 signature: Signature(
                     receiver: "of",
@@ -63,7 +62,7 @@ public extension Module {
                 ),
                 implementation: .query(ChainQuery(.and))
             ),
-            "or": Procedure(
+            "std.logic.or": Procedure(
                 description: "Whether one answers true, asked until one does.",
                 signature: Signature(
                     receiver: "of",
