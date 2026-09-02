@@ -998,47 +998,10 @@ struct LinkerTests {
         #expect(error?.place?.rendered == "procedures.entry.body.got[0].dispatch")
     }
 
-    @Test("a bare name is not a spelling of any qualified declaration")
-    func aBareNameTwoModulesDeclareIsRefused() throws {
-        // Given — `map` is a collection word and a concurrent word on purpose,
-        // and this asymmetry is the contract: the bare spelling resolves only
-        // while exactly one linked module declares it
-        let sut = try Module(
-            procedures: [
-                "caller": Procedure(
-                    body: [
-                        Statement(
-                            id: "walked",
-                            expression: .dispatch(
-                                Dispatch(
-                                    receiver: .literal(.array([])),
-                                    selector: "map",
-                                    arguments: [
-                                        "by": .closure(
-                                            Procedure(body: [], result: .literal(.int(0)))
-                                        )
-                                    ]
-                                )
-                            )
-                        )
-                    ]
-                )
-            ]
-        )
-
-        // When / Then — the refusal names both candidates, which is the whole
-        // of what a caller needs to pick one
-        #expect {
-            try linker.link([sut] + Module.standard, entry: "caller")
-        } throws: { error in
-            "\(error)".contains("sends 'map', which no module in this link declares")
-        }
-    }
-
     @Test("a qualified name resolves beside the full link")
-    func aUniqueBareNameResolves() throws {
-        // Given — `all` stayed unique because `std.logic` moved to `and`/`or`;
-        // this holds that clearing to its purpose
+    func aQualifiedNameResolvesBesideTheFullLink() throws {
+        // Given — `std.concurrent.all` is sent beside every standard bundle,
+        // and its spelling names one declaration among all of them
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
