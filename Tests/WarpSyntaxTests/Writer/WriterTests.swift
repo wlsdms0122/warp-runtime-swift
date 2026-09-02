@@ -289,7 +289,7 @@ struct WriterTests {
         // bare would be a document that reads back meaning something else.
         let bounded = Signature(
             parameters: [
-                "item": Parameter(type: .variable(name: "T", constraint: "Scalar"))
+                "item": Parameter(type: .parameter(name: "T", constraint: "Scalar"))
             ],
             returns: .bool
         )
@@ -309,12 +309,12 @@ struct WriterTests {
         // the declaring procedure answers the same way, whichever entry the
         // caller came through
         #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(type: .variable(name: "T", constraint: "Scalar")))
+            try sut.value(of: Parameter(type: .parameter(name: "T", constraint: "Scalar")))
         }
 
         // A bounded variable declared as a type directly refuses the same way
         let variable = try Module(
-            types: ["Loose": .variable(name: "T", constraint: "Scalar")],
+            types: ["Loose": .parameter(name: "T", constraint: "Scalar")],
             procedures: [
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]

@@ -195,7 +195,7 @@ public struct Writer: Sendable {
                     + " fills"
             )
 
-        case let .variable(name, constraint):
+        case let .parameter(name, constraint):
             guard constraint == nil else {
                 throw WritingError(
                     "'some \(name)' is bounded by '\(constraint ?? "")', and nothing"
@@ -240,7 +240,7 @@ public struct Writer: Sendable {
             guard let signature else { return .string(word) }
 
             // No bound check of its own: a procedure type written as a type
-            // has no `bounds` surface, and the `.variable` case refuses any
+            // has no `bounds` surface, and the `.parameter` case refuses any
             // bound the walk below meets — one guard, wherever the walk
             // started.
             return .object([word: .object(try fields(of: signature))])
@@ -303,8 +303,8 @@ public struct Writer: Sendable {
     // every occurrence in them.
     private func stripped(_ type: TypeExpression) -> TypeExpression {
         switch type {
-        case let .variable(name, _):
-            return .variable(name: name)
+        case let .parameter(name, _):
+            return .parameter(name: name)
 
         // Carries no bound to strip.
         case .reading:

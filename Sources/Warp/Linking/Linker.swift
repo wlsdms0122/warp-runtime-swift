@@ -665,7 +665,7 @@ public struct Linker: Sendable {
                 }
 
                 switch resolved {
-                case .variable, .any, .never:
+                case .parameter, .any, .never:
                     throw LinkError(
                         "a member is a concrete shape"
                             + " — `\(member.rendered)` says nothing a"
@@ -925,7 +925,7 @@ public struct Linker: Sendable {
 
             return
 
-        case .variable:
+        case .parameter:
             guard parameterized else {
                 throw LinkError(
                     "writes `\(type.rendered)`, and nothing here is"
@@ -986,7 +986,7 @@ public struct Linker: Sendable {
             }
 
             switch resolved {
-            case .any, .null, .never, .variable, .nullable:
+            case .any, .null, .never, .parameter, .nullable:
                 throw LinkError(
                     "writes `?` on \(inner.rendered), which"
                         + " stands for `\(resolved.rendered)` — a `?` says"
@@ -1129,7 +1129,7 @@ public struct Linker: Sendable {
         // member of its constraint could spell — a `oneOf` of words on a
         // Numeric slot fits no call, and that is knowable where the parameter
         // is declared.
-        case let .variable(_, constraint):
+        case let .parameter(_, constraint):
             guard let constraint, let members = table.constraint(constraint) else {
                 return true
             }

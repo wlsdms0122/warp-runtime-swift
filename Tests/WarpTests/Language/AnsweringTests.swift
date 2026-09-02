@@ -216,7 +216,7 @@ struct AnsweringTests {
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
-                            parameters: ["of": Parameter(type: .variable(name: "T"))]
+                            parameters: ["of": Parameter(type: .parameter(name: "T"))]
                         ),
                         body: [],
                         result: .reference(answer)

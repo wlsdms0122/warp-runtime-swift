@@ -38,7 +38,7 @@ public extension TypeExpression {
         in types: TypeTable = TypeTable()
     ) {
         switch (self, given) {
-        case let (.variable(name, _), _):
+        case let (.parameter(name, _), _):
             guard let already = bound[name] else {
                 bound[name] = given
 
@@ -128,7 +128,7 @@ public extension TypeExpression {
     // when it says nothing.
     func filling(_ bound: [String: TypeExpression]) -> TypeExpression {
         switch self {
-        case let .variable(name, _):
+        case let .parameter(name, _):
             return bound[name] ?? .any
 
         // Nothing fills a walk through a parameter — it is named for a path
@@ -166,7 +166,7 @@ public extension TypeExpression {
     // refuses rather than picks from.
     func parameterConstraints(into table: inout [String: Set<String>]) {
         switch self {
-        case let .variable(name, constraint):
+        case let .parameter(name, constraint):
             table[name, default: []].formUnion(constraint.map { bound in [bound] } ?? [])
 
         // Not a slot a signature declares, and it carries no bound to claim
@@ -197,7 +197,7 @@ public extension TypeExpression {
         switch self {
         // Both are shapes a call decides, and the deep question is only
         // whether this declaration has to be filled at all.
-        case .variable, .reading:
+        case .parameter, .reading:
             return true
 
         case let .array(element), let .object(element), let .nullable(element):
@@ -286,8 +286,8 @@ public extension TypeExpression {
     // included, because they are the outer signature's own slots.
     func bounded(by bounds: [String: String]) -> TypeExpression {
         switch self {
-        case let .variable(name, constraint):
-            return .variable(name: name, constraint: constraint ?? bounds[name])
+        case let .parameter(name, constraint):
+            return .parameter(name: name, constraint: constraint ?? bounds[name])
 
         case .reading:
             return self

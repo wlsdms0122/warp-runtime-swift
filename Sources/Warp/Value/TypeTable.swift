@@ -97,7 +97,7 @@ public struct TypeTable: Sendable {
         case .reading:
             return true
 
-        case let .variable(_, constraint):
+        case let .parameter(_, constraint):
             guard let constraint, let inner = constraints[constraint] else { return true }
             guard !assuming.contains(constraint) else { return true }
 

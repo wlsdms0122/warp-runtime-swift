@@ -111,7 +111,7 @@ public struct TypeReader: Decodable {
             // A type parameter stands for what the call puts there, and what
             // the call puts there is a type of its own — nullability rides on
             // the filling, not on the mention.
-            case .variable:
+            case .parameter:
                 throw TypeFormError(
                     "type '\(text)' writes `?` on a type parameter — a"
                         + " parameter stands for the whole type the call fills in"
@@ -146,7 +146,7 @@ public struct TypeReader: Decodable {
                 )
             }
 
-            return .variable(name: bare)
+            return .parameter(name: bare)
         }
 
         if let bare = text.dropPrefixed("pure ") {

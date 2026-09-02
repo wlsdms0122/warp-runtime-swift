@@ -16,10 +16,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.plus))
             ),
@@ -28,10 +28,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.minus))
             ),
@@ -40,10 +40,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.times))
             ),
@@ -52,8 +52,8 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
                     ],
                     returns: .double
                 ),
@@ -64,10 +64,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
                     ],
-                    returns: .variable(name: "N", constraint: "std.Numeric")
+                    returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(ArithmeticQuery(.remainder))
             ),
@@ -76,10 +76,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Comparable")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Comparable"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Comparable")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Comparable"))
                     ],
-                    returns: .variable(name: "N", constraint: "std.Comparable")
+                    returns: .parameter(name: "N", constraint: "std.Comparable")
                 ),
                 implementation: .query(ComparisonQuery(.min))
             ),
@@ -88,10 +88,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "N", constraint: "std.Comparable")),
-                        "value": Parameter(type: .variable(name: "N", constraint: "std.Comparable"))
+                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Comparable")),
+                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Comparable"))
                     ],
-                    returns: .variable(name: "N", constraint: "std.Comparable")
+                    returns: .parameter(name: "N", constraint: "std.Comparable")
                 ),
                 implementation: .query(ComparisonQuery(.max))
             ),
@@ -99,8 +99,8 @@ public extension Module {
                 description: "The number without its sign.",
                 signature: Signature(
                     receiver: "of",
-                    parameters: ["of": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))],
-                    returns: .variable(name: "N", constraint: "std.Numeric")
+                    parameters: ["of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))],
+                    returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
                 implementation: .query(NumberQuery(.absolute))
             ),
@@ -127,8 +127,8 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "T", constraint: "std.Comparable")),
-                        "value": Parameter(type: .variable(name: "T", constraint: "std.Comparable"))
+                        "of": Parameter(type: .parameter(name: "T", constraint: "std.Comparable")),
+                        "value": Parameter(type: .parameter(name: "T", constraint: "std.Comparable"))
                     ],
                     returns: .bool
                 ),
@@ -139,8 +139,8 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .variable(name: "T", constraint: "std.Comparable")),
-                        "value": Parameter(type: .variable(name: "T", constraint: "std.Comparable"))
+                        "of": Parameter(type: .parameter(name: "T", constraint: "std.Comparable")),
+                        "value": Parameter(type: .parameter(name: "T", constraint: "std.Comparable"))
                     ],
                     returns: .bool
                 ),

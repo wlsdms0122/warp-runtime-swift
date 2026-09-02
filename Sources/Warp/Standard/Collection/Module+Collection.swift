@@ -37,9 +37,9 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element")))
+                        "of": Parameter(type: .array(.parameter(name: "Element")))
                     ],
-                    returns: .variable(name: "Element")
+                    returns: .parameter(name: "Element")
                 ),
                 implementation: .query(SequenceQuery(.first))
             ),
@@ -48,9 +48,9 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element")))
+                        "of": Parameter(type: .array(.parameter(name: "Element")))
                     ],
-                    returns: .variable(name: "Element")
+                    returns: .parameter(name: "Element")
                 ),
                 implementation: .query(SequenceQuery(.last))
             ),
@@ -59,9 +59,9 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element")))
+                        "of": Parameter(type: .array(.parameter(name: "Element")))
                     ],
-                    returns: .array(.variable(name: "Element"))
+                    returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(SequenceQuery(.reversed))
             ),
@@ -70,10 +70,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element"))),
-                        "value": Parameter(type: .variable(name: "Element"))
+                        "of": Parameter(type: .array(.parameter(name: "Element"))),
+                        "value": Parameter(type: .parameter(name: "Element"))
                     ],
-                    returns: .array(.variable(name: "Element"))
+                    returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(BuildingQuery(.appending))
             ),
@@ -82,10 +82,10 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element"))),
-                        "value": Parameter(type: .variable(name: "Element"))
+                        "of": Parameter(type: .array(.parameter(name: "Element"))),
+                        "value": Parameter(type: .parameter(name: "Element"))
                     ],
-                    returns: .array(.variable(name: "Element"))
+                    returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(BuildingQuery(.prepending))
             ),
@@ -94,9 +94,9 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element")))
+                        "of": Parameter(type: .array(.parameter(name: "Element")))
                     ],
-                    returns: .array(.variable(name: "Element"))
+                    returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(BuildingQuery(.dropFirst))
             ),
@@ -105,9 +105,9 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element")))
+                        "of": Parameter(type: .array(.parameter(name: "Element")))
                     ],
-                    returns: .array(.variable(name: "Element"))
+                    returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(BuildingQuery(.dropLast))
             ),
@@ -120,10 +120,10 @@ public extension Module {
                     receiver: "of",
                     parameters: [
                         "of": Parameter(
-                            type: .array(.variable(name: "Element", constraint: "std.Comparable"))
+                            type: .array(.parameter(name: "Element", constraint: "std.Comparable"))
                         )
                     ],
-                    returns: .array(.variable(name: "Element", constraint: "std.Comparable"))
+                    returns: .array(.parameter(name: "Element", constraint: "std.Comparable"))
                 ),
                 implementation: .query(BuildingQuery(.sorted))
             ),
@@ -132,18 +132,18 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element"))),
+                        "of": Parameter(type: .array(.parameter(name: "Element"))),
                         "value": Parameter(
                             type: .procedure(
                                 Signature(
-                                    parameters: ["item": Parameter(type: .variable(name: "Element"))],
-                                    returns: .variable(name: "Answer")
+                                    parameters: ["item": Parameter(type: .parameter(name: "Element"))],
+                                    returns: .parameter(name: "Answer")
                                 ),
                                 .pure
                             )
                         )
                     ],
-                    returns: .array(.variable(name: "Answer"))
+                    returns: .array(.parameter(name: "Answer"))
                 ),
                 implementation: .query(WalkingQuery(.map))
             ),
@@ -152,18 +152,18 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element"))),
+                        "of": Parameter(type: .array(.parameter(name: "Element"))),
                         "value": Parameter(
                             type: .procedure(
                                 Signature(
-                                    parameters: ["item": Parameter(type: .variable(name: "Element"))],
+                                    parameters: ["item": Parameter(type: .parameter(name: "Element"))],
                                     returns: .bool
                                 ),
                                 .pure
                             )
                         )
                     ],
-                    returns: .array(.variable(name: "Element"))
+                    returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(WalkingQuery(.filter))
             ),
@@ -172,22 +172,22 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .array(.variable(name: "Element"))),
-                        "from": Parameter(type: .variable(name: "Carried")),
+                        "of": Parameter(type: .array(.parameter(name: "Element"))),
+                        "from": Parameter(type: .parameter(name: "Carried")),
                         "value": Parameter(
                             type: .procedure(
                                 Signature(
                                     parameters: [
-                                        "carried": Parameter(type: .variable(name: "Carried")),
-                                        "item": Parameter(type: .variable(name: "Element"))
+                                        "carried": Parameter(type: .parameter(name: "Carried")),
+                                        "item": Parameter(type: .parameter(name: "Element"))
                                     ],
-                                    returns: .variable(name: "Carried")
+                                    returns: .parameter(name: "Carried")
                                 ),
                                 .pure
                             )
                         )
                     ],
-                    returns: .variable(name: "Carried")
+                    returns: .parameter(name: "Carried")
                 ),
                 implementation: .query(WalkingQuery(.reduce))
             ),
@@ -207,9 +207,9 @@ public extension Module {
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .object(.variable(name: "Entry")))
+                        "of": Parameter(type: .object(.parameter(name: "Entry")))
                     ],
-                    returns: .array(.variable(name: "Entry"))
+                    returns: .array(.parameter(name: "Entry"))
                 ),
                 implementation: .query(MappingQuery(.values))
             ),

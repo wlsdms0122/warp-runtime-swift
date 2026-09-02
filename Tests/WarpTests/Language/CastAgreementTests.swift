@@ -67,8 +67,8 @@ struct CastAgreementTests {
         .named("Person"), .named("Byte"), .named("Ratio"), .named("Maybe"), .named("Whole"),
         .named("Tree"),
         .named("Nothing declares this"),
-        .variable(name: "T"),
-        .variable(name: "N", constraint: "Comparable"),
+        .parameter(name: "T"),
+        .parameter(name: "N", constraint: "Comparable"),
         .reading(of: "T", path: [.key("inner")]),
         .procedure(nil)
     ]

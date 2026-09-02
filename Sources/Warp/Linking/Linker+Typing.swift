@@ -627,7 +627,7 @@ extension Linker {
 
         case let .reads(innerResolved, innerType):
             switch frame.resolve(innerType) {
-            case .int, .ranged, .double, .number, .any, .never, .variable:
+            case .int, .ranged, .double, .number, .any, .never, .parameter:
                 return .judged(innerResolved)
 
             default:

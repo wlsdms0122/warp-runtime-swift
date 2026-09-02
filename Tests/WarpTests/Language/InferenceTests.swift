@@ -1340,7 +1340,7 @@ struct InferenceTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .variable(name: "T"))],
+                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [

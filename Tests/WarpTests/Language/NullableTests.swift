@@ -1005,7 +1005,7 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .variable(name: "T"))],
+                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [],
@@ -1037,7 +1037,7 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["of": Parameter(type: .variable(name: "T"))],
+                        parameters: ["of": Parameter(type: .parameter(name: "T"))],
                         returns: .any
                     ),
                     body: [
@@ -1082,7 +1082,7 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .variable(name: "T")),
+                            "of": Parameter(type: .parameter(name: "T")),
                             "flag": Parameter(type: .bool)
                         ],
                         returns: .any
@@ -1148,7 +1148,7 @@ struct ParameterReceiverTests {
                     "peek": Procedure(
                         signature: Signature(
                             parameters: [
-                                "of": Parameter(type: .variable(name: "T")),
+                                "of": Parameter(type: .parameter(name: "T")),
                                 "flag": Parameter(type: .bool)
                             ],
                             returns: .any
@@ -1215,7 +1215,7 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .variable(name: "T")),
+                            "of": Parameter(type: .parameter(name: "T")),
                             "flag": Parameter(type: .bool)
                         ],
                         returns: .any
@@ -1269,8 +1269,8 @@ struct ParameterReceiverTests {
                 "peek": Procedure(
                     signature: Signature(
                         parameters: [
-                            "of": Parameter(type: .variable(name: "T")),
-                            "also": Parameter(type: .variable(name: "T")),
+                            "of": Parameter(type: .parameter(name: "T")),
+                            "also": Parameter(type: .parameter(name: "T")),
                             "flag": Parameter(type: .bool)
                         ],
                         returns: .any

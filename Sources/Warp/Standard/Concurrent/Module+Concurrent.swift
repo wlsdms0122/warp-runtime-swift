@@ -51,20 +51,20 @@ public extension Module {
                 signature: Signature(
                     receiver: "over",
                     parameters: [
-                        "over": Parameter(type: .array(.variable(name: "Element"))),
+                        "over": Parameter(type: .array(.parameter(name: "Element"))),
                         "by": Parameter(
                             type: .procedure(
                                 Signature(
                                     parameters: [
-                                        "item": Parameter(type: .variable(name: "Element")),
+                                        "item": Parameter(type: .parameter(name: "Element")),
                                         "index": Parameter(type: .int)
                                     ],
-                                    returns: .variable(name: "Answer")
+                                    returns: .parameter(name: "Answer")
                                 )
                             )
                         )
                     ],
-                    returns: .array(.variable(name: "Answer"))
+                    returns: .array(.parameter(name: "Answer"))
                 ),
                 implementation: .effect(ConcurrentEffect(.map, receiving: "over"))
             )

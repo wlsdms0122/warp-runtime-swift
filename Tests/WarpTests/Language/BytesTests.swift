@@ -91,7 +91,7 @@ struct BytesTests {
             types: [
                 "Small": .ranged(.whole(from: 0, to: .through(200))),
                 "Whole": .int,
-                "Named": .variable(name: "Element", constraint: "Named")
+                "Named": .parameter(name: "Element", constraint: "Named")
             ],
             constraints: [
                 "Ordered": [.int, .double, .string],
@@ -118,12 +118,12 @@ struct BytesTests {
             .ranged(.fraction()),
             .nullable(.int),
             .nullable(.ranged(.whole(from: 0, to: .through(254)))),
-            .variable(name: "Element"),
-            .variable(name: "Element", constraint: "Ordered"),
-            .variable(name: "Element", constraint: "Textual"),
-            .variable(name: "Element", constraint: "Nobody"),
-            .variable(name: "Element", constraint: "Split"),
-            .variable(name: "Element", constraint: "Partial"),
+            .parameter(name: "Element"),
+            .parameter(name: "Element", constraint: "Ordered"),
+            .parameter(name: "Element", constraint: "Textual"),
+            .parameter(name: "Element", constraint: "Nobody"),
+            .parameter(name: "Element", constraint: "Split"),
+            .parameter(name: "Element", constraint: "Partial"),
             .named("Whole"),
             .named("Small"),
             .named("Nobody"),

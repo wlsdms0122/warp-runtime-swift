@@ -110,7 +110,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // type — a module binds a name to the types it admits — so a signature
     // writes the name and never the membership, and there is no inline union
     // for the membership to leak out through.
-    case variable(name: String, constraint: String? = nil)
+    case parameter(name: String, constraint: String? = nil)
 
     // What a walk *through* a type parameter reached. Still a shape the call
     // decides — a dot on it stands as written, the way a dot on the parameter
@@ -119,7 +119,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // constraint admits was proven of the parameter, and nothing was proven of
     // what was read out of it.
     //
-    // Apart from `variable` rather than spelled into one. Both are shapes the
+    // Apart from `parameter` rather than spelled into one. Both are shapes the
     // link cannot see, but only one of them is a slot a call fills, and the
     // difference has to survive every way a type is built: a declaration is
     // written in a document *and* assembled in a host, and a rule the reader
@@ -242,7 +242,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case .reading:
             return value
 
-        case let .variable(_, constraint):
+        case let .parameter(_, constraint):
             guard let constraint, !assuming.contains(constraint) else { return value }
 
             guard let admitted = types.admits(
@@ -439,7 +439,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         // would hide the one fact a bound refusal is about. What a document
         // spells is the writer's question, and the writer answers it with
         // `bounds`.
-        case let .variable(name, constraint):
+        case let .parameter(name, constraint):
             return constraint.map { bound in "some \(name): \(bound)" } ?? "some \(name)"
 
         // Spelled as what it is — the shape reached by that path. No document
@@ -556,7 +556,7 @@ extension TypeExpression {
         // takes every byte answers that question for all of them at once, so
         // `sorted` reads a compact spelling the way `reversed` does rather than
         // by whether its declaration happened to carry a bound.
-        case let .variable(_, constraint):
+        case let .parameter(_, constraint):
             guard let constraint else { return true }
             guard !boundAssuming.contains(constraint) else { return true }
 
@@ -653,7 +653,7 @@ extension TypeExpression {
     // that answer it.
     var decidedAtCall: Bool {
         switch self {
-        case .variable, .reading:
+        case .parameter, .reading:
             return true
 
         default:
@@ -675,7 +675,7 @@ extension TypeExpression {
     // value, and where the walk landed is the same field either way.
     func reaching(_ path: [PathSegment]) -> TypeExpression? {
         switch self {
-        case let .variable(name, _):
+        case let .parameter(name, _):
             return .reading(of: name, path: path.map(\.unmarked))
 
         case let .reading(of, walked):
@@ -971,7 +971,7 @@ extension TypeExpression {
         // because membership is judged where the filling is read. In the other
         // direction a parameter stands for some type and this one is that
         // type, so it fits.
-        case (.variable, _), (_, .variable), (.reading, _), (_, .reading):
+        case (.parameter, _), (_, .parameter), (.reading, _), (_, .reading):
             return true
 
         case (.any, _), (_, .any):
