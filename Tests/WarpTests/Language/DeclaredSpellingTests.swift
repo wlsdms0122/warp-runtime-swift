@@ -1,5 +1,5 @@
 //
-//  QualifiedNameTests.swift
+//  DeclaredSpellingTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/23/26.
@@ -14,7 +14,7 @@ import Testing
 // rule decides something, and the places it refuses, because a spelling no
 // module declares names nothing.
 @Suite("A type name is its declared spelling")
-struct QualifiedNameTests {
+struct DeclaredSpellingTests {
     // MARK: - Property
     private let linker = Linker()
 

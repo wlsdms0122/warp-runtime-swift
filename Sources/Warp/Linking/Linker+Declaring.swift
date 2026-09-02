@@ -1,5 +1,5 @@
 //
-//  Linker+Qualifying.swift
+//  Linker+Declaring.swift
 //  Warp
 //
 //  Created by JSilver on 8/23/26.
@@ -26,7 +26,7 @@ extension Linker {
     // table is filled as its space is walked. A mention nothing declares is
     // refused by the judgment that owns undeclared names, which says where the
     // mention lives.
-    func qualified(_ modules: [Module]) throws -> (
+    func declared(in modules: [Module]) throws -> (
         types: [String: Declared<TypeExpression>],
         constraints: [String: Declared<[TypeExpression]>]
     ) {

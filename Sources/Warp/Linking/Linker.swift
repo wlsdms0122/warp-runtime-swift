@@ -60,7 +60,7 @@ public struct Linker: Sendable {
         // their uniqueness, so it hands over the tables that fact was proved on.
         try once(modules)
 
-        let (declaredTypes, declaredConstraints) = try qualified(modules)
+        let (declaredTypes, declaredConstraints) = try declared(in: modules)
 
         let types = try types(
             of: modules,
