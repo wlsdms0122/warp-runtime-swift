@@ -1409,7 +1409,7 @@ extension Linker {
 
             try handedInPlace(
                 by: dispatch,
-                to: callee.procedure.signature,
+                to: callee,
                 in: environment,
                 with: frame,
                 at: place
@@ -2283,7 +2283,6 @@ extension Linker {
         }
 
         var current = box.fieldUnwrapped.inoutUnwrapped
-        var declared = false
         var walked: [PathSegment] = [.key(head)]
 
         for segment in path.dropFirst() {
@@ -2296,8 +2295,19 @@ extension Linker {
                 )
             }
 
+            // Whether the container being entered is a declared type's, which
+            // is asked of this segment alone: a record written inline under a
+            // `var` field is nobody's declaration.
+            var declared = false
+
             if case .named = current {
                 declared = true
+            }
+
+            if case let .indexRef(inner, _) = segment {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: frame) {
+                    return .refused(reason)
+                }
             }
 
             current = frame.resolve(current)
@@ -2363,20 +2373,17 @@ extension Linker {
     // refuses the head rather than guessing.
     func handedInPlace(
         by dispatch: Dispatch,
-        to signature: Signature,
+        to callee: Symbol,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
         at place: Place
     ) throws {
+        let signature = callee.procedure.signature
         var heads: [String: String] = [:]
 
         for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key })
         where parameter.declared.isInout {
-            let argument = name == signature.receiver
-                ? dispatch.receiver ?? dispatch.arguments[name]
-                : dispatch.arguments[name]
-
-            guard let argument else { continue }
+            guard let argument = dispatch.handed(name, to: signature) else { continue }
 
             let at = name == signature.receiver && dispatch.receiver != nil
                 ? place.slot(.receiver)
@@ -2410,6 +2417,24 @@ extension Linker {
                 throw LinkError(
                     "hands '\(head)' in place twice, to '\(earlier)' and to"
                         + " '\(name)' — one call hands one variable to one parameter",
+                    at: at
+                )
+            }
+
+            // A module variable handed to a body declared beside it is the
+            // same variable reached twice: once through the parameter, and
+            // once by its own name in that body. The same rule as two
+            // parameters under one head, and the same answer.
+            if
+                callee.procedure.block != nil,
+                callee.document == place.document,
+                frame.variables(of: place.document).contains(head)
+            {
+                throw LinkError(
+                    "hands '\(head)' in place to '\(dispatch.selector)', which is"
+                        + " declared beside it and reads it by name — a module"
+                        + " variable is handed in place only to a body of another"
+                        + " document, or to a native word",
                     at: at
                 )
             }

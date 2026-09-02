@@ -349,7 +349,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 )
             }
 
-            if isolation == .isolated, closure.isolation != .isolated, closure.purity != .pure {
+            if isolation == .isolated, !closure.runsBeside {
                 throw ArgumentError(
                     "\(path): expected \(rendered), got a procedure that writes"
                         + " what another body could touch"

@@ -167,7 +167,7 @@ public struct Executor: Sendable {
             // An assignment introduces nothing, so the scope is unchanged here
             // — the write went into a box the enclosing bodies also hold.
             case let .assignment(path)?:
-                try scope.assign(path, to: result)
+                try scope.assign(try positioned(path, in: scope), to: result)
 
             // A nameless statement ran for its effect, and the answer is
             // dropped — which is what leaving the name off said.
@@ -330,6 +330,7 @@ public struct Executor: Sendable {
             return try await effect.run(
                 Invocation(
                     selector: dispatch.selector,
+                    signature: procedure.signature,
                     receiver: dispatch.receiver,
                     arguments: dispatch.arguments,
                     trace: trace,
@@ -391,18 +392,30 @@ public struct Executor: Sendable {
                 inner = inner.sharing(box.box, as: name)
             }
 
-            defer {
-                for (_, box) in handed where box.path.count > 1 {
-                    try? scope.assign(box.path, to: box.box.value)
-                }
+            // A box handed for a path into a variable is written back when
+            // the call ends, whether it answered or failed: a box written
+            // halfway is still written. What the writing back refuses is
+            // refused out loud.
+            let answered: Result<Value, any Error>
+
+            do {
+                answered = .success(
+                    try await answer(
+                        block,
+                        of: procedure.signature,
+                        in: inner,
+                        at: trace.appending(.procedure(dispatch.selector))
+                    )
+                )
+            } catch {
+                answered = .failure(error)
             }
 
-            return try await answer(
-                block,
-                of: procedure.signature,
-                in: inner,
-                at: trace.appending(.procedure(dispatch.selector))
-            )
+            for (_, box) in handed.sorted(by: { $0.key < $1.key }) where box.path.count > 1 {
+                try scope.assign(box.path, to: box.box.value)
+            }
+
+            return try answered.get()
         }
     }
 
@@ -518,11 +531,7 @@ public struct Executor: Sendable {
         var handed: [String: (box: Variable, path: [PathSegment])] = [:]
 
         for (name, parameter) in signature.parameters where parameter.declared.isInout {
-            let argument = name == signature.receiver
-                ? dispatch.receiver ?? dispatch.arguments[name]
-                : dispatch.arguments[name]
-
-            guard case let .reference(path)? = argument, let head = path.head else {
+            guard case let .reference(written)? = dispatch.handed(name, to: signature), let head = written.head else {
                 throw ExecutionError(
                     "'\(dispatch.selector)' takes '\(name)' in place, and was not handed a variable"
                 )
@@ -534,18 +543,45 @@ public struct Executor: Sendable {
                 )
             }
 
-            let current = try resolver(in: scope).resolve(.reference(path))
+            // A whole variable hands its own box, and what it holds was settled
+            // when it was written. A path into one hands a box holding what
+            // the path reads, settled against the declaration the way a value
+            // argument is; the position is fixed here, once, so the writing
+            // back lands where the reading came from.
+            let path = try positioned(written, in: scope)
 
-            _ = try parameter.declared.inoutUnwrapped.settling(
-                current,
+            guard path.count > 1 else {
+                handed[name] = (box, path)
+                continue
+            }
+
+            let settled = try parameter.declared.inoutUnwrapped.settling(
+                try resolver(in: scope).resolve(.reference(path)),
                 at: "input '\(name)'",
                 in: types
             )
 
-            handed[name] = path.count == 1 ? (box, path) : (Variable(current), path)
+            handed[name] = (Variable(settled), path)
         }
 
         return handed
+    }
+
+    // The path with every index read to a position: an index written as a
+    // name is a reading in the scope the write stands in, and a write lands on
+    // one position.
+    private func positioned(_ path: [PathSegment], in scope: Scope) throws -> [PathSegment] {
+        try path.map { segment in
+            guard case let .indexRef(inner, optional) = segment else { return segment }
+
+            guard case let .int(index) = try resolver(in: scope).resolve(.reference(inner)) else {
+                throw ExecutionError(
+                    "'\(path.rendered)' indexes with '\(inner.rendered)', which is not an int"
+                )
+            }
+
+            return .index(index, optional: optional)
+        }
     }
 
     func resolve(_ name: String) throws -> Procedure {

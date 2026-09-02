@@ -137,7 +137,8 @@ public struct Linker: Sendable {
                 types: types,
                 words: answeringWords,
                 pure: settled,
-                isolated: isolatedDeclarations
+                isolated: isolatedDeclarations,
+                moduleVariables: modules.map { module in (.of(module), Set(module.variables.keys)) }
             )
         }
 
@@ -1279,9 +1280,9 @@ public struct Linker: Sendable {
     }
 
     // What each document's variables start a run holding. Settled the way a
-    // constant is, beside the constants, and from native words alone; the
-    // starting value is a fact the link reads, and a variable's type is the
-    // type of that value.
+    // constant is, from native words alone, reading the constants beside it
+    // and no variable; the starting value is a fact the link reads, and a
+    // variable's type is the type of that value.
     private func variables(
         of modules: [Module],
         beside constants: [Int: [String: Value]],
@@ -1296,7 +1297,7 @@ public struct Linker: Sendable {
             let known = constants[origin] ?? [:]
             var started: [String: Value] = [:]
 
-            for (name, expression) in try order(module.variables, in: module) {
+            for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
                 let resolver = Resolver(
                     scope: Scope(bindings: known),
                     selectors: selectors,
@@ -1329,8 +1330,7 @@ public struct Linker: Sendable {
 
     // The order a module's constants settle in: what a constant reads comes
     // before it. Constants that wait on each other have no such order, and that
-    // is refused here, standing on one of them. A module's variables settle by
-    // the same rule, beside the constants.
+    // is refused here, standing on one of them.
     private func order(
         _ constants: [String: Expression],
         in module: Module

@@ -53,14 +53,11 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            let (purity, isolation, rest) = Self.modifiers(of: key.stringValue),
-            Self.slotWords.contains(where: { word, _ in rest == "\(word) procedure" }) || rest == "procedure"
+            let (wrap, purity, isolation) = Self.procedureWords(of: key.stringValue)
         {
             let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
-            let procedure = TypeExpression.procedure(signature.signature, purity, isolation)
 
-            self.type = Self.slotWords.first { word, _ in rest == "\(word) procedure" }
-                .map { _, wrap in wrap(procedure) } ?? procedure
+            self.type = wrap(.procedure(signature.signature, purity, isolation))
 
             return
         }
@@ -267,12 +264,35 @@ public struct TypeReader: Decodable {
     // make a mapping a procedure rather than a record. Both are read here and
     // both decide what a document *cannot* say, so writing one asks for them.
     public static var builtinNames: Set<String> { Set(builtins.keys) }
-    // The keys a procedure form may sit under, in the writer's spelling.
+    // The keys a procedure form may sit under, in the writer's spelling: a
+    // slot word or none, then the modifiers, then `procedure`.
     public static var procedureKeys: Set<String> {
-        Set(
-            [(Purity.unstated, Isolation.unstated), (.pure, .unstated), (.unstated, .isolated), (.pure, .isolated)]
-                .map { purity, isolation in procedureWord(purity, isolation) }
-        )
+        let words = [(Purity.unstated, Isolation.unstated), (.pure, .unstated), (.unstated, .isolated), (.pure, .isolated)]
+            .map { purity, isolation in procedureWord(purity, isolation) }
+
+        return Set(words + slotWords.flatMap { slot, _ in words.map { word in "\(slot) \(word)" } })
+    }
+
+    // What a procedure form's key says, read front to back: a slot word if
+    // one is written, the modifiers in either order, and `procedure`. Nil
+    // where the key is not a procedure form's.
+    static func procedureWords(
+        of key: String
+    ) -> (wrap: (TypeExpression) -> TypeExpression, purity: Purity, isolation: Isolation)? {
+        var rest = key
+        var wrap: (TypeExpression) -> TypeExpression = { inner in inner }
+
+        for (word, wrapping) in slotWords {
+            guard let bare = rest.dropPrefixed("\(word) ") else { continue }
+
+            rest = String(bare)
+            wrap = wrapping
+            break
+        }
+
+        guard let (purity, isolation, word) = modifiers(of: rest), word == "procedure" else { return nil }
+
+        return (wrap, purity, isolation)
     }
 
     // The one spelling of a procedure type's word: `pure` before `isolated`,

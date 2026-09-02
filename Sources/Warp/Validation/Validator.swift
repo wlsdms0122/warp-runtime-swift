@@ -195,6 +195,9 @@ public struct Validator: Sendable {
         )
     }
 
+    // What the body leaves behind for what follows it: the names it made
+    // visible, and which of them are variables — a result written after the
+    // body sees both.
     @discardableResult
     private func validate(
         _ body: [Statement],
@@ -203,7 +206,7 @@ public struct Validator: Sendable {
         declared startDeclared: Set<String> = [],
         surroundings: Surroundings = .procedure,
         at place: Place
-    ) throws -> Set<String> {
+    ) throws -> (visible: Set<String>, variables: Set<String>) {
         var visible = startVisible
         var variables = startVariables
         var declared = startDeclared
@@ -322,7 +325,7 @@ public struct Validator: Sendable {
             }
         }
 
-        return visible
+        return (visible, variables)
     }
 
     private func isIteration(_ expression: Expression) -> Bool {
@@ -664,8 +667,8 @@ public struct Validator: Sendable {
 
             try validate(
                 result,
-                visible: inner,
-                variables: variables,
+                visible: inner.visible,
+                variables: inner.variables,
                 surroundings: surroundings,
                 at: place.slot(.result)
             )

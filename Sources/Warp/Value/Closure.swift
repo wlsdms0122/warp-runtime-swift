@@ -45,5 +45,11 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Public
+    // Whether this may run beside another body: it was derived isolated, or it
+    // is pure, since what runs nothing touches nothing.
+    public var runsBeside: Bool {
+        isolation == .isolated || purity == .pure
+    }
+
     // MARK: - Private
 }

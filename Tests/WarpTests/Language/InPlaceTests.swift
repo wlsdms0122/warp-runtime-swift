@@ -135,6 +135,32 @@ struct InPlaceTests {
         #expect(answer == .array([.int(1), .int(9)]))
     }
 
+    @Test("a var field holding an inline record is written through")
+    func varFieldHoldingAnInlineRecordIsWrittenThrough() async throws {
+        // Given — a declared type whose `var` field holds a record nobody
+        // declared, so the inner field is nobody's `var` and the path passes
+        let sut = try Module(
+            imports: [],
+            types: ["Outer": .record(["inner": .variable(.record(["a": .int]))])],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .variable("held"),
+                            expression: .cast(.record(["inner": .record(["a": .literal(.int(1))])]), as: .named("Outer"), optional: false)
+                        ),
+                        Statement(binding: .assignment([.key("held"), .key("inner"), .key("a")]), expression: .literal(.int(5)))
+                    ],
+                    result: reference("held", "inner", "a")
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .int(5))
+    }
+
     @Test("inout is written on a parameter and nowhere else")
     func inoutOutsideAParameterRefuses() throws {
         // Given — a declared type with an inout field

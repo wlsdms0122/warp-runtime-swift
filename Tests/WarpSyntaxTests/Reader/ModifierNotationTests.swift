@@ -34,6 +34,25 @@ struct ModifierNotationTests {
         #expect(try Writer().value(of: parsed) == .string(canonical))
     }
 
+    @Test("a slot word and a modifier on one procedure form survive the round trip")
+    func slotWordAndModifierRoundTrip() throws {
+        // Given — a parameter typed `inout pure procedure<...>`, which the writer
+        // spells as a form under one key
+        let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))
+
+        // When
+        let written = try Writer().value(of: type)
+        let module = try Loader().load([
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]
+        ])
+
+        // Then
+        #expect(written == .object(["inout pure procedure": .object(["returns": "int"])]))
+        #expect(module.procedures["entry"]?.signature.parameters["f"]?.type == type)
+    }
+
     @Test("a word written twice is refused", arguments: [
         "inout inout int", "var var int", "pure pure procedure", "isolated isolated procedure"
     ])
