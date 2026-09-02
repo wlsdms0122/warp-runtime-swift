@@ -30,11 +30,9 @@ public struct Scope: Sendable {
         self.variables = [:]
     }
 
-    init(bindings: [String: Value], variables: [String: Variable]) {
+    init(bindings: [String: Value], variables: [String: Handle]) {
         self.bindings = bindings
-        self.variables = variables.reduce(into: [:]) { held, entry in
-            held[entry.key] = Handle(head: entry.key, box: entry.value, path: [])
-        }
+        self.variables = variables
     }
 
     // MARK: - Public

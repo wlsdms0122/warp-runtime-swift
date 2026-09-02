@@ -8,9 +8,9 @@
 import Foundation
 
 // Writing one element onto the end of an array, in place. The array is handed
-// as a variable's path and written back through it, so the caller's variable
-// holds the longer array when the word answers. An effect and not a query,
-// because a write is what it does.
+// as a variable's path and written through it, so the caller's variable holds
+// the longer array when the word answers. An effect and not a query, because
+// a write is what it does.
 struct AppendingEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer

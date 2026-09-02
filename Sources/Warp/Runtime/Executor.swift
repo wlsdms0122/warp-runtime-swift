@@ -30,7 +30,7 @@ public struct Executor: Sendable {
     // One box per module variable, made when the run starts, by the document
     // that declared it; and which document each procedure reads its boxes
     // from. A closure carries the boxes in the scope it captured.
-    let boxes: [Int: [String: Variable]]
+    let boxes: [Int: [String: Handle]]
     let origins: [String: Int]
 
     // MARK: - Initializer
@@ -53,7 +53,7 @@ public struct Executor: Sendable {
         selectors: [String: Procedure] = [:],
         words: [String: Procedure] = [:],
         types: TypeTable = TypeTable(),
-        boxes: [Int: [String: Variable]] = [:],
+        boxes: [Int: [String: Handle]] = [:],
         origins: [String: Int] = [:]
     ) {
         self.observer = observer
@@ -80,7 +80,9 @@ public struct Executor: Sendable {
             selectors: image.selectors,
             words: image.words,
             types: image.types,
-            boxes: image.variables.mapValues { started in started.mapValues(Variable.init) },
+            boxes: image.variables.mapValues { started in
+                started.reduce(into: [:]) { held, entry in held[entry.key] = Handle(entry.key, entry.value) }
+            },
             origins: image.origins
         )
         .run(image.entry, arguments: arguments, boxes: image.entryOrigin)
@@ -494,10 +496,6 @@ public struct Executor: Sendable {
         )
     }
 
-    // Linking put every name the document spells in this table, so there is
-    // nowhere else for a name to be. A door for names the link never saw would
-    // be a second way to call, and one that nothing checked — the promise this
-    // language makes is that reaching a run means the reaching was settled.
     // The holds a call hands in place, by parameter: the caller's box, seen
     // through the path the argument wrote. Every write the callee makes lands
     // in that box as it is made, so a call that fails after writing has
@@ -530,6 +528,10 @@ public struct Executor: Sendable {
         return handed
     }
 
+    // Linking put every name the document spells in this table, so there is
+    // nowhere else for a name to be. A door for names the link never saw would
+    // be a second way to call, and one that nothing checked — the promise this
+    // language makes is that reaching a run means the reaching was settled.
     func resolve(_ name: String) throws -> Procedure {
         guard let linked = procedures[name] else {
             throw ExecutionError("procedure '\(name)' was not linked into this image")

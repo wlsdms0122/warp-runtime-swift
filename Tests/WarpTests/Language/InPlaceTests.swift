@@ -247,6 +247,68 @@ struct InPlaceTests {
         #expect(try await run(sut) == .int(3))
     }
 
+    @Test("a write into an inout parameter has to fit the declared type")
+    func writeIntoInoutParameterIsHeldToItsType() throws {
+        // Given — the body writes a string into a parameter declared inout int
+        let sut = try Module(
+            imports: [],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
+                        Statement(
+                            expression: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                        )
+                    ],
+                    result: .literal(.null)
+                ),
+                "poke": Procedure(
+                    signature: Signature(parameters: ["first": Parameter(type: .inout(.int))]),
+                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("first")
+        }
+    }
+
+    @Test("a path handed in place has to read as the declared type")
+    func handedPathIsHeldToTheDeclaredType() throws {
+        // Given — an int element is handed to a parameter declared inout string
+        let sut = try Module(
+            imports: [],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
+                        Statement(
+                            expression: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                        )
+                    ],
+                    result: .literal(.null)
+                ),
+                "poke": Procedure(
+                    signature: Signature(parameters: ["first": Parameter(type: .inout(.string))]),
+                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("first")
+        }
+    }
+
     @Test("a part of a box handed in place is handed on like any local's")
     func aHandedBoxIsSplitOnwards() throws {
         // Given — a body handed `all` whole hands `all.items` on to another
