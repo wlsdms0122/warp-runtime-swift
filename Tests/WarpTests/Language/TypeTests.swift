@@ -68,6 +68,23 @@ struct TypeTests {
         }
     }
 
+    @Test("an alias of a declared record names the record on either side")
+    func anAliasNamesTheRecordItStandsFor() throws {
+        // Given
+        let types = TypeTable(types: ["Person": .record(["name": .string]), "Someone": .named("Person")])
+        let sut = TypeExpression.named("Someone")
+
+        // When
+        let bare = try sut.settling(.object(["name": .string("a")]), at: "who", in: types)
+        let aliased = try sut.settling(.record(name: "Someone", fields: ["name": .string("a")]), at: "who", in: types)
+        let named = try sut.settling(.record(name: "Person", fields: ["name": .string("a")]), at: "who", in: types)
+
+        // Then — every one settles under the record's own name
+        #expect(bare == .record(name: "Person", fields: ["name": .string("a")]))
+        #expect(aliased == bare)
+        #expect(named == bare)
+    }
+
     @Test("a named type resolves through the table it was declared in")
     func namedTypeResolves() throws {
         // Given

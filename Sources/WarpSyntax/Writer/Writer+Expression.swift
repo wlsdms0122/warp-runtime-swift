@@ -60,7 +60,7 @@ public extension Writer {
     // empty exactly when the reading side is a notation, and then this is the
     // only thing standing between a record and a message.
     func value(of expression: Expression, reserving reserved: Set<String> = []) throws -> Value {
-        let reserved = reserved.union(ExpressionReader.formKeys)
+        let reserved = reserved.union(registry.escapedKeys)
 
         switch expression {
         // Data that happens to look like a form has to say it is data, and data
@@ -220,7 +220,7 @@ public extension Writer {
         // Whatever is left needs no name, so it is written as the expression it
         // is under the word that says "this statement is just a value".
         default:
-            return (StatementReader.valueKey, try value(of: expression, reserving: registry.escapedKeys))
+            return (StatementReader.valueKey, try value(of: expression))
         }
     }
 

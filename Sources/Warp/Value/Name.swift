@@ -26,5 +26,19 @@ public enum Name {
         name.precomposedStringWithCanonicalMapping.utf8.elementsEqual(name.utf8)
     }
 
+    // A declared type's name, and so a record's: ASCII identifiers joined by
+    // dots, which every encoding writes bare. ASCII is its own normal form,
+    // so this is the one grammar and the two encodings share it.
+    public static func isTypeName(_ name: String) -> Bool {
+        !name.isEmpty
+            && name.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { segment in
+                guard let first = segment.first, first.isASCII, first.isLetter || first == "_" else { return false }
+
+                return segment.dropFirst().allSatisfy { character in
+                    character.isASCII && (character.isLetter || character.isNumber || character == "_")
+                }
+            }
+    }
+
     // MARK: - Private
 }

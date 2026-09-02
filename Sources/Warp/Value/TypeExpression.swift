@@ -244,7 +244,9 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 return try declared.settling(value, at: path, in: types, assuming: assuming)
             }
 
-            if let tag, tag != nominal {
+            // The value's name is read the same way the slot's is: an alias
+            // written on either side names the record it stands for.
+            if let tag, TypeExpression.named(tag).recordName(in: types) != nominal {
                 throw ArgumentError("\(path): is a \(tag), and the slot declares \(nominal)")
             }
 

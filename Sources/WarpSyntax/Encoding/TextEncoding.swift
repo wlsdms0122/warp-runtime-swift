@@ -347,7 +347,7 @@ public enum TextEncoding {
                 // A bare word in front of a record is the record's name: the
                 // declared type the value settled to.
                 case let .bare(bare):
-                    if tokens.first == .recordOpen, typeName(bare) {
+                    if tokens.first == .recordOpen, Name.isTypeName(bare) {
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: bare))
 
@@ -389,13 +389,6 @@ public enum TextEncoding {
     // What a bare token names. Everything unquoted is one of five things, and a
     // number is whole or a fraction by grammar — a point or an exponent, not a
     // reader's guess.
-    // A record's name as the text writes it: identifiers joined by dots, in
-    // normal form C. The same words a declared type is named by, so a name a
-    // document cannot spell bare is one no declaration wrote.
-    static func typeName(_ name: String) -> Bool {
-        normal(name) && name.split(separator: ".", omittingEmptySubsequences: false)
-            .allSatisfy { segment in identifier(String(segment)) }
-    }
 
     private static func scalar(from bare: String) throws -> Value {
         switch bare {
@@ -540,7 +533,7 @@ public enum TextEncoding {
 
         case let .record(name, object):
             if let name {
-                guard typeName(name) else {
+                guard Name.isTypeName(name) else {
                     throw EncodingError.invalidValue(
                         Value.string(name),
                         .init(codingPath: [], debugDescription: "the record's name is not a type's name")

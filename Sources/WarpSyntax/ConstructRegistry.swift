@@ -39,8 +39,7 @@ public struct ConstructRegistry: Sendable {
 
     // Every key a record of data cannot carry bare in an expression slot: the
     // constructs this registry reads under `value`, and the forms an
-    // expression reads anywhere. The writer quotes a record carrying one, and
-    // this is the one place the reader's two tables are read together.
+    // expression reads anywhere. The writer quotes a record carrying one.
     public var escapedKeys: Set<String> {
         Set(keys).union(ExpressionReader.formKeys)
     }
@@ -143,6 +142,16 @@ public struct ConstructRegistry: Sendable {
             // A registry is assembled by a caller and not read out of a
             // document, so there is no place in one to point at.
             throw ValidationError("construct key '\(key)' is already registered", at: nil)
+        }
+
+        // A statement's expression slot is read before any construct is, so
+        // a construct under that word would be registered and never read.
+        guard key != StatementReader.valueKey else {
+            throw ValidationError(
+                "construct key '\(key)' is the word a statement writes its expression under,"
+                    + " and no construct sits under it",
+                at: nil
+            )
         }
 
         forms[key] = form
