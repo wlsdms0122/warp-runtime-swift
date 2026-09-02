@@ -43,7 +43,7 @@ struct ModifierNotationTests {
         // When
         let written = try Writer().value(of: type)
         let module = try Loader().load([
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]
         ])
@@ -96,7 +96,7 @@ struct ModifierNotationTests {
         // Given
         let loader = Loader()
         let written: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "var": ["total": 0],
             "procedures": [

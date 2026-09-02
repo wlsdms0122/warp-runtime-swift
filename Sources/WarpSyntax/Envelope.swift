@@ -27,12 +27,11 @@ public enum Envelope {
     // that is not a document at all would get as far as having its keys judged —
     // turned away for being a malformed module rather than for not being one.
     //
-    // The reading range is one number: nothing has shipped, so no document
-    // written for an earlier number is one a reader is asked to hold, and
-    // the earliest moves with the current. The number moved when a
-    // statement's spelling did.
-    public static let version = 2
-    public static let earliest = 2
+    // Nothing has shipped, so there is nothing old to hold a number for — every
+    // change before the first release folds into this one. The counter starts
+    // moving when a document exists somewhere this code does not control.
+    public static let version = 1
+    public static let earliest = 1
 
     public static let versionKey = "warp"
     public static let importsKey = "imports"

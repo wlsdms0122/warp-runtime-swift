@@ -78,7 +78,7 @@ struct EnvelopeTests {
                 "name": "a-case",
                 "note": "why it exists",
                 "expect": ["answers": 1],
-                "program": ["warp": 2, "procedures": ["entry": ["result": "hello"]]]
+                "program": ["warp": 1, "procedures": ["entry": ["result": "hello"]]]
             ])
         } throws: { error in
             "\(error)".contains("not a warp document")

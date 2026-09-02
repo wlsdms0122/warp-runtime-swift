@@ -518,7 +518,7 @@ struct WriterTests {
     // document *is*. Something reading this from another language would need to
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
-        "warp": 2,
+        "warp": 1,
         "imports": ["std.logic.notEqual", "std.math.plus"],
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],

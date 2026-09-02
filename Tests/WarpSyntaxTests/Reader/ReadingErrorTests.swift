@@ -24,7 +24,7 @@ struct ReadingErrorTests {
         // answer to which file to open, and a refusal that names none sends it
         // opening all four
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["let": "sent", "var": "again", "value": 1]]]]
         ]
@@ -44,7 +44,7 @@ struct ReadingErrorTests {
         // the module rather than from reading it, since a caller holding four
         // files cannot tell which stage refused and still has to open one
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "std.math.plus"]]]]]]
         ]
@@ -65,7 +65,7 @@ struct ReadingErrorTests {
         // statement wears the name it wrote, which is what validation and the
         // link call it
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["let": "broken", "value": "x", "fallbck": "y"]]]]
         ]
@@ -85,7 +85,7 @@ struct ReadingErrorTests {
         // spelling parses to, and `procedures[12]` is an address no document
         // has: what the document holds where the walk is settles which it is
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["12": ["body": [["let": "broken", "value": "x", "fallbck": "y"]]]]
         ]
@@ -104,7 +104,7 @@ struct ReadingErrorTests {
         // Given — the two ways of writing nothing spell the same, and a step
         // rendering an empty name puts a dot in front of nothing
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["let": "", "value": "x", "fallbck": "y"]]]]
         ]
@@ -124,7 +124,7 @@ struct ReadingErrorTests {
         // reader's own error, which carries no place of its own. It leaves
         // through the door that says every reading is placed, so it is.
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["value": ["return": ["ref": [1]]]]]]]
         ]
@@ -144,7 +144,7 @@ struct ReadingErrorTests {
         // Given — nothing inside the document is wrong, so there is no step to
         // walk and the document alone is the whole address
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "procedures": ["entry": ["result": "hello"]]
         ]
 
@@ -164,7 +164,7 @@ struct ReadingErrorTests {
         // that stopped at the document while knowing the key would be pointing
         // an author at the first character of their file
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": [:]
         ]
@@ -203,7 +203,7 @@ struct ReadingErrorTests {
         // once, in one place. Two readings would let a statement be labelled
         // 'held' by the address of the very refusal saying it is named twice.
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["let": "held", "var": "kept", "value": "x"]]]]
         ]
@@ -224,7 +224,7 @@ struct ReadingErrorTests {
         // answered by refusing. What the statement is called while that
         // happens is this one, and a number is nothing to call it by.
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [["let": 12, "value": "x"]]]]
         ]
@@ -246,7 +246,7 @@ struct ReadingErrorTests {
         // written over a truer one, and the front end says "exact" about
         // whatever it is handed.
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "helper",
@@ -272,7 +272,7 @@ struct ReadingErrorTests {
         // same two ways every other walk descends, so a record ten fields deep
         // is not answered with the address of the record
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "held",
@@ -296,7 +296,7 @@ struct ReadingErrorTests {
         // afresh per process, so which of two bad fields an author is sent to
         // would change between runs of the same reader on the same document.
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "held",
@@ -320,7 +320,7 @@ struct ReadingErrorTests {
         // claim and past the reader as no claim, arriving trusted and never
         // checked, which is the one thing the list exists to prevent.
         let fixture: Value = [
-            "warp": 2,
+            "warp": 1,
             "imports": .null,
             "procedures": ["entry": ["body": [["let": "sent", "value": ["call": ["procedure": "std.math.plus"]]]]]]
         ]
