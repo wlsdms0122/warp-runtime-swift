@@ -521,7 +521,7 @@ public enum TextEncoding {
 
             text += String(repeating: "  ", count: indent) + "]"
 
-        case let .object(object):
+        case let .record(_, object):
             guard !object.isEmpty else {
                 text += "{}"
 

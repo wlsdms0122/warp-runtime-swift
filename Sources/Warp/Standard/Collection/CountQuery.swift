@@ -22,7 +22,7 @@ public struct CountQuery: Query {
         case let .string(text):
             return .int(text.count)
 
-        case let .object(fields):
+        case let .record(_, fields):
             return .int(fields.count)
 
         // What is indexed — an array, or bytes through the one projection

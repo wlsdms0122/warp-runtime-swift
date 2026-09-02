@@ -251,7 +251,7 @@ public struct Writer: Sendable {
             case let .string(written):
                 return .string("\(word) \(written)")
 
-            case let .object(form) where form.count == 1 && TypeReader.procedureKeys.contains(form.keys.first!):
+            case let .record(_, form) where form.count == 1 && TypeReader.procedureKeys.contains(form.keys.first!):
                 return .object(["\(word) \(form.keys.first!)": form.values.first!])
 
             default:

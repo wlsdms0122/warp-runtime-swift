@@ -286,7 +286,7 @@ public struct Resolver: Sendable {
                 }
 
             case let .key(key, _):
-                guard case let .object(object) = current else {
+                guard case let .record(_, object) = current else {
                     return .unfit(
                         reason: "\(walked.rendered) drills a field into"
                             + " \(current.type)"

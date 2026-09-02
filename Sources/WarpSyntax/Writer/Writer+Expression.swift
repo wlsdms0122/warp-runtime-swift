@@ -331,7 +331,7 @@ public extension Writer {
                 try spelling(of: element, reserving: reserved) == .plainly ? carried : .quoted
             }
 
-        case let .object(fields):
+        case let .record(_, fields):
             guard Set(fields.keys).isDisjoint(with: reserved) else { return .quoted }
 
             return try fields.values.reduce(.plainly) { carried, field in

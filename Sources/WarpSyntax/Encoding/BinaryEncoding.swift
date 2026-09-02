@@ -155,7 +155,7 @@ public enum BinaryEncoding {
         // Sorted by their UTF-8 bytes, so that the same document is the same
         // bytes in every implementation. A language's own string ordering is
         // whatever that language decided, and the wire cannot depend on it.
-        case let .object(object):
+        case let .record(_, object):
             bytes.append(Tag.record.rawValue)
 
             write(UInt64(object.count), into: &bytes)

@@ -67,7 +67,7 @@ public struct ValueWriter: Encodable {
 
             try container.encode(elements.map(ValueWriter.init))
 
-        case let .object(object):
+        case let .record(_, object):
             try container.encode(object.mapValues(ValueWriter.init))
 
         // A body is code, and a document spells code as a procedure rather than

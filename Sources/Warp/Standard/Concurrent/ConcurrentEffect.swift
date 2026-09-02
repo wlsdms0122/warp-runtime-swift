@@ -121,7 +121,7 @@ public struct ConcurrentEffect: Effect {
     // for positional ones. Which one arrived decides the shape of the answer.
     private func closures(of invocation: Invocation) throws -> ([Piece], keyed: Bool) {
         switch try material(of: invocation) {
-        case let .object(fields):
+        case let .record(_, fields):
             return (
                 try fields.keys.sorted().enumerated().map { position, key in
                     Piece(

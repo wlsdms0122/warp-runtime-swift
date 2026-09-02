@@ -57,7 +57,7 @@ extension Value: ExpressibleByArrayLiteral {
 // value to answer with — the same reaction `Dictionary` has.
 extension Value: ExpressibleByDictionaryLiteral {
     public init(dictionaryLiteral elements: (String, Value)...) {
-        self = .object(Dictionary(elements) { _, _ in
+        self = .record(name: nil, fields: Dictionary(elements) { _, _ in
             preconditionFailure("duplicate key in a value literal")
         })
     }

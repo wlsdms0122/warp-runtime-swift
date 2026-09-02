@@ -303,7 +303,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
             )
 
         case let .object(entry):
-            guard case let .object(object) = value else { throw mismatch(value, at: path) }
+            guard case let .record(_, object) = value else { throw mismatch(value, at: path) }
 
             return .object(
                 try object.mapValues { item in
@@ -312,7 +312,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
             )
 
         case let .record(fields):
-            guard case let .object(object) = value else { throw mismatch(value, at: path) }
+            guard case let .record(_, object) = value else { throw mismatch(value, at: path) }
 
             var settled = object
 

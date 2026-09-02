@@ -147,7 +147,7 @@ extension Loader {
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
     func loadDocument(_ value: Value, from notation: Notation = .testing) throws -> Module {
-        guard case let .object(fields) = value else { return try load(value, identity: nil) }
+        guard case let .record(_, fields) = value else { return try load(value, identity: nil) }
 
         let written = Value.object(fields.merging([
             Envelope.versionKey: .int(Envelope.version),
@@ -195,7 +195,7 @@ func run(
     // This notation spells several named outputs, which the reader lowers to one
     // record — so a test that asks about `outputs["x"]` is asking about a field
     // of the answer, and unwrapping here keeps that phrasing.
-    guard case let .object(outputs) = answer else { return [:] }
+    guard case let .record(_, outputs) = answer else { return [:] }
 
     return outputs
 }

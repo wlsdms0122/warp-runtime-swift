@@ -2203,7 +2203,7 @@ extension Linker {
                     .reduce(nil) { joined, next in join(joined, next) } ?? .any
             )
 
-        case let .object(fields):
+        case let .record(_, fields):
             return .record(fields.mapValues(type(of:)))
         }
     }
