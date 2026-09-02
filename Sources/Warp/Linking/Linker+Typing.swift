@@ -659,7 +659,7 @@ extension Linker {
 
             guard
                 case let .key(head, _)? = inner.first,
-                folding.scope.value(of: head) != nil
+                folding.scope.holds(head)
             else {
                 return .indexRef(
                     try foldedIndexReferences(inner, at: place, folding: folding),
@@ -1004,7 +1004,7 @@ extension Linker {
 
                 guard
                     case let .key(head, _)? = settled.first,
-                    folding.scope.value(of: head) != nil
+                    folding.scope.holds(head)
                 else {
                     return Inspection(rewritten: .reference(settled), reading: read)
                 }
@@ -2381,14 +2381,10 @@ extension Linker {
     }
 
     // The rules a call handing variables in place is held to: the argument is
-    // a path, the path's head is a variable here, the path is one a write may
-    // take, and no two `inout` parameters are handed one variable. The last is
-    // static: two paths under one head may or may not meet, and the link
-    // refuses the head rather than guessing.
-    //
-    // A module variable goes in place only to a native word, which reads no
-    // name. A written body of any module reaches the variable's own module by
-    // calling it, and there the variable is read by name: one box, two ways.
+    // a path, the path's head is a variable here, and the path is one a write
+    // may take. Two parameters handed paths under one head hold one box two
+    // ways, and every write lands in it as it is made, so nothing here keeps
+    // them apart.
     private func handedInPlace(
         by dispatch: Dispatch,
         to callee: Symbol,
@@ -2397,11 +2393,9 @@ extension Linker {
         at place: Place,
         when ask: Ask
     ) throws {
-        guard case let .judging(_, origin) = ask else { return }
+        guard case .judging = ask else { return }
 
-        let moduleVariables = origin.flatMap { origin in frame.moduleVariables[origin] } ?? []
         let signature = callee.procedure.signature
-        var heads: [String: String] = [:]
 
         for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key })
         where parameter.declared.isInout {
@@ -2438,28 +2432,6 @@ extension Linker {
             if case let .refused(reason) = writable(path, in: environment, with: frame) {
                 try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
-
-            if let earlier = heads[head] {
-                try refuse(
-                    "hands '\(head)' in place twice, to '\(earlier)' and to"
-                        + " '\(name)' — one call hands one variable to one parameter",
-                    at: at,
-                    when: ask
-                )
-            }
-
-            if moduleVariables.contains(head), callee.procedure.block != nil {
-                try refuse(
-                    "hands '\(path.rendered)' in place to '\(dispatch.selector)', which is"
-                        + " a written body — a module variable is handed in place only to"
-                        + " a native word; a body changes it through a procedure declared"
-                        + " beside it",
-                    at: at,
-                    when: ask
-                )
-            }
-
-            heads[head] = name
         }
     }
 

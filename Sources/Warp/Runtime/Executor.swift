@@ -368,8 +368,8 @@ public struct Executor: Sendable {
                 )
             }
 
-            // A parameter handed in place takes no value: it takes the
-            // caller's box, or a box the caller's path is written back from.
+            // A parameter handed in place takes no value: it takes a hold on
+            // the caller's variable.
             let handed = try handed(by: dispatch, to: procedure.signature, in: scope)
 
             for name in handed.keys {
@@ -388,46 +388,16 @@ public struct Executor: Sendable {
                 variables: origins[dispatch.selector].flatMap { origin in boxes[origin] } ?? [:]
             )
 
-            for (name, box) in handed.sorted(by: { $0.key < $1.key }) {
-                inner = inner.sharing(box.box, as: name)
+            for (name, handle) in handed.sorted(by: { $0.key < $1.key }) {
+                inner = inner.sharing(handle, as: name)
             }
 
-            // A box handed for a path into a variable is written back when
-            // the call ends, whether it answered or failed: a box written
-            // halfway is still written.
-            let answered: Result<Value, any Error>
-
-            do {
-                answered = .success(
-                    try await answer(
-                        block,
-                        of: procedure.signature,
-                        in: inner,
-                        at: trace.appending(.procedure(dispatch.selector))
-                    )
-                )
-            } catch {
-                answered = .failure(error)
-            }
-
-            // Every box is written back, whichever refuses. What the call
-            // reports is the body's own failure, as the type it was, where
-            // the body failed: that is what an attempt around the call is
-            // written to catch. Where the body answered, the first writing
-            // back that refused is the fault reported.
-            var refused: [WriteBackRefused] = []
-
-            for (_, box) in handed.sorted(by: { $0.key < $1.key }) where box.path.count > 1 {
-                do {
-                    try scope.assign(box.path, to: box.box.value)
-                } catch {
-                    refused.append(WriteBackRefused(path: box.path, selector: dispatch.selector, refusal: error))
-                }
-            }
-
-            if case .success = answered, let first = refused.first { throw first }
-
-            return try answered.get()
+            return try await answer(
+                block,
+                of: procedure.signature,
+                in: inner,
+                at: trace.appending(.procedure(dispatch.selector))
+            )
         }
     }
 
@@ -528,19 +498,16 @@ public struct Executor: Sendable {
     // nowhere else for a name to be. A door for names the link never saw would
     // be a second way to call, and one that nothing checked — the promise this
     // language makes is that reaching a run means the reaching was settled.
-    // The boxes a call hands in place, by parameter. A path that is a whole
-    // variable hands the variable's own box, so every write lands in it as it
-    // is made. A path into a variable hands a fresh box holding what the path
-    // reads, and the call writes it back along the path when it ends — by
-    // answering or by failing, since a box written halfway is still written.
-    // What arrives is settled against the declaration first, the way a value
-    // argument is.
+    // The holds a call hands in place, by parameter: the caller's box, seen
+    // through the path the argument wrote. Every write the callee makes lands
+    // in that box as it is made, so a call that fails after writing has
+    // written. An index written as a name is read to a position here, once.
     private func handed(
         by dispatch: Dispatch,
         to signature: Signature,
         in scope: Scope
-    ) throws -> [String: (box: Variable, path: [PathSegment])] {
-        var handed: [String: (box: Variable, path: [PathSegment])] = [:]
+    ) throws -> [String: Handle] {
+        var handed: [String: Handle] = [:]
 
         for (name, parameter) in signature.parameters where parameter.declared.isInout {
             guard case let .reference(written)? = dispatch.handed(name, to: signature), let head = written.head else {
@@ -549,31 +516,15 @@ public struct Executor: Sendable {
                 )
             }
 
-            guard let box = scope.box(of: head) else {
+            guard let handle = scope.handle(of: head) else {
                 throw ExecutionError(
                     "'\(dispatch.selector)' takes '\(name)' in place, and '\(head)' is not a variable here"
                 )
             }
 
-            // A whole variable hands its own box, and what it holds was settled
-            // when it was written. A path into one hands a box holding what
-            // the path reads, settled against the declaration the way a value
-            // argument is; the position is fixed here, once, so the writing
-            // back lands where the reading came from.
             let path = try resolver(in: scope).positioned(written)
 
-            guard path.count > 1 else {
-                handed[name] = (box, path)
-                continue
-            }
-
-            let settled = try parameter.declared.inoutUnwrapped.settling(
-                try resolver(in: scope).resolve(.reference(path)),
-                at: "input '\(name)'",
-                in: types
-            )
-
-            handed[name] = (Variable(settled), path)
+            handed[name] = handle.extended(by: Array(path.dropFirst()))
         }
 
         return handed

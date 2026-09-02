@@ -81,10 +81,10 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a path handed in place is written back when the call fails")
-    func handedPathIsWrittenBackOnFailure() async throws {
-        // Given — the callee writes its box and then aborts; the write lands
-        // in the caller's array all the same
+    @Test("a path handed in place is written as it is made, so a failing call has written")
+    func handedPathIsWrittenBeforeFailure() async throws {
+        // Given — the callee writes through the path and then aborts; the
+        // write is in the caller's array all the same
         let sut = try Module(
             imports: ["std.control.abort"],
             procedures: [
@@ -161,69 +161,64 @@ struct InPlaceTests {
         #expect(try await run(sut) == .int(5))
     }
 
-    @Test("a module variable is handed in place only to a native word")
-    func moduleVariableGoesOnlyToANativeWord() throws {
-        // Given — two modules a caller built; the first hands its variable,
-        // whole and in part, to the other's written bodies
-        let whole = try Module(
-            imports: ["other.take"],
-            variables: ["state": .record(["items": .array([.literal(.int(1))])])],
-            procedures: [
-                entryName: Procedure(
-                    body: [
-                        Statement(
-                            expression: .dispatch(Dispatch(selector: "other.take", arguments: ["all": reference("state")]))
-                        )
-                    ],
-                    result: .literal(.null)
-                )
-            ]
-        )
-        let part = try Module(
-            imports: ["other.grow"],
-            variables: ["state": .record(["items": .array([.literal(.int(1))])])],
-            procedures: [
-                entryName: Procedure(
-                    body: [
-                        Statement(
-                            expression: .dispatch(Dispatch(selector: "other.grow", arguments: ["list": reference("state", "items")]))
-                        )
-                    ],
-                    result: .literal(.null)
-                )
-            ]
-        )
-        let other = try Module(
+    @Test("a module variable handed in place is one box, by the parameter and by its name")
+    func moduleVariableHandedInPlaceIsOneBox() async throws {
+        // Given — a body handed a part of the module variable writes the part,
+        // then reads the whole by name
+        let sut = try Module(
             imports: [],
+            variables: ["items": .array([.literal(.int(1)), .literal(.int(2))])],
             procedures: [
-                "other.take": Procedure(
-                    signature: Signature(parameters: ["all": Parameter(type: .inout(.record(["items": .array(.int)])))]),
+                entryName: Procedure(
+                    signature: Signature(returns: .array(.int)),
                     body: [],
-                    result: .literal(.null)
+                    result: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
                 ),
-                "other.grow": Procedure(
-                    signature: Signature(parameters: ["list": Parameter(type: .inout(.array(.int)))]),
-                    body: [],
-                    result: .literal(.null)
+                "poke": Procedure(
+                    signature: Signature(parameters: ["first": Parameter(type: .inout(.int))], returns: .array(.int)),
+                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.int(9)))],
+                    result: reference("items")
                 )
             ]
         )
 
         // When / Then
-        for sut in [whole, part] {
-            #expect {
-                try Linker().link([sut, other] + Module.standard, entry: entryName)
-            } throws: { error in
-                "\(error)".contains("a module variable is handed in place only to a native word")
-            }
+        #expect(try await run(sut) == .array([.int(9), .int(2)]))
+    }
+
+    @Test("a hold whose box no longer has the part refuses the read")
+    func handedPathReadsWhatTheBoxHoldsNow() async throws {
+        // Given — the callee is handed the second element, then writes the
+        // whole array shorter by name, then reads the parameter
+        let sut = try Module(
+            imports: [],
+            variables: ["items": .array([.literal(.int(1)), .literal(.int(2))])],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .dispatch(Dispatch(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
+                ),
+                "poke": Procedure(
+                    signature: Signature(parameters: ["second": Parameter(type: .inout(.int))], returns: .int),
+                    body: [Statement(binding: .assignment([.key("items")]), expression: .array([.literal(.int(7))]))],
+                    result: reference("second")
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await run(sut)
+        } throws: { error in
+            "\(error)".contains("reads element 1 of an array holding 1")
         }
     }
 
     @Test("a part of a box handed in place is handed on like any local's")
     func aHandedBoxIsSplitOnwards() throws {
         // Given — a body handed `all` whole hands `all.items` on to another
-        // written body; the box is rooted in a local variable somewhere up
-        // the calls, since a module variable never arrives this way
+        // written body
         let sut = try Module(
             imports: ["other.grow"],
             procedures: [

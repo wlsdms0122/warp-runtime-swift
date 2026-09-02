@@ -138,7 +138,15 @@ public struct Resolver: Sendable {
         if let refusal = path.markedHead { return .unfit(reason: refusal) }
 
         guard case let .key(head, _)? = path.first else { return .absent }
-        guard let value = scope.value(of: head) else { return .absent }
+
+        let value: Value
+
+        do {
+            guard let held = try scope.value(of: head) else { return .absent }
+            value = held
+        } catch {
+            return .unfit(reason: "\(error)")
+        }
 
         return drill(into: value, Array(path.dropFirst()), at: [.key(head)])
     }

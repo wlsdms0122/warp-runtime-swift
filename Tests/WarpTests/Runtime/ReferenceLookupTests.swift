@@ -160,8 +160,8 @@ struct ReferenceLookupTests {
     // A scope is an environment and nothing more — which is what lets the
     // vocabulary that derives `count` be the caller's rather than the scope's.
     @Test("a scope answers about a head and not about a path")
-    func scopeAnswersHeadsOnly() {
-        #expect(sut.scope.value(of: "step") != nil)
-        #expect(sut.scope.value(of: "nowhere") == nil)
+    func scopeAnswersHeadsOnly() throws {
+        #expect(try sut.scope.value(of: "step") != nil)
+        #expect(try sut.scope.value(of: "nowhere") == nil)
     }
 }
