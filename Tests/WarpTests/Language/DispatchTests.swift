@@ -105,15 +105,14 @@ struct DispatchTests {
         #expect(answer == .int(3))
     }
 
-    @Test("two declarations of one qualified name are refused at link")
+    @Test("two declarations of one spelling are refused at link")
     func oneNameIsDeclaredOnce() throws {
         // Given / When / Then — which one runs must never be a link-order
-        // accident, and an implementation is not a namespace: a body and a
+        // accident, and an implementation is not a spelling: a body and a
         // native answering one name collide the same way two bodies would
         let rival = try Module(
-            namespace: "std.collection",
             procedures: [
-                "count": Procedure(
+                "std.collection.count": Procedure(
                     signature: Signature(returns: .int),
                     implementation: .effect(ShoutEffect())
                 )

@@ -23,7 +23,6 @@ struct LinkerTests {
         // Given — `greeting` names nothing that is missing, so the only reason
         // it fails is its own: `text` refuses to spell nothing
         let sut = try Module(
-            namespace: "app",
             constants: [
                 "greeting": .dispatch(Dispatch(receiver: .literal(.null), selector: "std.text.text"))
             ],
@@ -32,10 +31,10 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: "app.\(entryName)")
+            try linker.link([sut] + Module.standard, entry: entryName)
         }
 
-        #expect(error?.place?.rendered == "app/constants.greeting")
+        #expect(error?.place?.rendered == "constants.greeting")
         #expect(
             error?.message.contains("names it back") == false,
             "a refusal of its own was reported as a cycle"
@@ -228,7 +227,6 @@ struct LinkerTests {
         // reads is settled before it because the order says so, not because
         // enough rounds happened.
         let sut = try Module(
-            namespace: "app",
             constants: [
                 "zebra": .literal(.int(2)),
                 "yak": .dispatch(
@@ -250,7 +248,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut, entry: "app.\(entryName)")
+        let answer = try await run(sut, entry: entryName)
 
         // Then
         #expect(answer == .int(6))
@@ -269,7 +267,6 @@ struct LinkerTests {
         // twice is a program whose meaning is in its names.
         func module(closure: String, reading constant: String) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: [
                     closure: .closure(Procedure(body: [], result: reference(constant))),
                     constant: .literal(.int(3))
@@ -289,8 +286,8 @@ struct LinkerTests {
         }
 
         // When
-        let first = try await run(module(closure: "apply", reading: "zebra"), entry: "app.\(entryName)")
-        let last = try await run(module(closure: "zapply", reading: "alpha"), entry: "app.\(entryName)")
+        let first = try await run(module(closure: "apply", reading: "zebra"), entry: entryName)
+        let last = try await run(module(closure: "zapply", reading: "alpha"), entry: entryName)
 
         // Then
         #expect(first == .int(3))
@@ -305,7 +302,6 @@ struct LinkerTests {
         // place.
         func module(introducing statement: Statement?) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: [
                     "apply": .closure(Procedure(
                         signature: Signature(
@@ -338,7 +334,6 @@ struct LinkerTests {
         // closure is made. The spelling puts the closure first in name order,
         // which is the order it would settle in if nothing said otherwise.
         let sut = try Module(
-            namespace: "app",
             constants: [
                 "apply": .closure(Procedure(
                     signature: Signature(returns: .int),
@@ -366,7 +361,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut, entry: "app.\(entryName)")
+        let answer = try await run(sut, entry: entryName)
 
         // Then
         #expect(answer == .int(7))
@@ -378,7 +373,6 @@ struct LinkerTests {
         // so a closure nested in a record has the same demand on the order as
         // one written on its own.
         let sut = try Module(
-            namespace: "app",
             constants: [
                 "apply": .record([
                     "run": .closure(Procedure(
@@ -403,7 +397,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut, entry: "app.\(entryName)")
+        let answer = try await run(sut, entry: entryName)
 
         // Then
         #expect(answer == .int(3))
@@ -414,7 +408,6 @@ struct LinkerTests {
         // Given — folding happens after the words are known, so a constant that
         // interpolates is a constant that sends
         let sut = try Module(
-            namespace: "app",
             constants: [
                 "host": .literal(.string("warp.dev")),
                 "url": .dispatch(
@@ -431,7 +424,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut, entry: "app.\(entryName)")
+        let answer = try await run(sut, entry: entryName)
 
         // Then
         #expect(answer == .string("https://warp.dev"))
@@ -998,8 +991,8 @@ struct LinkerTests {
         #expect(error?.place?.rendered == "procedures.entry.body.got[0].dispatch")
     }
 
-    @Test("a qualified name resolves beside the full link")
-    func aQualifiedNameResolvesBesideTheFullLink() throws {
+    @Test("a dotted spelling resolves beside the full link")
+    func aDottedSpellingResolvesBesideTheFullLink() throws {
         // Given — `std.concurrent.all` is sent beside every standard bundle,
         // and its spelling names one declaration among all of them
         let sut = try Module(

@@ -178,85 +178,38 @@ public struct Place: Sendable, Equatable {
 }
 
 public extension Place {
-    // Which document a place is an address in, and what that document's module
-    // calls itself.
-    //
-    // Two facts and not one, because they answer to different things. A
-    // document is told from another by what it says — `name` is the namespace a
-    // module declares into, several documents may share one, and a document may
-    // write none — so identifying by the name would answer a refusal in one
-    // half of a split module with the other half's line. And a module a caller
-    // built has a namespace and no text at all, so folding the two together
-    // would take the namespace out of every refusal about one.
+    // Which document a place is an address in.
     struct Document: Sendable, Equatable {
         // Which text this is. Nil where the program was never written down —
         // a caller that built it in memory — and that is the whole of what nil
         // means here: there is no file for a reader to be pointed back into.
         public let identity: Identity?
 
-        // What the module calls itself. Carried beside the identity and never
-        // instead of it: a name is the namespace a module declares into, two
-        // documents may share one, and a module a caller built has a name and
-        // no text. A person reading a refusal wants the word they typed, which
-        // is the whole of what this is for.
-        public let namespace: String?
+        // A program nobody wrote down, which is what a caller holding a body it
+        // assembled has. Spelled out rather than left to a default, so that a
+        // place meaning to say which text it is in cannot get this one by
+        // saying nothing.
+        public static let assembled = Document(identity: nil)
 
-        // A program nobody wrote down and nobody named, which is what a caller
-        // holding a body it assembled has. Spelled out rather than left to a
-        // default, so that a place meaning to say which text it is in cannot
-        // get this one by saying nothing.
-        public static let assembled = Document(identity: nil, namespace: nil)
-
-        // A namespace written empty is no namespace. The rule is here and not
-        // at whoever is assembling one, because a place is assembled at every
-        // stage: what is read from a document before it is judged, what a
-        // validated module says it is called, what a caller hands in. Three
-        // sites keeping one rule is three chances to spell one document two
-        // ways, and which document a refusal is about is the one thing a place
-        // exists to answer.
-        public init(identity: Identity?, namespace: String?) {
+        public init(identity: Identity?) {
             self.identity = identity
-            self.namespace = namespace?.isEmpty == true ? nil : namespace
         }
 
         public static func of(_ module: Module) -> Document {
-            Document(identity: module.identity, namespace: module.namespace)
+            Document(identity: module.identity)
         }
 
-        // How the document reads on its own, which is both halves where there
-        // are both. A person reading a refusal wants the word they typed, and
-        // the word alone does not tell two documents apart — two halves of a
-        // module split across files write one name between them, which is the
-        // case this exists to keep separate. Showing the name and hiding what
-        // makes it unambiguous would put that case back in front of the only
-        // reader who cannot check it.
-        //
-        // Absence stays absence rather than folding into an empty string and
-        // being read back out of one: a document that wrote its name as nothing
-        // would otherwise spell the same as a program nobody wrote down.
+        // How the document reads on its own. An identity tells one document
+        // from every other in a link, since a link refuses the same one twice.
         var rendered: String? {
-            switch (namespace, identity) {
-            case let (namespace?, identity?): "\(namespace)@\(identity.short)"
-            case let (namespace?, nil): namespace
-            case let (nil, identity?): identity.short
-            case (nil, nil): nil
-            }
+            identity?.short
         }
 
         // What a sentence calls this document when it names one among several.
-        //
-        // An identity tells one document from every other in a link, since a
-        // link refuses the same one twice, so where there is one nothing else
-        // is needed. Without one there is only the name, and
-        // two modules a caller built may write the same name or no name at all
-        // — so where the caller put it goes on as well. The caller counts its
-        // own modules, in the order it handed them over.
+        // Without an identity there is only where the caller put it: the
+        // caller counts its own modules, in the order it handed them over.
         func spelled(at origin: Int) -> String {
-            if identity != nil, let rendered { return rendered }
-
-            let position = "the module at \(origin) in this link"
-
-            return namespace.map { namespace in "\(namespace), \(position)" } ?? position
+            rendered ?? "the module at \(origin) in this link"
         }
     }
 
@@ -273,7 +226,6 @@ public extension Place {
         case constants
         case types
         case constraints
-        case namespace
         case imports
 
         case parameters
@@ -308,7 +260,6 @@ public extension Place {
             case .constants: "constants"
             case .types: "types"
             case .constraints: "constraints"
-            case .namespace: "namespace"
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"

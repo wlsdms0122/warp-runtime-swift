@@ -528,7 +528,7 @@ struct ReceiverTests {
     func neverIsNotDerivable() {
         // Given — a walk decides on its own whether to send what it reaches, and
         // leaving is not a decision a walk gets to make quietly
-        let sut = Module.control.procedures["abort"]
+        let sut = Module.control.procedures["std.control.abort"]
 
         // When / Then
         #expect(sut?.signature.isDerivable(in: TypeTable()) == false)

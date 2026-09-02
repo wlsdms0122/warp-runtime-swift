@@ -10,11 +10,10 @@ import Foundation
 // Which document this is, worked out from what it says rather than from what it
 // is called.
 //
-// A name cannot do this job. `name` is the namespace a module declares into and
-// several documents may share one — splitting a module across files is a thing
-// this language allows — so two documents that both write `name: wallet` are
-// two documents with one name. A document that writes no name is worse: every
-// such document is spelled the same.
+// Nothing a document says about itself can do this job. What a document
+// writes is declarations, and two documents may declare spellings under one
+// prefix (a program split across files), so nothing written in one tells it
+// from the other.
 //
 // Nor can a file path. A document arrives as bytes, over a wire that carries no
 // container and no name for one; a runtime that asked where a document came

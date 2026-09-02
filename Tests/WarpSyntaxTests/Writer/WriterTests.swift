@@ -436,7 +436,6 @@ struct WriterTests {
         // the mapping a record is. A type written back as a string it cannot
         // be read from would survive neither direction.
         try! Module(
-            namespace: "casting",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["payload": Parameter(type: .any)]),
@@ -465,7 +464,6 @@ struct WriterTests {
         // Messages nested inside other expressions, deeper than a document's
         // fixed shapes would ever place them
         try! Module(
-            namespace: "nested",
             procedures: [
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),
@@ -536,7 +534,6 @@ struct WriterTests {
     private static let canonical: Value = [
         "warp": 1,
         "imports": ["std.logic.notEqual", "std.math.plus"],
-        "name": "canonical",
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],
         "constraints": ["Scalar": ["int", "string"]],
@@ -650,7 +647,6 @@ struct WriterTests {
     static let corpus: [Value] = [
         // Literals, references, records, arrays and quoting
         [
-            "name": "plain",
             "description": "the shapes that need no name",
             "types": ["Task": ["id": "string", "done": "bool"]],
             "const": ["limit": 10],

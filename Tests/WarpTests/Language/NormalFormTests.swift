@@ -117,9 +117,8 @@ struct NormalFormTests {
     @Test("a module's own names outside normal form C are refused")
     func aDenormalModuleNameIsRefused() {
         // Given — a constant's and a procedure's name are read by references
-        // and calls, so they meet the same bytes rule their readers do. So is
-        // the namespace: a qualified call spells it, and a name nobody can
-        // type is a namespace nothing can join.
+        // and calls, so they meet the same bytes rule their readers do, and a
+        // dotted spelling meets it whole.
         //
         // Written out rather than handed in as arguments, since there is no
         // such module to hand: the three are the making of one.
@@ -129,7 +128,7 @@ struct NormalFormTests {
             "\(error)".contains("normal form C")
         }
 
-        // When / Then — a constant, a procedure, and the namespace
+        // When / Then — a constant, a procedure, and a dotted procedure
         #expect {
             try Module(constants: ["cafe\u{301}": .literal(.int(1))], procedures: ["entry": entry])
         } throws: { error in
@@ -143,7 +142,7 @@ struct NormalFormTests {
         }
 
         #expect {
-            try Module(namespace: "cafe\u{301}", procedures: ["entry": entry])
+            try Module(procedures: ["cafe\u{301}.entry": entry])
         } throws: { error in
             denormal(error)
         }
@@ -184,21 +183,6 @@ struct NormalFormTests {
             try Validator().validate(sut, visible: [])
         } throws: { error in
             "\(error)".contains("normal form C")
-        }
-    }
-
-    @Test("a module that writes a name and no name in it is refused")
-    func anEmptyModuleNameIsRefused() throws {
-        // Given — a namespace written empty says a document has one and names
-        // none. Every stage that spells a place would then have to decide what
-        // an empty name renders as, and they would not decide it the same way.
-        #expect {
-            try Module(
-                namespace: "",
-                procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))]
-            )
-        } throws: { error in
-            "\(error)".contains("writes a name")
         }
     }
 }

@@ -53,7 +53,6 @@ struct IdentityTests {
         // arrived may reach the answer.
         let document = Value.object([
             "warp": .int(1),
-            "name": .string("wallet"),
             "procedures": .object(["entry": .object(["body": .array([])])])
         ])
 
@@ -67,17 +66,14 @@ struct IdentityTests {
 
     @Test("two documents that say different things are two identities")
     func differentDocumentsDiffer() throws {
-        // Given — the pair a name cannot tell apart: two documents declaring
-        // into one namespace, which is how a module is split across files.
+        // Given: two documents that declare different things.
         let first = Value.object([
             "warp": .int(1),
-            "name": .string("wallet"),
             "procedures": .object(["charge": .object(["body": .array([])])])
         ])
 
         let second = Value.object([
             "warp": .int(1),
-            "name": .string("wallet"),
             "procedures": .object(["refund": .object(["body": .array([])])])
         ])
 

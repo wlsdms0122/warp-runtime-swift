@@ -102,9 +102,8 @@ func validates(
 // spells it, the other says what answers.
 extension Module {
     static let testing = try! Module(
-        namespace: "test",
         procedures: [
-            "fail": Procedure(
+            "test.fail": Procedure(
                 signature: Signature(
                     parameters: ["recoverable": Parameter(type: .bool)]
                 ),
@@ -221,19 +220,19 @@ func run(
 // Every procedure a list of modules declares, as two tables for two questions:
 // what a selector names, and what a path segment reaches.
 extension [Module] {
-    // Every declaration by its qualified spelling, the way a selector names it.
+    // Every declaration by its spelling, the way a selector names it.
     var procedures: [String: Procedure] {
         reduce(into: [:]) { table, module in
-            for (name, procedure) in module.procedures {
-                table[Draft.qualified(name, in: module.namespace)] = procedure
-            }
+            table.merge(module.procedures) { _, new in new }
         }
     }
 
-    // Every declaration by its bare name, the way a path segment names it.
+    // Every declaration by its last segment, the way a path segment names it.
     var words: [String: Procedure] {
         reduce(into: [:]) { table, module in
-            table.merge(module.procedures) { _, new in new }
+            for (name, procedure) in module.procedures {
+                table[String(name.split(separator: ".").last ?? Substring(name))] = procedure
+            }
         }
     }
 }

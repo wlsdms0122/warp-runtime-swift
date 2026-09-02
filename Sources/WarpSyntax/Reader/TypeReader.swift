@@ -343,7 +343,7 @@ private extension String {
 private struct SignatureFormReader: Decodable {
     // No `bounds` here on purpose: a nested signature's parameters are the
     // declaring procedure's own slots, so the declaring signature owns every
-    // bound — two `bounds` records binding one namespace would be two claims
+    // bound — two `bounds` records binding one name would be two claims
     // about one thing, written a document apart.
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters

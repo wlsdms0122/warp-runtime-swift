@@ -95,9 +95,8 @@ struct CallTests {
             ]
         ])
         let elsewhere = try loader.loadDocument([
-            "name": "some-other-file",
             "procedures": [
-                "greet": [
+                "some-other-file.greet": [
                     "body": [["id": "word", "value": "hello"]],
                     "result": ["said": ["ref": "word"]],
                     "returns": ["said": "string"]

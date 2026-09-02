@@ -208,7 +208,7 @@ public struct ConcurrentEffect: Effect {
         return closure
     }
 
-    // The qualified spelling, because `first` and `map` are also collection
+    // The declared spelling, because `first` and `map` are also collection
     // words — a refusal that says which module's word refused is the one a
     // caller can act on.
     private var name: String {

@@ -15,7 +15,7 @@ import Foundation
 // sides.
 struct TypeFrame: Sendable {
     // MARK: - Property
-    // Every declaration under its qualified spelling, as the author wrote it.
+    // Every declaration under its declared spelling, as the author wrote it.
     // A walk that meets a send finds the declaration here, once, and hands it
     // on with the call. The same spellings key `signatures`, where the link
     // has filled in what each declaration answers.

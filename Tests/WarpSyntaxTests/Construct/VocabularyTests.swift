@@ -24,9 +24,8 @@ struct VocabularyTests {
         // Given — `count` and `contains` are declarations, not language
         // structure; anyone adds their own the same way
         let extra = try Module(
-            namespace: "extra",
             procedures: [
-                "head": Procedure(
+                "extra.head": Procedure(
                     signature: Signature(
                         receiver: "of",
                         parameters: ["of": Parameter(type: .array(.any))],
@@ -34,7 +33,7 @@ struct VocabularyTests {
                     ),
                     implementation: .query(FirstQuery())
                 ),
-                "longerThan": Procedure(
+                "extra.longerThan": Procedure(
                     signature: Signature(
                         receiver: "of",
                         parameters: [
@@ -96,9 +95,8 @@ struct VocabularyTests {
         // Given — `${x.count}` writes no module, so there is no spelling that
         // would tell two of them apart
         let rival = try Module(
-            namespace: "rival",
             procedures: [
-                "count": Procedure(
+                "rival.count": Procedure(
                     signature: Signature(
                         receiver: "of",
                         parameters: ["of": Parameter(type: .any)],

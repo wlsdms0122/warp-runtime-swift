@@ -30,7 +30,7 @@ public struct Image: Sendable {
     // whole call graph has to be walked to know.
     public let pure: Set<String>
 
-    // What a selector may send without running, by the qualified spelling a
+    // What a selector may send without running, by the declared spelling a
     // selector writes: the pure declarations, bodies and native words alike.
     public let selectors: [String: Procedure]
 

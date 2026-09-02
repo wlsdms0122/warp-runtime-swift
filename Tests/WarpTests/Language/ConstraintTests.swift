@@ -896,7 +896,7 @@ struct ConstraintTests {
 
     @Test("a declaration sharing a word's bare spelling does not shadow the path")
     func aDeclarationDoesNotShadowAPathWord() async throws {
-        // Given — an unnamed module's `first` lives among the selectors and
+        // Given — a module's bare `first` lives among the selectors and
         // std's `first` among the path words; one spelling, two questions,
         // two tables
         let sut = try Module(

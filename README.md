@@ -118,10 +118,10 @@ the only part that is not a key.
 
 **Which document a place is in is an `Identity`, and never a name.** A link
 holds several documents and the steps alone do not say which —
-`std.collection` and `std.concurrent` both declare `first`. A name cannot
-settle it either: `name` is the namespace a module declares into, two documents
-may write `name: wallet` between them (splitting a module across files is
-allowed), and a document may write no name at all. So identity is derived from
+`std.collection.first` and `wallet.first` are two declarations that may sit in
+two documents or in one. Nothing a document says about itself can settle it:
+what a document writes is declarations, and a program split across files
+declares spellings under one prefix from several documents. So identity is derived from
 the document itself — the digest of its canonical bytes, worked out by
 `WarpSyntax` and never written down by anybody. Nothing to declare means
 nothing to declare wrongly, and two callers holding one document arrive at one
@@ -178,9 +178,8 @@ struct ShoutQuery: Query {
 }
 
 let vocabulary = Module(
-    name: "app",
     procedures: [
-        "shout": Procedure(
+        "app.shout": Procedure(
             signature: Signature(
                 receiver: "of",
                 parameters: ["of": Parameter(type: .string)],
@@ -192,10 +191,10 @@ let vocabulary = Module(
 )
 ```
 
-Link it beside `Module.standard` and a document may write `name.shout` — and a
+Link it beside `Module.standard` and a document may send `app.shout`, and a
 document that sends a word nobody linked is refused by name before anything
 runs. The standard vocabulary ships the same way: bundles a caller takes what
-it wants from, no second namespace and no second lookup order.
+it wants from, no second name table and no second lookup order.
 
 ## Stopping and watching
 

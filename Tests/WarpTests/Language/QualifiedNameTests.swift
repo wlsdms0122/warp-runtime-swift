@@ -9,27 +9,25 @@ import Foundation
 import Testing
 @testable import Warp
 
-// Type and constraint names carry their module the way procedure names do, and
-// a mention is the declared spelling, written out: `store.Task` inside `store`
-// too, and `Task` only for a declaration in the shared space. These are the
-// places that rule decides something, and the places it refuses, because a
-// spelling no module declares names nothing.
-@Suite("A type name carries its module")
+// A type or constraint name is the spelling it was declared under, dot and
+// all, and a mention is that spelling written out. These are the places that
+// rule decides something, and the places it refuses, because a spelling no
+// module declares names nothing.
+@Suite("A type name is its declared spelling")
 struct QualifiedNameTests {
     // MARK: - Property
     private let linker = Linker()
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a type name is its qualified spelling, in the declaring module too")
+    @Test("a type name is its declared spelling, in the declaring module too")
     func aTypeNameIsItsQualifiedSpelling() async throws {
         // Given — `store` declares `Task`, and both `store` and the entry
         // module mention it as `store.Task`
         let store = try Module(
-            namespace: "store",
-            types: ["Task": .record(["id": .string])],
+            types: ["store.Task": .record(["id": .string])],
             procedures: [
-                "keep": Procedure(
+                "store.keep": Procedure(
                     signature: Signature(
                         parameters: ["value": Parameter(type: .named("store.Task"))],
                         returns: .named("store.Task")
@@ -55,20 +53,19 @@ struct QualifiedNameTests {
         // When
         let image = try linker.link([sut, store] + Module.standard, entry: entryName)
 
-        // Then — the declaration is under the qualified spelling alone
+        // Then — the declaration is under the declared spelling alone
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
         #expect(image.types.resolve("Task") == nil)
     }
 
-    @Test("a module names its own type by its qualified spelling")
-    func ownTypeIsNamedQualified() async throws {
-        // Given — two modules declare `Limit`, and `mine` mentions its own as
+    @Test("a module names its own type by its declared spelling")
+    func ownTypeIsNamedByItsSpelling() async throws {
+        // Given — two modules declare a `Limit`, and `mine` mentions its own as
         // `mine.Limit` from inside: an int, where the other module's is a string
         let mine = try Module(
-            namespace: "mine",
-            types: ["Limit": .int],
+            types: ["mine.Limit": .int],
             procedures: [
-                entryName: Procedure(
+                "mine.\(entryName)": Procedure(
                     signature: Signature(returns: .named("mine.Limit")),
                     body: [],
                     result: .literal(.int(3))
@@ -76,10 +73,9 @@ struct QualifiedNameTests {
             ]
         )
         let theirs = try Module(
-            namespace: "theirs",
-            types: ["Limit": .string],
+            types: ["theirs.Limit": .string],
             procedures: [
-                "unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "theirs.unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
 
@@ -89,22 +85,20 @@ struct QualifiedNameTests {
         #expect(answer == .int(3))
     }
 
-    @Test("a bare name is not a spelling of any qualified declaration")
-    func aBareNameSpellsNoQualifiedDeclaration() throws {
+    @Test("a bare name is not a spelling of any dotted declaration")
+    func aBareNameSpellsNoDottedDeclaration() throws {
         // Given — two modules declare `one.Limit` and `two.Limit`, and a third
         // mentions `Limit`, which neither of those spellings is
         let one = try Module(
-            namespace: "one",
-            types: ["Limit": .int],
+            types: ["one.Limit": .int],
             procedures: [
-                "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "one.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            namespace: "two",
-            types: ["Limit": .string],
+            types: ["two.Limit": .string],
             procedures: [
-                "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let sut = try Module(
@@ -126,21 +120,19 @@ struct QualifiedNameTests {
         }
     }
 
-    @Test("the qualified spelling says which, where the bare one cannot")
-    func theQualifiedSpellingResolvesTheTie() async throws {
+    @Test("the dotted spelling says which, where the bare one cannot")
+    func theDottedSpellingResolvesTheTie() async throws {
         // Given — the same link, with the mention spelled out
         let one = try Module(
-            namespace: "one",
-            types: ["Limit": .int],
+            types: ["one.Limit": .int],
             procedures: [
-                "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "one.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            namespace: "two",
-            types: ["Limit": .string],
+            types: ["two.Limit": .string],
             procedures: [
-                "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let sut = try Module(
@@ -159,10 +151,10 @@ struct QualifiedNameTests {
         #expect(answer == .int(1))
     }
 
-    @Test("two modules declaring one qualified name still refuse")
-    func oneQualifiedNameDeclaredTwiceRefuses() throws {
-        // Given — two unnamed modules declare into the shared space, so the
-        // qualified names collide the way two `.c` files' symbols do
+    @Test("two modules declaring one name refuse")
+    func oneNameDeclaredTwiceRefuses() throws {
+        // Given — two modules declare one spelling, which collide the way two
+        // `.c` files' symbols do
         let one = try Module(
             types: ["Limit": .int],
             procedures: [
@@ -184,8 +176,8 @@ struct QualifiedNameTests {
         }
     }
 
-    @Test("a constraint is named by its qualified spelling")
-    func aConstraintIsNamedQualified() async throws {
+    @Test("a constraint is named by its declared spelling")
+    func aConstraintIsNamedByItsSpelling() async throws {
         // Given — `std` declares `Comparable`, and a document-shaped module
         // bounds its own parameter with that spelling, `std.Comparable`
         let sut = try Module(
@@ -242,22 +234,21 @@ struct QualifiedNameTests {
         }
     }
 
-    @Test("a shared-space declaration's bare name is its qualified spelling")
-    func aSharedSpaceDeclarationAnswersExactly() async throws {
-        // Given — an unnamed module declares `Limit` into the shared space, a
-        // named module declares `one.Limit`, and a third module mentions
-        // `Limit`: the shared declaration's spelling, and nothing else's
+    @Test("a bare spelling names only the bare declaration")
+    func aBareSpellingNamesTheBareDeclaration() async throws {
+        // Given — one module declares `Limit`, another declares `one.Limit`,
+        // and a third mentions `Limit`: the first declaration's spelling, and
+        // nothing else's
         let shared = try Module(
             types: ["Limit": .int],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let named = try Module(
-            namespace: "one",
-            types: ["Limit": .string],
+        let dotted = try Module(
+            types: ["one.Limit": .string],
             procedures: [
-                "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "one.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let sut = try Module(
@@ -270,8 +261,8 @@ struct QualifiedNameTests {
             ]
         )
 
-        // When / Then — an int answers, which only the shared `Limit` admits
-        let answer = try await run([sut, shared, named], vocabulary: [])
+        // When / Then — an int answers, which only the bare `Limit` admits
+        let answer = try await run([sut, shared, dotted], vocabulary: [])
 
         #expect(answer == .int(3))
     }
@@ -308,7 +299,7 @@ struct QualifiedNameTests {
     @Test("a name declared as a type and a constraint refuses in either order")
     func aCrossSpaceCollisionRefusesInEitherOrder() throws {
         // Given — one module declares `Limit` as a constraint, another as a
-        // type, both into the shared space
+        // type
         let membership = try Module(
             constraints: ["Limit": [.int]],
             procedures: [
@@ -335,8 +326,8 @@ struct QualifiedNameTests {
 
     @Test("a document's bare constraint does not capture what std meant")
     func aBareDeclarationDoesNotCaptureTheStandardName() async throws {
-        // Given — an unnamed module declares its own `Numeric`, admitting
-        // text, and still leans on std.math for arithmetic
+        // Given — a module declares its own `Numeric`, admitting text, and
+        // still leans on std.math for arithmetic
         let sut = try Module(
             constraints: ["Numeric": [.string]],
             procedures: [

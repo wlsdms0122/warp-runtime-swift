@@ -21,7 +21,6 @@ struct SignatureTests {
         // all, and the two are not the same declaration even though neither is
         // checked
         let sut = try Loader.testing.loadDocument([
-            "name": "notes",
             "procedures": [
                 "keep": [
                     "parameters": ["subject": [:], "labelled": "any"],
@@ -47,7 +46,6 @@ struct SignatureTests {
     func untypedReturnDeclaresNothing() throws {
         // Given
         let sut = try Loader.testing.loadDocument([
-            "name": "notes",
             "procedures": [
                 "quiet": ["body": [["id": "done", "value": "end"]]],
                 "loud": ["returns": "any", "body": [["id": "done", "value": "end"]]]
@@ -205,7 +203,6 @@ struct SignatureTests {
     func probeNullDefaultInModule() throws {
         // Given
         let sut = try Loader.testing.loadDocument([
-            "name": "nullcwd",
             "procedures": [
                 "nullcwd": [
                     "parameters": ["dir": ["type": "string", "default": .null]],

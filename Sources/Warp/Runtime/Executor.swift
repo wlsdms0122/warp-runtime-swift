@@ -16,7 +16,7 @@ public struct Executor: Sendable {
     // until then, which is why nothing but `run(_ image:)` can start a run.
     let procedures: [String: Procedure]
 
-    // What a selector may send without running, by its qualified spelling,
+    // What a selector may send without running, by its declared spelling,
     // worked out by the link.
     let selectors: [String: Procedure]
 

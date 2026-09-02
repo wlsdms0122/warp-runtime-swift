@@ -69,21 +69,20 @@ public struct Linker: Sendable {
         )
         let symbols = try symbols(of: modules)
 
-        // Every declaration under its qualified spelling. The spellings are
+        // Every declaration under its declared spelling. The spellings are
         // unique, since the symbol gathering refused a double, and every send
         // in every body asks this table.
         let space = symbols.reduce(into: [String: Symbol]()) { table, symbol in
-            table[symbol.qualified] = symbol
+            table[symbol.declared] = symbol
         }
 
         // A name is its declared spelling and nothing else, so the entry is
-        // looked up as the caller wrote it, the module's name in front where
-        // the module has one.
+        // looked up as the caller wrote it.
         guard let start = space[entry] else {
             throw LinkError(
                 "entry '\(entry)' is not declared by any module in this link."
-                    + " A name is its declared spelling, the module's name in front where"
-                    + " it has one — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                    + " A name is its declared spelling. Declared:"
+                    + " \(symbols.map(\.declared).sorted().joined(separator: ", "))",
                 at: nil
             )
         }
@@ -92,7 +91,7 @@ public struct Linker: Sendable {
         // uses. Built before the walk so a call can be judged against a callee
         // the walk has not reached yet.
         let signatures = symbols.reduce(into: [String: Signature]()) { table, symbol in
-            table[symbol.qualified] = symbol.procedure.signature
+            table[symbol.declared] = symbol.procedure.signature
         }
 
         // Purity is worked out over every declaration rather than the reached
@@ -126,7 +125,7 @@ public struct Linker: Sendable {
         // reachable under more than one, and an answer worked out for it is
         // that declaration's however a walk spelled it.
         let wordSpellings = wordSymbols.reduce(into: [String: [String]]()) { spellings, entry in
-            spellings[entry.value.qualified, default: []].append(entry.key)
+            spellings[entry.value.declared, default: []].append(entry.key)
         }
 
         func frame() -> TypeFrame {
@@ -201,7 +200,7 @@ public struct Linker: Sendable {
         var foldingSelectors = settling
         var foldingWords = settlingWords
 
-        // A declaration, bound and dot-judged: selectors resolve to qualified
+        // A declaration, bound and dot-judged: selectors resolve to declared
         // spellings, every dot in the body is spelled as what the types say
         // it means, and a constant-headed path — judged first, like any path
         // — folds to the value it is. The image holds only this form, so a
@@ -212,7 +211,7 @@ public struct Linker: Sendable {
         // callee declared, arguments taken — is kept per body rather than per
         // reachability.
         func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite]) {
-            if let done = resolvedBodies[symbol.qualified] { return done }
+            if let done = resolvedBodies[symbol.declared] { return done }
 
             let declared = symbol.procedure
 
@@ -249,7 +248,7 @@ public struct Linker: Sendable {
                 )
             }
 
-            resolvedBodies[symbol.qualified] = answer
+            resolvedBodies[symbol.declared] = answer
 
             try checked(answer.calls, in: frame)
 
@@ -287,19 +286,19 @@ public struct Linker: Sendable {
         var linked: Procedure?
 
         // Breadth over the frontier, so the first refusal an author sees is the
-        // first mistake they wrote. Memoising by qualified name is what makes a
+        // first mistake they wrote. Memoising by declared spelling is what makes a
         // recursive procedure link once instead of forever.
         while index < frontier.count {
             let symbol = frontier[index]
             index += 1
 
-            if procedures[symbol.qualified] != nil { continue }
+            if procedures[symbol.declared] != nil { continue }
 
             let (resolved, calls) = try resolved(symbol)
 
-            procedures[symbol.qualified] = resolved
+            procedures[symbol.declared] = resolved
 
-            if symbol.qualified == start.qualified { linked = resolved }
+            if symbol.declared == start.declared { linked = resolved }
 
             // A constant answer is knowable from the text, so it is held to the
             // declaration here, the way a constant argument is. An answer only
@@ -401,13 +400,13 @@ public struct Linker: Sendable {
     // impure, which is a fact about the algorithm rather than about the code.
     private func pure(among symbols: [Symbol]) -> Set<String> {
         let bodies = symbols.reduce(into: [String: Block?]()) { table, symbol in
-            table[symbol.qualified] = symbol.procedure.block
+            table[symbol.declared] = symbol.procedure.block
         }
 
         var pure = Set(
             symbols
                 .filter { symbol in symbol.procedure.implementation.isNativelyPure != false }
-                .map(\.qualified)
+                .map(\.declared)
         )
 
         while true {
@@ -507,20 +506,20 @@ public struct Linker: Sendable {
 
         // Two tables, because a name answers two different questions — what a
         // selector reaches, and what a bare spelling a path writes may send.
-        // One table held both and let a declaration whose qualified name
-        // matched another's bare spelling quietly answer the wrong question.
+        // One table held both and let a declaration whose declared spelling
+        // matched another's bare last segment quietly answer the wrong question.
         // Symbols rather than procedures, because the bodies are still to be
         // read: the caller reads them through the same judgment every reached
         // body takes.
-        for symbol in symbols.sorted(by: { $0.qualified < $1.qualified }) {
-            guard pure.contains(symbol.qualified) else { continue }
+        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
+            guard pure.contains(symbol.declared) else { continue }
 
-            selectors[symbol.qualified] = symbol
+            selectors[symbol.declared] = symbol
 
             guard symbol.procedure.signature.isDerivable(in: types) else { continue }
 
-            let bare = symbol.qualified.split(separator: ".").last.map(String.init)
-                ?? symbol.qualified
+            let bare = symbol.declared.split(separator: ".").last.map(String.init)
+                ?? symbol.declared
 
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
@@ -549,7 +548,7 @@ public struct Linker: Sendable {
             throw LinkError(
                 "\(contested.keys.sorted().joined(separator: ", ")) is declared by more"
                     + " than one module as something a path may reach — '\(word)' by"
-                    + " \(ranked.map(\.qualified).joined(separator: ", "))"
+                    + " \(ranked.map(\.declared).joined(separator: ", "))"
                     + " — a path segment names no module, so there is no spelling that"
                     + " would tell them apart",
                 at: ranked[1].place
@@ -559,9 +558,8 @@ public struct Linker: Sendable {
         return (selectors, words)
     }
 
-    // Every declaration, qualified. A module with a name declares into that
-    // name; a module without one declares into the shared space, and two of
-    // those cannot both declare a name for the same reason two `.c` files
+    // Every declaration under the spelling it was declared by. Two modules
+    // cannot both declare one spelling, for the same reason two `.c` files
     // cannot both define a symbol.
     private func symbols(of modules: [Module]) throws -> [Symbol] {
         var symbols: [Symbol] = []
@@ -577,7 +575,6 @@ public struct Linker: Sendable {
             for name in module.procedures.keys.sorted() {
                 guard let procedure = module.procedures[name] else { continue }
 
-                let qualified = module.qualified(name)
 
                 let symbol = Symbol(
                     declared: name,
@@ -586,16 +583,16 @@ public struct Linker: Sendable {
                     procedure: procedure
                 )
 
-                if let first = claimed[qualified] {
+                if let first = claimed[name] {
                     throw LinkError(
-                        "'\(qualified)' is declared more than once in this link — by"
+                        "'\(name)' is declared more than once in this link — by"
                             + " \(first.spelled) and \(symbol.spelled) — two declarations"
                             + " of a name have no way to be told apart",
                         at: symbol.place
                     )
                 }
 
-                claimed[qualified] = symbol
+                claimed[name] = symbol
 
                 symbols.append(symbol)
             }

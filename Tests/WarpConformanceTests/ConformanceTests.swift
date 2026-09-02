@@ -54,16 +54,10 @@ struct ConformanceTests {
 
     // MARK: - Public
     // MARK: - Private
-    // A case starts from `entry`, spelled the way the document declares it:
-    // the document's name in front where it has one.
-    private static func entry(of module: Module) -> String {
-        Draft.qualified("entry", in: module.namespace)
-    }
-
     private func run(_ sut: Case) async throws -> Value {
         let linker = Linker()
         let module = try Loader().load(sut.program, identity: nil)
-        let image = try linker.link([module] + Module.standard, entry: Self.entry(of: module))
+        let image = try linker.link([module] + Module.standard, entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
     }
@@ -84,7 +78,7 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try linker.link([module] + Module.standard, entry: Self.entry(of: module))
+            image = try linker.link([module] + Module.standard, entry: "entry")
         } catch {
             return .link
         }

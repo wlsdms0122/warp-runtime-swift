@@ -12,8 +12,8 @@ import Foundation
 // sending a no-argument word to what the walk reached.
 //
 // `selectors` is what a selector may send without running: the link worked
-// out which declarations answer purely, and gave them back under the qualified
-// names a selector writes. `words` is the part of them a path segment may reach,
+// out which declarations answer purely, and gave them back under the declared
+// spellings a selector writes. `words` is the part of them a path segment may reach,
 // under the bare names a path writes. A resolver built without either reads
 // paths and nothing else, which is what a constant or a closed template wants.
 public struct Resolver: Sendable {
@@ -390,7 +390,7 @@ public struct Resolver: Sendable {
     // something in the middle of a comparison.
     private func send(_ dispatch: Dispatch) throws -> Value {
         // The spelling is the selector as the author wrote it, which is a
-        // declared qualified name; a path word is reached by `derive`, never
+        // declared spelling; a path word is reached by `derive`, never
         // by a send.
         guard let procedure = selectors[dispatch.selector] else {
             throw ExecutionError(

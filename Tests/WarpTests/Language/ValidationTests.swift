@@ -25,7 +25,6 @@ struct ValidationTests {
         // able to see that the name was already taken.
         func module(introducing statement: Statement) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
@@ -60,7 +59,6 @@ struct ValidationTests {
         // When / Then
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
@@ -82,7 +80,6 @@ struct ValidationTests {
         // failure an attempt rescues.
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: ["limit": .literal(.int(3))],
                 procedures: [
                     entryName: Procedure(
@@ -115,7 +112,6 @@ struct ValidationTests {
         // which of the two the reader is standing in.
         func module(_ procedure: Procedure) throws -> Module {
             try Module(
-                namespace: "app",
                 constants: [
                     "apply": .closure(procedure),
                     "limit": .literal(.int(3))
@@ -148,7 +144,6 @@ struct ValidationTests {
         // a name nothing here settles, and the refusal stands on it.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                namespace: "pricing",
                 constants: ["aaa": reference("bbb"), "bbb": reference("nowhere")],
                 procedures: [entryName: Procedure(body: [])],
                 identity: Identity([0x01])
@@ -156,7 +151,7 @@ struct ValidationTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "pricing@01/constants.bbb")
+        #expect(error?.place?.rendered == "01/constants.bbb")
         #expect(error?.message.contains("aaa") == false)
 
         // And the name it reads is said, since that is the half of the mistake
@@ -471,16 +466,14 @@ struct ValidationTests {
     }
 
     @Test("a module calling its own by the name the link knows it by imports nothing")
-    func aQualifiedSelfCallIsNotAnImport() throws {
-        // Given — a module may call a sibling by the bare name or by the one
-        // the link knows it as, and both reach the same declaration. A list
-        // that only knew the bare spelling would make this document declare a
-        // dependency on itself, and the honest empty list would be refused.
+    func aSiblingCallIsNotAnImport() throws {
+        // Given — a module calls a sibling by its declared spelling, and a
+        // spelling this document declares is not an import. The honest empty
+        // list is accepted.
         let sut = try Module(
-            namespace: "wallet",
             imports: [],
             procedures: [
-                "pay": Procedure(
+                "wallet.pay": Procedure(
                     body: [
                         Statement(
                             id: "charged",
@@ -488,7 +481,7 @@ struct ValidationTests {
                         )
                     ]
                 ),
-                "fee": Procedure(body: [], result: .literal(.int(1)))
+                "wallet.fee": Procedure(body: [], result: .literal(.int(1)))
             ]
         )
 
