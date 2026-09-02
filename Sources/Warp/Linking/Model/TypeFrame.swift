@@ -47,10 +47,6 @@ struct TypeFrame: Sendable {
     // time, worked out from the bodies the way purity is.
     let isolated: Set<String>
 
-    // Which names each module declares as variables, by the module's
-    // position in the link: two modules a caller built are still two modules.
-    let moduleVariables: [Int: Set<String>]
-
     // MARK: - Initializer
     // MARK: - Public
     // The whole declaration, for the one send a path makes — and only where a

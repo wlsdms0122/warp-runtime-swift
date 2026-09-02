@@ -137,10 +137,7 @@ public struct Linker: Sendable {
                 types: types,
                 words: answeringWords,
                 pure: settled,
-                isolated: isolatedDeclarations,
-                moduleVariables: modules.enumerated().reduce(into: [:]) { table, entry in
-                    table[entry.offset] = Set(entry.element.variables.keys)
-                }
+                isolated: isolatedDeclarations
             )
         }
 

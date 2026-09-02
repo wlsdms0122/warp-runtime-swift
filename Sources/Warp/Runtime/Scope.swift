@@ -19,10 +19,10 @@ public struct Scope: Sendable {
     // MARK: - Property
     public private(set) var bindings: [String: Value]
 
-    // Which names are variables, and what each one points at. The dictionary is
-    // a value and the boxes are references, which is exactly the split scoping
-    // needs — see `Variable`.
-    private var variables: [String: Variable]
+    // Which names are variables, and what each one holds: a box, and the path
+    // into it the name stands for. The dictionary is a value and the boxes are
+    // references, which is exactly the split scoping needs — see `Variable`.
+    private var variables: [String: Handle]
 
     // MARK: - Initializer
     public init(bindings: [String: Value] = [:]) {
@@ -30,18 +30,24 @@ public struct Scope: Sendable {
         self.variables = [:]
     }
 
-    init(bindings: [String: Value], variables: [String: Variable]) {
+    init(bindings: [String: Value], variables: [String: Handle]) {
         self.bindings = bindings
         self.variables = variables
     }
 
     // MARK: - Public
     // What a reference's first segment names here. Nil is absence — the name is
-    // not in this environment at all.
-    public func value(of head: String) -> Value? {
-        if let variable = variables[head] { return variable.value }
+    // not in this environment at all. A variable held through a path is read
+    // through it, and a path the box no longer holds refuses.
+    public func value(of head: String) throws -> Value? {
+        if let handle = variables[head] { return try handle.value() }
 
         return bindings[head]
+    }
+
+    // Whether a name is in this environment at all, variable or binding.
+    public func holds(_ head: String) -> Bool {
+        variables[head] != nil || bindings[head] != nil
     }
 
     public func binding(_ id: String, to value: Value) -> Scope {
@@ -63,7 +69,7 @@ public struct Scope: Sendable {
         var scope = self
 
         scope.bindings[id] = nil
-        scope.variables[id] = Variable(value)
+        scope.variables[id] = Handle(id, value)
 
         return scope
     }
@@ -74,36 +80,30 @@ public struct Scope: Sendable {
     //
     // A name that is not a variable here cannot reach this: the validator
     // proves every assignment names one before the program runs.
-    // A write through a path: the head names the box, and the rest of the
-    // path says where inside its value the new value goes. The box is read
-    // once, rewritten, and stored once, so nothing observes the value halfway.
+    // A write through a path: the head names the hold, and the rest of the
+    // path says where below it the new value goes.
     public func assign(_ path: [PathSegment], to value: Value) throws {
-        guard let head = path.head, let box = variables[head] else {
+        guard let head = path.head, let handle = variables[head] else {
             throw ExecutionError(
                 "'\(path.rendered)' writes a name that is not a variable here"
             )
         }
 
-        guard path.count > 1 else {
-            box.value = value
-            return
-        }
-
-        box.value = try box.value.writing(value, at: Array(path.dropFirst()), under: path.rendered)
+        try handle.write(value, at: Array(path.dropFirst()))
     }
 
-    // The box under a name, where the name is a variable. Handing a box on is
-    // how a call shares a variable with its callee.
-    func box(of name: String) -> Variable? {
+    // The hold under a name, where the name is a variable. Handing a hold on
+    // is how a call shares a variable with its callee.
+    func handle(of name: String) -> Handle? {
         variables[name]
     }
 
-    // The same scope holding a box under a name — what a callee reads its
-    // `inout` parameter through.
-    func sharing(_ box: Variable, as name: String) -> Scope {
+    // The same scope holding a variable under a name — what a callee reads
+    // its `inout` parameter through.
+    func sharing(_ handle: Handle, as name: String) -> Scope {
         var scope = self
         scope.bindings[name] = nil
-        scope.variables[name] = box
+        scope.variables[name] = handle
         return scope
     }
 
