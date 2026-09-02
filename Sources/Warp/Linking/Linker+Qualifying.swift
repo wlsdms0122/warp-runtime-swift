@@ -25,8 +25,9 @@ extension Linker {
     }
 
     // The two spaces gathered whole, here and nowhere else, so the uniqueness
-    // this pass refuses on is the same fact the tables are built from. A mention nothing declares is refused by the judgment that owns
-    // undeclared names, which says where the mention lives.
+    // this pass refuses on is the same fact the tables are built from. A
+    // mention nothing declares is refused by the judgment that owns undeclared
+    // names, which says where the mention lives.
     func qualified(_ modules: [Module]) throws -> (
         types: [String: Declared<TypeExpression>],
         constraints: [String: Declared<[TypeExpression]>]

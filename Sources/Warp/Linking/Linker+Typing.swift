@@ -1303,6 +1303,17 @@ extension Linker {
                 )
             }
 
+            // A selector no module declares is refused where the walk meets
+            // it. Its answer is unknown, and a dot on an unknown answer would
+            // be refused first for what the dot reads, which is not what the
+            // author got wrong.
+            guard signature != nil else {
+                throw LinkError(
+                    "sends '\(dispatch.selector)', which no module in this link declares",
+                    at: place
+                )
+            }
+
             // The guard above already said judging, so this refusal has no
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.

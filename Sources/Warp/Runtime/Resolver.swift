@@ -388,9 +388,9 @@ public struct Resolver: Sendable {
     // so a condition that names one is refused here rather than quietly starting
     // something in the middle of a comparison.
     private func send(_ dispatch: Dispatch) throws -> Value {
-        // The spelling is a resolved selector after the link's rewrite, and an
-        // author's own spelling inside a constant, where nothing rewrites — a
-        // bare spelling not among the selectors may still be a path word.
+        // The spelling is the selector as the author wrote it, which is a
+        // declared qualified name, and a bare spelling not among the selectors
+        // may still be a path word.
         guard let procedure = derivations[dispatch.selector] ?? words[dispatch.selector] else {
             throw ExecutionError(
                 "'\(dispatch.selector)' answers only by running, so it cannot be"

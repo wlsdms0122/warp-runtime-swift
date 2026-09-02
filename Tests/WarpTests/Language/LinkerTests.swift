@@ -967,6 +967,37 @@ struct LinkerTests {
         #expect(Set(image.procedures.keys) == ["alone"])
     }
 
+    @Test("an undeclared selector is refused before what it answers is read")
+    func anUndeclaredSelectorIsRefusedWhereItIsMet() throws {
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            id: "got",
+                            expression: .dispatch(
+                                Dispatch(
+                                    receiver: .literal(.int(1)),
+                                    selector: "plus",
+                                    arguments: ["value": .literal(.int(2))]
+                                )
+                            )
+                        )
+                    ],
+                    result: .reference([.key("got"), .key("field")])
+                )
+            ]
+        )
+
+        let error = #expect(throws: LinkError.self) {
+            try linker.link([sut] + Module.standard, entry: entryName)
+        }
+
+        #expect(error?.message == "sends 'plus', which no module in this link declares")
+        #expect(error?.place?.rendered == "procedures.entry.body.got[0].dispatch")
+    }
+
     @Test("a bare name is not a spelling of any qualified declaration")
     func aBareNameTwoModulesDeclareIsRefused() throws {
         // Given — `map` is a collection word and a concurrent word on purpose,

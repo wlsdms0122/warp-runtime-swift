@@ -77,8 +77,9 @@ public struct Linker: Sendable {
         // under `wallet`, `entry` for one in the shared space.
         guard let start = space.symbol(spelled: entry) else {
             throw LinkError(
-                "entry '\(entry)' is not declared by any module in this link"
-                    + " — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                "entry '\(entry)' is not declared by any module in this link."
+                    + " A name is its declared spelling, `wallet.entry` for a declaration"
+                    + " under `wallet` — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
                 at: nil
             )
         }
@@ -366,25 +367,21 @@ public struct Linker: Sendable {
     }
 
     // The one gate every gathered send passes, wherever its body sits — a
-    // procedure, a word, a constant's closure. The callee is the declaration
-    // the selector spells, and the call is judged against it.
+    // procedure, a word, a constant's closure. The walk that gathered a call
+    // refused a selector no module declares, and the signature table and
+    // the symbol space are read off the same declarations, so the callee is
+    // there; if the two ever came apart, the crash says so.
     private func checked(
         _ calls: [CallSite],
         in frame: TypeFrame,
         symbols space: SymbolSpace
     ) throws {
         for call in calls {
-            let selector = call.dispatch.selector
-
-            guard let callee = space.symbol(spelled: selector) else {
-                throw LinkError(
-                    "sends '\(selector)', which no module in"
-                        + " this link declares",
-                    at: call.place
-                )
-            }
-
-            try check(call, against: callee.procedure, with: frame)
+            try check(
+                call,
+                against: space.symbol(spelled: call.dispatch.selector)!.procedure,
+                with: frame
+            )
         }
     }
 
