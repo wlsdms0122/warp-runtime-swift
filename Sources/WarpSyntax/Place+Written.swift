@@ -94,8 +94,7 @@ public extension Place {
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
-        let form: any ConstructForm.Type = switch construct {
-        case .literal, .reference, .array, .record, .closure, .cast: ValueForm.self
+        let form: (any ConstructForm.Type)? = switch construct {
         case .invoke: InvokeForm.self
         case .block: GroupForm.self
         case .conditional: BranchForm.self
@@ -109,7 +108,10 @@ public extension Place {
             case .construct: BreakForm.self
             case .round: ContinueForm.self
             }
+        case .literal, .reference, .array, .record, .closure, .cast: nil
         }
+
+        guard let form else { return StatementReader.valueKey }
 
         return registry.key(for: form) ?? construct.rendered
     }

@@ -1104,7 +1104,7 @@ extension Linker {
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = type.declaresRecord(in: frame.types)
+            let nominal = type.recordName(in: frame.types) != nil
 
             if !type.couldBothHold(inner.reading, in: frame.types) {
                 // Neither could ever be the other, and the reading proves what

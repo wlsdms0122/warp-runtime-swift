@@ -160,6 +160,13 @@ public enum BinaryEncoding {
         // front, so a reader that met the tag knows a name follows.
         case let .record(name, object):
             if let name {
+                guard normal(name) else {
+                    throw EncodingError.invalidValue(
+                        Value.string(name),
+                        .init(codingPath: [], debugDescription: "the record's name is not in normal form C")
+                    )
+                }
+
                 bytes.append(Tag.namedRecord.rawValue)
                 write(Array(name.utf8), into: &bytes)
             } else {
@@ -311,6 +318,10 @@ public enum BinaryEncoding {
 
             case .record, .namedRecord:
                 let name = tag == .namedRecord ? try text(from: &reading) : nil
+
+                if let name, !normal(name) {
+                    throw refused("the record's name is not in normal form C")
+                }
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {

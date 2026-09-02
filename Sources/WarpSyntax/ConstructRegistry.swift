@@ -23,7 +23,6 @@ public struct ConstructRegistry: Sendable {
     // The built-in set is a compile-time constant with unique keys — a throw here
     // would be a kernel bug, so the forced try is the honest reaction.
     public static let standard = try! ConstructRegistry(forms: [
-        ValueForm.self,
         BranchForm.self,
         LoopForm.self,
         EachForm.self,
@@ -37,6 +36,14 @@ public struct ConstructRegistry: Sendable {
     ])
 
     public var keys: [String] { forms.keys.sorted() }
+
+    // Every key a record of data cannot carry bare in an expression slot: the
+    // constructs this registry reads under `value`, and the forms an
+    // expression reads anywhere. The writer quotes a record carrying one, and
+    // this is the one place the reader's two tables are read together.
+    public var escapedKeys: Set<String> {
+        Set(keys).union(ExpressionReader.formKeys)
+    }
 
     // What the registered forms send, and what their slots spend on their
     // behalf. Dropping a form drops what it required, which is the point of the

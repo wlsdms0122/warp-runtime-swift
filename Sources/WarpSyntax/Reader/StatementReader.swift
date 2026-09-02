@@ -54,7 +54,7 @@ public struct StatementReader: Decodable {
 
     // The one key a statement writes its expression under. A construct sits
     // inside it under the construct's own key.
-    static let valueKey = "value"
+    public static let valueKey = "value"
 
     public let statement: Statement
 

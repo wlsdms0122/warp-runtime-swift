@@ -220,7 +220,7 @@ public extension Writer {
         // Whatever is left needs no name, so it is written as the expression it
         // is under the word that says "this statement is just a value".
         default:
-            return (try spelling(ValueForm.self), try value(of: expression))
+            return (StatementReader.valueKey, try value(of: expression, reserving: registry.escapedKeys))
         }
     }
 

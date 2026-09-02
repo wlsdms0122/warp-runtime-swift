@@ -43,6 +43,15 @@ public indirect enum Value: Sendable, Equatable {
         .record(name: nil, fields: fields)
     }
 
+    // This record with other fields and the same name, or any other value as
+    // it is. Rewriting fields goes through here so a name is kept without
+    // each caller remembering to.
+    public func replacingFields(_ rewrite: ([String: Value]) throws -> [String: Value]) rethrows -> Value {
+        guard case let .record(name, fields) = self else { return self }
+
+        return .record(name: name, fields: try rewrite(fields))
+    }
+
     // MARK: - Property
     // What is said wherever a value stands where a document can reach it. One
     // sentence because it is one rule, and an author meeting it twice should

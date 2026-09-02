@@ -245,11 +245,9 @@ public struct Loader: Sendable {
     // it says which reader the document is written for, and that is an answer
     // about the writing rather than about the program.
     private func stamped(_ value: Value) -> Value {
-        guard case let .record(_, fields) = value else { return value }
-
-        return .object(fields.merging(
-            [Envelope.versionKey: .int(Envelope.version)]
-        ) { written, _ in written })
+        value.replacingFields { fields in
+            fields.merging([Envelope.versionKey: .int(Envelope.version)]) { written, _ in written }
+        }
     }
 
     // Every reading goes through here, and so does every refusal one raises.

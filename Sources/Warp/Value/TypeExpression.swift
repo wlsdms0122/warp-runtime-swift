@@ -240,19 +240,19 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 )
             }
 
-            guard case let .record(tag, _) = value, declared.declaresRecord(in: types) else {
+            guard case let .record(tag, _) = value, let nominal = recordName(in: types) else {
                 return try declared.settling(value, at: path, in: types, assuming: assuming)
             }
 
-            if let tag, tag != name {
-                throw ArgumentError("\(path): is a \(tag), and the slot declares \(name)")
+            if let tag, tag != nominal {
+                throw ArgumentError("\(path): is a \(tag), and the slot declares \(nominal)")
             }
 
             guard case let .record(_, fields) = try declared.settling(value, at: path, in: types, assuming: assuming) else {
                 throw mismatch(value, at: path)
             }
 
-            return .record(name: name, fields: fields)
+            return .record(name: nominal, fields: fields)
 
         // Null arrives as itself; anything else is held to the declared half.
         case let .nullable(inner):
@@ -715,21 +715,25 @@ extension TypeExpression {
         return false
     }
 
-    // Whether this stands for a record shape, following declared names to
-    // what they stand for. A name that leads back to itself declares no shape.
-    func declaresRecord(in types: TypeTable) -> Bool {
+    // The name a record settled here carries: the last declared name on the
+    // way to a record shape, so an alias of a declared record is that record
+    // and not a second type. Nil where this stands for no record, or for a
+    // name that leads back to itself.
+    func recordName(in types: TypeTable) -> String? {
         var current = self
+        var last: String?
         var visited: Set<String> = []
 
         while case let .named(name) = current {
-            guard !visited.contains(name), let declared = types.resolve(name) else { return false }
+            guard !visited.contains(name), let declared = types.resolve(name) else { return nil }
 
             visited.insert(name)
+            last = name
             current = declared
         }
 
-        if case .record = current { return true }
-        return false
+        if case .record = current { return last }
+        return nil
     }
 
     public var isVariable: Bool {
@@ -870,11 +874,11 @@ extension TypeExpression {
         assuming: Set<String>
     ) -> Bool {
         if
-            case let .named(mine) = self,
-            case let .named(theirs) = other,
-            mine != theirs,
-            declaresRecord(in: types),
-            other.declaresRecord(in: types)
+            case .named = self,
+            case .named = other,
+            let mine = recordName(in: types),
+            let theirs = other.recordName(in: types),
+            mine != theirs
         {
             return false
         }
@@ -1084,11 +1088,11 @@ extension TypeExpression {
         // Two declared records under two names are two types, whatever their
         // shapes: a value settled under one name fits only that name.
         if
-            case let .named(mine) = self,
-            case let .named(theirs) = other,
-            mine != theirs,
-            declaresRecord(in: types),
-            other.declaresRecord(in: types)
+            case .named = self,
+            case .named = other,
+            let mine = recordName(in: types),
+            let theirs = other.recordName(in: types),
+            mine != theirs
         {
             return false
         }
