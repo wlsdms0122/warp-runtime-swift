@@ -25,9 +25,10 @@ extension Linker {
     }
 
     // The two spaces gathered whole, here and nowhere else, so the uniqueness
-    // this pass refuses on is the same fact the tables are built from. A
-    // mention nothing declares is refused by the judgment that owns undeclared
-    // names, which says where the mention lives.
+    // this pass refuses on is the same fact the tables are built from: each
+    // table is filled as its space is walked. A mention nothing declares is
+    // refused by the judgment that owns undeclared names, which says where the
+    // mention lives.
     func qualified(_ modules: [Module]) throws -> (
         types: [String: Declared<TypeExpression>],
         constraints: [String: Declared<[TypeExpression]>]
@@ -48,9 +49,11 @@ extension Linker {
         // happened to list the modules in.
         var typePlaces: [String: Declaration] = [:]
         var constraintPlaces: [String: Declaration] = [:]
+        var declaredTypes: [String: Declared<TypeExpression>] = [:]
+        var declaredConstraints: [String: Declared<[TypeExpression]>] = [:]
 
         for (origin, module) in modules.enumerated() {
-            for name in module.types.keys.sorted() {
+            for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
                 let qualified = module.qualified(name)
                 let declaration = Declaration(place: .type(name, in: .of(module)), origin: origin)
 
@@ -65,11 +68,12 @@ extension Linker {
                 }
 
                 typePlaces[qualified] = declaration
+                declaredTypes[qualified] = Declared(type, at: declaration.place)
             }
         }
 
         for (origin, module) in modules.enumerated() {
-            for name in module.constraints.keys.sorted() {
+            for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
                 let qualified = module.qualified(name)
                 let declaration = Declaration(
                     place: .constraint(name, in: .of(module)),
@@ -95,32 +99,7 @@ extension Linker {
                 }
 
                 constraintPlaces[qualified] = declaration
-            }
-        }
-
-        // Uniqueness was refused above, so this only gathers, under the
-        // joined name every later reading uses.
-        var declaredTypes: [String: Declared<TypeExpression>] = [:]
-        var declaredConstraints: [String: Declared<[TypeExpression]>] = [:]
-
-        for module in modules {
-            for (name, type) in module.types {
-                let qualified = module.qualified(name)
-
-                // The place was gathered above, under the same joined name and
-                // from the same declaration, so this cannot miss — and if the
-                // two ever came apart, the crash says so where a `nil` place
-                // would have gone out looking like a refusal with nowhere to be.
-                declaredTypes[qualified] = Declared(type, at: typePlaces[qualified]!.place)
-            }
-
-            for (name, members) in module.constraints {
-                let qualified = module.qualified(name)
-
-                declaredConstraints[qualified] = Declared(
-                    members,
-                    at: constraintPlaces[qualified]!.place
-                )
+                declaredConstraints[qualified] = Declared(members, at: declaration.place)
             }
         }
 

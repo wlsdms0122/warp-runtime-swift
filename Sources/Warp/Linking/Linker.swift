@@ -69,17 +69,21 @@ public struct Linker: Sendable {
         )
         let symbols = try symbols(of: modules)
 
-        // The namespace, prepared once. Every send in every body asks it.
-        let space = SymbolSpace(symbols)
+        // Every declaration under its qualified spelling. The spellings are
+        // unique, since the symbol gathering refused a double, and every send
+        // in every body asks this table.
+        let space = symbols.reduce(into: [String: Symbol]()) { table, symbol in
+            table[symbol.qualified] = symbol
+        }
 
         // A name is its declared spelling and nothing else, so the entry is
-        // looked up as the caller wrote it: `wallet.entry` for a declaration
-        // under `wallet`, `entry` for one in the shared space.
-        guard let start = space.symbol(spelled: entry) else {
+        // looked up as the caller wrote it, the module's name in front where
+        // the module has one.
+        guard let start = space[entry] else {
             throw LinkError(
                 "entry '\(entry)' is not declared by any module in this link."
-                    + " A name is its declared spelling, `wallet.entry` for a declaration"
-                    + " under `wallet` — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
+                    + " A name is its declared spelling, the module's name in front where"
+                    + " it has one — declared: \(symbols.map(\.qualified).sorted().joined(separator: ", "))",
                 at: nil
             )
         }
@@ -315,7 +319,7 @@ public struct Linker: Sendable {
 
             for call in calls {
                 // Checked inside `resolved` — reaching here only walks on.
-                guard let callee = space.symbol(spelled: call.dispatch.selector) else { continue }
+                guard let callee = space[call.dispatch.selector] else { continue }
 
                 frontier.append(callee)
             }
@@ -374,14 +378,10 @@ public struct Linker: Sendable {
     private func checked(
         _ calls: [CallSite],
         in frame: TypeFrame,
-        symbols space: SymbolSpace
+        symbols space: [String: Symbol]
     ) throws {
         for call in calls {
-            try check(
-                call,
-                against: space.symbol(spelled: call.dispatch.selector)!.procedure,
-                with: frame
-            )
+            try check(call, against: space[call.dispatch.selector]!.procedure, with: frame)
         }
     }
 
@@ -1197,7 +1197,7 @@ public struct Linker: Sendable {
         words: [String: Procedure],
         in types: TypeTable,
         with frame: TypeFrame,
-        symbols space: SymbolSpace
+        symbols space: [String: Symbol]
     ) throws -> [Int: [String: Value]] {
         var settled: [Int: [String: Value]] = [:]
 
