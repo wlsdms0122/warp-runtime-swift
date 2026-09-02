@@ -15,6 +15,10 @@ struct CallSite: Sendable {
     let dispatch: Dispatch
     let place: Place
 
+    // The declaration the selector names, found by the walk that gathered
+    // this call, so nothing has to find it again.
+    let callee: Symbol
+
     // What each operand held where this was written — the walk's own answers,
     // carried so the check never walks a body a second time for them. A
     // call's arguments are mostly references, so without these the types a
@@ -26,11 +30,13 @@ struct CallSite: Sendable {
     init(
         dispatch: Dispatch,
         place: Place,
+        callee: Symbol,
         readings: [String: TypeExpression],
         received: TypeExpression?
     ) {
         self.dispatch = dispatch
         self.place = place
+        self.callee = callee
         self.readings = readings
         self.received = received
     }

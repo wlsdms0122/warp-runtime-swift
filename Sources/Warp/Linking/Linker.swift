@@ -131,6 +131,7 @@ public struct Linker: Sendable {
 
         func frame() -> TypeFrame {
             TypeFrame(
+                symbols: space,
                 signatures: answeringSignatures,
                 types: types,
                 words: answeringWords,
@@ -148,8 +149,7 @@ public struct Linker: Sendable {
             reaching: settling,
             words: settlingWords,
             in: types,
-            with: declaredFrame,
-            symbols: space
+            with: declaredFrame
         )
 
         // The names in scope before a body's first statement: its parameters,
@@ -251,7 +251,7 @@ public struct Linker: Sendable {
 
             resolvedBodies[symbol.qualified] = answer
 
-            try checked(answer.calls, in: frame, symbols: space)
+            try checked(answer.calls, in: frame)
 
             return answer
         }
@@ -318,10 +318,7 @@ public struct Linker: Sendable {
             }
 
             for call in calls {
-                // Checked inside `resolved` — reaching here only walks on.
-                guard let callee = space[call.dispatch.selector] else { continue }
-
-                frontier.append(callee)
+                frontier.append(call.callee)
             }
         }
 
@@ -371,17 +368,11 @@ public struct Linker: Sendable {
     }
 
     // The one gate every gathered send passes, wherever its body sits — a
-    // procedure, a word, a constant's closure. The walk that gathered a call
-    // refused a selector no module declares, and the signature table and
-    // the symbol space are read off the same declarations, so the callee is
-    // there; if the two ever came apart, the crash says so.
-    private func checked(
-        _ calls: [CallSite],
-        in frame: TypeFrame,
-        symbols space: [String: Symbol]
-    ) throws {
+    // procedure, a word, a constant's closure. The call carries the
+    // declaration the walk found for it, and is judged against that.
+    private func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
         for call in calls {
-            try check(call, against: space[call.dispatch.selector]!.procedure, with: frame)
+            try check(call, against: call.callee.procedure, with: frame)
         }
     }
 
@@ -1196,8 +1187,7 @@ public struct Linker: Sendable {
         reaching selectors: [String: Procedure],
         words: [String: Procedure],
         in types: TypeTable,
-        with frame: TypeFrame,
-        symbols space: [String: Symbol]
+        with frame: TypeFrame
     ) throws -> [Int: [String: Value]] {
         var settled: [Int: [String: Value]] = [:]
 
@@ -1231,7 +1221,7 @@ public struct Linker: Sendable {
                 // A closure a constant holds runs later, so evaluating
                 // the constant proves nothing about the sends inside it —
                 // they pass the same gate every gathered send does.
-                try checked(calls, in: frame, symbols: space)
+                try checked(calls, in: frame)
 
                 do {
                     known[name] = try resolver.resolve(judged)

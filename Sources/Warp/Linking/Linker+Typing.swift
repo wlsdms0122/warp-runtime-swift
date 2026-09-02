@@ -1307,7 +1307,7 @@ extension Linker {
             // it. Its answer is unknown, and a dot on an unknown answer would
             // be refused first for what the dot reads, which is not what the
             // author got wrong.
-            guard signature != nil else {
+            guard let callee = frame.symbols[dispatch.selector] else {
                 throw LinkError(
                     "sends '\(dispatch.selector)', which no module in this link declares",
                     at: place
@@ -1368,6 +1368,7 @@ extension Linker {
                     CallSite(
                         dispatch: rewritten,
                         place: place,
+                        callee: callee,
                         readings: sent,
                         received: receiver?.reading
                     )
