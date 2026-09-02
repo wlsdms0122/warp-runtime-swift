@@ -16,11 +16,9 @@ import Foundation
 // notation's own answer.
 //
 // Qualified names are what these should be, though nothing here checks it. A
-// name the author did not write must not be found by searching: an unqualified
-// selector resolves against the calling module first, so a document that
-// happened to declare `text` would quietly take over its own templates — a break
-// with no visible cause, since the two share no letters. A qualified name is
-// matched rather than searched, and two modules claiming it is a refused link
+// name is its declared spelling: `std.text.text` names one declaration wherever
+// a template is written, and a document declaring a `text` of its own declares
+// a different name. Two modules claiming one qualified name is a refused link
 // instead of a silent winner.
 public struct Interpolation: Sendable, Equatable {
     // MARK: - Property
