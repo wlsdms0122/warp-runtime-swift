@@ -107,7 +107,7 @@ struct ExecutorTests {
                             expression: .attempt(Block(body: [
                                         Statement(
                                             id: "fragile",
-                                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]))
                                         )
@@ -148,7 +148,7 @@ struct ExecutorTests {
                             expression: .attempt(Block(body: [
                                         Statement(
                                             id: "fragile",
-                                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]))
                                         )
@@ -194,7 +194,7 @@ struct ExecutorTests {
                             expression: .attempt(Block(body: [
                                         Statement(
                                             id: "broken",
-                                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(false))
                                                     ]))
                                         )
@@ -225,7 +225,7 @@ struct ExecutorTests {
                     body: [
                         Statement(
                             id: "fragile",
-                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(true))
                                     ]))
                         )

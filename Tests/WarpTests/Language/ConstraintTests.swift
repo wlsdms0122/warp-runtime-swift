@@ -458,7 +458,7 @@ struct ConstraintTests {
                     signature: Signature(
                         parameters: [
                             "speed": Parameter(
-                                type: .variable(name: "N", constraint: "Numeric"),
+                                type: .variable(name: "N", constraint: "std.Numeric"),
                                 oneOf: ["fast", "slow"]
                             )
                         ]
@@ -556,7 +556,7 @@ struct ConstraintTests {
                     signature: Signature(
                         parameters: [
                             "level": Parameter(
-                                type: .variable(name: "N", constraint: "Numeric"),
+                                type: .variable(name: "N", constraint: "std.Numeric"),
                                 oneOf: ["1", "2.5"]
                             )
                         ]
@@ -677,12 +677,12 @@ struct ConstraintTests {
                         parameters: [
                             "of": Parameter(type: .procedure(Signature(
                                 parameters: [
-                                    "seed": Parameter(type: .variable(name: "N", constraint: "Numeric"))
+                                    "seed": Parameter(type: .variable(name: "N", constraint: "std.Numeric"))
                                 ],
-                                returns: .variable(name: "N", constraint: "Numeric")
+                                returns: .variable(name: "N", constraint: "std.Numeric")
                             )))
                         ],
-                        returns: .variable(name: "N", constraint: "Numeric")
+                        returns: .variable(name: "N", constraint: "std.Numeric")
                     ),
                     body: [],
                     result: .literal(.int(0))

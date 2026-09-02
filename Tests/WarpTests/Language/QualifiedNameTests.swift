@@ -21,8 +21,8 @@ struct QualifiedNameTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a bare mention finds the one module that declares the name")
-    func aBareMentionFindsTheOneDeclaration() async throws {
+    @Test("a type name is its qualified spelling, in the declaring module too")
+    func aTypeNameIsItsQualifiedSpelling() async throws {
         // Given — `Task` is declared by `store` alone, and the entry module
         // mentions it bare
         let store = try Module(
@@ -31,8 +31,8 @@ struct QualifiedNameTests {
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .named("Task"))],
-                        returns: .named("Task")
+                        parameters: ["value": Parameter(type: .named("store.Task"))],
+                        returns: .named("store.Task")
                     ),
                     body: [],
                     result: reference("value")
@@ -42,10 +42,10 @@ struct QualifiedNameTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(returns: .named("Task")),
+                    signature: Signature(returns: .named("store.Task")),
                     body: [],
                     result: .dispatch(Dispatch(
-                        selector: "keep",
+                        selector: "store.keep",
                         arguments: ["value": .literal(.object(["id": .string("a")]))]
                     ))
                 )
@@ -60,8 +60,8 @@ struct QualifiedNameTests {
         #expect(image.types.resolve("Task") == nil)
     }
 
-    @Test("a module's own declaration wins over another module's")
-    func ownDeclarationWins() async throws {
+    @Test("a module names its own type by its qualified spelling")
+    func ownTypeIsNamedQualified() async throws {
         // Given — two modules declare `Limit`, and `mine` mentions it bare
         // from inside: its own is an int, the other module's is a string
         let mine = try Module(
@@ -69,7 +69,7 @@ struct QualifiedNameTests {
             types: ["Limit": .int],
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(returns: .named("Limit")),
+                    signature: Signature(returns: .named("mine.Limit")),
                     body: [],
                     result: .literal(.int(3))
                 )
@@ -90,8 +90,8 @@ struct QualifiedNameTests {
         #expect(answer == .int(3))
     }
 
-    @Test("a bare name two modules declare refuses where it is mentioned")
-    func anAmbiguousBareNameRefuses() throws {
+    @Test("a bare name is not a spelling of any qualified declaration")
+    func aBareNameSpellsNoQualifiedDeclaration() throws {
         // Given — the mention lives in a third module that declares no `Limit`
         // of its own, so neither rule reaches a single answer
         let one = try Module(
@@ -123,9 +123,7 @@ struct QualifiedNameTests {
             try linker.link([sut, one, two], entry: entryName)
         } throws: { error in
             error is LinkError
-                && "\(error)".contains("declared by more than one module")
-                && "\(error)".contains("one.Limit")
-                && "\(error)".contains("two.Limit")
+                && "\(error)".contains("names type 'Limit', which no module in this link declares")
         }
     }
 
@@ -187,8 +185,8 @@ struct QualifiedNameTests {
         }
     }
 
-    @Test("a constraint mention resolves through the same rule")
-    func aConstraintMentionResolves() async throws {
+    @Test("a constraint is named by its qualified spelling")
+    func aConstraintIsNamedQualified() async throws {
         // Given — `Comparable` is declared by std alone, and a document-shaped
         // module bounds its own parameter with the bare name
         let sut = try Module(
@@ -196,9 +194,9 @@ struct QualifiedNameTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            "value": Parameter(type: .variable(name: "T", constraint: "Comparable"))
+                            "value": Parameter(type: .variable(name: "T", constraint: "std.Comparable"))
                         ],
-                        returns: .variable(name: "T", constraint: "Comparable")
+                        returns: .variable(name: "T", constraint: "std.Comparable")
                     ),
                     body: [],
                     result: reference("value")
@@ -245,7 +243,7 @@ struct QualifiedNameTests {
         }
     }
 
-    @Test("a shared-space declaration answers a bare mention exactly, like a procedure")
+    @Test("a shared-space declaration's bare name is its qualified spelling")
     func aSharedSpaceDeclarationAnswersExactly() async throws {
         // Given — an unnamed module declares `Limit` into the shared space, a
         // named module declares its own, and a third module mentions the bare
@@ -309,8 +307,8 @@ struct QualifiedNameTests {
         }
     }
 
-    @Test("a module whose two declarations answer one spelling refuses the tie")
-    func aTieAmongOwnDeclarationsRefuses() throws {
+    @Test("a module's own bare name is not a spelling of its qualified declaration")
+    func ownBareNameSpellsNothing() throws {
         // Given — `m` declares `Limit` and `extra.Limit`, and both answer the
         // bare spelling. Picking either would be an order deciding a meaning,
         // so the tie refuses — and the exact spelling still says which.
@@ -334,8 +332,7 @@ struct QualifiedNameTests {
             try linker.link([sut], entry: "m.\(entryName)")
         } throws: { error in
             error is LinkError
-                && "\(error)".contains("m.Limit")
-                && "\(error)".contains("m.extra.Limit")
+                && "\(error)".contains("names type 'Limit', which no module in this link declares")
         }
 
         // The exact spelling resolves what the bare one cannot

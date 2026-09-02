@@ -112,7 +112,7 @@ struct InferenceTests {
                 returns: .int
             ),
             body: [],
-            result: .dispatch(Dispatch(receiver: reference("item"), selector: "count"))
+            result: .dispatch(Dispatch(receiver: reference("item"), selector: "std.collection.count"))
         )
         let wants = Procedure(
             signature: Signature(parameters: ["ns": Parameter(type: .array(.string))]),

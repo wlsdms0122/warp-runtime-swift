@@ -211,7 +211,7 @@ struct BytesTests {
             (
                 .dispatch(Dispatch(
                     receiver: reference("data"),
-                    selector: "count"
+                    selector: "std.collection.count"
                 )),
                 .int(2)
             ),
@@ -225,7 +225,7 @@ struct BytesTests {
             (
                 .dispatch(Dispatch(
                     receiver: reference("data"),
-                    selector: "reversed"
+                    selector: "std.collection.reversed"
                 )),
                 // The receiver's own elements, in the other order — so the
                 // spelling they arrived in is the spelling they leave in.
@@ -234,7 +234,7 @@ struct BytesTests {
             (
                 .dispatch(Dispatch(
                     receiver: reference("data"),
-                    selector: "contains",
+                    selector: "std.collection.contains",
                     arguments: ["value": .literal(.int(105))]
                 )),
                 .bool(true)
@@ -277,7 +277,7 @@ struct BytesTests {
                     body: [],
                     result: .dispatch(Dispatch(
                         receiver: reference("data"),
-                        selector: "joined"
+                        selector: "std.text.joined"
                     ))
                 )
             ]
@@ -318,7 +318,7 @@ struct BytesTests {
                                         binding: .assignment,
                                         expression: .dispatch(Dispatch(
                                             receiver: reference("sum"),
-                                            selector: "plus",
+                                            selector: "std.math.plus",
                                             arguments: ["value": reference("element", "item")]
                                         ))
                                     )
@@ -354,13 +354,13 @@ struct BytesTests {
         }
 
         // When / Then
-        #expect(try await run(word("decoded", on: .bytes([104, 105]))) == .string("hi"))
-        #expect(try await run(word("encoded", on: .string("hi"))) == .bytes([104, 105]))
+        #expect(try await run(word("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
+        #expect(try await run(word("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
 
         // Bytes carry no promise of being text, and a completed guess is a
         // text nobody sent.
         await #expect {
-            try await run(word("decoded", on: .bytes([0xff])))
+            try await run(word("std.text.decoded", on: .bytes([0xff])))
         } throws: { error in
             "\(error)".contains("not utf8 text")
         }
@@ -376,7 +376,7 @@ struct BytesTests {
                     body: [],
                     result: .dispatch(Dispatch(
                         receiver: .literal(.bytes([104])),
-                        selector: "decoded",
+                        selector: "std.text.decoded",
                         arguments: ["encoding": .literal(.string("utf16"))]
                     ))
                 )

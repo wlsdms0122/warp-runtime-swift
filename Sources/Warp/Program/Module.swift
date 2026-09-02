@@ -41,21 +41,21 @@ public struct Module: Sendable {
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type — a module declares, and what it declares differs only in
     // what kind of thing the name stands for.
-    public private(set) var types: [String: TypeExpression]
+    public let types: [String: TypeExpression]
 
     // Constraints this module declares: a name bound to the types a bounded
     // parameter under that name admits. Declared the same way a type is and
     // kept apart from the types, because nothing is ever *of* a constraint —
     // it bounds `some T`, and a slot cannot declare it directly.
-    public private(set) var constraints: [String: [TypeExpression]]
+    public let constraints: [String: [TypeExpression]]
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second namespace in path position
     // — where a qualified spelling cannot be told from drilling into a record.
-    public private(set) var constants: [String: Expression]
+    public let constants: [String: Expression]
 
-    public private(set) var procedures: [String: Procedure]
+    public let procedures: [String: Procedure]
 
     // Which document this was read out of, where it was read out of one.
     //
@@ -68,7 +68,7 @@ public struct Module: Sendable {
     // Not the namespace. That is what this declares into and several documents
     // may share one, since a module split across files is a thing this language
     // allows; two documents named `wallet` are two documents.
-    public private(set) var identity: Identity?
+    public let identity: Identity?
 
     // MARK: - Initializer
     // Making one is checking one, so a module that exists has been checked
@@ -127,37 +127,6 @@ public struct Module: Sendable {
         self.imports = draft.imports ?? draft.sends
 
         try Validator().validate(self)
-    }
-
-    // The same module with something changed.
-    //
-    // A copy of the whole with the named parts written over, rather than a new
-    // module built field by field: a copy that lists what it carries keeps only
-    // what somebody remembered to list, and a field left off is not a compiler
-    // error but a fact quietly going missing. Nothing here enumerates, so a
-    // field added to a module is carried through by every copy without this
-    // having to be told about it.
-    //
-    // Back through the door and not around it. `imports` is what the module
-    // said and `sends` is what it does, and a copy that rewrote a body while
-    // keeping the old list would be a module holding the one disagreement the
-    // check exists to refuse — arrived at by a route the check never sees.
-    func replacing(
-        types: [String: TypeExpression]? = nil,
-        constraints: [String: [TypeExpression]]? = nil,
-        constants: [String: Expression]? = nil,
-        procedures: [String: Procedure]? = nil,
-        identity: Identity? = nil
-    ) throws -> Module {
-        var copy = self
-
-        if let types { copy.types = types }
-        if let constraints { copy.constraints = constraints }
-        if let constants { copy.constants = constants }
-        if let procedures { copy.procedures = procedures }
-        if let identity { copy.identity = identity }
-
-        return try Module(copy.draft, identity: copy.identity)
     }
 
     // MARK: - Public

@@ -72,7 +72,7 @@ struct ClosureTests {
                                         Statement(
                                             id: "said",
                                             expression: .dispatch(Dispatch(
-                                                selector: "shout",
+                                                selector: "app.shout",
                                                 arguments: ["text": .literal(.string("hi"))]
                                             ))
                                         )

@@ -30,8 +30,7 @@ public struct LinkError: WarpError {
     //
     // Nil is for what no address is known for, said out loud rather than left
     // to a default — the entry, which is an argument to linking and written in
-    // no text, and a bare type or constraint mention, which the qualifying walk
-    // reaches without carrying where in the document it sat.
+    // no text.
     public init(_ message: String, at place: Place?) {
         self.message = message
         self.place = place

@@ -259,7 +259,7 @@ struct VariableTests {
                             ),
                             "right": .closure(Procedure(body: [], result: .literal(.int(2))))
                         ]),
-                        selector: "all"
+                        selector: "std.concurrent.all"
                     )
                 )
             )

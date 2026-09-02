@@ -41,7 +41,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .literal(.int(1)),
-                            selector: "plus",
+                            selector: "std.math.plus",
                             arguments: ["value": .literal(.string("a"))]
                         )
                     )
@@ -74,7 +74,7 @@ struct BoundaryTests {
                                 "it": .dispatch(
                                     Dispatch(
                                         receiver: .literal(.int(1)),
-                                        selector: "plus",
+                                        selector: "std.math.plus",
                                         arguments: ["value": .literal(.int(2))]
                                     )
                                 )
@@ -103,8 +103,8 @@ struct BoundaryTests {
     func orderingIsNotOnlyForNumbers() async throws {
         // Given — the words that order values order text too, so declaring them
         // as taking numbers said something the word does not mean
-        #expect(try await answering("lessThan", .string("a"), .string("b")) == .bool(true))
-        #expect(try await answering("lessThan", .int(1), .int(2)) == .bool(true))
+        #expect(try await answering("std.math.lessThan", .string("a"), .string("b")) == .bool(true))
+        #expect(try await answering("std.math.lessThan", .int(1), .int(2)) == .bool(true))
     }
 
     @Test("a slot that means either number takes either, and nothing else")
@@ -141,7 +141,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("names")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .literal(.int(1))]
                         )
                     )
@@ -177,7 +177,7 @@ struct BoundaryTests {
                             expression: .dispatch(
                                 Dispatch(
                                     receiver: .reference([.key("xs")]),
-                                    selector: "appending",
+                                    selector: "std.collection.appending",
                                     arguments: ["value": .literal(.int(1))]
                                 )
                             )
@@ -186,7 +186,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("one")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .literal(.string("a"))]
                         )
                     )
@@ -217,7 +217,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("trees")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .record(["a": .literal(.int(1))])]
                         )
                     )
@@ -244,7 +244,7 @@ struct BoundaryTests {
                     result: .dispatch(
                         Dispatch(
                             receiver: .reference([.key("counts")]),
-                            selector: "appending",
+                            selector: "std.collection.appending",
                             arguments: ["value": .literal(.int(1))]
                         )
                     )
@@ -264,9 +264,9 @@ struct BoundaryTests {
         // answer, and the language stops rather than wrapping or answering a
         // silent fraction.
         for (word, left, right) in [
-            ("plus", Int.max, 1),
-            ("minus", Int.min, 1),
-            ("times", Int.max, 2)
+            ("std.math.plus", Int.max, 1),
+            ("std.math.minus", Int.min, 1),
+            ("std.math.times", Int.max, 2)
         ] {
             // When / Then
             await #expect {
@@ -284,9 +284,9 @@ struct BoundaryTests {
         // to exactly the first place that tries to write it down. Found by
         // running `1e308 plus 1e308` and being answered inf.
         for (word, left, right) in [
-            ("plus", 1e308, 1e308),
-            ("minus", -1e308, 1e308),
-            ("times", 1e308, 10.0)
+            ("std.math.plus", 1e308, 1e308),
+            ("std.math.minus", -1e308, 1e308),
+            ("std.math.times", 1e308, 10.0)
         ] {
             // When / Then
             await #expect {
@@ -302,8 +302,8 @@ struct BoundaryTests {
         // Given — the alternative is two words, or one word whose answer type
         // depends on whether the division came out even. The second is not a
         // type a signature can hold.
-        #expect(try await answering("dividedBy", .int(7), .int(2)) == .double(3.5))
-        #expect(try await answering("dividedBy", .int(4), .int(2)) == .double(2))
+        #expect(try await answering("std.math.dividedBy", .int(7), .int(2)) == .double(3.5))
+        #expect(try await answering("std.math.dividedBy", .int(4), .int(2)) == .double(2))
     }
 
     @Test("division by zero refuses")
@@ -313,7 +313,7 @@ struct BoundaryTests {
         // check could talk about
         for (left, right) in [(Value.int(1), Value.int(0)), (.double(1), .double(0))] {
             await #expect {
-                try await answering("dividedBy", left, right)
+                try await answering("std.math.dividedBy", left, right)
             } throws: { error in
                 "\(error)".contains("zero")
             }
@@ -324,8 +324,8 @@ struct BoundaryTests {
     func wholeNumbersWiden() async throws {
         // Given — every whole number is a fraction and the reverse is false, so
         // the conversion that cannot lose anything is the one that happens
-        #expect(try await answering("plus", .int(1), .double(0.5)) == .double(1.5))
-        #expect(try await answering("plus", .double(0.5), .int(1)) == .double(1.5))
+        #expect(try await answering("std.math.plus", .int(1), .double(0.5)) == .double(1.5))
+        #expect(try await answering("std.math.plus", .double(0.5), .int(1)) == .double(1.5))
     }
 
     // MARK: - Public

@@ -231,7 +231,7 @@ struct RangeTests {
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
-                        parameters: ["value": Parameter(type: .named("byte"))]
+                        parameters: ["value": Parameter(type: .named("std.byte"))]
                     ),
                     body: [],
                     result: reference("value")

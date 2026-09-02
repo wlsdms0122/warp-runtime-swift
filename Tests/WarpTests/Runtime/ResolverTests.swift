@@ -20,7 +20,7 @@ struct ResolverTests {
                 "record": .object(["a": .int(1)])
             ]
         ),
-        words: Module.standard.procedures
+        derivations: Module.standard.procedures, words: Module.standard.words
     )
 
     // MARK: - Initializer

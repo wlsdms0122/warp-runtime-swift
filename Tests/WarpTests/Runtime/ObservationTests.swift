@@ -255,7 +255,7 @@ struct ObservationTests {
                     body: [
                         Statement(
                             id: "doomed",
-                            expression: .dispatch(Dispatch(selector: "fail"))
+                            expression: .dispatch(Dispatch(selector: "app.fail"))
                         )
                     ]
                 )
@@ -295,7 +295,7 @@ struct ObservationTests {
                                             id: "doomed",
                                             expression: .dispatch(
                                                 Dispatch(
-                                                    selector: "fail",
+                                                    selector: "app.fail",
                                                     arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]

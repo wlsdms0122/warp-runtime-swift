@@ -1202,7 +1202,7 @@ extension Linker {
                 )
             }
 
-            let pure = body.map { block in isPure(resolved: block, given: frame.pure) } ?? false
+            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
 
             return Inspection(
                 rewritten: rewritten,

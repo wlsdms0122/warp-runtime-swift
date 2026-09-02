@@ -78,11 +78,10 @@ public struct Draft: Sendable {
         let held = constants.values.flatMap(\.buried)
             + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
 
-        // Its own by either spelling. A module may call a sibling by the bare
-        // name or by the one the link knows it as, and both reach the same
-        // declaration — so a list that only knew the bare one would make a
-        // document declare a dependency on itself.
-        let declared = Set(procedures.keys).union(procedures.keys.map(qualified))
+        // Its own by the spelling the link knows it as. A module names a
+        // sibling the way any other module does, so what it declares is not
+        // something it imports.
+        let declared = Set(procedures.keys.map(qualified))
 
         return held
             .reduce(into: Set()) { sent, expression in

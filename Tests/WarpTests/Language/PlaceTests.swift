@@ -704,7 +704,7 @@ struct PlaceTests {
             constants: [
                 "beta": .dispatch(Dispatch(
                     receiver: reference("gamma"),
-                    selector: "plus",
+                    selector: "std.math.plus",
                     arguments: ["value": reference("delta")]
                 )),
                 "gamma": reference("beta"),

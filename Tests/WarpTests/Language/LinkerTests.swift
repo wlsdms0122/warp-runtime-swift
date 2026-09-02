@@ -25,14 +25,14 @@ struct LinkerTests {
         let sut = try Module(
             namespace: "app",
             constants: [
-                "greeting": .dispatch(Dispatch(receiver: .literal(.null), selector: "text"))
+                "greeting": .dispatch(Dispatch(receiver: .literal(.null), selector: "std.text.text"))
             ],
             procedures: [entryName: Procedure(body: [])]
         )
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try linker.link([sut] + Module.standard, entry: "app.\(entryName)")
         }
 
         #expect(error?.place?.rendered == "app/constants.greeting")
@@ -234,14 +234,14 @@ struct LinkerTests {
                 "yak": .dispatch(
                     Dispatch(
                         receiver: reference("zebra"),
-                        selector: "times",
+                        selector: "std.math.times",
                         arguments: ["value": reference("zebra")]
                     )
                 ),
                 "xerus": .dispatch(
                     Dispatch(
                         receiver: reference("yak"),
-                        selector: "plus",
+                        selector: "std.math.plus",
                         arguments: ["value": reference("zebra")]
                     )
                 )
@@ -250,7 +250,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut)
+        let answer = try await run(sut, entry: "app.\(entryName)")
 
         // Then
         #expect(answer == .int(6))
@@ -289,8 +289,8 @@ struct LinkerTests {
         }
 
         // When
-        let first = try await run(module(closure: "apply", reading: "zebra"))
-        let last = try await run(module(closure: "zapply", reading: "alpha"))
+        let first = try await run(module(closure: "apply", reading: "zebra"), entry: "app.\(entryName)")
+        let last = try await run(module(closure: "zapply", reading: "alpha"), entry: "app.\(entryName)")
 
         // Then
         #expect(first == .int(3))
@@ -366,7 +366,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut)
+        let answer = try await run(sut, entry: "app.\(entryName)")
 
         // Then
         #expect(answer == .int(7))
@@ -403,7 +403,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut)
+        let answer = try await run(sut, entry: "app.\(entryName)")
 
         // Then
         #expect(answer == .int(3))
@@ -421,9 +421,9 @@ struct LinkerTests {
                     Dispatch(
                         receiver: .array([
                             .literal(.string("https://")),
-                            .dispatch(Dispatch(receiver: reference("host"), selector: "text"))
+                            .dispatch(Dispatch(receiver: reference("host"), selector: "std.text.text"))
                         ]),
-                        selector: "joined"
+                        selector: "std.text.joined"
                     )
                 )
             ],
@@ -431,7 +431,7 @@ struct LinkerTests {
         )
 
         // When
-        let answer = try await run(sut)
+        let answer = try await run(sut, entry: "app.\(entryName)")
 
         // Then
         #expect(answer == .string("https://warp.dev"))
@@ -484,7 +484,7 @@ struct LinkerTests {
                             expression: .attempt(Block(body: [
                                         Statement(
                                             id: "attempt",
-                                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]))
                                         )
@@ -967,7 +967,7 @@ struct LinkerTests {
         #expect(Set(image.procedures.keys) == ["alone"])
     }
 
-    @Test("a bare name two modules declare is refused, naming both")
+    @Test("a bare name is not a spelling of any qualified declaration")
     func aBareNameTwoModulesDeclareIsRefused() throws {
         // Given — `map` is a collection word and a concurrent word on purpose,
         // and this asymmetry is the contract: the bare spelling resolves only
@@ -1000,12 +1000,11 @@ struct LinkerTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: "caller")
         } throws: { error in
-            "\(error)".contains("std.collection.map")
-                && "\(error)".contains("std.concurrent.map")
+            "\(error)".contains("sends 'map', which no module in this link declares")
         }
     }
 
-    @Test("a bare name one module declares still resolves beside the full link")
+    @Test("a qualified name resolves beside the full link")
     func aUniqueBareNameResolves() throws {
         // Given — `all` stayed unique because `std.logic` moved to `and`/`or`;
         // this holds that clearing to its purpose
@@ -1020,7 +1019,7 @@ struct LinkerTests {
                                     receiver: .array([
                                         .closure(Procedure(body: [], result: .literal(.int(1))))
                                     ]),
-                                    selector: "all"
+                                    selector: "std.concurrent.all"
                                 )
                             )
                         )

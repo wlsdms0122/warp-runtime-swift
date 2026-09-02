@@ -174,7 +174,7 @@ struct ValidationTests {
             Statement(
                 id: "said",
                 expression: .dispatch(
-                    Dispatch(selector: "shout", arguments: [
+                    Dispatch(selector: "app.shout", arguments: [
                         "text": .conditional(.literal(.bool(true)), then: arm, else: nil)
                     ])
                 )
@@ -364,7 +364,7 @@ struct ValidationTests {
 
     @Test("a module is held to the words it says it imports", arguments: [
         [] as Set<String>,
-        ["count", "plus"]
+        ["std.collection.count", "std.math.plus"]
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<String>) {
         // Given — a caller decides what to grant from this list and then links
@@ -381,7 +381,7 @@ struct ValidationTests {
                                 id: "counted",
                                 expression: .dispatch(Dispatch(
                                     receiver: .literal(.array([.int(1)])),
-                                    selector: "count"
+                                    selector: "std.collection.count"
                                 ))
                             )
                         ]
@@ -399,7 +399,7 @@ struct ValidationTests {
         // nothing uses.
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                imports: ["minus"],
+                imports: ["std.math.minus"],
                 procedures: [
                     entryName: Procedure(
                         body: [
@@ -407,7 +407,7 @@ struct ValidationTests {
                                 id: "counted",
                                 expression: .dispatch(Dispatch(
                                     receiver: .literal(.array([.int(1)])),
-                                    selector: "count"
+                                    selector: "std.collection.count"
                                 ))
                             )
                         ]
@@ -419,8 +419,8 @@ struct ValidationTests {
         // Then
         #expect(
             error?.message
-                == "sends [\"count\"], which it does not import,"
-                    + " and imports [\"minus\"], which it does not send"
+                == "sends [\"std.collection.count\"], which it does not import,"
+                    + " and imports [\"std.math.minus\"], which it does not send"
         )
     }
 
@@ -437,7 +437,7 @@ struct ValidationTests {
                             id: "counted",
                             expression: .dispatch(Dispatch(
                                 receiver: .literal(.array([.int(1)])),
-                                selector: "count"
+                                selector: "std.collection.count"
                             ))
                         )
                     ]
@@ -446,7 +446,7 @@ struct ValidationTests {
         )
 
         // Then
-        #expect(sut.imports == ["count"])
+        #expect(sut.imports == ["std.collection.count"])
     }
 
     @Test("a word the module declares itself is not one it imports")

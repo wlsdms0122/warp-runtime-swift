@@ -167,7 +167,7 @@ struct ReceiverTests {
                     body: [
                         Statement(
                             id: "done",
-                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(true))
                                     ]))
                         )
@@ -211,7 +211,7 @@ struct ReceiverTests {
                 returns: .string
             ),
             body: [],
-            result: .dispatch(Dispatch(receiver: reference("of"), selector: "joined"))
+            result: .dispatch(Dispatch(receiver: reference("of"), selector: "std.text.joined"))
         )
         let sut = try Module(
             procedures: [
@@ -321,7 +321,7 @@ struct ReceiverTests {
                     body: [
                         Statement(
                             id: "boom",
-                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(false))
                                     ]))
                         )
@@ -366,7 +366,7 @@ struct ReceiverTests {
                     body: [
                         Statement(
                             id: "boom",
-                            expression: .dispatch(Dispatch(selector: "fail", arguments: [
+                            expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(false))
                                     ]))
                         )

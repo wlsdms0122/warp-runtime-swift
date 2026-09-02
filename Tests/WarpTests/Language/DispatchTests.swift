@@ -32,13 +32,13 @@ struct DispatchTests {
             Statement(
                 id: "counted",
                 expression: .dispatch(
-                    Dispatch(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "count")
+                    Dispatch(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "std.collection.count")
                 )
             ),
             Statement(
                 id: "shouted",
                 expression: .dispatch(
-                    Dispatch(selector: "shout", arguments: ["text": .literal(.string("hi"))])
+                    Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                 )
             ),
             Statement(
@@ -74,7 +74,7 @@ struct DispatchTests {
         // Given — `count` has nothing to say about an int, and a word saying
         // nothing is the same answer as a field nobody set
         let sut = Warp.Expression.dispatch(
-            Dispatch(receiver: .literal(.int(7)), selector: "count")
+            Dispatch(receiver: .literal(.int(7)), selector: "std.collection.count")
         )
 
         // When
@@ -138,7 +138,7 @@ struct DispatchTests {
                     id: "shouted",
                     expression: .dispatch(
                         Dispatch(
-                            selector: "shout",
+                            selector: "app.shout",
                             arguments: [
                                 "text": .literal(.string("hi")),
                                 "volume": .literal(.int(11))
@@ -162,7 +162,7 @@ struct DispatchTests {
             body: [
                 Statement(
                     id: "shouted",
-                    expression: .dispatch(Dispatch(selector: "shout"))
+                    expression: .dispatch(Dispatch(selector: "app.shout"))
                 )
             ]
         )
@@ -182,7 +182,7 @@ struct DispatchTests {
                 Statement(
                     id: "shouted",
                     expression: .dispatch(
-                        Dispatch(selector: "shout", arguments: ["text": .literal(.int(7))])
+                        Dispatch(selector: "app.shout", arguments: ["text": .literal(.int(7))])
                     )
                 )
             ]

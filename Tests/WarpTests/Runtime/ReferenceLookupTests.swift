@@ -22,7 +22,7 @@ struct ReferenceLookupTests {
                 "index": .int(1)
             ]
         ),
-        words: Module.standard.procedures
+        derivations: Module.standard.procedures, words: Module.standard.words
     )
 
     // MARK: - Initializer
@@ -122,7 +122,7 @@ struct ReferenceLookupTests {
                     "far": .double(1e30)
                 ]
             ),
-            words: Module.standard.procedures
+            derivations: Module.standard.procedures, words: Module.standard.words
         )
 
         guard case let .unfit(halfway) = resolver.lookup(

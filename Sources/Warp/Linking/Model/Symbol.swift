@@ -7,9 +7,9 @@
 
 import Foundation
 
-// One declaration, together with where it was declared. The linker needs the
-// second half: a name written inside a module means that module's declaration
-// first, so resolving a call takes the call's origin and not only its spelling.
+// One declaration, together with where it was declared. The second half says
+// which document a refusal points at, and which module's constants a body
+// reads beside its parameters.
 struct Symbol: Sendable {
     // MARK: - Property
     // The key this declaration is written under in its module, and the name

@@ -112,7 +112,7 @@ struct SwiftAuthoringTests {
                     id: "shout",
                     expression: .dispatch(
                         Dispatch(
-                            selector: "shout",
+                            selector: "app.shout",
                             arguments: ["text": .literal(.string("hey"))]
                         )
                     )
@@ -143,13 +143,13 @@ struct SwiftAuthoringTests {
                 Statement(
                     id: "counted",
                     expression: .dispatch(
-                        Dispatch(receiver: .reference([.key("names")]), selector: "count")
+                        Dispatch(receiver: .reference([.key("names")]), selector: "std.collection.count")
                     )
                 ),
                 Statement(
                     id: "shouted",
                     expression: .dispatch(
-                        Dispatch(selector: "shout", arguments: ["text": .literal(.string("hi"))])
+                        Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                     )
                 ),
                 Statement(

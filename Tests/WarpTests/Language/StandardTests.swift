@@ -31,7 +31,7 @@ struct StandardTests {
                             id: "many",
                             expression: .dispatch(Dispatch(
                                 receiver: .literal(.array([.int(1)])),
-                                selector: "count"
+                                selector: "std.collection.count"
                             ))
                         )
                     ]
@@ -64,7 +64,7 @@ struct StandardTests {
                                 equals(
                                     .dispatch(Dispatch(
                                         receiver: .literal(.int(1)),
-                                        selector: "dividedBy",
+                                        selector: "std.math.dividedBy",
                                         arguments: ["value": .literal(.int(0))]
                                     )),
                                     .literal(.int(0))
@@ -90,7 +90,7 @@ struct StandardTests {
             body: [],
             result: .dispatch(Dispatch(
                 receiver: reference("item"),
-                selector: "times",
+                selector: "std.math.times",
                 arguments: ["value": .literal(.int(2))]
             ))
         )
@@ -101,7 +101,7 @@ struct StandardTests {
                     id: "left",
                     expression: .dispatch(Dispatch(
                         receiver: reference("item"),
-                        selector: "remainder",
+                        selector: "std.math.remainder",
                         arguments: ["value": .literal(.int(2))]
                     ))
                 )
@@ -119,7 +119,7 @@ struct StandardTests {
             body: [],
             result: .dispatch(Dispatch(
                 receiver: reference("carried"),
-                selector: "plus",
+                selector: "std.math.plus",
                 arguments: ["value": reference("item")]
             ))
         )
@@ -141,7 +141,7 @@ struct StandardTests {
                             id: "kept",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
-                                selector: "filter",
+                                selector: "std.collection.filter",
                                 arguments: ["value": .closure(odd)]
                             ))
                         ),
@@ -149,7 +149,7 @@ struct StandardTests {
                             id: "total",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("ns"),
-                                selector: "reduce",
+                                selector: "std.collection.reduce",
                                 arguments: [
                                     "from": .literal(.int(0)),
                                     "value": .closure(adding)
@@ -195,7 +195,7 @@ struct StandardTests {
             body: [],
             result: .dispatch(Dispatch(
                 receiver: reference("carried"),
-                selector: "plus",
+                selector: "std.math.plus",
                 arguments: ["value": .literal(.int(1))]
             ))
         )
@@ -206,7 +206,7 @@ struct StandardTests {
                     body: [],
                     result: .dispatch(Dispatch(
                         receiver: reference("ns"),
-                        selector: "reduce",
+                        selector: "std.collection.reduce",
                         arguments: [
                             "from": .literal(.int(0)),
                             "value": .closure(counting)
@@ -234,7 +234,7 @@ struct StandardTests {
             signature: Signature(parameters: ["item": Parameter(type: .string)]),
             body: [],
             result: .dispatch(Dispatch(
-                selector: "shout",
+                selector: "app.shout",
                 arguments: ["text": reference("item")]
             ))
         )
@@ -263,8 +263,8 @@ struct StandardTests {
         // Given — both are Swift traps if the answer is taken rather than
         // judged, and each arrives at run time
         let asks: [(String, Value, Value)] = [
-            ("remainder", .int(5), .int(0)),
-            ("dividedBy", .int(5), .int(0))
+            ("std.math.remainder", .int(5), .int(0)),
+            ("std.math.dividedBy", .int(5), .int(0))
         ]
 
         for (word, receiver, operand) in asks {
@@ -294,9 +294,9 @@ struct StandardTests {
         // the language stops rather than answering a number the digits do not
         // say
         let asks: [(String, Value, Value)] = [
-            ("times", .int(Int.max), .int(2)),
-            ("plus", .int(Int.max), .int(1)),
-            ("minus", .int(Int.min), .int(1))
+            ("std.math.times", .int(Int.max), .int(2)),
+            ("std.math.plus", .int(Int.max), .int(1)),
+            ("std.math.minus", .int(Int.min), .int(1))
         ]
 
         func asking(_ word: String, _ receiver: Value, _ operand: Value) throws -> Module {
@@ -323,7 +323,7 @@ struct StandardTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0 — an answer the word holds, so it answers.
-        #expect(try await run(asking("remainder", .int(Int.min), .int(-1))) == .int(0))
+        #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("a quotient is a fraction even between wholes")
@@ -337,7 +337,7 @@ struct StandardTests {
                         body: [],
                         result: .dispatch(Dispatch(
                             receiver: .literal(.int(left)),
-                            selector: "dividedBy",
+                            selector: "std.math.dividedBy",
                             arguments: ["value": .literal(.int(right))]
                         ))
                     )
@@ -399,7 +399,7 @@ struct StandardTests {
                             .int(Int.max),
                             .string("9223372036854775807")
                         ])),
-                        selector: "text"
+                        selector: "std.text.text"
                     ))
                 )
             ]
@@ -419,9 +419,9 @@ struct StandardTests {
         // holds. The refusal names the overflow, not a missing whole answer —
         // the two reasons are different facts.
         let asks: [(String, Value)] = [
-            ("floored", .double(1e30)),
-            ("rounded", .double(1e30)),
-            ("absolute", .int(Int.min))
+            ("std.math.floored", .double(1e30)),
+            ("std.math.rounded", .double(1e30)),
+            ("std.math.absolute", .int(Int.min))
         ]
 
         for (word, receiver) in asks {
@@ -459,7 +459,7 @@ struct StandardTests {
                             id: "quotient",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("n"),
-                                selector: "dividedBy",
+                                selector: "std.math.dividedBy",
                                 arguments: ["value": .literal(.int(4))]
                             ))
                         ),
@@ -467,14 +467,14 @@ struct StandardTests {
                             id: "whole",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("quotient"),
-                                selector: "floored"
+                                selector: "std.math.floored"
                             ))
                         ),
                         Statement(
                             id: "left",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("n"),
-                                selector: "remainder",
+                                selector: "std.math.remainder",
                                 arguments: ["value": .literal(.int(4))]
                             ))
                         )
@@ -515,7 +515,7 @@ struct StandardTests {
                             id: "stepped",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("head"),
-                                selector: "plus",
+                                selector: "std.math.plus",
                                 arguments: ["value": .literal(.int(1))]
                             ))
                         ),
@@ -523,7 +523,7 @@ struct StandardTests {
                             id: "wrapped",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("stepped"),
-                                selector: "remainder",
+                                selector: "std.math.remainder",
                                 arguments: ["value": reference("side")]
                             ))
                         ),
@@ -531,7 +531,7 @@ struct StandardTests {
                             id: "grown",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("trail"),
-                                selector: "prepending",
+                                selector: "std.collection.prepending",
                                 arguments: ["value": reference("wrapped")]
                             ))
                         ),
@@ -539,7 +539,7 @@ struct StandardTests {
                             id: "moved",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("grown"),
-                                selector: "dropLast"
+                                selector: "std.collection.dropLast"
                             ))
                         )
                     ],
@@ -582,21 +582,21 @@ struct StandardTests {
                             id: "named",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
-                                selector: "keys"
+                                selector: "std.collection.keys"
                             ))
                         ),
                         Statement(
                             id: "held",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
-                                selector: "values"
+                                selector: "std.collection.values"
                             ))
                         ),
                         Statement(
                             id: "changed",
                             expression: .dispatch(Dispatch(
                                 receiver: reference("counts"),
-                                selector: "setting",
+                                selector: "std.collection.setting",
                                 arguments: [
                                     "key": .literal(.string("b")),
                                     "value": .literal(.int(9))
@@ -638,21 +638,21 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "sum",
-                            expression: .dispatch(Dispatch(selector: "plus", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.plus", arguments: [
                                         "of": .literal(.int(2)),
                                         "value": .literal(.int(3))
                                     ]))
                         ),
                         Statement(
                             id: "product",
-                            expression: .dispatch(Dispatch(selector: "times", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.times", arguments: [
                                         "of": .literal(.int(4)),
                                         "value": .literal(.double(2.5))
                                     ]))
                         ),
                         Statement(
                             id: "quotient",
-                            expression: .dispatch(Dispatch(selector: "dividedBy", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
                                         "of": .literal(.int(7)),
                                         "value": .literal(.int(2))
                                     ]))
@@ -685,7 +685,7 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "gone",
-                            expression: .dispatch(Dispatch(selector: "dividedBy", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.math.dividedBy", arguments: [
                                         "of": .literal(.int(1)),
                                         "value": .literal(.int(0))
                                     ]))
@@ -720,7 +720,7 @@ struct StandardTests {
                             expression: .literal(.string(""))
                         ),
                         Statement(
-                            expression: .conditional(.dispatch(Dispatch(receiver: .reference([.key("n")]), selector: "lessThan", arguments: [
+                            expression: .conditional(.dispatch(Dispatch(receiver: .reference([.key("n")]), selector: "std.math.lessThan", arguments: [
                                             "value": .literal(.int(10))
                                         ])), then: [
                                         Statement(
@@ -804,21 +804,21 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "parts",
-                            expression: .dispatch(Dispatch(selector: "split", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
                                         "of": .reference([.key("line")]),
                                         "value": .literal(.string(","))
                                     ]))
                         ),
                         Statement(
                             id: "rejoined",
-                            expression: .dispatch(Dispatch(selector: "joined", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.joined", arguments: [
                                         "of": .reference([.key("parts")]),
                                         "value": .literal(.string(" / "))
                                     ]))
                         ),
                         Statement(
                             id: "fixed",
-                            expression: .dispatch(Dispatch(selector: "replacing", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.replacing", arguments: [
                                         "of": .reference([.key("rejoined")]),
                                         "value": .literal(.string("b")),
                                         "with": .literal(.string("B"))
@@ -854,13 +854,13 @@ struct StandardTests {
                     body: [
                         Statement(
                             id: "many",
-                            expression: .dispatch(Dispatch(selector: "count", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.collection.count", arguments: [
                                         "of": .reference([.key("items")])
                                     ]))
                         ),
                         Statement(
                             id: "said",
-                            expression: .dispatch(Dispatch(selector: "split", arguments: [
+                            expression: .dispatch(Dispatch(selector: "std.text.split", arguments: [
                                         "of": .reference([.key("many")]),
                                         "value": .literal(.string(","))
                                     ]))
@@ -884,7 +884,7 @@ struct StandardTests {
         let sut = Warp.Expression.dispatch(
             Dispatch(
                 receiver: .literal(.bytes([0x01])),
-                selector: "lessThan",
+                selector: "std.math.lessThan",
                 arguments: ["value": .literal(.bytes([0x02]))]
             )
         )
@@ -938,7 +938,7 @@ struct StandardTests {
         let sut = Warp.Expression.dispatch(
             Dispatch(
                 receiver: .literal(.string("caf\u{E9}")),
-                selector: "equal",
+                selector: "std.logic.equal",
                 arguments: ["value": .literal(.string("cafe\u{301}"))]
             )
         )
