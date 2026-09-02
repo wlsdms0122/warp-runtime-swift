@@ -26,8 +26,8 @@ struct EachTests {
             "body": [
                 ["var": "seen", "value": ""],
                 [
-                    "id": "walk",
-                    "each": [
+                    "let": "walk",
+                    "value": ["each": [
                         "in": ["ref": "items"],
                         "body": [
                             [
@@ -43,7 +43,7 @@ struct EachTests {
                             ]
                         ]
                     ]
-                ]
+                ]]
             ],
             "result": ["seen": ["ref": "seen"]]
         ], importing: ["std.text.joined", "std.text.text"])
@@ -67,13 +67,13 @@ struct EachTests {
                 "parameters": ["items": "array"],
                 "body": [
                     [
-                        "id": "walk",
-                        "each": [
+                        "let": "walk",
+                        "value": ["each": [
                             "in": ["ref": "items"],
-                            "body": [["id": "noop", "value": "x"]],
+                            "body": [["let": "noop", "value": "x"]],
                             "result": ["ref": "noop"]
                         ]
-                    ]
+                    ]]
                 ]
             ])
         }
@@ -86,9 +86,9 @@ struct EachTests {
             "parameters": ["items": "string"],
             "body": [
                 [
-                    "id": "walk",
-                    "each": ["in": ["ref": "items"], "body": [["id": "noop", "value": "x"]]]
-                ]
+                    "let": "walk",
+                    "value": ["each": ["in": ["ref": "items"], "body": [["let": "noop", "value": "x"]]]
+                ]]
             ]
         ])
 
@@ -104,9 +104,9 @@ struct EachTests {
         let spec = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "walk",
-                    "each": ["in": "not-a-list", "body": [["id": "noop", "value": "x"]]]
-                ]
+                    "let": "walk",
+                    "value": ["each": ["in": "not-a-list", "body": [["let": "noop", "value": "x"]]]
+                ]]
             ]
         ])
 

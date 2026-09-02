@@ -32,18 +32,18 @@ struct PlaceWrittenTests {
             try loader.loadProcedure([
                 "body": [
                     [
-                        "id": "spin",
-                        "loop": [
-                            "where": ["ref": "missing"],
+                        "let": "spin",
+                        "value": ["loop": [
+                            "while": ["ref": "missing"],
                             "body": []
                         ]
-                    ]
+                    ]]
                 ]
             ])
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.spin[0].loop.where")
+        #expect(error?.place?.rendered == "procedures.entry.body.spin[0].loop.while")
     }
 
     @Test("a branch and a loop hold one slot and write two words")
@@ -62,7 +62,7 @@ struct PlaceWrittenTests {
 
         // Then
         #expect(branch.written(by: .standard).rendered?.hasSuffix(".branch.when") == true)
-        #expect(loop.written(by: .standard).rendered?.hasSuffix(".loop.where") == true)
+        #expect(loop.written(by: .standard).rendered?.hasSuffix(".loop.while") == true)
 
         // And the language's own reading says one thing for both
         #expect(branch.rendered?.hasSuffix(".conditional.condition") == true)
@@ -92,9 +92,9 @@ struct PlaceWrittenTests {
         let module = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "sent",
-                    "call": ["procedure": "nowhere", "of": 1]
-                ]
+                    "let": "sent",
+                    "value": ["call": ["procedure": "nowhere", "of": 1]
+                ]]
             ]
         ], importing: ["nowhere"])
 
@@ -154,7 +154,7 @@ struct PlaceWrittenTests {
         let place = try #require(error?.place)
 
         #expect(place.rendered == "procedures.entry.result.condition")
-        #expect(place.written(by: .standard).rendered == "procedures.entry.result.where")
+        #expect(place.written(by: .standard).rendered == "procedures.entry.result.while")
     }
 
     // MARK: - Public

@@ -292,7 +292,7 @@ struct TypeNotationTests {
             "procedures": [
                 "entry": [
                     "parameters": ["tasks": "array<Task>"],
-                    "body": [["id": "seen", "value": ["ref": "tasks"]]]
+                    "body": [["let": "seen", "value": ["ref": "tasks"]]]
                 ]
             ]
         ])
@@ -313,7 +313,7 @@ struct TypeNotationTests {
             "procedures": [
                 "entry": [
                     "parameters": ["tasks": "array<Task>"],
-                    "body": [["id": "seen", "value": ["ref": "tasks"]]],
+                    "body": [["let": "seen", "value": ["ref": "tasks"]]],
                     "result": ["result": ["ref": "seen"]]
                 ]
             ]

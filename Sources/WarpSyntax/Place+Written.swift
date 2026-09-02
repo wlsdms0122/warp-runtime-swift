@@ -83,7 +83,7 @@ public extension Place {
         case let .condition(construct):
             switch construct {
             case .branch: BranchForm.CodingKeys.when.stringValue
-            case .loop: LoopForm.CodingKeys.where.stringValue
+            case .loop: LoopForm.CodingKeys.while.stringValue
             }
         }
     }

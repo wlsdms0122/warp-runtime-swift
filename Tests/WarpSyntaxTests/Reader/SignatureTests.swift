@@ -24,7 +24,7 @@ struct SignatureTests {
             "procedures": [
                 "keep": [
                     "parameters": ["subject": [:], "labelled": "any"],
-                    "body": [["id": "done", "value": ["ref": "subject"]]]
+                    "body": [["let": "done", "value": ["ref": "subject"]]]
                 ]
             ]
         ])
@@ -47,8 +47,8 @@ struct SignatureTests {
         // Given
         let sut = try Loader.testing.loadDocument([
             "procedures": [
-                "quiet": ["body": [["id": "done", "value": "end"]]],
-                "loud": ["returns": "any", "body": [["id": "done", "value": "end"]]]
+                "quiet": ["body": [["let": "done", "value": "end"]]],
+                "loud": ["returns": "any", "body": [["let": "done", "value": "end"]]]
             ]
         ])
 
@@ -144,7 +144,7 @@ struct SignatureTests {
             "parameters": [
                 "mode": ["type": "string", "oneOf": ["fast", "slow"], "default": "medium"]
             ],
-            "body": [["id": "noop", "value": "ok"]]
+            "body": [["let": "noop", "value": "ok"]]
         ])
 
         // When / Then
@@ -160,7 +160,7 @@ struct SignatureTests {
         // representation
         let spec = try Loader.testing.loadProcedure([
             "parameters": ["ratio": ["type": "double", "default": 3]],
-            "body": [["id": "echo", "value": ["ref": "ratio"]]],
+            "body": [["let": "echo", "value": ["ref": "ratio"]]],
             "result": ["result": ["ref": "echo"]]
         ])
 
@@ -175,7 +175,7 @@ struct SignatureTests {
     @Test("no inputs declaration is still a closed contract — strays are rejected")
     func strayInputRejectedOnEmptySignature() async throws {
         // Given — absent `inputs:` is an empty signature, not an absent contract
-        let spec = try Loader.testing.loadProcedure(["body": [["id": "noop", "value": "ok"]]])
+        let spec = try Loader.testing.loadProcedure(["body": [["let": "noop", "value": "ok"]]])
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -189,7 +189,7 @@ struct SignatureTests {
         // saying what it is
         let sut = try Loader.testing.loadProcedure([
             "parameters": ["dir": ["type": "string", "default": .null]],
-            "body": [["id": "seen", "value": ["ref": "dir"]]]
+            "body": [["let": "seen", "value": ["ref": "dir"]]]
         ])
 
         // Then
@@ -206,7 +206,7 @@ struct SignatureTests {
             "procedures": [
                 "nullcwd": [
                     "parameters": ["dir": ["type": "string", "default": .null]],
-                    "body": [["id": "seen", "value": ["ref": "dir"]]]
+                    "body": [["let": "seen", "value": ["ref": "dir"]]]
                 ]
             ]
         ])

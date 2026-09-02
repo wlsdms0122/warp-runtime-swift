@@ -33,12 +33,12 @@ struct SpellingTests {
             "body": [
                 ["var": "pick"],
                 [
-                    "unless": [
+                    "value": ["unless": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "pick"]]
         ], importing: ["std.logic.equal"])
@@ -96,15 +96,15 @@ struct SpellingTests {
                 "parameters": ["kind": "string"],
                 "body": [
                     [
-                        "id": "pick",
-                        "branch": [
+                        "let": "pick",
+                        "value": ["branch": [
                             "when": ["of": ["ref": "kind"], "equal": "a"],
                             "then": [
-                                "body": [["id": "chosen", "value": "took-then"]],
-                                "result": ["ref": "chosen"]
+                                "body": [["let": "chosen", "value": "took-then"]],
+                                "result": ["value": ["ref": "chosen"]]
                             ]
                         ]
-                    ]
+                    ]]
                 ]
             ])
         }

@@ -51,11 +51,11 @@ struct VocabularyTests {
             "body": [
                 ["var": "verdict"],
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "names.first"], "longerThan": 3],
                         "then": [["set": "verdict", "value": "long"]]
                     ]
-                ]
+                ]]
             ],
             "result": ["result": ["ref": "verdict"], "head": ["ref": "names.first"]]
         ], importing: ["extra.longerThan"])
@@ -79,8 +79,8 @@ struct VocabularyTests {
         let sut = try loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
-                ["id": "how_many", "value": ["ref": "names.count"]],
-                ["id": "said", "call": ["procedure": "std.collection.count"]]
+                ["let": "how_many", "value": ["ref": "names.count"]],
+                ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]
             ]
         ], importing: ["std.collection.count"])
 
@@ -106,7 +106,7 @@ struct VocabularyTests {
                 )
             ]
         )
-        let sut = try loader.loadProcedure(["body": [["id": "done", "value": "end"]]])
+        let sut = try loader.loadProcedure(["body": [["let": "done", "value": "end"]]])
 
         // When / Then
         #expect(throws: LinkError.self) {

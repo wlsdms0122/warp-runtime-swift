@@ -500,7 +500,7 @@ public struct Validator: Sendable {
             }
 
         // The round state is bound before the condition is asked, which is what
-        // lets `where` read how many rounds have passed.
+        // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
             try introduced(round, beside: surroundings.constants, at: place)
 

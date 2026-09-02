@@ -43,7 +43,7 @@ public extension Writer {
 
         let (key, body) = try construct(of: statement.expression, named: statement.binding?.spelled)
 
-        written[key] = body
+        written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .object([key: body])
 
         return .object(written)
     }
@@ -172,7 +172,7 @@ public extension Writer {
             try named(round, matches: id, in: "loop", binding: "round")
 
             var written: [String: Value] = [
-                "where": try value(of: condition, reserving: conditionKeys)
+                "while": try value(of: condition, reserving: conditionKeys)
             ]
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
@@ -300,7 +300,7 @@ public extension Writer {
 
     private func key(of binding: Statement.Binding) -> String {
         switch binding {
-        case .constant: "id"
+        case .constant: "let"
         case .variable: "var"
         case .assignment: "set"
         }

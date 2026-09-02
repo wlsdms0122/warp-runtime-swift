@@ -27,9 +27,9 @@ struct ModuleNotationTests {
             "procedures": [
                 "verify": [
                     "parameters": ["path": "string"],
-                    "body": [["id": "done", "value": ["ref": "path"]]]
+                    "body": [["let": "done", "value": ["ref": "path"]]]
                 ],
-                "report": ["body": [["id": "done", "value": "reported"]]]
+                "report": ["body": [["let": "done", "value": "reported"]]]
             ]
         ])
 
@@ -42,7 +42,7 @@ struct ModuleNotationTests {
         // Given — this was the whole shape of a document once, and it made
         // every document an entry point with no way to write one that only
         // declares
-        let fixture: Value = ["body": [["id": "done", "value": "end"]]]
+        let fixture: Value = ["body": [["let": "done", "value": "end"]]]
 
         // When / Then
         #expect(throws: ReadingError.self) {
@@ -67,7 +67,7 @@ struct ModuleNotationTests {
         // it declares. A key naming the document is a key nothing reads.
         let fixture: Value = [
             "name": "deploy",
-            "procedures": ["verify": ["body": [["id": "done", "value": "end"]]]]
+            "procedures": ["verify": ["body": [["let": "done", "value": "end"]]]]
         ]
 
         // When / Then
@@ -84,7 +84,7 @@ struct ModuleNotationTests {
         // disagree
         let fixture: Value = [
             "procedures": [
-                "verify": ["name": "something-else", "body": [["id": "done", "value": "end"]]]
+                "verify": ["name": "something-else", "body": [["let": "done", "value": "end"]]]
             ]
         ]
 
@@ -101,7 +101,7 @@ struct ModuleNotationTests {
             "procedures": [
                 "verify": [
                     "description": "checks the thing",
-                    "body": [["id": "done", "value": "end"]]
+                    "body": [["let": "done", "value": "end"]]
                 ]
             ]
         ])
@@ -116,8 +116,8 @@ struct ModuleNotationTests {
         // the entry is not known here
         let fixture: Value = [
             "procedures": [
-                "fine": ["body": [["id": "done", "value": "end"]]],
-                "broken": ["body": [["id": "done", "value": ["ref": "nowhere"]]]]
+                "fine": ["body": [["let": "done", "value": "end"]]],
+                "broken": ["body": [["let": "done", "value": ["ref": "nowhere"]]]]
             ]
         ]
 

@@ -202,7 +202,7 @@ public struct Loader: Sendable {
     // assembled a program in Swift is owed: it wrote no document, so no
     // document's words would lead it anywhere. A caller holding a text is owed
     // the other reading — `condition` is a slot they cannot look for and
-    // `where` is what they typed — and this is where a stage that has no
+    // `while` is what they typed — and this is where a stage that has no
     // document of its own gets it.
     //
     //     let image = try loader.reading { try Linker().link(modules, entry: "greet") }

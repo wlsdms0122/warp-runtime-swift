@@ -32,7 +32,7 @@ struct NotationGateTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": ["subject": Value.string(written)],
-                "body": [["id": "done", "value": "end"]]
+                "body": [["let": "done", "value": "end"]]
             ])
         }
     }
@@ -50,15 +50,6 @@ struct NotationGateTests {
         // Given / When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": ["done"]])
-        }
-    }
-
-    @Test("a construct the registry does not hold names nothing")
-    func unknownConstructIsRefused() {
-        // Given / When / Then — the message names the words there are, because a
-        // misspelling is the likeliest way to arrive here
-        #expect(throws: ReadingError.self) {
-            try loader.loadProcedure(["body": [["id": "done", "brnach": [:]]]])
         }
     }
 

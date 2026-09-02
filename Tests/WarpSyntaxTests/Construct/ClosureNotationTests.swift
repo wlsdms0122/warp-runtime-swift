@@ -27,27 +27,27 @@ struct ClosureNotationTests {
                 "entry": [
                     "body": [
                         [
-                            "id": "ran",
-                            "call": [
+                            "let": "ran",
+                            "value": ["call": [
                                 "procedure": "twice",
                                 "arguments": [
                                     "body": [
                                         "closure": [
-                                            "body": [["id": "said", "value": "hi"]],
+                                            "body": [["let": "said", "value": "hi"]],
                                             "result": ["ref": "said"]
                                         ]
                                     ]
                                 ]
                             ]
-                        ]
+                        ]]
                     ],
                     "result": ["result": ["ref": "ran"]]
                 ],
                 "twice": [
                     "parameters": ["body": "procedure"],
                     "body": [
-                        ["id": "first", "invoke": ["procedure": ["ref": "body"]]],
-                        ["id": "second", "invoke": ["procedure": ["ref": "body"]]]
+                        ["let": "first", "value": ["invoke": ["procedure": ["ref": "body"]]]],
+                        ["let": "second", "value": ["invoke": ["procedure": ["ref": "body"]]]]
                     ],
                     "result": ["said": [["ref": "first"], ["ref": "second"]]]
                 ]
@@ -70,28 +70,28 @@ struct ClosureNotationTests {
             "procedures": [
                 "entry": [
                     "body": [
-                        ["id": "outer", "value": "written"],
+                        ["let": "outer", "value": "written"],
                         [
-                            "id": "made",
+                            "let": "made",
                             "value": [
                                 "closure": [
-                                    "body": [["id": "seen", "value": ["ref": "outer"]]],
+                                    "body": [["let": "seen", "value": ["ref": "outer"]]],
                                     "result": ["ref": "seen"]
                                 ]
                             ]
                         ],
                         [
-                            "id": "said",
-                            "call": ["procedure": "runner", "arguments": ["body": ["ref": "made"]]]
-                        ]
+                            "let": "said",
+                            "value": ["call": ["procedure": "runner", "arguments": ["body": ["ref": "made"]]]
+                        ]]
                     ],
                     "result": ["result": ["ref": "said"]]
                 ],
                 "runner": [
                     "parameters": ["body": "procedure"],
                     "body": [
-                        ["id": "outer", "value": "called"],
-                        ["id": "ran", "invoke": ["procedure": ["ref": "body"]]]
+                        ["let": "outer", "value": "called"],
+                        ["let": "ran", "value": ["invoke": ["procedure": ["ref": "body"]]]]
                     ],
                     "result": ["said": ["ref": "ran"]]
                 ]
@@ -114,13 +114,13 @@ struct ClosureNotationTests {
                 "entry": [
                     "body": [
                         [
-                            "id": "doubler",
+                            "let": "doubler",
                             "value": [
                                 "closure": [
                                     "parameters": ["n": "int"],
                                     "body": [
                                         [
-                                            "id": "out",
+                                            "let": "out",
                                             "value": [
                                                 "format": "n=${n}",
                                                 "with": ["n": ["ref": "n"]]
@@ -132,9 +132,9 @@ struct ClosureNotationTests {
                             ]
                         ],
                         [
-                            "id": "said",
-                            "invoke": ["procedure": ["ref": "doubler"], "arguments": ["n": 3]]
-                        ]
+                            "let": "said",
+                            "value": ["invoke": ["procedure": ["ref": "doubler"], "arguments": ["n": 3]]
+                        ]]
                     ],
                     "result": ["result": ["ref": "said"]]
                 ]
@@ -156,9 +156,9 @@ struct ClosureNotationTests {
                 "entry": [
                     "body": [
                         [
-                            "id": "made",
+                            "let": "made",
                             "value": [
-                                "closure": ["body": [["id": "seen", "value": ["ref": "nowhere"]]]]
+                                "closure": ["body": [["let": "seen", "value": ["ref": "nowhere"]]]]
                             ]
                         ]
                     ]
@@ -181,24 +181,24 @@ struct ClosureNotationTests {
                 "entry": [
                     "body": [
                         [
-                            "id": "ran",
-                            "call": [
+                            "let": "ran",
+                            "value": ["call": [
                                 "procedure": "twice",
                                 "arguments": [
                                     "body": [
                                         "closure": [
                                             "returns": "int",
-                                            "body": [["id": "said", "value": 1]]
+                                            "body": [["let": "said", "value": 1]]
                                         ]
                                     ]
                                 ]
                             ]
-                        ]
+                        ]]
                     ]
                 ],
                 "twice": [
                     "parameters": ["body": ["type": ["procedure": ["returns": "string"]]]],
-                    "body": [["id": "first", "invoke": ["procedure": ["ref": "body"]]]]
+                    "body": [["let": "first", "value": ["invoke": ["procedure": ["ref": "body"]]]]]
                 ]
             ]
         ]
@@ -220,24 +220,24 @@ struct ClosureNotationTests {
                 "entry": [
                     "body": [
                         [
-                            "id": "ran",
-                            "call": [
+                            "let": "ran",
+                            "value": ["call": [
                                 "procedure": "twice",
                                 "arguments": [
                                     "body": [
                                         "closure": [
                                             "returns": "string",
-                                            "body": [["id": "said", "value": "hi"]]
+                                            "body": [["let": "said", "value": "hi"]]
                                         ]
                                     ]
                                 ]
                             ]
-                        ]
+                        ]]
                     ]
                 ],
                 "twice": [
                     "parameters": ["body": ["type": ["procedure": ["returns": "string"]]]],
-                    "body": [["id": "first", "invoke": ["procedure": ["ref": "body"]]]]
+                    "body": [["let": "first", "value": ["invoke": ["procedure": ["ref": "body"]]]]]
                 ]
             ]
         ]

@@ -95,11 +95,11 @@ struct WriterTests {
             "parameters": ["ready": "bool"],
             "body": [
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["holds": ["ref": "ready"]],
-                        "then": [["id": "kept", "value": "yes"]]
+                        "then": [["let": "kept", "value": "yes"]]
                     ]
-                ]
+                ]]
             ]
         ], importing: ["example.holds"], from: Notation(condition: WordedConditions()))
 
@@ -123,31 +123,31 @@ struct WriterTests {
                     "body": [
                         ["var": "pick"],
                         [
-                            "branch": [
+                            "value": ["branch": [
                                 "when": ["of": ["ref": "word"], "equal": "hey"],
                                 "then": [["set": "pick", "value": "matched"]],
                                 "else": [["set": "pick", "value": "missed"]]
                             ]
-                        ],
+                        ]],
                         ["var": "walked", "value": 0],
                         [
-                            "id": "sized",
-                            "each": [
+                            "let": "sized",
+                            "value": ["each": [
                                 "in": ["ref": "names"],
                                 "body": [
                                     [
                                         "set": "walked",
-                                        "call": [
+                                        "value": ["call": [
                                             "of": ["ref": "walked"],
                                             "procedure": "std.math.plus",
                                             "arguments": ["value": ["ref": "sized.item.count"]]
                                         ]
-                                    ]
+                                    ]]
                                 ]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "line",
+                            "let": "line",
                             "value": [
                                 "format": "${word}/${pick}",
                                 "with": ["word": ["ref": "word"], "pick": ["ref": "pick"]]
@@ -190,11 +190,11 @@ struct WriterTests {
             "parameters": ["word": "string"],
             "body": [
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "word"], "equal": "hey"],
-                        "then": [["id": "kept", "value": "matched"]]
+                        "then": [["let": "kept", "value": "matched"]]
                     ]
-                ]
+                ]]
             ]
         ], importing: ["std.logic.equal"])
 
@@ -204,7 +204,7 @@ struct WriterTests {
         // Then
         guard
             case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let message = body.first?["branch"]?["when"]?["call"]
+            let message = body.first?["value"]?["branch"]?["when"]?["call"]
         else {
             Issue.record("a branch is written with a condition under `when`")
 
@@ -258,12 +258,12 @@ struct WriterTests {
         let module = try loader.loadProcedure([
             "body": [
                 [
-                    "id": "walked",
-                    "loop": [
-                        "where": false,
-                        "body": [["id": "step", "value": 1]]
+                    "let": "walked",
+                    "value": ["loop": [
+                        "while": false,
+                        "body": [["let": "step", "value": 1]]
                     ]
-                ]
+                ]]
             ]
         ])
         let narrowed = Writer(registry: ConstructRegistry.standard.removing(LoopForm.key))
@@ -518,7 +518,7 @@ struct WriterTests {
     // document *is*. Something reading this from another language would need to
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
-        "warp": 1,
+        "warp": 2,
         "imports": ["std.logic.notEqual", "std.math.plus"],
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],
@@ -534,16 +534,16 @@ struct WriterTests {
                 ],
                 "returns": "object<any>",
                 "body": [
-                    ["id": "list", "value": [1, 2, 3]],
-                    ["id": "pair", "value": ["a": ["ref": "word"], "b": 2]],
-                    ["id": "quoted", "value": ["value": ["ref": "not-a-path"]]],
+                    ["let": "list", "value": [1, 2, 3]],
+                    ["let": "pair", "value": ["a": ["ref": "word"], "b": 2]],
+                    ["let": "quoted", "value": ["value": ["ref": "not-a-path"]]],
                     ["var": "seen", "value": 0],
-                    ["id": "indexed", "value": ["ref": "names[0]"]],
-                    ["id": "computed", "value": ["ref": "names[seen].count"]],
+                    ["let": "indexed", "value": ["ref": "names[0]"]],
+                    ["let": "computed", "value": ["ref": "names[seen].count"]],
                     [
-                        "id": "walked",
-                        "loop": [
-                            "where": [
+                        "let": "walked",
+                        "value": ["loop": [
+                            "while": [
                                 "call": [
                                     "procedure": "std.logic.notEqual",
                                     "of": ["ref": "seen"],
@@ -553,52 +553,52 @@ struct WriterTests {
                             "body": [
                                 [
                                     "set": "seen",
-                                    "call": [
+                                    "value": ["call": [
                                         "procedure": "std.math.plus",
                                         "of": ["ref": "seen"],
                                         "arguments": ["value": 1]
                                     ]
-                                ]
+                                ]]
                             ],
                             "result": ["ref": "seen"]
                         ]
-                    ],
+                    ]],
                     ["var": "pick"],
                     [
-                        "branch": [
+                        "value": ["branch": [
                             "when": ["ref": "kind"],
                             "then": [["set": "pick", "value": "yes"]],
                             "else": [["set": "pick", "value": "no"]]
                         ]
-                    ],
+                    ]],
                     [
-                        "id": "mapped",
-                        "each": [
+                        "let": "mapped",
+                        "value": ["each": [
                             "in": ["ref": "names"],
-                            "body": [["id": "one", "value": ["ref": "mapped.item"]]]
+                            "body": [["let": "one", "value": ["ref": "mapped.item"]]]
                         ]
-                    ],
+                    ]],
                     [
-                        "id": "tried",
-                        "attempt": [
-                            "body": [["id": "risky", "value": 1]],
+                        "let": "tried",
+                        "value": ["attempt": [
+                            "body": [["let": "risky", "value": 1]],
                             "result": ["ref": "risky"],
                             "rescue": [
-                                "body": [["id": "instead", "value": 0]],
+                                "body": [["let": "instead", "value": 0]],
                                 "result": ["ref": "instead"]
                             ]
                         ]
-                    ],
-                    ["id": "grouped", "group": ["body": [["id": "inner", "value": 1]]]],
+                    ]],
+                    ["let": "grouped", "value": ["group": ["body": [["let": "inner", "value": 1]]]]],
                     [
-                        "id": "called",
-                        "invoke": [
+                        "let": "called",
+                        "value": ["invoke": [
                             "procedure": [
                                 "closure": ["parameters": ["n": "int"], "result": ["ref": "n"]]
                             ],
                             "arguments": ["n": 1]
                         ]
-                    ]
+                    ]]
                 ],
                 "result": ["result": ["ref": "pick"]]
             ],
@@ -645,9 +645,9 @@ struct WriterTests {
                     ],
                     "returns": "object<any>",
                     "body": [
-                        ["id": "list", "value": [1, 2, 3]],
-                        ["id": "pair", "value": ["a": ["ref": "word"], "b": 2]],
-                        ["id": "quoted", "value": ["value": ["ref": "literal-text"]]],
+                        ["let": "list", "value": [1, 2, 3]],
+                        ["let": "pair", "value": ["a": ["ref": "word"], "b": 2]],
+                        ["let": "quoted", "value": ["value": ["ref": "literal-text"]]],
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
@@ -664,7 +664,7 @@ struct WriterTests {
                     "body": [
                         ["var": "pick"],
                         [
-                            "branch": [
+                            "value": ["branch": [
                                 // A connective is a word over sides nobody has
                                 // asked yet, which is why each arrives as a
                                 // closure. A notation may spell that; a document
@@ -700,8 +700,8 @@ struct WriterTests {
                                 "then": [["set": "pick", "value": "yes"]],
                                 "else": [["set": "pick", "value": "no"]]
                             ]
-                        ],
-                        ["id": "grouped", "group": ["body": [["id": "inner", "value": 1]]]]
+                        ]],
+                        ["let": "grouped", "value": ["group": ["body": [["let": "inner", "value": 1]]]]]
                     ],
                     "result": ["result": ["ref": "pick"]]
                 ]
@@ -716,36 +716,36 @@ struct WriterTests {
                     "body": [
                         ["var": "seen", "value": 0],
                         [
-                            "id": "walked",
-                            "loop": [
-                                "where": ["of": ["ref": "seen"], "notEqual": 3],
+                            "let": "walked",
+                            "value": ["loop": [
+                                "while": ["of": ["ref": "seen"], "notEqual": 3],
                                     "body": [
                                     [
                                         "set": "seen",
-                                        "call": [
+                                        "value": ["call": [
                                             "procedure": "std.math.plus",
                                             "of": ["ref": "seen"],
                                             "arguments": ["value": 1]
                                         ]
-                                    ]
+                                    ]]
                                 ]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "mapped",
-                            "each": [
+                            "let": "mapped",
+                            "value": ["each": [
                                 "in": ["ref": "names"],
-                                "body": [["id": "one", "value": ["ref": "mapped.item"]]]
+                                "body": [["let": "one", "value": ["ref": "mapped.item"]]]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "tried",
-                            "attempt": [
-                                "body": [["id": "risky", "fail": true]],
+                            "let": "tried",
+                            "value": ["attempt": [
+                                "body": [["let": "risky", "value": ["fail": true]]],
                                 "result": ["ref": "risky"],
                                 "rescue": ["result": "recovered"]
                             ]
-                        ]
+                        ]]
                     ],
                     "result": ["result": ["ref": "tried"]]
                 ]
@@ -759,35 +759,35 @@ struct WriterTests {
                     "returns": "any",
                     "body": [
                         [
-                            "id": "outer",
-                            "loop": [
-                                "where": false,
+                            "let": "outer",
+                            "value": ["loop": [
+                                "while": false,
                                 "body": [
                                     [
-                                        "id": "walked",
-                                        "each": [
+                                        "let": "walked",
+                                        "value": ["each": [
                                             "in": ["ref": "names"],
                                             "body": [
                                                 [
-                                                    "branch": [
+                                                    "value": ["branch": [
                                                         "when": true,
                                                         "then": [
                                                             [
-                                                                "continue": Value.null
-                                                            ]
+                                                                "value": ["continue": Value.null
+                                                            ]]
                                                         ],
                                                         "else": [
-                                                            ["break": "outer"]
+                                                            ["value": ["break": "outer"]]
                                                         ]
                                                     ]
-                                                ]
+                                                ]]
                                             ]
                                         ]
-                                    ]
+                                    ]]
                                 ]
                             ]
-                        ],
-                        ["return": ["ref": "outer"]]
+                        ]],
+                        ["value": ["return": ["ref": "outer"]]]
                     ]
                 ]
             ]
@@ -799,10 +799,10 @@ struct WriterTests {
                 "entry": [
                     "parameters": ["word": "string", "names": "array<string>"],
                     "body": [
-                        ["id": "shouted", "call": ["procedure": "shout", "of": ["ref": "word"]]],
+                        ["let": "shouted", "value": ["call": ["procedure": "shout", "of": ["ref": "word"]]]],
                         [
-                            "id": "kept",
-                            "call": [
+                            "let": "kept",
+                            "value": ["call": [
                                 "procedure": "std.collection.filter",
                                 "of": ["ref": "names"],
                                 "arguments": [
@@ -821,18 +821,18 @@ struct WriterTests {
                                     ]
                                 ]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "called",
-                            "invoke": [
+                            "let": "called",
+                            "value": ["invoke": [
                                 "procedure": [
                                     "closure": ["parameters": ["n": "int"], "result": ["ref": "n"]]
                                 ],
                                 "arguments": ["n": 1]
                             ]
-                        ],
+                        ]],
                         [
-                            "id": "line",
+                            "let": "line",
                             "value": ["format": "${word}!", "with": ["word": ["ref": "word"]]]
                         ]
                     ],

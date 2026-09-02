@@ -20,7 +20,7 @@ struct LoadGateTests {
     @Test("an unknown step key is rejected at load")
     func unknownStepKeyRejected() {
         // Given
-        let fixture: Value = ["body": [["id": "broken", "value": "x", "fallbck": "y"]]]
+        let fixture: Value = ["body": [["let": "broken", "value": "x", "fallbck": "y"]]]
 
         // When / Then
         #expect(throws: ReadingError.self) {
@@ -37,7 +37,7 @@ struct LoadGateTests {
             "parameters": ["kind": "string"],
             "body": [
                 [
-                    "id": "only-a",
+                    "let": "only-a",
                     "when": ["of": ["ref": "kind"], "equal": "a"],
                     "value": "taken"
                 ]
@@ -53,7 +53,7 @@ struct LoadGateTests {
     @Test("a step declaring two actions is rejected")
     func doubleActionStepRejected() {
         // Given
-        let fixture: Value = ["body": [["id": "broken", "value": "x", "fail": true]]]
+        let fixture: Value = ["body": [["let": "broken", "value": "x", "fail": true]]]
 
         // When / Then
         #expect(throws: ReadingError.self) {
@@ -65,7 +65,7 @@ struct LoadGateTests {
     func unknownReferenceHeadRejected() {
         // Given — forward references and typos surface at load, not at run
         let fixture: Value = [
-            "body": [["id": "early", "value": ["ref": "later"]], ["id": "later", "value": "x"]]
+            "body": [["let": "early", "value": ["ref": "later"]], ["let": "later", "value": "x"]]
         ]
 
         // When / Then
@@ -77,7 +77,7 @@ struct LoadGateTests {
     @Test("duplicate sibling step ids are rejected")
     func duplicateSiblingIDsRejected() {
         // Given
-        let fixture: Value = ["body": [["id": "twin", "value": "x"], ["id": "twin", "value": "y"]]]
+        let fixture: Value = ["body": [["let": "twin", "value": "x"], ["let": "twin", "value": "y"]]]
 
         // When / Then
         #expect(throws: ValidationError.self) {
@@ -91,7 +91,7 @@ struct LoadGateTests {
         // signature introduced cannot be introduced again
         let fixture: Value = [
             "parameters": ["name": ["type": "string"]],
-            "body": [["id": "name", "value": "x"]]
+            "body": [["let": "name", "value": "x"]]
         ]
 
         // When / Then
@@ -107,9 +107,9 @@ struct LoadGateTests {
         let fixture: Value = [
             "body": [
                 [
-                    "id": "fragile",
-                    "attempt": ["body": [["id": "broken", "fail": true]], "rescue": ["body": []]]
-                ]
+                    "let": "fragile",
+                    "value": ["attempt": ["body": [["let": "broken", "value": ["fail": true]]], "rescue": ["body": []]]
+                ]]
             ]
         ]
 
@@ -124,7 +124,7 @@ struct LoadGateTests {
         // Given
         let fixture: Value = [
             "parameters": ["items": "array"],
-            "body": [["id": "pick", "value": ["ref": "items[${typoooo}]"]]]
+            "body": [["let": "pick", "value": ["ref": "items[${typoooo}]"]]]
         ]
 
         // When / Then — nested index refs are part of the reference, not a blind spot
@@ -139,7 +139,7 @@ struct LoadGateTests {
         // carried into the model
         let fixture: Value = [
             "parameters": ["items": "array"],
-            "body": [["id": "pick", "value": ["ref": "items[]"]]]
+            "body": [["let": "pick", "value": ["ref": "items[]"]]]
         ]
 
         // When / Then
@@ -154,9 +154,9 @@ struct LoadGateTests {
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
             "parameters": ["run": "object"],
-            "body": [["id": "whoami", "value": ["ref": "run.id"]]]
+            "body": [["let": "whoami", "value": ["ref": "run.id"]]]
         ]
-        let assumed: Value = ["body": [["id": "whoami", "value": ["ref": "run.id"]]]]
+        let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run.id"]]]]
 
         // When / Then
         #expect(throws: Never.self) {
@@ -172,7 +172,7 @@ struct LoadGateTests {
         // Given — a step array that arrived as data (through a signature) becomes
         // IR via the loader's Value door; the string stays a literal even there
         let carried = Value.array([
-            .object(["id": .string("greet"), "value": .string("hello there")])
+            .object(["let": .string("greet"), "value": .string("hello there")])
         ])
 
         // When

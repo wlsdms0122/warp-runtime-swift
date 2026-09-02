@@ -30,8 +30,8 @@ struct NamelessTests {
                 "entry": [
                     "returns": "int",
                     "body": [
-                        ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]],
-                        ["id": "kept", "value": 5]
+                        ["value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]]],
+                        ["let": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]
                 ]
@@ -67,15 +67,15 @@ struct NamelessTests {
     func twoNamingKeysAreRefused() {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
-                "body": [["id": "one", "var": "another", "value": 1]]
+                "body": [["let": "one", "var": "another", "value": 1]]
             ])
         }
     }
 
     @Test("a named leaving statement is refused", arguments: [
-        ["id": "done", "return": "answer"] as Value,
-        ["var": "gone", "break": Value.null],
-        ["set": "past", "continue": Value.null]
+        ["let": "done", "value": ["return": "answer"]] as Value,
+        ["var": "gone", "value": ["break": Value.null]],
+        ["set": "past", "value": ["continue": Value.null]]
     ])
     func aNamedLeavingStatementIsRefused(_ statement: Value) {
         // Given — a leaving statement never finishes, so a naming key on one
@@ -95,13 +95,13 @@ struct NamelessTests {
         #expect {
             try loader.statements(from: [
                 [
-                    "id": "done",
-                    "branch": [
+                    "let": "done",
+                    "value": ["branch": [
                         "when": true,
-                        "then": [["return": 1]],
-                        "else": [["return": 2]]
+                        "then": [["value": ["return": 1]]],
+                        "else": [["value": ["return": 2]]]
                     ]
-                ]
+                ]]
             ])
         } throws: { error in
             "\(error)".contains("takes no name")
@@ -115,8 +115,8 @@ struct NamelessTests {
         // must not wait for a link they may never reach
         #expect {
             try loader.statements(from: [
-                ["return": 1],
-                ["id": "unreachable", "value": 2]
+                ["value": ["return": 1]],
+                ["let": "unreachable", "value": 2]
             ])
         } throws: { error in
             "\(error)".contains("would never run")
@@ -139,9 +139,9 @@ struct NamelessTests {
     }
 
     @Test("a construct that binds through its name cannot be written nameless", arguments: [
-        ["loop": ["where": false, "body": [["id": "x", "value": 1]]]] as Value,
-        ["each": ["in": ["value": [1]], "body": [["id": "x", "value": 1]]]],
-        ["attempt": ["body": [["id": "x", "value": 1]], "rescue": ["result": 0]]]
+        ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
+        ["value": ["each": ["in": ["value": [1]], "body": [["let": "x", "value": 1]]]]],
+        ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
     ])
     func aBindingConstructRequiresAName(_ statement: Value) {
         // Given — with no name there is nothing the body could read the
@@ -159,7 +159,7 @@ struct NamelessTests {
         // Given — a key written with no name in it: reading it as "no naming
         // key" would make a failed name and an omitted one the same document
         #expect(throws: ReadingError.self) {
-            try loader.loadProcedure(["body": [["id": Value.null, "value": 1]]])
+            try loader.loadProcedure(["body": [["let": Value.null, "value": 1]]])
         }
     }
 
@@ -173,8 +173,8 @@ struct NamelessTests {
                 "entry": [
                     "returns": "int",
                     "body": [
-                        ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]],
-                        ["id": "kept", "value": 5]
+                        ["value": ["call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]]],
+                        ["let": "kept", "value": 5]
                     ],
                     "result": ["ref": "kept"]
                 ]

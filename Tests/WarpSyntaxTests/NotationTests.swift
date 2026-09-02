@@ -77,7 +77,7 @@ struct NotationTests {
                     "body": [
                         ["var": "pick"],
                         [
-                            "branch": [
+                            "value": ["branch": [
                                 "when": [
                                     "call": [
                                         "procedure": "std.logic.equal",
@@ -88,7 +88,7 @@ struct NotationTests {
                                 "then": [["set": "pick", "value": "matched"]],
                                 "else": [["set": "pick", "value": "missed"]]
                             ]
-                        ]
+                        ]]
                     ],
                     "result": ["result": ["ref": "pick"]]
                 ]
@@ -112,11 +112,11 @@ struct NotationTests {
             "parameters": ["ready": "bool"],
             "body": [
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["ref": "ready"],
-                        "then": [["id": "kept", "value": "yes"]]
+                        "then": [["let": "kept", "value": "yes"]]
                     ]
-                ]
+                ]]
             ]
         ])
 
@@ -208,7 +208,7 @@ struct NotationTests {
                         "parameters": ["word": "string"],
                         "body": [
                             [
-                                "id": "line",
+                                "let": "line",
                                 "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]
                             ]
                         ]
@@ -227,7 +227,7 @@ struct NotationTests {
         let sut = try Loader.testing.loadProcedure([
             "parameters": ["word": "string"],
             "body": [
-                ["id": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
+                ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
         ], importing: ["std.text.joined", "std.text.text"])
 
@@ -255,11 +255,11 @@ struct NotationTests {
             "parameters": ["flag": "any"],
             "body": [
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["as": "bool", "of": ["ref": "flag"]],
-                        "then": [["id": "kept", "value": "yes"]]
+                        "then": [["let": "kept", "value": "yes"]]
                     ]
-                ]
+                ]]
             ]
         ]
 
@@ -291,7 +291,7 @@ struct NotationTests {
                 "entry": [
                     "parameters": ["word": "string"],
                     "body": [
-                        ["id": "asked", "value": ["of": ["ref": "word"], "is": "hey"]]
+                        ["let": "asked", "value": ["of": ["ref": "word"], "is": "hey"]]
                     ],
                     "result": ["ref": "asked"]
                 ]

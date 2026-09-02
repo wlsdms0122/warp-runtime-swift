@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A condition slot. In a document it holds an expression that must answer a
-// bool, and that is the whole of it — `when` and `where` take what any value
+// bool, and that is the whole of it — `when` and `while` take what any value
 // slot takes, and nothing about a condition is written differently from
 // anything else.
 //

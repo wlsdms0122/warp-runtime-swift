@@ -134,11 +134,11 @@ struct ConditionTests {
             "parameters": ["title": "string"],
             "body": [
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "title"], "regex": "[unclosed"],
-                        "then": [["id": "taken", "value": "x"]]
+                        "then": [["let": "taken", "value": "x"]]
                     ]
-                ]
+                ]]
             ]
         ]
 
@@ -173,11 +173,11 @@ struct ConditionTests {
             "parameters": ["k": "string"],
             "body": [
                 [
-                    "branch": [
+                    "value": ["branch": [
                         "when": ["of": ["ref": "k"], "equal": "a", "notEqual": "b"],
-                        "then": [["id": "taken", "value": "x"]]
+                        "then": [["let": "taken", "value": "x"]]
                     ]
-                ]
+                ]]
             ]
         ]
 

@@ -67,7 +67,7 @@ struct ModifierNotationTests {
         // Given
         let loader = Loader()
         let written: Value = [
-            "warp": 1,
+            "warp": 2,
             "imports": [],
             "var": ["total": 0],
             "procedures": [
