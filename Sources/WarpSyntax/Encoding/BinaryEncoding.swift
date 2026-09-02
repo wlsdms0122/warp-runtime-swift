@@ -396,9 +396,6 @@ public enum BinaryEncoding {
         return (key, raw)
     }
 
-    // Whether a name is its own NFC form, by bytes — Swift's own `==` compares
-    // under canonical equivalence, which is exactly the difference this rule
-    // exists to see. ASCII always passes.
     private static func normal(_ name: String) -> Bool {
         Name.isNormal(name)
     }

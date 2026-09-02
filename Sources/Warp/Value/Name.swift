@@ -26,18 +26,29 @@ public enum Name {
         name.precomposedStringWithCanonicalMapping.utf8.elementsEqual(name.utf8)
     }
 
-    // A declared type's name, and so a record's: ASCII identifiers joined by
-    // dots, which every encoding writes bare. ASCII is its own normal form,
-    // so this is the one grammar and the two encodings share it.
-    public static func isTypeName(_ name: String) -> Bool {
-        !name.isEmpty
-            && name.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { segment in
-                guard let first = segment.first, first.isASCII, first.isLetter || first == "_" else { return false }
+    // An identifier as every encoding writes one bare: ASCII on purpose, since
+    // "is this a letter" for the rest of Unicode is answered by whatever
+    // tables a host language shipped, and a canonical layout cannot depend
+    // on whose tables were newer. A name outside this set is quoted where a
+    // key stands, and is no type's name. ASCII is its own normal form.
+    public static func isIdentifier(_ name: String) -> Bool {
+        func word(_ character: Character, first: Bool) -> Bool {
+            character.isASCII
+                && (character.isLetter || character == "_" || (!first && character.isNumber))
+        }
 
-                return segment.dropFirst().allSatisfy { character in
-                    character.isASCII && (character.isLetter || character.isNumber || character == "_")
-                }
-            }
+        guard let first = name.first, word(first, first: true) else { return false }
+
+        return name.allSatisfy { character in word(character, first: false) }
+    }
+
+    // A declared type's name, and so a record's: identifiers joined by dots.
+    // A scalar's word is no name: a bare `true` in front of a record would be
+    // read as the record's name, and the value would be gone.
+    public static func isTypeName(_ name: String) -> Bool {
+        name.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { segment in
+            isIdentifier(String(segment)) && !["null", "true", "false"].contains(String(segment))
+        }
     }
 
     // MARK: - Private

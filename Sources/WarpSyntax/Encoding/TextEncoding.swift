@@ -389,7 +389,6 @@ public enum TextEncoding {
     // What a bare token names. Everything unquoted is one of five things, and a
     // number is whole or a fraction by grammar — a point or an exponent, not a
     // reader's guess.
-
     private static func scalar(from bare: String) throws -> Value {
         switch bare {
         case "null": return .null
@@ -440,27 +439,14 @@ public enum TextEncoding {
         }
     }
 
-    // Whether a name is its own NFC form, by bytes — Swift's own `==` compares
-    // under canonical equivalence, which is exactly the difference this rule
-    // exists to see. ASCII always passes.
     private static func normal(_ name: String) -> Bool {
         Name.isNormal(name)
     }
 
-    // ASCII on purpose, not for lack of ambition: "is this a letter" for the
-    // rest of Unicode is answered by whatever tables a host language shipped,
-    // and a canonical layout cannot depend on whose tables were newer. A name
-    // outside this set is simply quoted, which every implementation spells the
-    // same way.
+    // A key written bare, which is a key spelled as an identifier; any other
+    // key is quoted, which every implementation spells the same way.
     private static func identifier(_ name: String) -> Bool {
-        func word(_ character: Character, first: Bool) -> Bool {
-            character.isASCII
-                && (character.isLetter || character == "_" || (!first && character.isNumber))
-        }
-
-        guard let first = name.first, word(first, first: true) else { return false }
-
-        return name.allSatisfy { character in word(character, first: false) }
+        Name.isIdentifier(name)
     }
 
     private static func write(
