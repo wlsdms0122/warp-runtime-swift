@@ -2,30 +2,29 @@
 //  Trace.swift
 //  Warp
 //
-//  Created by JSilver on 8/19/26.
+//  Created by JSilver on 8/8/26.
 //
 
 import Foundation
 
-// Where a run is, spelled as everything it went through to get there.
-//
-// A statement's id names it in the text it was written in, and the same text
-// runs more than once — a loop round, a piece of a fan-out, a body called from
-// two places. A name alone cannot tell those apart, so nothing outside could say
-// which `send` finished, and a language whose account of a run cannot be matched
-// up with itself has no account.
-//
-// Frames are pushed rather than replaced. A run that calls into a body is still
-// inside the statement that called it, which is what makes this read like a
-// stack rather than a cursor.
-//
-// It is a list here, and a tree in the whole: a fan-out hands each piece its own
-// trace, so what a run leaves behind branches wherever the run did. There is no
-// one stack to ask for, and pretending otherwise is what a single mutable
-// current-position would do.
+// Where a run is, as everything it went through to get there. Extending a
+// trace links one more frame onto the one before it, so a trace a run carries
+// through every statement costs one link per frame and shares the frames
+// above it with every trace under them.
 public struct Trace: Sendable, Equatable {
     // MARK: - Property
-    public let frames: [Frame]
+    // The frames from the outermost in.
+    public var frames: [Frame] {
+        var frames: [Frame] = []
+        var link = last
+
+        while let current = link {
+            frames.append(current.frame)
+            link = current.parent
+        }
+
+        return frames.reversed()
+    }
 
     // How the place reads in a message.
     //
@@ -48,17 +47,36 @@ public struct Trace: Sendable, Equatable {
         }
     }
 
+    private let last: Link?
+
     // MARK: - Initializer
     public init(frames: [Frame] = []) {
-        self.frames = frames
+        self.last = frames.reduce(nil) { parent, frame in Link(frame, under: parent) }
+    }
+
+    private init(last: Link?) {
+        self.last = last
     }
 
     // MARK: - Public
     public func appending(_ frame: Frame) -> Trace {
-        Trace(frames: frames + [frame])
+        Trace(last: Link(frame, under: last))
+    }
+
+    public static func == (lhs: Trace, rhs: Trace) -> Bool {
+        lhs.frames == rhs.frames
     }
 
     // MARK: - Private
+    private final class Link: Sendable {
+        let frame: Frame
+        let parent: Link?
+
+        init(_ frame: Frame, under parent: Link?) {
+            self.frame = frame
+            self.parent = parent
+        }
+    }
 }
 
 extension Trace: CustomStringConvertible {
