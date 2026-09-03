@@ -104,11 +104,6 @@ public struct Linker: Sendable {
         // earn, because it is itself still being resolved beside the
         // constants it may read — the table carries the fact, so no resolver
         // needs a flag saying when it runs.
-        let written = selectorSymbols.mapValues(\.procedure)
-        let wordsWritten = wordSymbols.mapValues(\.procedure)
-        let settling = settleable(written)
-        let settlingWords = settleable(wordsWritten)
-
         // Selectors and path words are two tables, because they are two
         // questions: what a selector reaches, and what a bare spelling a
         // walk writes may send. One table masked by a set let one spelling
@@ -130,6 +125,58 @@ public struct Linker: Sendable {
 
         let isolatedDeclarations = isolated(among: symbols, pure: settled, signatures: signatures)
 
+        // The table a run reads, one row per declaration in name order. A
+        // native answers as it is from the start; a written body stands as
+        // the refusal it would earn until it is lowered, so nothing folds
+        // through a body half-made.
+        var rows: [String: Int] = [:]
+        var table: [Linked] = []
+
+        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
+            let implementation: Linked.Implementation
+
+            switch symbol.procedure.implementation {
+            case .body:
+                implementation = .query(UnsettledWord())
+
+            case let .query(query):
+                implementation = .query(query)
+
+            case let .effect(effect):
+                implementation = .effect(effect)
+            }
+
+            rows[symbol.declared] = table.count
+            table.append(
+                Linked(
+                    label: symbol.declared,
+                    origin: symbol.origin,
+                    signature: symbol.procedure.signature,
+                    purity: settled.contains(symbol.declared) ? .pure : .unstated,
+                    isolation: isolatedDeclarations.contains(symbol.declared) ? .isolated : .unstated,
+                    implementation: implementation
+                )
+            )
+        }
+
+        var lowering = Lowering(
+            table: table,
+            rows: rows,
+            words: wordSymbols.compactMapValues { symbol in rows[symbol.declared] },
+            variables: modules.enumerated().reduce(into: [:]) { table, entry in
+                table[entry.offset] = entry.element.variables.keys.sorted().enumerated()
+                    .reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
+            }
+        )
+
+        func row(of symbol: Symbol) throws -> Int {
+            guard let row = rows[symbol.declared] else {
+                throw LinkError("'\(symbol.declared)' has no row in the table", at: symbol.place)
+            }
+
+            return row
+        }
+
         func frame() -> TypeFrame {
             TypeFrame(
                 symbols: space,
@@ -148,8 +195,7 @@ public struct Linker: Sendable {
         // other constants is spelling it with words like any other expression.
         let constants = try constants(
             of: modules,
-            reaching: settling,
-            words: settlingWords,
+            lowering: &lowering,
             in: types,
             with: declaredFrame
         )
@@ -157,8 +203,7 @@ public struct Linker: Sendable {
         let variables = try variables(
             of: modules,
             beside: constants,
-            reaching: settling,
-            words: settlingWords,
+            lowering: &lowering,
             in: types,
             with: declaredFrame
         )
@@ -211,14 +256,6 @@ public struct Linker: Sendable {
         // for a reached body, the derivable tables for a body a path may run.
         var resolvedBodies: [String: (procedure: Procedure, calls: [CallSite])] = [:]
 
-        // What a body's folding executes. Two moments hold two facts: while
-        // the words themselves settle, a written body cannot run — a word
-        // folding through a word would be a circle — so the stand-ins answer;
-        // once the words are resolved, folding runs the same judged bodies a
-        // run would, and the tables are swapped to say so.
-        var foldingSelectors = settling
-        var foldingWords = settlingWords
-
         // A declaration, bound and dot-judged: selectors resolve to declared
         // spellings, every dot in the body is spelled as what the types say
         // it means, and a constant-headed path — judged first, like any path
@@ -237,10 +274,13 @@ public struct Linker: Sendable {
             var answer = (procedure: declared, calls: [CallSite]())
 
             if let block = declared.block {
-                let folding = Resolver(
-                    scope: Scope(bindings: constants[symbol.origin] ?? [:]),
-                    selectors: foldingSelectors,
-                    words: foldingWords,
+                // The table as it stands: a word already lowered answers, a
+                // body not yet lowered stands as its refusal, so a word
+                // folding through a word is refused as the circle it is.
+                let folding = Folding(
+                    constants: constants[symbol.origin] ?? [:],
+                    origin: symbol.origin,
+                    lowering: lowering,
                     types: types
                 )
 
@@ -266,6 +306,8 @@ public struct Linker: Sendable {
                     ),
                     calls: gathered
                 )
+
+                try lowering.settle(try row(of: symbol), body: rewritten, at: symbol.place)
             }
 
             resolvedBodies[symbol.declared] = answer
@@ -285,20 +327,9 @@ public struct Linker: Sendable {
         // against the stand-ins, and whether a declaration links stays a
         // fact of its text rather than of who happens to call it. In name
         // order, so which mistake is reported first is the text's fact too.
-        var pathWords: [String: Procedure] = [:]
-
-        for (name, symbol) in wordSymbols.sorted(by: { $0.key < $1.key }) {
-            pathWords[name] = try resolved(symbol).procedure
+        for (_, symbol) in wordSymbols.sorted(by: { $0.key < $1.key }) {
+            _ = try resolved(symbol)
         }
-
-        // From here a fold runs judged bodies. Only the words are resolved
-        // so far — a fold that walks from a word's body into another written
-        // declaration still meets a stand-in, the same circle guard by the
-        // same rule.
-        foldingWords = pathWords
-        foldingSelectors = settling.merging(
-            resolvedBodies.mapValues(\.procedure)
-        ) { _, resolved in resolved }
 
         var procedures: [String: Procedure] = [:]
         var frontier: [Symbol] = [start]
@@ -347,22 +378,17 @@ public struct Linker: Sendable {
         // reported before one in a declaration nothing reaches; in name
         // order, so which unreached mistake comes first is a fact of the
         // text rather than of a hash seed.
-        var selectors: [String: Procedure] = [:]
-
-        for (name, symbol) in selectorSymbols.sorted(by: { $0.key < $1.key }) {
-            selectors[name] = try resolved(symbol).procedure
+        for (_, symbol) in selectorSymbols.sorted(by: { $0.key < $1.key }) {
+            _ = try resolved(symbol)
         }
 
         return Image(
-            entry: linked ?? start.procedure,
-            procedures: procedures,
+            linked: lowering.table,
+            start: try row(of: start),
+            rows: rows,
+            reached: Set(procedures.keys),
             types: types,
-            pure: settled,
-            selectors: selectors,
-            words: pathWords,
-            variables: variables,
-            origins: symbols.reduce(into: [:]) { table, symbol in table[symbol.declared] = symbol.origin },
-            entryOrigin: start.origin
+            variables: variables
         )
     }
 
@@ -389,28 +415,32 @@ public struct Linker: Sendable {
         }
     }
 
+    // A constant's or a variable's expression, settled the way a run reads
+    // it: lowered against the settled neighbours as a frame, and read by the
+    // executor over the table as it stands. A closure the expression holds
+    // is lowered into the table here, where it stays for the run.
+    private func folded(
+        _ expression: Expression,
+        reading known: [String: Value],
+        origin: Int,
+        label: String,
+        at place: Place,
+        lowering: inout Lowering,
+        in types: TypeTable
+    ) throws -> Value {
+        let names = known.keys.sorted()
+        let code = try lowering.lower(expression, reading: names, origin: origin, label: label, at: place)
+
+        return try Executor(observer: nil, environment: nil, linked: lowering.table, types: types)
+            .read(code, in: Activation(cells: names.map { name in .value(known[name] ?? .null) }, names: names))
+    }
+
     // The one gate every gathered send passes, wherever its body sits — a
     // procedure, a word, a constant's closure. The call carries the
     // declaration the walk found for it, and is judged against that.
     private func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
         for call in calls {
             try check(call, against: call.callee.procedure, with: frame)
-        }
-    }
-
-    // The tables the link's own settling reads. A native word answers at the
-    // link; a written body is itself still being resolved beside the
-    // constants it may read, so it is swapped for the refusal it would earn —
-    // present, judged and named, and never run half-made.
-    private func settleable(_ table: [String: Procedure]) -> [String: Procedure] {
-        table.mapValues { procedure in
-            guard procedure.block != nil else { return procedure }
-
-            return Procedure(
-                description: procedure.description,
-                signature: procedure.signature,
-                implementation: .query(UnsettledWord())
-            )
         }
     }
 
@@ -1227,8 +1257,7 @@ public struct Linker: Sendable {
     // is the whole of finding it.
     private func constants(
         of modules: [Module],
-        reaching selectors: [String: Procedure],
-        words: [String: Procedure],
+        lowering: inout Lowering,
         in types: TypeTable,
         with frame: TypeFrame
     ) throws -> [Int: [String: Value]] {
@@ -1242,13 +1271,6 @@ public struct Linker: Sendable {
             // one needs comes before it, and asking again is a second chance
             // to ask a different table.
             for (name, expression) in try order(module.constants, in: module) {
-                let resolver = Resolver(
-                    scope: Scope(bindings: known),
-                    selectors: selectors,
-                    words: words,
-                    types: types
-                )
-
                 // A constant's dots are judged before it settles, the way a
                 // body's are: the settled neighbours' types are the
                 // environment, so an absent field or a needless `?.` refuses
@@ -1267,7 +1289,17 @@ public struct Linker: Sendable {
                 try checked(calls, in: frame)
 
                 do {
-                    known[name] = try resolver.resolve(judged)
+                    known[name] = try folded(
+                        judged,
+                        reading: known,
+                        origin: origin,
+                        label: name,
+                        at: .constant(name, in: .of(module)),
+                        lowering: &lowering,
+                        in: types
+                    )
+                } catch let refused as LinkError {
+                    throw refused
                 } catch {
                     throw LinkError("\(error)", at: .constant(name, in: .of(module)))
                 }
@@ -1286,8 +1318,7 @@ public struct Linker: Sendable {
     private func variables(
         of modules: [Module],
         beside constants: [Int: [String: Value]],
-        reaching selectors: [String: Procedure],
-        words: [String: Procedure],
+        lowering: inout Lowering,
         in types: TypeTable,
         with frame: TypeFrame
     ) throws -> [Int: [String: Value]] {
@@ -1298,13 +1329,6 @@ public struct Linker: Sendable {
             var started: [String: Value] = [:]
 
             for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
-                let resolver = Resolver(
-                    scope: Scope(bindings: known),
-                    selectors: selectors,
-                    words: words,
-                    types: types
-                )
-
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: .variable(name, in: .of(module)),
@@ -1316,7 +1340,17 @@ public struct Linker: Sendable {
                 try checked(calls, in: frame)
 
                 do {
-                    started[name] = try resolver.resolve(judged)
+                    started[name] = try folded(
+                        judged,
+                        reading: known,
+                        origin: origin,
+                        label: name,
+                        at: .variable(name, in: .of(module)),
+                        lowering: &lowering,
+                        in: types
+                    )
+                } catch let refused as LinkError {
+                    throw refused
                 } catch {
                     throw LinkError("\(error)", at: .variable(name, in: .of(module)))
                 }

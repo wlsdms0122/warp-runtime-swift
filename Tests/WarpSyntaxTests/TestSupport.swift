@@ -35,11 +35,7 @@ struct FailEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation) async throws -> Value {
-        guard
-            case .bool(true) = try invocation.resolver.resolve(
-                invocation.arguments["recoverable"] ?? .literal(.bool(false))
-            )
-        else {
+        guard invocation["recoverable"] == .bool(true) else {
             throw TestFatalError()
         }
 
@@ -219,23 +215,6 @@ func run(
 
 // Every procedure a list of modules declares, as two tables for two questions:
 // what a selector names, and what a path segment reaches.
-extension [Module] {
-    // Every declaration by its spelling, the way a selector names it.
-    var procedures: [String: Procedure] {
-        reduce(into: [:]) { table, module in
-            table.merge(module.procedures) { _, new in new }
-        }
-    }
-
-    // Every declaration by its last segment, the way a path segment names it.
-    var words: [String: Procedure] {
-        reduce(into: [:]) { table, module in
-            for (name, procedure) in module.procedures {
-                table[String(name.split(separator: ".").last ?? Substring(name))] = procedure
-            }
-        }
-    }
-}
 
 // MARK: - Conditions
 
@@ -279,4 +258,36 @@ private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> War
             selector: selector
         )
     )
+}
+
+extension Closure {
+    // A closure a caller assembles in Swift: no body a document spelled, no
+    // captures, claiming nothing.
+    static func assembled() -> Closure {
+        Closure(
+            linked: Linked(
+                label: "assembled",
+                origin: 0,
+                signature: Signature(),
+                purity: .unstated,
+                isolation: .unstated,
+                implementation: .body(
+                    Body(instructions: [], result: nil),
+                    Layout(size: 0, parameters: [], variables: [], names: [])
+                )
+            ),
+            captured: []
+        )
+    }
+}
+
+extension Folding {
+    // A condition read here, as the bool it answers.
+    func evaluate(_ condition: Warp.Expression) throws -> Bool {
+        guard case let .bool(answer) = try read(condition) else {
+            throw ReadingError("a condition must answer bool")
+        }
+
+        return answer
+    }
 }

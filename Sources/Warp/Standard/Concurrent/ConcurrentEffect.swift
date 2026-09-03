@@ -169,7 +169,7 @@ public struct ConcurrentEffect: Effect {
             throw ExecutionError("\(name) walks an array, and was sent \(material.type)")
         }
 
-        let handed = try invocation.resolve("by")
+        let handed = invocation["by"]
 
         guard case let .procedure(by) = handed else {
             // Unset and set-to-something-else are different mistakes, and the
@@ -192,11 +192,7 @@ public struct ConcurrentEffect: Effect {
     }
 
     private func material(of invocation: Invocation) throws -> Value {
-        guard let receiver = invocation.receiver else {
-            return try invocation.resolve(receiving)
-        }
-
-        return try invocation.resolver.resolve(receiver)
+        invocation.receiver ?? invocation[receiving]
     }
 
     private func closure(_ value: Value, called label: String) throws -> Closure {

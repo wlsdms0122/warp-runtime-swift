@@ -269,7 +269,7 @@ struct ClosureTests {
     func proceduresHaveNoEquality() {
         // Given — there is no honest answer, so the language does not offer one
         let sut = Value.procedure(
-            Closure(procedure: Procedure(body: []), captured: Scope())
+            Closure.assembled()
         )
 
         // Then

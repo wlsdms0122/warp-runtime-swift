@@ -42,11 +42,7 @@ struct FailEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation) async throws -> Value {
-        guard
-            case .bool(true) = try invocation.resolver.resolve(
-                invocation.arguments["recoverable"] ?? .literal(.bool(false))
-            )
-        else {
+        guard invocation["recoverable"] == .bool(true) else {
             throw TestFatalError()
         }
 
@@ -198,25 +194,6 @@ struct ShoutEffect: Effect {
 
 // Every procedure a list of modules declares, as two tables for two questions:
 // what a selector names, and what a path segment reaches.
-extension [Module] {
-    // Every declaration by its spelling, the way a selector names it.
-    var procedures: [String: Procedure] {
-        reduce(into: [:]) { table, module in
-            for (name, procedure) in module.procedures {
-                table[name] = procedure
-            }
-        }
-    }
-
-    // Every declaration by its last segment, the way a path segment names it.
-    var words: [String: Procedure] {
-        reduce(into: [:]) { table, module in
-            for (name, procedure) in module.procedures {
-                table[name.split(separator: ".").last.map(String.init) ?? name] = procedure
-            }
-        }
-    }
-}
 
 // MARK: - Conditions
 
@@ -283,4 +260,39 @@ func spelling(_ value: Warp.Expression) -> Warp.Expression {
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
     .dispatch(Dispatch(receiver: message, selector: "std.control.abort"))
+}
+
+extension Closure {
+    // A closure a caller assembles in Swift: no body a document spelled, no
+    // captures, claiming nothing. What a slot that asks nothing takes.
+    static func assembled(answering result: Value? = nil) -> Closure {
+        Closure(
+            linked: Linked(
+                label: "assembled",
+                origin: 0,
+                signature: Signature(),
+                purity: .unstated,
+                isolation: .unstated,
+                implementation: .body(
+                    Body(instructions: [], result: result.map(Code.literal)),
+                    Layout(size: 0, parameters: [], variables: [], names: [])
+                )
+            ),
+            captured: []
+        )
+    }
+}
+
+extension Folding {
+    // The walk's answer as the tests ask it: what a path holds, or why the
+    // reading went wrong.
+    func lookup(_ path: [PathSegment]) -> Lookup {
+        do {
+            return .found(try read(path, at: .given("test")))
+        } catch let unfit as ReferenceUnfit {
+            return .unfit(reason: unfit.reason)
+        } catch {
+            return .unfit(reason: "\(error)")
+        }
+    }
 }

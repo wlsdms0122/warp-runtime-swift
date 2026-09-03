@@ -12,7 +12,7 @@ import Foundation
 // condition that declines is an expression answering null, and the statement
 // that bound it completed like any other.
 public protocol ExecutionObserver: Sendable {
-    func statementStarted(at trace: Trace, expression: Expression) async
+    func statementStarted(at trace: Trace) async
     func statementCompleted(at trace: Trace, result: Value) async
     func statementFailed(at trace: Trace, error: any Error) async
 
@@ -23,7 +23,7 @@ public protocol ExecutionObserver: Sendable {
 }
 
 public extension ExecutionObserver {
-    func statementStarted(at trace: Trace, expression: Expression) async {
+    func statementStarted(at trace: Trace) async {
     }
 
     func statementCompleted(at trace: Trace, result: Value) async {

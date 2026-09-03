@@ -1379,9 +1379,11 @@ struct InferenceTests {
         let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
-        let read = image.entry.block?.body.first { statement in statement.name == "read" }
-
-        guard case let .cast(_, type, _)? = read?.expression else {
+        guard
+            case let .body(body, _) = image.entry.implementation,
+            let read = body.instructions.first(where: { instruction in instruction.label == "read" }),
+            case let .cast(_, type, _) = read.code
+        else {
             Issue.record("the cast did not survive the link")
 
             return

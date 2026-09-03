@@ -98,13 +98,13 @@ struct ReceiverTests {
         let image = try linker.link([written] + Module.standard, entry: entryName)
 
         // Then — one table, and what separates them is only how each is written
-        let shout = try #require(image.words["shout"])
-        let count = try #require(image.words["count"])
+        let shout = try #require(image["shout"])
+        let count = try #require(image["std.collection.count"])
 
         #expect(shout.signature.receiver == "of")
         #expect(count.signature.receiver == "of")
-        #expect(shout.block != nil)
-        #expect(count.block == nil)
+        #expect(shout.isWritten)
+        #expect(!count.isWritten)
     }
 
     @Test("a call sends its receiver even where the parameter is required")
@@ -175,10 +175,10 @@ struct ReceiverTests {
 
         // Then — `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
-        #expect(image.pure.contains("clean"))
-        #expect(!image.pure.contains("dirty"))
-        #expect(!image.pure.contains("entry"))
-        #expect(image.pure.contains("std.collection.count"))
+        #expect(image["clean"]?.purity == .pure)
+        #expect(image["dirty"]?.purity != .pure)
+        #expect(image["entry"]?.purity != .pure)
+        #expect(image["std.collection.count"]?.purity == .pure)
     }
 
     @Test("a body that sends a word is still something a path may reach")
@@ -212,8 +212,8 @@ struct ReceiverTests {
         let image = try linker.link([sut] + Module.standard, entry: entryName)
 
         // Then
-        #expect(image.pure.contains("label"))
-        #expect(image.words["label"] != nil)
+        #expect(image["label"]?.purity == .pure)
+        #expect(image["label"]?.signature.isDerivable(in: image.types) == true)
     }
 
     @Test("a procedure someone wrote is reachable from a path")
@@ -306,8 +306,8 @@ struct ReceiverTests {
         let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
 
         // Then
-        #expect(!image.pure.contains("summarize"))
-        #expect(image.words["summarize"] == nil)
+        #expect(image["summarize"]?.purity != .pure)
+        #expect(image["summarize"]?.purity != .pure)
     }
 
     @Test("a path to a body that reaches an effect is refused before any run")

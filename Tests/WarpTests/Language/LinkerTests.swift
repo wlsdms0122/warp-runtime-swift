@@ -546,7 +546,7 @@ struct LinkerTests {
         let image = try linker.link([caller, middle, leaf], entry: "caller")
 
         // Then
-        #expect(Set(image.procedures.keys) == ["caller", "middle", "leaf"])
+        #expect(image.reached == ["caller", "middle", "leaf"])
     }
 
     @Test("a module left out of the link is a module that does not exist")
@@ -687,7 +687,7 @@ struct LinkerTests {
         let image = try linker.link([sut], entry: "loopy")
 
         // Then
-        #expect(Set(image.procedures.keys) == ["loopy"])
+        #expect(image.reached == ["loopy"])
     }
 
     @Test("an argument the callee never declared is refused")
@@ -889,7 +889,7 @@ struct LinkerTests {
         let image = try linker.link([sut], entry: "alone")
 
         // Then
-        #expect(Set(image.procedures.keys) == ["alone"])
+        #expect(image.reached == ["alone"])
     }
 
     @Test("an undeclared selector is refused before what it answers is read")

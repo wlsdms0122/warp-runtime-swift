@@ -16,16 +16,11 @@ struct AppendingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation) async throws -> Value {
-        let value = try invocation.resolve("value")
-
-        guard
-            let handed = invocation.handed("to"),
-            case let .array(elements) = try invocation.resolver.resolve(handed)
-        else {
+        guard case let .array(elements) = try invocation.held("to") else {
             throw ExecutionError("append writes onto an array, and 'to' holds something else")
         }
 
-        try invocation.write("to", .array(elements + [value]))
+        try invocation.write("to", .array(elements + [invocation["value"]]))
 
         return .null
     }

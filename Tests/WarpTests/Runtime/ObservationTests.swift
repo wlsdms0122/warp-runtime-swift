@@ -341,7 +341,7 @@ private actor RecordingObserver: ExecutionObserver {
 
     // MARK: - Initializer
     // MARK: - Public
-    func statementStarted(at trace: Trace, expression: Warp.Expression) async {
+    func statementStarted(at trace: Trace) async {
         events.append(.started(trace.rendered))
     }
 

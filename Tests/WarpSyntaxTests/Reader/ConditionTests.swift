@@ -13,14 +13,14 @@ import Testing
 @Suite
 struct ConditionTests {
     // MARK: - Property
-    private let scope = Scope(bindings: ["kind": .string("a"), "n": .int(3), "none": .null])
+    private let scope: [String: Value] = ["kind": .string("a"), "n": .int(3), "none": .null, "gone": .null]
 
     // MARK: - Initializer
     // MARK: - Test
     @Test("predicates evaluate against scope values")
     func predicatesEvaluateAgainstScope() throws {
         // Given
-        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
+        let sut = Folding(bindings: scope, natives: Module.standard)
 
         // Then
         #expect(try sut.evaluate(
@@ -46,14 +46,11 @@ struct ConditionTests {
     @Test("both sides of a predicate are expressions")
     func bothSidesAreExpressions() throws {
         // Given
-        let sut = Resolver(
-            scope: Scope(bindings: [
+        let sut = Folding(bindings: [
             "left": .string("same"),
             "right": .string("same"),
             "candidates": .array([.string("same"), .string("other")])
-        ]),
-            selectors: Module.standard.procedures, words: Module.standard.words
-        )
+        ], natives: Module.standard)
 
         // Then — a reference compares against another reference
         #expect(try sut.evaluate(
@@ -69,7 +66,7 @@ struct ConditionTests {
     @Test("numeric equality crosses int and double")
     func numericEqualityCrossesIntAndDouble() throws {
         // Given
-        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
+        let sut = Folding(bindings: scope, natives: Module.standard)
 
         // Then
         #expect(try sut.evaluate(
@@ -80,7 +77,7 @@ struct ConditionTests {
     @Test("combinators compose nested conditions")
     func combinatorsCompose() throws {
         // Given
-        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
+        let sut = Folding(bindings: scope, natives: Module.standard)
         let condition = every(
             equals(.reference(path("kind")), .literal(.string("a"))),
             negating(equals(.reference(path("n")), .literal(.int(4))))
@@ -93,14 +90,12 @@ struct ConditionTests {
     @Test("text atoms evaluate on strings; asking a number is unfit")
     func textAtomsEvaluateOnStrings() throws {
         // Given
-        let sut = Resolver(
-            scope: Scope(bindings: [
+        let sut = Folding(bindings: [
             "title": .string("hello, spec"),
             "tags": .array([.string("a"), .string("b")]),
-            "n": .int(3)
-        ]),
-            selectors: Module.standard.procedures, words: Module.standard.words
-        )
+            "n": .int(3),
+            "gone": .null
+        ], natives: Module.standard)
 
         // Then
         #expect(try sut.evaluate(
@@ -156,7 +151,7 @@ struct ConditionTests {
     @Test("shape misuse in a condition is unfit, not false")
     func conditionShapeMisuseThrowsUnfit() {
         // Given
-        let sut = Resolver(scope: scope, selectors: Module.standard.procedures, words: Module.standard.words)
+        let sut = Folding(bindings: scope, natives: Module.standard)
 
         // When / Then — a typo'd drill must not silently read as false
         #expect(throws: ReferenceUnfit.self) {

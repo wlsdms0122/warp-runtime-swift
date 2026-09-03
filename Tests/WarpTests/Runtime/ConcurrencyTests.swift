@@ -361,7 +361,8 @@ struct ConcurrencyTests {
 
     @Test("map refuses material that is not a collection")
     func mapRefusesUnfitMaterial() async throws {
-        // Given — the material arrives as `any`, so only the run can judge it
+        // Given — the material arrives as `any`, so only the run can judge
+        // it, and the boundary every word shares is what judges it
         let sut = Statement(binding: .constant("walked"), expression: .dispatch(
                 Dispatch(
                     receiver: reference("subject"),
@@ -390,7 +391,7 @@ struct ConcurrencyTests {
                 signature: Signature(parameters: ["subject": Parameter(type: .any)])
             )
         } throws: { error in
-            "\(error)".contains("walks an array")
+            "\(error)".contains("expected array") && "\(error)".contains("got string")
         }
     }
 

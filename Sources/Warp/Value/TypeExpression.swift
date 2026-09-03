@@ -280,7 +280,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
             guard let admitted = types.admits(
                 constraint: constraint,
                 value: value,
-                assuming: assuming.union([constraint])
+                assuming: assuming
             ) else {
                 throw UndeclaredTypeError(
                     "\(path()): declares constraint '\(constraint)', which nothing declares"
@@ -380,10 +380,10 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
             guard let required else { return value }
 
-            guard required.accepts(closure.procedure.signature, in: types) else {
+            guard required.accepts(closure.signature, in: types) else {
                 throw ArgumentError(
                     "\(path()): expected \(rendered), got"
-                        + " \(TypeExpression.procedure(closure.procedure.signature).rendered)"
+                        + " \(TypeExpression.procedure(closure.signature).rendered)"
                 )
             }
 
@@ -558,6 +558,19 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // the fraction happened to be whole would make the answer to "does this fit"
     // depend on the value rather than the type — `2.0` accepted where `2.5` is
     // refused, by a declaration that names neither.
+    // Whether a scalar member admits a value: by kind, with the one widening,
+    // and without settling. Nil for a member that is not a scalar, which is
+    // judged by settling the value against it.
+    func admitsAsScalar(_ value: Value) -> Bool? {
+        switch self {
+        case .null, .bool, .int, .double, .string:
+            return scalar(value) != nil
+
+        default:
+            return nil
+        }
+    }
+
     private func scalar(_ value: Value) -> Value? {
         switch (self, value) {
         case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double),

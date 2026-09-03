@@ -1,0 +1,82 @@
+warpt 1
+{
+  imports [
+    "std.math.lessThan"
+    "std.logic.equal"
+  ]
+  procedures {
+    entry {
+      body [
+        {
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  let "seen"
+                  value {
+                    ref "round.index"
+                  }
+                }
+                {
+                  value {
+                    branch {
+                      then [
+                        {
+                          value {
+                            continue null
+                          }
+                        }
+                      ]
+                      when {
+                        call {
+                          arguments {
+                            value 1
+                          }
+                          of {
+                            ref "round.index"
+                          }
+                          procedure "std.logic.equal"
+                        }
+                      }
+                    }
+                  }
+                }
+                {
+                  let "kept"
+                  value {
+                    ref "seen"
+                  }
+                }
+              ]
+              result {
+                ref "kept"
+              }
+              while {
+                call {
+                  arguments {
+                    value {
+                      ref "rounds"
+                    }
+                  }
+                  of {
+                    ref "round.index"
+                  }
+                  procedure "std.math.lessThan"
+                }
+              }
+            }
+          }
+        }
+      ]
+      parameters {
+        rounds "int"
+      }
+      result {
+        ref "round"
+      }
+      returns "int"
+    }
+  }
+  warp 1
+}

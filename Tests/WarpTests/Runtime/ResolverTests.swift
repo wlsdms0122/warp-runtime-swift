@@ -12,16 +12,11 @@ import Testing
 @Suite
 struct ResolverTests {
     // MARK: - Property
-    private let sut = Resolver(
-        scope: Scope(
-            bindings: [
+    private let sut = Folding(bindings: [
                 "count": .int(3),
                 "maybe": .null,
                 "record": .object(["a": .int(1)])
-            ]
-        ),
-        selectors: Module.standard.procedures, words: Module.standard.words
-    )
+            ], natives: Module.standard)
 
     // MARK: - Initializer
     // MARK: - Test
@@ -31,7 +26,7 @@ struct ResolverTests {
         let reference = Expression.reference([.key("count")])
 
         // When
-        let value = try sut.resolve(reference)
+        let value = try sut.read(reference)
 
         // Then
         #expect(value == .int(3))
@@ -43,7 +38,7 @@ struct ResolverTests {
         let reference = Expression.reference([.key("maybe")])
 
         // When
-        let value = try sut.resolve(reference)
+        let value = try sut.read(reference)
 
         // Then
         #expect(value == .null)
@@ -56,18 +51,18 @@ struct ResolverTests {
 
         // When / Then
         #expect(throws: ReferenceUnfit.self) {
-            try sut.resolve(reference)
+            try sut.read(reference)
         }
     }
 
-    @Test("a name the scope does not hold reads as null")
+    @Test("a field nobody set reads as null where the author marked it")
     func absentPathReadsAsNull() throws {
         // Given — the head of every reference is checked at load, so what is
         // left to be absent at run time is a field nobody set
-        let reference = Expression.reference([.key("gone")])
+        let reference = Expression.reference([.key("record"), .key("gone", optional: true)])
 
         // When / Then
-        #expect(try sut.resolve(reference) == .null)
+        #expect(try sut.read(reference) == .null)
     }
 
     @Test("a shape-misusing path throws ReferenceUnfit")
@@ -77,7 +72,7 @@ struct ResolverTests {
 
         // When / Then
         #expect(throws: ReferenceUnfit.self) {
-            try sut.resolve(reference)
+            try sut.read(reference)
         }
     }
 
@@ -90,7 +85,7 @@ struct ResolverTests {
         ])
 
         // When
-        let value = try sut.resolve(reference)
+        let value = try sut.read(reference)
 
         // Then
         #expect(value == .object(["n": .int(3), "list": .array([.string("x")])]))
@@ -102,7 +97,7 @@ struct ResolverTests {
         let reference = interpolated(literal("n="), spelling(reference("count")))
 
         // When
-        let value = try sut.resolve(reference)
+        let value = try sut.read(reference)
 
         // Then
         #expect(value == .string("n=3"))
@@ -115,7 +110,7 @@ struct ResolverTests {
         let reference = interpolated(literal("who="), spelling(reference("count")))
 
         // When
-        let value = try sut.resolve(reference)
+        let value = try sut.read(reference)
 
         // Then
         #expect(value == .string("who=3"))
@@ -130,7 +125,7 @@ struct ResolverTests {
         ]))
 
         // When
-        let value = try sut.resolve(reference)
+        let value = try sut.read(reference)
 
         // Then — nothing evaluated, nothing rendered
         #expect(value == .object([

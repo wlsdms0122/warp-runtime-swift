@@ -71,11 +71,15 @@ public struct TypeTable: Sendable {
         admits(constraint: name, value: value, assuming: [])
     }
 
+    // `assuming` is what the caller was already asking; this constraint joins
+    // it only where a member has to be settled to answer, since a scalar
+    // member answers by kind.
     func admits(constraint name: String, value: Value, assuming: Set<String>) -> Bool? {
         guard let members = constraints[name] else { return nil }
 
         return members.contains { member in
-            (try? member.settling(value, at: "member", in: self, assuming: assuming)) != nil
+            member.admitsAsScalar(value)
+                ?? ((try? member.settling(value, at: "member", in: self, assuming: assuming.union([name]))) != nil)
         }
     }
 
