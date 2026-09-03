@@ -1,5 +1,5 @@
 //
-//  ResolverTests.swift
+//  FoldingTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/9/26.
@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 @Suite
-struct ResolverTests {
+struct FoldingTests {
     // MARK: - Property
     private let sut = Folding(bindings: [
                 "count": .int(3),
