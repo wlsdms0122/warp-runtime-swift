@@ -51,7 +51,7 @@ struct Lowering {
         var scope = Scope()
 
         for (name, _) in declared.parameters {
-            scope.slots[name] = frame.allocate(name)
+            scope.slots[name] = frame.allocateParameter(name)
         }
 
         let body = try lower(block, in: scope, on: frame, label: declared.label, at: place)
@@ -62,7 +62,7 @@ struct Lowering {
             signature: declared.signature,
             purity: declared.purity,
             isolation: declared.isolation,
-            implementation: .body(body, frame.layout(parameters: declared.parameters.map(\.name)))
+            implementation: .body(body, frame.layout)
         )
     }
 
@@ -102,6 +102,7 @@ struct Lowering {
         let outer: (frame: Frame, scope: Scope)?
 
         private(set) var names: [String] = []
+        private(set) var parameters: [Int] = []
         private(set) var reads: [(variable: Int, slot: Int)] = []
         private(set) var captures: [(Int, Int)] = []
 
@@ -122,39 +123,44 @@ struct Lowering {
             return names.count - 1
         }
 
-        // The slot a name reads from here: declared in this body, a module
-        // variable, or a name the body it was written in holds.
-        func slot(of name: String, in scope: Scope) -> Int? {
-            if let slot = scope.slots[name] { return slot }
-
-            if let slot = variableSlots[name] { return slot }
-
-            if let variable = variables[name] {
-                let slot = allocate(name)
-                variableSlots[name] = slot
-                reads.append((variable: variable, slot: slot))
-
-                return slot
-            }
-
-            if let slot = capturedSlots[name] { return slot }
-
-            guard let outer, let taken = outer.frame.slot(of: name, in: outer.scope) else { return nil }
-
+        func allocateParameter(_ name: String) -> Int {
             let slot = allocate(name)
-            capturedSlots[name] = slot
-            captures.append((taken, slot))
+            parameters.append(slot)
 
             return slot
         }
 
-        func layout(parameters: [String]) -> Layout {
-            Layout(
-                size: size,
-                parameters: parameters.map { name in names.firstIndex(of: name) ?? 0 },
-                variables: reads,
-                names: names
-            )
+        // The slot a name reads from here, the way scope reads a name: what
+        // this body declared, then what the body it was written in holds,
+        // then the module's variables. A closure reaches a module variable
+        // through the body it was written in, so the hold it takes is that
+        // body's.
+        func slot(of name: String, in scope: Scope) -> Int? {
+            if let slot = scope.slots[name] { return slot }
+
+            if let slot = capturedSlots[name] { return slot }
+
+            if let outer, let taken = outer.frame.slot(of: name, in: outer.scope) {
+                let slot = allocate(name)
+                capturedSlots[name] = slot
+                captures.append((taken, slot))
+
+                return slot
+            }
+
+            if let slot = variableSlots[name] { return slot }
+
+            guard let variable = variables[name] else { return nil }
+
+            let slot = allocate(name)
+            variableSlots[name] = slot
+            reads.append((variable: variable, slot: slot))
+
+            return slot
+        }
+
+        var layout: Layout {
+            Layout(size: size, parameters: parameters, variables: reads, names: names)
         }
     }
 
@@ -249,15 +255,14 @@ struct Lowering {
 
         case let .closure(procedure):
             guard let block = procedure.block else {
-                throw LinkError("a closure is a body, and this one is native", at: place)
+                throw unjudged("a closure with no body", at: place)
             }
 
             let inner = Frame(origin: frame.origin, variables: frame.variables, outer: (frame, scope))
             var innerScope = Scope()
-            let parameters = procedure.signature.parameters.keys.sorted()
 
-            for name in parameters {
-                innerScope.slots[name] = inner.allocate(name)
+            for name in procedure.signature.parameters.keys.sorted() {
+                innerScope.slots[name] = inner.allocateParameter(name)
             }
 
             let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
@@ -267,7 +272,7 @@ struct Lowering {
                 signature: procedure.signature,
                 purity: procedure.purity,
                 isolation: procedure.isolation,
-                implementation: .body(body, inner.layout(parameters: parameters))
+                implementation: .body(body, inner.layout)
             )
 
             table.append(row)
@@ -321,7 +326,7 @@ struct Lowering {
             // binds. The result reads the last finished round, so the range
             // it reads is put back where a round can end early.
             let keeps = result.map { result in
-                result.reads(bound) && body.body.leavesARound ? bound : nil
+                result.reads(bound) && body.body.leavesARound(round) ? bound : nil
             } ?? nil
 
             return .loop(
@@ -377,13 +382,13 @@ struct Lowering {
         at place: Place
     ) throws -> Send {
         guard let row = rows[dispatch.selector] else {
-            throw LinkError("'\(dispatch.selector)' names no declaration the link knows", at: place)
+            throw unjudged("a send to '\(dispatch.selector)', which has no row", at: place)
         }
 
         let callee = table[row]
 
         if let stray = dispatch.arguments.keys.first(where: { name in callee.signature.parameters[name] == nil }) {
-            throw LinkError("'\(dispatch.selector)' declares no parameter '\(stray)'", at: place)
+            throw unjudged("an argument '\(stray)' that '\(dispatch.selector)' does not declare", at: place)
         }
 
         var receiver: Code?
@@ -395,10 +400,7 @@ struct Lowering {
 
             if parameter.declared.isInout {
                 guard case let .reference(path)? = written else {
-                    throw LinkError(
-                        "'\(dispatch.selector)' takes '\(name)' in place, and was not handed a variable",
-                        at: place
-                    )
+                    throw unjudged("'\(name)' handed to '\(dispatch.selector)' in place without a variable", at: place)
                 }
 
                 let (slot, steps) = try lower(path, in: scope, on: frame, at: place)
@@ -436,11 +438,11 @@ struct Lowering {
         }
 
         guard case let .key(head, _)? = path.first else {
-            throw LinkError("'\(path.rendered)' starts with no name", at: place)
+            throw unjudged("a path '\(path.rendered)' with no name at its head", at: place)
         }
 
         guard let slot = frame.slot(of: head, in: scope) else {
-            throw LinkError("'\(path.rendered)' reads '\(head)', which nothing here declares", at: place)
+            throw unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
         }
 
         let steps = try path.dropFirst().map { segment -> Step in
@@ -458,7 +460,7 @@ struct Lowering {
 
             case let .word(name, optional):
                 guard let row = words[name] else {
-                    throw LinkError("'\(path.rendered)' sends '\(name)', which no path may reach", at: place)
+                    throw unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
                 }
 
                 return .word(row, name, optional: optional)
@@ -466,6 +468,13 @@ struct Lowering {
         }
 
         return (slot, steps)
+    }
+
+    // What the link should have refused before lowering and did not. Not a
+    // sentence for an author to act on: it names the judgment that was
+    // skipped, for whoever reads the link.
+    private func unjudged(_ what: String, at place: Place) -> LinkError {
+        LinkError("the link lowered \(what) without judging it", at: place)
     }
 }
 
@@ -552,34 +561,41 @@ extension Instruction {
 }
 
 extension [Statement] {
-    // Whether a round of this body can end before its last statement: a
-    // `break` or `continue` anywhere in it, outside any closure, since a
-    // closure's leaving is refused at the link.
-    var leavesARound: Bool {
-        contains { statement in statement.expression.leavesARound }
+    // Whether a round of the loop named `round` can end before this body's
+    // last statement: a `break` or `continue` aimed at it. One inside a
+    // nested loop aims at that loop unless it names this one; one inside a
+    // closure is refused at the link.
+    func leavesARound(_ round: String) -> Bool {
+        contains { statement in statement.expression.leavesARound(round, nested: false) }
+    }
+
+    fileprivate func leavesARound(_ round: String, nested: Bool) -> Bool {
+        contains { statement in statement.expression.leavesARound(round, nested: nested) }
     }
 }
 
 extension Expression {
-    var leavesARound: Bool {
+    fileprivate func leavesARound(_ round: String, nested: Bool) -> Bool {
         switch self {
         case let .leave(leave):
-            return leave.reach != .procedure
+            return leave.reach != .procedure && (leave.target == round || (!nested && leave.target == nil))
 
         case let .block(block):
-            return block.body.leavesARound
+            return block.body.leavesARound(round, nested: nested)
 
         case let .conditional(_, then, otherwise):
-            return then.leavesARound || otherwise?.leavesARound == true
+            return then.leavesARound(round, nested: nested)
+                || otherwise?.leavesARound(round, nested: nested) == true
 
         case let .loop(_, body, _):
-            return body.body.leavesARound
+            return body.body.leavesARound(round, nested: true)
 
         case let .iteration(_, body, _):
-            return body.leavesARound
+            return body.leavesARound(round, nested: true)
 
         case let .attempt(block, rescue, _):
-            return block.body.leavesARound || rescue.body.leavesARound
+            return block.body.leavesARound(round, nested: nested)
+                || rescue.body.leavesARound(round, nested: nested)
 
         case .literal, .reference, .array, .record, .closure, .invoke, .cast, .dispatch:
             return false

@@ -432,7 +432,13 @@ public struct Linker: Sendable {
         let code = try lowering.lower(expression, reading: names, origin: origin, label: label, at: place)
 
         return try Executor(observer: nil, environment: nil, linked: lowering.table, types: types)
-            .read(code, in: Activation(cells: names.map { name in .value(known[name] ?? .null) }, names: names))
+            .read(
+                code,
+                in: Activation(
+                    cells: names.map { name in .value(known[name] ?? .null) },
+                    layout: Layout(size: names.count, parameters: [], variables: [], names: names)
+                )
+            )
     }
 
     // The one gate every gathered send passes, wherever its body sits — a

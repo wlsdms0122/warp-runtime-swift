@@ -99,7 +99,7 @@ struct Folding {
         let code = try lowering.lower(expression, reading: names, origin: origin, label: "", at: place)
 
         return try Executor(observer: nil, environment: nil, linked: lowering.table, types: types)
-            .read(code, in: Activation(cells: cells, names: names))
+            .read(code, in: Activation(cells: cells, layout: Layout(size: names.count, parameters: [], variables: [], names: names)))
     }
 
     // MARK: - Private

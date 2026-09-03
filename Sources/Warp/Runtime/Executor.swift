@@ -213,7 +213,7 @@ public struct Executor: Sendable {
             // A new box, so a variable declared inside a block shadows rather
             // than writes an outer one of the same name.
             case let .declare(slot)?:
-                activation.cells[slot] = .hold(Handle(activation.names[slot], result))
+                activation.cells[slot] = .hold(Handle(activation.layout.names[slot], result))
 
             // A write lands in a box the enclosing bodies also hold.
             case let .assign(slot, steps)?:
@@ -490,7 +490,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let name = activation.names[round]
+        let name = activation.layout.names[round]
         var index = 0
 
         while true {
@@ -534,7 +534,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let name = activation.names[element]
+        let name = activation.layout.names[element]
         let elements = try await array(of: material, naming: name, in: &activation, at: trace)
 
         for (index, item) in elements.enumerated() {
@@ -601,7 +601,7 @@ public struct Executor: Sendable {
             // did, not for what the procedure says.
             guard let recoverable = error as? any RecoverableFailure else { throw error }
 
-            await observer?.failureRescued(name: activation.names[failure], error: error)
+            await observer?.failureRescued(name: activation.layout.names[failure], error: error)
 
             // While the rescue runs, the failure is a value under the declared
             // name. Its shape needs no check here: `RecoverableFailure`
@@ -639,7 +639,7 @@ public struct Executor: Sendable {
             guard case let .hold(handle) = activation.cells[handed.slot] else {
                 throw ExecutionError(
                     "'\(callee.label)' takes '\(callee.parameters[handed.position].name)' in place,"
-                        + " and '\(activation.names[handed.slot])' is not a variable here"
+                        + " and '\(activation.layout.names[handed.slot])' is not a variable here"
                 )
             }
 
@@ -888,7 +888,7 @@ public struct Executor: Sendable {
             return .unfit(reason: "\(error)")
         }
 
-        var walked: [PathSegment] = [.key(activation.names[slot])]
+        var walked: [PathSegment] = [.key(activation.layout.names[slot])]
 
         for step in steps {
             let segment = spelled(step, in: activation)
@@ -1062,7 +1062,7 @@ public struct Executor: Sendable {
 
     // The path as the author wrote it, for a sentence that reads it back.
     private func spelled(_ slot: Int, _ steps: [Step], in activation: Activation) -> [PathSegment] {
-        [.key(activation.names[slot])] + spelled(steps, in: activation)
+        [.key(activation.layout.names[slot])] + spelled(steps, in: activation)
     }
 
     private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {
