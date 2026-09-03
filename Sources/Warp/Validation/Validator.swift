@@ -163,9 +163,13 @@ public struct Validator: Sendable {
         // A default is a value a document writes, so it is held to what a
         // document can hold. It reaches the wire without ever passing through
         // a body, so a body's rules never see it.
-        guard signature.parameters[parameter]?.default?.holdsProcedure == true else { return }
+        guard let fallback = signature.parameters[parameter]?.default else { return }
 
-        throw ValidationError(Value.procedureIsNotData, at: here)
+        guard !fallback.holdsProcedure else {
+            throw ValidationError(Value.procedureIsNotData, at: here)
+        }
+
+        try normal(fallback, at: here)
     }
 
     private func validate(
@@ -791,6 +795,10 @@ public struct Validator: Sendable {
             }
 
         case let .record(record):
+            if let name = record.name {
+                try normal(name, at: place)
+            }
+
             for (name, field) in record.entries {
                 try normal(name, at: place)
                 try normal(field, at: place)

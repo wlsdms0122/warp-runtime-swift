@@ -154,6 +154,44 @@ struct RecordTests {
         }
     }
 
+    @Test("a default a caller assembled is held to normal form C at the module")
+    func aDefaultIsHeldToNormalForm() {
+        // Given
+        let record = Record(name: "app.Cafe\u{301}", ["a": .int(1)])
+
+        // When / Then
+        #expect {
+            try Module(
+                imports: [],
+                procedures: [
+                    "entry": Procedure(
+                        signature: Signature(parameters: ["x": Parameter(type: .any, default: .record(record))]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            "\(error)".contains("not in normal form C")
+        }
+    }
+
+    @Test("setting refuses a key that is not one byte spelling")
+    func settingRefusesAKeyOutsideNormalForm() {
+        // Given
+        let question = Question(
+            receiver: .object(["a": .int(1)]),
+            arguments: ["key": .string("cafe\u{301}"), "value": .int(2)]
+        )
+
+        // When / Then
+        #expect {
+            try MappingQuery(.setting).evaluate(question)
+        } throws: { error in
+            "\(error)".contains("normal form C")
+        }
+    }
+
     @Test("a record equals another by name and by every entry, and matches across numeric width")
     func equalityAndMatching() {
         // Given

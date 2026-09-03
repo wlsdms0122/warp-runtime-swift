@@ -48,6 +48,12 @@ public struct MappingQuery: Query {
                 throw ExecutionError("setting asks a string key")
             }
 
+            // The key becomes a field's name, and a name is one byte
+            // spelling: the rule every name a program writes is held to.
+            guard Name.isNormal(key) else {
+                throw ExecutionError("setting asks a key in normal form C, and '\(key)' is not")
+            }
+
             // A new object: the value written was held to no declaration, so
             // whatever name the receiver settled to would say what nothing
             // checked.
