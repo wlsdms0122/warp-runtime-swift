@@ -77,7 +77,7 @@ public struct Executor: Sendable {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
-        let settled = try entry.signature.settle(arguments, over: entry.slots, offered: false, in: image.shapes)
+        let settled = try entry.settle(arguments.map { name, value in (name: name, value: value) }, offered: false)
         var activation = try executor.frame(of: entry, layout)
 
         for (position, value) in settled.enumerated() {
@@ -96,10 +96,7 @@ public struct Executor: Sendable {
         offering arguments: [(name: String, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        var (body, activation) = try enter(
-            closure,
-            settled: try closure.signature.settle(arguments, over: closure.linked.slots, offered: true, in: shapes)
-        )
+        var (body, activation) = try enter(closure, given: arguments, offered: true)
 
         return try await answer(body, of: closure.linked, in: &activation, at: trace)
     }
@@ -178,7 +175,7 @@ public struct Executor: Sendable {
             returned = leaving.value
         }
 
-        return try callee.settling(returned: returned, in: shapes)
+        return try callee.settling(returned: returned)
     }
 
     // A body answers what it says it answers, and a body that says nothing
@@ -453,19 +450,19 @@ public struct Executor: Sendable {
         // find their slots here, along the list.
         let resolved = try arguments.map { name, argument in (name: name, value: try read(argument, in: activation)) }
 
-        var (body, inner) = try enter(
-            closure,
-            settled: try closure.signature.settle(resolved, over: closure.linked.slots, offered: false, in: shapes)
-        )
+        var (body, inner) = try enter(closure, given: resolved, offered: false)
 
         return try await answer(body, of: closure.linked, in: &inner, at: trace)
     }
 
-    // The one way a closure's frame is made, however its arguments were
-    // settled: the captured cells in their slots, the parameters in theirs.
+    // The one way a closure's frame is made: the arguments settled by the
+    // closure's own row, the captured cells in their slots, the parameters
+    // in theirs. The row is asked whether this run may read it before
+    // anything reads its rows.
     private func enter(
         _ closure: Closure,
-        settled: [Value?]
+        given arguments: [(name: String, value: Value)],
+        offered: Bool
     ) throws -> (Body, Activation) {
         guard case let .body(body, layout) = closure.linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
@@ -476,6 +473,7 @@ public struct Executor: Sendable {
             throw ExecutionError("this call names a procedure another link made, which this run cannot read")
         }
 
+        let settled = try closure.linked.settle(arguments, offered: offered)
         var activation = try frame(of: closure.linked, layout)
 
         for (slot, cell) in closure.captured {
@@ -664,7 +662,7 @@ public struct Executor: Sendable {
         guard let receiver = send.receiver else { return nil }
 
         do {
-            return try callee.settling(receiver: try read(receiver, in: activation), in: shapes)
+            return try callee.settling(receiver: try read(receiver, in: activation))
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
@@ -705,16 +703,7 @@ public struct Executor: Sendable {
         given: [Value?],
         skipping: Skipped
     ) throws -> Settled {
-        Settled(
-            by: callee,
-            values: try callee.signature.settle(
-                given,
-                over: callee.slots,
-                offered: false,
-                skipping: skipping.contains,
-                in: shapes
-            )
-        )
+        Settled(by: callee, values: try callee.settle(given, offered: false, skipping: skipping.contains))
     }
 
     // The pure half of a send. An effect or a body that runs answers only by
@@ -788,7 +777,7 @@ public struct Executor: Sendable {
                 activation.cells[layout.parameters[position]] = .value(sent)
             }
 
-            return try callee.settling(returned: try read(body, in: &activation), in: shapes)
+            return try callee.settling(returned: try read(body, in: &activation))
 
         case .effect:
             throw ExecutionError(
@@ -836,12 +825,9 @@ public struct Executor: Sendable {
     // word able to take one. What may be called is what the link proved
     // answers, and a slot declaring `pure procedure` is how a word says so.
     func call(_ closure: Closure, with arguments: [(name: String, value: Value)]) throws -> Value {
-        var (body, activation) = try enter(
-            closure,
-            settled: try closure.signature.settle(arguments, over: closure.linked.slots, offered: true, in: shapes)
-        )
+        var (body, activation) = try enter(closure, given: arguments, offered: true)
 
-        return try closure.settling(returned: try read(body, in: &activation), in: shapes)
+        return try closure.settling(returned: try read(body, in: &activation))
     }
 
     private func bool(_ value: Value) throws -> Bool {
@@ -1017,10 +1003,10 @@ public struct Executor: Sendable {
     // as a field never set. A word that took the shape and then refused did not
     // decline it, so that refusal is answered rather than swallowed.
     private func derive(_ callee: Linked, from value: Value) throws -> Value? {
-        guard callee.isDerivable(in: shapes) else { return nil }
+        guard callee.isDerivable() else { return nil }
 
         guard
-            let receiver = try? callee.settling(receiver: value, in: shapes),
+            let receiver = try? callee.settling(receiver: value),
             let arguments = try? settled(
                 callee,
                 given: Array(repeating: nil, count: callee.slots.count),

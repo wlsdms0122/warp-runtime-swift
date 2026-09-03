@@ -30,8 +30,8 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Public
-    func settling(returned value: Value, in table: ShapeTable) throws -> Value {
-        try linked.settling(returned: value, in: table)
+    func settling(returned value: Value) throws -> Value {
+        try linked.settling(returned: value)
     }
 
     // Whether this may run beside another body: it was derived isolated, or it

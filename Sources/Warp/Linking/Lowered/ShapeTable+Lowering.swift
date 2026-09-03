@@ -1,5 +1,5 @@
 //
-//  TypeTable+Lowering.swift
+//  ShapeTable+Lowering.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -7,13 +7,19 @@
 
 import Foundation
 
-extension TypeTable {
-    // The table as the run reads it. Rows are numbered by the order of the
-    // declared spellings, so what a link concludes does not depend on the
-    // order a caller listed its modules in. A name that names itself
+extension ShapeTable {
+    // The declarations as the run reads them. Rows are numbered by the order
+    // of the declared spellings, so what a link concludes does not depend on
+    // the order a caller listed its modules in. A name that names itself
     // through a chain of names stands for no shape and lowers to the shape
-    // every judgment refuses, so a chain of names is always finite.
-    func lowered() -> ShapeTable {
+    // every judgment refuses, so a chain of names is always finite. A table
+    // declaring nothing is the one bare table, whichever declared nothing.
+    static func lowering(
+        _ types: [String: TypeExpression],
+        constraints: [String: [TypeExpression]]
+    ) -> ShapeTable {
+        guard !types.isEmpty || !constraints.isEmpty else { return .empty }
+
         let labels = types.keys.sorted(by: Name.precedes)
         let constraintLabels = constraints.keys.sorted(by: Name.precedes)
 

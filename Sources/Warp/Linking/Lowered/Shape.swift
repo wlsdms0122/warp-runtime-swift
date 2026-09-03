@@ -35,8 +35,8 @@ indirect enum Shape: Sendable {
     case procedure(
         parameters: [(name: String, shape: Shape)]?,
         returns: Shape?,
-        Purity,
-        Isolation
+        purity: Purity,
+        isolation: Isolation
     )
 
     case variable(Shape)
@@ -149,10 +149,10 @@ extension Shape: Equatable {
             return mine == theirs
 
         case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
-            return myLabel == theirLabel && mine == theirs
+            return Name.same(myLabel, theirLabel) && mine == theirs
 
         case let (.undeclared(mine, _), .undeclared(theirs, _)):
-            return mine == theirs
+            return Name.same(mine, theirs)
 
         default:
             return false

@@ -37,6 +37,11 @@ final class ShapeTable: Sendable {
 
     static let empty = ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
 
+    // Whether this declares nothing, and so has no rows for a number to name.
+    var isBare: Bool {
+        shapes.isEmpty && constraints.isEmpty
+    }
+
     // MARK: - Initializer
     init(shapes: [Shape], constraints: [[Shape]], labels: [String], constraintLabels: [String], recordRows: [Int?]) {
         self.shapes = shapes

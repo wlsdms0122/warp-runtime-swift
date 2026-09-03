@@ -40,15 +40,7 @@ public struct TypeTable: Sendable {
     ) {
         self.types = types
         self.constraints = constraints
-        self.shapes = TypeTable(lowering: types, constraints: constraints).lowered()
-    }
-
-    // The document's two tables alone, for lowering them: the lowering reads
-    // the declarations and nothing else.
-    private init(lowering types: [String: TypeExpression], constraints: [String: [TypeExpression]]) {
-        self.types = types
-        self.constraints = constraints
-        self.shapes = .empty
+        self.shapes = ShapeTable.lowering(types, constraints: constraints)
     }
 
     // MARK: - Public

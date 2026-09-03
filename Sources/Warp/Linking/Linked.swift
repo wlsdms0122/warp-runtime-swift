@@ -111,16 +111,33 @@ public final class Linked: Sendable {
         )
     }
 
+    // The boundary this row keeps, over arguments standing at their slot's
+    // position, read by this row's own table: the slots' rows are numbered by
+    // it and by nothing else. `skipping` names the positions a call fills
+    // another way.
+    func settle(
+        _ given: [Value?],
+        offered: Bool,
+        skipping: (Int) -> Bool = { _ in false }
+    ) throws -> [Value?] {
+        try signature.settle(given, over: slots, offered: offered, skipping: skipping, in: table)
+    }
+
+    // The same, over arguments given by name.
+    func settle(_ given: [(name: String, value: Value)], offered: Bool) throws -> [Value?] {
+        try signature.settle(given, over: slots, offered: offered, in: table)
+    }
+
     // The receiver settled against the slot at this row's receiver
     // position, or as it is where the row takes none.
-    func settling(receiver value: Value, in table: ShapeTable) throws -> Value {
+    func settling(receiver value: Value) throws -> Value {
         guard let position = receiverPosition else { return value }
 
         return try slots[position].checking(receiver: value, in: table)
     }
 
     // The returned value, checked against what was declared.
-    func settling(returned value: Value, in table: ShapeTable) throws -> Value {
+    func settling(returned value: Value) throws -> Value {
         guard let returns else { return value }
 
         return try returns.settling(value, at: "returns", in: table)
@@ -130,16 +147,16 @@ public final class Linked: Sendable {
     // something for the walk to send it to, and it needs nothing else. A row
     // that answers `never` is reachable by neither: a path reads a value, and
     // this one leaves instead of producing one.
-    func isDerivable(in table: ShapeTable) -> Bool {
+    func isDerivable() -> Bool {
         slots.derivable(receiver: receiverPosition, returns: returns, in: table)
     }
 
     // Whether a run reading that table can read this row: the row was made
-    // by the same link, or by no link at all. A row made in no link carries
-    // no row numbers, since a table declaring nothing has none, so it reads
-    // the same in any table.
+    // by the same link, or by a table declaring nothing. Such a table has no
+    // rows, so a row made against it carries no row numbers and reads the
+    // same in any table.
     func readable(in other: ShapeTable) -> Bool {
-        table === other || table === ShapeTable.empty
+        table === other || table.isBare
     }
 
     // Whether this row is a written body.

@@ -67,8 +67,8 @@ extension TypeExpression {
                     (name: name, shape: parameter.declared.lowered(in: table))
                 },
                 returns: signature?.returns?.lowered(in: table),
-                purity,
-                isolation
+                purity: purity,
+                isolation: isolation
             )
 
         case let .variable(inner):

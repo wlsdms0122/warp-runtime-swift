@@ -193,11 +193,11 @@ extension Shape {
             let given = Shape.procedure(
                 parameters: closure.linked.slots.map { slot in (name: slot.name, shape: slot.shape) },
                 returns: closure.linked.returns,
-                closure.purity,
-                closure.isolation
+                purity: closure.purity,
+                isolation: closure.isolation
             )
 
-            guard Shape.procedure(parameters: required, returns: returns, .unstated, .unstated).accepts(given, in: table) else {
+            guard Shape.procedure(parameters: required, returns: returns, purity: .unstated, isolation: .unstated).accepts(given, in: table) else {
                 throw ArgumentError(
                     "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
                 )
