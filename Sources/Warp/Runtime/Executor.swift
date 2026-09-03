@@ -391,7 +391,7 @@ public struct Executor: Sendable {
                     selector: callee.label,
                     signature: callee.signature,
                     receiver: sent(to: callee, receiver: try received(send, of: callee, in: activation) ?? held, arguments: settled),
-                    settlement: Settlement(names: callee.names, values: settled),
+                    settled: Settled(names: callee.names, values: settled),
                     holds: holds,
                     trace: trace,
                     executor: self
@@ -769,7 +769,7 @@ public struct Executor: Sendable {
             return try query.evaluate(
                 Question(
                     receiver: sent == .null ? nil : sent,
-                    settlement: Settlement(names: callee.names, values: arguments),
+                    settled: Settled(names: callee.names, values: arguments),
                     executor: self
                 )
             ) ?? .null

@@ -1,5 +1,5 @@
 //
-//  Settlement.swift
+//  Settled.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -12,7 +12,7 @@ import Foundation
 // those positions. A native reads one by name, and the name is found along
 // the declaration rather than hashed: a declaration has a few parameters,
 // and a word asks for each once.
-struct Settlement: Sendable {
+struct Settled: Sendable {
     // MARK: - Property
     let names: [String]
     let values: [Value?]

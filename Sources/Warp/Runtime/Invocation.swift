@@ -22,7 +22,7 @@ public struct Invocation: Sendable {
     // What this was sent to, or nil where it was sent to nothing.
     public let receiver: Value?
 
-    private let settlement: Settlement
+    private let settled: Settled
 
     // Where the run was when this was sent, as everything it went through to
     // get here. Provenance, not meaning: a word does not know the statement it
@@ -41,7 +41,7 @@ public struct Invocation: Sendable {
         selector: String,
         signature: Signature,
         receiver: Value?,
-        settlement: Settlement,
+        settled: Settled,
         holds: [(position: Int, handle: Handle)],
         trace: Trace,
         executor: Executor
@@ -49,7 +49,7 @@ public struct Invocation: Sendable {
         self.selector = selector
         self.signature = signature
         self.receiver = receiver
-        self.settlement = settlement
+        self.settled = settled
         self.holds = holds
         self.trace = trace
         self.executor = executor
@@ -59,7 +59,7 @@ public struct Invocation: Sendable {
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
     public subscript(name: String) -> Value {
-        settlement[name]
+        settled[name]
     }
 
     // What a parameter handed in place holds now.
@@ -117,7 +117,7 @@ public struct Invocation: Sendable {
 
     // MARK: - Private
     private func hold(of name: String) -> Handle? {
-        guard let position = settlement.names.firstIndex(of: name) else { return nil }
+        guard let position = settled.names.firstIndex(of: name) else { return nil }
 
         return holds.first { hold in hold.position == position }?.handle
     }
