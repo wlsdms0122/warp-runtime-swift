@@ -105,6 +105,11 @@ extension Shape {
                 return value
             }
 
+            // An element nothing was declared for passes as it is, so the
+            // array does too: settling each element to itself would copy the
+            // array to say nothing.
+            if element == .any, case .array = value { return value }
+
             // Otherwise the slot's spelling wins the way `double` settles a
             // whole number, and both spellings are read through the one
             // projection that owns the equation.
@@ -118,6 +123,10 @@ extension Shape {
 
         case let .object(entry):
             guard case let .record(tag, object) = value else { throw mismatch(value, at: path(), in: table) }
+
+            // An entry nothing was declared for passes as it is, so the record
+            // does too.
+            if entry == .any { return value }
 
             return .record(
                 name: tag,
