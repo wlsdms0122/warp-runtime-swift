@@ -117,7 +117,7 @@ public struct Invocation: Sendable {
 
     // MARK: - Private
     private func hold(of name: String) -> Handle? {
-        guard let position = settled.names.firstIndex(of: name) else { return nil }
+        guard let position = settled.position(of: name) else { return nil }
 
         return holds.first { hold in hold.position == position }?.handle
     }

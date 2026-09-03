@@ -348,6 +348,18 @@ struct StandardTests {
         )
     }
 
+    @Test("joined asked directly answers the same for no separator as for none written")
+    func joinedAnswersForNoSeparator() throws {
+        // Given: asked outside a link, nothing fills the declaration's
+        // default, so the word answers for the absence itself
+        let sut = JoinedQuery()
+
+        // When / Then
+        #expect(
+            try sut.evaluate(Question(receiver: .array([.string("a"), .string("b")]))) == .string("ab")
+        )
+    }
+
     @Test("a codec keeps its own contract on the encoding name")
     func aCodecReadsItsEncodingArgument() throws {
         // Given — the declaration's oneOf says the same names early; this is

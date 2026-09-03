@@ -391,7 +391,7 @@ public struct Executor: Sendable {
                     selector: callee.label,
                     signature: callee.signature,
                     receiver: sent(to: callee, receiver: try received(send, of: callee, in: activation) ?? held, arguments: settled),
-                    settled: Settled(names: callee.names, values: settled),
+                    settled: Settled(by: callee, values: settled),
                     holds: holds,
                     trace: trace,
                     executor: self
@@ -661,7 +661,7 @@ public struct Executor: Sendable {
         guard let receiver = send.receiver else { return nil }
 
         do {
-            return try received(try read(receiver, in: activation), by: callee)
+            return try callee.settling(receiver: try read(receiver, in: activation), in: types)
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
@@ -672,14 +672,6 @@ public struct Executor: Sendable {
 
             throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: "\(error)")
         }
-    }
-
-    // A receiver settled against the parameter standing at the callee's
-    // receiver position, or as it is where the callee takes none.
-    private func received(_ value: Value, by callee: Linked) throws -> Value {
-        guard let position = callee.receiverPosition else { return value }
-
-        return try callee.signature.settling(receiver: value, as: callee.parameters[position], in: types)
     }
 
     // The positions a call fills another way: the receiver where the call
@@ -769,7 +761,7 @@ public struct Executor: Sendable {
             return try query.evaluate(
                 Question(
                     receiver: sent == .null ? nil : sent,
-                    settled: Settled(names: callee.names, values: arguments),
+                    settled: Settled(by: callee, values: arguments),
                     executor: self
                 )
             ) ?? .null
@@ -890,6 +882,8 @@ public struct Executor: Sendable {
         }
 
         for (count, step) in steps.enumerated() {
+            let segment = spelled(step, in: activation)
+
             // The path as far as this step, spelled for a refusal. Only a
             // refusal reads it, so a read that lands spells nothing.
             func walked() -> [PathSegment] {
@@ -900,7 +894,7 @@ public struct Executor: Sendable {
             // the segment: the link's walk over types asks the same judge, so
             // the two layers cannot drift apart.
             if current == .null {
-                switch spelled(step, in: activation).meetingNull(at: walked()) {
+                switch segment.meetingNull(at: walked()) {
                 case .reads:
                     return .found(.null)
 
@@ -944,16 +938,16 @@ public struct Executor: Sendable {
                     return .unfit(reason)
                 }
 
-            case let .key(key, optional):
+            case let .key(key, _):
                 guard case let .record(_, object) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
                 guard let next = object[key] else {
-                    guard optional else {
+                    guard segment.optional else {
                         return .unfit(
                             "\(walked().rendered): '\(key)' is not there"
-                                + " — only `\(spelled(step, in: activation).mark)` reads absence"
+                                + " — only `\(segment.mark)` reads absence"
                         )
                     }
 
@@ -1019,7 +1013,7 @@ public struct Executor: Sendable {
         guard callee.signature.isDerivable(in: types) else { return nil }
 
         guard
-            let receiver = try? received(value, by: callee),
+            let receiver = try? callee.settling(receiver: value, in: types),
             let arguments = try? settled(
                 callee,
                 given: Array(repeating: nil, count: callee.parameters.count),

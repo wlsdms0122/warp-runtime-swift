@@ -24,7 +24,7 @@ public struct Question: Sendable {
 
     // MARK: - Initializer
     public init(receiver: Value? = nil, arguments: [String: Value] = [:]) {
-        self.init(receiver: receiver, settled: Settled(arguments), executor: nil)
+        self.init(receiver: receiver, settled: Settled(offered: arguments), executor: nil)
     }
 
     init(receiver: Value?, settled: Settled, executor: Executor?) {

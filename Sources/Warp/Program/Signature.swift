@@ -71,25 +71,11 @@ public struct Signature: Sendable, Equatable {
         return try returns.settling(value, at: "returns", in: types)
     }
 
-    // The receiver, checked against what the parameter naming it declares —
-    // except that nothing passes through. A word decides for itself what being
-    // sent to nothing means: `contains` says false rather than failing, and a
-    // path that reached null is absence rather than misuse.
+    // The receiver, checked against what the parameter naming it declares.
     public func settling(receiver value: Value, in types: TypeTable = TypeTable()) throws -> Value {
         guard let receiver, let parameter = parameters[receiver] else { return value }
 
-        return try settling(receiver: value, as: (name: receiver, parameter: parameter), in: types)
-    }
-
-    // The same, for a caller that already stands at the receiver's position.
-    func settling(
-        receiver value: Value,
-        as declared: (name: String, parameter: Parameter),
-        in types: TypeTable
-    ) throws -> Value {
-        guard value != .null else { return value }
-
-        return try declared.parameter.checking(value, called: declared.name, in: types)
+        return try parameter.checking(receiver: value, called: receiver, in: types)
     }
 
     // Whether something declared this way may stand where this is required.

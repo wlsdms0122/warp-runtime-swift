@@ -31,9 +31,6 @@ public final class Linked: Sendable {
     // The parameters in the order arguments stand in, with what settles them.
     public let parameters: [(name: String, parameter: Parameter)]
 
-    // The same names alone: what a native reads its arguments by.
-    let names: [String]
-
     // Where the receiver stands among them, for a declaration that takes one.
     public let receiverPosition: Int?
 
@@ -57,7 +54,6 @@ public final class Linked: Sendable {
         self.origin = origin
         self.signature = signature
         self.parameters = parameters
-        self.names = parameters.map { name, _ in name }
         self.receiverPosition = signature.receiver.flatMap { receiver in
             parameters.firstIndex { name, _ in name == receiver }
         }
@@ -99,6 +95,16 @@ public final class Linked: Sendable {
             isolation: isolated ? .isolated : .unstated,
             implementation: implementation
         )
+    }
+
+    // The receiver settled against the parameter at this row's receiver
+    // position, or as it is where the row takes none.
+    func settling(receiver value: Value, in types: TypeTable) throws -> Value {
+        guard let position = receiverPosition else { return value }
+
+        let declared = parameters[position]
+
+        return try declared.parameter.checking(receiver: value, called: declared.name, in: types)
     }
 
     // Whether this row is a written body.
