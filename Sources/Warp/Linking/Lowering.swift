@@ -62,7 +62,7 @@ struct Lowering {
 
         let body = try lower(block, in: scope, on: frame, label: declared.label, at: place)
 
-        table[row] = try Linked(
+        table[row] = Linked(
             label: declared.label,
             origin: declared.origin,
             signature: declared.signature,
@@ -277,7 +277,7 @@ struct Lowering {
 
             let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
             return .closure(
-                try Linked(
+                Linked(
                     label: label,
                     origin: frame.origin,
                     signature: procedure.signature,
@@ -300,7 +300,7 @@ struct Lowering {
         case let .cast(value, type, optional):
             return .cast(
                 try lower(value, in: scope, on: frame, label: label, at: place),
-                as: try type.lowered(in: shapes),
+                as: type.lowered(in: shapes),
                 optional: optional
             )
 

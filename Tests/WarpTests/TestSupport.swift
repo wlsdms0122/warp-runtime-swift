@@ -184,7 +184,7 @@ struct ShoutEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation) async throws -> Value {
-        .string(try invocation.string("text")?.uppercased() ?? "")
+        .string(invocation.string("text")?.uppercased() ?? "")
     }
 
     // MARK: - Private
@@ -265,9 +265,9 @@ func refusing(_ message: Warp.Expression) -> Warp.Expression {
 extension Closure {
     // A closure a caller assembles in Swift: no body a document spelled, no
     // captures, claiming nothing. What a slot that asks nothing takes.
-    static func assembled(answering result: Value? = nil) throws -> Closure {
+    static func assembled(answering result: Value? = nil) -> Closure {
         Closure(
-            linked: try Linked(
+            linked: Linked(
                 label: "assembled",
                 origin: 0,
                 signature: Signature(),

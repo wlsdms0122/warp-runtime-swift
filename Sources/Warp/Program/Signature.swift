@@ -80,8 +80,8 @@ public struct Signature: Sendable, Equatable {
 
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
-    func lowered(in table: ShapeTable) throws -> [Slot] {
-        try ordered.map { name, parameter in try parameter.lowered(named: name, in: table) }
+    func lowered(in table: ShapeTable) -> [Slot] {
+        ordered.map { name, parameter in parameter.lowered(named: name, in: table) }
     }
 
     // Whether something declared this way may stand where this is required.
@@ -103,17 +103,15 @@ public struct Signature: Sendable, Equatable {
     // put the word that must not be missable where a walk decides on its own
     // whether to send it.
     public func isDerivable(in types: TypeTable) -> Bool {
-        guard let table = try? types.lowered() else { return false }
-
-        return isDerivable(in: table)
+        isDerivable(in: types.shapes)
     }
 
     func isDerivable(in table: ShapeTable) -> Bool {
-        guard let slots = try? lowered(in: table) else { return false }
+        let slots = lowered(in: table)
 
         return slots.derivable(
             receiver: receiver.flatMap { name in slots.firstIndex { slot in Name.same(slot.name, name) } },
-            returns: try? returns?.lowered(in: table),
+            returns: returns?.lowered(in: table),
             in: table
         )
     }
@@ -139,10 +137,9 @@ public struct Signature: Sendable, Equatable {
         _ given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        let table = try types.lowered()
-        let slots = try lowered(in: table)
+        let slots = lowered(in: types.shapes)
 
-        return named(try settle(given, over: slots, offered: false, in: table), over: slots)
+        return named(try settle(given, over: slots, offered: false, in: types.shapes), over: slots)
     }
 
     // The same, for a caller that hands over more than the body asked for. A
@@ -153,10 +150,9 @@ public struct Signature: Sendable, Equatable {
         offered given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        let table = try types.lowered()
-        let slots = try lowered(in: table)
+        let slots = lowered(in: types.shapes)
 
-        return named(try settle(given, over: slots, offered: true, in: table), over: slots)
+        return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
     }
 
     // The parameters in the order arguments stand in.

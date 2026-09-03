@@ -50,6 +50,13 @@ indirect enum Shape: Sendable {
     // shows; the constraint is the row of the membership it is bounded by.
     case parameter(label: String, constraint: Int?)
 
+    // A name the table does not answer: nothing declares it, or it names
+    // itself. Every judgment refuses it in the refusal's words, so a table
+    // a host built by hand answers instead of failing to lower, and only the
+    // judgments that reach the name are touched by it. The link refuses such
+    // a name before anything is lowered, so a run never meets one.
+    case undeclared(label: String, refusal: String)
+
     // MARK: - Property
     var inoutUnwrapped: Shape {
         if case let .inout(inner) = self { return inner }
@@ -143,6 +150,9 @@ extension Shape: Equatable {
 
         case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
             return myLabel == theirLabel && mine == theirs
+
+        case let (.undeclared(mine, _), .undeclared(theirs, _)):
+            return mine == theirs
 
         default:
             return false

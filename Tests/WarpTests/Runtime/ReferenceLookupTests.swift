@@ -12,19 +12,15 @@ import Testing
 @Suite
 struct ReferenceLookupTests {
     // MARK: - Property
-    private let sut: Folding
-
-    // MARK: - Initializer
-    init() throws {
-        sut = try Folding(bindings: [
+    private let sut = Folding(bindings: [
                 "name": .string("spec"),
                 "run": .object(["id": .string("r-1")]),
                 "items": .array([.int(1), .int(2), .int(3)]),
                 "step": .object(["out": .string("done"), "list": .array([.string("a")])]),
                 "index": .int(1)
             ], natives: Module.standard)
-    }
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("an existing path returns its value")
     func existingPathReturnsValue() {
@@ -107,7 +103,7 @@ struct ReferenceLookupTests {
     func indexReferenceFractionNamesItsMiss() throws {
         // Given — a fraction with digits after the point, and a whole one no
         // machine word holds: two different facts, each named as itself
-        let resolver = try Folding(bindings: [
+        let resolver = Folding(bindings: [
                     "items": .array([.int(1), .int(2)]),
                     "half": .double(1.5),
                     "far": .double(1e30)

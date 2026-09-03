@@ -163,10 +163,10 @@ extension Parameter {
     // This parameter as the run reads it. An undeclared type lowers to
     // `any`: the boundary tells "nothing written" from "`any` written" in no
     // way, so the slot does not either.
-    func lowered(named name: String, in table: ShapeTable) throws -> Slot {
+    func lowered(named name: String, in table: ShapeTable) -> Slot {
         Slot(
             name: name,
-            shape: try declared.lowered(in: table),
+            shape: declared.lowered(in: table),
             default: `default`,
             oneOf: oneOf
         )

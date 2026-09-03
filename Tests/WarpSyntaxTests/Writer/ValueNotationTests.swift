@@ -129,7 +129,7 @@ struct ValueNotationTests {
     func writingAProcedureRefuses() throws {
         // Given
         let sut = Value.procedure(
-            try Closure.assembled()
+            Closure.assembled()
         )
 
         // When / Then

@@ -64,6 +64,11 @@ extension Shape {
         case (.never, _):
             return false
 
+        // A name nothing answers stands for no shape, so nothing fits it and
+        // it fits nothing.
+        case (.undeclared, _), (_, .undeclared):
+            return false
+
         case let (.named(row), _):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
@@ -208,6 +213,11 @@ extension Shape {
         }
 
         if provesNothing || other.provesNothing { return true }
+
+        // A name nothing answers is left to the run, the way a name not yet
+        // resolved was.
+        if case .undeclared = self { return true }
+        if case .undeclared = other { return true }
 
         // Null is a value both hold, so one exists whatever else they say.
         if declaresNull(in: table), other.declaresNull(in: table) { return true }

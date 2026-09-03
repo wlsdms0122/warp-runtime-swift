@@ -68,9 +68,9 @@ public struct Linker: Sendable {
             constraints: declaredConstraints
         )
 
-        // Lowered once: every judgment the link asks and every row it builds
-        // reads the table the run will read.
-        let shapes = try types.lowered()
+        // Every judgment the link asks and every row it builds reads the
+        // table the run will read.
+        let shapes = types.shapes
         let symbols = try symbols(of: modules)
 
         // Every declaration under its declared spelling. The spellings are
@@ -142,7 +142,7 @@ public struct Linker: Sendable {
         for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
             rows[symbol.declared] = table.count
             table.append(
-                try Linked.standing(
+                Linked.standing(
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
@@ -190,7 +190,6 @@ public struct Linker: Sendable {
                 symbols: space,
                 signatures: answeringSignatures,
                 types: types,
-                shapes: shapes,
                 words: answeringWords,
                 pure: settled,
                 isolated: isolatedDeclarations,
@@ -405,7 +404,7 @@ public struct Linker: Sendable {
             start: try row(of: start),
             rows: rows,
             reached: Set(procedures.keys),
-            shapes: shapes,
+            types: types,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
                     (name: name, value: entry.value[name] ?? .null)
@@ -1192,7 +1191,7 @@ public struct Linker: Sendable {
         // as the kind under the range and judged by the range's own judge, so
         // what the link calls dead is exactly what the boundary would refuse.
         case let .ranged(refinement):
-            guard let value = Parameter.numeral(candidate, as: refinement.kind, in: table) else {
+            guard let value = refinement.kind.lowered(in: table.shapes).numeral(candidate, in: table.shapes) else {
                 return false
             }
 
@@ -1207,7 +1206,7 @@ public struct Linker: Sendable {
         // The boundary's own candidate reading, so what the link calls a
         // dead member is exactly what the boundary would never match.
         case .double, .number:
-            return Parameter.numeral(candidate, as: type, in: table) != nil
+            return type.lowered(in: table.shapes).numeral(candidate, in: table.shapes) != nil
 
         case .bool:
             return candidate == "true" || candidate == "false"
@@ -1542,7 +1541,7 @@ public struct Linker: Sendable {
             }
 
             do {
-                _ = try parameter.taking(constant, called: name, in: shapes)
+                _ = try parameter.lowered(named: name, in: shapes).taking(constant, in: shapes)
             } catch {
                 throw LinkError(
                     "sending '\(dispatch.selector)' — \(error)",

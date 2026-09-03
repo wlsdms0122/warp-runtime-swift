@@ -32,6 +32,9 @@ extension Shape {
         case .never:
             throw ArgumentError("\(path()): declares never, and nothing is ever that")
 
+        case let .undeclared(_, refusal):
+            throw UndeclaredTypeError("\(path()): declares \(refusal)")
+
         // Either shape arrives as itself. Settling to one of them would be the
         // declaration picking, and it declined to.
         case .number:
@@ -375,7 +378,7 @@ extension Shape {
         // to a default, so that a kind added to the type language has to be
         // answered for here too.
         case .never, .null, .bool, .double, .string, .bytes,
-             .array, .object, .record, .procedure:
+             .array, .object, .record, .procedure, .undeclared:
             return false
         }
     }
@@ -484,6 +487,9 @@ extension Shape {
 
         case let .named(row):
             return table.labels[row]
+
+        case let .undeclared(label, _):
+            return label
 
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"

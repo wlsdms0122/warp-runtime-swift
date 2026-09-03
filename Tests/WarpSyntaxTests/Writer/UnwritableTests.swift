@@ -31,7 +31,7 @@ struct UnwritableTests {
         // Given — a closure has already taken a scope with it, and a document
         // carries neither code nor the scope it closed over
         let held = Value.procedure(
-            try Closure.assembled()
+            Closure.assembled()
         )
 
         // When / Then — a program carrying one never reaches a writing: making

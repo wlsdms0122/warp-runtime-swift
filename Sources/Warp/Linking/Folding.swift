@@ -47,13 +47,13 @@ struct Folding {
     // refusal it earns before it is lowered. What a constant settles from. A
     // native's purity is its own; a written body is never run here, so its
     // purity is not asked.
-    init(bindings: [String: Value], natives modules: [Module]) throws {
+    init(bindings: [String: Value], natives modules: [Module]) {
         // The natives declare the shapes their own signatures name, so the
-        // table is theirs: one built by hand would refuse their rows.
-        let shapes = try TypeTable(
+        // table is theirs.
+        let shapes = TypeTable(
             types: modules.reduce(into: [:]) { table, module in table.merge(module.types) { first, _ in first } },
             constraints: modules.reduce(into: [:]) { table, module in table.merge(module.constraints) { first, _ in first } }
-        ).lowered()
+        ).shapes
         var table: [Linked] = []
         var rows: [String: Int] = [:]
         var words: [String: Int] = [:]
@@ -63,7 +63,7 @@ struct Folding {
                 rows[name] = table.count
                 words[String(name.split(separator: ".").last ?? Substring(name))] = table.count
                 table.append(
-                    try Linked.standing(
+                    Linked.standing(
                         label: name,
                         origin: origin,
                         procedure: procedure,

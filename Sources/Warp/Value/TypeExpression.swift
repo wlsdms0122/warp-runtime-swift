@@ -166,31 +166,18 @@ public indirect enum TypeExpression: Sendable, Equatable {
         at path: @autoclosure () -> String,
         in types: TypeTable = TypeTable()
     ) throws -> Value {
-        try settling(value, at: path(), in: try types.lowered())
+        try settling(value, at: path(), in: types.shapes)
     }
 
     // The link's door: the table is already lowered, so only this is.
     func settling(_ value: Value, at path: @autoclosure () -> String, in table: ShapeTable) throws -> Value {
-        try lowered(in: table, at: path()).settling(value, at: path(), in: table)
-    }
-
-    // This type lowered for a judgment a host asked by path: a name nothing
-    // declares is refused with the path in front, the way the judgment
-    // itself would say it.
-    private func lowered(in table: ShapeTable, at path: String) throws -> Shape {
-        do {
-            return try lowered(in: table)
-        } catch let undeclared as UndeclaredTypeError {
-            throw UndeclaredTypeError("\(path): \(undeclared.message)")
-        }
+        try lowered(in: table).settling(value, at: path(), in: table)
     }
 
     // What a cast does: the judgment is `settling`'s, and a mismatch is
     // what the cast spelling decides it is.
     func reading(_ value: Value, optional: Bool, in types: TypeTable) throws -> Value {
-        let table = try types.lowered()
-
-        return try lowered(in: table, at: "as \(rendered)").reading(value, optional: optional, in: table)
+        try lowered(in: types.shapes).reading(value, optional: optional, in: types.shapes)
     }
 
     // How the type reads in a message. A declaration an author wrote should come
@@ -444,15 +431,11 @@ extension TypeExpression {
     // provably disagree, and everything else is left to the run. Refusing what
     // this cannot decide would close doors an author has no other way through.
     func couldBothHold(_ other: TypeExpression, in types: TypeTable) -> Bool {
-        guard let table = try? types.lowered() else { return true }
-
-        return couldBothHold(other, in: table)
+        couldBothHold(other, in: types.shapes)
     }
 
     func couldBothHold(_ other: TypeExpression, in table: ShapeTable) -> Bool {
-        guard let mine = try? lowered(in: table), let theirs = try? other.lowered(in: table) else { return true }
-
-        return mine.couldBothHold(theirs, in: table)
+        lowered(in: table).couldBothHold(other.lowered(in: table), in: table)
     }
 
     // The same shape with every name it holds walked through to what that
@@ -510,15 +493,11 @@ extension TypeExpression {
     // means "give me something". The looser question, "could a default of
     // null ever be taken", is the link's and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
-        guard let table = try? types.lowered() else { return false }
-
-        return declaresNull(in: table)
+        declaresNull(in: types.shapes)
     }
 
     func declaresNull(in table: ShapeTable) -> Bool {
-        guard let shape = try? lowered(in: table) else { return false }
-
-        return shape.declaresNull(in: table)
+        lowered(in: table).declaresNull(in: table)
     }
 }
 
@@ -532,14 +511,10 @@ extension TypeExpression {
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
     public func accepts(_ other: TypeExpression, in types: TypeTable = TypeTable()) -> Bool {
-        guard let table = try? types.lowered() else { return false }
-
-        return accepts(other, in: table)
+        accepts(other, in: types.shapes)
     }
 
     func accepts(_ other: TypeExpression, in table: ShapeTable) -> Bool {
-        guard let mine = try? lowered(in: table), let theirs = try? other.lowered(in: table) else { return false }
-
-        return mine.accepts(theirs, in: table)
+        lowered(in: table).accepts(other.lowered(in: table), in: table)
     }
 }

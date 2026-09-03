@@ -52,8 +52,8 @@ public final class Linked: Sendable {
         isolation: Isolation,
         implementation: Implementation,
         in table: ShapeTable
-    ) throws {
-        let slots = try signature.lowered(in: table)
+    ) {
+        let slots = signature.lowered(in: table)
 
         self.label = label
         self.origin = origin
@@ -64,7 +64,7 @@ public final class Linked: Sendable {
         self.purity = purity
         self.isolation = isolation
         self.slots = slots
-        self.returns = try signature.returns?.lowered(in: table)
+        self.returns = signature.returns?.lowered(in: table)
         self.implementation = implementation
     }
 
@@ -80,7 +80,7 @@ public final class Linked: Sendable {
         pure: Bool,
         isolated: Bool,
         in table: ShapeTable
-    ) throws -> Linked {
+    ) -> Linked {
         let implementation: Implementation
 
         switch procedure.implementation {
@@ -94,7 +94,7 @@ public final class Linked: Sendable {
             implementation = .effect(effect)
         }
 
-        return try Linked(
+        return Linked(
             label: label,
             origin: origin,
             signature: procedure.signature,

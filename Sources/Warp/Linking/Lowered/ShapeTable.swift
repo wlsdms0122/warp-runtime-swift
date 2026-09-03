@@ -103,13 +103,11 @@ final class ShapeTable: Sendable {
 
     // The same membership asked of a document's reading by the constraint's
     // spelling, for the link's walk. Nil where nothing declares the
-    // constraint. A reading naming a type nothing declares is admitted by
-    // nothing, the way `accepts` answers it.
+    // constraint.
     func admits(constraint name: String, reading: TypeExpression) -> Bool? {
         guard let row = constraintRow(named: name) else { return nil }
-        guard let shape = try? reading.lowered(in: self) else { return false }
 
-        return admits(constraint: row, reading: shape, assuming: [])
+        return admits(constraint: row, reading: reading.lowered(in: self), assuming: [])
     }
 
     // MARK: - Private

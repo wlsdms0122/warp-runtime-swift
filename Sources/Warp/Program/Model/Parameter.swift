@@ -24,18 +24,13 @@ public struct Parameter: Sendable, Equatable {
     // (`T?`) answers it with the null it holds. Without either, omission is a
     // missing argument. Optionality has no third axis.
     public func mustBeGiven(in types: TypeTable) -> Bool {
-        guard let table = try? types.lowered() else { return true }
-
-        return mustBeGiven(in: table)
+        mustBeGiven(in: types.shapes)
     }
 
-    // The half that needs no table is answered first: a default answers
-    // omission whatever the type says. A type nothing declares spells no
-    // null, the way it did before it was lowered.
+    // The slot's question, asked through the slot. The name is a refusal's
+    // and no refusal is made here.
     func mustBeGiven(in table: ShapeTable) -> Bool {
-        guard `default` == nil else { return false }
-
-        return !((try? declared.lowered(in: table))?.declaresNull(in: table) ?? false)
+        lowered(named: "", in: table).mustBeGiven(in: table)
     }
 
     // What this reads as where a type is needed regardless. An undeclared
@@ -63,11 +58,7 @@ public struct Parameter: Sendable, Equatable {
         called name: String,
         in types: TypeTable = TypeTable()
     ) throws -> Value {
-        try taking(value, called: name, in: try types.lowered())
-    }
-
-    func taking(_ value: Value, called name: String, in table: ShapeTable) throws -> Value {
-        try lowered(named: name, in: table).taking(value, in: table)
+        try lowered(named: name, in: types.shapes).taking(value, in: types.shapes)
     }
 
     public func checking(
@@ -75,9 +66,7 @@ public struct Parameter: Sendable, Equatable {
         called name: String,
         in types: TypeTable = TypeTable()
     ) throws -> Value {
-        let table = try types.lowered()
-
-        return try lowered(named: name, in: table).checking(receiver: value, in: table)
+        try lowered(named: name, in: types.shapes).checking(receiver: value, in: types.shapes)
     }
 
     public func checking(
@@ -85,9 +74,7 @@ public struct Parameter: Sendable, Equatable {
         called name: String,
         in types: TypeTable = TypeTable()
     ) throws -> Value {
-        let table = try types.lowered()
-
-        return try lowered(named: name, in: table).checking(value, in: table)
+        try lowered(named: name, in: types.shapes).checking(value, in: types.shapes)
     }
 
     // A candidate of `oneOf` read as the number its canonical spelling
@@ -98,11 +85,7 @@ public struct Parameter: Sendable, Equatable {
         as declared: TypeExpression?,
         in types: TypeTable
     ) -> Value? {
-        guard let table = try? types.lowered(), let shape = try? (declared ?? .any).lowered(in: table) else {
-            return nil
-        }
-
-        return shape.numeral(candidate, in: table)
+        (declared ?? .any).lowered(in: types.shapes).numeral(candidate, in: types.shapes)
     }
 
     // MARK: - Private

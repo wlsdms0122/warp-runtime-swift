@@ -12,17 +12,13 @@ import Testing
 @Suite
 struct FoldingTests {
     // MARK: - Property
-    private let sut: Folding
-
-    // MARK: - Initializer
-    init() throws {
-        sut = try Folding(bindings: [
+    private let sut = Folding(bindings: [
                 "count": .int(3),
                 "maybe": .null,
                 "record": .object(["a": .int(1)])
             ], natives: Module.standard)
-    }
 
+    // MARK: - Initializer
     // MARK: - Test
     @Test("ref resolution preserves the type")
     func refResolutionPreservesType() throws {

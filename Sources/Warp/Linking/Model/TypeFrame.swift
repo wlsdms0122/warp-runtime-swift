@@ -35,10 +35,10 @@ struct TypeFrame: Sendable {
     // reading is a document's type.
     let types: TypeTable
 
-    // The same declarations as the run reads them, lowered once. Every
-    // judgment the walk asks goes here, lowering its reading and nothing
-    // else, so the walk and the run judge by one table.
-    let shapes: ShapeTable
+    // The same declarations as the run reads them. Every judgment the walk
+    // asks goes here, lowering its reading and nothing else, so the walk and
+    // the run judge by one table.
+    var shapes: ShapeTable { types.shapes }
 
     // What a bare spelling a path writes may send: the pure declarations whose
     // only required slot is the receiver, by the name a walk reaches them

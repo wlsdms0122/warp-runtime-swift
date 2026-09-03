@@ -551,7 +551,7 @@ struct NullableTests {
         // And the run says the same rather than reading past it — the layers
         // share one sentence, so neither answers what the other refuses
         let marked: [PathSegment] = [.key("items", optional: true), .index(0)]
-        let resolver = try Folding(bindings: ["items": .array([.string("one")])], natives: [])
+        let resolver = Folding(bindings: ["items": .array([.string("one")])], natives: [])
 
         #expect {
             try resolver.read(marked, at: .given("test"))

@@ -485,7 +485,7 @@ struct ValidationTests {
         // is a program no text spells and nothing reads back. Only a caller
         // assembling shapes in Swift can build it, and this is where that stops.
         let carried = Value.procedure(
-            try Closure.assembled()
+            Closure.assembled()
         )
 
         // When / Then

@@ -34,7 +34,7 @@ struct ShapeTests {
     @Test("a lowered type renders as the author wrote it")
     func aLoweredTypeRendersAsWritten() throws {
         // Given: every declared type, and a few that name them
-        let table = try types.lowered()
+        let table = types.shapes
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("bank.Acct")),
             .nullable(.named("bank.Owner")),
@@ -45,14 +45,14 @@ struct ShapeTests {
 
         // When / Then
         for type in written {
-            #expect(try type.lowered(in: table).rendered(in: table) == type.rendered, "\(type.rendered)")
+            #expect(type.lowered(in: table).rendered(in: table) == type.rendered, "\(type.rendered)")
         }
     }
 
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")
     func aNameLowersToARow() throws {
         // Given
-        let table = try types.lowered()
+        let table = types.shapes
 
         // When
         let alias = try #require(table.row(named: "bank.Acct"))
@@ -60,7 +60,7 @@ struct ShapeTests {
         let byte = try #require(table.row(named: "app.Byte"))
 
         // Then: the alias names the account's record, and a range names none
-        #expect(try TypeExpression.named("bank.Acct").lowered(in: table) == .named(alias))
+        #expect(TypeExpression.named("bank.Acct").lowered(in: table) == .named(alias))
         #expect(table.recordRows[alias] == account)
         #expect(table.recordRows[account] == account)
         #expect(table.recordRows[byte] == nil)
@@ -69,7 +69,7 @@ struct ShapeTests {
     @Test("a walk's reading lowers to what proves nothing")
     func aReadingLowersToAny() throws {
         // Given
-        let table = try types.lowered()
+        let table = types.shapes
 
         // When / Then
         #expect(try TypeExpression.reading(of: "T", path: [.key("inner")]).lowered(in: table) == .any)
@@ -80,8 +80,8 @@ struct ShapeTests {
     func aRecordSettlesUnderTheCanonicalName() throws {
         // Given: a slot spelled with the alias, a nameless record, and one
         // already named by the alias
-        let table = try types.lowered()
-        let slot = try TypeExpression.named("bank.Acct").lowered(in: table)
+        let table = types.shapes
+        let slot = TypeExpression.named("bank.Acct").lowered(in: table)
         let owner = Value.object(["name": .string("a")])
 
         // When
@@ -192,13 +192,13 @@ struct ShapeTests {
     func anArgumentGivenTwiceIsRefused() throws {
         // Given
         let signature = Signature(parameters: ["item": Parameter(type: .int)])
-        let table = try TypeTable().lowered()
+        let table = TypeTable().shapes
 
         // When / Then
         #expect {
             try signature.settle(
                 [(name: "item", value: .int(1)), (name: "item", value: .int(2))],
-                over: try signature.lowered(in: table),
+                over: signature.lowered(in: table),
                 offered: true,
                 in: table
             )
@@ -213,6 +213,40 @@ struct ShapeTests {
         #expect(types.admits(constraint: "app.Ordered", value: .int(1)) == true)
         #expect(types.admits(constraint: "app.Ordered", value: .bool(true)) == false)
         #expect(types.admits(constraint: "app.Nobody", value: .int(1)) == nil)
+    }
+
+    @Test("a table built by hand whose names form a circle answers instead of chasing them")
+    func aCircleOfNamesIsRefusedNotChased() {
+        // Given
+        let circular = TypeTable(types: ["app.A": .named("app.B"), "app.B": .named("app.A"), "app.C": .int])
+
+        // When / Then: the circle is refused where it is met, and the row
+        // beside it answers as itself
+        #expect {
+            try TypeExpression.named("app.A").settling(.int(1), at: "input", in: circular)
+        } throws: { error in
+            "\(error)".contains("input: declares type 'app.A', which names itself")
+        }
+        #expect(!TypeExpression.named("app.A").declaresNull(in: circular))
+        #expect(TypeExpression.named("app.C").accepts(.int, in: circular))
+        #expect(Parameter(type: .named("app.C"), default: .int(0)).mustBeGiven(in: circular) == false)
+    }
+
+    @Test("one undeclared name touches only the judgments that reach it")
+    func anUndeclaredNameTouchesOnlyItsOwnJudgments() {
+        // Given: a table with one bad row beside a good one
+        let table = TypeTable(types: ["app.Bad": .named("app.Missing"), "app.Good": .nullable(.int)])
+
+        // When / Then
+        #expect(TypeExpression.named("app.Good").declaresNull(in: table))
+        #expect(TypeExpression.named("app.Good").accepts(.int, in: table))
+        #expect(!TypeExpression.named("app.Bad").accepts(.int, in: table))
+        #expect(!TypeExpression.named("app.Bad").declaresNull(in: table))
+        #expect {
+            try TypeExpression.named("app.Bad").settling(.int(1), at: "input", in: table)
+        } throws: { error in
+            "\(error)".contains("input: declares type 'app.Missing', which nothing declares")
+        }
     }
 
     // MARK: - Public

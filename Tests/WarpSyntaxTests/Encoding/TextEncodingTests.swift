@@ -319,7 +319,7 @@ struct TextEncodingTests {
 
         #expect(throws: (any Error).self) {
             try TextEncoding.data(
-                from: .procedure(try Closure.assembled())
+                from: .procedure(Closure.assembled())
             )
         }
     }

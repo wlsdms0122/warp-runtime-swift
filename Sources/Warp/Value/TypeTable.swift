@@ -22,8 +22,12 @@ import Foundation
 // "what does this name admit".
 public struct TypeTable: Sendable {
     // MARK: - Property
-    public private(set) var types: [String: TypeExpression]
-    public private(set) var constraints: [String: [TypeExpression]]
+    public let types: [String: TypeExpression]
+    public let constraints: [String: [TypeExpression]]
+
+    // The same declarations as the run reads them, lowered once here. Every
+    // judgment this table answers is asked of the lowered one.
+    let shapes: ShapeTable
 
     // MARK: - Initializer
     public init(
@@ -32,6 +36,15 @@ public struct TypeTable: Sendable {
     ) {
         self.types = types
         self.constraints = constraints
+        self.shapes = TypeTable(lowering: types, constraints: constraints).lowered()
+    }
+
+    // The document's two tables alone, for lowering them: the lowering reads
+    // the declarations and nothing else.
+    private init(lowering types: [String: TypeExpression], constraints: [String: [TypeExpression]]) {
+        self.types = types
+        self.constraints = constraints
+        self.shapes = .empty
     }
 
     // MARK: - Public
@@ -58,21 +71,15 @@ public struct TypeTable: Sendable {
     // again — so a table built by hand refuses or answers where a linked one
     // would, and never chases a declaration the link would have refused.
     public func admits(constraint name: String, reading: TypeExpression) -> Bool? {
-        guard
-            let table = try? lowered(),
-            let row = table.constraintRow(named: name),
-            let shape = try? reading.lowered(in: table)
-        else { return nil }
-
-        return table.admits(constraint: row, reading: shape, assuming: [])
+        shapes.admits(constraint: name, reading: reading)
     }
 
     // The same membership, asked of a value at the boundary. Nil again
     // where nothing declares the constraint.
     public func admits(constraint name: String, value: Value) -> Bool? {
-        guard let table = try? lowered(), let row = table.constraintRow(named: name) else { return nil }
+        guard let row = shapes.constraintRow(named: name) else { return nil }
 
-        return table.admits(constraint: row, value: value, assuming: [])
+        return shapes.admits(constraint: row, value: value, assuming: [])
     }
 
     // MARK: - Private

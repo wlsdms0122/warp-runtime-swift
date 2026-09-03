@@ -359,7 +359,7 @@ struct BinaryEncodingTests {
         // And code is not data in any encoding
         #expect(throws: (any Error).self) {
             try BinaryEncoding.data(
-                from: .procedure(try Closure.assembled())
+                from: .procedure(Closure.assembled())
             )
         }
     }
