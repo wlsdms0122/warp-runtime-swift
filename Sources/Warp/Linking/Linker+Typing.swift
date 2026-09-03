@@ -2218,8 +2218,9 @@ extension Linker {
 
         // A record under a name reads as that name; the shape is the
         // declaration's, and the name is what the value fits.
-        case let .record(name, fields):
-            return name.map { name in .named(name) } ?? .record(fields.mapValues(type(of:)))
+        case let .record(record):
+            return record.name.map { name in .named(name) }
+                ?? .record(Dictionary(uniqueKeysWithValues: record.entries.map { entry in (entry.name, type(of: entry.value)) }))
         }
     }
 

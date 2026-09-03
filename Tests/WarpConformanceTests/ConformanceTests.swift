@@ -174,8 +174,8 @@ struct Case: Sendable, CustomStringConvertible {
         self.note = note
         self.program = program
 
-        if case let .record(_, arguments)? = written["arguments"] {
-            self.arguments = arguments
+        if case let .record(arguments)? = written["arguments"] {
+            self.arguments = arguments.fields
         } else {
             self.arguments = [:]
         }
@@ -187,9 +187,9 @@ struct Case: Sendable, CustomStringConvertible {
         // would otherwise start asking a different question than it reads as, and
         // nobody would be told.
         guard
-            case let .record(_, expect)? = written["expect"],
+            case let .record(expect)? = written["expect"],
             expect.count == 1,
-            let (held, expected) = expect.first
+            let (held, expected) = expect.entries.first
         else {
             throw ConformanceError("a case expects exactly one of `answers` or `refuses`")
         }

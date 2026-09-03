@@ -84,11 +84,11 @@ struct TypeTests {
 
         // When
         let bare = try sut.settling(.object(["name": .string("a")]), at: "who", in: types)
-        let aliased = try sut.settling(.record(name: "Someone", fields: ["name": .string("a")]), at: "who", in: types)
-        let named = try sut.settling(.record(name: "Person", fields: ["name": .string("a")]), at: "who", in: types)
+        let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
+        let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
         // Then — every one settles under the record's own name
-        #expect(bare == .record(name: "Person", fields: ["name": .string("a")]))
+        #expect(bare == .record(Record(name: "Person", ["name": .string("a")])))
         #expect(aliased == bare)
         #expect(named == bare)
     }
@@ -107,7 +107,7 @@ struct TypeTests {
         )
 
         // Then
-        #expect(settled == .array([.record(name: "Task", fields: ["id": .string("a")])]))
+        #expect(settled == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         #expect(throws: ArgumentError.self) {
             try sut.settling(.array([.object(["id": .int(1)])]), at: "tasks", in: types)

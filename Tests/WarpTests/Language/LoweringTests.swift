@@ -268,7 +268,7 @@ struct LoweringTests {
                     result: .dispatch(Dispatch(
                         receiver: .dispatch(Dispatch(selector: "app.tag", arguments: ["of": .reference([.key("held")])])),
                         selector: "std.logic.equal",
-                        arguments: ["value": .literal(.record(name: "Tag", fields: ["a": .int(1)]))]
+                        arguments: ["value": .literal(.record(Record(name: "Tag", ["a": .int(1)])))]
                     ))
                 ),
                 "app.tag": Procedure(

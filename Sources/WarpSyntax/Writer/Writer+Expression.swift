@@ -361,12 +361,12 @@ public extension Writer {
                 try spelling(of: element, reserving: reserved) == .plainly ? carried : .quoted
             }
 
-        case let .record(_, fields):
-            guard taken(Set(fields.keys), reserving: reserved, constructs: constructs).isEmpty else {
+        case let .record(record):
+            guard taken(Set(record.names), reserving: reserved, constructs: constructs).isEmpty else {
                 return .quoted
             }
 
-            return try fields.values.reduce(.plainly) { carried, field in
+            return try record.values.reduce(.plainly) { carried, field in
                 try spelling(of: field, reserving: reserved) == .plainly ? carried : .quoted
             }
 

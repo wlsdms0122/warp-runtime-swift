@@ -48,11 +48,14 @@ public extension RecoverableFailure {
     // does not get to redefine the word naming what happened. What it wanted
     // to say belongs under a name of its own.
     var payload: Value {
-        .object(
-            details.merging([
-                "type": .string(type),
-                "message": .string(message),
-            ]) { _, core in core }
+        .record(
+            Record(
+                name: nil,
+                details.merging([
+                    "type": .string(type),
+                    "message": .string(message),
+                ]) { _, core in core }
+            )
         )
     }
 }

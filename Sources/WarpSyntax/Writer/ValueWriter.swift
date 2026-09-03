@@ -67,8 +67,8 @@ public struct ValueWriter: Encodable {
 
             try container.encode(elements.map(ValueWriter.init))
 
-        case let .record(_, object):
-            try container.encode(object.mapValues(ValueWriter.init))
+        case let .record(record):
+            try container.encode(record.fields.mapValues(ValueWriter.init))
 
         // A body is code, and a document spells code as a procedure rather than
         // as data. Writing a marker would make a document that cannot be read

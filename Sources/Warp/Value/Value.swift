@@ -13,7 +13,7 @@ import Foundation
 // The ninth is made by running, never by reading: a closure comes out of the
 // expression that writes one, and a program carrying one as a literal is
 // refused where a module is made. So a text spells eight, and anything handed
-// data from outside a run is handed eight — which is why the writings say so
+// data from outside a run is handed eight, which is why the writings say so
 // where a caller can reach them with the ninth directly.
 //
 // Equality is written by hand because a procedure has no honest one: two
@@ -28,28 +28,27 @@ public indirect enum Value: Sendable, Equatable {
     case bytes([UInt8])
     case array([Value])
 
-    // Fields under keys, and the name of the declared type the record settled
-    // to, where it has. A record made by a literal, answered by a native word
-    // or read out of a document has no name; it takes one the first time it
-    // settles into a slot that declares a type, and from then on it fits only
-    // that name. Two records of one shape under two names are two values.
-    case record(name: String?, fields: [String: Value])
+    // Fields under names, and the name of the declared type the record
+    // settled to, where it has. A record made by a literal, answered by a
+    // native word or read out of a document has no name; it takes one the
+    // first time it settles into a slot that declares a type, and from then
+    // on it fits only that name. Two records of one shape under two names
+    // are two values.
+    case record(Record)
 
     case procedure(Closure)
 
     // A record with no name: what a literal, a native word and a document
     // make. The one spelling for it, so a caller never writes the nil.
     public static func object(_ fields: [String: Value]) -> Value {
-        .record(name: nil, fields: fields)
+        .record(Record(name: nil, fields))
     }
 
-    // This record with other fields and the same name, or any other value as
-    // it is. Rewriting fields goes through here so a name is kept without
-    // each caller remembering to.
-    public func replacingFields(_ rewrite: ([String: Value]) throws -> [String: Value]) rethrows -> Value {
-        guard case let .record(name, fields) = self else { return self }
+    // This record with one field written, or any other value as it is.
+    public func replacing(_ field: String, with value: Value) -> Value {
+        guard case let .record(record) = self else { return self }
 
-        return .record(name: name, fields: try rewrite(fields))
+        return .record(record.replacing(field, with: value))
     }
 
     // MARK: - Property
@@ -57,7 +56,7 @@ public indirect enum Value: Sendable, Equatable {
     // sentence because it is one rule, and an author meeting it twice should
     // not have to work out whether they are two.
     public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
-        + " where a document reaches — a body a program carries is written as a closure"
+        + " where a document reaches; a body a program carries is written as a closure"
 
     // Whether a procedure is anywhere in here, however deep.
     //
@@ -69,7 +68,7 @@ public indirect enum Value: Sendable, Equatable {
         switch self {
         case .procedure: true
         case let .array(items): items.contains { item in item.holdsProcedure }
-        case let .record(_, fields): fields.values.contains { field in field.holdsProcedure }
+        case let .record(record): record.entries.contains { entry in entry.value.holdsProcedure }
         default: false
         }
     }
@@ -109,16 +108,16 @@ public indirect enum Value: Sendable, Equatable {
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a caller does with what a run gave it.
     public subscript(field: String) -> Value? {
-        guard case let .record(_, fields) = self else { return nil }
+        guard case let .record(record) = self else { return nil }
 
-        return fields[field]
+        return record[field]
     }
 
     // The elements a value is indexed by, and nil for what has none. This is
     // where the `bytes = array<byte>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they
-    // are — lazily, so a compact spelling is not unpacked to read one element
-    // — and a word taking either through `any` reads this one projection
+    // are, lazily, so a compact spelling is not unpacked to read one element,
+    // and a word taking either through `any` reads this one projection
     // instead of knowing the equation itself.
     public var elements: AnyRandomAccessCollection<Value>? {
         switch self {
@@ -133,7 +132,7 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The elements at these positions, in the spelling this value is — nil for
+    // The elements at these positions, in the spelling this value is. Nil for
     // what has no elements to take, the way `elements` answers nil.
     //
     // This is for the words that only put their receiver's own elements in
@@ -144,7 +143,7 @@ public indirect enum Value: Sendable, Equatable {
     //
     // A position this value does not have is answered the way a value with no
     // elements at all is: with nil. The three words in this library count
-    // their positions from `elements` and so can never ask for one — but this
+    // their positions from `elements` and so can never ask for one. This
     // is reachable from outside, where a caller's own arithmetic decides, and
     // a library that brings its caller's process down over that is not one
     // this can be.
@@ -165,14 +164,14 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // This value with one more element at one end, in the spelling it is — nil
+    // This value with one more element at one end, in the spelling it is. Nil
     // for what has no elements, the way the two above answer nil.
     //
     // Only the arriving element is looked at, because it is the only one that
     // can make a compact spelling stop holding: the ones already there are
     // bytes by construction. Reading them out to put one more beside them
     // would spend the whole collection's boxing on a single addition, which is
-    // the same waste the two above exist against — and it is the arriving
+    // the same waste the two above exist against. It is the arriving
     // element, not the receiver's size, that decides the answer's spelling.
     public func adding(_ element: Value, atFront: Bool) -> Value? {
         guard let held = elements else { return nil }
@@ -196,11 +195,11 @@ public indirect enum Value: Sendable, Equatable {
     // These elements, spelled the way this value is. The other half of the
     // projection above: `elements` reads a compact spelling as the array it is,
     // and this writes an array back into the compact spelling where it still
-    // holds — so a word that answers its receiver's own elements, rearranged or
+    // holds, so a word that answers its receiver's own elements, rearranged or
     // fewer, answers bytes when it was given bytes.
     //
-    // Where it no longer holds — a byte's slot now carrying something that is
-    // not one — the answer is a plain array, because the spelling is a fact
+    // Where it no longer holds, a byte's slot now carrying something that is
+    // not one, the answer is a plain array, because the spelling is a fact
     // about the value and saying otherwise would be a claim no value backs.
     //
     // A word that builds *new* elements does not come through here. `map`
@@ -253,12 +252,12 @@ public indirect enum Value: Sendable, Equatable {
         case let (.array(left), .array(right)):
             return left == right
 
-        case let (.record(leftName, left), .record(rightName, right)):
-            return leftName == rightName && left == right
+        case let (.record(left), .record(right)):
+            return left == right
 
         // Two procedures are never equal. Structural equality would compare
         // bodies, which says nothing an author asked about, and reference
-        // equality would make a value's identity observable — neither is a
+        // equality would make a value's identity observable, and neither is a
         // question this language has.
         case (.procedure, .procedure):
             return false
@@ -270,7 +269,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // How two values stand to each other, for the kinds that order: numbers
     // among themselves and strings among themselves. Nil is a pair with no
-    // order — mixed kinds, the kinds that do not order, and a fraction that
+    // order: mixed kinds, the kinds that do not order, and a fraction that
     // is not a number, which orders with nothing. Every consumer of order —
     // equality across numeric width, `lessThan`/`greaterThan`, `sorted`,
     // `min`/`max` — reads this one answer, so a whole beside a fraction is
@@ -359,11 +358,13 @@ public indirect enum Value: Sendable, Equatable {
             return left.count == right.count
                 && zip(left, right).allSatisfy { pair in pair.0.matches(pair.1) }
 
-        case let (.record(leftName, left), .record(rightName, right)):
-            return leftName == rightName
+        // Both hold their entries in name order, so two records match
+        // entry by entry.
+        case let (.record(left), .record(right)):
+            return left.name == right.name
                 && left.count == right.count
-                && left.allSatisfy { key, value in
-                    right[key].map { other in value.matches(other) } ?? false
+                && zip(left.entries, right.entries).allSatisfy { mine, theirs in
+                    Name.same(mine.name, theirs.name) && mine.value.matches(theirs.value)
                 }
 
         default:

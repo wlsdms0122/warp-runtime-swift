@@ -88,17 +88,21 @@ struct ShapeTests {
         let settled = try slot.settling(.object(["balance": .int(1), "owner": owner]), at: "input", in: table)
         let again = try slot.settling(settled, at: "input", in: table)
         let spelled = try slot.settling(
-            .record(name: "bank.Acct", fields: ["balance": .int(1), "owner": owner]),
+            .record(Record(name: "bank.Acct", ["balance": .int(1), "owner": owner])),
             at: "input",
             in: table
         )
 
         // Then
-        #expect(settled == .record(name: "bank.Account", fields: ["balance": .int(1), "owner": .record(name: "bank.Owner", fields: ["name": .string("a")])]))
+        #expect(
+            settled == .record(
+                Record(name: "bank.Account", ["balance": .int(1), "owner": .record(Record(name: "bank.Owner", ["name": .string("a")]))])
+            )
+        )
         #expect(again == settled)
         #expect(spelled == settled)
         #expect {
-            try slot.settling(.record(name: "bank.Owner", fields: ["balance": .int(1), "owner": owner]), at: "input", in: table)
+            try slot.settling(.record(Record(name: "bank.Owner", ["balance": .int(1), "owner": owner])), at: "input", in: table)
         } throws: { error in
             "\(error)".contains("is a bank.Owner, and the slot declares bank.Account")
         }

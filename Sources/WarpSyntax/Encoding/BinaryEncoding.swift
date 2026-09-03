@@ -158,8 +158,8 @@ public enum BinaryEncoding {
         // whatever that language decided, and the wire cannot depend on it.
         // A record under a name is written under its own tag with the name in
         // front, so a reader that met the tag knows a name follows.
-        case let .record(name, object):
-            if let name {
+        case let .record(record):
+            if let name = record.name {
                 guard Name.isName(name) else {
                     throw EncodingError.invalidValue(
                         Value.string(name),
@@ -173,12 +173,10 @@ public enum BinaryEncoding {
                 bytes.append(Tag.record.rawValue)
             }
 
-            write(UInt64(object.count), into: &bytes)
+            write(UInt64(record.count), into: &bytes)
 
-            let fields = object.map { field in (Array(field.key.utf8), field.key, field.value) }
-                .sorted { one, other in Name.precedes(one.1, other.1) }
-
-            for (raw, key, value) in fields {
+            // The record holds its entries in byte order, the order written.
+            for (key, value) in record.entries {
                 // A name outside NFC would give one name several byte
                 // spellings, and byte order would stop being an order on
                 // names — refused on the way out exactly as on the way in.
@@ -192,7 +190,7 @@ public enum BinaryEncoding {
                     )
                 }
 
-                write(raw, into: &bytes)
+                write(Array(key.utf8), into: &bytes)
 
                 try write(value, into: &bytes, within: depth - 1)
             }
@@ -325,7 +323,7 @@ public enum BinaryEncoding {
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
-                    settled = .record(name: name, fields: [:])
+                    settled = .record(Record(name: name, entries: []))
                 } else {
                     var held: [String: Value] = [:]
 
@@ -361,7 +359,7 @@ public enum BinaryEncoding {
                     held[key] = value
 
                     if expecting == 1 {
-                        settled = .record(name: name, fields: held)
+                        settled = .record(Record(name: name, held))
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 

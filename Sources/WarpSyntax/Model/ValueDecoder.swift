@@ -34,13 +34,13 @@ struct ValueDecoder: Decoder {
 
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let object: [String: Value]
+        let object: Record
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            object.keys.compactMap { key in Key(stringValue: key) }
+            object.names.compactMap { key in Key(stringValue: key) }
         }
 
         // MARK: - Initializer
@@ -306,7 +306,7 @@ struct ValueDecoder: Decoder {
     // MARK: - Initializer
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .record(_, object) = value else {
+        guard case let .record(object) = value else {
             throw ReadingError("expected object, found \(value.type)", at: steps)
         }
 

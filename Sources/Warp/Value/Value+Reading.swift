@@ -18,8 +18,8 @@ extension Value {
         let rest = Array(path.dropFirst())
 
         switch (self, segment) {
-        case let (.record(_, fields), .key(name, _)):
-            guard let field = fields[name] else {
+        case let (.record(record), .key(name, _)):
+            guard let field = record[name] else {
                 throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
             }
 

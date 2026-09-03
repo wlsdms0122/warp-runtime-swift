@@ -111,8 +111,8 @@ public struct ExpressionReader: Decodable {
                     }
                 )
 
-            case let .record(_, object):
-                return try read(object: object, at: steps, in: decoder)
+            case let .record(record):
+                return try read(object: record.fields, at: steps, in: decoder)
 
             // A document is text. Nothing it parses to is ever a procedure, so
             // this arm is unreachable rather than unwritten — a closure reaches
@@ -348,11 +348,11 @@ public struct ExpressionReader: Decodable {
         case nil:
             bindings = [:]
 
-        case let .record(_, withObject)?:
-            bindings = try withObject.keys.sorted().reduce(into: [String: Expression]()) { bound, key in
-                bound[key] = try read(
-                    withObject[key] ?? .null,
-                    at: steps + [.key("with"), .key(key)],
+        case let .record(withRecord)?:
+            bindings = try withRecord.entries.reduce(into: [String: Expression]()) { bound, entry in
+                bound[entry.name] = try read(
+                    entry.value,
+                    at: steps + [.key("with"), .key(entry.name)],
                     in: decoder
                 )
             }

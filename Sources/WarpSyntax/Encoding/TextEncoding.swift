@@ -295,7 +295,7 @@ public enum TextEncoding {
                 case .recordClose:
                     opened.removeLast()
 
-                    settled = .record(name: name, fields: held)
+                    settled = .record(Record(name: name, held))
 
                 case let .bare(key) where Name.isIdentifier(key):
                     try expect(key, in: held)
@@ -505,8 +505,8 @@ public enum TextEncoding {
 
             text += String(repeating: "  ", count: indent) + "]"
 
-        case let .record(name, object):
-            if let name {
+        case let .record(record):
+            if let name = record.name {
                 guard Name.isName(name) else {
                     throw EncodingError.invalidValue(
                         Value.string(name),
@@ -517,7 +517,7 @@ public enum TextEncoding {
                 text += name + " "
             }
 
-            guard !object.isEmpty else {
+            guard !record.isEmpty else {
                 text += "{}"
 
                 break
@@ -525,9 +525,8 @@ public enum TextEncoding {
 
             text += "{\n"
 
-            let fields = object.sorted { one, other in Name.precedes(one.key, other.key) }
-
-            for (key, value) in fields {
+            // The record holds its entries in byte order, the order written.
+            for (key, value) in record.entries {
                 // The same rule the reader holds: one name, one byte spelling
                 guard Name.isNormal(key) else {
                     throw EncodingError.invalidValue(

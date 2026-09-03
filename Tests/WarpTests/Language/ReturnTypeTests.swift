@@ -119,7 +119,7 @@ struct ReturnTypeTests {
         let answer = try await Executor().run(image)
 
         // Then
-        #expect(answer == .array([.record(name: "Task", fields: ["id": .string("a")])]))
+        #expect(answer == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
     }
 
     @Test("an answer naming a shape nobody declared is refused at link")
