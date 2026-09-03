@@ -58,7 +58,6 @@ public struct ConcurrentEffect: Effect {
     // MARK: - Property
     private let word: Word
 
-
     // MARK: - Initializer
     public init(_ word: Word) {
         self.word = word
