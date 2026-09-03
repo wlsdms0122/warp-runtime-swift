@@ -63,6 +63,39 @@ public final class Linked: Sendable {
     }
 
     // MARK: - Public
+    // A declaration's row before its body is lowered: a native answers as it
+    // is, and a written body stands as the refusal it earns until then, so
+    // nothing folds through a body half-made.
+    static func standing(
+        label: String,
+        origin: Int,
+        procedure: Procedure,
+        pure: Bool,
+        isolated: Bool
+    ) -> Linked {
+        let implementation: Implementation
+
+        switch procedure.implementation {
+        case .body:
+            implementation = .query(UnsettledWord())
+
+        case let .query(query):
+            implementation = .query(query)
+
+        case let .effect(effect):
+            implementation = .effect(effect)
+        }
+
+        return Linked(
+            label: label,
+            origin: origin,
+            signature: procedure.signature,
+            purity: pure ? .pure : .unstated,
+            isolation: isolated ? .isolated : .unstated,
+            implementation: implementation
+        )
+    }
+
     // Whether this row is a written body.
     public var isWritten: Bool {
         if case .body = implementation { return true }

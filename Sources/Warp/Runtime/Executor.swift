@@ -68,9 +68,7 @@ public struct Executor: Sendable {
             linked: image.linked,
             types: image.types,
             boxes: image.variables.mapValues { started in
-                started
-                    .sorted { left, right in left.key < right.key }
-                    .map { name, value in Handle(name, value) }
+                started.map { name, value in Handle(name, value) }
             }
         )
         let entry = image.entry
@@ -80,7 +78,7 @@ public struct Executor: Sendable {
         }
 
         let settled = try entry.signature.settle(arguments, over: entry.parameters, offered: false, in: image.types)
-        var activation = executor.frame(of: entry, layout)
+        var activation = try executor.frame(of: entry, layout)
 
         for (position, value) in settled.enumerated() {
             activation.cells[layout.parameters[position]] = .value(value ?? .null)
@@ -379,11 +377,14 @@ public struct Executor: Sendable {
 
         case let .effect(effect):
             let holds = try holds(send.handed, of: callee, in: activation)
+            // A receiver handed in place is read for the effect as what its
+            // hold holds now, the way the effect reads any receiver.
             let receiver = try received(send, of: callee, in: activation)
+                ?? holds.first { position, _ in position == callee.receiverPosition }.map { _, handle in try handle.value() }
             let settled = try settled(
                 callee,
                 given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
-                skipping: skipped(send, of: callee)
+                skipping: skipped(send, of: callee, holding: true)
             )
 
             return try await effect.run(
@@ -401,7 +402,7 @@ public struct Executor: Sendable {
             )
 
         case let .body(body, layout):
-            var inner = frame(of: callee, layout)
+            var inner = try frame(of: callee, layout)
 
             // A parameter handed in place takes no value: it takes a hold on
             // the caller's variable, and what the hold reaches is read only
@@ -421,7 +422,7 @@ public struct Executor: Sendable {
             let settled = try settled(
                 callee,
                 given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
-                skipping: skipped(send, of: callee)
+                skipping: skipped(send, of: callee, holding: true)
             )
 
             for (position, value) in settled.enumerated() {
@@ -475,7 +476,7 @@ public struct Executor: Sendable {
             throw ExecutionError("a closure is a body, and this one is native")
         }
 
-        var activation = frame(of: closure.linked, layout)
+        var activation = try frame(of: closure.linked, layout)
 
         for (slot, cell) in closure.captured {
             activation.cells[slot] = cell
@@ -620,13 +621,17 @@ public struct Executor: Sendable {
     }
 
     // The frame a row runs in, with the module variables it reads in place.
-    private func frame(of callee: Linked, _ layout: Layout) -> Activation {
+    private func frame(of callee: Linked, _ layout: Layout) throws -> Activation {
         var activation = Activation(layout)
 
-        if !layout.variables.isEmpty, let held = boxes[callee.origin] {
-            for (variable, slot) in layout.variables {
-                activation.cells[slot] = .hold(held[variable])
-            }
+        guard !layout.variables.isEmpty else { return activation }
+
+        guard let held = boxes[callee.origin] else {
+            throw ExecutionError("'\(callee.label)' reads its document's variables, and this run holds none")
+        }
+
+        for (variable, slot) in layout.variables {
+            activation.cells[slot] = .hold(held[variable])
         }
 
         return activation
@@ -672,10 +677,15 @@ public struct Executor: Sendable {
         }
     }
 
-    // The positions a call settles elsewhere: the ones handed in place, and
-    // the receiver where the call wrote one in front.
-    private func skipped(_ send: Send, of callee: Linked) -> Skipped {
-        Skipped(handed: send.handed, receiver: send.receiver == nil ? nil : callee.receiverPosition)
+    // The positions a call fills another way: the receiver where the call
+    // wrote one in front, and the ones handed in place where the callee
+    // takes holds. A pure body takes no hold, so what it was handed is
+    // settled as a value.
+    private func skipped(_ send: Send, of callee: Linked, holding: Bool) -> Skipped {
+        Skipped(
+            handed: holding ? send.handed : [],
+            receiver: send.receiver == nil ? nil : callee.receiverPosition
+        )
     }
 
     private struct Skipped {
@@ -738,11 +748,7 @@ public struct Executor: Sendable {
             given[handed.position] = try found(handed.slot, handed.path, in: activation)
         }
 
-        let arguments = try settled(
-            callee,
-            given: given,
-            skipping: Skipped(handed: [], receiver: send.receiver == nil ? nil : callee.receiverPosition)
-        )
+        let arguments = try settled(callee, given: given, skipping: skipped(send, of: callee, holding: false))
 
         do {
             return try answer(callee, for: receiver, with: arguments)
@@ -782,7 +788,7 @@ public struct Executor: Sendable {
         // A body the link proved pure runs here, synchronously. Nothing in it
         // can suspend, which is what the proof says.
         case let .body(body, layout):
-            var activation = frame(of: callee, layout)
+            var activation = try frame(of: callee, layout)
 
             for (position, value) in arguments.enumerated() {
                 guard let value else { continue }

@@ -289,6 +289,78 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
+    @Test("a word folding through a written word is refused whichever is declared first")
+    func aWordFoldingThroughAWordIsRefusedInAnyOrder() throws {
+        // Given — `app.zeta` reads a constant through `alpha`, a written word
+        // declared before it in name order; while the words settle every
+        // written body stands as its refusal, so the order is not the text's
+        let module = try Module(
+            constants: ["K": .literal(.int(1))],
+            procedures: [
+                "entry": Procedure(body: [], result: .literal(.null)),
+                "app.alpha": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
+                    body: [],
+                    result: .reference([.key("of")])
+                ),
+                "app.zeta": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
+                    body: [],
+                    result: .reference([.key("K"), .key("alpha")])
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try linker.link([module] + Module.standard, entry: "entry")
+        } throws: { error in
+            "\(error)".contains("runs after the link")
+        }
+    }
+
+    @Test("an effect sent to a variable in place reads it as its receiver")
+    func anEffectReadsItsHandedReceiver() async throws {
+        // Given — the receiver is handed in place, so the effect holds it,
+        // and it reads as the receiver too, the way any receiver does
+        let module = try Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(binding: .variable("held"), expression: .literal(.int(5)))
+                    ],
+                    result: .dispatch(Dispatch(receiver: .reference([.key("held")]), selector: "app.echo"))
+                ),
+                "app.echo": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .inout(.int))],
+                        returns: .int
+                    ),
+                    implementation: .effect(EchoEffect())
+                )
+            ]
+        )
+
+        // When
+        let image = try linker.link([module] + Module.standard, entry: "entry")
+
+        // Then
+        #expect(try await Executor().run(image) == .int(5))
+    }
+
     // MARK: - Public
+    // MARK: - Private
+}
+
+// Answers what it was sent to.
+private struct EchoEffect: Effect {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation) async throws -> Value {
+        invocation.receiver ?? .null
+    }
+
     // MARK: - Private
 }

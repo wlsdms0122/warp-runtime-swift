@@ -36,8 +36,9 @@ public struct Image: Sendable {
     public let types: TypeTable
 
     // What each document's variables start a run holding, by the document's
-    // position in the link. A run makes one box per variable from these.
-    public let variables: [Int: [String: Value]]
+    // position in the link, in the order the layouts read them. A run makes
+    // one box per variable from these, in this order.
+    public let variables: [Int: [(name: String, value: Value)]]
 
     // MARK: - Initializer
     init(
@@ -46,7 +47,7 @@ public struct Image: Sendable {
         rows: [String: Int],
         reached: Set<String>,
         types: TypeTable,
-        variables: [Int: [String: Value]]
+        variables: [Int: [(name: String, value: Value)]]
     ) {
         self.linked = linked
         self.start = start

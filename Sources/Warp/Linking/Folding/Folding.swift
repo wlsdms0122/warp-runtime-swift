@@ -23,15 +23,22 @@ struct Folding {
     let types: TypeTable
 
     // MARK: - Initializer
-    init(constants: [String: Value], origin: Int, lowering: Lowering, types: TypeTable) {
+    init(
+        constants: [String: Value],
+        origin: Int,
+        table: [Linked],
+        rows: [String: Int],
+        words: [String: Int],
+        types: TypeTable
+    ) {
         let names = constants.keys.sorted()
 
         self.names = names
         self.cells = names.map { name in .value(constants[name] ?? .null) }
         self.origin = origin
-        self.table = lowering.table
-        self.rows = lowering.rows
-        self.words = lowering.words
+        self.table = table
+        self.rows = rows
+        self.words = words
         self.types = types
     }
 
@@ -45,40 +52,21 @@ struct Folding {
 
         for (origin, module) in modules.enumerated() {
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
-                let implementation: Linked.Implementation
-
-                switch procedure.implementation {
-                case .body:
-                    implementation = .query(UnsettledWord())
-
-                case let .query(query):
-                    implementation = .query(query)
-
-                case let .effect(effect):
-                    implementation = .effect(effect)
-                }
-
                 rows[name] = table.count
                 words[String(name.split(separator: ".").last ?? Substring(name))] = table.count
                 table.append(
-                    Linked(
+                    Linked.standing(
                         label: name,
                         origin: origin,
-                        signature: procedure.signature,
-                        purity: procedure.implementation.isNativelyPure == true ? .pure : .unstated,
-                        isolation: .unstated,
-                        implementation: implementation
+                        procedure: procedure,
+                        pure: procedure.implementation.isNativelyPure == true,
+                        isolated: false
                     )
                 )
             }
         }
 
-        self.init(
-            constants: bindings,
-            origin: 0,
-            lowering: Lowering(table: table, rows: rows, words: words, variables: [:]),
-            types: types
-        )
+        self.init(constants: bindings, origin: 0, table: table, rows: rows, words: words, types: types)
     }
 
     // MARK: - Public

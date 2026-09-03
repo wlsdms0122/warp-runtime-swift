@@ -283,9 +283,14 @@ extension Closure {
     }
 }
 
+// The walk's answer as the tests ask it: what a path holds, or why the
+// reading went wrong.
+enum Lookup: Equatable {
+    case found(Value)
+    case unfit(reason: String)
+}
+
 extension Folding {
-    // The walk's answer as the tests ask it: what a path holds, or why the
-    // reading went wrong.
     func lookup(_ path: [PathSegment]) -> Lookup {
         do {
             return .found(try read(path, at: .given("test")))

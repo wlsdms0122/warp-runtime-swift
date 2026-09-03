@@ -136,41 +136,40 @@ public struct Linker: Sendable {
         var table: [Linked] = []
 
         for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
-            let implementation: Linked.Implementation
-
-            switch symbol.procedure.implementation {
-            case .body:
-                implementation = .query(UnsettledWord())
-
-            case let .query(query):
-                implementation = .query(query)
-
-            case let .effect(effect):
-                implementation = .effect(effect)
-            }
-
             rows[symbol.declared] = table.count
             table.append(
-                Linked(
+                Linked.standing(
                     label: symbol.declared,
                     origin: symbol.origin,
-                    signature: symbol.procedure.signature,
-                    purity: settled.contains(symbol.declared) ? .pure : .unstated,
-                    isolation: isolatedDeclarations.contains(symbol.declared) ? .isolated : .unstated,
-                    implementation: implementation
+                    procedure: symbol.procedure,
+                    pure: settled.contains(symbol.declared),
+                    isolated: isolatedDeclarations.contains(symbol.declared)
                 )
             )
+        }
+
+        // Each document's variables in the order a run makes their boxes,
+        // decided here once: the layouts read positions from it and the
+        // image carries the starting values in it.
+        let orderedVariables = modules.enumerated().reduce(into: [Int: [String]]()) { table, entry in
+            table[entry.offset] = entry.element.variables.keys.sorted()
         }
 
         var lowering = Lowering(
             table: table,
             rows: rows,
             words: wordSymbols.compactMapValues { symbol in rows[symbol.declared] },
-            variables: modules.enumerated().reduce(into: [:]) { table, entry in
-                table[entry.offset] = entry.element.variables.keys.sorted().enumerated()
-                    .reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
+            variables: orderedVariables.mapValues { names in
+                names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
             }
         )
+
+        // What a body's constant paths fold against. The stand-ins, while
+        // the words themselves settle: a word folding through a word would
+        // be a circle, and which words are already lowered is a fact of
+        // name order rather than of the text. Once the words are resolved,
+        // folding runs them.
+        var foldingTable = table
 
         func row(of symbol: Symbol) throws -> Int {
             guard let row = rows[symbol.declared] else {
@@ -278,13 +277,14 @@ public struct Linker: Sendable {
             var answer = (procedure: declared, calls: [CallSite]())
 
             if let block = declared.block {
-                // The table as it stands: a word already lowered answers, a
-                // body not yet lowered stands as its refusal, so a word
+                // A body not yet lowered stands as its refusal, so a word
                 // folding through a word is refused as the circle it is.
                 let folding = Folding(
                     constants: constants[symbol.origin] ?? [:],
                     origin: symbol.origin,
-                    lowering: lowering,
+                    table: foldingTable,
+                    rows: lowering.rows,
+                    words: lowering.words,
                     types: types
                 )
 
@@ -339,6 +339,8 @@ public struct Linker: Sendable {
         for (_, symbol) in wordSymbols.sorted(by: { $0.key < $1.key }) {
             _ = try resolved(symbol)
         }
+
+        foldingTable = lowering.table
 
         var procedures: [String: Procedure] = [:]
         var frontier: [Symbol] = [start]
@@ -397,7 +399,11 @@ public struct Linker: Sendable {
             rows: rows,
             reached: Set(procedures.keys),
             types: types,
-            variables: variables
+            variables: variables.reduce(into: [:]) { table, entry in
+                table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
+                    (name: name, value: entry.value[name] ?? .null)
+                }
+            }
         )
     }
 
