@@ -10,8 +10,9 @@ import Foundation
 // A parameter as the run reads it: what the boundary asks of an argument,
 // and nothing else. The name for a refusal, the shape to settle against,
 // the default where nothing was given, and the spellings the settled value
-// must be one of. The declaration's type is not here; its lowering is.
-struct Slot: Sendable {
+// must be one of. The declaration's type is not here; its lowering is. A
+// class, the way a row is: a boundary reads its slots without copying them.
+final class Slot: Sendable {
     // MARK: - Property
     let name: String
     let shape: Shape

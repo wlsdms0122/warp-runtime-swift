@@ -285,9 +285,13 @@ extension Shape {
     // and without settling. Nil for a member that is not a scalar, which is
     // judged by settling the value against it.
     func admitsAsScalar(_ value: Value) -> Bool? {
-        switch self {
-        case .null, .bool, .int, .double, .string:
-            return scalar(value) != nil
+        switch (self, value) {
+        case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double), (.double, .int),
+            (.string, .string):
+            return true
+
+        case (.null, _), (.bool, _), (.int, _), (.double, _), (.string, _):
+            return false
 
         default:
             return nil
