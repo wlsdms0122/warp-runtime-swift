@@ -96,6 +96,11 @@ final class ShapeTable: Sendable {
                 admits(constraint: row, reading: member, assuming: assuming + [constraint])
             }
 
+        // Nothing can be said about a reading the table does not answer, so
+        // it passes here and is refused where the name is met.
+        case .undeclared:
+            return true
+
         default:
             return constraints[row].contains { member in member.accepts(reading, in: self) }
         }
@@ -108,6 +113,22 @@ final class ShapeTable: Sendable {
         guard let row = constraintRow(named: name) else { return nil }
 
         return admits(constraint: row, reading: reading.lowered(in: self), assuming: [])
+    }
+
+    // The record a shape names, through the names and the slot facts that
+    // wrap it, or nil where it names none. The one reading of `recordRows`
+    // for a shape that is not itself a row.
+    func record(of shape: Shape) -> Int? {
+        switch shape {
+        case let .named(row):
+            return recordRows[row]
+
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return record(of: inner)
+
+        default:
+            return nil
+        }
     }
 
     // MARK: - Private

@@ -249,6 +249,44 @@ struct ShapeTests {
         }
     }
 
+    @Test("a procedure another link made is refused by a run, not read by its rows")
+    func aProcedureFromAnotherLinkIsRefused() async throws {
+        // Given: a closure made by one image, handed to a run of another
+        let maker = try Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [],
+                    result: .closure(Procedure(body: [], result: .literal(.int(1))))
+                )
+            ]
+        )
+        let taker = try Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
+                    body: [],
+                    result: .invoke(.reference([.key("held")]), arguments: [:])
+                )
+            ]
+        )
+        let made = try await Executor().run(try linker.link([maker] + Module.standard, entry: "entry"))
+        let taking = try linker.link([taker] + Module.standard, entry: "entry")
+
+        // When / Then
+        await #expect(throws: ArgumentError.self) {
+            try await Executor().run(taking, arguments: ["held": made])
+        }
+    }
+
+    @Test("a reading naming an undeclared constraint passes membership, since nothing is proven of it")
+    func anUndeclaredReadingPassesMembership() {
+        // Given
+        let table = types.shapes
+
+        // When / Then
+        #expect(table.admits(constraint: "app.Ordered", reading: .parameter(name: "T", constraint: "app.Nobody")) == true)
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

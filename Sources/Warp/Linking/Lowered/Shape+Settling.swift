@@ -54,7 +54,7 @@ extension Shape {
         case let .named(row):
             let declared = table.shapes[row]
 
-            guard case let .record(tag, _) = value, let nominal = table.recordRows[row] else {
+            guard case let .record(tag, _) = value, let nominal = table.record(of: self) else {
                 return try declared.settling(value, at: path(), in: table, assuming: assuming)
             }
 
@@ -171,6 +171,11 @@ extension Shape {
         // an undeclared field is judged here for the first time.
         case let .procedure(required, returns, purity, isolation):
             guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
+
+            // Its rows are numbered by the table of the link that made it.
+            guard closure.linked.readable(in: table) else {
+                throw ArgumentError("\(path()): got a procedure another link made, which this run cannot read")
+            }
 
             if purity == .pure, closure.purity != .pure {
                 throw ArgumentError(
@@ -395,7 +400,7 @@ extension Shape {
         // A range is a condition on a number, so the spelling it reads is the
         // spelling of the kind under it.
         case let .ranged(refinement):
-            return refinement.kind.shape.numeral(candidate, in: table)
+            return refinement.shape.numeral(candidate, in: table)
 
         case .double:
             return Double(spelling: candidate).map(Value.double)
@@ -518,19 +523,5 @@ extension Shape {
 
     private func mismatch(_ value: Value, at path: String, in table: ShapeTable) -> ArgumentError {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
-    }
-}
-
-extension TypeExpression {
-    // The kind under a range, as a shape. A range's kind is one of two
-    // scalars, so nothing here needs a table.
-    var shape: Shape {
-        switch self {
-        case .double:
-            return .double
-
-        default:
-            return .int
-        }
     }
 }

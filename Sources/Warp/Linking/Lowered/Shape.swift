@@ -69,7 +69,7 @@ indirect enum Shape: Sendable {
     var unrefined: Shape {
         switch self {
         case let .ranged(refinement):
-            return refinement.kind.shape
+            return refinement.shape
 
         case .bytes:
             return .array(.byteElement)

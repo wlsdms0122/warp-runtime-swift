@@ -471,6 +471,11 @@ public struct Executor: Sendable {
             throw ExecutionError("a closure is a body, and this one is native")
         }
 
+        // Its rows are numbered by the table of the link that made it.
+        guard closure.linked.readable(in: shapes) else {
+            throw ExecutionError("this call names a procedure another link made, which this run cannot read")
+        }
+
         var activation = try frame(of: closure.linked, layout)
 
         for (slot, cell) in closure.captured {

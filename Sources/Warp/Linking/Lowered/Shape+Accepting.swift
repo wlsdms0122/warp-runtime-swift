@@ -140,16 +140,16 @@ extension Shape {
         // fact: the kinds under them decide which way a value may widen, and
         // bounds that cannot overlap are provably apart.
         case let (.ranged(mine), .ranged(theirs)):
-            return mine.kind.shape.accepts(theirs.kind.shape, in: table, assuming: assuming)
+            return mine.shape.accepts(theirs.shape, in: table, assuming: assuming)
                 && mine.overlaps(theirs)
 
         // A range against anything else is its kind against that: the bounds
         // speak where a value is settled.
         case let (.ranged(mine), _):
-            return mine.kind.shape.accepts(other, in: table, assuming: assuming)
+            return mine.shape.accepts(other, in: table, assuming: assuming)
 
         case let (_, .ranged(theirs)):
-            return accepts(theirs.kind.shape, in: table, assuming: assuming)
+            return accepts(theirs.shape, in: table, assuming: assuming)
 
         // `bytes` and `array<byte>` are one type in two spellings, so each
         // side reads by its elements.
@@ -225,7 +225,7 @@ extension Shape {
         // Two ranges are asked of the judge that decides them, the way
         // `accepts` asks it: what is provably apart is refused here.
         if case let .ranged(mine) = self, case let .ranged(theirs) = other {
-            return mine.kind.shape.couldBothHold(theirs.kind.shape, in: table, assuming: assuming)
+            return mine.shape.couldBothHold(theirs.shape, in: table, assuming: assuming)
                 && mine.overlaps(theirs)
         }
 

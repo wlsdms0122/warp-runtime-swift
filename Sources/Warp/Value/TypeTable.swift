@@ -29,6 +29,10 @@ public struct TypeTable: Sendable {
     // judgment this table answers is asked of the lowered one.
     let shapes: ShapeTable
 
+    // A table declaring nothing, for a judgment asked with no declarations
+    // behind it.
+    public static let empty = TypeTable()
+
     // MARK: - Initializer
     public init(
         types: [String: TypeExpression] = [:],

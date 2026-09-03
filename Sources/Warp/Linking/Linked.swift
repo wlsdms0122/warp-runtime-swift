@@ -41,6 +41,11 @@ public final class Linked: Sendable {
     let slots: [Slot]
     let returns: Shape?
 
+    // The table the slots' rows are numbered by. A row means something in
+    // its own link alone, and a closure value carries its row out of a run,
+    // so a run that is handed one asks whether it was made by the same link.
+    let table: ShapeTable
+
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -65,6 +70,7 @@ public final class Linked: Sendable {
         self.isolation = isolation
         self.slots = slots
         self.returns = signature.returns?.lowered(in: table)
+        self.table = table
         self.implementation = implementation
     }
 
@@ -126,6 +132,14 @@ public final class Linked: Sendable {
     // this one leaves instead of producing one.
     func isDerivable(in table: ShapeTable) -> Bool {
         slots.derivable(receiver: receiverPosition, returns: returns, in: table)
+    }
+
+    // Whether a run reading that table can read this row: the row was made
+    // by the same link, or by no link at all. A row made in no link carries
+    // no row numbers, since a table declaring nothing has none, so it reads
+    // the same in any table.
+    func readable(in other: ShapeTable) -> Bool {
+        table === other || table === ShapeTable.empty
     }
 
     // Whether this row is a written body.

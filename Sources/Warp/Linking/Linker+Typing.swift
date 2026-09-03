@@ -1104,11 +1104,7 @@ extension Linker {
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = { (lowered: Shape) -> Int? in
-                guard case let .named(row) = lowered else { return nil }
-
-                return frame.shapes.recordRows[row]
-            }(type.lowered(in: frame.shapes)) != nil
+            let nominal = frame.shapes.record(of: type.lowered(in: frame.shapes)) != nil
 
             if !type.couldBothHold(inner.reading, in: frame.shapes) {
                 // Neither could ever be the other, and the reading proves what

@@ -65,14 +65,14 @@ public struct Signature: Sendable, Equatable {
     // than link time because what a body computes is not a thing the linker can
     // read off the text — but a declaration that only ever describes is a declaration
     // nothing keeps, so it is checked where the fact exists.
-    public func settling(returned value: Value, in types: TypeTable = TypeTable()) throws -> Value {
+    public func settling(returned value: Value, in types: TypeTable = .empty) throws -> Value {
         guard let returns else { return value }
 
         return try returns.settling(value, at: "returns", in: types)
     }
 
     // The receiver, checked against what the parameter naming it declares.
-    public func settling(receiver value: Value, in types: TypeTable = TypeTable()) throws -> Value {
+    public func settling(receiver value: Value, in types: TypeTable = .empty) throws -> Value {
         guard let receiver, let parameter = parameters[receiver] else { return value }
 
         return try parameter.checking(receiver: value, called: receiver, in: types)
@@ -90,7 +90,7 @@ public struct Signature: Sendable, Equatable {
     // everything that will be passed to it, and what is required must accept
     // everything it will get back. A body promising less than the slot asks and
     // returning more than the slot allows is the one that fits.
-    public func accepts(_ given: Signature, in types: TypeTable = TypeTable()) -> Bool {
+    public func accepts(_ given: Signature, in types: TypeTable = .empty) -> Bool {
         TypeExpression.procedure(self).accepts(.procedure(given), in: types)
     }
 
@@ -135,7 +135,7 @@ public struct Signature: Sendable, Equatable {
     // outside a run: the entry's arguments, a closure assembled in Swift.
     public func settle(
         _ given: [String: Value],
-        in types: TypeTable = TypeTable()
+        in types: TypeTable = .empty
     ) throws -> [String: Value] {
         let slots = lowered(in: types.shapes)
 
@@ -148,7 +148,7 @@ public struct Signature: Sendable, Equatable {
     // name only to leave it unread is a declaration nobody meant.
     public func settle(
         offered given: [String: Value],
-        in types: TypeTable = TypeTable()
+        in types: TypeTable = .empty
     ) throws -> [String: Value] {
         let slots = lowered(in: types.shapes)
 

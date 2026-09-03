@@ -1191,7 +1191,7 @@ public struct Linker: Sendable {
         // as the kind under the range and judged by the range's own judge, so
         // what the link calls dead is exactly what the boundary would refuse.
         case let .ranged(refinement):
-            guard let value = refinement.kind.lowered(in: table.shapes).numeral(candidate, in: table.shapes) else {
+            guard let value = refinement.shape.numeral(candidate, in: table.shapes) else {
                 return false
             }
 

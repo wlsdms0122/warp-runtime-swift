@@ -51,6 +51,17 @@ public extension TypeExpression.Refinement {
         }
     }
 
+    // The same kind as the run reads it.
+    internal var shape: Shape {
+        switch self {
+        case .whole:
+            return .int
+
+        case .fraction:
+            return .double
+        }
+    }
+
     // What this admits, or why not. The two refusals are different facts — a
     // text where a number was wanted missed the kind, and a number outside the
     // bounds missed the condition — so the boundary can say which.

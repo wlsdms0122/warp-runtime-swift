@@ -164,7 +164,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     public func settling(
         _ value: Value,
         at path: @autoclosure () -> String,
-        in types: TypeTable = TypeTable()
+        in types: TypeTable = .empty
     ) throws -> Value {
         try settling(value, at: path(), in: types.shapes)
     }
@@ -510,7 +510,7 @@ extension TypeExpression {
     // This is the half of checking the linker can do. What a body computes is
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
-    public func accepts(_ other: TypeExpression, in types: TypeTable = TypeTable()) -> Bool {
+    public func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
         accepts(other, in: types.shapes)
     }
 

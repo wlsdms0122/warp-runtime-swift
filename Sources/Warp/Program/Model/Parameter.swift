@@ -56,7 +56,7 @@ public struct Parameter: Sendable, Equatable {
     public func taking(
         _ value: Value,
         called name: String,
-        in types: TypeTable = TypeTable()
+        in types: TypeTable = .empty
     ) throws -> Value {
         try lowered(named: name, in: types.shapes).taking(value, in: types.shapes)
     }
@@ -64,7 +64,7 @@ public struct Parameter: Sendable, Equatable {
     public func checking(
         receiver value: Value,
         called name: String,
-        in types: TypeTable = TypeTable()
+        in types: TypeTable = .empty
     ) throws -> Value {
         try lowered(named: name, in: types.shapes).checking(receiver: value, in: types.shapes)
     }
@@ -72,20 +72,9 @@ public struct Parameter: Sendable, Equatable {
     public func checking(
         _ value: Value,
         called name: String,
-        in types: TypeTable = TypeTable()
+        in types: TypeTable = .empty
     ) throws -> Value {
         try lowered(named: name, in: types.shapes).checking(value, in: types.shapes)
-    }
-
-    // A candidate of `oneOf` read as the number its canonical spelling
-    // names for the declared slot, the way the boundary reads it, so the
-    // link's candidate judge and the boundary agree on which members exist.
-    static func numeral(
-        _ candidate: String,
-        as declared: TypeExpression?,
-        in types: TypeTable
-    ) -> Value? {
-        (declared ?? .any).lowered(in: types.shapes).numeral(candidate, in: types.shapes)
     }
 
     // MARK: - Private
