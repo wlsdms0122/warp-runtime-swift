@@ -357,9 +357,11 @@ public struct Validator: Sendable {
         // nothing reads back. A caller assembling shapes in Swift is the only
         // one that can build it, and this is the door it comes through.
         case let .literal(value):
-            guard value.holdsProcedure else { return }
+            guard !value.holdsProcedure else {
+                throw ValidationError(Value.procedureIsNotData, at: place)
+            }
 
-            throw ValidationError(Value.procedureIsNotData, at: place)
+            try normal(value, at: place)
 
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)
@@ -774,6 +776,28 @@ public struct Validator: Sendable {
                 "the name '\(name)' is not in normal form C",
                 at: place
             )
+        }
+    }
+
+    // The field names a value carries, however deep, held to the same rule.
+    // A record a document wrote met it at the encoding; one a caller
+    // assembled in Swift meets it here, before a link folds its fields by
+    // Swift's equality.
+    private func normal(_ value: Value, at place: Place) throws {
+        switch value {
+        case let .array(elements):
+            for element in elements {
+                try normal(element, at: place)
+            }
+
+        case let .record(record):
+            for (name, field) in record.entries {
+                try normal(name, at: place)
+                try normal(field, at: place)
+            }
+
+        default:
+            break
         }
     }
 

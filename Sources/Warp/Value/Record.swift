@@ -85,6 +85,14 @@ public struct Record: Sendable {
         self.entries = entries
     }
 
+    // Entries this record already holds, in the order it holds them, for
+    // the makers below that change a value, a name or one place and so
+    // cannot disturb the order.
+    private init(name: String?, keeping entries: [(name: String, value: Value)]) {
+        self.name = name
+        self.entries = entries
+    }
+
     // MARK: - Public
     // The field of this name, or nil where none is held. A binary search
     // over the names' bytes.
@@ -106,7 +114,7 @@ public struct Record: Sendable {
             written.insert((name: field, value: value), at: position)
         }
 
-        return Record(name: name, ordered: written)
+        return Record(name: name, keeping: written)
     }
 
     // This record without the field of this name, or as it is where none is
@@ -119,7 +127,7 @@ public struct Record: Sendable {
         var written = entries
         written.remove(at: position)
 
-        return Record(name: name, ordered: written)
+        return Record(name: name, keeping: written)
     }
 
     // This record with every value put through `transform`, under the same
@@ -127,13 +135,13 @@ public struct Record: Sendable {
     public func settling(_ transform: (String, Value) throws -> Value) rethrows -> Record {
         Record(
             name: name,
-            ordered: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+            keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
         )
     }
 
     // This record under another name, with the same fields.
     public func named(_ name: String?) -> Record {
-        Record(name: name, ordered: entries)
+        Record(name: name, keeping: entries)
     }
 
     // MARK: - Private
@@ -159,7 +167,7 @@ public struct Record: Sendable {
 
 extension Record: Equatable {
     public static func == (lhs: Record, rhs: Record) -> Bool {
-        lhs.name == rhs.name
+        Name.same(lhs.name, rhs.name)
             && lhs.entries.count == rhs.entries.count
             && zip(lhs.entries, rhs.entries).allSatisfy { one, other in
                 Name.same(one.name, other.name) && one.value == other.value

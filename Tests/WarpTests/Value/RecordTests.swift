@@ -126,6 +126,34 @@ struct RecordTests {
         #expect(sut[decomposed] == .int(2))
     }
 
+    @Test("a record's own name is compared as bytes, the way its fields are")
+    func aNameIsComparedAsBytes() {
+        // Given
+        let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
+        let decomposed = Record(name: "app.Cafe\u{301}", ["a": .int(1)])
+
+        // When / Then
+        #expect(composed != decomposed)
+        #expect(!Value.record(composed).matches(.record(decomposed)))
+        #expect(Record(name: nil, ["a": .int(1)]) != composed)
+    }
+
+    @Test("a literal a caller assembled is held to normal form C at the module")
+    func aLiteralIsHeldToNormalForm() {
+        // Given
+        let record = Record(name: nil, entries: [(name: "cafe\u{301}", value: .int(1))])
+
+        // When / Then
+        #expect {
+            try Module(
+                imports: [],
+                procedures: ["entry": Procedure(body: [], result: .literal(.record(record)))]
+            )
+        } throws: { error in
+            "\(error)".contains("not in normal form C")
+        }
+    }
+
     @Test("a record equals another by name and by every entry, and matches across numeric width")
     func equalityAndMatching() {
         // Given

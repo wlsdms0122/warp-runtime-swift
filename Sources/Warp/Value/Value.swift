@@ -361,7 +361,7 @@ public indirect enum Value: Sendable, Equatable {
         // Both hold their entries in name order, so two records match
         // entry by entry.
         case let (.record(left), .record(right)):
-            return left.name == right.name
+            return Name.same(left.name, right.name)
                 && left.count == right.count
                 && zip(left.entries, right.entries).allSatisfy { mine, theirs in
                     Name.same(mine.name, theirs.name) && mine.value.matches(theirs.value)
