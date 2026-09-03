@@ -21,3 +21,10 @@ struct Body: Sendable {
     // MARK: - Public
     // MARK: - Private
 }
+
+extension Body {
+    func reads(_ slots: Range<Int>) -> Bool {
+        instructions.contains { instruction in instruction.reads(slots) }
+            || result?.reads(slots) == true
+    }
+}

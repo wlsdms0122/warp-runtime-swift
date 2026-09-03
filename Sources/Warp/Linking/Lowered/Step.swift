@@ -24,3 +24,11 @@ enum Step: Sendable {
         }
     }
 }
+
+extension Step {
+    func reads(_ slots: Range<Int>) -> Bool {
+        guard case let .at(slot, steps, _) = self else { return false }
+
+        return slots.contains(slot) || steps.contains { step in step.reads(slots) }
+    }
+}

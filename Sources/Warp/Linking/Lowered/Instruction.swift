@@ -31,3 +31,14 @@ struct Instruction: Sendable {
     // MARK: - Public
     // MARK: - Private
 }
+
+extension Instruction {
+    func reads(_ slots: Range<Int>) -> Bool {
+        if case let .assign(slot, steps)? = binding,
+           slots.contains(slot) || steps.contains(where: { step in step.reads(slots) }) {
+            return true
+        }
+
+        return code.reads(slots)
+    }
+}
