@@ -97,8 +97,8 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        guard case let .record(_, fields) = value,
-            Envelope.declaresImports(fields[Envelope.importsKey])
+        guard case let .record(record) = value,
+            Envelope.declaresImports(record[Envelope.importsKey])
         else {
             throw ReadingError(
                 "a document says what it imports, and this one does not —"
@@ -245,9 +245,9 @@ public struct Loader: Sendable {
     // it says which reader the document is written for, and that is an answer
     // about the writing rather than about the program.
     private func stamped(_ value: Value) -> Value {
-        value.replacingFields { fields in
-            fields.merging([Envelope.versionKey: .int(Envelope.version)]) { written, _ in written }
-        }
+        guard case let .record(record) = value, record[Envelope.versionKey] == nil else { return value }
+
+        return .record(record.writing(Envelope.versionKey, with: .int(Envelope.version)))
     }
 
     // Every reading goes through here, and so does every refusal one raises.

@@ -114,14 +114,11 @@ public struct Executor: Sendable {
         case let .array(elements):
             return .array(try elements.map { element in try read(element, in: activation) })
 
+        // The link ordered the fields by name, so the record is made as it is.
         case let .record(fields):
-            var values: [String: Value] = [:]
-
-            for (name, field) in fields {
-                values[name] = try read(field, in: activation)
-            }
-
-            return .object(values)
+            return .record(
+                Record(name: nil, ordered: try fields.map { name, field in (name: name, value: try read(field, in: activation)) })
+            )
 
         // Making a closure runs nothing: it is the capture, and the capture is
         // these cells. Which is why it belongs to the pure half and a
@@ -285,13 +282,14 @@ public struct Executor: Sendable {
             return .array(values)
 
         case let .record(fields):
-            var values: [String: Value] = [:]
+            var values: [(name: String, value: Value)] = []
+            values.reserveCapacity(fields.count)
 
             for (name, field) in fields {
-                values[name] = try await evaluate(field, in: &activation, at: trace)
+                values.append((name: name, value: try await evaluate(field, in: &activation, at: trace)))
             }
 
-            return .object(values)
+            return .record(Record(name: nil, ordered: values))
 
         // The run's whole share of a cast: the link already decided what every
         // dot after this means, and the one thing it could not know is what
@@ -501,7 +499,7 @@ public struct Executor: Sendable {
         while true {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
-            activation.cells[round] = .value(.object(["index": .int(index)]))
+            activation.cells[round] = .value(.record(Record(name: nil, ordered: [(name: "index", value: .int(index))])))
 
             guard try bool(try read(condition, in: activation)) else {
                 guard let result = body.result else { return .null }
@@ -543,7 +541,9 @@ public struct Executor: Sendable {
         let elements = try await array(of: material, naming: name, in: &activation, at: trace)
 
         for (index, item) in elements.enumerated() {
-            activation.cells[element] = .value(.object(["item": item, "index": .int(index)]))
+            activation.cells[element] = .value(
+                .record(Record(name: nil, ordered: [(name: "index", value: .int(index)), (name: "item", value: item)]))
+            )
 
             do {
                 try await perform(body, in: &activation, at: trace.appending(.round(index)))
@@ -932,11 +932,11 @@ public struct Executor: Sendable {
                 }
 
             case let .key(key, _):
-                guard case let .record(_, object) = current else {
+                guard case let .record(record) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
-                guard let next = object[key] else {
+                guard let next = record[key] else {
                     guard segment.optional else {
                         return .unfit(
                             "\(walked().rendered): '\(key)' is not there"

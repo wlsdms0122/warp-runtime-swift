@@ -2217,9 +2217,14 @@ extension Linker {
             )
 
         // A record under a name reads as that name; the shape is the
-        // declaration's, and the name is what the value fits.
-        case let .record(name, fields):
-            return name.map { name in .named(name) } ?? .record(fields.mapValues(type(of:)))
+        // declaration's, and the name is what the value fits. A document's
+        // type names its fields by Swift's equality, so two spellings the
+        // value keeps apart are one field here, the first by bytes.
+        case let .record(record):
+            return record.name.map { name in .named(name) }
+                ?? .record(
+                    Dictionary(record.entries.map { entry in (entry.name, type(of: entry.value)) }) { first, _ in first }
+                )
         }
     }
 

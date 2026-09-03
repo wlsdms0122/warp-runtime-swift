@@ -121,12 +121,10 @@ struct Rendering {
         case let .array(array):
             return "[" + (try array.map(written)).joined(separator: ",") + "]"
 
-        case let .record(name, object):
-            let fields = try object
-                .sorted { left, right in left.key < right.key }
-                .map { key, value in "\(quoted(key)):\(try written(value))" }
+        case let .record(record):
+            let fields = try record.entries.map { name, value in "\(quoted(name)):\(try written(value))" }
 
-            return (name.map { name in "\(name) " } ?? "") + "{" + fields.joined(separator: ",") + "}"
+            return (record.name.map { name in "\(name) " } ?? "") + "{" + fields.joined(separator: ",") + "}"
         }
     }
 

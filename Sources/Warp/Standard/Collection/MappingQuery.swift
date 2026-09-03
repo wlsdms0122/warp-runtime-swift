@@ -30,24 +30,34 @@ public struct MappingQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
-        guard case let .record(_, fields) = question.receiver else { return nil }
+        guard case let .record(record) = question.receiver else { return nil }
 
         switch reading {
-        // Sorted, because an object holds no order of its own and a walk that
-        // answered a different order each run would make a program that reads it
-        // depend on nothing an author wrote.
+        // In name order, the order the record holds: an object holds no
+        // order of its own, and a walk that answered a different order each
+        // run would make a program that reads it depend on nothing an author
+        // wrote.
         case .keys:
-            return .array(fields.keys.sorted().map(Value.string))
+            return .array(record.names.map(Value.string))
 
         case .values:
-            return .array(fields.keys.sorted().compactMap { key in fields[key] })
+            return .array(record.values)
 
         case .setting:
             guard case let .string(key) = question["key"] else {
                 throw ExecutionError("setting asks a string key")
             }
 
-            return .object(fields.merging([key: question["value"]]) { _, new in new })
+            // The key becomes a field's name, and a name is one byte
+            // spelling: the rule every name a program writes is held to.
+            guard Name.isNormal(key) else {
+                throw ExecutionError("setting asks a key in normal form C, and '\(key)' is not")
+            }
+
+            // A new object: the value written was held to no declaration, so
+            // whatever name the receiver settled to would say what nothing
+            // checked.
+            return .record(record.writing(key, with: question["value"]).named(nil))
         }
     }
 

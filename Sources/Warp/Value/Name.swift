@@ -40,6 +40,21 @@ public enum Name {
         name.utf8.elementsEqual(other.utf8)
     }
 
+    // The same, where either side may be no name at all: two absences are
+    // one, and an absence is no name.
+    public static func same(_ name: String?, _ other: String?) -> Bool {
+        switch (name, other) {
+        case let (mine?, theirs?):
+            return same(mine, theirs)
+
+        case (nil, nil):
+            return true
+
+        default:
+            return false
+        }
+    }
+
     // An identifier as every encoding writes one bare: ASCII on purpose, since
     // "is this a letter" for the rest of Unicode is answered by whatever
     // tables a host language shipped, and a canonical layout cannot depend

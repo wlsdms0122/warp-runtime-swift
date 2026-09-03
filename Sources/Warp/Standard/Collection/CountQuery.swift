@@ -22,8 +22,8 @@ public struct CountQuery: Query {
         case let .string(text):
             return .int(text.count)
 
-        case let .record(_, fields):
-            return .int(fields.count)
+        case let .record(record):
+            return .int(record.count)
 
         // What is indexed — an array, or bytes through the one projection
         // that owns the equation — is counted the same way. Bytes have a

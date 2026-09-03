@@ -54,7 +54,7 @@ extension Shape {
         case let .named(row):
             let declared = table.shapes[row]
 
-            guard case let .record(tag, _) = value, let nominal = table.record(of: self) else {
+            guard case let .record(record) = value, let nominal = table.record(of: self) else {
                 return try declared.settling(value, at: path(), in: table, assuming: assuming)
             }
 
@@ -62,17 +62,17 @@ extension Shape {
 
             // A tag already canonical is the same spelling. One that is not
             // is an alias or another record, told apart by the table once.
-            if let tag, !Name.same(tag, label) {
+            if let tag = record.name, !Name.same(tag, label) {
                 guard let spelled = table.row(named: tag), table.recordRows[spelled] == nominal else {
                     throw ArgumentError("\(path()): is a \(tag), and the slot declares \(label)")
                 }
             }
 
-            guard case let .record(_, fields) = try declared.settling(value, at: path(), in: table, assuming: assuming) else {
+            guard case let .record(settled) = try declared.settling(value, at: path(), in: table, assuming: assuming) else {
                 throw mismatch(value, at: path(), in: table)
             }
 
-            return .record(name: label, fields: fields)
+            return .record(settled.named(label))
 
         // Null arrives as itself; anything else is held to the declared half.
         case let .nullable(inner):
@@ -125,40 +125,46 @@ extension Shape {
             )
 
         case let .object(entry):
-            guard case let .record(tag, object) = value else { throw mismatch(value, at: path(), in: table) }
+            guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
 
             // An entry nothing was declared for passes as it is, so the record
             // does too.
             if entry == .any { return value }
 
             return .record(
-                name: tag,
-                fields: try object.mapValues { item in
+                try record.mapValues { _, item in
                     try entry.settling(item, at: path(), in: table, assuming: assuming)
                 }
             )
 
         // An inline record is structural: a record under any name fits it by
-        // shape and keeps the name it came with.
+        // shape and keeps the name it came with. The declared fields and the
+        // record's entries are both in name order, so one walk down the
+        // entries meets every declared field where it stands.
         case let .record(fields):
-            guard case let .record(tag, object) = value else { throw mismatch(value, at: path(), in: table) }
+            guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
 
-            var settled = object
+            var settled = record.entries
+            var cursor = 0
 
             for (name, field) in fields {
-                guard let written = object[name] else {
+                while cursor < settled.count, Name.precedes(settled[cursor].name, name) {
+                    cursor += 1
+                }
+
+                guard cursor < settled.count, Name.same(settled[cursor].name, name) else {
                     throw ArgumentError("\(path()).\(name): required by \(rendered(in: table)), and nothing was given")
                 }
 
-                settled[name] = try field.settling(
-                    written,
+                settled[cursor].value = try field.settling(
+                    settled[cursor].value,
                     at: "\(path()).\(name)",
                     in: table,
                     assuming: assuming
                 )
             }
 
-            return .record(name: tag, fields: settled)
+            return .record(Record(name: record.name, ordered: settled))
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.

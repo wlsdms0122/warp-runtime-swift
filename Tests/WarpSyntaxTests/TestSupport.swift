@@ -143,14 +143,19 @@ extension Loader {
     // Tests about the envelope itself call `load` directly, because for those
     // the envelope is the subject rather than the ceremony.
     func loadDocument(_ value: Value, from notation: Notation = .testing) throws -> Module {
-        guard case let .record(_, fields) = value else { return try load(value, identity: nil) }
+        guard case let .record(record) = value else { return try load(value, identity: nil) }
 
-        let written = Value.object(fields.merging([
-            Envelope.versionKey: .int(Envelope.version),
-            Envelope.importsKey: .array([])
-        ]) { written, _ in written })
+        var written = record
 
-        return try load(try canonical(written, from: notation), identity: nil)
+        if written[Envelope.versionKey] == nil {
+            written = written.writing(Envelope.versionKey, with: .int(Envelope.version))
+        }
+
+        if written[Envelope.importsKey] == nil {
+            written = written.writing(Envelope.importsKey, with: .array([]))
+        }
+
+        return try load(try canonical(.record(written), from: notation), identity: nil)
     }
 
     // Most tests here are about one construct or one reader, not about the
@@ -191,9 +196,9 @@ func run(
     // This notation spells several named outputs, which the reader lowers to one
     // record — so a test that asks about `outputs["x"]` is asking about a field
     // of the answer, and unwrapping here keeps that phrasing.
-    guard case let .record(_, outputs) = answer else { return [:] }
+    guard case let .record(outputs) = answer else { return [:] }
 
-    return outputs
+    return Dictionary(uniqueKeysWithValues: outputs.entries.map { entry in (entry.name, entry.value) })
 }
 
 
