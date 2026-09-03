@@ -149,7 +149,7 @@ struct ConditionTests {
     }
 
     @Test("shape misuse in a condition is unfit, not false")
-    func conditionShapeMisuseThrowsUnfit() {
+    func conditionShapeMisuseThrowsUnfit() throws {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)
 

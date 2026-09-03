@@ -52,7 +52,7 @@ public struct ConcurrentEffect: Effect {
         let key: String?
         let position: Int
         let closure: Closure
-        let arguments: [String: Value]
+        let arguments: [(name: String, value: Value)]
     }
 
     // MARK: - Property
@@ -122,7 +122,7 @@ public struct ConcurrentEffect: Effect {
                         key: key,
                         position: position,
                         closure: try closure(fields[key] ?? .null, called: key),
-                        arguments: [:]
+                        arguments: []
                     )
                 },
                 keyed: true
@@ -135,7 +135,7 @@ public struct ConcurrentEffect: Effect {
                         key: nil,
                         position: position,
                         closure: try closure(element, called: "[\(position)]"),
-                        arguments: [:]
+                        arguments: []
                     )
                 },
                 keyed: false
@@ -180,7 +180,7 @@ public struct ConcurrentEffect: Effect {
                 key: nil,
                 position: position,
                 closure: by,
-                arguments: ["item": element, "index": .int(position)]
+                arguments: [(name: "item", value: element), (name: "index", value: .int(position))]
             )
         }
     }

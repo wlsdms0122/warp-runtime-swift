@@ -14,7 +14,7 @@ import Foundation
 // statements and nothing is solved: a call site is one place, what it hands over
 // is already known there, and the parameters are read off by walking the
 // declaration beside what arrived.
-public extension TypeExpression {
+extension TypeExpression {
     // What the type parameters in this declaration stand for, given what
     // arrived. Walked in step: where the declaration has a parameter, whatever
     // sits opposite it is what the parameter stands for; where both have a
@@ -35,7 +35,7 @@ public extension TypeExpression {
         against given: TypeExpression,
         into bound: inout [String: TypeExpression],
         disagreeing: inout [String: TypeExpression],
-        in types: TypeTable = TypeTable()
+        in table: ShapeTable
     ) {
         switch (self, given) {
         case let (.parameter(name, _), _):
@@ -69,9 +69,9 @@ public extension TypeExpression {
             // declared and the shape that name stands for. Asking without it
             // would call those two a disagreement, which is the same question
             // the link asks elsewhere and answers correctly.
-            if already.accepts(given, in: types) { return }
+            if already.accepts(given, in: table) { return }
 
-            if given.accepts(already, in: types) {
+            if given.accepts(already, in: table) {
                 bound[name] = given
 
                 return
@@ -86,43 +86,43 @@ public extension TypeExpression {
         // null carries no reading, and a nullable arrival reads by its own
         // declared half for the same reason.
         case let (.nullable(mine), .nullable(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: types)
+            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.nullable(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: types)
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.array(mine), .array(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: types)
+            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         // `bytes` is `array<byte>` in a compact spelling, so an element
         // parameter reads a byte from it — `first` on bytes answers one.
         case (.array(let mine), .bytes):
-            mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, in: types)
+            mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.object(mine), .object(theirs)):
-            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: types)
+            mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.record(mine), .record(theirs)):
-            for (name, field) in mine.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in mine.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 guard let opposite = theirs[name] else { continue }
 
-                field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: types)
+                field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: table)
             }
 
         case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: types)
+            mine.binding(against: given, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (_, .variable(theirs)), let (_, .inout(theirs)):
-            binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: types)
+            binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.procedure(.some(mine), _, _), .procedure(.some(theirs), _, _)):
-            for (name, parameter) in mine.parameters.sorted(by: { $0.key < $1.key }) {
+            for (name, parameter) in mine.parameters.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 guard let opposite = theirs.parameters[name] else { continue }
 
-                parameter.declared.binding(against: opposite.declared, into: &bound, disagreeing: &disagreeing, in: types)
+                parameter.declared.binding(against: opposite.declared, into: &bound, disagreeing: &disagreeing, in: table)
             }
 
-            (mine.returns ?? .any).binding(against: theirs.returns ?? .any, into: &bound, disagreeing: &disagreeing, in: types)
+            (mine.returns ?? .any).binding(against: theirs.returns ?? .any, into: &bound, disagreeing: &disagreeing, in: table)
 
         default:
             return
@@ -298,7 +298,7 @@ public extension Signature {
     }
 }
 
-public extension TypeExpression {
+extension TypeExpression {
     // The occurrence side of `Signature.bounded(by:)`, walked through every
     // place a type parameter may sit — a nested signature's parameters
     // included, because they are the outer signature's own slots.

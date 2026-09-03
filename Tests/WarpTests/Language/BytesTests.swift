@@ -140,8 +140,10 @@ struct BytesTests {
                 return (try? shape.settling(value, at: "value", in: types)) == value
             }
 
+            let table = types.shapes
+
             #expect(
-                shape.holdsEveryByte(in: types) == untouched,
+                shape.lowered(in: table).holdsEveryByte(in: table) == untouched,
                 "\(shape.rendered) is held to say \(untouched)"
             )
         }

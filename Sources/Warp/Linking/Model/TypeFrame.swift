@@ -30,7 +30,15 @@ struct TypeFrame: Sendable {
     // fills it — and what fills it is read from the arguments.
     let signatures: [String: Signature]
 
+    // The declared types as the documents wrote them. The walk expands a
+    // name through this when it reads into a shape (`resolve`), since a
+    // reading is a document's type.
     let types: TypeTable
+
+    // The same declarations as the run reads them. Every judgment the walk
+    // asks goes here, lowering its reading and nothing else, so the walk and
+    // the run judge by one table.
+    var shapes: ShapeTable { types.shapes }
 
     // What a bare spelling a path writes may send: the pure declarations whose
     // only required slot is the receiver, by the name a walk reaches them

@@ -962,7 +962,7 @@ struct ConstraintTests {
     }
 
     @Test("a hand-built table ends its own membership recursion")
-    func aHandBuiltTableTerminates() {
+    func aHandBuiltTableTerminates() throws {
         // Given — a table nothing linked, holding the declaration the link
         // would have refused; the table answers rather than chasing it
         let sut = TypeTable(
@@ -976,7 +976,10 @@ struct ConstraintTests {
                 reading: .parameter(name: "T", constraint: "Loop")
             ) == true
         )
-        #expect(sut.admits(constraint: "Loop", value: .int(1)) == true)
+        let table = sut.shapes
+        let loop = try #require(table.constraintRow(named: "Loop"))
+
+        #expect(table.admits(constraint: loop, value: .int(1), assuming: []) == true)
     }
 
     @Test("a constrained reading fed to a looser bound passes")

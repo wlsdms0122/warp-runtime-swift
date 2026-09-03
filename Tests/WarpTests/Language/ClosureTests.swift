@@ -266,7 +266,7 @@ struct ClosureTests {
     }
 
     @Test("a procedure is never equal to a procedure")
-    func proceduresHaveNoEquality() {
+    func proceduresHaveNoEquality() throws {
         // Given — there is no honest answer, so the language does not offer one
         let sut = Value.procedure(
             Closure.assembled()

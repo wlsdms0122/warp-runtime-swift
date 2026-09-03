@@ -525,10 +525,9 @@ public enum TextEncoding {
 
             text += "{\n"
 
-            let fields = object.map { field in (Array(field.key.utf8), field.key, field.value) }
-                .sorted { one, other in one.0.lexicographicallyPrecedes(other.0) }
+            let fields = object.sorted { one, other in Name.precedes(one.key, other.key) }
 
-            for (_, key, value) in fields {
+            for (key, value) in fields {
                 // The same rule the reader holds: one name, one byte spelling
                 guard Name.isNormal(key) else {
                     throw EncodingError.invalidValue(

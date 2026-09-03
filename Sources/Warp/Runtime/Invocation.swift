@@ -105,7 +105,7 @@ public struct Invocation: Sendable {
     // where it happened rather than only which word was running.
     public func call(
         _ closure: Closure,
-        offering arguments: [String: Value],
+        offering arguments: [(name: String, value: Value)],
         piece label: String? = nil
     ) async throws -> Value {
         try await executor.call(

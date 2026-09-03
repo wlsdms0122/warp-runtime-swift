@@ -30,6 +30,10 @@ public struct Closure: Sendable {
     }
 
     // MARK: - Public
+    func settling(returned value: Value) throws -> Value {
+        try linked.settling(returned: value)
+    }
+
     // Whether this may run beside another body: it was derived isolated, or it
     // is pure, since what runs nothing touches nothing.
     public var runsBeside: Bool {

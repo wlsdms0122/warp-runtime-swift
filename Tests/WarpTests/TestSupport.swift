@@ -184,7 +184,7 @@ struct ShoutEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation) async throws -> Value {
-        .string(try invocation.string("text")?.uppercased() ?? "")
+        .string(invocation.string("text")?.uppercased() ?? "")
     }
 
     // MARK: - Private
@@ -276,7 +276,8 @@ extension Closure {
                 implementation: .body(
                     Body(instructions: [], result: result.map(Code.literal)),
                     Layout(size: 0, parameters: [], variables: [], names: [])
-                )
+                ),
+                in: .empty
             ),
             captured: []
         )

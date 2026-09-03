@@ -274,7 +274,8 @@ extension Closure {
                 implementation: .body(
                     Body(instructions: [], result: nil),
                     Layout(size: 0, parameters: [], variables: [], names: [])
-                )
+                ),
+                in: .empty
             ),
             captured: []
         )

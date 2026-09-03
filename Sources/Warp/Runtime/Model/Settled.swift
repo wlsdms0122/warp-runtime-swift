@@ -34,7 +34,7 @@ struct Settled: Sendable {
 
     // Where a name stands in the row, or nil for a name the row lacks.
     func position(of name: String) -> Int? {
-        callee.parameters.firstIndex { declared, _ in declared == name }
+        callee.slots.firstIndex { slot in Name.same(slot.name, name) }
     }
 
     // MARK: - Private

@@ -32,7 +32,7 @@ indirect enum Code: Sendable {
     // arguments travel by name and settle where the closure is known.
     case invoke(Code, arguments: [(String, Code)])
 
-    case cast(Code, as: TypeExpression, optional: Bool)
+    case cast(Code, as: Shape, optional: Bool)
     case block(Body)
     case conditional(Code, then: [Instruction], else: [Instruction]?)
 

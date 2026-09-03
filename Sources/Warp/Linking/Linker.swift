@@ -67,6 +67,10 @@ public struct Linker: Sendable {
             declared: declaredTypes,
             constraints: declaredConstraints
         )
+
+        // Every judgment the link asks and every row it builds reads the
+        // table the run will read.
+        let shapes = types.shapes
         let symbols = try symbols(of: modules)
 
         // Every declaration under its declared spelling. The spellings are
@@ -100,7 +104,7 @@ public struct Linker: Sendable {
             table[entry.offset] = Set(entry.element.variables.keys)
         }
         let settled = pure(among: symbols, reading: moduleVariables)
-        let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: types)
+        let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: shapes)
 
         // The tables as the author spelled them, and the form the link's own
         // settling reads: a written body is swapped for the refusal it would
@@ -143,7 +147,8 @@ public struct Linker: Sendable {
                     origin: symbol.origin,
                     procedure: symbol.procedure,
                     pure: settled.contains(symbol.declared),
-                    isolated: isolatedDeclarations.contains(symbol.declared)
+                    isolated: isolatedDeclarations.contains(symbol.declared),
+                    in: shapes
                 )
             )
         }
@@ -152,7 +157,7 @@ public struct Linker: Sendable {
         // decided here once: the layouts read positions from it and the
         // image carries the starting values in it.
         let orderedVariables = modules.enumerated().reduce(into: [Int: [String]]()) { table, entry in
-            table[entry.offset] = entry.element.variables.keys.sorted()
+            table[entry.offset] = entry.element.variables.keys.sorted(by: Name.precedes)
         }
 
         var lowering = Lowering(
@@ -161,7 +166,8 @@ public struct Linker: Sendable {
             words: wordSymbols.compactMapValues { symbol in rows[symbol.declared] },
             variables: orderedVariables.mapValues { names in
                 names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
-            }
+            },
+            shapes: shapes
         )
 
         // What a body's constant paths fold against. The stand-ins, while
@@ -285,7 +291,7 @@ public struct Linker: Sendable {
                     table: foldingTable,
                     rows: lowering.rows,
                     words: lowering.words,
-                    types: types
+                    shapes: shapes
                 )
 
                 // The starting environment knows the constants beside the
@@ -336,7 +342,7 @@ public struct Linker: Sendable {
         // against the stand-ins, and whether a declaration links stays a
         // fact of its text rather than of who happens to call it. In name
         // order, so which mistake is reported first is the text's fact too.
-        for (_, symbol) in wordSymbols.sorted(by: { $0.key < $1.key }) {
+        for (_, symbol) in wordSymbols.sorted(by: { Name.precedes($0.key, $1.key) }) {
             _ = try resolved(symbol)
         }
 
@@ -368,7 +374,7 @@ public struct Linker: Sendable {
             if let returns = resolved.signature.returns,
                let answer = resolved.block?.result?.constantValue {
                 do {
-                    _ = try returns.settling(answer, at: "answer", in: types)
+                    _ = try returns.settling(answer, at: "answer", in: shapes)
                 } catch {
                     throw LinkError(
                         "answers \(answer.type), and its"
@@ -389,7 +395,7 @@ public struct Linker: Sendable {
         // reported before one in a declaration nothing reaches; in name
         // order, so which unreached mistake comes first is a fact of the
         // text rather than of a hash seed.
-        for (_, symbol) in selectorSymbols.sorted(by: { $0.key < $1.key }) {
+        for (_, symbol) in selectorSymbols.sorted(by: { Name.precedes($0.key, $1.key) }) {
             _ = try resolved(symbol)
         }
 
@@ -550,7 +556,7 @@ public struct Linker: Sendable {
     private func derivable(
         among symbols: [Symbol],
         pure: Set<String>,
-        in types: TypeTable
+        in shapes: ShapeTable
     ) throws -> (selectors: [String: Symbol], words: [String: Symbol]) {
         var selectors: [String: Symbol] = [:]
         var words: [String: Symbol] = [:]
@@ -574,7 +580,7 @@ public struct Linker: Sendable {
 
             selectors[symbol.declared] = symbol
 
-            guard symbol.procedure.signature.isDerivable(in: types) else { continue }
+            guard symbol.procedure.signature.isDerivable(in: shapes) else { continue }
 
             let bare = symbol.declared.split(separator: ".").last.map(String.init)
                 ?? symbol.declared
@@ -633,7 +639,6 @@ public struct Linker: Sendable {
             for name in module.procedures.keys.sorted() {
                 guard let procedure = module.procedures[name] else { continue }
 
-
                 let symbol = Symbol(
                     declared: name,
                     document: .of(module),
@@ -673,29 +678,29 @@ public struct Linker: Sendable {
         declared: [String: Declared<TypeExpression>],
         constraints members: [String: Declared<[TypeExpression]>]
     ) throws -> TypeTable {
-        // A name that reaches a shape may name itself along the way — `Tree`
+        let table = TypeTable(
+            types: declared.mapValues(\.held),
+            constraints: members.mapValues(\.held)
+        )
+
+        // A name that reaches a shape may name itself along the way: `Tree`
         // holding `array<Tree>` is a shape. A name that reaches only names
-        // never becomes one, and everything that resolves names would chase
-        // it forever — so the cycle is refused here, and every later walk
-        // through `named` is finite because of it.
-        for (name, declaration) in declared.sorted(by: { $0.key < $1.key }) {
-            var seen: Set<String> = [name]
-            var current: TypeExpression? = declaration.held
+        // never becomes one, and the lowering says which do, so the refusal
+        // reads the lowering rather than walking the names a second way.
+        // Refused first, so every walk below through `named` is finite.
+        for row in table.shapes.circling {
+            let label = table.shapes.labels[row]
 
-            while case let .named(next) = current {
-                guard seen.insert(next).inserted else {
-                    throw LinkError(
-                        "reaches itself through nothing but names"
-                            + " — a name that only names names never reaches a shape",
-                        at: declaration.place
-                    )
-                }
+            guard let declaration = declared[label] else { continue }
 
-                current = declared[next]?.held
-            }
+            throw LinkError(
+                "reaches itself through nothing but names, and a name"
+                    + " that only names names never reaches a shape",
+                at: declaration.place
+            )
         }
 
-        for (_, declaration) in members.sorted(by: { $0.key < $1.key }) {
+        for (_, declaration) in members.sorted(by: { Name.precedes($0.key, $1.key) }) {
             let admitted = declaration.held
 
             guard !admitted.isEmpty else {
@@ -713,7 +718,7 @@ public struct Linker: Sendable {
             // a member that names another constraint is what keeps the
             // membership judgment from ever chasing itself. Judged through
             // every name a member hides behind, or one alias would carry
-            // the refused shape in — the chain is finite because a
+            // the refused shape in. The chain is finite because a
             // name-only cycle was refused above.
             for member in admitted {
                 var resolved = member
@@ -737,15 +742,10 @@ public struct Linker: Sendable {
             }
         }
 
-        let table = TypeTable(
-            types: declared.mapValues(\.held),
-            constraints: members.mapValues(\.held)
-        )
-
         // The two spaces are walked from the tables rather than per module:
         // they arrive carrying where each name was written, and asking a module
         // again would be spelling that a second way.
-        for (_, declaration) in declared.sorted(by: { $0.key < $1.key }) {
+        for (_, declaration) in declared.sorted(by: { Name.precedes($0.key, $1.key) }) {
             try mentioned(
                 in: declaration.held,
                 at: declaration.place,
@@ -754,7 +754,7 @@ public struct Linker: Sendable {
             )
         }
 
-        for (_, declaration) in members.sorted(by: { $0.key < $1.key }) {
+        for (_, declaration) in members.sorted(by: { Name.precedes($0.key, $1.key) }) {
             for member in declaration.held {
                 try mentioned(
                     in: member,
@@ -766,7 +766,7 @@ public struct Linker: Sendable {
         }
 
         for module in modules {
-            for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
+            for (name, procedure) in module.procedures.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 try judge(procedure.signature, at: .procedure(name, in: .of(module)), in: table)
 
                 // A closure literal carries a signature the way a declaration
@@ -793,7 +793,7 @@ public struct Linker: Sendable {
                 }
             }
 
-            for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
+            for (name, constant) in module.constants.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 let buried = constant.buried(at: .constant(name, in: .of(module)))
 
                 for (place, inner) in closures(in: buried) {
@@ -819,7 +819,7 @@ public struct Linker: Sendable {
         at place: Place,
         in table: TypeTable
     ) throws {
-        for (input, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
+        for (input, parameter) in signature.parameters.sorted(by: { Name.precedes($0.key, $1.key) }) {
             try mentioned(
                 in: parameter.declared.inoutUnwrapped,
                 at: place.slot(.parameters).key(input),
@@ -904,7 +904,7 @@ public struct Linker: Sendable {
         var bounds: [String: Set<String>] = [:]
         signature.parameterConstraints(into: &bounds)
 
-        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
+        for (parameter, names) in bounds.sorted(by: { Name.precedes($0.key, $1.key) }) {
             guard names.count <= 1 else {
                 throw LinkError(
                     "`some \(parameter)` is bounded by"
@@ -1000,7 +1000,7 @@ public struct Linker: Sendable {
         case let .procedure(signature, _, _):
             guard let signature else { return }
 
-            for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key }) {
+            for (name, parameter) in signature.parameters.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 try mentioned(
                     in: parameter.declared.inoutUnwrapped,
                     at: place.key(name),
@@ -1063,7 +1063,7 @@ public struct Linker: Sendable {
         // write through it. A record written inline in a signature declares no
         // type, so it has no field to make writable.
         case let .record(fields):
-            for (name, field) in fields.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in fields.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 var held = field
 
                 if case let .variable(inner) = field, !parameterized {
@@ -1105,6 +1105,10 @@ public struct Linker: Sendable {
         at place: Place,
         in table: TypeTable
     ) throws {
+        // The declaration as the boundary reads it, so what the link calls
+        // dead is exactly what the boundary would never match.
+        let shape = parameter.declared.lowered(in: table.shapes)
+
         if let allowed = parameter.oneOf {
             // Candidate by candidate: a spelling the declared type cannot
             // spell is a member no call could ever match, and a dead member
@@ -1113,7 +1117,7 @@ public struct Linker: Sendable {
             // entirely dead refuses by the plainer name, a dead member among
             // live ones is named.
             let dead = allowed.filter { candidate in
-                !spellable(candidate, as: parameter.declared, resolve: table)
+                !shape.spells(candidate, in: table.shapes)
             }
 
             if dead.count == allowed.count {
@@ -1138,9 +1142,10 @@ public struct Linker: Sendable {
         // An explicitly-null default is the value the body receives when the
         // argument is left out, so the declaration must admit null like any
         // other value — and a `oneOf` never lists it, since null has no scalar
-        // spelling.
+        // spelling. Asked of the value judge itself, since the slot reads an
+        // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
-            guard parameter.oneOf == nil, admitsNull(parameter.declared, resolve: table) else {
+            guard parameter.oneOf == nil, (try? shape.settling(.null, at: name, in: table.shapes)) != nil else {
                 throw LinkError(
                     "its default is not a value it takes — null",
                     at: place
@@ -1157,98 +1162,6 @@ public struct Linker: Sendable {
                 "its default is not a value it takes — \(error)",
                 at: place
             )
-        }
-    }
-
-    // Whether a `oneOf` candidate could ever be a spelling of a value of this
-    // type — a different question from a constraint's membership, so a
-    // different name. Candidates are written as the scalar spellings arguments
-    // are compared under, so a type with no scalar spelling can spell none of
-    // them.
-    private func spellable(
-        _ candidate: String,
-        as type: TypeExpression,
-        resolve table: TypeTable
-    ) -> Bool {
-        switch type {
-        // Filled by the call, so nothing about the candidates is knowable
-        // here — the same answer an unbounded parameter gives, for the same
-        // reason.
-        case .any, .string, .reading:
-            return true
-
-        case .int:
-            return Int(spelling: candidate) != nil
-
-        // A candidate has to be a value the range itself would admit — a
-        // `oneOf` past the bounds is a candidate no call could ever fit. Read
-        // as the kind under the range and judged by the range's own judge, so
-        // what the link calls dead is exactly what the boundary would refuse.
-        case let .ranged(refinement):
-            guard let value = Parameter.numeral(candidate, as: refinement.kind, in: table) else {
-                return false
-            }
-
-            guard case .settled = refinement.settling(value) else { return false }
-
-            return true
-
-        // A candidate is alive exactly when some arriving value spells as it,
-        // so the judge asks the value's one spelling rather than a looser
-        // parse — `1e0` and `1.00` read as fractions, but no fraction spells
-        // that way, so no call could ever match them.
-        // The boundary's own candidate reading, so what the link calls a
-        // dead member is exactly what the boundary would never match.
-        case .double, .number:
-            return Parameter.numeral(candidate, as: type, in: table) != nil
-
-        case .bool:
-            return candidate == "true" || candidate == "false"
-
-        // An unbounded type parameter is filled by the call, so nothing about
-        // the candidates is knowable here. A bounded one takes only what some
-        // member of its constraint could spell — a `oneOf` of words on a
-        // Numeric slot fits no call, and that is knowable where the parameter
-        // is declared.
-        case let .parameter(_, constraint):
-            guard let constraint, let members = table.constraint(constraint) else {
-                return true
-            }
-
-            return members.contains { member in
-                spellable(candidate, as: member, resolve: table)
-            }
-
-        case let .named(name):
-            guard let resolved = table.resolve(name) else { return false }
-
-            return spellable(candidate, as: resolved, resolve: table)
-
-        // A candidate spells a value, and null is not one a `oneOf` lists — so
-        // a nullable slot's candidates are the declared half's.
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return spellable(candidate, as: inner, resolve: table)
-
-        case .null, .never, .bytes, .array, .object, .record, .procedure:
-            return false
-        }
-    }
-
-    private func admitsNull(
-        _ type: TypeExpression,
-        resolve table: TypeTable
-    ) -> Bool {
-        switch type {
-        case .any, .null, .nullable:
-            return true
-
-        case let .named(name):
-            guard let resolved = table.resolve(name) else { return false }
-
-            return admitsNull(resolved, resolve: table)
-
-        default:
-            return false
         }
     }
 
@@ -1300,7 +1213,7 @@ public struct Linker: Sendable {
                         table: lowering.table,
                         rows: lowering.rows,
                         words: lowering.words,
-                        types: types
+                        shapes: frame.shapes
                     ).read(judged, at: .constant(name, in: .of(module)))
                 } catch let refused as LinkError {
                     throw refused
@@ -1332,7 +1245,7 @@ public struct Linker: Sendable {
             let known = constants[origin] ?? [:]
             var started: [String: Value] = [:]
 
-            for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
+            for (name, expression) in module.variables.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: .variable(name, in: .of(module)),
@@ -1350,7 +1263,7 @@ public struct Linker: Sendable {
                         table: lowering.table,
                         rows: lowering.rows,
                         words: lowering.words,
-                        types: types
+                        shapes: frame.shapes
                     ).read(judged, at: .variable(name, in: .of(module)))
                 } catch let refused as LinkError {
                     throw refused
@@ -1445,7 +1358,7 @@ public struct Linker: Sendable {
         with frame: TypeFrame
     ) throws {
         let dispatch = site.dispatch
-        let types = frame.types
+        let shapes = frame.shapes
 
         // One parameter takes one argument. A receiver written in front of
         // the dot and again by name is refused before either is read, since
@@ -1478,9 +1391,9 @@ public struct Linker: Sendable {
                 at: dispatch,
                 readings: site.readings,
                 receiver: site.received,
-                in: types
+                in: shapes
             ),
-            in: types
+            in: shapes
         ) {
         case let .refusal(reason):
             throw LinkError(
@@ -1510,7 +1423,7 @@ public struct Linker: Sendable {
 
         let missing = signature.parameters
             .filter { name, parameter in
-                parameter.mustBeGiven(in: types) && !supplied.contains(name)
+                parameter.mustBeGiven(in: shapes) && !supplied.contains(name)
             }
             .keys
             .sorted()
@@ -1535,7 +1448,7 @@ public struct Linker: Sendable {
             }
 
             do {
-                _ = try parameter.taking(constant, called: name, in: types)
+                _ = try parameter.lowered(named: name, in: shapes).taking(constant, in: shapes)
             } catch {
                 throw LinkError(
                     "sending '\(dispatch.selector)' — \(error)",
@@ -1571,7 +1484,7 @@ public struct Linker: Sendable {
 
             let written = site.readings[name] ?? .any
 
-            guard !parameter.declared.accepts(written, in: types) else { continue }
+            guard !parameter.declared.accepts(written, in: shapes) else { continue }
 
             throw LinkError(
                 "sending '\(dispatch.selector)' with \(name),"
@@ -1587,7 +1500,7 @@ public struct Linker: Sendable {
             let name = signature.receiver,
             let parameter = signature.parameters[name]
         {
-            guard parameter.declared.accepts(written, in: types) else {
+            guard parameter.declared.accepts(written, in: shapes) else {
                 throw LinkError(
                     "sending '\(dispatch.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",

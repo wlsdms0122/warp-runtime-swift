@@ -27,7 +27,7 @@ struct UnwritableTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a procedure held as a value is not data")
-    func aProcedureValueIsNotData() {
+    func aProcedureValueIsNotData() throws {
         // Given — a closure has already taken a scope with it, and a document
         // carries neither code nor the scope it closed over
         let held = Value.procedure(

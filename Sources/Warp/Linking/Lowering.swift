@@ -26,17 +26,23 @@ struct Lowering {
     // Each document's variables by name, in the order a run makes their boxes.
     let variables: [Int: [String: Int]]
 
+    // The declared types as the run reads them, for a cast's shape and a
+    // closure's row.
+    let shapes: ShapeTable
+
     // MARK: - Initializer
     init(
         table: [Linked],
         rows: [String: Int],
         words: [String: Int],
-        variables: [Int: [String: Int]]
+        variables: [Int: [String: Int]],
+        shapes: ShapeTable
     ) {
         self.table = table
         self.rows = rows
         self.words = words
         self.variables = variables
+        self.shapes = shapes
     }
 
     // MARK: - Public
@@ -50,8 +56,8 @@ struct Lowering {
         let frame = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:])
         var scope = Names()
 
-        for (name, _) in declared.parameters {
-            scope.slots[name] = frame.allocateParameter(name)
+        for slot in declared.slots {
+            scope.slots[slot.name] = frame.allocateParameter(slot.name)
         }
 
         let body = try lower(block, in: scope, on: frame, label: declared.label, at: place)
@@ -62,7 +68,8 @@ struct Lowering {
             signature: declared.signature,
             purity: declared.purity,
             isolation: declared.isolation,
-            implementation: .body(body, frame.layout)
+            implementation: .body(body, frame.layout),
+            in: shapes
         )
     }
 
@@ -252,7 +259,7 @@ struct Lowering {
             })
 
         case let .record(record):
-            return .record(try record.sorted { $0.key < $1.key }.map { name, field in
+            return .record(try record.sorted { Name.precedes($0.key, $1.key) }.map { name, field in
                 (name, try lower(field, in: scope, on: frame, label: label, at: place))
             })
 
@@ -264,7 +271,7 @@ struct Lowering {
             let inner = Slots(origin: frame.origin, variables: frame.variables, outer: (frame, scope))
             var innerScope = Names()
 
-            for name in procedure.signature.parameters.keys.sorted() {
+            for (name, _) in procedure.signature.ordered {
                 innerScope.slots[name] = inner.allocateParameter(name)
             }
 
@@ -276,7 +283,8 @@ struct Lowering {
                     signature: procedure.signature,
                     purity: procedure.purity,
                     isolation: procedure.isolation,
-                    implementation: .body(body, inner.layout)
+                    implementation: .body(body, inner.layout),
+                    in: shapes
                 ),
                 captures: inner.captures
             )
@@ -292,7 +300,7 @@ struct Lowering {
         case let .cast(value, type, optional):
             return .cast(
                 try lower(value, in: scope, on: frame, label: label, at: place),
-                as: type,
+                as: type.lowered(in: shapes),
                 optional: optional
             )
 
@@ -396,10 +404,11 @@ struct Lowering {
         var arguments: [Code?] = []
         var handed: [Send.Handed] = []
 
-        for (position, (name, parameter)) in callee.parameters.enumerated() {
+        for (position, slot) in callee.slots.enumerated() {
+            let name = slot.name
             let written = dispatch.handed(name, to: callee.signature)
 
-            if parameter.declared.isInout {
+            if case .inout = slot.shape {
                 guard case let .reference(path)? = written else {
                     throw unjudged("'\(name)' handed to '\(dispatch.selector)' in place without a variable", at: place)
                 }

@@ -213,7 +213,7 @@ struct ReceiverTests {
 
         // Then
         #expect(image["label"]?.purity == .pure)
-        #expect(image["label"]?.signature.isDerivable(in: image.types) == true)
+        #expect(image["label"]?.isDerivable == true)
     }
 
     @Test("a procedure someone wrote is reachable from a path")

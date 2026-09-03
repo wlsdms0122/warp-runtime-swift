@@ -100,7 +100,7 @@ struct ReferenceLookupTests {
     }
 
     @Test("a fraction index reference misses by the fact it is")
-    func indexReferenceFractionNamesItsMiss() {
+    func indexReferenceFractionNamesItsMiss() throws {
         // Given — a fraction with digits after the point, and a whole one no
         // machine word holds: two different facts, each named as itself
         let resolver = Folding(bindings: [

@@ -22,8 +22,16 @@ import Foundation
 // "what does this name admit".
 public struct TypeTable: Sendable {
     // MARK: - Property
-    public private(set) var types: [String: TypeExpression]
-    public private(set) var constraints: [String: [TypeExpression]]
+    public let types: [String: TypeExpression]
+    public let constraints: [String: [TypeExpression]]
+
+    // The same declarations as the run reads them, lowered once here. Every
+    // judgment this table answers is asked of the lowered one.
+    let shapes: ShapeTable
+
+    // A table declaring nothing, for a judgment asked with no declarations
+    // behind it.
+    public static let empty = TypeTable()
 
     // MARK: - Initializer
     public init(
@@ -32,6 +40,7 @@ public struct TypeTable: Sendable {
     ) {
         self.types = types
         self.constraints = constraints
+        self.shapes = ShapeTable.lowering(types, constraints: constraints)
     }
 
     // MARK: - Public
@@ -58,63 +67,16 @@ public struct TypeTable: Sendable {
     // again — so a table built by hand refuses or answers where a linked one
     // would, and never chases a declaration the link would have refused.
     public func admits(constraint name: String, reading: TypeExpression) -> Bool? {
-        admits(constraint: name, reading: reading, assuming: [])
+        shapes.admits(constraint: name, reading: reading)
     }
 
-    // The same membership, asked of a value at the boundary — nil again when
-    // nothing declares the name. A member speaks through the same settlement a
-    // declared type applies, so what `int` admits as a slot it admits as a
-    // member, widening included. The settlement carries which constraints are
-    // already being asked, so this side ends its own recursion the way the
-    // reading side does.
+    // The same membership, asked of a value at the boundary. Nil again
+    // where nothing declares the constraint.
     public func admits(constraint name: String, value: Value) -> Bool? {
-        admits(constraint: name, value: value, assuming: [])
-    }
+        guard let row = shapes.constraintRow(named: name) else { return nil }
 
-    // `assuming` is what the caller was already asking; this constraint joins
-    // it only where a member has to be settled to answer, since a scalar
-    // member answers by kind.
-    func admits(constraint name: String, value: Value, assuming: Set<String>) -> Bool? {
-        guard let members = constraints[name] else { return nil }
-
-        return members.contains { member in
-            member.admitsAsScalar(value)
-                ?? ((try? member.settling(value, at: "member", in: self, assuming: assuming.union([name]))) != nil)
-        }
+        return shapes.admits(constraint: row, value: value, assuming: [])
     }
 
     // MARK: - Private
-    private func admits(
-        constraint name: String,
-        reading: TypeExpression,
-        assuming: Set<String>
-    ) -> Bool? {
-        guard let members = constraints[name] else { return nil }
-
-        switch reading {
-        case .any:
-            return true
-
-        // Filled by a call, so it proves no membership here — said by name
-        // beside the parameter it is the walk-through of, rather than left to
-        // what `accepts` happens to answer.
-        case .reading:
-            return true
-
-        case let .parameter(_, constraint):
-            guard let constraint, let inner = constraints[constraint] else { return true }
-            guard !assuming.contains(constraint) else { return true }
-
-            return inner.allSatisfy { member in
-                admits(
-                    constraint: name,
-                    reading: member,
-                    assuming: assuming.union([constraint])
-                ) == true
-            }
-
-        default:
-            return members.contains { member in member.accepts(reading, in: self) }
-        }
-    }
 }

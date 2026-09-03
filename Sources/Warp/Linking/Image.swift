@@ -31,9 +31,11 @@ public struct Image: Sendable {
     public let reached: Set<String>
 
     // Every shape the linked modules declared. A named type survives into the
-    // run rather than being expanded at link, so the run needs the table that
-    // answers it.
+    // run as a row of the table's lowering rather than being expanded at
+    // link, so the run needs the table that answers it.
     public let types: TypeTable
+
+    var shapes: ShapeTable { types.shapes }
 
     // What each document's variables start a run holding, by the document's
     // position in the link, in the order the layouts read them. A run makes

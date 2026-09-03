@@ -1,0 +1,73 @@
+warpt 1
+{
+  imports [
+    "std.collection.map"
+    "std.math.lessThan"
+  ]
+  procedures {
+    entry {
+      body [
+        {
+          let "items"
+          value [
+            1
+          ]
+        }
+        {
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  let "mapped"
+                  value {
+                    call {
+                      arguments {
+                        value {
+                          closure {
+                            body []
+                            parameters {
+                              item "int"
+                            }
+                            result {
+                              ref "item"
+                            }
+                          }
+                        }
+                      }
+                      of {
+                        ref "items"
+                      }
+                      procedure "std.collection.map"
+                    }
+                  }
+                }
+              ]
+              while {
+                call {
+                  arguments {
+                    value {
+                      ref "rounds"
+                    }
+                  }
+                  of {
+                    ref "round.index"
+                  }
+                  procedure "std.math.lessThan"
+                }
+              }
+            }
+          }
+        }
+      ]
+      parameters {
+        rounds "int"
+      }
+      result {
+        ref "items"
+      }
+      returns "array<int>"
+    }
+  }
+  warp 1
+}
