@@ -13,7 +13,9 @@ import Foundation
 // by number. The spellings ride along for a refusal and for a record's
 // name, and the one lookup by spelling left is a record that arrived under
 // an alias, which is resolved once and then carries the canonical spelling.
-struct ShapeTable: Sendable {
+// A class, so a judgment that recurses passes one reference down rather than
+// a copy of every array the table holds.
+final class ShapeTable: Sendable {
     // MARK: - Property
     // The declared types, in the order of their spellings.
     let shapes: [Shape]
