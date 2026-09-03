@@ -322,27 +322,6 @@ extension TypeExpression {
         return false
     }
 
-    // The name a record settled here carries: the last declared name on the
-    // way to a record shape, so an alias of a declared record is that record
-    // and not a second type. Nil where this stands for no record, or for a
-    // name that leads back to itself.
-    func recordName(in types: TypeTable) -> String? {
-        var current = self
-        var last: String?
-        var visited: Set<String> = []
-
-        while case let .named(name) = current {
-            guard !visited.contains(name), let declared = types.resolve(name) else { return nil }
-
-            visited.insert(name)
-            last = name
-            current = declared
-        }
-
-        if case .record = current { return last }
-        return nil
-    }
-
     public var isVariable: Bool {
         if case .variable = self { return true }
         return false

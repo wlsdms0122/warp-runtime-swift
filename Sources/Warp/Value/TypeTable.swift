@@ -67,5 +67,13 @@ public struct TypeTable: Sendable {
         return table.admits(constraint: row, reading: shape, assuming: [])
     }
 
+    // The same membership, asked of a value at the boundary. Nil again
+    // where nothing declares the constraint.
+    public func admits(constraint name: String, value: Value) -> Bool? {
+        guard let table = try? lowered(), let row = table.constraintRow(named: name) else { return nil }
+
+        return table.admits(constraint: row, value: value, assuming: [])
+    }
+
     // MARK: - Private
 }

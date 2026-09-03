@@ -57,7 +57,7 @@ public struct Question: Sendable {
     // link proved answers without running, which a word states by declaring the
     // parameter `pure procedure`, so reaching here means the judgement was
     // already made.
-    public func call(_ procedure: Value, with arguments: KeyValuePairs<String, Value> = [:]) throws -> Value {
+    public func call(_ procedure: Value, with arguments: [(name: String, value: Value)] = []) throws -> Value {
         guard case let .procedure(closure) = procedure else {
             throw ExecutionError(
                 "this call names \(procedure.type), and only a procedure can be called"
@@ -68,6 +68,6 @@ public struct Question: Sendable {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 
-        return try executor.call(closure, with: arguments.map { name, value in (name: name, value: value) })
+        return try executor.call(closure, with: arguments)
     }
 }

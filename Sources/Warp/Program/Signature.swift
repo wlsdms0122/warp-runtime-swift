@@ -109,13 +109,13 @@ public struct Signature: Sendable, Equatable {
     }
 
     func isDerivable(in table: ShapeTable) -> Bool {
-        guard let receiver else { return false }
-        guard returns != .never else { return false }
+        guard let slots = try? lowered(in: table) else { return false }
 
-        return parameters
-            .filter { name, _ in name != receiver }
-            .values
-            .allSatisfy { parameter in !parameter.mustBeGiven(in: table) }
+        return slots.derivable(
+            receiver: receiver.flatMap { name in slots.firstIndex { slot in Name.same(slot.name, name) } },
+            returns: try? returns?.lowered(in: table),
+            in: table
+        )
     }
 
     // The expression a call hands under a parameter's name: the argument
@@ -199,6 +199,14 @@ public struct Signature: Sendable, Equatable {
                         + " \(undeclared.joined(separator: ", "))"
                 )
             }
+        }
+
+        // A name given twice is two instructions for one slot, and neither
+        // is the one to keep.
+        for (index, entry) in given.enumerated() {
+            guard given[..<index].contains(where: { earlier in Name.same(earlier.name, entry.name) }) else { continue }
+
+            throw ArgumentError("parameters: '\(entry.name)' is given more than once")
         }
 
         return try settle(

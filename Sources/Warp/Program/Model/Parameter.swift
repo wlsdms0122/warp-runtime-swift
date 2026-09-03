@@ -29,10 +29,13 @@ public struct Parameter: Sendable, Equatable {
         return mustBeGiven(in: table)
     }
 
+    // The half that needs no table is answered first: a default answers
+    // omission whatever the type says. A type nothing declares spells no
+    // null, the way it did before it was lowered.
     func mustBeGiven(in table: ShapeTable) -> Bool {
-        guard let slot = try? lowered(named: "", in: table) else { return true }
+        guard `default` == nil else { return false }
 
-        return slot.mustBeGiven(in: table)
+        return !((try? declared.lowered(in: table))?.declaresNull(in: table) ?? false)
     }
 
     // What this reads as where a type is needed regardless. An undeclared

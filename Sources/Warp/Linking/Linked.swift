@@ -28,10 +28,8 @@ public final class Linked: Sendable {
 
     public let signature: Signature
 
-    // The parameters in the order arguments stand in, with what settles them.
-    public let parameters: [(name: String, parameter: Parameter)]
-
-    // Where the receiver stands among them, for a declaration that takes one.
+    // Where the receiver stands among the slots, for a declaration that
+    // takes one.
     public let receiverPosition: Int?
 
     public let purity: Purity
@@ -55,18 +53,17 @@ public final class Linked: Sendable {
         implementation: Implementation,
         in table: ShapeTable
     ) throws {
-        let parameters = signature.ordered
+        let slots = try signature.lowered(in: table)
 
         self.label = label
         self.origin = origin
         self.signature = signature
-        self.parameters = parameters
         self.receiverPosition = signature.receiver.flatMap { receiver in
-            parameters.firstIndex { name, _ in name == receiver }
+            slots.firstIndex { slot in Name.same(slot.name, receiver) }
         }
         self.purity = purity
         self.isolation = isolation
-        self.slots = try parameters.map { name, parameter in try parameter.lowered(named: name, in: table) }
+        self.slots = slots
         self.returns = try signature.returns?.lowered(in: table)
         self.implementation = implementation
     }
@@ -128,12 +125,7 @@ public final class Linked: Sendable {
     // that answers `never` is reachable by neither: a path reads a value, and
     // this one leaves instead of producing one.
     func isDerivable(in table: ShapeTable) -> Bool {
-        guard let position = receiverPosition else { return false }
-        guard returns != .never else { return false }
-
-        return slots.enumerated().allSatisfy { index, slot in
-            index == position || !slot.mustBeGiven(in: table)
-        }
+        slots.derivable(receiver: receiverPosition, returns: returns, in: table)
     }
 
     // Whether this row is a written body.

@@ -225,7 +225,7 @@ struct LoweringTests {
             return
         }
 
-        #expect(image.linked[send.procedure].parameters.map(\.name) == ["first", "of", "second"])
+        #expect(image.linked[send.procedure].slots.map(\.name) == ["first", "of", "second"])
         #expect(send.receiver != nil)
         #expect(send.arguments.map { argument in argument == nil } == [false, true, false])
         #expect(try await Executor().run(image) == .array([.int(1), .int(2), .int(3)]))

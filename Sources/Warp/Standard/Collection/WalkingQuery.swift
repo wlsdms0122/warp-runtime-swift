@@ -46,7 +46,7 @@ public struct WalkingQuery: Query {
         case .map:
             return .array(
                 try elements.map { element in
-                    try question.call(body, with: ["item": element])
+                    try question.call(body, with: [(name: "item", value: element)])
                 }
             )
 
@@ -54,7 +54,7 @@ public struct WalkingQuery: Query {
         case .filter:
             return receiver.respelled(
                 try elements.filter { element in
-                    let verdict = try question.call(body, with: ["item": element])
+                    let verdict = try question.call(body, with: [(name: "item", value: element)])
 
                     guard case let .bool(kept) = verdict else {
                         throw ExecutionError(
@@ -69,7 +69,7 @@ public struct WalkingQuery: Query {
 
         case .reduce:
             return try elements.reduce(question["from"]) { carried, element in
-                try question.call(body, with: ["carried": carried, "item": element])
+                try question.call(body, with: [(name: "carried", value: carried), (name: "item", value: element)])
             }
         }
     }

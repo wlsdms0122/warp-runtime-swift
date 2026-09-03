@@ -178,6 +178,43 @@ struct ShapeTests {
         #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
     }
 
+    @Test("a parameter with a default is never required, whatever its type names")
+    func aDefaultedParameterIsNeverRequired() {
+        // Given: a type nothing declares, beside a default
+        let sut = Parameter(type: .named("bank.Vault"), default: .string("x"))
+
+        // When / Then
+        #expect(sut.mustBeGiven(in: types) == false)
+        #expect(Parameter(type: .named("bank.Vault")).mustBeGiven(in: types) == true)
+    }
+
+    @Test("an argument given twice by name is refused, not quietly kept once")
+    func anArgumentGivenTwiceIsRefused() throws {
+        // Given
+        let signature = Signature(parameters: ["item": Parameter(type: .int)])
+        let table = try TypeTable().lowered()
+
+        // When / Then
+        #expect {
+            try signature.settle(
+                [(name: "item", value: .int(1)), (name: "item", value: .int(2))],
+                over: try signature.lowered(in: table),
+                offered: true,
+                in: table
+            )
+        } throws: { error in
+            "\(error)".contains("'item' is given more than once")
+        }
+    }
+
+    @Test("a host asks a constraint about a value through the document's table")
+    func aHostAsksMembershipOfAValue() {
+        // When / Then
+        #expect(types.admits(constraint: "app.Ordered", value: .int(1)) == true)
+        #expect(types.admits(constraint: "app.Ordered", value: .bool(true)) == false)
+        #expect(types.admits(constraint: "app.Nobody", value: .int(1)) == nil)
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

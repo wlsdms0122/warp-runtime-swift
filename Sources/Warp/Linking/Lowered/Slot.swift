@@ -142,6 +142,23 @@ final class Slot: Sendable {
     }
 }
 
+extension Array where Element == Slot {
+    // Whether a path segment may reach a declaration with these slots: it
+    // takes a receiver, so there is something for the walk to send it to,
+    // and it needs nothing else, so `x.count` supplies everything it asks
+    // for. One that answers `never` is reachable by neither: a path reads a
+    // value, and this one leaves instead of producing one. The link and the
+    // run ask this one rule.
+    func derivable(receiver position: Int?, returns: Shape?, in table: ShapeTable) -> Bool {
+        guard let position else { return false }
+        guard returns != .never else { return false }
+
+        return enumerated().allSatisfy { index, slot in
+            index == position || !slot.mustBeGiven(in: table)
+        }
+    }
+}
+
 extension Parameter {
     // This parameter as the run reads it. An undeclared type lowers to
     // `any`: the boundary tells "nothing written" from "`any` written" in no

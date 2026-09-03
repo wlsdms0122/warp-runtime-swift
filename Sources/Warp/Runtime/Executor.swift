@@ -644,7 +644,7 @@ public struct Executor: Sendable {
         try handed.map { handed in
             guard case let .hold(handle) = activation.cells[handed.slot] else {
                 throw ExecutionError(
-                    "'\(callee.label)' takes '\(callee.parameters[handed.position].name)' in place,"
+                    "'\(callee.label)' takes '\(callee.slots[handed.position].name)' in place,"
                         + " and '\(activation.layout.names[handed.slot])' is not a variable here"
                 )
             }
@@ -1018,7 +1018,7 @@ public struct Executor: Sendable {
             let receiver = try? callee.settling(receiver: value, in: shapes),
             let arguments = try? settled(
                 callee,
-                given: Array(repeating: nil, count: callee.parameters.count),
+                given: Array(repeating: nil, count: callee.slots.count),
                 skipping: Skipped(handed: [], receiver: callee.receiverPosition)
             )
         else {

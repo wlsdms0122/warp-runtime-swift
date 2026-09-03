@@ -56,8 +56,8 @@ struct Lowering {
         let frame = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:])
         var scope = Names()
 
-        for (name, _) in declared.parameters {
-            scope.slots[name] = frame.allocateParameter(name)
+        for slot in declared.slots {
+            scope.slots[slot.name] = frame.allocateParameter(slot.name)
         }
 
         let body = try lower(block, in: scope, on: frame, label: declared.label, at: place)
@@ -404,10 +404,11 @@ struct Lowering {
         var arguments: [Code?] = []
         var handed: [Send.Handed] = []
 
-        for (position, (name, parameter)) in callee.parameters.enumerated() {
+        for (position, slot) in callee.slots.enumerated() {
+            let name = slot.name
             let written = dispatch.handed(name, to: callee.signature)
 
-            if parameter.declared.isInout {
+            if case .inout = slot.shape {
                 guard case let .reference(path)? = written else {
                     throw unjudged("'\(name)' handed to '\(dispatch.selector)' in place without a variable", at: place)
                 }

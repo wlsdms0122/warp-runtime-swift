@@ -103,7 +103,7 @@ extension TypeExpression {
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.record(mine), .record(theirs)):
-            for (name, field) in mine.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in mine.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 guard let opposite = theirs[name] else { continue }
 
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: table)
@@ -116,7 +116,7 @@ extension TypeExpression {
             binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.procedure(.some(mine), _, _), .procedure(.some(theirs), _, _)):
-            for (name, parameter) in mine.parameters.sorted(by: { $0.key < $1.key }) {
+            for (name, parameter) in mine.parameters.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 guard let opposite = theirs.parameters[name] else { continue }
 
                 parameter.declared.binding(against: opposite.declared, into: &bound, disagreeing: &disagreeing, in: table)
