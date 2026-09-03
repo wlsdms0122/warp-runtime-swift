@@ -66,6 +66,32 @@ struct RecordTests {
         #expect(inserted.name == "app.Point")
     }
 
+    @Test("removing takes a held field out and leaves a record without it as it is")
+    func removingAField() {
+        // Given
+        let sut = Record(name: "app.Point", ["a": .int(1), "b": .int(2)])
+
+        // When / Then
+        #expect(sut.removing("a").names == ["b"])
+        #expect(sut.removing("z") == sut)
+        #expect(sut.removing("a").name == "app.Point")
+    }
+
+    @Test("setting a field answers a new object, whatever name the receiver had")
+    func settingAnswersAnObject() throws {
+        // Given
+        let question = Question(
+            receiver: .record(Record(name: "app.Point", ["a": .int(1)])),
+            arguments: ["key": .string("b"), "value": .int(2)]
+        )
+
+        // When
+        let answer = try MappingQuery(.setting).evaluate(question)
+
+        // Then
+        #expect(answer == .object(["a": .int(1), "b": .int(2)]))
+    }
+
     @Test("settling changes every value and nothing else")
     func settlingKeepsNamesAndOrder() throws {
         // Given

@@ -35,11 +35,6 @@ public struct Record: Sendable {
         entries.map(\.value)
     }
 
-    // The fields by name, for a reader that works by key.
-    public var fields: [String: Value] {
-        Dictionary(uniqueKeysWithValues: entries.map { entry in (entry.name, entry.value) })
-    }
-
     // MARK: - Initializer
     public init(name: String? = nil, _ fields: [String: Value]) {
         self.name = name
@@ -77,9 +72,11 @@ public struct Record: Sendable {
 
     // Entries already in order under distinct names, for a maker that walks
     // them in order: a literal the link ordered, or another record's
-    // entries with their values changed.
+    // entries with their values changed. Every reading of a record stands
+    // on this order, so it is checked here rather than trusted: a pass over
+    // the names is less than the sort it stands in for.
     init(name: String?, ordered entries: [(name: String, value: Value)]) {
-        assert(
+        precondition(
             zip(entries, entries.dropFirst()).allSatisfy { one, other in Name.precedes(one.name, other.name) },
             "a record's entries are ordered by name"
         )
@@ -108,6 +105,19 @@ public struct Record: Sendable {
         } else {
             written.insert((name: field, value: value), at: position)
         }
+
+        return Record(name: name, ordered: written)
+    }
+
+    // This record without the field of this name, or as it is where none is
+    // held.
+    public func removing(_ field: String) -> Record {
+        let (position, found) = position(of: field)
+
+        guard found else { return self }
+
+        var written = entries
+        written.remove(at: position)
 
         return Record(name: name, ordered: written)
     }

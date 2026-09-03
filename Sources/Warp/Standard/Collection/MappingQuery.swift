@@ -48,7 +48,9 @@ public struct MappingQuery: Query {
                 throw ExecutionError("setting asks a string key")
             }
 
-            return .record(record.replacing(key, with: question["value"]))
+            // A new object: whatever name the receiver settled to, this holds
+            // a field that name never declared.
+            return .record(record.replacing(key, with: question["value"]).named(nil))
         }
     }
 

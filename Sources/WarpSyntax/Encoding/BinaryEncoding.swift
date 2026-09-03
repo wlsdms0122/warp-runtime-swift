@@ -234,7 +234,7 @@ public enum BinaryEncoding {
     // code has to promise never to reach.
     private enum Opened {
         case array(expecting: Int, held: [Value])
-        case record(expecting: Int, held: [String: Value], key: String, previous: [UInt8], name: String?)
+        case record(expecting: Int, held: [(name: String, value: Value)], key: String, previous: [UInt8], name: String?)
     }
 
     // One pass over the bytes with an explicit stack, because the depth of a
@@ -325,7 +325,7 @@ public enum BinaryEncoding {
                 if count == 0 {
                     settled = .record(Record(name: name, entries: []))
                 } else {
-                    var held: [String: Value] = [:]
+                    var held: [(name: String, value: Value)] = []
 
                     held.reserveCapacity(count)
 
@@ -353,13 +353,14 @@ public enum BinaryEncoding {
                     }
 
                 case .record(let expecting, var held, let key, let previous, let name):
-                    // Unique because the keys arrived strictly ascending and
-                    // in NFC: byte order refuses a byte-equal duplicate, and
-                    // NFC leaves one name one byte spelling to be equal in.
-                    held[key] = value
+                    // Ordered and unique because the keys arrived strictly
+                    // ascending and in NFC: byte order refuses a byte-equal
+                    // duplicate, and NFC leaves one name one byte spelling to
+                    // be equal in. The record's sort meets them in order.
+                    held.append((name: key, value: value))
 
                     if expecting == 1 {
-                        settled = .record(Record(name: name, held))
+                        settled = .record(Record(name: name, entries: held))
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 
