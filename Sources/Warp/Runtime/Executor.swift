@@ -317,16 +317,10 @@ public struct Executor: Sendable {
 
         switch procedure.implementation {
         // A query answers without running, so the pure resolver is the whole
-        // implementation — it is here only so that `x.count` and the same
-        // word written as a statement mean the same thing.
+        // implementation. Every query is in the selector table, since a native
+        // that answers without running is pure by declaration.
         case .query:
-            return try Resolver(
-                scope: scope,
-                selectors: selectors.merging([dispatch.selector: procedure]) { _, new in new },
-                words: words,
-                types: types
-            )
-            .resolve(.dispatch(dispatch))
+            return try resolver(in: scope).resolve(.dispatch(dispatch))
 
         case let .effect(effect):
             return try await effect.run(
@@ -363,11 +357,9 @@ public struct Executor: Sendable {
             // name. It is not settled as an argument — being sent to nothing is
             // something a word answers rather than refuses — but the body reads
             // it under the name its signature gave it.
-            var declared = procedure.signature.parameters
             var received: (String, Value)?
 
             if let name = procedure.signature.receiver, let receiver = dispatch.receiver, handed[name] == nil {
-                declared[name] = nil
                 received = (
                     name,
                     try procedure.signature.settling(
@@ -377,11 +369,11 @@ public struct Executor: Sendable {
                 )
             }
 
-            for name in handed.keys {
-                declared[name] = nil
-            }
+            var settledElsewhere = Set(handed.keys)
 
-            var settled = try Signature(parameters: declared).settle(given, in: types)
+            if let received { settledElsewhere.insert(received.0) }
+
+            var settled = try procedure.signature.settle(given, except: settledElsewhere, in: types)
 
             if let received { settled[received.0] = received.1 }
 
@@ -604,16 +596,13 @@ public struct Executor: Sendable {
             // to carry, and nothing else comes with it.
             let state = Value.object(["index": .int(index)])
             let scope = startScope.binding(round, to: state)
-            // Where the result is read: what the last finished round bound, plus
-            // the round state as it stands now.
-            let reading = settled.binding(round, to: state)
 
             let take = try resolver(in: scope).evaluate(condition)
 
             if !take {
                 guard let result = body.result else { return .null }
 
-                return try await evaluate(result, in: reading, at: trace)
+                return try await evaluate(result, in: settled.binding(round, to: state), at: trace)
             }
 
             do {
@@ -632,7 +621,7 @@ public struct Executor: Sendable {
                     // reads its result in.
                     guard let result = body.result else { return .null }
 
-                    return try await evaluate(result, in: reading, at: trace)
+                    return try await evaluate(result, in: settled.binding(round, to: state), at: trace)
                 }
             }
 

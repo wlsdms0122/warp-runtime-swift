@@ -147,11 +147,16 @@ public struct Signature: Sendable, Equatable {
 
     // Inputs settle once at the scope boundary — inside the scope, references read
     // the settled values instead of re-evaluating.
+    //
+    // `except` names the parameters the call settles elsewhere: a receiver
+    // written in front of the dot, and a parameter handed a variable in place.
+    // They are left out of the settled values and not asked for.
     public func settle(
         _ given: [String: Value],
+        except settledElsewhere: Set<String> = [],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        try settle(given, offered: false, in: types)
+        try settle(given, offered: false, except: settledElsewhere, in: types)
     }
 
     // The same, for a caller that hands over more than the body asked for. A
@@ -162,20 +167,21 @@ public struct Signature: Sendable, Equatable {
         offered given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        try settle(given, offered: true, in: types)
+        try settle(given, offered: true, except: [], in: types)
     }
 
     // MARK: - Private
     private func settle(
         _ given: [String: Value],
         offered: Bool,
+        except settledElsewhere: Set<String>,
         in types: TypeTable
     ) throws -> [String: Value] {
-        let undeclared = given.keys
-            .filter { name in parameters[name] == nil }
-            .sorted()
+        if !offered, given.keys.contains(where: { name in parameters[name] == nil }) {
+            let undeclared = given.keys
+                .filter { name in parameters[name] == nil }
+                .sorted()
 
-        guard offered || undeclared.isEmpty else {
             throw ArgumentError(
                 "parameters: not declared in the signature:"
                     + " \(undeclared.joined(separator: ", "))"
@@ -189,15 +195,15 @@ public struct Signature: Sendable, Equatable {
         // *offers* is the other way: it hands over values it actually holds,
         // and a null it offered is a value — an element of the walked
         // collection, not a blank — so only a key it never offered is missing.
-        let missing = parameters
-            .filter { name, parameter in
-                parameter.mustBeGiven(in: types)
-                    && (offered ? given[name] == nil : (given[name] ?? .null) == .null)
-            }
-            .keys
-            .sorted()
+        func isMissing(_ name: String, _ parameter: Parameter) -> Bool {
+            !settledElsewhere.contains(name)
+                && parameter.mustBeGiven(in: types)
+                && (offered ? given[name] == nil : (given[name] ?? .null) == .null)
+        }
 
-        guard missing.isEmpty else {
+        if parameters.contains(where: isMissing) {
+            let missing = parameters.filter(isMissing).keys.sorted()
+
             throw ArgumentError(
                 "parameters: required, and nothing was given for \(missing.joined(separator: ", "))"
             )
@@ -207,7 +213,8 @@ public struct Signature: Sendable, Equatable {
         // caller — only declared names exist inside the boundary.
         var settled: [String: Value] = [:]
 
-        for (name, parameter) in parameters.sorted(by: { left, right in left.key < right.key }) {
+        for (name, parameter) in parameters.sorted(by: { left, right in left.key < right.key })
+        where !settledElsewhere.contains(name) {
             // An offered null passes through as the value it is, for the same
             // reason it counted as given above.
             if offered, given[name] == .null {

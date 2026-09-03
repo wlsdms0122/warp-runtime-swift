@@ -355,12 +355,13 @@ public struct Resolver: Sendable {
 
         // A receiver is not settled as an argument: the word decides what being
         // sent to nothing means, and a required parameter cannot say that.
-        var declared = procedure.signature.parameters
-        declared[procedure.signature.receiver ?? ""] = nil
-
         guard
             let receiver = try? procedure.signature.settling(receiver: value, in: types),
-            let arguments = try? Signature(parameters: declared).settle([:], in: types)
+            let arguments = try? procedure.signature.settle(
+                [:],
+                except: procedure.signature.receiver.map { name in [name] } ?? [],
+                in: types
+            )
         else {
             return nil
         }
@@ -450,21 +451,19 @@ public struct Resolver: Sendable {
 
         // A receiver is not settled as an argument: the word decides what being
         // sent to nothing means, and a required parameter cannot say that.
-        var declared = procedure.signature.parameters
+        // In name order, so which argument's refusal surfaces when two would
+        // refuse is the text's fact rather than a hash table's.
+        var given: [String: Value] = [:]
 
-        if let name = procedure.signature.receiver, dispatch.receiver != nil {
-            declared[name] = nil
+        for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
+            given[name] = try resolve(argument)
         }
 
-        let arguments = try Signature(parameters: declared)
-            .settle(
-                try dispatch.arguments
-                    .sorted { left, right in left.key < right.key }
-                    .reduce(into: [:]) { settled, argument in
-                        settled[argument.key] = try resolve(argument.value)
-                    },
-                in: types
-            )
+        let arguments = try procedure.signature.settle(
+            given,
+            except: dispatch.receiver == nil ? [] : procedure.signature.receiver.map { name in [name] } ?? [],
+            in: types
+        )
 
         do {
             return try evaluate(procedure, for: receiver, with: arguments)

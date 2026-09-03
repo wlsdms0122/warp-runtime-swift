@@ -163,10 +163,10 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // the message names the field rather than the whole argument.
     public func settling(
         _ value: Value,
-        at path: String,
+        at path: @autoclosure () -> String,
         in types: TypeTable = TypeTable()
     ) throws -> Value {
-        try settling(value, at: path, in: types, assuming: [])
+        try settling(value, at: path(), in: types, assuming: [])
     }
 
     // What a cast does, said once. Both evaluators read a cast — the executor
@@ -204,7 +204,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // a declaration the link would have refused.
     func settling(
         _ value: Value,
-        at path: String,
+        at path: @autoclosure () -> String,
         in types: TypeTable,
         assuming: Set<String>
     ) throws -> Value {
@@ -215,7 +215,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         // A value arrived where nothing was supposed to, so the arrival is the
         // refusal — there is no shape to compare it against.
         case .never:
-            throw ArgumentError("\(path): declares never, and nothing is ever that")
+            throw ArgumentError("\(path()): declares never, and nothing is ever that")
 
         // Either shape arrives as itself. Settling to one of them would be the
         // declaration picking, and it declined to.
@@ -225,7 +225,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 return value
 
             default:
-                throw mismatch(value, at: path)
+                throw mismatch(value, at: path())
             }
 
         // A declared record is nominal. A record arriving without a name
@@ -236,22 +236,22 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .named(name):
             guard let declared = types.resolve(name) else {
                 throw UndeclaredTypeError(
-                    "\(path): declares type '\(name)', which nothing declares"
+                    "\(path()): declares type '\(name)', which nothing declares"
                 )
             }
 
             guard case let .record(tag, _) = value, let nominal = recordName(in: types) else {
-                return try declared.settling(value, at: path, in: types, assuming: assuming)
+                return try declared.settling(value, at: path(), in: types, assuming: assuming)
             }
 
             // The value's name is read the same way the slot's is: an alias
             // written on either side names the record it stands for.
             if let tag, TypeExpression.named(tag).recordName(in: types) != nominal {
-                throw ArgumentError("\(path): is a \(tag), and the slot declares \(nominal)")
+                throw ArgumentError("\(path()): is a \(tag), and the slot declares \(nominal)")
             }
 
-            guard case let .record(_, fields) = try declared.settling(value, at: path, in: types, assuming: assuming) else {
-                throw mismatch(value, at: path)
+            guard case let .record(_, fields) = try declared.settling(value, at: path(), in: types, assuming: assuming) else {
+                throw mismatch(value, at: path())
             }
 
             return .record(name: nominal, fields: fields)
@@ -260,7 +260,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .nullable(inner):
             guard value != .null else { return value }
 
-            return try inner.settling(value, at: path, in: types, assuming: assuming)
+            return try inner.settling(value, at: path(), in: types, assuming: assuming)
 
         // A type parameter the call site filled, and the link is where it was
         // filled — unbounded, there is nothing left to compare against. A
@@ -283,13 +283,13 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 assuming: assuming.union([constraint])
             ) else {
                 throw UndeclaredTypeError(
-                    "\(path): declares constraint '\(constraint)', which nothing declares"
+                    "\(path()): declares constraint '\(constraint)', which nothing declares"
                 )
             }
 
             guard admitted else {
                 throw ArgumentError(
-                    "\(path): expected \(rendered), and '\(constraint)' does not"
+                    "\(path()): expected \(rendered), and '\(constraint)' does not"
                         + " admit \(value.type)"
                 )
             }
@@ -313,39 +313,39 @@ public indirect enum TypeExpression: Sendable, Equatable {
             // projection that owns the equation — so what is outside the
             // declaration says which element and by how much, whichever
             // spelling it arrived in.
-            guard let items = value.elements else { throw mismatch(value, at: path) }
+            guard let items = value.elements else { throw mismatch(value, at: path()) }
 
             return .array(
                 try items.enumerated().map { index, item in
-                    try element.settling(item, at: "\(path)[\(index)]", in: types, assuming: assuming)
+                    try element.settling(item, at: "\(path())[\(index)]", in: types, assuming: assuming)
                 }
             )
 
         case let .object(entry):
-            guard case let .record(tag, object) = value else { throw mismatch(value, at: path) }
+            guard case let .record(tag, object) = value else { throw mismatch(value, at: path()) }
 
             return .record(
                 name: tag,
                 fields: try object.mapValues { item in
-                    try entry.settling(item, at: path, in: types, assuming: assuming)
+                    try entry.settling(item, at: path(), in: types, assuming: assuming)
                 }
             )
 
         // An inline record is structural: a record under any name fits it by
         // shape and keeps the name it came with.
         case let .record(fields):
-            guard case let .record(tag, object) = value else { throw mismatch(value, at: path) }
+            guard case let .record(tag, object) = value else { throw mismatch(value, at: path()) }
 
             var settled = object
 
             for (name, field) in fields.sorted(by: { left, right in left.key < right.key }) {
                 guard let written = object[name] else {
-                    throw ArgumentError("\(path).\(name): required by \(rendered), and nothing was given")
+                    throw ArgumentError("\(path()).\(name): required by \(rendered), and nothing was given")
                 }
 
                 settled[name] = try field.settling(
                     written,
-                    at: "\(path).\(name)",
+                    at: "\(path()).\(name)",
                     in: types,
                     assuming: assuming
                 )
@@ -356,24 +356,24 @@ public indirect enum TypeExpression: Sendable, Equatable {
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
         case let .variable(inner), let .inout(inner):
-            return try inner.settling(value, at: path, in: types, assuming: assuming)
+            return try inner.settling(value, at: path(), in: types, assuming: assuming)
 
         // A closure carries what the link derived about its text — its purity
         // and its isolation — and a slot that asks for either reads the carried
         // fact. A closure that reached here through `any` or through an
         // undeclared field is judged here for the first time.
         case let .procedure(required, purity, isolation):
-            guard case let .procedure(closure) = value else { throw mismatch(value, at: path) }
+            guard case let .procedure(closure) = value else { throw mismatch(value, at: path()) }
 
             if purity == .pure, closure.purity != .pure {
                 throw ArgumentError(
-                    "\(path): expected \(rendered), got a procedure that runs"
+                    "\(path()): expected \(rendered), got a procedure that runs"
                 )
             }
 
             if isolation == .isolated, !closure.runsBeside {
                 throw ArgumentError(
-                    "\(path): expected \(rendered), got a procedure that writes"
+                    "\(path()): expected \(rendered), got a procedure that writes"
                         + " what another body could touch"
                 )
             }
@@ -382,7 +382,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
             guard required.accepts(closure.procedure.signature, in: types) else {
                 throw ArgumentError(
-                    "\(path): expected \(rendered), got"
+                    "\(path()): expected \(rendered), got"
                         + " \(TypeExpression.procedure(closure.procedure.signature).rendered)"
                 )
             }
@@ -398,10 +398,10 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 return settled
 
             case .otherKind:
-                throw mismatch(value, at: path)
+                throw mismatch(value, at: path())
 
             case let .outside(number):
-                throw ArgumentError("\(path): \(number) is outside \(rendered)")
+                throw ArgumentError("\(path()): \(number) is outside \(rendered)")
             }
 
         // Bytes take their own spelling as themselves, and an array whose
@@ -417,7 +417,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 let bytes = try elements.enumerated().map { index, item in
                     let settled = try TypeExpression.byteElement.settling(
                         item,
-                        at: "\(path)[\(index)]",
+                        at: "\(path())[\(index)]",
                         in: types,
                         assuming: assuming
                     )
@@ -439,14 +439,14 @@ public indirect enum TypeExpression: Sendable, Equatable {
                 return .bytes(bytes)
 
             default:
-                throw mismatch(value, at: path)
+                throw mismatch(value, at: path())
             }
 
         // The scalars, plus the one widening the language has, one way only:
         // an int where a double is declared. Nothing narrows — an int slot
         // refuses every fraction, `2.0` included.
         case .null, .bool, .int, .double, .string:
-            guard let settled = scalar(value) else { throw mismatch(value, at: path) }
+            guard let settled = scalar(value) else { throw mismatch(value, at: path()) }
 
             return settled
         }
