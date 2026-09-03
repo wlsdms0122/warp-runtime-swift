@@ -20,9 +20,9 @@ public struct Executor: Sendable {
     // until then, which is why nothing but `run(_ image:)` can start a run.
     let linked: [Linked]
 
-    // The shapes the link declared. A named type is answered here rather than
-    // expanded at link, so every boundary that settles arguments needs it.
-    let types: TypeTable
+    // The shapes the link declared, by row. Every boundary that settles a
+    // value reads it.
+    let shapes: ShapeTable
 
     // One box per module variable, made when the run starts, by the document
     // that declared it, in the order its layout reads them.
@@ -45,13 +45,13 @@ public struct Executor: Sendable {
         observer: (any ExecutionObserver)?,
         environment: (any Environment)?,
         linked: [Linked],
-        types: TypeTable = TypeTable(),
+        shapes: ShapeTable = .empty,
         boxes: [Int: [Handle]] = [:]
     ) {
         self.observer = observer
         self.environment = environment
         self.linked = linked
-        self.types = types
+        self.shapes = shapes
         self.boxes = boxes
     }
 
@@ -66,7 +66,7 @@ public struct Executor: Sendable {
             observer: observer,
             environment: environment,
             linked: image.linked,
-            types: image.types,
+            shapes: image.shapes,
             boxes: image.variables.mapValues { started in
                 started.map { name, value in Handle(name, value) }
             }
@@ -77,7 +77,7 @@ public struct Executor: Sendable {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
-        let settled = try entry.signature.settle(arguments, over: entry.parameters, offered: false, in: image.types)
+        let settled = try entry.signature.settle(arguments, over: entry.slots, offered: false, in: image.shapes)
         var activation = try executor.frame(of: entry, layout)
 
         for (position, value) in settled.enumerated() {
@@ -93,12 +93,12 @@ public struct Executor: Sendable {
     // those the closure's author wanted is the author's business.
     func call(
         _ closure: Closure,
-        offering arguments: [String: Value],
+        offering arguments: [(name: String, value: Value)],
         at trace: Trace
     ) async throws -> Value {
         var (body, activation) = try enter(
             closure,
-            settled: try closure.signature.settle(arguments, over: closure.linked.parameters, offered: true, in: types)
+            settled: try closure.signature.settle(arguments, over: closure.linked.slots, offered: true, in: shapes)
         )
 
         return try await answer(body, of: closure.linked, in: &activation, at: trace)
@@ -139,8 +139,8 @@ public struct Executor: Sendable {
 
         // Judging a value against a shape runs nothing, so a cast is data the
         // pure half can read.
-        case let .cast(value, type, optional):
-            return try type.reading(try read(value, in: activation), optional: optional, in: types)
+        case let .cast(value, shape, optional):
+            return try shape.reading(try read(value, in: activation), optional: optional, in: shapes)
 
         case let .send(send):
             return try self.send(send, in: activation)
@@ -178,7 +178,7 @@ public struct Executor: Sendable {
             returned = leaving.value
         }
 
-        return try callee.signature.settling(returned: returned, in: types)
+        return try callee.settling(returned: returned, in: shapes)
     }
 
     // A body answers what it says it answers, and a body that says nothing
@@ -301,11 +301,11 @@ public struct Executor: Sendable {
         // actually arrived. A plain cast lets the refusal out as a failure like
         // any other; an optional one reads the mismatch as null, which is the
         // author saying they expected it.
-        case let .cast(value, type, optional):
-            return try type.reading(
+        case let .cast(value, shape, optional):
+            return try shape.reading(
                 await evaluate(value, in: &activation, at: trace),
                 optional: optional,
-                in: types
+                in: shapes
             )
 
         case let .send(send):
@@ -449,15 +449,13 @@ public struct Executor: Sendable {
             )
         }
 
-        var resolved: [String: Value] = [:]
-
-        for (name, argument) in arguments {
-            resolved[name] = try read(argument, in: activation)
-        }
+        // The signature is the value's, so the arguments travel by name and
+        // find their slots here, along the list.
+        let resolved = try arguments.map { name, argument in (name: name, value: try read(argument, in: activation)) }
 
         var (body, inner) = try enter(
             closure,
-            settled: try closure.signature.settle(resolved, over: closure.linked.parameters, offered: false, in: types)
+            settled: try closure.signature.settle(resolved, over: closure.linked.slots, offered: false, in: shapes)
         )
 
         return try await answer(body, of: closure.linked, in: &inner, at: trace)
@@ -661,7 +659,7 @@ public struct Executor: Sendable {
         guard let receiver = send.receiver else { return nil }
 
         do {
-            return try callee.settling(receiver: try read(receiver, in: activation), in: types)
+            return try callee.settling(receiver: try read(receiver, in: activation), in: shapes)
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
@@ -706,10 +704,10 @@ public struct Executor: Sendable {
             by: callee,
             values: try callee.signature.settle(
                 given,
-                over: callee.parameters,
+                over: callee.slots,
                 offered: false,
                 skipping: skipping.contains,
-                in: types
+                in: shapes
             )
         )
     }
@@ -785,7 +783,7 @@ public struct Executor: Sendable {
                 activation.cells[layout.parameters[position]] = .value(sent)
             }
 
-            return try callee.signature.settling(returned: try read(body, in: &activation), in: types)
+            return try callee.settling(returned: try read(body, in: &activation), in: shapes)
 
         case .effect:
             throw ExecutionError(
@@ -832,13 +830,13 @@ public struct Executor: Sendable {
     // Running a closure here rather than in `evaluate`, which is what makes a
     // word able to take one. What may be called is what the link proved
     // answers, and a slot declaring `pure procedure` is how a word says so.
-    func call(_ closure: Closure, with arguments: [String: Value]) throws -> Value {
+    func call(_ closure: Closure, with arguments: [(name: String, value: Value)]) throws -> Value {
         var (body, activation) = try enter(
             closure,
-            settled: try closure.signature.settle(arguments, over: closure.linked.parameters, offered: true, in: types)
+            settled: try closure.signature.settle(arguments, over: closure.linked.slots, offered: true, in: shapes)
         )
 
-        return try closure.signature.settling(returned: try read(body, in: &activation), in: types)
+        return try closure.settling(returned: try read(body, in: &activation), in: shapes)
     }
 
     private func bool(_ value: Value) throws -> Bool {
@@ -1014,10 +1012,10 @@ public struct Executor: Sendable {
     // as a field never set. A word that took the shape and then refused did not
     // decline it, so that refusal is answered rather than swallowed.
     private func derive(_ callee: Linked, from value: Value) throws -> Value? {
-        guard callee.signature.isDerivable(in: types) else { return nil }
+        guard callee.isDerivable(in: shapes) else { return nil }
 
         guard
-            let receiver = try? callee.settling(receiver: value, in: types),
+            let receiver = try? callee.settling(receiver: value, in: shapes),
             let arguments = try? settled(
                 callee,
                 given: Array(repeating: nil, count: callee.parameters.count),

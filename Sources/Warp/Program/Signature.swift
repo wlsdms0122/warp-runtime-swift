@@ -78,6 +78,12 @@ public struct Signature: Sendable, Equatable {
         return try parameter.checking(receiver: value, called: receiver, in: types)
     }
 
+    // This declaration as the run reads it: its parameters as slots, in
+    // position order.
+    func lowered(in table: ShapeTable) throws -> [Slot] {
+        try ordered.map { name, parameter in try parameter.lowered(named: name, in: table) }
+    }
+
     // Whether something declared this way may stand where this is required.
     //
     // The directions are opposite on purpose: what is given must accept
@@ -85,27 +91,7 @@ public struct Signature: Sendable, Equatable {
     // everything it will get back. A body promising less than the slot asks and
     // returning more than the slot allows is the one that fits.
     public func accepts(_ given: Signature, in types: TypeTable = TypeTable()) -> Bool {
-        accepts(given, in: types, assuming: [])
-    }
-
-    // The assumption-carrying half, so a named type reaching itself through a
-    // procedure's signature ends the same way it does through any other shape.
-    func accepts(_ given: Signature, in types: TypeTable, assuming: Set<String>) -> Bool {
-        // An undeclared half claims nothing, so it neither demands nor promises —
-        // it reads as `any` here, which is the one type that fits both roles.
-        //
-        // A parameter the body leaves out is not a disagreement. What is given
-        // must accept everything that will be passed to it, and a body that
-        // never reads a name accepts anything under it — so the check is on the
-        // ones it did declare.
-        for (name, parameter) in parameters {
-            guard let taken = given.parameters[name] else { continue }
-            guard taken.declared.accepts(parameter.declared, in: types, assuming: assuming) else {
-                return false
-            }
-        }
-
-        return (returns ?? .any).accepts(given.returns ?? .any, in: types, assuming: assuming)
+        TypeExpression.procedure(self).accepts(.procedure(given), in: types)
     }
 
     // Whether a path segment may reach this — it takes a receiver, so there is
@@ -117,13 +103,19 @@ public struct Signature: Sendable, Equatable {
     // put the word that must not be missable where a walk decides on its own
     // whether to send it.
     public func isDerivable(in types: TypeTable) -> Bool {
+        guard let table = try? types.lowered() else { return false }
+
+        return isDerivable(in: table)
+    }
+
+    func isDerivable(in table: ShapeTable) -> Bool {
         guard let receiver else { return false }
         guard returns != .never else { return false }
 
         return parameters
             .filter { name, _ in name != receiver }
             .values
-            .allSatisfy { parameter in !parameter.mustBeGiven(in: types) }
+            .allSatisfy { parameter in !parameter.mustBeGiven(in: table) }
     }
 
     // The expression a call hands under a parameter's name: the argument
@@ -147,9 +139,10 @@ public struct Signature: Sendable, Equatable {
         _ given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        let ordered = self.ordered
+        let table = try types.lowered()
+        let slots = try lowered(in: table)
 
-        return named(try settle(given, over: ordered, offered: false, in: types), over: ordered)
+        return named(try settle(given, over: slots, offered: false, in: table), over: slots)
     }
 
     // The same, for a caller that hands over more than the body asked for. A
@@ -160,9 +153,10 @@ public struct Signature: Sendable, Equatable {
         offered given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        let ordered = self.ordered
+        let table = try types.lowered()
+        let slots = try lowered(in: table)
 
-        return named(try settle(given, over: ordered, offered: true, in: types), over: ordered)
+        return named(try settle(given, over: slots, offered: true, in: table), over: slots)
     }
 
     // The parameters in the order arguments stand in.
@@ -177,26 +171,41 @@ public struct Signature: Sendable, Equatable {
     // A name the declaration lacks is refused unless the caller offers.
     func settle(
         _ given: [String: Value],
-        over ordered: [(name: String, parameter: Parameter)],
+        over slots: [Slot],
         offered: Bool,
-        in types: TypeTable
+        in table: ShapeTable
     ) throws -> [Value?] {
-        if !offered, given.keys.contains(where: { name in parameters[name] == nil }) {
-            let undeclared = given.keys
-                .filter { name in parameters[name] == nil }
-                .sorted()
+        try settle(given.map { name, value in (name: name, value: value) }, over: slots, offered: offered, in: table)
+    }
 
-            throw ArgumentError(
-                "parameters: not declared in the signature:"
-                    + " \(undeclared.joined(separator: ", "))"
-            )
+    // Arguments given as a list of names and values, the way a word hands
+    // them to a closure and a call of a value hands them to what it named.
+    // Each slot finds its name along the list, so neither side hashes.
+    func settle(
+        _ given: [(name: String, value: Value)],
+        over slots: [Slot],
+        offered: Bool,
+        in table: ShapeTable
+    ) throws -> [Value?] {
+        if !offered {
+            let undeclared = given
+                .map { entry in entry.name }
+                .filter { name in !slots.contains { slot in Name.same(slot.name, name) } }
+                .sorted(by: Name.precedes)
+
+            guard undeclared.isEmpty else {
+                throw ArgumentError(
+                    "parameters: not declared in the signature:"
+                        + " \(undeclared.joined(separator: ", "))"
+                )
+            }
         }
 
         return try settle(
-            ordered.map { name, _ in given[name] },
-            over: ordered,
+            slots.map { slot in given.first { entry in Name.same(entry.name, slot.name) }?.value },
+            over: slots,
             offered: offered,
-            in: types
+            in: table
         )
     }
 
@@ -208,10 +217,10 @@ public struct Signature: Sendable, Equatable {
     // inside the boundary.
     func settle(
         _ given: [Value?],
-        over ordered: [(name: String, parameter: Parameter)],
+        over slots: [Slot],
         offered: Bool,
         skipping: (Int) -> Bool = { _ in false },
-        in types: TypeTable
+        in table: ShapeTable
     ) throws -> [Value?] {
         // What "nothing was given" means differs by who is giving. An author's
         // argument space folds null and unwritten into one instruction: a
@@ -223,11 +232,11 @@ public struct Signature: Sendable, Equatable {
         // missing.
         var missing: [String] = []
 
-        for (position, (name, parameter)) in ordered.enumerated() where !skipping(position) {
+        for (position, slot) in slots.enumerated() where !skipping(position) {
             let blank = offered ? given[position] == nil : (given[position] ?? .null) == .null
 
-            if blank, parameter.mustBeGiven(in: types) {
-                missing.append(name)
+            if blank, slot.mustBeGiven(in: table) {
+                missing.append(slot.name)
             }
         }
 
@@ -237,9 +246,9 @@ public struct Signature: Sendable, Equatable {
             )
         }
 
-        var settled: [Value?] = Array(repeating: nil, count: ordered.count)
+        var settled: [Value?] = Array(repeating: nil, count: slots.count)
 
-        for (position, (name, parameter)) in ordered.enumerated() where !skipping(position) {
+        for (position, slot) in slots.enumerated() where !skipping(position) {
             // An offered null passes through as the value it is, for the same
             // reason it counted as given above.
             if offered, given[position] == .null {
@@ -248,23 +257,20 @@ public struct Signature: Sendable, Equatable {
                 continue
             }
 
-            settled[position] = try parameter.taking(given[position] ?? .null, called: name, in: types)
+            settled[position] = try slot.taking(given[position] ?? .null, in: table)
         }
 
         return settled
     }
 
     // MARK: - Private
-    private func named(
-        _ settled: [Value?],
-        over ordered: [(name: String, parameter: Parameter)]
-    ) -> [String: Value] {
+    private func named(_ settled: [Value?], over slots: [Slot]) -> [String: Value] {
         var named: [String: Value] = [:]
 
         for (position, value) in settled.enumerated() {
             guard let value else { continue }
 
-            named[ordered[position].name] = value
+            named[slots[position].name] = value
         }
 
         return named

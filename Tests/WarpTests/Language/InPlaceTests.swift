@@ -386,7 +386,7 @@ struct InPlaceTests {
     @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
     func anAssembledClosureClaimsNothing() throws {
         // Given
-        let closure = Closure.assembled(answering: .int(1))
+        let closure = try Closure.assembled(answering: .int(1))
 
         // When / Then
         #expect(throws: ArgumentError.self) {

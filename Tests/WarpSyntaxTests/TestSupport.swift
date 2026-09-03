@@ -263,9 +263,9 @@ private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> War
 extension Closure {
     // A closure a caller assembles in Swift: no body a document spelled, no
     // captures, claiming nothing.
-    static func assembled() -> Closure {
+    static func assembled() throws -> Closure {
         Closure(
-            linked: Linked(
+            linked: try Linked(
                 label: "assembled",
                 origin: 0,
                 signature: Signature(),
@@ -274,7 +274,8 @@ extension Closure {
                 implementation: .body(
                     Body(instructions: [], result: nil),
                     Layout(size: 0, parameters: [], variables: [], names: [])
-                )
+                ),
+                in: .empty
             ),
             captured: []
         )

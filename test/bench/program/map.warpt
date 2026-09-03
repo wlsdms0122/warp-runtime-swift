@@ -1,0 +1,79 @@
+warpt 1
+{
+  imports [
+    "std.collection.setting"
+    "std.math.lessThan"
+    "std.math.remainder"
+    "std.text.text"
+  ]
+  procedures {
+    entry {
+      body [
+        {
+          value {}
+          var "held"
+        }
+        {
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  set "held"
+                  value {
+                    call {
+                      arguments {
+                        key {
+                          call {
+                            of {
+                              call {
+                                arguments {
+                                  value 1000
+                                }
+                                of {
+                                  ref "round.index"
+                                }
+                                procedure "std.math.remainder"
+                              }
+                            }
+                            procedure "std.text.text"
+                          }
+                        }
+                        value 1
+                      }
+                      of {
+                        ref "held"
+                      }
+                      procedure "std.collection.setting"
+                    }
+                  }
+                }
+              ]
+              while {
+                call {
+                  arguments {
+                    value {
+                      ref "rounds"
+                    }
+                  }
+                  of {
+                    ref "round.index"
+                  }
+                  procedure "std.math.lessThan"
+                }
+              }
+            }
+          }
+        }
+      ]
+      parameters {
+        rounds "int"
+      }
+      result {
+        ref "held"
+      }
+      returns "object<int>"
+    }
+  }
+  warp 1
+}

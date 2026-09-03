@@ -119,13 +119,13 @@ extension Linker {
     func constraintRefusal(
         mentions: [String: Set<String>],
         readings: [String: TypeExpression],
-        in types: TypeTable
+        in shapes: ShapeTable
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             guard let reading = readings[parameter] else { continue }
 
             for constraint in names.sorted() {
-                guard let admitted = types.admits(constraint: constraint, reading: reading) else {
+                guard let admitted = shapes.admits(constraint: constraint, reading: reading) else {
                     continue
                 }
 
@@ -153,7 +153,7 @@ extension Linker {
     func judged(
         _ declared: Signature,
         filledWith bound: Bound,
-        in types: TypeTable
+        in shapes: ShapeTable
     ) -> Judgment {
         guard bound.disagreeing.isEmpty else {
             let named = bound.disagreeing.keys.sorted().map { parameter in
@@ -170,7 +170,7 @@ extension Linker {
         if let refusal = constraintRefusal(
             mentions: mentions,
             readings: bound.readings,
-            in: types
+            in: shapes
         ) {
             return .refusal(refusal)
         }
@@ -188,7 +188,7 @@ extension Linker {
         at dispatch: Dispatch,
         readings sent: [String: TypeExpression],
         receiver received: TypeExpression?,
-        in types: TypeTable
+        in shapes: ShapeTable
     ) -> Bound {
         var bound: [String: TypeExpression] = [:]
         var disagreeing: [String: TypeExpression] = [:]
@@ -202,7 +202,7 @@ extension Linker {
                 against: reading,
                 into: &bound,
                 disagreeing: &disagreeing,
-                in: types
+                in: shapes
             )
         }
 
@@ -218,7 +218,7 @@ extension Linker {
             against: received,
             into: &bound,
             disagreeing: &disagreeing,
-            in: types
+            in: shapes
         )
 
         return Bound(readings: bound, disagreeing: disagreeing)
@@ -233,7 +233,7 @@ extension Linker {
         at dispatch: Dispatch,
         readings sent: @autoclosure () throws -> [String: TypeExpression],
         receiver received: @autoclosure () throws -> TypeExpression?,
-        in types: TypeTable
+        in shapes: ShapeTable
     ) rethrows -> TypeExpression {
         guard let signature, let returns = signature.returns else { return .any }
         guard signature.isGeneric else { return returns }
@@ -244,7 +244,7 @@ extension Linker {
                 at: dispatch,
                 readings: try sent(),
                 receiver: try received(),
-                in: types
+                in: shapes
             ).readings
         )
     }
@@ -759,7 +759,7 @@ extension Linker {
             )
         }
 
-        guard parameter.declared.accepts(current, in: frame.types) else {
+        guard parameter.declared.accepts(current, in: frame.shapes) else {
             return .refused(
                 "\(walked.rendered) sends '\(key)' to \(current.rendered),"
                     + " where \(parameter.declared) is declared"
@@ -773,13 +773,13 @@ extension Linker {
             against: current,
             into: &readings,
             disagreeing: &disagreeing,
-            in: frame.types
+            in: frame.shapes
         )
 
         switch judged(
             signature,
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
-            in: frame.types
+            in: frame.shapes
         ) {
         case let .refusal(reason):
             return .refused("\(walked.rendered) sends '\(key)' — \(reason)")
@@ -1096,7 +1096,7 @@ extension Linker {
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
             // rather than about the spelling that produced it.
-            let handed = optional && !type.declaresNull(in: frame.types)
+            let handed = optional && !type.declaresNull(in: frame.shapes)
                 ? TypeExpression.nullable(type)
                 : type
 
@@ -1106,7 +1106,7 @@ extension Linker {
             // value, and the unresolved types are asked so that is seen.
             let nominal = type.recordName(in: frame.types) != nil
 
-            if !type.couldBothHold(inner.reading, in: frame.types) {
+            if !type.couldBothHold(inner.reading, in: frame.shapes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is — so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
@@ -1226,7 +1226,7 @@ extension Linker {
                 for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
                     guard let held = environment[name]?.fieldUnwrapped.inoutUnwrapped else { continue }
 
-                    guard held.accepts(write.type, in: frame.types) else {
+                    guard held.accepts(write.type, in: frame.shapes) else {
                         throw LinkError(
                             "writes '\(name)', which it captured, as"
                                 + " \(write.type.rendered) — the body it captured"
@@ -1366,7 +1366,7 @@ extension Linker {
                                 ask: ask
                             ).reading
                         },
-                        in: frame.types
+                        in: frame.shapes
                     )
                 )
             }
@@ -1455,7 +1455,7 @@ extension Linker {
                     at: dispatch,
                     readings: sent,
                     receiver: receiver?.reading,
-                    in: frame.types
+                    in: frame.shapes
                 )
             )
 
@@ -2465,7 +2465,7 @@ extension Linker {
             }
         }
 
-        guard slot.accepts(written, in: frame.types) else {
+        guard slot.accepts(written, in: frame.shapes) else {
             try refuse(
                 "writes '\(path.rendered)' as \(written.rendered), and it holds"
                     + " \(slot.rendered)",

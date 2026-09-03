@@ -37,6 +37,12 @@ public final class Linked: Sendable {
     public let purity: Purity
     public let isolation: Isolation
 
+    // The parameters as the run settles them, in the same order, and what
+    // the answer settles against. The declaration's lowering, born here
+    // from the signature beside it.
+    let slots: [Slot]
+    let returns: Shape?
+
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -46,8 +52,9 @@ public final class Linked: Sendable {
         signature: Signature,
         purity: Purity,
         isolation: Isolation,
-        implementation: Implementation
-    ) {
+        implementation: Implementation,
+        in table: ShapeTable
+    ) throws {
         let parameters = signature.ordered
 
         self.label = label
@@ -59,6 +66,8 @@ public final class Linked: Sendable {
         }
         self.purity = purity
         self.isolation = isolation
+        self.slots = try parameters.map { name, parameter in try parameter.lowered(named: name, in: table) }
+        self.returns = try signature.returns?.lowered(in: table)
         self.implementation = implementation
     }
 
@@ -72,8 +81,9 @@ public final class Linked: Sendable {
         origin: Int,
         procedure: Procedure,
         pure: Bool,
-        isolated: Bool
-    ) -> Linked {
+        isolated: Bool,
+        in table: ShapeTable
+    ) throws -> Linked {
         let implementation: Implementation
 
         switch procedure.implementation {
@@ -87,24 +97,43 @@ public final class Linked: Sendable {
             implementation = .effect(effect)
         }
 
-        return Linked(
+        return try Linked(
             label: label,
             origin: origin,
             signature: procedure.signature,
             purity: pure ? .pure : .unstated,
             isolation: isolated ? .isolated : .unstated,
-            implementation: implementation
+            implementation: implementation,
+            in: table
         )
     }
 
-    // The receiver settled against the parameter at this row's receiver
+    // The receiver settled against the slot at this row's receiver
     // position, or as it is where the row takes none.
-    func settling(receiver value: Value, in types: TypeTable) throws -> Value {
+    func settling(receiver value: Value, in table: ShapeTable) throws -> Value {
         guard let position = receiverPosition else { return value }
 
-        let declared = parameters[position]
+        return try slots[position].checking(receiver: value, in: table)
+    }
 
-        return try declared.parameter.checking(receiver: value, called: declared.name, in: types)
+    // The returned value, checked against what was declared.
+    func settling(returned value: Value, in table: ShapeTable) throws -> Value {
+        guard let returns else { return value }
+
+        return try returns.settling(value, at: "returns", in: table)
+    }
+
+    // Whether a path segment may reach this: it takes a receiver, so there is
+    // something for the walk to send it to, and it needs nothing else. A row
+    // that answers `never` is reachable by neither: a path reads a value, and
+    // this one leaves instead of producing one.
+    func isDerivable(in table: ShapeTable) -> Bool {
+        guard let position = receiverPosition else { return false }
+        guard returns != .never else { return false }
+
+        return slots.enumerated().allSatisfy { index, slot in
+            index == position || !slot.mustBeGiven(in: table)
+        }
     }
 
     // Whether this row is a written body.

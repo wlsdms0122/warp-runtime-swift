@@ -1,0 +1,79 @@
+warpt 1
+{
+  imports [
+    "std.math.lessThan"
+  ]
+  procedures {
+    "app.read" {
+      parameters {
+        of "app.Account"
+      }
+      result {
+        ref "of.balance"
+      }
+      returns "int"
+    }
+    entry {
+      body [
+        {
+          let "account"
+          value {
+            balance 1
+          }
+        }
+        {
+          value 0
+          var "seen"
+        }
+        {
+          let "round"
+          value {
+            loop {
+              body [
+                {
+                  set "seen"
+                  value {
+                    call {
+                      arguments {
+                        of {
+                          ref "account"
+                        }
+                      }
+                      procedure "app.read"
+                    }
+                  }
+                }
+              ]
+              while {
+                call {
+                  arguments {
+                    value {
+                      ref "rounds"
+                    }
+                  }
+                  of {
+                    ref "round.index"
+                  }
+                  procedure "std.math.lessThan"
+                }
+              }
+            }
+          }
+        }
+      ]
+      parameters {
+        rounds "int"
+      }
+      result {
+        ref "seen"
+      }
+      returns "int"
+    }
+  }
+  types {
+    "app.Account" {
+      balance "int"
+    }
+  }
+  warp 1
+}

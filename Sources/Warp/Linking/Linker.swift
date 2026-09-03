@@ -67,6 +67,10 @@ public struct Linker: Sendable {
             declared: declaredTypes,
             constraints: declaredConstraints
         )
+
+        // Lowered once: every judgment the link asks and every row it builds
+        // reads the table the run will read.
+        let shapes = try types.lowered()
         let symbols = try symbols(of: modules)
 
         // Every declaration under its declared spelling. The spellings are
@@ -100,7 +104,7 @@ public struct Linker: Sendable {
             table[entry.offset] = Set(entry.element.variables.keys)
         }
         let settled = pure(among: symbols, reading: moduleVariables)
-        let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: types)
+        let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: shapes)
 
         // The tables as the author spelled them, and the form the link's own
         // settling reads: a written body is swapped for the refusal it would
@@ -138,12 +142,13 @@ public struct Linker: Sendable {
         for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
             rows[symbol.declared] = table.count
             table.append(
-                Linked.standing(
+                try Linked.standing(
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
                     pure: settled.contains(symbol.declared),
-                    isolated: isolatedDeclarations.contains(symbol.declared)
+                    isolated: isolatedDeclarations.contains(symbol.declared),
+                    in: shapes
                 )
             )
         }
@@ -152,7 +157,7 @@ public struct Linker: Sendable {
         // decided here once: the layouts read positions from it and the
         // image carries the starting values in it.
         let orderedVariables = modules.enumerated().reduce(into: [Int: [String]]()) { table, entry in
-            table[entry.offset] = entry.element.variables.keys.sorted()
+            table[entry.offset] = entry.element.variables.keys.sorted(by: Name.precedes)
         }
 
         var lowering = Lowering(
@@ -161,7 +166,8 @@ public struct Linker: Sendable {
             words: wordSymbols.compactMapValues { symbol in rows[symbol.declared] },
             variables: orderedVariables.mapValues { names in
                 names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
-            }
+            },
+            shapes: shapes
         )
 
         // What a body's constant paths fold against. The stand-ins, while
@@ -184,6 +190,7 @@ public struct Linker: Sendable {
                 symbols: space,
                 signatures: answeringSignatures,
                 types: types,
+                shapes: shapes,
                 words: answeringWords,
                 pure: settled,
                 isolated: isolatedDeclarations,
@@ -285,7 +292,7 @@ public struct Linker: Sendable {
                     table: foldingTable,
                     rows: lowering.rows,
                     words: lowering.words,
-                    types: types
+                    shapes: shapes
                 )
 
                 // The starting environment knows the constants beside the
@@ -368,7 +375,7 @@ public struct Linker: Sendable {
             if let returns = resolved.signature.returns,
                let answer = resolved.block?.result?.constantValue {
                 do {
-                    _ = try returns.settling(answer, at: "answer", in: types)
+                    _ = try returns.settling(answer, at: "answer", in: shapes)
                 } catch {
                     throw LinkError(
                         "answers \(answer.type), and its"
@@ -398,7 +405,7 @@ public struct Linker: Sendable {
             start: try row(of: start),
             rows: rows,
             reached: Set(procedures.keys),
-            types: types,
+            shapes: shapes,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
                     (name: name, value: entry.value[name] ?? .null)
@@ -550,7 +557,7 @@ public struct Linker: Sendable {
     private func derivable(
         among symbols: [Symbol],
         pure: Set<String>,
-        in types: TypeTable
+        in shapes: ShapeTable
     ) throws -> (selectors: [String: Symbol], words: [String: Symbol]) {
         var selectors: [String: Symbol] = [:]
         var words: [String: Symbol] = [:]
@@ -574,7 +581,7 @@ public struct Linker: Sendable {
 
             selectors[symbol.declared] = symbol
 
-            guard symbol.procedure.signature.isDerivable(in: types) else { continue }
+            guard symbol.procedure.signature.isDerivable(in: shapes) else { continue }
 
             let bare = symbol.declared.split(separator: ".").last.map(String.init)
                 ?? symbol.declared
@@ -1300,7 +1307,7 @@ public struct Linker: Sendable {
                         table: lowering.table,
                         rows: lowering.rows,
                         words: lowering.words,
-                        types: types
+                        shapes: frame.shapes
                     ).read(judged, at: .constant(name, in: .of(module)))
                 } catch let refused as LinkError {
                     throw refused
@@ -1350,7 +1357,7 @@ public struct Linker: Sendable {
                         table: lowering.table,
                         rows: lowering.rows,
                         words: lowering.words,
-                        types: types
+                        shapes: frame.shapes
                     ).read(judged, at: .variable(name, in: .of(module)))
                 } catch let refused as LinkError {
                     throw refused
@@ -1445,7 +1452,7 @@ public struct Linker: Sendable {
         with frame: TypeFrame
     ) throws {
         let dispatch = site.dispatch
-        let types = frame.types
+        let shapes = frame.shapes
 
         // One parameter takes one argument. A receiver written in front of
         // the dot and again by name is refused before either is read, since
@@ -1478,9 +1485,9 @@ public struct Linker: Sendable {
                 at: dispatch,
                 readings: site.readings,
                 receiver: site.received,
-                in: types
+                in: shapes
             ),
-            in: types
+            in: shapes
         ) {
         case let .refusal(reason):
             throw LinkError(
@@ -1510,7 +1517,7 @@ public struct Linker: Sendable {
 
         let missing = signature.parameters
             .filter { name, parameter in
-                parameter.mustBeGiven(in: types) && !supplied.contains(name)
+                parameter.mustBeGiven(in: shapes) && !supplied.contains(name)
             }
             .keys
             .sorted()
@@ -1535,7 +1542,7 @@ public struct Linker: Sendable {
             }
 
             do {
-                _ = try parameter.taking(constant, called: name, in: types)
+                _ = try parameter.taking(constant, called: name, in: shapes)
             } catch {
                 throw LinkError(
                     "sending '\(dispatch.selector)' — \(error)",
@@ -1571,7 +1578,7 @@ public struct Linker: Sendable {
 
             let written = site.readings[name] ?? .any
 
-            guard !parameter.declared.accepts(written, in: types) else { continue }
+            guard !parameter.declared.accepts(written, in: shapes) else { continue }
 
             throw LinkError(
                 "sending '\(dispatch.selector)' with \(name),"
@@ -1587,7 +1594,7 @@ public struct Linker: Sendable {
             let name = signature.receiver,
             let parameter = signature.parameters[name]
         {
-            guard parameter.declared.accepts(written, in: types) else {
+            guard parameter.declared.accepts(written, in: shapes) else {
                 throw LinkError(
                     "sending '\(dispatch.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",

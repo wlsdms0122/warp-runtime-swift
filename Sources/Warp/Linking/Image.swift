@@ -30,10 +30,10 @@ public struct Image: Sendable {
     // rows by number and never asks.
     public let reached: Set<String>
 
-    // Every shape the linked modules declared. A named type survives into the
-    // run rather than being expanded at link, so the run needs the table that
-    // answers it.
-    public let types: TypeTable
+    // Every shape the linked modules declared, as the run reads them: a named
+    // type survives into the run as a row rather than being expanded at
+    // link, so the run needs the table that answers it.
+    let shapes: ShapeTable
 
     // What each document's variables start a run holding, by the document's
     // position in the link, in the order the layouts read them. A run makes
@@ -46,14 +46,14 @@ public struct Image: Sendable {
         start: Int,
         rows: [String: Int],
         reached: Set<String>,
-        types: TypeTable,
+        shapes: ShapeTable,
         variables: [Int: [(name: String, value: Value)]]
     ) {
         self.linked = linked
         self.start = start
         self.rows = rows
         self.reached = reached
-        self.types = types
+        self.shapes = shapes
         self.variables = variables
     }
 

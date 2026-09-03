@@ -54,8 +54,9 @@ struct DeclaredSpellingTests {
         let image = try linker.link([sut, store] + Module.standard, entry: entryName)
 
         // Then — the declaration is under the declared spelling alone
-        #expect(image.types.resolve("store.Task") == .record(["id": .string]))
-        #expect(image.types.resolve("Task") == nil)
+        let row = try #require(image.shapes.row(named: "store.Task"))
+        #expect(image.shapes.shapes[row] == .record([(name: "id", shape: .string)]))
+        #expect(image.shapes.row(named: "Task") == nil)
     }
 
     @Test("a module names its own type by its declared spelling")

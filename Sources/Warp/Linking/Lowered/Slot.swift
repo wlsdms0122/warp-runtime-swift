@@ -1,0 +1,156 @@
+//
+//  Slot.swift
+//  Warp
+//
+//  Created by JSilver on 9/3/26.
+//
+
+import Foundation
+
+// A parameter as the run reads it: what the boundary asks of an argument,
+// and nothing else. The name for a refusal, the shape to settle against,
+// the default where nothing was given, and the spellings the settled value
+// must be one of. The declaration's type is not here; its lowering is.
+struct Slot: Sendable {
+    // MARK: - Property
+    let name: String
+    let shape: Shape
+    let `default`: Value?
+    let oneOf: [String]?
+
+    // MARK: - Initializer
+    init(name: String, shape: Shape, default: Value?, oneOf: [String]?) {
+        self.name = name
+        self.shape = shape
+        self.default = `default`
+        self.oneOf = oneOf
+    }
+
+    // MARK: - Public
+    // Whether a call must write this argument. A default answers omission
+    // with a value; a type that declares null answers it with the null it
+    // holds. Without either, omission is a missing argument.
+    func mustBeGiven(in table: ShapeTable) -> Bool {
+        `default` == nil && !shape.declaresNull(in: table)
+    }
+
+    // An argument as given, or the default where nothing was.
+    func taking(_ value: Value, in table: ShapeTable) throws -> Value {
+        guard value != .null else {
+            guard let fallback = self.default else {
+                // A type that declares null holds it as a value, so a null
+                // here is what was given rather than the absence of anything.
+                guard shape.declaresNull(in: table) else {
+                    throw ArgumentError("input '\(name)': required, and nothing was given")
+                }
+
+                return try checking(value, in: table)
+            }
+
+            // The fallback walks through the same gate an argument does, so
+            // the body reads the declared representation either way.
+            return try checking(fallback, in: table)
+        }
+
+        return try checking(value, in: table)
+    }
+
+    // A receiver checked as this slot, except that nothing passes through. A
+    // word decides for itself what being sent to nothing means: `contains`
+    // says false rather than failing, and a path that reached null is
+    // absence rather than misuse.
+    func checking(receiver value: Value, in table: ShapeTable) throws -> Value {
+        guard value != .null else { return value }
+
+        return try checking(value, in: table)
+    }
+
+    // The value settled to the declared representation, and held to the
+    // spellings where the declaration lists them.
+    func checking(_ value: Value, in table: ShapeTable) throws -> Value {
+        if value == .null {
+            // Null passes where the declaration says it is a value: a `T?`
+            // slot, or the legacy spelling of the same fact, an explicitly
+            // null default.
+            guard self.default == .null || shape.declaresNull(in: table) else {
+                throw ArgumentError("input '\(name)': expected \(shape.rendered(in: table)), got null")
+            }
+
+            return value
+        }
+
+        let settled = try shape.settling(value, at: "input '\(name)'", in: table)
+
+        if let allowed = oneOf {
+            switch settled {
+            // A number meets the candidates by worth, the way the language
+            // compares numbers: `-0.0` is in a list that writes `0.0`. Only
+            // the canonical spellings read here, because an alias is a dead
+            // member the link already refused.
+            case .int, .double:
+                guard allowed.contains(where: { candidate in
+                    shape.numeral(candidate, in: table).map { numeral in
+                        Value.order(numeral, settled) == .orderedSame
+                    } ?? false
+                }) else {
+                    throw ArgumentError(
+                        "input '\(name)': '\(Self.shown(settled))' not in oneOf \(allowed)"
+                    )
+                }
+
+            default:
+                let scalar = Self.scalar(settled)
+
+                guard let scalar, allowed.contains(scalar) else {
+                    throw ArgumentError(
+                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in oneOf \(allowed)"
+                    )
+                }
+            }
+        }
+
+        return settled
+    }
+
+    // MARK: - Private
+    private static func scalar(_ value: Value) -> String? {
+        switch value {
+        case let .string(string):
+            return string
+
+        case let .bool(bool):
+            return String(bool)
+
+        default:
+            return nil
+        }
+    }
+
+    // A number as a refusal shows it: the value's own spelling.
+    private static func shown(_ settled: Value) -> String {
+        switch settled {
+        case let .int(integer):
+            return String(integer)
+
+        case let .double(double):
+            return double.spelling ?? "\(double)"
+
+        default:
+            return "\(settled.type)"
+        }
+    }
+}
+
+extension Parameter {
+    // This parameter as the run reads it. An undeclared type lowers to
+    // `any`: the boundary tells "nothing written" from "`any` written" in no
+    // way, so the slot does not either.
+    func lowered(named name: String, in table: ShapeTable) throws -> Slot {
+        Slot(
+            name: name,
+            shape: try declared.lowered(in: table),
+            default: `default`,
+            oneOf: oneOf
+        )
+    }
+}

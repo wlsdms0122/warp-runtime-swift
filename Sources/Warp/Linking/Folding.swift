@@ -20,7 +20,7 @@ struct Folding {
     let table: [Linked]
     let rows: [String: Int]
     let words: [String: Int]
-    let types: TypeTable
+    let shapes: ShapeTable
 
     // MARK: - Initializer
     init(
@@ -29,9 +29,9 @@ struct Folding {
         table: [Linked],
         rows: [String: Int],
         words: [String: Int],
-        types: TypeTable
+        shapes: ShapeTable
     ) {
-        let names = constants.keys.sorted()
+        let names = constants.keys.sorted(by: Name.precedes)
 
         self.names = names
         self.cells = names.map { name in .value(constants[name] ?? .null) }
@@ -39,7 +39,7 @@ struct Folding {
         self.table = table
         self.rows = rows
         self.words = words
-        self.types = types
+        self.shapes = shapes
     }
 
     // Against native words alone: every declaration of the modules by its
@@ -47,7 +47,13 @@ struct Folding {
     // refusal it earns before it is lowered. What a constant settles from. A
     // native's purity is its own; a written body is never run here, so its
     // purity is not asked.
-    init(bindings: [String: Value], natives modules: [Module], types: TypeTable = TypeTable()) {
+    init(bindings: [String: Value], natives modules: [Module]) throws {
+        // The natives declare the shapes their own signatures name, so the
+        // table is theirs: one built by hand would refuse their rows.
+        let shapes = try TypeTable(
+            types: modules.reduce(into: [:]) { table, module in table.merge(module.types) { first, _ in first } },
+            constraints: modules.reduce(into: [:]) { table, module in table.merge(module.constraints) { first, _ in first } }
+        ).lowered()
         var table: [Linked] = []
         var rows: [String: Int] = [:]
         var words: [String: Int] = [:]
@@ -57,18 +63,19 @@ struct Folding {
                 rows[name] = table.count
                 words[String(name.split(separator: ".").last ?? Substring(name))] = table.count
                 table.append(
-                    Linked.standing(
+                    try Linked.standing(
                         label: name,
                         origin: origin,
                         procedure: procedure,
                         pure: procedure.implementation.isNativelyPure == true,
-                        isolated: false
+                        isolated: false,
+                        in: shapes
                     )
                 )
             }
         }
 
-        self.init(constants: bindings, origin: 0, table: table, rows: rows, words: words, types: types)
+        self.init(constants: bindings, origin: 0, table: table, rows: rows, words: words, shapes: shapes)
     }
 
     // MARK: - Public
@@ -85,7 +92,7 @@ struct Folding {
     // What an expression reads here. A closure it holds is carried in the
     // code, so the table is read and never grown.
     func read(_ expression: Expression, at place: Place = .given("folding")) throws -> Value {
-        let lowering = Lowering(table: table, rows: rows, words: words, variables: [:])
+        let lowering = Lowering(table: table, rows: rows, words: words, variables: [:], shapes: shapes)
         let (code, layout) = try lowering.lower(expression, reading: names, origin: origin, label: "", at: place)
         var activation = Activation(layout)
 
@@ -93,7 +100,7 @@ struct Folding {
             activation.cells[slot] = cell
         }
 
-        return try Executor(observer: nil, environment: nil, linked: table, types: types).read(code, in: activation)
+        return try Executor(observer: nil, environment: nil, linked: table, shapes: shapes).read(code, in: activation)
     }
 
     // MARK: - Private

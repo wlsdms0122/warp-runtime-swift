@@ -58,63 +58,14 @@ public struct TypeTable: Sendable {
     // again — so a table built by hand refuses or answers where a linked one
     // would, and never chases a declaration the link would have refused.
     public func admits(constraint name: String, reading: TypeExpression) -> Bool? {
-        admits(constraint: name, reading: reading, assuming: [])
-    }
+        guard
+            let table = try? lowered(),
+            let row = table.constraintRow(named: name),
+            let shape = try? reading.lowered(in: table)
+        else { return nil }
 
-    // The same membership, asked of a value at the boundary — nil again when
-    // nothing declares the name. A member speaks through the same settlement a
-    // declared type applies, so what `int` admits as a slot it admits as a
-    // member, widening included. The settlement carries which constraints are
-    // already being asked, so this side ends its own recursion the way the
-    // reading side does.
-    public func admits(constraint name: String, value: Value) -> Bool? {
-        admits(constraint: name, value: value, assuming: [])
-    }
-
-    // `assuming` is what the caller was already asking; this constraint joins
-    // it only where a member has to be settled to answer, since a scalar
-    // member answers by kind.
-    func admits(constraint name: String, value: Value, assuming: Set<String>) -> Bool? {
-        guard let members = constraints[name] else { return nil }
-
-        return members.contains { member in
-            member.admitsAsScalar(value)
-                ?? ((try? member.settling(value, at: "member", in: self, assuming: assuming.union([name]))) != nil)
-        }
+        return table.admits(constraint: row, reading: shape, assuming: [])
     }
 
     // MARK: - Private
-    private func admits(
-        constraint name: String,
-        reading: TypeExpression,
-        assuming: Set<String>
-    ) -> Bool? {
-        guard let members = constraints[name] else { return nil }
-
-        switch reading {
-        case .any:
-            return true
-
-        // Filled by a call, so it proves no membership here — said by name
-        // beside the parameter it is the walk-through of, rather than left to
-        // what `accepts` happens to answer.
-        case .reading:
-            return true
-
-        case let .parameter(_, constraint):
-            guard let constraint, let inner = constraints[constraint] else { return true }
-            guard !assuming.contains(constraint) else { return true }
-
-            return inner.allSatisfy { member in
-                admits(
-                    constraint: name,
-                    reading: member,
-                    assuming: assuming.union([constraint])
-                ) == true
-            }
-
-        default:
-            return members.contains { member in member.accepts(reading, in: self) }
-        }
-    }
 }

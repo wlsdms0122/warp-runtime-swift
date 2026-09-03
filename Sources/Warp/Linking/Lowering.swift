@@ -26,17 +26,23 @@ struct Lowering {
     // Each document's variables by name, in the order a run makes their boxes.
     let variables: [Int: [String: Int]]
 
+    // The declared types as the run reads them, for a cast's shape and a
+    // closure's row.
+    let shapes: ShapeTable
+
     // MARK: - Initializer
     init(
         table: [Linked],
         rows: [String: Int],
         words: [String: Int],
-        variables: [Int: [String: Int]]
+        variables: [Int: [String: Int]],
+        shapes: ShapeTable
     ) {
         self.table = table
         self.rows = rows
         self.words = words
         self.variables = variables
+        self.shapes = shapes
     }
 
     // MARK: - Public
@@ -56,13 +62,14 @@ struct Lowering {
 
         let body = try lower(block, in: scope, on: frame, label: declared.label, at: place)
 
-        table[row] = Linked(
+        table[row] = try Linked(
             label: declared.label,
             origin: declared.origin,
             signature: declared.signature,
             purity: declared.purity,
             isolation: declared.isolation,
-            implementation: .body(body, frame.layout)
+            implementation: .body(body, frame.layout),
+            in: shapes
         )
     }
 
@@ -270,13 +277,14 @@ struct Lowering {
 
             let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
             return .closure(
-                Linked(
+                try Linked(
                     label: label,
                     origin: frame.origin,
                     signature: procedure.signature,
                     purity: procedure.purity,
                     isolation: procedure.isolation,
-                    implementation: .body(body, inner.layout)
+                    implementation: .body(body, inner.layout),
+                    in: shapes
                 ),
                 captures: inner.captures
             )
@@ -292,7 +300,7 @@ struct Lowering {
         case let .cast(value, type, optional):
             return .cast(
                 try lower(value, in: scope, on: frame, label: label, at: place),
-                as: type,
+                as: try type.lowered(in: shapes),
                 optional: optional
             )
 

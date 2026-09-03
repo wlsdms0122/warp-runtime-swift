@@ -166,290 +166,31 @@ public indirect enum TypeExpression: Sendable, Equatable {
         at path: @autoclosure () -> String,
         in types: TypeTable = TypeTable()
     ) throws -> Value {
-        try settling(value, at: path(), in: types, assuming: [])
+        try settling(value, at: path(), in: try types.lowered())
     }
 
-    // What a cast does, said once. Both evaluators read a cast — the executor
-    // for a body, the resolver for the pure half a constant folds through —
-    // and they answer the same expression, so the rule is here rather than
-    // twice over there. The judgment is `settling`'s; what this adds is the
-    // one thing the cast spelling decides: what a mismatch means.
-    func reading(_ value: Value, optional: Bool, in types: TypeTable) throws -> Value {
+    // The link's door: the table is already lowered, so only this is.
+    func settling(_ value: Value, at path: @autoclosure () -> String, in table: ShapeTable) throws -> Value {
+        try lowered(in: table, at: path()).settling(value, at: path(), in: table)
+    }
+
+    // This type lowered for a judgment a host asked by path: a name nothing
+    // declares is refused with the path in front, the way the judgment
+    // itself would say it.
+    private func lowered(in table: ShapeTable, at path: String) throws -> Shape {
         do {
-            return try settling(value, at: "as \(self)", in: types)
-        } catch let mismatch as ArgumentError {
-            // Only a mismatch is read as the author's expectation. Naming what
-            // *is* absorbed rather than what is not keeps the default closed:
-            // an error kind added later surfaces instead of quietly becoming
-            // null, which is the failure this whole spelling exists against.
-            // A name nothing declares already arrives as its own kind and
-            // leaves through here untouched.
-            guard optional else {
-                // Recoverable, unlike the same refusal at a parameter's
-                // boundary: a cast is the author expecting a shape of data
-                // that came from outside, and being wrong about that is what
-                // the world does. An `attempt` catches it.
-                throw CastRefused(mismatch.message, shape: rendered)
-            }
-
-            return .null
+            return try lowered(in: table)
+        } catch let undeclared as UndeclaredTypeError {
+            throw UndeclaredTypeError("\(path): \(undeclared.message)")
         }
     }
 
-    // The assumption-carrying half: which constraints are already being asked
-    // of this value. A bounded parameter's membership test settles the value
-    // against each member, and a member reaching a bounded parameter again
-    // walks back into the same question — met again, it is assumed rather
-    // than asked, so a table nothing linked still answers instead of chasing
-    // a declaration the link would have refused.
-    func settling(
-        _ value: Value,
-        at path: @autoclosure () -> String,
-        in types: TypeTable,
-        assuming: Set<String>
-    ) throws -> Value {
-        switch self {
-        case .any:
-            return value
+    // What a cast does: the judgment is `settling`'s, and a mismatch is
+    // what the cast spelling decides it is.
+    func reading(_ value: Value, optional: Bool, in types: TypeTable) throws -> Value {
+        let table = try types.lowered()
 
-        // A value arrived where nothing was supposed to, so the arrival is the
-        // refusal — there is no shape to compare it against.
-        case .never:
-            throw ArgumentError("\(path()): declares never, and nothing is ever that")
-
-        // Either shape arrives as itself. Settling to one of them would be the
-        // declaration picking, and it declined to.
-        case .number:
-            switch value {
-            case .int, .double:
-                return value
-
-            default:
-                throw mismatch(value, at: path())
-            }
-
-        // A declared record is nominal. A record arriving without a name
-        // settles to the declared shape and takes the name; one arriving
-        // under this name is settled again and keeps it; one arriving under
-        // another name is refused, whatever its shape. A declared name that is
-        // not a record shape settles as the shape it stands for.
-        case let .named(name):
-            guard let declared = types.resolve(name) else {
-                throw UndeclaredTypeError(
-                    "\(path()): declares type '\(name)', which nothing declares"
-                )
-            }
-
-            guard case let .record(tag, _) = value, let nominal = recordName(in: types) else {
-                return try declared.settling(value, at: path(), in: types, assuming: assuming)
-            }
-
-            // The value's name is read the same way the slot's is: an alias
-            // written on either side names the record it stands for.
-            if let tag, TypeExpression.named(tag).recordName(in: types) != nominal {
-                throw ArgumentError("\(path()): is a \(tag), and the slot declares \(nominal)")
-            }
-
-            guard case let .record(_, fields) = try declared.settling(value, at: path(), in: types, assuming: assuming) else {
-                throw mismatch(value, at: path())
-            }
-
-            return .record(name: nominal, fields: fields)
-
-        // Null arrives as itself; anything else is held to the declared half.
-        case let .nullable(inner):
-            guard value != .null else { return value }
-
-            return try inner.settling(value, at: path(), in: types, assuming: assuming)
-
-        // A type parameter the call site filled, and the link is where it was
-        // filled — unbounded, there is nothing left to compare against. A
-        // bounded one still holds its constraint here: what arrived through
-        // `any` was never read at the link, so membership is judged against
-        // the types the constraint admits, and the value passes untouched —
-        // a parameter stands for what arrived, it does not settle it.
-        // Nothing was proven of what a walk read out of a parameter, so there
-        // is nothing here to judge it against — it stands for what arrived,
-        // the way an unbounded parameter does.
-        case .reading:
-            return value
-
-        case let .parameter(_, constraint):
-            guard let constraint, !assuming.contains(constraint) else { return value }
-
-            guard let admitted = types.admits(
-                constraint: constraint,
-                value: value,
-                assuming: assuming
-            ) else {
-                throw UndeclaredTypeError(
-                    "\(path()): declares constraint '\(constraint)', which nothing declares"
-                )
-            }
-
-            guard admitted else {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered), and '\(constraint)' does not"
-                        + " admit \(value.type)"
-                )
-            }
-
-            return value
-
-        case let .array(element):
-            // Bytes are an array of bytes in a compact spelling, so they arrive
-            // here as the array they are. Where the declaration leaves every
-            // byte as it is, the compact spelling crosses whole — the slot
-            // asked for an array and one is what it has, and unpacking it would
-            // spend an element per byte to answer nothing.
-            // `settling`'s own carried set is of constraint names, which is the
-            // second of the two below.
-            if case .bytes = value, element.holdsEveryByte(in: types, boundAssuming: assuming) {
-                return value
-            }
-
-            // Otherwise the slot's spelling wins the way `double` settles a
-            // whole number, and both spellings are read through the one
-            // projection that owns the equation — so what is outside the
-            // declaration says which element and by how much, whichever
-            // spelling it arrived in.
-            guard let items = value.elements else { throw mismatch(value, at: path()) }
-
-            return .array(
-                try items.enumerated().map { index, item in
-                    try element.settling(item, at: "\(path())[\(index)]", in: types, assuming: assuming)
-                }
-            )
-
-        case let .object(entry):
-            guard case let .record(tag, object) = value else { throw mismatch(value, at: path()) }
-
-            return .record(
-                name: tag,
-                fields: try object.mapValues { item in
-                    try entry.settling(item, at: path(), in: types, assuming: assuming)
-                }
-            )
-
-        // An inline record is structural: a record under any name fits it by
-        // shape and keeps the name it came with.
-        case let .record(fields):
-            guard case let .record(tag, object) = value else { throw mismatch(value, at: path()) }
-
-            var settled = object
-
-            for (name, field) in fields.sorted(by: { left, right in left.key < right.key }) {
-                guard let written = object[name] else {
-                    throw ArgumentError("\(path()).\(name): required by \(rendered), and nothing was given")
-                }
-
-                settled[name] = try field.settling(
-                    written,
-                    at: "\(path()).\(name)",
-                    in: types,
-                    assuming: assuming
-                )
-            }
-
-            return .record(name: tag, fields: settled)
-
-        // A slot writes `var` or `inout` about itself; what stands in it is a
-        // value of the inner type.
-        case let .variable(inner), let .inout(inner):
-            return try inner.settling(value, at: path(), in: types, assuming: assuming)
-
-        // A closure carries what the link derived about its text — its purity
-        // and its isolation — and a slot that asks for either reads the carried
-        // fact. A closure that reached here through `any` or through an
-        // undeclared field is judged here for the first time.
-        case let .procedure(required, purity, isolation):
-            guard case let .procedure(closure) = value else { throw mismatch(value, at: path()) }
-
-            if purity == .pure, closure.purity != .pure {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered), got a procedure that runs"
-                )
-            }
-
-            if isolation == .isolated, !closure.runsBeside {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered), got a procedure that writes"
-                        + " what another body could touch"
-                )
-            }
-
-            guard let required else { return value }
-
-            guard required.accepts(closure.signature, in: types) else {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered), got"
-                        + " \(TypeExpression.procedure(closure.signature).rendered)"
-                )
-            }
-
-            return value
-
-        // The bounds speak where the value does: a number inside them settles
-        // as the kind's own value, and one outside is refused by the range
-        // the declaration wrote.
-        case let .ranged(refinement):
-            switch refinement.settling(value) {
-            case let .settled(settled):
-                return settled
-
-            case .otherKind:
-                throw mismatch(value, at: path())
-
-            case let .outside(number):
-                throw ArgumentError("\(path()): \(number) is outside \(rendered)")
-            }
-
-        // Bytes take their own spelling as themselves, and an array whose
-        // every element is a byte's worth — settled to the compact spelling
-        // the slot declared. The element judge is `byte`'s own, so what is
-        // outside says which element and by how much.
-        case .bytes:
-            switch value {
-            case .bytes:
-                return value
-
-            case let .array(elements):
-                let bytes = try elements.enumerated().map { index, item in
-                    let settled = try TypeExpression.byteElement.settling(
-                        item,
-                        at: "\(path())[\(index)]",
-                        in: types,
-                        assuming: assuming
-                    )
-
-                    // `byte`'s own judge already spoke: what settled is an
-                    // int inside 0...255, which the canonical small form
-                    // holds — a miss here is this file's own defect, not a
-                    // refusal a program could see.
-                    guard
-                        case let .int(number) = settled,
-                        let byte = UInt8(exactly: number)
-                    else {
-                        preconditionFailure("a settled byte was not one")
-                    }
-
-                    return byte
-                }
-
-                return .bytes(bytes)
-
-            default:
-                throw mismatch(value, at: path())
-            }
-
-        // The scalars, plus the one widening the language has, one way only:
-        // an int where a double is declared. Nothing narrows — an int slot
-        // refuses every fraction, `2.0` included.
-        case .null, .bool, .int, .double, .string:
-            guard let settled = scalar(value) else { throw mismatch(value, at: path()) }
-
-            return settled
-        }
+        return try lowered(in: table, at: "as \(rendered)").reading(value, optional: optional, in: table)
     }
 
     // How the type reads in a message. A declaration an author wrote should come
@@ -520,8 +261,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
             guard let signature else { return word }
 
-            let written = signature.parameters
-                .sorted { left, right in left.key < right.key }
+            let written = signature.ordered
                 .map { name, parameter in "\(name): \(parameter.declared.rendered)" }
 
             // Rendered as what it accepts, because a message is about what would
@@ -537,7 +277,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
         case let .record(fields):
             let written = fields
-                .sorted { left, right in left.key < right.key }
+                .sorted { left, right in Name.precedes(left.key, right.key) }
                 .map { name, field in "\(name): \(field.rendered)" }
 
             return "{ \(written.joined(separator: ", ")) }"
@@ -551,45 +291,6 @@ public indirect enum TypeExpression: Sendable, Equatable {
     }
 
     // MARK: - Private
-    // The one conversion the language performs, and it goes one way.
-    //
-    // Every whole number is a fraction, so a slot asking for a fraction can take
-    // a whole one and lose nothing. The reverse is not true, and taking it when
-    // the fraction happened to be whole would make the answer to "does this fit"
-    // depend on the value rather than the type — `2.0` accepted where `2.5` is
-    // refused, by a declaration that names neither.
-    // Whether a scalar member admits a value: by kind, with the one widening,
-    // and without settling. Nil for a member that is not a scalar, which is
-    // judged by settling the value against it.
-    func admitsAsScalar(_ value: Value) -> Bool? {
-        switch self {
-        case .null, .bool, .int, .double, .string:
-            return scalar(value) != nil
-
-        default:
-            return nil
-        }
-    }
-
-    private func scalar(_ value: Value) -> Value? {
-        switch (self, value) {
-        case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double),
-            (.string, .string):
-            return value
-
-        // The widening is binary64's own rounding, and every machine word has
-        // a fraction near it — the conversion cannot fail, only round.
-        case (.double, .int(let integer)):
-            return .double(Double(integer))
-
-        default:
-            return nil
-        }
-    }
-
-    private func mismatch(_ value: Value, at path: String) -> ArgumentError {
-        ArgumentError("\(path): expected \(rendered), got \(value.type)")
-    }
 }
 
 extension TypeExpression: CustomStringConvertible {
@@ -601,115 +302,6 @@ extension TypeExpression {
     // because the `bytes = array<byte>` equation reads it without a link, so
     // it cannot live behind the name.
     static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
-
-    // Whether every byte settles into this element declaration as itself —
-    // unchanged, and with nothing asked of any one of them.
-    //
-    // This is what lets a compact spelling cross a boundary whole. `bytes` is
-    // `array<byte>`, so it arrives at every `array<…>` slot, and unpacking it
-    // there costs a boxed element per byte to answer questions like `first`
-    // that read one. Where the declaration would leave each byte exactly as it
-    // is, the unpacking answers nothing and the compact spelling stands.
-    //
-    // It says the same thing `settling` says one byte at a time, which is a
-    // second copy of one rule — so `aByteSettlesAsItselfExactlyWhereTheTypeSaysIt`
-    // holds the two together over every byte and every shape below, and the
-    // copy is a claim a test refutes rather than a comment.
-    // The two sets are two namespaces. A table may bind one string as a type
-    // and the same string as a constraint, and they are different declarations
-    // — folding them into one guard would let a type's name end a constraint's
-    // question by assuming it, which answers yes where the membership was
-    // never asked.
-    func holdsEveryByte(
-        in types: TypeTable,
-        namedAssuming: Set<String> = [],
-        boundAssuming: Set<String> = []
-    ) -> Bool {
-        switch self {
-        // Nothing is asked, so nothing is changed. A walk through a parameter
-        // asks nothing either — it carries no bound to ask with.
-        case .any, .int, .number, .reading:
-            return true
-
-        case let .variable(inner), let .inout(inner):
-            return inner.holdsEveryByte(
-                in: types,
-                namedAssuming: namedAssuming,
-                boundAssuming: boundAssuming
-            )
-
-        // A parameter stands for what arrived and does not settle it. A bounded
-        // one still asks each value for its membership — and a member that
-        // takes every byte answers that question for all of them at once, so
-        // `sorted` reads a compact spelling the way `reversed` does rather than
-        // by whether its declaration happened to carry a bound.
-        case let .parameter(_, constraint):
-            guard let constraint else { return true }
-            guard !boundAssuming.contains(constraint) else { return true }
-
-            let deeper = boundAssuming.union([constraint])
-
-            // A member that takes every byte on its own settles the whole
-            // membership, because a membership is met when some member takes
-            // the value. This is the shape every constraint anyone has written
-            // has — `Comparable` holds `int` — and it costs one pass over the
-            // members rather than a pass per byte.
-            if
-                let members = types.constraint(constraint),
-                members.contains(where: { member in
-                    member.holdsEveryByte(
-                        in: types,
-                        namedAssuming: namedAssuming,
-                        boundAssuming: deeper
-                    )
-                })
-            { return true }
-
-            // No one member covers it, so the complete question is asked with
-            // the boundary's own primitive: members that divide the range
-            // between them still take every byte, and only asking each byte
-            // sees that. Sufficient first, complete behind it — the cheap test
-            // can only say yes where this one would.
-            return (0 ... 255).allSatisfy { byte in
-                types.admits(constraint: constraint, value: .int(byte), assuming: deeper) == true
-            }
-
-        // Null never arrives out of bytes, so the declared half decides alone.
-        case let .nullable(inner):
-            return inner.holdsEveryByte(
-                in: types,
-                namedAssuming: namedAssuming,
-                boundAssuming: boundAssuming
-            )
-
-        // The bounds have to hold the whole of `byte`; a narrower range refuses
-        // some byte, and which one it refuses is read out one by one.
-        case let .ranged(refinement):
-            return refinement.holdsEveryByte
-
-        case let .named(name):
-            guard
-                let declared = types.resolve(name),
-                !namedAssuming.contains(name)
-            else { return false }
-
-            return declared.holdsEveryByte(
-                in: types,
-                namedAssuming: namedAssuming.union([name]),
-                boundAssuming: boundAssuming
-            )
-
-        // `double` is the one widening the language has, so it changes every
-        // byte it takes; the rest take no byte at all. Named rather than left
-        // to a default, so that a kind added to the type language has to be
-        // answered for here too — this is the second copy of a rule, and the
-        // copy is only safe while nothing can be added to one and not the
-        // other.
-        case .never, .null, .bool, .double, .string, .bytes,
-             .array, .object, .record, .procedure:
-            return false
-        }
-    }
 
     // The spelling with its conditions dropped: a range is an int the bounds
     // refine, and bytes are `array<byte>` compacted. This answers the kind
@@ -873,139 +465,15 @@ extension TypeExpression {
     // provably disagree, and everything else is left to the run. Refusing what
     // this cannot decide would close doors an author has no other way through.
     func couldBothHold(_ other: TypeExpression, in types: TypeTable) -> Bool {
-        couldBothHold(other, in: types, assuming: [])
+        guard let table = try? types.lowered() else { return true }
+
+        return couldBothHold(other, in: table)
     }
 
-    // Names are peeled one layer at a time, with the pair already being asked
-    // about remembered — the guard belongs to *this* walk, because this walk
-    // is the one that recurses. Resolving each side whole at every step, as
-    // this first did, re-expanded a self-naming type one layer deeper on every
-    // descent and never finished: `Tree` holding `array<Tree>` crashed the
-    // link, and a guard that lives inside one expansion cannot bound a
-    // function that expands again on the way down.
-    private func couldBothHold(
-        _ other: TypeExpression,
-        in types: TypeTable,
-        assuming: Set<String>
-    ) -> Bool {
-        if
-            case .named = self,
-            case .named = other,
-            let mine = recordName(in: types),
-            let theirs = other.recordName(in: types),
-            mine != theirs
-        {
-            return false
-        }
+    func couldBothHold(_ other: TypeExpression, in table: ShapeTable) -> Bool {
+        guard let mine = try? lowered(in: table), let theirs = try? other.lowered(in: table) else { return true }
 
-        if case let .named(name) = self {
-            guard !assuming.contains(name), let declared = types.resolve(name) else { return true }
-
-            return declared.couldBothHold(other, in: types, assuming: assuming.union([name]))
-        }
-
-        if case let .named(name) = other {
-            guard !assuming.contains(name), let declared = types.resolve(name) else { return true }
-
-            return couldBothHold(declared, in: types, assuming: assuming.union([name]))
-        }
-
-        if provesNothing || other.provesNothing { return true }
-
-        // Null is a value both hold, so one exists whatever else they say.
-        // Asked of the fact rather than the spelling: `null` and `T?` both
-        // hold it and only one of them is written `?`, so reading this off the
-        // case would answer for `int?` beside `string?` and not for `int?`
-        // beside `null`.
-        if declaresNull(in: types), other.declaresNull(in: types) { return true }
-
-        // Two ranges are asked of the judge that decides them, the way
-        // `accepts` asks it. The witness below cannot: it carries one value
-        // per kind, so a pair peeled to their kinds is a pair of bare kinds
-        // and any int answers for both — `int(0...5)` beside `int(10...15)`
-        // would come back possible with the bounds already gone. What is
-        // provably apart is refused here for the same reason it is refused
-        // where it is written, and `overlaps` refuses only that.
-        if case let .ranged(mine) = self, case let .ranged(theirs) = other {
-            return mine.kind.couldBothHold(theirs.kind, in: types, assuming: assuming)
-                && mine.overlaps(theirs)
-        }
-
-        // Refinements and compact spellings are dropped first: whether a value
-        // could be both is a question about kinds, and `bytes` is an array of
-        // bytes however it is spelled.
-        switch (unrefined, other.unrefined) {
-        case let (.nullable(inner), side), let (side, .nullable(inner)):
-            return inner.couldBothHold(side, in: types, assuming: assuming)
-
-        // What both name has to be able to hold at once; what only one names
-        // is data the other lets ride through.
-        case let (.record(mine), .record(theirs)):
-            return mine.allSatisfy { name, field in
-                theirs[name].map { field.couldBothHold($0, in: types, assuming: assuming) } ?? true
-            }
-
-        // An object and a record are one runtime shape read two ways — the
-        // boundary settles both from the same value — so every field the
-        // record names must be able to be an entry.
-        //
-        // A list and a map are not asked about their elements: an empty one is
-        // of every element type there is, so `array<string>` and `array<int>`
-        // share a value however far apart the elements are, and asking the
-        // elements would call a pair impossible that a run settles. The witness
-        // below is that empty value, and it answers. A record is asked field by
-        // field because the one witness for it holds no fields, so a shape that
-        // requires some would have nothing to be judged on.
-        case let (.object(entry), .record(fields)), let (.record(fields), .object(entry)):
-            return fields.values.allSatisfy { field in
-                field.couldBothHold(entry, in: types, assuming: assuming)
-            }
-
-        // Two decided kinds, which is where a value either is both or is
-        // neither. Anything else this walk does not read into is the run's to
-        // answer.
-        case let (mine, theirs):
-            guard mine.isDecidedKind, theirs.isDecidedKind else { return true }
-
-            // Asked of the judge that will settle it, not of a second opinion
-            // about what it would say. One witness per kind is enough here —
-            // a decided kind is decided by the value's kind alone, and what a
-            // shape says about its parts is the structural cases above — and
-            // the pairs that need this are exactly the ones a restatement got
-            // wrong: `as double` over an int was refused at the link and
-            // settled fine at the run, because the widening lives in
-            // `settling` and the restatement had to remember it.
-            return TypeExpression.witnesses.contains { witness in
-                mine.settles(witness, in: types) && theirs.settles(witness, in: types)
-            }
-        }
-    }
-
-    // One value of every kind a decided shape can hold, for asking the judge
-    // rather than restating it. What they carry is empty on purpose: a kind is
-    // decided by the value's kind, and everything a shape says about its parts
-    // is answered before a witness is reached.
-    private static let witnesses: [Value] = [
-        .null, .bool(false), .int(0), .double(0), .string(""),
-        .array([]), .object([:]), .bytes([])
-    ]
-
-    // Whether this shape takes that value — the boundary's own question, asked
-    // where only the answer matters.
-    private func settles(_ value: Value, in types: TypeTable) -> Bool {
-        (try? settling(value, at: "", in: types)) != nil
-    }
-
-    // Whether this names one of the kinds a value simply is, so that two
-    // different ones are two things no value is at once.
-    private var isDecidedKind: Bool {
-        switch self {
-        case .bool, .int, .double, .string, .null, .number, .array, .object, .record:
-            return true
-
-        default:
-            return false
-        }
+        return mine.couldBothHold(theirs, in: table)
     }
 
     // The same shape with every name it holds walked through to what that
@@ -1063,16 +531,15 @@ extension TypeExpression {
     // means "give me something". The looser question, "could a default of
     // null ever be taken", is the link's and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
-        switch self {
-        case .null, .nullable:
-            return true
+        guard let table = try? types.lowered() else { return false }
 
-        case let .named(name):
-            return types.resolve(name)?.declaresNull(in: types) ?? false
+        return declaresNull(in: table)
+    }
 
-        default:
-            return false
-        }
+    func declaresNull(in table: ShapeTable) -> Bool {
+        guard let shape = try? lowered(in: table) else { return false }
+
+        return shape.declaresNull(in: table)
     }
 }
 
@@ -1086,180 +553,14 @@ extension TypeExpression {
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
     public func accepts(_ other: TypeExpression, in types: TypeTable = TypeTable()) -> Bool {
-        accepts(other, in: types, assuming: [])
+        guard let table = try? types.lowered() else { return false }
+
+        return accepts(other, in: table)
     }
 
-    // The same question, carrying which pairs are already being asked. A named
-    // type may reach itself through a shape, so comparing one structurally
-    // walks back to the comparison it is inside — and a recursive shape agrees
-    // with itself precisely when assuming it does uncovers no disagreement, so
-    // a pair met again answers yes rather than asking forever. Only the two
-    // `named` doors record the pair, because they are the only way back.
-    func accepts(
-        _ other: TypeExpression,
-        in types: TypeTable,
-        assuming: Set<String>
-    ) -> Bool {
-        // Two declared records under two names are two types, whatever their
-        // shapes: a value settled under one name fits only that name.
-        if
-            case .named = self,
-            case .named = other,
-            let mine = recordName(in: types),
-            let theirs = other.recordName(in: types),
-            mine != theirs
-        {
-            return false
-        }
+    func accepts(_ other: TypeExpression, in table: ShapeTable) -> Bool {
+        guard let mine = try? lowered(in: table), let theirs = try? other.lowered(in: table) else { return false }
 
-        switch (self, other) {
-        // What answers `never` never arrives, so it cannot be the value that
-        // disagrees with a declaration — it fits everywhere. The other way round
-        // it fits nowhere, because a slot declaring `never` is a slot nothing
-        // can reach.
-        case (_, .never):
-            return true
-
-        // A type parameter accepts whatever fills it, and what fills it is
-        // worked out at the call rather than here — a bounded one included,
-        // because membership is judged where the filling is read. In the other
-        // direction a parameter stands for some type and this one is that
-        // type, so it fits.
-        case (.parameter, _), (_, .parameter), (.reading, _), (_, .reading):
-            return true
-
-        // `var` and `inout` are facts about a slot, and fitting is asked of the
-        // inner type on either side.
-        case let (.variable(inner), _), let (.inout(inner), _):
-            return inner.accepts(other, in: types, assuming: assuming)
-
-        case let (_, .variable(inner)), let (_, .inout(inner)):
-            return accepts(inner, in: types, assuming: assuming)
-
-        case (.any, _), (_, .any):
-            return true
-
-        case (.never, _):
-            return false
-
-        case (.named(let name), _):
-            let pair = "\(name) takes \(other.rendered)"
-
-            guard !assuming.contains(pair) else { return true }
-            guard let declared = types.resolve(name) else { return false }
-
-            return declared.accepts(other, in: types, assuming: assuming.union([pair]))
-
-        case (_, .named(let name)):
-            let pair = "\(rendered) takes \(name)"
-
-            guard !assuming.contains(pair) else { return true }
-            guard let declared = types.resolve(name) else { return false }
-
-            return accepts(declared, in: types, assuming: assuming.union([pair]))
-
-        // A nullable slot takes null, the declared half, and anything nullable
-        // whose declared half it takes. The other way round is the refusal the
-        // case exists for: what may be null does not stand where null was
-        // never declared, so `(_, .nullable)` falls through to disagree.
-        case (.nullable, .null):
-            return true
-
-        case let (.nullable(mine), .nullable(theirs)):
-            return mine.accepts(theirs, in: types, assuming: assuming)
-
-        case let (.nullable(mine), _):
-            return mine.accepts(other, in: types, assuming: assuming)
-
-        case (.array(let mine), .array(let theirs)):
-            return mine.accepts(theirs, in: types, assuming: assuming)
-
-        case (.object(let mine), .object(let theirs)):
-            return mine.accepts(theirs, in: types, assuming: assuming)
-
-        // A record is an object whose fields happen to be known. What is asked
-        // for is a mapping with values of one shape, and a record whose every
-        // field is that shape is one — the extra knowledge does not disqualify
-        // it. Not the other way round: an `object` promises nothing about which
-        // fields exist, and a record names fields it requires.
-        case let (.object(mine), .record(theirs)):
-            return theirs.values.allSatisfy { field in
-                mine.accepts(field, in: types, assuming: assuming)
-            }
-
-        // Width again: what stands here must declare at least the fields this
-        // one names, and may declare more.
-        case let (.record(mine), .record(theirs)):
-            return mine.allSatisfy { name, field in
-                theirs[name].map { given in
-                    field.accepts(given, in: types, assuming: assuming)
-                } ?? false
-            }
-
-        case let (.procedure(required, wanted, wantedIsolation), .procedure(given, offered, offeredIsolation)):
-            // A slot asking for purity takes only what says it is pure, and one
-            // asking for isolation only what says it is isolated — or pure,
-            // since what runs nothing touches nothing. The other way round is
-            // free: what promises more stands anywhere less is wanted.
-            guard wanted != .pure || offered == .pure else { return false }
-            guard wantedIsolation != .isolated || offeredIsolation == .isolated || offered == .pure else {
-                return false
-            }
-
-            // Nothing was said on one side or the other, so nothing is refused.
-            guard let required, let given else { return true }
-
-            return required.accepts(given, in: types, assuming: assuming)
-
-        // Two ranges are the one meeting where both sides are the text's
-        // fact: the kinds under them decide which way a value may widen, and
-        // bounds that cannot overlap are provably apart — refused here the way
-        // a range below its own floor is refused where it is written. Any
-        // overlap passes; which value arrives is the boundary's to see.
-        case let (.ranged(mine), .ranged(theirs)):
-            return mine.kind.accepts(theirs.kind, in: types, assuming: assuming)
-                && mine.overlaps(theirs)
-
-        // A range against anything else is its kind against that: the bounds
-        // speak where a value is settled, and refusing here would need the
-        // value. Only what is provably outside is refused before the run.
-        case let (.ranged(mine), _):
-            return mine.kind.accepts(other, in: types, assuming: assuming)
-
-        case let (_, .ranged(theirs)):
-            return accepts(theirs.kind, in: types, assuming: assuming)
-
-        // `bytes` and `array<byte>` are one type in two spellings, so each
-        // side reads by its elements: an array slot takes bytes where its
-        // element takes a byte, and a bytes slot takes an array whose element
-        // type a byte's own range takes.
-        case let (.array(mine), .bytes):
-            return mine.accepts(.byteElement, in: types, assuming: assuming)
-
-        case let (.bytes, .array(theirs)):
-            return TypeExpression.byteElement.accepts(theirs, in: types, assuming: assuming)
-
-        // The one conversion the language has, and it goes the way that cannot
-        // lose anything. A slot asking for a whole number does not take a
-        // fraction, whatever that fraction happens to be worth.
-        case (.double, .int):
-            return true
-
-        // A slot that means either takes either.
-        case (.number, .int), (.number, .double):
-            return true
-
-        // And the other way round, because arithmetic answers one of these and
-        // the answer has to fit where a whole number or a fraction was asked
-        // for. It reads the same way `any` does one case above: a value known
-        // only this loosely fits a slot that takes everything the looseness
-        // covers, and no slot that takes less.
-        case (_, .number):
-            return accepts(.int, in: types, assuming: assuming)
-                && accepts(.double, in: types, assuming: assuming)
-
-        default:
-            return self == other
-        }
+        return mine.accepts(theirs, in: table)
     }
 }

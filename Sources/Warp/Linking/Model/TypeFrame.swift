@@ -32,6 +32,10 @@ struct TypeFrame: Sendable {
 
     let types: TypeTable
 
+    // The same table as the run reads it, lowered once, so every judgment the
+    // walk asks lowers its reading and nothing else.
+    let shapes: ShapeTable
+
     // What a bare spelling a path writes may send: the pure declarations whose
     // only required slot is the receiver, by the name a walk reaches them
     // under. Its own table rather than a mask over `signatures`, so the gate

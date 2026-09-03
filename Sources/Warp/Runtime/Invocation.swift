@@ -105,12 +105,12 @@ public struct Invocation: Sendable {
     // where it happened rather than only which word was running.
     public func call(
         _ closure: Closure,
-        offering arguments: [String: Value],
+        offering arguments: KeyValuePairs<String, Value>,
         piece label: String? = nil
     ) async throws -> Value {
         try await executor.call(
             closure,
-            offering: arguments,
+            offering: arguments.map { name, value in (name: name, value: value) },
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }

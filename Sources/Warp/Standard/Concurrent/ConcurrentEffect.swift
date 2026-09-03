@@ -52,7 +52,7 @@ public struct ConcurrentEffect: Effect {
         let key: String?
         let position: Int
         let closure: Closure
-        let arguments: [String: Value]
+        let arguments: KeyValuePairs<String, Value>
     }
 
     // MARK: - Property

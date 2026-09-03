@@ -479,13 +479,13 @@ struct ValidationTests {
     }
 
     @Test("a procedure is not data, so it cannot stand as a literal")
-    func aProcedureLiteralIsRefused() {
+    func aProcedureLiteralIsRefused() throws {
         // Given — the one value shape a program cannot carry. A closure is made
         // by running the expression that writes one, so a literal holding one
         // is a program no text spells and nothing reads back. Only a caller
         // assembling shapes in Swift can build it, and this is where that stops.
         let carried = Value.procedure(
-            Closure.assembled()
+            try Closure.assembled()
         )
 
         // When / Then
