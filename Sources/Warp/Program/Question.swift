@@ -14,7 +14,7 @@ public struct Question: Sendable {
     // means: `contains` says false rather than failing.
     public let receiver: Value?
 
-    public let arguments: [String: Value]
+    private let settlement: Settlement
 
     // The way back in, for a word handed a procedure. It is here rather than
     // handed to `Query.evaluate` because most words never call anything, and a
@@ -24,12 +24,12 @@ public struct Question: Sendable {
 
     // MARK: - Initializer
     public init(receiver: Value? = nil, arguments: [String: Value] = [:]) {
-        self.init(receiver: receiver, arguments: arguments, executor: nil)
+        self.init(receiver: receiver, settlement: Settlement(arguments), executor: nil)
     }
 
-    init(receiver: Value?, arguments: [String: Value], executor: Executor?) {
+    init(receiver: Value?, settlement: Settlement, executor: Executor?) {
         self.receiver = receiver
-        self.arguments = arguments
+        self.settlement = settlement
         self.executor = executor
     }
 
@@ -37,7 +37,7 @@ public struct Question: Sendable {
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
     public subscript(name: String) -> Value {
-        arguments[name] ?? .null
+        settlement[name]
     }
 
     // Running a procedure this word was handed. What may be handed is what the

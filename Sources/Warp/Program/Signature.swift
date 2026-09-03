@@ -76,11 +76,20 @@ public struct Signature: Sendable, Equatable {
     // sent to nothing means: `contains` says false rather than failing, and a
     // path that reached null is absence rather than misuse.
     public func settling(receiver value: Value, in types: TypeTable = TypeTable()) throws -> Value {
-        guard let receiver, let parameter = parameters[receiver], value != .null else {
-            return value
-        }
+        guard let receiver, let parameter = parameters[receiver] else { return value }
 
-        return try parameter.checking(value, called: receiver, in: types)
+        return try settling(receiver: value, as: (name: receiver, parameter: parameter), in: types)
+    }
+
+    // The same, for a caller that already stands at the receiver's position.
+    func settling(
+        receiver value: Value,
+        as declared: (name: String, parameter: Parameter),
+        in types: TypeTable
+    ) throws -> Value {
+        guard value != .null else { return value }
+
+        return try declared.parameter.checking(value, called: declared.name, in: types)
     }
 
     // Whether something declared this way may stand where this is required.
@@ -226,15 +235,17 @@ public struct Signature: Sendable, Equatable {
         // and a null it offered is a value, an element of the walked
         // collection and not a blank, so only a position it never offered is
         // missing.
-        func isMissing(_ position: Int) -> Bool {
-            !skipping(position)
-                && ordered[position].parameter.mustBeGiven(in: types)
-                && (offered ? given[position] == nil : (given[position] ?? .null) == .null)
+        var missing: [String] = []
+
+        for (position, (name, parameter)) in ordered.enumerated() where !skipping(position) {
+            let blank = offered ? given[position] == nil : (given[position] ?? .null) == .null
+
+            if blank, parameter.mustBeGiven(in: types) {
+                missing.append(name)
+            }
         }
 
-        if ordered.indices.contains(where: isMissing) {
-            let missing = ordered.indices.filter(isMissing).map { position in ordered[position].name }
-
+        guard missing.isEmpty else {
             throw ArgumentError(
                 "parameters: required, and nothing was given for \(missing.joined(separator: ", "))"
             )

@@ -22,7 +22,7 @@ public struct Invocation: Sendable {
     // What this was sent to, or nil where it was sent to nothing.
     public let receiver: Value?
 
-    public let arguments: [String: Value]
+    private let settlement: Settlement
 
     // Where the run was when this was sent, as everything it went through to
     // get here. Provenance, not meaning: a word does not know the statement it
@@ -32,8 +32,8 @@ public struct Invocation: Sendable {
 
     public var environment: (any Environment)? { executor.environment }
 
-    // The variables handed in place, by parameter.
-    private let holds: [String: Handle]
+    // The variables handed in place, by parameter position.
+    private let holds: [(position: Int, handle: Handle)]
     private let executor: Executor
 
     // MARK: - Initializer
@@ -41,15 +41,15 @@ public struct Invocation: Sendable {
         selector: String,
         signature: Signature,
         receiver: Value?,
-        arguments: [String: Value],
-        holds: [String: Handle],
+        settlement: Settlement,
+        holds: [(position: Int, handle: Handle)],
         trace: Trace,
         executor: Executor
     ) {
         self.selector = selector
         self.signature = signature
         self.receiver = receiver
-        self.arguments = arguments
+        self.settlement = settlement
         self.holds = holds
         self.trace = trace
         self.executor = executor
@@ -59,12 +59,12 @@ public struct Invocation: Sendable {
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
     public subscript(name: String) -> Value {
-        arguments[name] ?? .null
+        settlement[name]
     }
 
     // What a parameter handed in place holds now.
     public func held(_ name: String) throws -> Value {
-        guard let hold = holds[name] else {
+        guard let hold = hold(of: name) else {
             throw ExecutionError(
                 "'\(selector)' reads '\(name)' in place, and it was not handed a variable"
             )
@@ -78,7 +78,7 @@ public struct Invocation: Sendable {
     // way, and a word writing an argument that is not a path is a word the
     // link should have refused.
     public func write(_ name: String, _ value: Value) throws {
-        guard let hold = holds[name] else {
+        guard let hold = hold(of: name) else {
             throw ExecutionError(
                 "'\(selector)' writes '\(name)' in place, and it was not handed a variable"
             )
@@ -116,4 +116,9 @@ public struct Invocation: Sendable {
     }
 
     // MARK: - Private
+    private func hold(of name: String) -> Handle? {
+        guard let position = settlement.names.firstIndex(of: name) else { return nil }
+
+        return holds.first { hold in hold.position == position }?.handle
+    }
 }

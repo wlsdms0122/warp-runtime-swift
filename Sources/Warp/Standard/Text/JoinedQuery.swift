@@ -29,7 +29,7 @@ public struct JoinedQuery: Query {
             )
         }
 
-        guard case let .string(separator) = question.arguments["value"] ?? .string("") else {
+        guard case let .string(separator) = question["value"] else {
             throw ExecutionError("joined asks a non-string separator")
         }
 

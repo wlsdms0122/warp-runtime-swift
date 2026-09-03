@@ -31,6 +31,9 @@ public final class Linked: Sendable {
     // The parameters in the order arguments stand in, with what settles them.
     public let parameters: [(name: String, parameter: Parameter)]
 
+    // The same names alone: what a native reads its arguments by.
+    let names: [String]
+
     // Where the receiver stands among them, for a declaration that takes one.
     public let receiverPosition: Int?
 
@@ -54,6 +57,7 @@ public final class Linked: Sendable {
         self.origin = origin
         self.signature = signature
         self.parameters = parameters
+        self.names = parameters.map { name, _ in name }
         self.receiverPosition = signature.receiver.flatMap { receiver in
             parameters.firstIndex { name, _ in name == receiver }
         }
