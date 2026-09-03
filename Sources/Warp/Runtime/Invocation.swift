@@ -2,27 +2,27 @@
 //  Invocation.swift
 //  Warp
 //
-//  Created by JSilver on 8/9/26.
+//  Created by JSilver on 8/8/26.
 //
 
 import Foundation
 
-// A message in flight: what was sent, where it was sent from, and the doors back
-// into the runtime an effect needs to answer it.
-//
-// Arguments arrive unresolved. An effect decides for itself what to settle and
-// when — some it must have as values before it can act, and a block must not be
-// evaluated until the effect decides it should run.
+// An effect's door into the run. The arguments arrive settled, the way a
+// body's do; what an effect has beyond a query is the way to write a variable
+// it was handed in place, to call a closure it was handed, and to reach the
+// environment.
 public struct Invocation: Sendable {
     // MARK: - Property
     public let selector: String
 
     // The declaration being sent, so a word reads its arguments by the names
-    // the declaration gave them, receiver included.
+    // the declaration gave them.
     public let signature: Signature
 
-    public let receiver: Expression?
-    public let arguments: [String: Expression]
+    // What this was sent to, or nil where it was sent to nothing.
+    public let receiver: Value?
+
+    public let arguments: [String: Value]
 
     // Where the run was when this was sent, as everything it went through to
     // get here. Provenance, not meaning: a word does not know the statement it
@@ -30,102 +30,74 @@ public struct Invocation: Sendable {
     // are.
     public let trace: Trace
 
-    public let scope: Scope
-
-    public var resolver: Resolver { resolver(for: scope) }
-
     public var environment: (any Environment)? { executor.environment }
 
+    // The variables handed in place, by parameter.
+    private let holds: [String: Handle]
     private let executor: Executor
 
     // MARK: - Initializer
     init(
         selector: String,
         signature: Signature,
-        receiver: Expression?,
-        arguments: [String: Expression],
+        receiver: Value?,
+        arguments: [String: Value],
+        holds: [String: Handle],
         trace: Trace,
-        scope: Scope,
         executor: Executor
     ) {
         self.selector = selector
         self.signature = signature
         self.receiver = receiver
         self.arguments = arguments
+        self.holds = holds
         self.trace = trace
-        self.scope = scope
         self.executor = executor
     }
 
     // MARK: - Public
-    // Writes a value back through the path an argument was handed as. A
-    // native word declaring a parameter `inout` answers into the caller's
-    // variable this way, and a word writing an argument that is not a path
-    // is a word the link should have refused.
+    // What a named argument holds. An argument nobody wrote and one written as
+    // null are the same fact here, the same as they are everywhere else.
+    public subscript(name: String) -> Value {
+        arguments[name] ?? .null
+    }
+
+    // What a parameter handed in place holds now.
+    public func held(_ name: String) throws -> Value {
+        guard let hold = holds[name] else {
+            throw ExecutionError(
+                "'\(selector)' reads '\(name)' in place, and it was not handed a variable"
+            )
+        }
+
+        return try hold.value()
+    }
+
+    // Writes a value through the hold a parameter was handed. A native word
+    // declaring a parameter `inout` answers into the caller's variable this
+    // way, and a word writing an argument that is not a path is a word the
+    // link should have refused.
     public func write(_ name: String, _ value: Value) throws {
-        guard case let .reference(path)? = handed(name) else {
+        guard let hold = holds[name] else {
             throw ExecutionError(
                 "'\(selector)' writes '\(name)' in place, and it was not handed a variable"
             )
         }
 
-        try scope.assign(try resolver.positioned(path), to: value)
-    }
-
-    // The expression handed under a parameter's name, receiver included.
-    public func handed(_ name: String) -> Expression? {
-        signature.handed(name, receiver: receiver, arguments: arguments)
-    }
-
-    // An argument settled in the sending scope. An argument that was not written
-    // reads as null, the same as a reference that names nothing — an effect
-    // declares what it requires in its signature, and the linker is what
-    // enforces it, so reaching here means the author was allowed to omit this.
-    public func resolve(_ name: String) throws -> Value {
-        guard let argument = arguments[name] else { return .null }
-
-        return try resolver.resolve(argument)
+        try hold.write(value, at: [])
     }
 
     // Nil for an argument that is absent or null, rather than the empty string
-    // stringifying null would give — "unset" and "set to nothing" are different
+    // stringifying null would give: "unset" and "set to nothing" are different
     // instructions to a caller.
-    public func string(_ name: String) throws -> String? {
-        switch try resolve(name) {
+    public func string(_ name: String) -> String? {
+        switch self[name] {
         case .null:
             return nil
 
         case let value:
-            return resolver.stringify(value)
+            return Rendering(value).text()
         }
-    }
-
-    public func resolver(for scope: Scope) -> Resolver {
-        Resolver(
-            scope: scope,
-            selectors: executor.selectors,
-            words: executor.words,
-            types: executor.types
-        )
-    }
-
-    public func evaluate(_ expression: Expression, in scope: Scope) async throws -> Value {
-        try await executor.evaluate(expression, in: scope, at: trace)
-    }
-
-    public func run(_ block: Block, in scope: Scope) async throws -> Value {
-        try await executor.run(block, in: scope, at: trace)
-    }
-
-    public func run(_ body: [Statement], in scope: Scope) async throws -> BlockResult {
-        try await executor.run(body, in: scope, at: trace)
-    }
-
-    public func call(
-        procedure name: String,
-        arguments: [String: Value]
-    ) async throws -> Value {
-        try await executor.call(procedure: name, arguments: arguments, in: scope)
     }
 
     // Calling a closure the word was handed as a value. The label names which

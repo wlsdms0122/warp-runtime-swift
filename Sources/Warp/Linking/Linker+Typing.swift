@@ -74,7 +74,7 @@ extension Linker {
         at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
-        folding: Resolver?,
+        folding: Folding?,
         origin: Int? = nil
     ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
@@ -94,7 +94,7 @@ extension Linker {
         at place: Place,
         in environment: [String: TypeExpression],
         with frame: TypeFrame,
-        folding: Resolver?
+        folding: Folding?
     ) throws -> (Expression, [CallSite]) {
         let inner = try inspected(
             expression,
@@ -652,14 +652,14 @@ extension Linker {
     func foldedIndexReferences(
         _ segments: [PathSegment],
         at place: Place,
-        folding: Resolver
+        folding: Folding
     ) throws -> [PathSegment] {
         try segments.map { segment in
             guard case let .indexRef(inner, optionally) = segment else { return segment }
 
             guard
                 case let .key(head, _)? = inner.first,
-                folding.scope.holds(head)
+                folding.holds(head)
             else {
                 return .indexRef(
                     try foldedIndexReferences(inner, at: place, folding: folding),
@@ -670,7 +670,7 @@ extension Linker {
             let settled: Value
 
             do {
-                settled = try folding.resolve(.reference(inner))
+                settled = try folding.read(inner, at: place)
             } catch {
                 throw LinkError("reading constant '\(head)' — \(error)", at: place)
             }
@@ -880,7 +880,7 @@ extension Linker {
         // Judging carries which module the body being judged was declared
         // in, where it was declared in one; a constant's expression has no
         // module to read its variables by.
-        case judging(folding: Resolver?, origin: Int? = nil)
+        case judging(folding: Folding?, origin: Int? = nil)
         case reading
 
         // Whether this ask keeps what the walk rebuilds. Reading reads a
@@ -1004,13 +1004,13 @@ extension Linker {
 
                 guard
                     case let .key(head, _)? = settled.first,
-                    folding.scope.holds(head)
+                    folding.holds(head)
                 else {
                     return Inspection(rewritten: .reference(settled), reading: read)
                 }
 
                 do {
-                    let value = try folding.resolve(.reference(settled))
+                    let value = try folding.read(settled, at: place)
 
                     return Inspection(rewritten: .literal(value), reading: type(of: value))
                 } catch {
@@ -1240,7 +1240,13 @@ extension Linker {
                 calls = inner.calls
             }
 
-            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
+            var reading: Set<String> = []
+
+            if case let .judging(_, origin?) = ask {
+                reading = frame.variables[origin] ?? []
+            }
+
+            let pure = body.map { block in isPure(block, given: frame.pure, reading: reading) } ?? false
             let isolated = pure || (body.map { block in
                 isIsolated(
                     block,

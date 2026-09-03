@@ -145,84 +145,131 @@ public struct Signature: Sendable, Equatable {
             : arguments[name]
     }
 
-    // Inputs settle once at the scope boundary — inside the scope, references read
-    // the settled values instead of re-evaluating.
+    // Inputs settle once at the scope boundary; inside the scope, references
+    // read the settled values instead of re-evaluating. By name, for a caller
+    // outside a run: the entry's arguments, a closure assembled in Swift.
     public func settle(
         _ given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        try settle(given, offered: false, in: types)
+        let ordered = self.ordered
+
+        return named(try settle(given, over: ordered, offered: false, in: types), over: ordered)
     }
 
     // The same, for a caller that hands over more than the body asked for. A
     // word walking an array offers the element and whatever else it has, and
-    // which of those the author wanted is the author's business — declaring a
+    // which of those the author wanted is the author's business: declaring a
     // name only to leave it unread is a declaration nobody meant.
     public func settle(
         offered given: [String: Value],
         in types: TypeTable = TypeTable()
     ) throws -> [String: Value] {
-        try settle(given, offered: true, in: types)
+        let ordered = self.ordered
+
+        return named(try settle(given, over: ordered, offered: true, in: types), over: ordered)
     }
 
-    // MARK: - Private
-    private func settle(
+    // The parameters in the order arguments stand in.
+    public var ordered: [(name: String, parameter: Parameter)] {
+        parameters
+            .sorted { left, right in left.key < right.key }
+            .map { entry in (name: entry.key, parameter: entry.value) }
+    }
+
+    // MARK: - Internal
+    // Arguments given by name, settled into the order a run keeps them in.
+    // A name the declaration lacks is refused unless the caller offers.
+    func settle(
         _ given: [String: Value],
+        over ordered: [(name: String, parameter: Parameter)],
         offered: Bool,
         in types: TypeTable
-    ) throws -> [String: Value] {
-        let undeclared = given.keys
-            .filter { name in parameters[name] == nil }
-            .sorted()
+    ) throws -> [Value?] {
+        if !offered, given.keys.contains(where: { name in parameters[name] == nil }) {
+            let undeclared = given.keys
+                .filter { name in parameters[name] == nil }
+                .sorted()
 
-        guard offered || undeclared.isEmpty else {
             throw ArgumentError(
                 "parameters: not declared in the signature:"
                     + " \(undeclared.joined(separator: ", "))"
             )
         }
 
+        return try settle(
+            ordered.map { name, _ in given[name] },
+            over: ordered,
+            offered: offered,
+            in: types
+        )
+    }
+
+    // The boundary itself, over arguments standing at their parameter's
+    // position. `skipping` names the positions a call fills another way, a
+    // receiver written in front of the dot or a parameter handed a variable
+    // in place, and those answer nil. The answer is built from the
+    // declaration, never copied from the caller: only declared names exist
+    // inside the boundary.
+    func settle(
+        _ given: [Value?],
+        over ordered: [(name: String, parameter: Parameter)],
+        offered: Bool,
+        skipping: (Int) -> Bool = { _ in false },
+        in types: TypeTable
+    ) throws -> [Value?] {
         // What "nothing was given" means differs by who is giving. An author's
-        // argument space folds null and unwritten into one instruction — a
+        // argument space folds null and unwritten into one instruction: a
         // reference that names nothing reads as null, and requiring the author
         // to know which is which would make absence observable. A word that
         // *offers* is the other way: it hands over values it actually holds,
-        // and a null it offered is a value — an element of the walked
-        // collection, not a blank — so only a key it never offered is missing.
-        let missing = parameters
-            .filter { name, parameter in
-                parameter.mustBeGiven(in: types)
-                    && (offered ? given[name] == nil : (given[name] ?? .null) == .null)
-            }
-            .keys
-            .sorted()
+        // and a null it offered is a value, an element of the walked
+        // collection and not a blank, so only a position it never offered is
+        // missing.
+        func isMissing(_ position: Int) -> Bool {
+            !skipping(position)
+                && ordered[position].parameter.mustBeGiven(in: types)
+                && (offered ? given[position] == nil : (given[position] ?? .null) == .null)
+        }
 
-        guard missing.isEmpty else {
+        if ordered.indices.contains(where: isMissing) {
+            let missing = ordered.indices.filter(isMissing).map { position in ordered[position].name }
+
             throw ArgumentError(
                 "parameters: required, and nothing was given for \(missing.joined(separator: ", "))"
             )
         }
 
-        // The settled scope is built from the declaration, never copied from the
-        // caller — only declared names exist inside the boundary.
-        var settled: [String: Value] = [:]
+        var settled: [Value?] = Array(repeating: nil, count: ordered.count)
 
-        for (name, parameter) in parameters.sorted(by: { left, right in left.key < right.key }) {
+        for (position, (name, parameter)) in ordered.enumerated() where !skipping(position) {
             // An offered null passes through as the value it is, for the same
             // reason it counted as given above.
-            if offered, given[name] == .null {
-                settled[name] = .null
+            if offered, given[position] == .null {
+                settled[position] = .null
 
                 continue
             }
 
-            settled[name] = try parameter.taking(
-                given[name] ?? .null,
-                called: name,
-                in: types
-            )
+            settled[position] = try parameter.taking(given[position] ?? .null, called: name, in: types)
         }
 
         return settled
+    }
+
+    // MARK: - Private
+    private func named(
+        _ settled: [Value?],
+        over ordered: [(name: String, parameter: Parameter)]
+    ) -> [String: Value] {
+        var named: [String: Value] = [:]
+
+        for (position, value) in settled.enumerated() {
+            guard let value else { continue }
+
+            named[ordered[position].name] = value
+        }
+
+        return named
     }
 }

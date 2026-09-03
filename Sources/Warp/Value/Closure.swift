@@ -2,46 +2,31 @@
 //  Closure.swift
 //  Warp
 //
-//  Created by JSilver on 8/17/26.
+//  Created by JSilver on 8/8/26.
 //
 
 import Foundation
 
-// A procedure together with the scope it was written in. This is what a
-// procedure literal answers with, and it is the only shape a value can have that
-// can be called.
-//
-// The captured scope is what makes it a closure rather than a body: a literal
-// written inside a loop round sees that round's names forever after, and calling
-// it later does not put it back where the caller stands. Scope is lexical.
-//
-// A declared procedure and an anonymous one are the same `Procedure`. What
-// separates them is only whether a module declares it under a name, which is a
-// fact about the module rather than about the thing declared.
+// A procedure as a value: the row its body was lowered into, and the cells
+// it took from the frame it was written in, each with the slot it fills in
+// the closure's own frame. A value cell was copied; a hold shares its box.
 public struct Closure: Sendable {
     // MARK: - Property
-    public let procedure: Procedure
-    public let captured: Scope
+    public let linked: Linked
+    let captured: [(slot: Int, cell: Cell)]
+
+    public var signature: Signature { linked.signature }
 
     // What the link derived about the literal's text, carried with the value so
-    // a slot the link could not see — one reached through `any`, or through a
-    // field no declaration named — still asks it. A closure a caller assembles
-    // claims nothing, and claims nothing is what fits only a slot that asks
-    // nothing.
-    public let purity: Purity
-    public let isolation: Isolation
+    // a slot the link could not see, one reached through `any` or through a
+    // field no declaration named, still asks it.
+    public var purity: Purity { linked.purity }
+    public var isolation: Isolation { linked.isolation }
 
     // MARK: - Initializer
-    public init(
-        procedure: Procedure,
-        captured: Scope,
-        purity: Purity = .unstated,
-        isolation: Isolation = .unstated
-    ) {
-        self.procedure = procedure
+    init(linked: Linked, captured: [(slot: Int, cell: Cell)]) {
+        self.linked = linked
         self.captured = captured
-        self.purity = purity
-        self.isolation = isolation
     }
 
     // MARK: - Public

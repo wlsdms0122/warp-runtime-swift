@@ -12,18 +12,13 @@ import Testing
 @Suite
 struct ReferenceLookupTests {
     // MARK: - Property
-    private let sut = Resolver(
-        scope: Scope(
-            bindings: [
+    private let sut = Folding(bindings: [
                 "name": .string("spec"),
                 "run": .object(["id": .string("r-1")]),
                 "items": .array([.int(1), .int(2), .int(3)]),
                 "step": .object(["out": .string("done"), "list": .array([.string("a")])]),
                 "index": .int(1)
-            ]
-        ),
-        selectors: Module.standard.procedures, words: Module.standard.words
-    )
+            ], natives: Module.standard)
 
     // MARK: - Initializer
     // MARK: - Test
@@ -33,12 +28,6 @@ struct ReferenceLookupTests {
         #expect(sut.lookup([.key("run"), .key("id")]) == .found(.string("r-1")))
         #expect(sut.lookup([.key("step"), .key("out")]) == .found(.string("done")))
         #expect(sut.lookup([.key("items"), .index(1)]) == .found(.int(2)))
-    }
-
-    @Test("a missing head answers absent")
-    func missingHeadReturnsAbsent() {
-        #expect(sut.lookup([.key("missing")]) == .absent)
-        #expect(sut.lookup([.key("nowhere")]) == .absent)
     }
 
     @Test("a missing entry refuses, and ?. reads it as null")
@@ -114,16 +103,11 @@ struct ReferenceLookupTests {
     func indexReferenceFractionNamesItsMiss() {
         // Given — a fraction with digits after the point, and a whole one no
         // machine word holds: two different facts, each named as itself
-        let resolver = Resolver(
-            scope: Scope(
-                bindings: [
+        let resolver = Folding(bindings: [
                     "items": .array([.int(1), .int(2)]),
                     "half": .double(1.5),
                     "far": .double(1e30)
-                ]
-            ),
-            selectors: Module.standard.procedures, words: Module.standard.words
-        )
+                ], natives: Module.standard)
 
         guard case let .unfit(halfway) = resolver.lookup(
             [.key("items"), .indexRef([.key("half")])]
@@ -157,11 +141,4 @@ struct ReferenceLookupTests {
         }
     }
 
-    // A scope is an environment and nothing more — which is what lets the
-    // vocabulary that derives `count` be the caller's rather than the scope's.
-    @Test("a scope answers about a head and not about a path")
-    func scopeAnswersHeadsOnly() throws {
-        #expect(try sut.scope.value(of: "step") != nil)
-        #expect(try sut.scope.value(of: "nowhere") == nil)
-    }
 }

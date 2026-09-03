@@ -7,63 +7,52 @@
 
 import Foundation
 
+// Runs an image. Two halves over one code: `read` answers what answers
+// without running, synchronously, which is what a condition, an argument, a
+// pure body and a word handed a procedure need; `evaluate` runs constructs,
+// effects and calls of values, and hands every data case to `read`.
 public struct Executor: Sendable {
     // MARK: - Property
     public let observer: (any ExecutionObserver)?
     public let environment: (any Environment)?
 
-    // The linked call table, seeded from the image this run was given. Empty
+    // The linked table, seeded from the image this run was given. Empty
     // until then, which is why nothing but `run(_ image:)` can start a run.
-    let procedures: [String: Procedure]
-
-    // What a selector may send without running, by its declared spelling,
-    // worked out by the link.
-    let selectors: [String: Procedure]
-
-    // What a path segment may reach, by the bare name a path writes.
-    let words: [String: Procedure]
+    let linked: [Linked]
 
     // The shapes the link declared. A named type is answered here rather than
     // expanded at link, so every boundary that settles arguments needs it.
     let types: TypeTable
 
     // One box per module variable, made when the run starts, by the document
-    // that declared it; and which document each procedure reads its boxes
-    // from. A closure carries the boxes in the scope it captured.
-    let boxes: [Int: [String: Handle]]
-    let origins: [String: Int]
+    // that declared it, in the order its layout reads them.
+    let boxes: [Int: [Handle]]
 
     // MARK: - Initializer
     // What a caller has to say to make one: who watches, and what the run may
-    // reach outside itself. The tables come from an image, so this is an
+    // reach outside itself. The table comes from an image, so this is an
     // executor with nothing to run yet.
     public init(
         observer: (any ExecutionObserver)? = nil,
         environment: (any Environment)? = nil
     ) {
-        self.init(observer: observer, environment: environment, procedures: [:])
+        self.init(observer: observer, environment: environment, linked: [])
     }
 
-    // Seeded, and not public: the tables are the link's answer, so a caller
-    // that could write them would be running a program nothing linked.
+    // Seeded, and not public: the table is the link's answer, so a caller
+    // that could write it would be running a program nothing linked.
     init(
         observer: (any ExecutionObserver)?,
         environment: (any Environment)?,
-        procedures: [String: Procedure] = [:],
-        selectors: [String: Procedure] = [:],
-        words: [String: Procedure] = [:],
+        linked: [Linked],
         types: TypeTable = TypeTable(),
-        boxes: [Int: [String: Handle]] = [:],
-        origins: [String: Int] = [:]
+        boxes: [Int: [Handle]] = [:]
     ) {
         self.observer = observer
         self.environment = environment
-        self.procedures = procedures
-        self.selectors = selectors
-        self.words = words
+        self.linked = linked
         self.types = types
         self.boxes = boxes
-        self.origins = origins
     }
 
     // MARK: - Public
@@ -73,492 +62,189 @@ public struct Executor: Sendable {
         _ image: Image,
         arguments: [String: Value] = [:]
     ) async throws -> Value {
-        try await Executor(
+        let executor = Executor(
             observer: observer,
             environment: environment,
-            procedures: image.procedures,
-            selectors: image.selectors,
-            words: image.words,
+            linked: image.linked,
             types: image.types,
             boxes: image.variables.mapValues { started in
-                started.reduce(into: [:]) { held, entry in held[entry.key] = Handle(entry.key, entry.value) }
-            },
-            origins: image.origins
+                started.map { name, value in Handle(name, value) }
+            }
         )
-        .run(image.entry, arguments: arguments, boxes: image.entryOrigin)
-    }
+        let entry = image.entry
 
-    // MARK: - Private
-    func run(
-        _ procedure: Procedure,
-        arguments: [String: Value] = [:],
-        boxes origin: Int? = nil,
-        at trace: Trace = Trace()
-    ) async throws -> Value {
-        guard let block = procedure.block else {
+        guard case let .body(body, layout) = entry.implementation else {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
-        return try await answer(
-            block,
-            of: procedure.signature,
-            in: Scope(
-                bindings: try procedure.signature.settle(arguments, in: types),
-                variables: origin.flatMap { origin in boxes[origin] } ?? [:]
-            ),
-            at: trace
-        )
-    }
+        let settled = try entry.signature.settle(arguments, over: entry.parameters, offered: false, in: image.types)
+        var activation = try executor.frame(of: entry, layout)
 
-    // A body run as a procedure: what it answers is caught here, and what it
-    // answers is settled against what it declared.
-    //
-    // Both halves are the frame, and neither works without the other — so there
-    // is one of these rather than one per way of reaching a body. There are
-    // three ways: a run starting here, a word whose implementation is written,
-    // and a closure being invoked. When only the first caught a leaving, a
-    // `return` inside a called body travelled out through its own frame and
-    // became the *caller's* answer, settled against the caller's signature.
-    private func answer(
-        _ block: Block,
-        of signature: Signature,
-        in scope: Scope,
-        at trace: Trace
-    ) async throws -> Value {
-        let returned: Value
-
-        do {
-            returned = try await run(block, in: scope, at: trace)
-        } catch let leaving as Leaving where leaving.reach == .procedure {
-            // A closure is a procedure, so this is also what stops a `return`
-            // written inside one from answering for the procedure around it.
-            returned = leaving.value
+        for (position, value) in settled.enumerated() {
+            activation.cells[layout.parameters[position]] = .value(value ?? .null)
         }
 
-        return try signature.settling(returned: returned, in: types)
+        return try await executor.answer(body, of: entry, in: &activation, at: Trace())
     }
 
-    // Statements bind in order. What comes back is the scope they built and what
-    // the last one was worth — the second is for a caller that wants it, not
-    // what the block answers with, which is `run(_ block:)`.
-    func run(
-        _ body: [Statement],
-        in startScope: Scope,
-        at trace: Trace
-    ) async throws -> BlockResult {
-        // The cancellation check sits at sequence entry, not only per statement —
-        // an empty body inside a loop round must still observe cancellation, or
-        // the caller's one lever against a runaway loop silently stops working.
-        try Task.checkCancellation()
-
-        var scope = startScope
-        var lastResult = Value.null
-
-        for (position, statement) in body.enumerated() {
-            try Task.checkCancellation()
-
-            let result = try await run(statement, at: position, in: scope, at: trace)
-
-            switch statement.binding {
-            case let .constant(id)?:
-                scope = scope.binding(id, to: result)
-
-            case let .variable(id)?:
-                scope = scope.declaring(id, as: result)
-
-            // An assignment introduces nothing, so the scope is unchanged here
-            // — the write went into a box the enclosing bodies also hold.
-            case let .assignment(path)?:
-                try scope.assign(try resolver(in: scope).positioned(path), to: result)
-
-            // A nameless statement ran for its effect, and the answer is
-            // dropped — which is what leaving the name off said.
-            case nil:
-                break
-            }
-
-            lastResult = result
-        }
-
-        return BlockResult(scope: scope, lastResult: lastResult)
-    }
-
-    // A body answers what it says it answers, and a body that says nothing
-    // answers nothing.
-    //
-    // Reading the last statement instead would put a body's answer in its
-    // ordering, where nothing points at it: appending a statement would change
-    // what the body was worth, and the author who appended it wrote nothing that
-    // says so. A loop and a walk already answered this way, so this is also the
-    // language holding one rule where it held two.
-    func run(_ block: Block, in scope: Scope, at trace: Trace) async throws -> Value {
-        let outcome = try await run(block.body, in: scope, at: trace)
-
-        guard let result = block.result else { return .null }
-
-        return try await evaluate(result, in: outcome.scope, at: trace)
-    }
-
-    // The expression evaluator. `Resolver` answers the pure subset synchronously
-    // — which is what an effect settling its operands needs — and everything
-    // that runs a body or reaches outside is answered here, because both are
-    // async and both can fail in ways a rescue may catch.
-    func evaluate(
-        _ expression: Expression,
-        in scope: Scope,
-        at trace: Trace
-    ) async throws -> Value {
-        switch expression {
-        case .literal, .reference, .closure:
-            return try resolver(in: scope).resolve(expression)
-
-        // Nothing comes back, so this answers by not answering. What it carries
-        // is worked out here, where the names it reads are still in scope.
-        case let .leave(leave):
-            var carried = Value.null
-
-            if let value = leave.value {
-                carried = try await evaluate(value, in: scope, at: trace)
-            }
-
-            throw Leaving(reach: leave.reach, target: leave.target, value: carried)
-
-        case let .invoke(callee, arguments):
-            return try await invoke(callee, arguments: arguments, in: scope, at: trace)
-
-        // The run's whole share of a cast: the link already decided what every
-        // dot after this means, and the one thing it could not know is what
-        // actually arrived. That question is the boundary's, and the boundary's
-        // judge answers it — the same `settling` a parameter takes its argument
-        // through, so "is this value that shape" is answered in one place for
-        // both doors. A plain cast lets the refusal out as a failure like any
-        // other; an optional one reads the mismatch as null, which is the
-        // author saying they expected it.
-        case let .cast(value, type, optional):
-            return try type.reading(
-                await evaluate(value, in: scope, at: trace),
-                optional: optional,
-                in: types
-            )
-
-        case let .array(array):
-            var values: [Value] = []
-
-            for element in array {
-                values.append(try await evaluate(element, in: scope, at: trace))
-            }
-
-            return .array(values)
-
-        // In name order, the same order arguments evaluate in — the one order
-        // a program could observe (which field's write or refusal lands last)
-        // is the text's fact rather than a hash table's.
-        case let .record(record):
-            var values: [String: Value] = [:]
-
-            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
-                values[name] = try await evaluate(field, in: scope, at: trace)
-            }
-
-            return .object(values)
-
-        case let .block(block):
-            return try await run(block, in: scope, at: trace)
-
-        // A branch answers nothing — the condition chooses a way through the
-        // body, and what an arm keeps it writes to an outer variable.
-        case let .conditional(condition, then, otherwise):
-            let take = try resolver(in: scope).evaluate(condition)
-
-            if let taken = take ? then : otherwise {
-                _ = try await run(taken, in: scope, at: trace)
-            }
-
-            return .null
-
-        case let .loop(condition, body, round):
-            return try await loop(
-                while: condition,
-                body: body,
-                round: round,
-                in: scope,
-                at: trace
-            )
-
-        case let .iteration(material, body, element):
-            return try await iterate(
-                over: material,
-                body: body,
-                element: element,
-                in: scope,
-                at: trace
-            )
-
-        case let .attempt(block, rescue, failure):
-            return try await attempt(
-                block,
-                rescue: rescue,
-                failure: failure,
-                in: scope,
-                at: trace
-            )
-
-        case let .dispatch(dispatch):
-            return try await send(dispatch, in: scope, at: trace)
-
-        }
-    }
-
-    // One lookup, because there is one table. A selector was resolved at link to
-    // the name of a declaration, and what happens next is decided by how that
-    // declaration is implemented — not by which container it was found in.
-    func send(_ dispatch: Dispatch, in scope: Scope, at trace: Trace) async throws -> Value {
-        let procedure = try resolve(dispatch.selector)
-
-        switch procedure.implementation {
-        // A query answers without running, so the pure resolver is the whole
-        // implementation — it is here only so that `x.count` and the same
-        // word written as a statement mean the same thing.
-        case .query:
-            return try Resolver(
-                scope: scope,
-                selectors: selectors.merging([dispatch.selector: procedure]) { _, new in new },
-                words: words,
-                types: types
-            )
-            .resolve(.dispatch(dispatch))
-
-        case let .effect(effect):
-            return try await effect.run(
-                Invocation(
-                    selector: dispatch.selector,
-                    signature: procedure.signature,
-                    receiver: dispatch.receiver,
-                    arguments: dispatch.arguments,
-                    trace: trace,
-                    scope: scope,
-                    executor: self
-                )
-            )
-
-        case let .body(block):
-            let resolver = resolver(in: scope)
-
-            // A parameter handed in place takes no value: it takes a hold on
-            // the caller's variable, and what the hold reaches is read only
-            // where the body reads it.
-            let handed = try handed(by: dispatch, to: procedure.signature, in: scope)
-
-            // In name order, so the one order a program could observe — which
-            // argument's refusal surfaces when two would refuse — is the
-            // text's fact rather than a hash table's.
-            var given: [String: Value] = [:]
-
-            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
-            where handed[name] == nil {
-                given[name] = try resolver.resolve(argument)
-            }
-
-            // A receiver is written on the other side of the dot rather than by
-            // name. It is not settled as an argument — being sent to nothing is
-            // something a word answers rather than refuses — but the body reads
-            // it under the name its signature gave it.
-            var declared = procedure.signature.parameters
-            var received: (String, Value)?
-
-            if let name = procedure.signature.receiver, let receiver = dispatch.receiver, handed[name] == nil {
-                declared[name] = nil
-                received = (
-                    name,
-                    try procedure.signature.settling(
-                        receiver: try resolver.resolve(receiver),
-                        in: types
-                    )
-                )
-            }
-
-            for name in handed.keys {
-                declared[name] = nil
-            }
-
-            var settled = try Signature(parameters: declared).settle(given, in: types)
-
-            if let received { settled[received.0] = received.1 }
-
-            var inner = Scope(
-                bindings: settled,
-                variables: origins[dispatch.selector].flatMap { origin in boxes[origin] } ?? [:]
-            )
-
-            for (name, handle) in handed.sorted(by: { $0.key < $1.key }) {
-                inner = inner.sharing(handle, as: name)
-            }
-
-            return try await answer(
-                block,
-                of: procedure.signature,
-                in: inner,
-                at: trace.appending(.procedure(dispatch.selector))
-            )
-        }
-    }
-
-    // Calling a value. The body runs in the scope the closure captured and not
-    // in the caller's — that is what lexical scope means, and it is the reason a
-    // closure is worth passing at all.
-    func invoke(
-        _ callee: Expression,
-        arguments: [String: Expression],
-        in scope: Scope,
-        at trace: Trace
-    ) async throws -> Value {
-        let resolver = resolver(in: scope)
-        let value = try resolver.resolve(callee)
-
-        guard case let .procedure(closure) = value else {
-            throw ExecutionError(
-                "this call names \(value.type), and only a procedure can be called"
-            )
-        }
-
-        // Name order here too, for the same reason as a call's arguments.
-        var resolved: [String: Value] = [:]
-
-        for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-            resolved[name] = try resolver.resolve(argument)
-        }
-
-        return try await answer(
-            closure,
-            settled: try closure.procedure.signature.settle(resolved, in: types),
-            at: trace
-        )
-    }
-
+    // MARK: - Internal
     // Calling a closure a word holds. Arguments are offered rather than
-    // settled strictly — the word decides what it has to give, and which of
+    // settled strictly: the word decides what it has to give, and which of
     // those the closure's author wanted is the author's business.
     func call(
         _ closure: Closure,
         offering arguments: [String: Value],
         at trace: Trace
     ) async throws -> Value {
-        try await answer(
+        var (body, activation) = try enter(
             closure,
-            settled: try closure.procedure.signature.settle(offered: arguments, in: types),
-            at: trace
+            settled: try closure.signature.settle(arguments, over: closure.linked.parameters, offered: true, in: types)
         )
+
+        return try await answer(body, of: closure.linked, in: &activation, at: trace)
     }
 
-    // The one way a closure is entered, however its arguments were settled —
-    // so whatever this boundary grows (observation, cancellation, how a return
-    // lands) holds for a closure called as a value and one a word calls.
-    private func answer(
-        _ closure: Closure,
-        settled: [String: Value],
-        at trace: Trace
-    ) async throws -> Value {
-        guard let block = closure.procedure.block else {
-            throw ExecutionError("a closure is a body, and this one is native")
-        }
+    // The synchronous reading of one code against one frame: the half of the
+    // language that answers without running.
+    func read(_ code: Code, in activation: Activation) throws -> Value {
+        switch code {
+        case let .literal(value):
+            return value
 
-        var inner = closure.captured
+        case let .local(slot, steps):
+            return try found(slot, steps, in: activation)
 
-        for (name, value) in settled {
-            inner = inner.binding(name, to: value)
-        }
+        case let .array(elements):
+            return .array(try elements.map { element in try read(element, in: activation) })
 
-        return try await answer(
-            block,
-            of: closure.procedure.signature,
-            in: inner,
-            at: trace
-        )
-    }
+        case let .record(fields):
+            var values: [String: Value] = [:]
 
-    func call(
-        procedure name: String,
-        arguments: [String: Value],
-        in scope: Scope
-    ) async throws -> Value {
-        // procedure-to-procedure calls carry no termination guard — a name reappearing
-        // in the call chain is not an oracle for a cycle (recursion over shrinking
-        // input is legitimate), and a depth budget is policy, not mechanism.
-        // Runaway calls are the caller's concern: observation and cancellation,
-        // which propagate here through task cancellation.
-        let procedure = try resolve(name)
-
-        return try await run(
-            procedure,
-            arguments: arguments,
-            boxes: origins[name],
-            at: Trace(frames: [.procedure(name)])
-        )
-    }
-
-    // The holds a call hands in place, by parameter: the caller's box, seen
-    // through the path the argument wrote. Every write the callee makes lands
-    // in that box as it is made, so a call that fails after writing has
-    // written. An index written as a name is read to a position here, once.
-    private func handed(
-        by dispatch: Dispatch,
-        to signature: Signature,
-        in scope: Scope
-    ) throws -> [String: Handle] {
-        var handed: [String: Handle] = [:]
-
-        for (name, parameter) in signature.parameters where parameter.declared.isInout {
-            guard case let .reference(written)? = dispatch.handed(name, to: signature), let head = written.head else {
-                throw ExecutionError(
-                    "'\(dispatch.selector)' takes '\(name)' in place, and was not handed a variable"
-                )
+            for (name, field) in fields {
+                values[name] = try read(field, in: activation)
             }
 
-            guard let handle = scope.handle(of: head) else {
-                throw ExecutionError(
-                    "'\(dispatch.selector)' takes '\(name)' in place, and '\(head)' is not a variable here"
+            return .object(values)
+
+        // Making a closure runs nothing: it is the capture, and the capture is
+        // these cells. Which is why it belongs to the pure half and a
+        // condition may hand one to a word.
+        case let .closure(row, captures):
+            return .procedure(
+                Closure(
+                    linked: row,
+                    captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
                 )
-            }
+            )
 
-            let path = try resolver(in: scope).positioned(written)
+        // Judging a value against a shape runs nothing, so a cast is data the
+        // pure half can read.
+        case let .cast(value, type, optional):
+            return try type.reading(try read(value, in: activation), optional: optional, in: types)
 
-            handed[name] = handle.extended(by: Array(path.dropFirst()))
+        case let .send(send):
+            return try self.send(send, in: activation)
+
+        // Running a body or reaching outside is async and may fail in a way an
+        // attempt can catch, so it belongs to `evaluate`. Reaching here means
+        // a construct was written where only data can be read: inside a
+        // condition, or among an effect's settled arguments.
+        case .invoke, .block, .conditional, .loop, .iteration, .attempt, .leave:
+            throw ExecutionError("this expression runs, so it cannot be read as data here")
         }
-
-        return handed
-    }
-
-    // Linking put every name the document spells in this table, so there is
-    // nowhere else for a name to be. A door for names the link never saw would
-    // be a second way to call, and one that nothing checked — the promise this
-    // language makes is that reaching a run means the reaching was settled.
-    func resolve(_ name: String) throws -> Procedure {
-        guard let linked = procedures[name] else {
-            throw ExecutionError("procedure '\(name)' was not linked into this image")
-        }
-
-        return linked
     }
 
     // MARK: - Private
-    private func resolver(in scope: Scope) -> Resolver {
-        Resolver(scope: scope, selectors: selectors, words: words, types: types)
+    // A body run as a procedure: what it answers is caught here, and what it
+    // answers is settled against what it declared.
+    //
+    // Both halves are the frame, and neither works without the other, so there
+    // is one of these rather than one per way of reaching a body. There are
+    // three ways: a run starting here, a word whose implementation is written,
+    // and a closure being invoked.
+    private func answer(
+        _ body: Body,
+        of callee: Linked,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let returned: Value
+
+        do {
+            returned = try await run(body, in: &activation, at: trace)
+        } catch let leaving as Leaving where leaving.reach == .procedure {
+            // A closure is a procedure, so this is also what stops a `return`
+            // written inside one from answering for the procedure around it.
+            returned = leaving.value
+        }
+
+        return try callee.signature.settling(returned: returned, in: types)
+    }
+
+    // A body answers what it says it answers, and a body that says nothing
+    // answers nothing.
+    private func run(_ body: Body, in activation: inout Activation, at trace: Trace) async throws -> Value {
+        try await perform(body.instructions, in: &activation, at: trace)
+
+        guard let result = body.result else { return .null }
+
+        return try await evaluate(result, in: &activation, at: trace)
+    }
+
+    // Instructions in order, each landing its answer in the slot it binds.
+    private func perform(
+        _ instructions: [Instruction],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws {
+        // The cancellation check sits at sequence entry, not only per statement:
+        // an empty body inside a loop round must still observe cancellation, or
+        // the caller's one lever against a runaway loop silently stops working.
+        try Task.checkCancellation()
+
+        for instruction in instructions {
+            try Task.checkCancellation()
+
+            let result = try await run(instruction, in: &activation, at: trace)
+
+            switch instruction.binding {
+            case let .bind(slot)?:
+                activation.cells[slot] = .value(result)
+
+            // A new box, so a variable declared inside a block shadows rather
+            // than writes an outer one of the same name.
+            case let .declare(slot)?:
+                activation.cells[slot] = .hold(Handle(activation.layout.names[slot], result))
+
+            // A write lands in a box the enclosing bodies also hold.
+            case let .assign(slot, steps)?:
+                guard case let .hold(handle) = activation.cells[slot] else {
+                    throw ExecutionError(
+                        "'\(spelled(slot, steps, in: activation).rendered)' writes a name that is not a variable here"
+                    )
+                }
+
+                try handle.write(result, at: try positioned(slot, steps, in: activation))
+
+            // A nameless statement ran for its effect, and the answer is
+            // dropped, which is what leaving the name off said.
+            case nil:
+                break
+            }
+        }
     }
 
     private func run(
-        _ statement: Statement,
-        at position: Int,
-        in scope: Scope,
+        _ instruction: Instruction,
+        in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        // The same notation the validator uses for a nameless statement, and
-        // one an author's own name can never collide with — `_` is a name.
-        let inside = trace.appending(.statement(statement.name ?? "[\(position)]"))
+        let inside = trace.appending(.statement(instruction.label))
 
-        await observer?.statementStarted(at: inside, expression: statement.expression)
+        await observer?.statementStarted(at: inside)
 
         do {
-            let result = try await evaluate(statement.expression, in: scope, at: inside)
+            let result = try await evaluate(instruction.code, in: &activation, at: inside)
 
             await observer?.statementCompleted(at: inside, result: result)
 
@@ -573,7 +259,7 @@ public struct Executor: Sendable {
     }
 
     // A refusal leaving a statement takes that statement's place with it, unless
-    // it already carries one — the innermost is where the mistake is, and every
+    // it already carries one: the innermost is where the mistake is, and every
     // statement it passes through on the way out is only where the run was.
     private func refusal(_ error: any Error, at trace: Trace) -> any Error {
         guard let refused = error as? any WarpError, refused.trace == nil else { return error }
@@ -581,58 +267,265 @@ public struct Executor: Sendable {
         return refused.tracing(trace)
     }
 
-    private func loop(
-        while condition: Expression,
-        body: Block,
-        round: String,
-        in startScope: Scope,
+    // The evaluator for what runs. The containers recurse here so an effect
+    // written inside one is run; every other data case is `read`'s.
+    private func evaluate(
+        _ code: Code,
+        in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        var index = 0
-        // What the last round that finished left behind. The result reads it,
-        // because a result naming something the body bound is a thing the
-        // checker allows and so a thing that has to work. A round that did not
-        // finish contributed nothing, the same way a skipped round contributes
-        // nothing to a walk.
-        var settled = startScope
+        switch code {
+        case .literal, .local, .closure:
+            return try read(code, in: activation)
 
-        while true {
-            // A round is a block, so what it binds dies with it. Carrying the
-            // round's whole scope into the next one would make every binding in
-            // the body accidentally mutable to buy the one that had to be. A
-            // variable declared outside the loop carries what the author meant
-            // to carry, and nothing else comes with it.
-            let state = Value.object(["index": .int(index)])
-            let scope = startScope.binding(round, to: state)
-            // Where the result is read: what the last finished round bound, plus
-            // the round state as it stands now.
-            let reading = settled.binding(round, to: state)
+        case let .array(elements):
+            var values: [Value] = []
 
-            let take = try resolver(in: scope).evaluate(condition)
-
-            if !take {
-                guard let result = body.result else { return .null }
-
-                return try await evaluate(result, in: reading, at: trace)
+            for element in elements {
+                values.append(try await evaluate(element, in: &activation, at: trace))
             }
 
-            do {
-                settled = try await run(
-                    body.body,
-                    in: scope,
-                    at: trace.appending(.round(index))
+            return .array(values)
+
+        case let .record(fields):
+            var values: [String: Value] = [:]
+
+            for (name, field) in fields {
+                values[name] = try await evaluate(field, in: &activation, at: trace)
+            }
+
+            return .object(values)
+
+        // The run's whole share of a cast: the link already decided what every
+        // dot after this means, and the one thing it could not know is what
+        // actually arrived. A plain cast lets the refusal out as a failure like
+        // any other; an optional one reads the mismatch as null, which is the
+        // author saying they expected it.
+        case let .cast(value, type, optional):
+            return try type.reading(
+                await evaluate(value, in: &activation, at: trace),
+                optional: optional,
+                in: types
+            )
+
+        case let .send(send):
+            return try await self.send(send, in: &activation, at: trace)
+
+        case let .invoke(callee, arguments):
+            return try await invoke(callee, arguments: arguments, in: &activation, at: trace)
+
+        case let .block(body):
+            return try await run(body, in: &activation, at: trace)
+
+        // A branch answers nothing: the condition chooses a way through the
+        // body, and what an arm keeps it writes to an outer variable.
+        case let .conditional(condition, then, otherwise):
+            let take = try bool(try read(condition, in: activation))
+
+            if let taken = take ? then : otherwise {
+                try await perform(taken, in: &activation, at: trace)
+            }
+
+            return .null
+
+        case let .loop(condition, body, round, keeps):
+            return try await loop(
+                while: condition,
+                body: body,
+                round: round,
+                keeps: keeps,
+                in: &activation,
+                at: trace
+            )
+
+        case let .iteration(material, body, element):
+            return try await iterate(
+                over: material,
+                body: body,
+                element: element,
+                in: &activation,
+                at: trace
+            )
+
+        case let .attempt(body, rescue, failure):
+            return try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
+
+        // Nothing comes back, so this answers by not answering. What it carries
+        // is worked out here, where the names it reads are still in scope.
+        case let .leave(reach, target, value):
+            var carried = Value.null
+
+            if let value {
+                carried = try await evaluate(value, in: &activation, at: trace)
+            }
+
+            throw Leaving(reach: reach, target: target, value: carried)
+        }
+    }
+
+    // One lookup, because there is one table. What happens is decided by how
+    // the row is implemented, not by which container it was found in.
+    private func send(_ send: Send, in activation: inout Activation, at trace: Trace) async throws -> Value {
+        let callee = linked[send.procedure]
+
+        switch callee.implementation {
+        // A query answers without running, so the pure half is the whole
+        // implementation. It is here only so that `x.count` and the same
+        // word written as a statement mean the same thing.
+        case .query:
+            return try self.send(send, in: activation)
+
+        case let .effect(effect):
+            let holds = try holds(send.handed, of: callee, in: activation)
+            let settled = try settled(
+                callee,
+                given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
+                skipping: skipped(send, of: callee, holding: true)
+            )
+            // A receiver handed in place is read for the effect as what its
+            // hold holds now, the way the effect reads any receiver.
+            let held = try holds.first { position, _ in position == callee.receiverPosition }.map { _, handle in try handle.value() }
+
+            return try await effect.run(
+                Invocation(
+                    selector: callee.label,
+                    signature: callee.signature,
+                    receiver: sent(to: callee, receiver: try received(send, of: callee, in: activation) ?? held, arguments: settled),
+                    arguments: named(settled, of: callee),
+                    holds: holds.reduce(into: [:]) { table, entry in
+                        table[callee.parameters[entry.0].name] = entry.1
+                    },
+                    trace: trace,
+                    executor: self
                 )
-                .scope
-            } catch let leaving as Leaving where leaving.claimed(by: round) {
+            )
+
+        case let .body(body, layout):
+            var inner = try frame(of: callee, layout)
+
+            // A parameter handed in place takes no value: it takes a hold on
+            // the caller's variable, and what the hold reaches is read only
+            // where the body reads it.
+            for (position, handle) in try holds(send.handed, of: callee, in: activation) {
+                inner.cells[layout.parameters[position]] = .hold(handle)
+            }
+
+            // A receiver is written on the other side of the dot rather than by
+            // name. It is not settled as an argument, since being sent to
+            // nothing is something a word answers rather than refuses, but the
+            // body reads it under the name its signature gave it.
+            if let position = callee.receiverPosition, let receiver = try received(send, of: callee, in: activation) {
+                inner.cells[layout.parameters[position]] = .value(receiver)
+            }
+
+            let settled = try settled(
+                callee,
+                given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
+                skipping: skipped(send, of: callee, holding: true)
+            )
+
+            for (position, value) in settled.enumerated() {
+                guard let value else { continue }
+
+                inner.cells[layout.parameters[position]] = .value(value)
+            }
+
+            return try await answer(body, of: callee, in: &inner, at: trace.appending(.procedure(callee.label)))
+        }
+    }
+
+    // Calling a value. The body runs in the cells the closure captured and not
+    // in the caller's: that is what lexical scope means, and it is the reason a
+    // closure is worth passing at all.
+    private func invoke(
+        _ callee: Code,
+        arguments: [(String, Code)],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let value = try read(callee, in: activation)
+
+        guard case let .procedure(closure) = value else {
+            throw ExecutionError(
+                "this call names \(value.type), and only a procedure can be called"
+            )
+        }
+
+        var resolved: [String: Value] = [:]
+
+        for (name, argument) in arguments {
+            resolved[name] = try read(argument, in: activation)
+        }
+
+        var (body, inner) = try enter(
+            closure,
+            settled: try closure.signature.settle(resolved, over: closure.linked.parameters, offered: false, in: types)
+        )
+
+        return try await answer(body, of: closure.linked, in: &inner, at: trace)
+    }
+
+    // The one way a closure's frame is made, however its arguments were
+    // settled: the captured cells in their slots, the parameters in theirs.
+    private func enter(
+        _ closure: Closure,
+        settled: [Value?]
+    ) throws -> (Body, Activation) {
+        guard case let .body(body, layout) = closure.linked.implementation else {
+            throw ExecutionError("a closure is a body, and this one is native")
+        }
+
+        var activation = try frame(of: closure.linked, layout)
+
+        for (slot, cell) in closure.captured {
+            activation.cells[slot] = cell
+        }
+
+        for (position, value) in settled.enumerated() {
+            activation.cells[layout.parameters[position]] = .value(value ?? .null)
+        }
+
+        return (body, activation)
+    }
+
+    private func loop(
+        while condition: Code,
+        body: Body,
+        round: Int,
+        keeps: Range<Int>?,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let name = activation.layout.names[round]
+        var index = 0
+
+        while true {
+            // The condition reads the state before the round it would start,
+            // and the result reads it as it stands when the loop ends.
+            activation.cells[round] = .value(.object(["index": .int(index)]))
+
+            guard try bool(try read(condition, in: activation)) else {
+                guard let result = body.result else { return .null }
+
+                return try await evaluate(result, in: &activation, at: trace)
+            }
+
+            // What the last finished round bound is what the result reads. A
+            // round cut short is put back to that, where the link said the
+            // result could tell.
+            let kept = keeps.map { range in activation.cells[range] }
+
+            do {
+                try await perform(body.instructions, in: &activation, at: trace.appending(.round(index)))
+            } catch let leaving as Leaving where leaving.claimed(by: name) {
+                if let keeps, let kept {
+                    activation.cells.replaceSubrange(keeps, with: kept)
+                }
+
                 guard leaving.reach == .round else {
-                    // Ending the loop answers what ending it normally answers.
-                    // A round that stopped early still bound what it bound, so
-                    // the result reads the scope that round left behind — the
-                    // same scope the checker showed it, and the same one a walk
-                    // reads its result in.
                     guard let result = body.result else { return .null }
 
-                    return try await evaluate(result, in: reading, at: trace)
+                    return try await evaluate(result, in: &activation, at: trace)
                 }
             }
 
@@ -641,39 +534,23 @@ public struct Executor: Sendable {
     }
 
     private func iterate(
-        over material: Expression,
-        body: [Statement],
-        element: String,
-        in startScope: Scope,
+        over material: Code,
+        body: [Instruction],
+        element: Int,
+        in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let elements = try await array(
-            of: material,
-            naming: element,
-            in: startScope,
-            at: trace
-        )
+        let name = activation.layout.names[element]
+        let elements = try await array(of: material, naming: name, in: &activation, at: trace)
 
         for (index, item) in elements.enumerated() {
-            // Every round starts from the enclosing scope, the same rule the
-            // loop states: carrying a round's scope into the next would make
-            // every binding in the body accidentally live on. What a round
-            // leaves behind is what it wrote to an outer variable — the box
-            // carries that without any scope traveling.
-            let scope = startScope.binding(
-                element,
-                to: .object(["item": item, "index": .int(index)])
-            )
+            activation.cells[element] = .value(.object(["item": item, "index": .int(index)]))
 
             do {
-                _ = try await run(
-                    body,
-                    in: scope,
-                    at: trace.appending(.round(index))
-                )
-            } catch let leaving as Leaving where leaving.claimed(by: element) {
+                try await perform(body, in: &activation, at: trace.appending(.round(index)))
+            } catch let leaving as Leaving where leaving.claimed(by: name) {
                 // A walk answers nothing, so ending one early ends it and no
-                // more — what its rounds wrote outward is already written.
+                // more: what its rounds wrote outward is already written.
                 guard leaving.reach == .round else { break }
 
                 continue
@@ -687,23 +564,18 @@ public struct Executor: Sendable {
     // another or all at once, what they walk has to be an array, and it fails to
     // be one in the same way.
     private func array(
-        of material: Expression,
+        of material: Code,
         naming element: String,
-        in scope: Scope,
+        in activation: inout Activation,
         at trace: Trace
     ) async throws -> AnyRandomAccessCollection<Value> {
-        let resolved = try await evaluate(material, in: scope, at: trace)
+        let resolved = try await evaluate(material, in: &activation, at: trace)
 
-        // What is iterated is whatever has elements — the one projection that
+        // What is iterated is whatever has elements, the one projection that
         // owns the bytes equation, so `each` walks bytes the way an index
-        // reads them. The projection is left as it is rather than copied out:
-        // a round reads one element, and a compact spelling should not have to
-        // become a million boxed ints before the first round runs.
+        // reads them.
         guard let elements = resolved.elements else {
-            // A plain reference names its own locus; any other expression shape
-            // has no path to point at, so the message carries the blame instead
-            // of an empty `{ ref: }` rendering.
-            guard let path = material.referencePath else {
+            guard case let .local(slot, steps) = material else {
                 throw ExecutionError(
                     "the material of iteration '\(element)' resolved to"
                         + " \(resolved.type), expected array"
@@ -711,7 +583,7 @@ public struct Executor: Sendable {
             }
 
             throw ReferenceUnfit(
-                path: path,
+                path: spelled(slot, steps, in: activation),
                 reason: "iteration material is \(resolved.type), expected array"
             )
         }
@@ -720,14 +592,14 @@ public struct Executor: Sendable {
     }
 
     private func attempt(
-        _ block: Block,
-        rescue: Block,
-        failure name: String,
-        in scope: Scope,
+        _ body: Body,
+        rescue: Body,
+        failure: Int,
+        in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
         do {
-            return try await run(block, in: scope, at: trace)
+            return try await run(body, in: &activation, at: trace)
         } catch {
             guard !Task.isCancelled else { throw error }
 
@@ -735,18 +607,486 @@ public struct Executor: Sendable {
             // did, not for what the procedure says.
             guard let recoverable = error as? any RecoverableFailure else { throw error }
 
-            await observer?.failureRescued(name: name, error: error)
+            await observer?.failureRescued(name: activation.layout.names[failure], error: error)
 
             // While the rescue runs, the failure is a value under the declared
-            // name — readable, and gone the moment the rescue answers. Its
-            // shape needs no check here: `RecoverableFailure` assembles the
-            // payload itself, so `type` and `message` are there by
-            // construction rather than by inspection.
-            return try await run(
-                rescue,
-                in: scope.binding(name, to: recoverable.payload),
-                at: trace
+            // name. Its shape needs no check here: `RecoverableFailure`
+            // assembles the payload itself, so `type` and `message` are there
+            // by construction rather than by inspection.
+            activation.cells[failure] = .value(recoverable.payload)
+
+            return try await run(rescue, in: &activation, at: trace)
+        }
+    }
+
+    // The frame a row runs in, with the module variables it reads in place.
+    private func frame(of callee: Linked, _ layout: Layout) throws -> Activation {
+        var activation = Activation(layout)
+
+        guard !layout.variables.isEmpty else { return activation }
+
+        guard let held = boxes[callee.origin] else {
+            throw ExecutionError("'\(callee.label)' reads its document's variables, and this run holds none")
+        }
+
+        for (variable, slot) in layout.variables {
+            activation.cells[slot] = .hold(held[variable])
+        }
+
+        return activation
+    }
+
+    // The holds a call hands in place, by parameter position: the caller's
+    // box, seen through the path the argument wrote. Every write the callee
+    // makes lands in that box as it is made, so a call that fails after
+    // writing has written.
+    private func holds(
+        _ handed: [Send.Handed],
+        of callee: Linked,
+        in activation: Activation
+    ) throws -> [(Int, Handle)] {
+        try handed.map { handed in
+            guard case let .hold(handle) = activation.cells[handed.slot] else {
+                throw ExecutionError(
+                    "'\(callee.label)' takes '\(callee.parameters[handed.position].name)' in place,"
+                        + " and '\(activation.layout.names[handed.slot])' is not a variable here"
+                )
+            }
+
+            return (handed.position, handle.extended(by: try positioned(handed.slot, handed.path, in: activation)))
+        }
+    }
+
+    // The receiver a call wrote in front, settled against what the parameter
+    // naming it declares. Nil where the call wrote none.
+    private func received(_ send: Send, of callee: Linked, in activation: Activation) throws -> Value? {
+        guard let receiver = send.receiver else { return nil }
+
+        do {
+            return try callee.signature.settling(receiver: try read(receiver, in: activation), in: types)
+        } catch let unfit as ReferenceUnfit {
+            throw unfit
+        } catch {
+            // A refusal about the receiver is answerable only if the author can
+            // see which name held it: the locus is the receiver's path when it
+            // has one, and nothing to add when it does not.
+            guard case let .local(slot, steps) = receiver else { throw error }
+
+            throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: "\(error)")
+        }
+    }
+
+    // The positions a call fills another way: the receiver where the call
+    // wrote one in front, and the ones handed in place where the callee
+    // takes holds. A pure body takes no hold, so what it was handed is
+    // settled as a value.
+    private func skipped(_ send: Send, of callee: Linked, holding: Bool) -> Skipped {
+        Skipped(
+            handed: holding ? send.handed : [],
+            receiver: send.receiver == nil ? nil : callee.receiverPosition
+        )
+    }
+
+    private struct Skipped {
+        let handed: [Send.Handed]
+        let receiver: Int?
+
+        func contains(_ position: Int) -> Bool {
+            position == receiver || handed.contains { handed in handed.position == position }
+        }
+    }
+
+    // The arguments settled against the declaration, in parameter order: the
+    // signature's own boundary, over the order the row keeps.
+    private func settled(
+        _ callee: Linked,
+        given: [Value?],
+        skipping: Skipped
+    ) throws -> [Value?] {
+        try callee.signature.settle(
+            given,
+            over: callee.parameters,
+            offered: false,
+            skipping: skipping.contains,
+            in: types
+        )
+    }
+
+    // The settled arguments under the names a native reads them by.
+    private func named(_ settled: [Value?], of callee: Linked) -> [String: Value] {
+        var named: [String: Value] = [:]
+
+        for (position, value) in settled.enumerated() {
+            guard let value else { continue }
+
+            named[callee.parameters[position].name] = value
+        }
+
+        return named
+    }
+
+    // The pure half of a send. An effect or a body that runs answers only by
+    // running, so a condition that names one is refused here rather than
+    // quietly starting something in the middle of a comparison.
+    private func send(_ send: Send, in activation: Activation) throws -> Value {
+        let callee = linked[send.procedure]
+
+        guard callee.purity == .pure else {
+            throw ExecutionError(
+                "'\(callee.label)' answers only by running, so it cannot be"
+                    + " read as data here"
             )
+        }
+
+        let receiver = try received(send, of: callee, in: activation)
+        var given = try send.arguments.map { argument in try argument.map { try read($0, in: activation) } }
+
+        // A pure body writes nothing, so a variable handed to it in place is
+        // read as what it holds, and settled the way any argument is.
+        for handed in send.handed {
+            given[handed.position] = try found(handed.slot, handed.path, in: activation)
+        }
+
+        let arguments = try settled(callee, given: given, skipping: skipped(send, of: callee, holding: false))
+
+        do {
+            return try answer(callee, for: receiver, with: arguments)
+        } catch let unfit as ReferenceUnfit {
+            throw unfit
+        } catch {
+            // A word blaming a shape is answerable only if the author can see
+            // which name held it.
+            guard case let .local(slot, steps)? = send.receiver else { throw error }
+
+            throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: "\(error)")
+        }
+    }
+
+    // What a row answers, computed without running. Both shapes it can have
+    // are answerable without suspending: one because it is native and says
+    // so, the other because the link proved it.
+    private func answer(_ callee: Linked, for receiver: Value?, with arguments: [Value?]) throws -> Value {
+        let sent = sent(to: callee, receiver: receiver, arguments: arguments)
+
+        switch callee.implementation {
+        // Absent and null are the same fact, and a word asked about nothing
+        // decides for itself what that means: `contains` says false rather
+        // than failing.
+        case let .query(query):
+            return try query.evaluate(
+                Question(
+                    receiver: sent == .null ? nil : sent,
+                    arguments: named(arguments, of: callee),
+                    executor: self
+                )
+            ) ?? .null
+
+        // A body the link proved pure runs here, synchronously. Nothing in it
+        // can suspend, which is what the proof says.
+        case let .body(body, layout):
+            var activation = try frame(of: callee, layout)
+
+            for (position, value) in arguments.enumerated() {
+                guard let value else { continue }
+
+                activation.cells[layout.parameters[position]] = .value(value)
+            }
+
+            if let position = callee.receiverPosition, let sent {
+                activation.cells[layout.parameters[position]] = .value(sent)
+            }
+
+            return try callee.signature.settling(returned: try read(body, in: &activation), in: types)
+
+        case .effect:
+            throw ExecutionError(
+                "this answers only by running, so it cannot be read as data here"
+            )
+        }
+    }
+
+    // What a call was sent to. A receiver is a parameter, so it reaches a
+    // native the same way whether it was written on the other side of the
+    // dot or by its own name: the two spellings are one call.
+    private func sent(to callee: Linked, receiver: Value?, arguments: [Value?]) -> Value? {
+        receiver ?? callee.receiverPosition.flatMap { position in arguments[position] }
+    }
+
+    // A pure body, read without running. Instructions bind in order and the
+    // body answers what it declares, the same rule `run` follows, over the
+    // subset that cannot suspend.
+    private func read(_ body: Body, in activation: inout Activation) throws -> Value {
+        for instruction in body.instructions {
+            switch instruction.binding {
+            case .bind, nil:
+                break
+
+            case .declare, .assign:
+                throw ExecutionError(
+                    "'\(instruction.label)' writes a name, and what answers"
+                        + " without running only binds"
+                )
+            }
+
+            let value = try read(instruction.code, in: activation)
+
+            if case let .bind(slot)? = instruction.binding {
+                activation.cells[slot] = .value(value)
+            }
+        }
+
+        guard let result = body.result else { return .null }
+
+        return try read(result, in: activation)
+    }
+
+    // Running a closure here rather than in `evaluate`, which is what makes a
+    // word able to take one. What may be called is what the link proved
+    // answers, and a slot declaring `pure procedure` is how a word says so.
+    func call(_ closure: Closure, with arguments: [String: Value]) throws -> Value {
+        var (body, activation) = try enter(
+            closure,
+            settled: try closure.signature.settle(arguments, over: closure.linked.parameters, offered: true, in: types)
+        )
+
+        return try closure.signature.settling(returned: try read(body, in: &activation), in: types)
+    }
+
+    private func bool(_ value: Value) throws -> Bool {
+        guard case let .bool(answer) = value else {
+            throw ExecutionError("a condition must answer bool, got \(value.type)")
+        }
+
+        return answer
+    }
+
+    // What a slot path holds. The head is never absent, since every slot is
+    // there from the frame's making; a hold whose surroundings changed under
+    // it refuses, and every deeper absence is answered inside the walk.
+    private func found(_ slot: Int, _ steps: [Step], in activation: Activation) throws -> Value {
+        switch lookup(slot, steps, in: activation) {
+        case let .found(value):
+            return value
+
+        case let .unfit(reason):
+            throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: reason)
+        }
+    }
+
+    // Where a walk over a path came down: on a value, or on a reading gone
+    // wrong. Every slot is there from the frame's making, so there is no
+    // third answer.
+    private enum Walk {
+        case found(Value)
+        case unfit(String)
+    }
+
+    // A dot means what its spelling says: the link judged every one and wrote
+    // the judgment into the step. A key reads a field and nothing else; a
+    // word sends and nothing else; the value that arrives decides neither.
+    // What may genuinely be absent, a missing entry or a null on the way, is
+    // read as null only where the author spelled `?.`, and refused everywhere
+    // else.
+    private func lookup(_ slot: Int, _ steps: [Step], in activation: Activation) -> Walk {
+        var current: Value
+
+        do {
+            current = try activation.cells[slot].value()
+        } catch {
+            return .unfit("\(error)")
+        }
+
+        var walked: [PathSegment] = [.key(activation.layout.names[slot])]
+
+        for step in steps {
+            let segment = spelled(step, in: activation)
+            walked.append(segment)
+
+            // Null stops every reading the same way, and the rule lives with
+            // the segment: the link's walk over types asks the same judge, so
+            // the two layers cannot drift apart.
+            if current == .null {
+                switch segment.meetingNull(at: walked) {
+                case .reads:
+                    return .found(.null)
+
+                case let .refused(reason):
+                    return .unfit(reason)
+                }
+            }
+
+            let read: Walk
+
+            switch step {
+            case let .index(index, _):
+                read = indexed(current, at: index, walked: walked)
+
+            // The name is a path of its own, read against the same frame.
+            case let .at(inner, innerSteps, _):
+                let name = spelled(inner, innerSteps, in: activation).rendered
+
+                switch lookup(inner, innerSteps, in: activation) {
+                case let .found(.int(index)):
+                    read = indexed(current, at: index, walked: walked)
+
+                case let .found(.double(double)):
+                    switch Int.reading(double) {
+                    case let .word(index):
+                        read = indexed(current, at: index, walked: walked)
+
+                    case .notANumber, .fractional:
+                        return .unfit("index reference \(name) is not a whole number")
+
+                    case .pastTheWord:
+                        return .unfit(
+                            "index reference \(name) indexes past the end of any array"
+                        )
+                    }
+
+                case let .found(value):
+                    return .unfit("index reference \(name) is \(value.type), expected int")
+
+                case let .unfit(reason):
+                    return .unfit(reason)
+                }
+
+            case let .key(key, _):
+                guard case let .record(_, object) = current else {
+                    return .unfit("\(walked.rendered) drills a field into \(current.type)")
+                }
+
+                guard let next = object[key] else {
+                    guard segment.optional else {
+                        return .unfit(
+                            "\(walked.rendered): '\(key)' is not there"
+                                + " — only `\(segment.mark)` reads absence"
+                        )
+                    }
+
+                    return .found(.null)
+                }
+
+                read = .found(next)
+
+            case let .word(row, key, _):
+                do {
+                    guard let derived = try derive(linked[row], from: current) else {
+                        return .unfit(
+                            "\(walked.rendered) sends '\(key)', which does not take \(current.type)"
+                        )
+                    }
+
+                    read = .found(derived)
+                } catch {
+                    return .unfit("\(walked.rendered) — \(error)")
+                }
+            }
+
+            switch read {
+            case let .found(value):
+                current = value
+
+            case .unfit:
+                return read
+            }
+        }
+
+        return .found(current)
+    }
+
+    // One reading for both index spellings. What is indexed is whatever has
+    // elements: the projection owns the `array<byte>` equation, lazily, so
+    // one element read does not unpack a compact spelling. Past the end is a
+    // defect, not absence: the array is there and says how long it is.
+    private func indexed(_ current: Value, at index: Int, walked: [PathSegment]) -> Walk {
+        guard let elements = current.elements else {
+            return .unfit("\(walked.rendered) indexes into \(current.type), expected array")
+        }
+
+        guard index >= 0, index < elements.count else {
+            return .unfit(
+                "\(walked.rendered) indexes past the end of \(elements.count) element(s)"
+            )
+        }
+
+        return .found(elements[elements.index(elements.startIndex, offsetBy: index)])
+    }
+
+    // A path segment that names no field is a message: `items.count` sends
+    // `count` to what the path has reached so far. Only words that ask for
+    // nothing are reachable this way, because dot notation supplies no
+    // arguments, so the arguments a word does declare arrive from its own
+    // defaults, and the receiver is checked against what it declared.
+    //
+    // A word that declines the shape it was sent to reads as absence, the same
+    // as a field never set. A word that took the shape and then refused did not
+    // decline it, so that refusal is answered rather than swallowed.
+    private func derive(_ callee: Linked, from value: Value) throws -> Value? {
+        guard callee.signature.isDerivable(in: types) else { return nil }
+
+        guard
+            let receiver = try? callee.signature.settling(receiver: value, in: types),
+            let arguments = try? settled(
+                callee,
+                given: Array(repeating: nil, count: callee.parameters.count),
+                skipping: Skipped(handed: [], receiver: callee.receiverPosition)
+            )
+        else {
+            return nil
+        }
+
+        return try answer(callee, for: receiver, with: arguments)
+    }
+
+    // Every index reference read to a position: a write lands on one
+    // position, and a hold is extended by positions.
+    private func positioned(_ head: Int, _ steps: [Step], in activation: Activation) throws -> [PathSegment] {
+        try steps.map { step in
+            switch step {
+            case let .key(name, optional):
+                return .key(name, optional: optional)
+
+            case let .index(index, optional):
+                return .index(index, optional: optional)
+
+            case let .at(slot, inner, optional):
+                guard case let .int(index) = try found(slot, inner, in: activation) else {
+                    throw ExecutionError(
+                        "'\(spelled(head, steps, in: activation).rendered)' indexes with"
+                            + " '\(spelled(slot, inner, in: activation).rendered)', which is not an int"
+                    )
+                }
+
+                return .index(index, optional: optional)
+
+            case let .word(_, name, optional):
+                return .word(name, optional: optional)
+            }
+        }
+    }
+
+    // The path as the author wrote it, for a sentence that reads it back.
+    private func spelled(_ slot: Int, _ steps: [Step], in activation: Activation) -> [PathSegment] {
+        [.key(activation.layout.names[slot])] + spelled(steps, in: activation)
+    }
+
+    private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {
+        steps.map { step in spelled(step, in: activation) }
+    }
+
+    private func spelled(_ step: Step, in activation: Activation) -> PathSegment {
+        switch step {
+        case let .key(name, optional):
+            return .key(name, optional: optional)
+
+        case let .index(index, optional):
+            return .index(index, optional: optional)
+
+        case let .at(slot, inner, optional):
+            return .indexRef(spelled(slot, inner, in: activation), optional: optional)
+
+        case let .word(_, name, optional):
+            return .word(name, optional: optional)
         }
     }
 }
