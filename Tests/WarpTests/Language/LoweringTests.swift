@@ -231,6 +231,64 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .array([.int(1), .int(2), .int(3)]))
     }
 
+    @Test("a body reading a module variable does not answer without running")
+    func aBodyReadingAVariableIsNotPure() throws {
+        // Given — the variable's value is the run's, so folding the word at
+        // the link would fix a value nothing at the run could change
+        let module = try Module(
+            variables: ["count": .literal(.int(0))],
+            procedures: [
+                "entry": Procedure(body: [], result: .literal(.null)),
+                "app.tally": Procedure(
+                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
+                    body: [],
+                    result: .reference([.key("count")])
+                )
+            ]
+        )
+
+        // When
+        let image = try linker.link([module] + Module.standard, entry: "entry")
+
+        // Then
+        #expect(image["app.tally"]?.purity != .pure)
+    }
+
+    @Test("a variable handed in place to a pure word is settled like any argument")
+    func aHandedVariableIsSettledForAPureWord() async throws {
+        // Given — a record without a name, handed to a slot declaring one; the
+        // word answers it named, as it would had the record been passed by value
+        let module = try Module(
+            types: ["Tag": .record(["a": .int])],
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(binding: .variable("held"), expression: .record(["a": .literal(.int(1))]))
+                    ],
+                    result: .dispatch(Dispatch(
+                        receiver: .dispatch(Dispatch(selector: "app.tag", arguments: ["of": .reference([.key("held")])])),
+                        selector: "std.logic.equal",
+                        arguments: ["value": .literal(.record(name: "Tag", fields: ["a": .int(1)]))]
+                    ))
+                ),
+                "app.tag": Procedure(
+                    signature: Signature(
+                        parameters: ["of": Parameter(type: .inout(.named("Tag")))],
+                        returns: .named("Tag")
+                    ),
+                    body: [],
+                    result: .reference([.key("of")])
+                )
+            ]
+        )
+
+        // When
+        let image = try linker.link([module] + Module.standard, entry: "entry")
+
+        // Then
+        #expect(try await Executor().run(image) == .bool(true))
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

@@ -96,7 +96,10 @@ public struct Linker: Sendable {
 
         // Purity is worked out over every declaration rather than the reached
         // ones: a path names a word the call graph never mentions.
-        let settled = pure(among: symbols)
+        let moduleVariables = modules.enumerated().reduce(into: [Int: Set<String>]()) { table, entry in
+            table[entry.offset] = Set(entry.element.variables.keys)
+        }
+        let settled = pure(among: symbols, reading: moduleVariables)
         let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: types)
 
         // The tables as the author spelled them, and the form the link's own
@@ -184,7 +187,8 @@ public struct Linker: Sendable {
                 types: types,
                 words: answeringWords,
                 pure: settled,
-                isolated: isolatedDeclarations
+                isolated: isolatedDeclarations,
+                variables: moduleVariables
             )
         }
 
@@ -195,7 +199,7 @@ public struct Linker: Sendable {
         // other constants is spelling it with words like any other expression.
         let constants = try constants(
             of: modules,
-            lowering: &lowering,
+            lowering: lowering,
             in: types,
             with: declaredFrame
         )
@@ -203,7 +207,7 @@ public struct Linker: Sendable {
         let variables = try variables(
             of: modules,
             beside: constants,
-            lowering: &lowering,
+            lowering: lowering,
             in: types,
             with: declaredFrame
         )
@@ -307,12 +311,17 @@ public struct Linker: Sendable {
                     calls: gathered
                 )
 
-                try lowering.settle(try row(of: symbol), body: rewritten, at: symbol.place)
             }
 
             resolvedBodies[symbol.declared] = answer
 
             try checked(answer.calls, in: frame)
+
+            // Lowered once every send in it passed the gate, so nothing
+            // the gate refuses reaches the lowering.
+            if let rewritten = answer.procedure.block {
+                try lowering.settle(try row(of: symbol), body: rewritten, at: symbol.place)
+            }
 
             return answer
         }
@@ -418,14 +427,14 @@ public struct Linker: Sendable {
     // A constant's or a variable's expression, settled the way a run reads
     // it: lowered against the settled neighbours as a frame, and read by the
     // executor over the table as it stands. A closure the expression holds
-    // is lowered into the table here, where it stays for the run.
+    // is carried in the code, not in the table.
     private func folded(
         _ expression: Expression,
         reading known: [String: Value],
         origin: Int,
         label: String,
         at place: Place,
-        lowering: inout Lowering,
+        lowering: Lowering,
         in types: TypeTable
     ) throws -> Value {
         let names = known.keys.sorted()
@@ -457,9 +466,11 @@ public struct Linker: Sendable {
     // is struck out when something it reaches is not pure. Starting from "impure
     // until proven" would make two procedures that call each other permanently
     // impure, which is a fact about the algorithm rather than about the code.
-    private func pure(among symbols: [Symbol]) -> Set<String> {
-        let bodies = symbols.reduce(into: [String: Block?]()) { table, symbol in
-            table[symbol.declared] = symbol.procedure.block
+    private func pure(among symbols: [Symbol], reading variables: [Int: Set<String>]) -> Set<String> {
+        let bodies = symbols.reduce(into: [String: (Block, Set<String>)]()) { table, symbol in
+            guard let block = symbol.procedure.block else { return }
+
+            table[symbol.declared] = (block, variables[symbol.origin] ?? [])
         }
 
         var pure = Set(
@@ -470,9 +481,9 @@ public struct Linker: Sendable {
 
         while true {
             let struck = pure.filter { name in
-                guard let block = bodies[name], let block else { return false }
+                guard let (block, reading) = bodies[name] else { return false }
 
-                return !isPure(block, given: pure)
+                return !isPure(block, given: pure, reading: reading)
             }
 
             guard !struck.isEmpty else { return pure }
@@ -487,21 +498,29 @@ public struct Linker: Sendable {
     // because the surface that answers purely does not run bodies at all. A
     // selector is the declared spelling it names, so the table is asked by the
     // selector as written.
-    func isPure(_ block: Block, given pure: Set<String>) -> Bool {
+    // `reading` is the module's variables: a body reading one answers by the
+    // run's state, so it does not answer without running.
+    func isPure(_ block: Block, given pure: Set<String>, reading variables: Set<String>) -> Bool {
         block.body.allSatisfy { statement in
-            statement.binding?.isConstant != false && isPure(statement.expression, given: pure)
+            statement.binding?.isConstant != false
+                && isPure(statement.expression, given: pure, reading: variables)
         }
-            && (block.result.map { result in isPure(result, given: pure) } ?? true)
+            && (block.result.map { result in isPure(result, given: pure, reading: variables) } ?? true)
     }
 
-    private func isPure(_ expression: Expression, given pure: Set<String>) -> Bool {
+    private func isPure(_ expression: Expression, given pure: Set<String>, reading variables: Set<String>) -> Bool {
         func isPure(_ inner: Expression) -> Bool {
-            self.isPure(inner, given: pure)
+            self.isPure(inner, given: pure, reading: variables)
         }
 
         switch expression {
-        case .literal, .reference, .closure:
+        case .literal, .closure:
             return true
+
+        case let .reference(path):
+            return path.expandingIndexReferences.allSatisfy { inner in
+                inner.head.map { head in !variables.contains(head) } ?? true
+            }
 
         // Leaving is not a computation, and what it does is not something the
         // pure evaluator can do: purity here means "can be answered without
@@ -1263,7 +1282,7 @@ public struct Linker: Sendable {
     // is the whole of finding it.
     private func constants(
         of modules: [Module],
-        lowering: inout Lowering,
+        lowering: Lowering,
         in types: TypeTable,
         with frame: TypeFrame
     ) throws -> [Int: [String: Value]] {
@@ -1301,7 +1320,7 @@ public struct Linker: Sendable {
                         origin: origin,
                         label: name,
                         at: .constant(name, in: .of(module)),
-                        lowering: &lowering,
+                        lowering: lowering,
                         in: types
                     )
                 } catch let refused as LinkError {
@@ -1324,7 +1343,7 @@ public struct Linker: Sendable {
     private func variables(
         of modules: [Module],
         beside constants: [Int: [String: Value]],
-        lowering: inout Lowering,
+        lowering: Lowering,
         in types: TypeTable,
         with frame: TypeFrame
     ) throws -> [Int: [String: Value]] {
@@ -1352,7 +1371,7 @@ public struct Linker: Sendable {
                         origin: origin,
                         label: name,
                         at: .variable(name, in: .of(module)),
-                        lowering: &lowering,
+                        lowering: lowering,
                         in: types
                     )
                 } catch let refused as LinkError {
@@ -1449,6 +1468,16 @@ public struct Linker: Sendable {
     ) throws {
         let dispatch = site.dispatch
         let types = frame.types
+
+        // One parameter takes one argument. A receiver written in front of
+        // the dot and again by name is refused before either is read, since
+        // the one by name would be neither read nor run.
+        if let receiver = callee.signature.receiver, dispatch.receiver != nil, dispatch.arguments[receiver] != nil {
+            throw LinkError(
+                "sending '\(dispatch.selector)' with '\(receiver)' both in front and by name",
+                at: site.place.slot(.arguments)
+            )
+        }
 
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would

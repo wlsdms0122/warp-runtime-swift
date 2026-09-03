@@ -733,12 +733,16 @@ public struct Executor: Sendable {
         var given = try send.arguments.map { argument in try argument.map { try read($0, in: activation) } }
 
         // A pure body writes nothing, so a variable handed to it in place is
-        // read as what it holds.
+        // read as what it holds, and settled the way any argument is.
         for handed in send.handed {
             given[handed.position] = try found(handed.slot, handed.path, in: activation)
         }
 
-        let arguments = try settled(callee, given: given, skipping: skipped(send, of: callee))
+        let arguments = try settled(
+            callee,
+            given: given,
+            skipping: Skipped(handed: [], receiver: send.receiver == nil ? nil : callee.receiverPosition)
+        )
 
         do {
             return try answer(callee, for: receiver, with: arguments)
@@ -855,12 +859,17 @@ public struct Executor: Sendable {
         case let .found(value):
             return value
 
-        case .absent:
-            return .null
-
         case let .unfit(reason):
             throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: reason)
         }
+    }
+
+    // Where a walk over a path came down: on a value, or on a reading gone
+    // wrong. Every slot is there from the frame's making, so there is no
+    // third answer.
+    private enum Walk {
+        case found(Value)
+        case unfit(String)
     }
 
     // A dot means what its spelling says: the link judged every one and wrote
@@ -869,13 +878,13 @@ public struct Executor: Sendable {
     // What may genuinely be absent, a missing entry or a null on the way, is
     // read as null only where the author spelled `?.`, and refused everywhere
     // else.
-    private func lookup(_ slot: Int, _ steps: [Step], in activation: Activation) -> Lookup {
+    private func lookup(_ slot: Int, _ steps: [Step], in activation: Activation) -> Walk {
         var current: Value
 
         do {
             current = try activation.cells[slot].value()
         } catch {
-            return .unfit(reason: "\(error)")
+            return .unfit("\(error)")
         }
 
         var walked: [PathSegment] = [.key(activation.layout.names[slot])]
@@ -893,11 +902,11 @@ public struct Executor: Sendable {
                     return .found(.null)
 
                 case let .refused(reason):
-                    return .unfit(reason: reason)
+                    return .unfit(reason)
                 }
             }
 
-            let read: Lookup
+            let read: Walk
 
             switch step {
             case let .index(index, _):
@@ -917,33 +926,30 @@ public struct Executor: Sendable {
                         read = indexed(current, at: index, walked: walked)
 
                     case .notANumber, .fractional:
-                        return .unfit(reason: "index reference \(name) is not a whole number")
+                        return .unfit("index reference \(name) is not a whole number")
 
                     case .pastTheWord:
                         return .unfit(
-                            reason: "index reference \(name) indexes past the end of any array"
+                            "index reference \(name) indexes past the end of any array"
                         )
                     }
 
                 case let .found(value):
-                    return .unfit(reason: "index reference \(name) is \(value.type), expected int")
-
-                case .absent:
-                    return .unfit(reason: "index reference \(name) names nothing")
+                    return .unfit("index reference \(name) is \(value.type), expected int")
 
                 case let .unfit(reason):
-                    return .unfit(reason: reason)
+                    return .unfit(reason)
                 }
 
             case let .key(key, _):
                 guard case let .record(_, object) = current else {
-                    return .unfit(reason: "\(walked.rendered) drills a field into \(current.type)")
+                    return .unfit("\(walked.rendered) drills a field into \(current.type)")
                 }
 
                 guard let next = object[key] else {
                     guard segment.optional else {
                         return .unfit(
-                            reason: "\(walked.rendered): '\(key)' is not there"
+                            "\(walked.rendered): '\(key)' is not there"
                                 + " — only `\(segment.mark)` reads absence"
                         )
                     }
@@ -957,13 +963,13 @@ public struct Executor: Sendable {
                 do {
                     guard let derived = try derive(linked[row], from: current) else {
                         return .unfit(
-                            reason: "\(walked.rendered) sends '\(key)', which does not take \(current.type)"
+                            "\(walked.rendered) sends '\(key)', which does not take \(current.type)"
                         )
                     }
 
                     read = .found(derived)
                 } catch {
-                    return .unfit(reason: "\(walked.rendered) — \(error)")
+                    return .unfit("\(walked.rendered) — \(error)")
                 }
             }
 
@@ -971,7 +977,7 @@ public struct Executor: Sendable {
             case let .found(value):
                 current = value
 
-            case .absent, .unfit:
+            case .unfit:
                 return read
             }
         }
@@ -983,14 +989,14 @@ public struct Executor: Sendable {
     // elements: the projection owns the `array<byte>` equation, lazily, so
     // one element read does not unpack a compact spelling. Past the end is a
     // defect, not absence: the array is there and says how long it is.
-    private func indexed(_ current: Value, at index: Int, walked: [PathSegment]) -> Lookup {
+    private func indexed(_ current: Value, at index: Int, walked: [PathSegment]) -> Walk {
         guard let elements = current.elements else {
-            return .unfit(reason: "\(walked.rendered) indexes into \(current.type), expected array")
+            return .unfit("\(walked.rendered) indexes into \(current.type), expected array")
         }
 
         guard index >= 0, index < elements.count else {
             return .unfit(
-                reason: "\(walked.rendered) indexes past the end of \(elements.count) element(s)"
+                "\(walked.rendered) indexes past the end of \(elements.count) element(s)"
             )
         }
 

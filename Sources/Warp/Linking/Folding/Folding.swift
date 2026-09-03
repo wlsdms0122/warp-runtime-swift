@@ -92,10 +92,10 @@ struct Folding {
         try read(.reference(path), at: place)
     }
 
-    // What an expression reads here. A closure it holds is lowered into a
-    // table this reading keeps to itself.
+    // What an expression reads here. A closure it holds is carried in the
+    // code, so the table is read and never grown.
     func read(_ expression: Expression, at place: Place = .given("folding")) throws -> Value {
-        var lowering = Lowering(table: table, rows: rows, words: words, variables: [:])
+        let lowering = Lowering(table: table, rows: rows, words: words, variables: [:])
         let code = try lowering.lower(expression, reading: names, origin: origin, label: "", at: place)
 
         return try Executor(observer: nil, environment: nil, linked: lowering.table, types: types)

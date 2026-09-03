@@ -47,6 +47,10 @@ struct TypeFrame: Sendable {
     // time, worked out from the bodies the way purity is.
     let isolated: Set<String>
 
+    // Each document's variables by name. A body reading one answers by the
+    // run's state, so purity is read against these.
+    let variables: [Int: Set<String>]
+
     // MARK: - Initializer
     // MARK: - Public
     // The whole declaration, for the one send a path makes — and only where a

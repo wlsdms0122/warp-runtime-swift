@@ -1240,7 +1240,13 @@ extension Linker {
                 calls = inner.calls
             }
 
-            let pure = body.map { block in isPure(block, given: frame.pure) } ?? false
+            var reading: Set<String> = []
+
+            if case let .judging(_, origin?) = ask {
+                reading = frame.variables[origin] ?? []
+            }
+
+            let pure = body.map { block in isPure(block, given: frame.pure, reading: reading) } ?? false
             let isolated = pure || (body.map { block in
                 isIsolated(
                     block,

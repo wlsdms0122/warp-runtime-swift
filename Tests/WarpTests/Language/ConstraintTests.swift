@@ -796,11 +796,11 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a receiver and a same-named argument are two readings of one slot")
+    @Test("a receiver written in front and by name is refused")
     func aReceiverAndASameNamedArgumentAreOneSlot() throws {
         // Given — the dot writes the receiver and the arguments write `of`
-        // again; both readings land in one slot, so they are judged together
-        // rather than one quietly replacing the other
+        // again. One parameter takes one argument, and the one by name would
+        // be neither read nor run, so the link refuses the call
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -819,7 +819,7 @@ struct ConstraintTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("is read as")
+            error is LinkError && "\(error)".contains("both in front and by name")
         }
     }
 

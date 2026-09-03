@@ -47,8 +47,8 @@ struct Lowering {
         at place: Place
     ) throws {
         let declared = table[row]
-        let frame = Frame(origin: declared.origin, variables: variables[declared.origin] ?? [:])
-        var scope = Scope()
+        let frame = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:])
+        var scope = Names()
 
         for (name, _) in declared.parameters {
             scope.slots[name] = frame.allocateParameter(name)
@@ -69,15 +69,15 @@ struct Lowering {
     // Lowers one expression read against a frame of constants, as a constant's
     // own expression is, and as a body's constant path is when it folds. The
     // frame is `names` in slot order.
-    mutating func lower(
+    func lower(
         _ expression: Expression,
         reading names: [String],
         origin: Int,
         label: String,
         at place: Place
     ) throws -> Code {
-        let frame = Frame(origin: origin, variables: [:])
-        var scope = Scope()
+        let frame = Slots(origin: origin, variables: [:])
+        var scope = Names()
 
         for name in names {
             scope.slots[name] = frame.allocate(name)
@@ -89,17 +89,17 @@ struct Lowering {
     // MARK: - Private
     // The names visible at one point of a body, by slot. A value, so a block
     // takes a copy and what it introduces dies with it.
-    private struct Scope {
+    private struct Names {
         var slots: [String: Int] = [:]
     }
 
-    // The frame of one body being lowered. A closure's frame knows the frame
-    // and scope it was written in, and takes a cell from there the first
-    // time its body reads a name it did not declare.
-    private final class Frame {
+    // The slots of one body being lowered. A closure's slots know the slots
+    // and names of the body it was written in, and take a cell from there
+    // the first time the closure reads a name it did not declare.
+    private final class Slots {
         let origin: Int
         let variables: [String: Int]
-        let outer: (frame: Frame, scope: Scope)?
+        let outer: (slots: Slots, names: Names)?
 
         private(set) var names: [String] = []
         private(set) var parameters: [Int] = []
@@ -109,7 +109,7 @@ struct Lowering {
         private var variableSlots: [String: Int] = [:]
         private var capturedSlots: [String: Int] = [:]
 
-        init(origin: Int, variables: [String: Int], outer: (frame: Frame, scope: Scope)? = nil) {
+        init(origin: Int, variables: [String: Int], outer: (slots: Slots, names: Names)? = nil) {
             self.origin = origin
             self.variables = variables
             self.outer = outer
@@ -135,12 +135,12 @@ struct Lowering {
         // then the module's variables. A closure reaches a module variable
         // through the body it was written in, so the hold it takes is that
         // body's.
-        func slot(of name: String, in scope: Scope) -> Int? {
-            if let slot = scope.slots[name] { return slot }
+        func slot(of name: String, in names: Names) -> Int? {
+            if let slot = names.slots[name] { return slot }
 
             if let slot = capturedSlots[name] { return slot }
 
-            if let outer, let taken = outer.frame.slot(of: name, in: outer.scope) {
+            if let outer, let taken = outer.slots.slot(of: name, in: outer.names) {
                 let slot = allocate(name)
                 capturedSlots[name] = slot
                 captures.append((taken, slot))
@@ -164,10 +164,10 @@ struct Lowering {
         }
     }
 
-    private mutating func lower(
+    private func lower(
         _ block: Block,
-        in scope: Scope,
-        on frame: Frame,
+        in scope: Names,
+        on frame: Slots,
         label: String,
         at place: Place
     ) throws -> Body {
@@ -183,10 +183,10 @@ struct Lowering {
     // Statements in order: a statement's expression is lowered before the
     // name it binds exists, so a name reads what the statement before it
     // bound.
-    private mutating func lower(
+    private func lower(
         _ statements: [Statement],
-        in scope: inout Scope,
-        on frame: Frame,
+        in scope: inout Names,
+        on frame: Slots,
         label: String,
         at place: Place
     ) throws -> [Instruction] {
@@ -227,10 +227,10 @@ struct Lowering {
         return instructions
     }
 
-    private mutating func lower(
+    private func lower(
         _ expression: Expression,
-        in scope: Scope,
-        on frame: Frame,
+        in scope: Names,
+        on frame: Slots,
         label: String,
         at place: Place
     ) throws -> Code {
@@ -258,8 +258,8 @@ struct Lowering {
                 throw unjudged("a closure with no body", at: place)
             }
 
-            let inner = Frame(origin: frame.origin, variables: frame.variables, outer: (frame, scope))
-            var innerScope = Scope()
+            let inner = Slots(origin: frame.origin, variables: frame.variables, outer: (frame, scope))
+            var innerScope = Names()
 
             for name in procedure.signature.parameters.keys.sorted() {
                 innerScope.slots[name] = inner.allocateParameter(name)
@@ -372,10 +372,10 @@ struct Lowering {
         }
     }
 
-    private mutating func lower(
+    private func lower(
         _ dispatch: Dispatch,
-        in scope: Scope,
-        on frame: Frame,
+        in scope: Names,
+        on frame: Slots,
         label: String,
         at place: Place
     ) throws -> Send {
@@ -409,6 +409,10 @@ struct Lowering {
             }
 
             if name == callee.signature.receiver, let sent = dispatch.receiver {
+                guard dispatch.arguments[name] == nil else {
+                    throw unjudged("'\(name)' sent to '\(dispatch.selector)' both in front and by name", at: place)
+                }
+
                 receiver = try lower(sent, in: scope, on: frame, label: label, at: place)
                 arguments.append(nil)
 
@@ -423,10 +427,10 @@ struct Lowering {
         return Send(procedure: row, receiver: receiver, arguments: arguments, handed: handed)
     }
 
-    private mutating func lower(
+    private func lower(
         _ path: [PathSegment],
-        in scope: Scope,
-        on frame: Frame,
+        in scope: Names,
+        on frame: Slots,
         at place: Place
     ) throws -> (Int, [Step]) {
         // A mark on the head expects a name to be missing, which is not

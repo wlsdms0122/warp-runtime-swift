@@ -206,10 +206,11 @@ public struct Signature: Sendable, Equatable {
     }
 
     // The boundary itself, over arguments standing at their parameter's
-    // position. `skipping` names the positions a call settles elsewhere: a
-    // receiver written in front of the dot, and a parameter handed a variable
-    // in place. The answer is built from the declaration, never copied from
-    // the caller: only declared names exist inside the boundary.
+    // position. `skipping` names the positions a call fills another way, a
+    // receiver written in front of the dot or a parameter handed a variable
+    // in place, and those answer nil. The answer is built from the
+    // declaration, never copied from the caller: only declared names exist
+    // inside the boundary.
     func settle(
         _ given: [Value?],
         over ordered: [(name: String, parameter: Parameter)],
@@ -239,7 +240,7 @@ public struct Signature: Sendable, Equatable {
             )
         }
 
-        var settled = given
+        var settled: [Value?] = Array(repeating: nil, count: ordered.count)
 
         for (position, (name, parameter)) in ordered.enumerated() where !skipping(position) {
             // An offered null passes through as the value it is, for the same
