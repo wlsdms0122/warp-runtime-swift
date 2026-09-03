@@ -102,9 +102,9 @@ public struct Record: Sendable {
         return found ? entries[position].value : nil
     }
 
-    // This record with one field written: replaced where the name is held,
-    // and put in its place where it is not.
-    public func replacing(_ field: String, with value: Value) -> Record {
+    // This record with one field written: the value replaced where the name
+    // is held, and the field put where it sorts where it is not.
+    public func writing(_ field: String, with value: Value) -> Record {
         var written = entries
         let (position, found) = position(of: field)
 

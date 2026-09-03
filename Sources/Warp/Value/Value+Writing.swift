@@ -23,7 +23,7 @@ extension Value {
         switch (self, segment) {
         case let (.record(record), .key(name, _)):
             return .record(
-                record.replacing(name, with: try (record[name] ?? .null).writing(value, at: rest, under: rendered))
+                record.writing(name, with: try (record[name] ?? .null).writing(value, at: rest, under: rendered))
             )
 
         case let (.array(elements), .index(index, _)):

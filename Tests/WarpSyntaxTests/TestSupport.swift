@@ -148,11 +148,11 @@ extension Loader {
         var written = record
 
         if written[Envelope.versionKey] == nil {
-            written = written.replacing(Envelope.versionKey, with: .int(Envelope.version))
+            written = written.writing(Envelope.versionKey, with: .int(Envelope.version))
         }
 
         if written[Envelope.importsKey] == nil {
-            written = written.replacing(Envelope.importsKey, with: .array([]))
+            written = written.writing(Envelope.importsKey, with: .array([]))
         }
 
         return try load(try canonical(.record(written), from: notation), identity: nil)

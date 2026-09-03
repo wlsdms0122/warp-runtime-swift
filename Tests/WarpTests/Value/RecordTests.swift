@@ -49,15 +49,15 @@ struct RecordTests {
         #expect(sut["a"] == .int(3))
     }
 
-    @Test("replacing writes a held name in place and puts a new one where it sorts")
-    func replacingKeepsTheOrder() {
+    @Test("writing a field replaces a held one in place and puts a new one where it sorts")
+    func writingKeepsTheOrder() {
         // Given
         let sut = Record(name: "app.Point", ["a": .int(1), "c": .int(3)])
 
         // When
-        let replaced = sut.replacing("c", with: .int(30))
-        let inserted = sut.replacing("b", with: .int(2))
-        let appended = sut.replacing("d", with: .int(4))
+        let replaced = sut.writing("c", with: .int(30))
+        let inserted = sut.writing("b", with: .int(2))
+        let appended = sut.writing("d", with: .int(4))
 
         // Then
         #expect(replaced.entries.map(\.value) == [.int(1), .int(30)])

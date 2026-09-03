@@ -44,11 +44,11 @@ public indirect enum Value: Sendable, Equatable {
         .record(Record(name: nil, fields))
     }
 
-    // This record with one field written, or any other value as it is.
-    public func replacing(_ field: String, with value: Value) -> Value {
+    // This value with one field written, or any other value as it is.
+    public func writing(_ field: String, with value: Value) -> Value {
         guard case let .record(record) = self else { return self }
 
-        return .record(record.replacing(field, with: value))
+        return .record(record.writing(field, with: value))
     }
 
     // MARK: - Property

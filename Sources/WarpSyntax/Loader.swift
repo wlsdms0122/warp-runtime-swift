@@ -247,7 +247,7 @@ public struct Loader: Sendable {
     private func stamped(_ value: Value) -> Value {
         guard case let .record(record) = value, record[Envelope.versionKey] == nil else { return value }
 
-        return .record(record.replacing(Envelope.versionKey, with: .int(Envelope.version)))
+        return .record(record.writing(Envelope.versionKey, with: .int(Envelope.version)))
     }
 
     // Every reading goes through here, and so does every refusal one raises.
