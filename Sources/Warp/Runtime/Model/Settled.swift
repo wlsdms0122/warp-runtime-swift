@@ -19,8 +19,6 @@ struct Settled: Sendable {
 
     // MARK: - Initializer
     init(by callee: Linked, values: [Value?]) {
-        precondition(callee.parameters.count == values.count)
-
         self.callee = callee
         self.values = values
     }

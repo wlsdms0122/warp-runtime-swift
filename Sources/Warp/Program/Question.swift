@@ -8,11 +8,12 @@
 import Foundation
 
 public struct Question: Sendable {
-    // The arguments a word reads: settled by the row a run sent, or offered
-    // by name where a caller asks the word directly, with no declaration
-    // behind them.
+    // The arguments a word reads: settled by the row a run sent, with the
+    // run as the way back in for a word handed a procedure, or offered by
+    // name where a caller asks the word directly, with no declaration and no
+    // run behind them.
     private enum Arguments: Sendable {
-        case settled(Settled)
+        case settled(Settled, Executor)
         case offered([String: Value])
     }
 
@@ -22,25 +23,21 @@ public struct Question: Sendable {
     // means: `contains` says false rather than failing.
     public let receiver: Value?
 
+    // The way back in travels with the arguments rather than being handed to
+    // `Query.evaluate`: most words never call anything, and a parameter every
+    // word declares to serve the few that do is a parameter in the wrong
+    // place.
     private let arguments: Arguments
-
-    // The way back in, for a word handed a procedure. It is here rather than
-    // handed to `Query.evaluate` because most words never call anything, and a
-    // parameter every word declares to serve the few that do is a parameter in
-    // the wrong place.
-    private let executor: Executor?
 
     // MARK: - Initializer
     public init(receiver: Value? = nil, arguments: [String: Value] = [:]) {
         self.receiver = receiver
         self.arguments = .offered(arguments)
-        self.executor = nil
     }
 
     init(receiver: Value?, settled: Settled, executor: Executor) {
         self.receiver = receiver
-        self.arguments = .settled(settled)
-        self.executor = executor
+        self.arguments = .settled(settled, executor)
     }
 
     // MARK: - Public
@@ -48,7 +45,7 @@ public struct Question: Sendable {
     // null are the same fact here, the same as they are everywhere else.
     public subscript(name: String) -> Value {
         switch arguments {
-        case let .settled(settled):
+        case let .settled(settled, _):
             return settled[name]
 
         case let .offered(offered):
@@ -67,7 +64,7 @@ public struct Question: Sendable {
             )
         }
 
-        guard let executor else {
+        guard case let .settled(_, executor) = self.arguments else {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 
