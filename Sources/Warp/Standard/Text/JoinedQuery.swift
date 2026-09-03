@@ -29,19 +29,8 @@ public struct JoinedQuery: Query {
             )
         }
 
-        // The declaration's default fills the separator inside a link; asked
-        // directly, the word answers the same for nothing.
-        let separator: String
-
-        switch question["value"] {
-        case .null:
-            separator = ""
-
-        case let .string(written):
-            separator = written
-
-        default:
-            throw ExecutionError("joined asks a non-string separator")
+        guard case let .string(separator) = question["value"] else {
+            throw ExecutionError("joined asks a string separator, and \(question["value"].type) arrived")
         }
 
         let written = try elements.map { element -> String in

@@ -7,29 +7,22 @@
 
 import Foundation
 
-// The arguments as settling left them: each value standing at its
-// parameter's position, beside the declaration of that position. A native
-// reads one by name, and the name is found along the declaration rather than
-// hashed: a declaration has a few parameters, and a word asks for each once.
+// The arguments as a row's boundary left them: one value per parameter of
+// the row, standing at that parameter's position. The row is the owner of
+// the positions, so a name is read by asking the row where it stands. A
+// declaration has a few parameters and a word asks for each once, so the
+// name is found along the declaration rather than hashed.
 struct Settled: Sendable {
     // MARK: - Property
-    let parameters: [(name: String, parameter: Parameter)]
+    let callee: Linked
     let values: [Value?]
 
     // MARK: - Initializer
-    // The values a row's boundary settled, one per parameter of the row.
     init(by callee: Linked, values: [Value?]) {
         precondition(callee.parameters.count == values.count)
 
-        self.parameters = callee.parameters
+        self.callee = callee
         self.values = values
-    }
-
-    // Arguments a caller offers by name with no declaration behind them, so
-    // each stands as undeclared: what `any` says.
-    init(offered arguments: [String: Value]) {
-        self.parameters = arguments.keys.map { name in (name: name, parameter: Parameter()) }
-        self.values = arguments.keys.map { name in arguments[name] }
     }
 
     // MARK: - Public
@@ -41,9 +34,9 @@ struct Settled: Sendable {
         return values[position] ?? .null
     }
 
-    // Where a name stands, or nil for a name the declaration lacks.
+    // Where a name stands in the row, or nil for a name the row lacks.
     func position(of name: String) -> Int? {
-        parameters.firstIndex { declared, _ in declared == name }
+        callee.parameters.firstIndex { declared, _ in declared == name }
     }
 
     // MARK: - Private
