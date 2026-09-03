@@ -224,7 +224,7 @@ public struct Executor: Sendable {
                     )
                 }
 
-                try handle.write(result, at: try positioned(steps, in: activation))
+                try handle.write(result, at: try positioned(slot, steps, in: activation))
 
             // A nameless statement ran for its effect, and the answer is
             // dropped, which is what leaving the name off said.
@@ -377,21 +377,20 @@ public struct Executor: Sendable {
 
         case let .effect(effect):
             let holds = try holds(send.handed, of: callee, in: activation)
-            // A receiver handed in place is read for the effect as what its
-            // hold holds now, the way the effect reads any receiver.
-            let receiver = try received(send, of: callee, in: activation)
-                ?? holds.first { position, _ in position == callee.receiverPosition }.map { _, handle in try handle.value() }
             let settled = try settled(
                 callee,
                 given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
                 skipping: skipped(send, of: callee, holding: true)
             )
+            // A receiver handed in place is read for the effect as what its
+            // hold holds now, the way the effect reads any receiver.
+            let held = try holds.first { position, _ in position == callee.receiverPosition }.map { _, handle in try handle.value() }
 
             return try await effect.run(
                 Invocation(
                     selector: callee.label,
                     signature: callee.signature,
-                    receiver: receiver,
+                    receiver: sent(to: callee, receiver: try received(send, of: callee, in: activation) ?? held, arguments: settled),
                     arguments: named(settled, of: callee),
                     holds: holds.reduce(into: [:]) { table, entry in
                         table[callee.parameters[entry.0].name] = entry.1
@@ -654,7 +653,7 @@ public struct Executor: Sendable {
                 )
             }
 
-            return (handed.position, handle.extended(by: try positioned(handed.path, in: activation)))
+            return (handed.position, handle.extended(by: try positioned(handed.slot, handed.path, in: activation)))
         }
     }
 
@@ -767,10 +766,7 @@ public struct Executor: Sendable {
     // are answerable without suspending: one because it is native and says
     // so, the other because the link proved it.
     private func answer(_ callee: Linked, for receiver: Value?, with arguments: [Value?]) throws -> Value {
-        // A receiver is a parameter, so it reaches a native the same way whether
-        // it was written on the other side of the dot or by its own name. The
-        // two spellings are one call.
-        let sent = receiver ?? callee.receiverPosition.flatMap { position in arguments[position] }
+        let sent = sent(to: callee, receiver: receiver, arguments: arguments)
 
         switch callee.implementation {
         // Absent and null are the same fact, and a word asked about nothing
@@ -807,6 +803,13 @@ public struct Executor: Sendable {
                 "this answers only by running, so it cannot be read as data here"
             )
         }
+    }
+
+    // What a call was sent to. A receiver is a parameter, so it reaches a
+    // native the same way whether it was written on the other side of the
+    // dot or by its own name: the two spellings are one call.
+    private func sent(to callee: Linked, receiver: Value?, arguments: [Value?]) -> Value? {
+        receiver ?? callee.receiverPosition.flatMap { position in arguments[position] }
     }
 
     // A pure body, read without running. Instructions bind in order and the
@@ -1037,7 +1040,7 @@ public struct Executor: Sendable {
 
     // Every index reference read to a position: a write lands on one
     // position, and a hold is extended by positions.
-    private func positioned(_ steps: [Step], in activation: Activation) throws -> [PathSegment] {
+    private func positioned(_ head: Int, _ steps: [Step], in activation: Activation) throws -> [PathSegment] {
         try steps.map { step in
             switch step {
             case let .key(name, optional):
@@ -1049,7 +1052,7 @@ public struct Executor: Sendable {
             case let .at(slot, inner, optional):
                 guard case let .int(index) = try found(slot, inner, in: activation) else {
                     throw ExecutionError(
-                        "'\(spelled(steps, in: activation).rendered)' indexes with"
+                        "'\(spelled(head, steps, in: activation).rendered)' indexes with"
                             + " '\(spelled(slot, inner, in: activation).rendered)', which is not an int"
                     )
                 }

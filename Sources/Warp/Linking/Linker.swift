@@ -430,32 +430,6 @@ public struct Linker: Sendable {
         }
     }
 
-    // A constant's or a variable's expression, settled the way a run reads
-    // it: lowered against the settled neighbours as a frame, and read by the
-    // executor over the table as it stands. A closure the expression holds
-    // is carried in the code, not in the table.
-    private func folded(
-        _ expression: Expression,
-        reading known: [String: Value],
-        origin: Int,
-        label: String,
-        at place: Place,
-        lowering: Lowering,
-        in types: TypeTable
-    ) throws -> Value {
-        let names = known.keys.sorted()
-        let code = try lowering.lower(expression, reading: names, origin: origin, label: label, at: place)
-
-        return try Executor(observer: nil, environment: nil, linked: lowering.table, types: types)
-            .read(
-                code,
-                in: Activation(
-                    cells: names.map { name in .value(known[name] ?? .null) },
-                    layout: Layout(size: names.count, parameters: [], variables: [], names: names)
-                )
-            )
-    }
-
     // The one gate every gathered send passes, wherever its body sits — a
     // procedure, a word, a constant's closure. The call carries the
     // declaration the walk found for it, and is judged against that.
@@ -1320,15 +1294,14 @@ public struct Linker: Sendable {
                 try checked(calls, in: frame)
 
                 do {
-                    known[name] = try folded(
-                        judged,
-                        reading: known,
+                    known[name] = try Folding(
+                        constants: known,
                         origin: origin,
-                        label: name,
-                        at: .constant(name, in: .of(module)),
-                        lowering: lowering,
-                        in: types
-                    )
+                        table: lowering.table,
+                        rows: lowering.rows,
+                        words: lowering.words,
+                        types: types
+                    ).read(judged, at: .constant(name, in: .of(module)))
                 } catch let refused as LinkError {
                     throw refused
                 } catch {
@@ -1371,15 +1344,14 @@ public struct Linker: Sendable {
                 try checked(calls, in: frame)
 
                 do {
-                    started[name] = try folded(
-                        judged,
-                        reading: known,
+                    started[name] = try Folding(
+                        constants: known,
                         origin: origin,
-                        label: name,
-                        at: .variable(name, in: .of(module)),
-                        lowering: lowering,
-                        in: types
-                    )
+                        table: lowering.table,
+                        rows: lowering.rows,
+                        words: lowering.words,
+                        types: types
+                    ).read(judged, at: .variable(name, in: .of(module)))
                 } catch let refused as LinkError {
                     throw refused
                 } catch {

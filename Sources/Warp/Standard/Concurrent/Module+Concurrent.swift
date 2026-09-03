@@ -31,7 +31,7 @@ public extension Module {
                     parameters: ["of": Parameter(type: .any)],
                     returns: .any
                 ),
-                implementation: .effect(ConcurrentEffect(.all, receiving: "of"))
+                implementation: .effect(ConcurrentEffect(.all))
             ),
             "std.concurrent.first": Procedure(
                 description: "Runs every closure, answers the first success and"
@@ -42,7 +42,7 @@ public extension Module {
                     parameters: ["of": Parameter(type: .any)],
                     returns: .any
                 ),
-                implementation: .effect(ConcurrentEffect(.first, receiving: "of"))
+                implementation: .effect(ConcurrentEffect(.first))
             ),
             "std.concurrent.map": Procedure(
                 description: "Runs one closure once per element, offering each"
@@ -68,7 +68,7 @@ public extension Module {
                     ],
                     returns: .array(.parameter(name: "Answer"))
                 ),
-                implementation: .effect(ConcurrentEffect(.map, receiving: "over"))
+                implementation: .effect(ConcurrentEffect(.map))
             )
         ]
     )

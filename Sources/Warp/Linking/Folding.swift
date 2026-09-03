@@ -44,7 +44,9 @@ struct Folding {
 
     // Against native words alone: every declaration of the modules by its
     // spelling and by its last segment, a written body standing as the
-    // refusal it earns before it is lowered. What a constant settles from.
+    // refusal it earns before it is lowered. What a constant settles from. A
+    // native's purity is its own; a written body is never run here, so its
+    // purity is not asked.
     init(bindings: [String: Value], natives modules: [Module], types: TypeTable = TypeTable()) {
         var table: [Linked] = []
         var rows: [String: Int] = [:]
@@ -84,10 +86,14 @@ struct Folding {
     // code, so the table is read and never grown.
     func read(_ expression: Expression, at place: Place = .given("folding")) throws -> Value {
         let lowering = Lowering(table: table, rows: rows, words: words, variables: [:])
-        let code = try lowering.lower(expression, reading: names, origin: origin, label: "", at: place)
+        let (code, layout) = try lowering.lower(expression, reading: names, origin: origin, label: "", at: place)
+        var activation = Activation(layout)
 
-        return try Executor(observer: nil, environment: nil, linked: lowering.table, types: types)
-            .read(code, in: Activation(cells: cells, layout: Layout(size: names.count, parameters: [], variables: [], names: names)))
+        for (slot, cell) in cells.enumerated() {
+            activation.cells[slot] = cell
+        }
+
+        return try Executor(observer: nil, environment: nil, linked: table, types: types).read(code, in: activation)
     }
 
     // MARK: - Private

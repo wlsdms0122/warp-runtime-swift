@@ -58,15 +58,10 @@ public struct ConcurrentEffect: Effect {
     // MARK: - Property
     private let word: Word
 
-    // The receiver parameter's name, handed in beside the word because the
-    // one other place it lives is the Signature this module declares — a
-    // ternary here would be a second copy nothing keeps in step.
-    private let receiving: String
 
     // MARK: - Initializer
-    public init(_ word: Word, receiving: String) {
+    public init(_ word: Word) {
         self.word = word
-        self.receiving = receiving
     }
 
     // MARK: - Public
@@ -192,7 +187,7 @@ public struct ConcurrentEffect: Effect {
     }
 
     private func material(of invocation: Invocation) throws -> Value {
-        invocation.receiver ?? invocation[receiving]
+        invocation.receiver ?? .null
     }
 
     private func closure(_ value: Value, called label: String) throws -> Closure {

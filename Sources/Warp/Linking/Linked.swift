@@ -65,7 +65,8 @@ public final class Linked: Sendable {
     // MARK: - Public
     // A declaration's row before its body is lowered: a native answers as it
     // is, and a written body stands as the refusal it earns until then, so
-    // nothing folds through a body half-made.
+    // nothing folds through a body half-made. Until it is lowered such a row
+    // is not written, since what it holds is the refusal.
     static func standing(
         label: String,
         origin: Int,

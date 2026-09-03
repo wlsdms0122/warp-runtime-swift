@@ -68,14 +68,15 @@ struct Lowering {
 
     // Lowers one expression read against a frame of constants, as a constant's
     // own expression is, and as a body's constant path is when it folds. The
-    // frame is `names` in slot order.
+    // frame starts as `names` in slot order and grows with what the
+    // expression declares; the layout says how large it is.
     func lower(
         _ expression: Expression,
         reading names: [String],
         origin: Int,
         label: String,
         at place: Place
-    ) throws -> Code {
+    ) throws -> (Code, Layout) {
         let frame = Slots(origin: origin, variables: [:])
         var scope = Names()
 
@@ -83,7 +84,9 @@ struct Lowering {
             scope.slots[name] = frame.allocate(name)
         }
 
-        return try lower(expression, in: scope, on: frame, label: label, at: place)
+        let code = try lower(expression, in: scope, on: frame, label: label, at: place)
+
+        return (code, frame.layout)
     }
 
     // MARK: - Private
