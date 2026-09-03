@@ -44,6 +44,17 @@ final class ShapeTable: Sendable {
         shapes.isEmpty && constraints.isEmpty
     }
 
+    // The rows that name themselves through a chain of names: each lowered
+    // to the shape that refuses its own spelling. The link's one reading of
+    // which declarations reach no shape.
+    var circling: [Int] {
+        shapes.indices.filter { row in
+            guard case let .undeclared(label, _) = shapes[row] else { return false }
+
+            return Name.same(label, labels[row])
+        }
+    }
+
     // MARK: - Initializer
     init(shapes: [Shape], constraints: [[Shape]], labels: [String], constraintLabels: [String], recordRows: [Int?]) {
         self.shapes = shapes

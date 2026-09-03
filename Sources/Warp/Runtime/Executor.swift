@@ -1003,7 +1003,7 @@ public struct Executor: Sendable {
     // as a field never set. A word that took the shape and then refused did not
     // decline it, so that refusal is answered rather than swallowed.
     private func derive(_ callee: Linked, from value: Value) throws -> Value? {
-        guard callee.isDerivable() else { return nil }
+        guard callee.isDerivable else { return nil }
 
         guard
             let receiver = try? callee.settling(receiver: value),

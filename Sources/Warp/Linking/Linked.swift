@@ -46,6 +46,12 @@ public final class Linked: Sendable {
     // so a run that is handed one asks whether it was made by the same link.
     let table: ShapeTable
 
+    // Whether a path segment may reach this: it takes a receiver, so there is
+    // something for the walk to send it to, and it needs nothing else. A row
+    // that answers `never` is reachable by neither: a path reads a value, and
+    // this one leaves instead of producing one.
+    let isDerivable: Bool
+
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -59,18 +65,21 @@ public final class Linked: Sendable {
         in table: ShapeTable
     ) {
         let slots = signature.lowered(in: table)
+        let returns = signature.returns?.lowered(in: table)
+        let receiverPosition = signature.receiver.flatMap { receiver in
+            slots.firstIndex { slot in Name.same(slot.name, receiver) }
+        }
 
         self.label = label
         self.origin = origin
         self.signature = signature
-        self.receiverPosition = signature.receiver.flatMap { receiver in
-            slots.firstIndex { slot in Name.same(slot.name, receiver) }
-        }
+        self.receiverPosition = receiverPosition
         self.purity = purity
         self.isolation = isolation
         self.slots = slots
-        self.returns = signature.returns?.lowered(in: table)
+        self.returns = returns
         self.table = table
+        self.isDerivable = slots.derivable(receiver: receiverPosition, returns: returns, in: table)
         self.implementation = implementation
     }
 
@@ -141,14 +150,6 @@ public final class Linked: Sendable {
         guard let returns else { return value }
 
         return try returns.settling(value, at: "returns", in: table)
-    }
-
-    // Whether a path segment may reach this: it takes a receiver, so there is
-    // something for the walk to send it to, and it needs nothing else. A row
-    // that answers `never` is reachable by neither: a path reads a value, and
-    // this one leaves instead of producing one.
-    func isDerivable() -> Bool {
-        slots.derivable(receiver: receiverPosition, returns: returns, in: table)
     }
 
     // Whether a run reading that table can read this row: the row was made

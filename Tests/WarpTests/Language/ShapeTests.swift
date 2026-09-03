@@ -282,6 +282,23 @@ struct ShapeTests {
         #expect(TypeExpression.named("app.T").declaresNull(in: table))
     }
 
+    @Test("the link refuses a chain of names that comes back on itself under a wrapper")
+    func theLinkRefusesACircleUnderAWrapper() throws {
+        // Given
+        let sut = try Module(
+            imports: [],
+            types: ["app.A": .nullable(.named("app.B")), "app.B": .named("app.A")],
+            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is LinkError && "\(error)".contains("through nothing but names")
+        }
+    }
+
     @Test("a row is found by the bytes of its spelling, and not by an equivalent one")
     func aRowIsFoundByBytes() {
         // Given: a declared name written composed, and asked for decomposed

@@ -1172,7 +1172,7 @@ extension Linker {
             var flowed = Flow()
             var fields: [String: TypeExpression] = [:]
 
-            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in record.sorted(by: { Name.precedes($0.key, $1.key) }) {
                 let inner = try inspected(
                     field,
                     at: place.key(name),

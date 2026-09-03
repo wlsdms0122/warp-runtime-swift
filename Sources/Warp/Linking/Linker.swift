@@ -678,26 +678,26 @@ public struct Linker: Sendable {
         declared: [String: Declared<TypeExpression>],
         constraints members: [String: Declared<[TypeExpression]>]
     ) throws -> TypeTable {
-        // A name that reaches a shape may name itself along the way — `Tree`
+        let table = TypeTable(
+            types: declared.mapValues(\.held),
+            constraints: members.mapValues(\.held)
+        )
+
+        // A name that reaches a shape may name itself along the way: `Tree`
         // holding `array<Tree>` is a shape. A name that reaches only names
-        // never becomes one, and everything that resolves names would chase
-        // it forever — so the cycle is refused here, and every later walk
-        // through `named` is finite because of it.
-        for (name, declaration) in declared.sorted(by: { Name.precedes($0.key, $1.key) }) {
-            var seen: Set<String> = [name]
-            var current: TypeExpression? = declaration.held
+        // never becomes one, and the lowering says which do, so the refusal
+        // reads the lowering rather than walking the names a second way.
+        // Refused first, so every walk below through `named` is finite.
+        for row in table.shapes.circling {
+            let label = table.shapes.labels[row]
 
-            while case let .named(next) = current {
-                guard seen.insert(next).inserted else {
-                    throw LinkError(
-                        "reaches itself through nothing but names"
-                            + " — a name that only names names never reaches a shape",
-                        at: declaration.place
-                    )
-                }
+            guard let declaration = declared[label] else { continue }
 
-                current = declared[next]?.held
-            }
+            throw LinkError(
+                "reaches itself through nothing but names, and a name"
+                    + " that only names names never reaches a shape",
+                at: declaration.place
+            )
         }
 
         for (_, declaration) in members.sorted(by: { Name.precedes($0.key, $1.key) }) {
@@ -718,7 +718,7 @@ public struct Linker: Sendable {
             // a member that names another constraint is what keeps the
             // membership judgment from ever chasing itself. Judged through
             // every name a member hides behind, or one alias would carry
-            // the refused shape in — the chain is finite because a
+            // the refused shape in. The chain is finite because a
             // name-only cycle was refused above.
             for member in admitted {
                 var resolved = member
@@ -741,11 +741,6 @@ public struct Linker: Sendable {
                 }
             }
         }
-
-        let table = TypeTable(
-            types: declared.mapValues(\.held),
-            constraints: members.mapValues(\.held)
-        )
 
         // The two spaces are walked from the tables rather than per module:
         // they arrive carrying where each name was written, and asking a module

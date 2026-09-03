@@ -55,8 +55,7 @@ indirect enum Shape: Sendable {
     // lets it pass, and the value judge refuses it in the refusal's words.
     // A table a host built by hand answers instead of failing to lower, and
     // only the judgments that reach the name are touched by it. The link
-    // refuses such a name before anything is lowered, so a run never meets
-    // one.
+    // refuses such a name as it lowers the table, so a run never meets one.
     case undeclared(label: String, refusal: String)
 
     // MARK: - Property
