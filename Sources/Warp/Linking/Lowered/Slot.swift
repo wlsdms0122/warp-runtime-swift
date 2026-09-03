@@ -28,11 +28,8 @@ final class Slot: Sendable {
     }
 
     // MARK: - Public
-    // Whether a call must write this argument. A default answers omission
-    // with a value; a type that declares null answers it with the null it
-    // holds. Without either, omission is a missing argument.
     func mustBeGiven(in table: ShapeTable) -> Bool {
-        `default` == nil && !shape.declaresNull(in: table)
+        shape.mustBeGiven(default: `default`, in: table)
     }
 
     // An argument as given, or the default where nothing was.

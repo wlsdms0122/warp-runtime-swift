@@ -44,7 +44,7 @@ extension ShapeTable {
             var row = start
             var walked: [Int] = [start]
 
-            while case let .named(next) = shapes[row] {
+            while let next = shapes[row].row {
                 guard !walked.contains(next) else { return nil }
 
                 walked.append(next)

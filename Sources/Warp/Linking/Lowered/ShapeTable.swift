@@ -32,8 +32,10 @@ final class ShapeTable: Sendable {
     // and not a second type. Nil where a row stands for no record.
     let recordRows: [Int?]
 
-    private let rows: [String: Int]
-    private let constraintRows: [String: Int]
+    // Keyed by bytes, the comparison `Name.same` makes: two spellings Swift
+    // calls equal are two names here.
+    private let rows: [[UInt8]: Int]
+    private let constraintRows: [[UInt8]: Int]
 
     static let empty = ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
 
@@ -49,9 +51,11 @@ final class ShapeTable: Sendable {
         self.labels = labels
         self.constraintLabels = constraintLabels
         self.recordRows = recordRows
-        self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
+        self.rows = Dictionary(
+            uniqueKeysWithValues: labels.enumerated().map { row, label in (Array(label.utf8), row) }
+        )
         self.constraintRows = Dictionary(
-            uniqueKeysWithValues: constraintLabels.enumerated().map { row, label in (label, row) }
+            uniqueKeysWithValues: constraintLabels.enumerated().map { row, label in (Array(label.utf8), row) }
         )
     }
 
@@ -60,11 +64,11 @@ final class ShapeTable: Sendable {
     // lowering a document's type and for a record that arrived under an
     // alias; the run reads rows by number otherwise.
     func row(named name: String) -> Int? {
-        rows[name]
+        rows[Array(name.utf8)]
     }
 
     func constraintRow(named name: String) -> Int? {
-        constraintRows[name]
+        constraintRows[Array(name.utf8)]
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -120,20 +124,11 @@ final class ShapeTable: Sendable {
         return admits(constraint: row, reading: reading.lowered(in: self), assuming: [])
     }
 
-    // The record a shape names, through the names and the slot facts that
-    // wrap it, or nil where it names none. The one reading of `recordRows`
-    // for a shape that is not itself a row.
+    // The record a shape names through the row it stands on, or nil where it
+    // names none. The one reading of `recordRows` for a shape that is not
+    // itself a row.
     func record(of shape: Shape) -> Int? {
-        switch shape {
-        case let .named(row):
-            return recordRows[row]
-
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return record(of: inner)
-
-        default:
-            return nil
-        }
+        shape.row.flatMap { row in recordRows[row] }
     }
 
     // MARK: - Private

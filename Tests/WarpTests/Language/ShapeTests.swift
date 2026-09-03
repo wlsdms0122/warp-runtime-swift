@@ -112,7 +112,7 @@ struct ShapeTests {
         } throws: { error in
             "\(error)".contains("input 'x': declares type 'bank.Vault', which nothing declares")
         }
-        #expect(!TypeExpression.named("bank.Vault").accepts(.int, in: types))
+        #expect(TypeExpression.named("bank.Vault").accepts(.int, in: types))
     }
 
     @Test("a linked row settles a bounded parameter by row, and its slots carry the lowering")
@@ -232,7 +232,7 @@ struct ShapeTests {
         #expect(Parameter(type: .named("app.C"), default: .int(0)).mustBeGiven(in: circular) == false)
     }
 
-    @Test("one undeclared name touches only the judgments that reach it")
+    @Test("one undeclared name passes every reading and is refused where a value meets it")
     func anUndeclaredNameTouchesOnlyItsOwnJudgments() {
         // Given: a table with one bad row beside a good one
         let table = TypeTable(types: ["app.Bad": .named("app.Missing"), "app.Good": .nullable(.int)])
@@ -240,13 +240,60 @@ struct ShapeTests {
         // When / Then
         #expect(TypeExpression.named("app.Good").declaresNull(in: table))
         #expect(TypeExpression.named("app.Good").accepts(.int, in: table))
-        #expect(!TypeExpression.named("app.Bad").accepts(.int, in: table))
+        #expect(TypeExpression.named("app.Bad").accepts(.int, in: table))
+        #expect(TypeExpression.int.accepts(.named("app.Bad"), in: table))
+        #expect(TypeExpression.named("app.Bad").couldBothHold(.int, in: table))
         #expect(!TypeExpression.named("app.Bad").declaresNull(in: table))
         #expect {
             try TypeExpression.named("app.Bad").settling(.int(1), at: "input", in: table)
         } throws: { error in
             "\(error)".contains("input: declares type 'app.Missing', which nothing declares")
         }
+    }
+
+    @Test("a name that reaches itself under a wrapper is a circle, and the value judge says so")
+    func aCircleUnderAWrapperIsRefusedNotChased() {
+        // Given: a table built by hand, which the link's refusals never saw
+        let table = TypeTable(
+            types: [
+                "app.M": .nullable(.named("app.M")),
+                "app.A": .variable(.named("app.B")),
+                "app.B": .inout(.named("app.A")),
+                "app.T": .nullable(.named("app.Leaf")),
+                "app.Leaf": .int
+            ]
+        )
+
+        // When / Then: each circle is refused where a value meets it, and a
+        // chain that ends is walked to its end
+        #expect {
+            try TypeExpression.named("app.M").settling(.int(1), at: "input", in: table)
+        } throws: { error in
+            "\(error)".contains("input: declares type 'app.M', which names itself")
+        }
+        #expect {
+            try TypeExpression.named("app.A").settling(.int(1), at: "input", in: table)
+        } throws: { error in
+            "\(error)".contains("input: declares type 'app.A', which names itself")
+        }
+        #expect(throws: Never.self) {
+            try TypeExpression.named("app.T").settling(.int(1), at: "input", in: table)
+        }
+        #expect(TypeExpression.named("app.T").declaresNull(in: table))
+    }
+
+    @Test("a row is found by the bytes of its spelling, and not by an equivalent one")
+    func aRowIsFoundByBytes() {
+        // Given: a declared name written composed, and asked for decomposed
+        let composed = "app.Caf\u{E9}"
+        let decomposed = "app.Cafe\u{301}"
+        let table = TypeTable(types: [composed: .int])
+
+        // When / Then: Swift calls the two spellings equal, and the table
+        // does not
+        #expect(composed == decomposed)
+        #expect(table.shapes.row(named: composed) == 0)
+        #expect(table.shapes.row(named: decomposed) == nil)
     }
 
     @Test("a procedure another link made is refused by a run, not read by its rows")

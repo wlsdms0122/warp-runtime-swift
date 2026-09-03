@@ -18,19 +18,14 @@ public struct Parameter: Sendable, Equatable {
     public let `default`: Value?
     public let hint: String?
 
-    // Whether a call must write this argument — the one question, answered in
-    // one place for the call check, the boundary and path reachability alike.
-    // A default answers omission with a value; a type that declares null
-    // (`T?`) answers it with the null it holds. Without either, omission is a
-    // missing argument. Optionality has no third axis.
+    // Whether a call must write this argument: the shape's one answer, for
+    // the call check, the boundary and path reachability alike.
     public func mustBeGiven(in types: TypeTable) -> Bool {
         mustBeGiven(in: types.shapes)
     }
 
-    // The slot's question, asked through the slot. The name is a refusal's
-    // and no refusal is made here.
     func mustBeGiven(in table: ShapeTable) -> Bool {
-        lowered(named: "", in: table).mustBeGiven(in: table)
+        declared.lowered(in: table).mustBeGiven(default: `default`, in: table)
     }
 
     // What this reads as where a type is needed regardless. An undeclared

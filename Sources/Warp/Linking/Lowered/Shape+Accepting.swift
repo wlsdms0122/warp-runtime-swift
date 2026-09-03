@@ -8,9 +8,12 @@
 import Foundation
 
 // The reading judges: whether one shape may stand where another is
-// declared, and whether some value could satisfy two shapes at once. The
-// link asks them of readings; the run asks the first of a closure value
-// that reached a procedure slot through `any`.
+// declared, whether some value could satisfy two shapes at once, and
+// whether a candidate spelling could ever be a value of a shape. The link
+// asks them of readings; the run asks the first of a closure value that
+// reached a procedure slot through `any`. A name the table does not answer
+// passes every one of them: nothing is knowable about it here, and the
+// value judge refuses it where a value arrives.
 extension Shape {
     // Whether a value of `other` may stand where this is declared.
     // Structural, and one-directional: `any` on the left accepts anything
@@ -64,10 +67,8 @@ extension Shape {
         case (.never, _):
             return false
 
-        // A name nothing answers stands for no shape, so nothing fits it and
-        // it fits nothing.
         case (.undeclared, _), (_, .undeclared):
-            return false
+            return true
 
         case let (.named(row), _):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
@@ -214,8 +215,6 @@ extension Shape {
 
         if provesNothing || other.provesNothing { return true }
 
-        // A name nothing answers is left to the run, the way a name not yet
-        // resolved was.
         if case .undeclared = self { return true }
         if case .undeclared = other { return true }
 
@@ -260,6 +259,50 @@ extension Shape {
             return Shape.witnesses.contains { witness in
                 mine.settles(witness, in: table) && theirs.settles(witness, in: table)
             }
+        }
+    }
+
+    // Whether a `oneOf` candidate could ever be a spelling of a value of this
+    // shape. Candidates are written as the scalar spellings arguments are
+    // compared under, so a shape with no scalar spelling spells none of
+    // them, and a number is read by the spelling the boundary reads: `1e0`
+    // is a fraction no fraction spells, so no call could ever match it.
+    func spells(_ candidate: String, in table: ShapeTable) -> Bool {
+        switch self {
+        case .any, .string, .undeclared:
+            return true
+
+        case .int, .double, .number:
+            return numeral(candidate, in: table) != nil
+
+        // A candidate has to be a value the range itself would admit.
+        case let .ranged(refinement):
+            guard let value = refinement.shape.numeral(candidate, in: table) else { return false }
+            guard case .settled = refinement.settling(value) else { return false }
+
+            return true
+
+        case .bool:
+            return candidate == "true" || candidate == "false"
+
+        // An unbounded type parameter is filled by the call, so nothing about
+        // the candidates is knowable here. A bounded one takes only what some
+        // member of its constraint could spell.
+        case let .parameter(_, constraint):
+            guard let constraint else { return true }
+
+            return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
+
+        case let .named(row):
+            return table.shapes[row].spells(candidate, in: table)
+
+        // A candidate spells a value, and null is not one a `oneOf` lists, so
+        // a nullable slot's candidates are the declared half's.
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.spells(candidate, in: table)
+
+        case .null, .never, .bytes, .array, .object, .record, .procedure:
+            return false
         }
     }
 

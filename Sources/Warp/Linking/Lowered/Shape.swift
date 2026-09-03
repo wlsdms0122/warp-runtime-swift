@@ -51,10 +51,12 @@ indirect enum Shape: Sendable {
     case parameter(label: String, constraint: Int?)
 
     // A name the table does not answer: nothing declares it, or it names
-    // itself. Every judgment refuses it in the refusal's words, so a table
-    // a host built by hand answers instead of failing to lower, and only the
-    // judgments that reach the name are touched by it. The link refuses such
-    // a name before anything is lowered, so a run never meets one.
+    // itself. Nothing can be said about it, so every judgment over readings
+    // lets it pass, and the value judge refuses it in the refusal's words.
+    // A table a host built by hand answers instead of failing to lower, and
+    // only the judgments that reach the name are touched by it. The link
+    // refuses such a name before anything is lowered, so a run never meets
+    // one.
     case undeclared(label: String, refusal: String)
 
     // MARK: - Property
@@ -62,6 +64,23 @@ indirect enum Shape: Sendable {
         if case let .inout(inner) = self { return inner }
 
         return self
+    }
+
+    // The row this stands on, through `?`, `var` and `inout`, which hold no
+    // value of their own. Nil for a shape that names no row. What follows a
+    // chain of names follows this, so a name reached under a wrapper is a
+    // link of the chain and not its end.
+    var row: Int? {
+        switch self {
+        case let .named(row):
+            return row
+
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.row
+
+        default:
+            return nil
+        }
     }
 
     // The spelling with its conditions dropped: a range is its kind, and
