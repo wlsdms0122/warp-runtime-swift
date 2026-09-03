@@ -26,6 +26,20 @@ public enum Name {
         name.precomposedStringWithCanonicalMapping.utf8.elementsEqual(name.utf8)
     }
 
+    // Whether one name orders before another, as bytes. Every place that
+    // puts names in order reads this one predicate: a record's entries, a
+    // signature's parameter positions, a canonical writer's keys. Swift's
+    // `<` orders under canonical equivalence and would put two spellings of
+    // one name in one place.
+    public static func precedes(_ name: String, _ other: String) -> Bool {
+        name.utf8.lexicographicallyPrecedes(other.utf8)
+    }
+
+    // Whether two names are one name, as bytes.
+    public static func same(_ name: String, _ other: String) -> Bool {
+        name.utf8.elementsEqual(other.utf8)
+    }
+
     // An identifier as every encoding writes one bare: ASCII on purpose, since
     // "is this a letter" for the rest of Unicode is answered by whatever
     // tables a host language shipped, and a canonical layout cannot depend

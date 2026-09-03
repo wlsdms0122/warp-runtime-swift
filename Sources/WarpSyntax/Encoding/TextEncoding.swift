@@ -526,7 +526,7 @@ public enum TextEncoding {
             text += "{\n"
 
             let fields = object.map { field in (Array(field.key.utf8), field.key, field.value) }
-                .sorted { one, other in one.0.lexicographicallyPrecedes(other.0) }
+                .sorted { one, other in Name.precedes(one.1, other.1) }
 
             for (_, key, value) in fields {
                 // The same rule the reader holds: one name, one byte spelling

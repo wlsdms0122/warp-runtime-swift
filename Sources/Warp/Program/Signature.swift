@@ -168,7 +168,7 @@ public struct Signature: Sendable, Equatable {
     // The parameters in the order arguments stand in.
     public var ordered: [(name: String, parameter: Parameter)] {
         parameters
-            .sorted { left, right in left.key < right.key }
+            .sorted { left, right in Name.precedes(left.key, right.key) }
             .map { entry in (name: entry.key, parameter: entry.value) }
     }
 

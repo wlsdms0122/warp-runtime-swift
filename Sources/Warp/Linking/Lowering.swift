@@ -252,7 +252,7 @@ struct Lowering {
             })
 
         case let .record(record):
-            return .record(try record.sorted { $0.key < $1.key }.map { name, field in
+            return .record(try record.sorted { Name.precedes($0.key, $1.key) }.map { name, field in
                 (name, try lower(field, in: scope, on: frame, label: label, at: place))
             })
 
@@ -264,7 +264,7 @@ struct Lowering {
             let inner = Slots(origin: frame.origin, variables: frame.variables, outer: (frame, scope))
             var innerScope = Names()
 
-            for name in procedure.signature.parameters.keys.sorted() {
+            for (name, _) in procedure.signature.ordered {
                 innerScope.slots[name] = inner.allocateParameter(name)
             }
 
