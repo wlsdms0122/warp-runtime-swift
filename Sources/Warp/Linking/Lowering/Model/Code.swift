@@ -36,9 +36,9 @@ indirect enum Code: Sendable {
     case block(Body)
     case conditional(Code, then: [Instruction], else: [Instruction]?)
 
-    // `keeps` is the range of body slots the result reads, where a round can
-    // end early: the result reads what the last finished round bound, so a
-    // round cut short is put back before the result reads.
+    // `keeps` is the range of body slots the result reads: the result reads
+    // what the last finished round bound, so a round cut short is put back
+    // before the result reads. Nil where the result reads none of them.
     case loop(while: Code, body: Body, round: Int, keeps: Range<Int>?)
 
     case iteration(over: Code, body: [Instruction], element: Int)

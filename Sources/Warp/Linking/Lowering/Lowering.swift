@@ -13,8 +13,8 @@ import Foundation
 // judged here: a name this walk cannot place is a body the link let through
 // unjudged, and is refused as the link's own mistake.
 //
-// The table starts with one row per declaration and grows by one per closure
-// literal, since a closure body is a body of its own with its own frame.
+// The table has one row per declaration. A closure literal is a body of its
+// own with its own frame, lowered into a row the closure code holds itself.
 struct Lowering {
     // MARK: - Property
     private(set) var table: [Linked]
@@ -266,18 +266,17 @@ struct Lowering {
             }
 
             let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
-            let row = Linked(
-                label: label,
-                origin: frame.origin,
-                signature: procedure.signature,
-                purity: procedure.purity,
-                isolation: procedure.isolation,
-                implementation: .body(body, inner.layout)
+            return .closure(
+                Linked(
+                    label: label,
+                    origin: frame.origin,
+                    signature: procedure.signature,
+                    purity: procedure.purity,
+                    isolation: procedure.isolation,
+                    implementation: .body(body, inner.layout)
+                ),
+                captures: inner.captures
             )
-
-            table.append(row)
-
-            return .closure(row, captures: inner.captures)
 
         case let .invoke(callee, arguments):
             return .invoke(
@@ -323,11 +322,10 @@ struct Lowering {
             }
 
             // A round that ends early has bound part of what a full round
-            // binds. The result reads the last finished round, so the range
-            // it reads is put back where a round can end early.
-            let keeps = result.map { result in
-                result.reads(bound) && body.body.leavesARound(round) ? bound : nil
-            } ?? nil
+            // binds. The result reads the last finished round, so where it
+            // reads the body's slots, the run puts them back after a round
+            // cut short. Whether a round can end early is the run's fact.
+            let keeps = result.map { result in result.reads(bound) ? bound : nil } ?? nil
 
             return .loop(
                 while: taking,
@@ -557,48 +555,5 @@ extension Instruction {
         }
 
         return code.reads(slots)
-    }
-}
-
-extension [Statement] {
-    // Whether a round of the loop named `round` can end before this body's
-    // last statement: a `break` or `continue` aimed at it. One inside a
-    // nested loop aims at that loop unless it names this one; one inside a
-    // closure is refused at the link.
-    func leavesARound(_ round: String) -> Bool {
-        contains { statement in statement.expression.leavesARound(round, nested: false) }
-    }
-
-    fileprivate func leavesARound(_ round: String, nested: Bool) -> Bool {
-        contains { statement in statement.expression.leavesARound(round, nested: nested) }
-    }
-}
-
-extension Expression {
-    fileprivate func leavesARound(_ round: String, nested: Bool) -> Bool {
-        switch self {
-        case let .leave(leave):
-            return leave.reach != .procedure && (leave.target == round || (!nested && leave.target == nil))
-
-        case let .block(block):
-            return block.body.leavesARound(round, nested: nested)
-
-        case let .conditional(_, then, otherwise):
-            return then.leavesARound(round, nested: nested)
-                || otherwise?.leavesARound(round, nested: nested) == true
-
-        case let .loop(_, body, _):
-            return body.body.leavesARound(round, nested: true)
-
-        case let .iteration(_, body, _):
-            return body.leavesARound(round, nested: true)
-
-        case let .attempt(block, rescue, _):
-            return block.body.leavesARound(round, nested: nested)
-                || rescue.body.leavesARound(round, nested: nested)
-
-        case .literal, .reference, .array, .record, .closure, .invoke, .cast, .dispatch:
-            return false
-        }
     }
 }

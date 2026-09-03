@@ -7,9 +7,10 @@
 
 import Foundation
 
-// What a link produces and a run reads: every declaration and closure
-// literal lowered into one table, the row a run starts from, the shapes the
-// link declared, and what each document's variables start out holding. Only
+// What a link produces and a run reads: every declaration lowered into one
+// table, the row a run starts from, the shapes the link declared, and what
+// each document's variables start out holding. A closure literal's row is
+// held by the code that makes the closure. Only
 // `Linker` makes one, so holding a value of this type is the evidence that
 // linking happened. An image is made per link and not kept: its rows mean
 // something within that link alone.
@@ -25,7 +26,8 @@ public struct Image: Sendable {
 
     // Which declarations a run from the entry can reach, by declared
     // spelling. Transitive: a declaration reached only through another is
-    // in here too.
+    // in here too. A fact of the link for whoever asks it; the run reads
+    // rows by number and never asks.
     public let reached: Set<String>
 
     // Every shape the linked modules declared. A named type survives into the

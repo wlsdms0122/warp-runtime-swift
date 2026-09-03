@@ -122,10 +122,10 @@ struct LoweringTests {
         #expect(inner.names == ["b"])
     }
 
-    @Test("a loop keeps its round's slots only where its result could tell")
+    @Test("a loop keeps its round's slots only where its result reads them")
     func aLoopKeepsOnlyWhereTheResultCouldTell() throws {
-        // Given — one loop whose result reads a body name and whose body
-        // continues; another whose inner loop continues on its own
+        // Given — one loop whose result reads a body name; another whose
+        // result reads nothing the body bound
         func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .dispatch(Dispatch(
@@ -152,15 +152,8 @@ struct LoweringTests {
                             result: .reference([.key("seen")])
                         )),
                         Statement(binding: .constant("nested"), expression: loop(
-                            [
-                                Statement(binding: .constant("seen"), expression: .literal(.int(1))),
-                                Statement(binding: .constant("inner"), expression: .loop(
-                                    while: .literal(.bool(false)),
-                                    body: Block(body: [continuing]),
-                                    round: "again"
-                                ))
-                            ],
-                            result: .reference([.key("seen")])
+                            [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
+                            result: .reference([.key("round"), .key("index")])
                         ))
                     ],
                     result: .literal(.null)

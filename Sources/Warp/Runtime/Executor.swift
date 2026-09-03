@@ -79,11 +79,11 @@ public struct Executor: Sendable {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
-        let settled = try entry.signature.settle(arguments, in: image.types)
+        let settled = try entry.signature.settle(arguments, over: entry.parameters, offered: false, in: image.types)
         var activation = executor.frame(of: entry, layout)
 
-        for (position, (name, _)) in entry.parameters.enumerated() {
-            activation.cells[layout.parameters[position]] = .value(settled[name] ?? .null)
+        for (position, value) in settled.enumerated() {
+            activation.cells[layout.parameters[position]] = .value(value ?? .null)
         }
 
         return try await executor.answer(body, of: entry, in: &activation, at: Trace())
@@ -98,7 +98,10 @@ public struct Executor: Sendable {
         offering arguments: [String: Value],
         at trace: Trace
     ) async throws -> Value {
-        var (body, activation) = try enter(closure, settled: try closure.signature.settle(offered: arguments, in: types))
+        var (body, activation) = try enter(
+            closure,
+            settled: try closure.signature.settle(arguments, over: closure.linked.parameters, offered: true, in: types)
+        )
 
         return try await answer(body, of: closure.linked, in: &activation, at: trace)
     }
@@ -454,7 +457,10 @@ public struct Executor: Sendable {
             resolved[name] = try read(argument, in: activation)
         }
 
-        var (body, inner) = try enter(closure, settled: try closure.signature.settle(resolved, in: types))
+        var (body, inner) = try enter(
+            closure,
+            settled: try closure.signature.settle(resolved, over: closure.linked.parameters, offered: false, in: types)
+        )
 
         return try await answer(body, of: closure.linked, in: &inner, at: trace)
     }
@@ -463,7 +469,7 @@ public struct Executor: Sendable {
     // settled: the captured cells in their slots, the parameters in theirs.
     private func enter(
         _ closure: Closure,
-        settled: [String: Value]
+        settled: [Value?]
     ) throws -> (Body, Activation) {
         guard case let .body(body, layout) = closure.linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
@@ -475,8 +481,8 @@ public struct Executor: Sendable {
             activation.cells[slot] = cell
         }
 
-        for (position, (name, _)) in closure.linked.parameters.enumerated() {
-            activation.cells[layout.parameters[position]] = .value(settled[name] ?? .null)
+        for (position, value) in settled.enumerated() {
+            activation.cells[layout.parameters[position]] = .value(value ?? .null)
         }
 
         return (body, activation)
@@ -681,39 +687,20 @@ public struct Executor: Sendable {
         }
     }
 
-    // The arguments settled against the declaration, in parameter order. The
-    // frame is built from the declaration, never copied from the caller: only
-    // declared names exist inside the boundary.
+    // The arguments settled against the declaration, in parameter order: the
+    // signature's own boundary, over the order the row keeps.
     private func settled(
         _ callee: Linked,
         given: [Value?],
         skipping: Skipped
     ) throws -> [Value?] {
-        var missing: [String] = []
-
-        for (position, (name, parameter)) in callee.parameters.enumerated() where !skipping.contains(position) {
-            // An author's argument space folds null and unwritten into one
-            // instruction: a reference that names nothing reads as null, and
-            // requiring the author to know which is which would make absence
-            // observable.
-            if parameter.mustBeGiven(in: types), (given[position] ?? .null) == .null {
-                missing.append(name)
-            }
-        }
-
-        guard missing.isEmpty else {
-            throw ArgumentError(
-                "parameters: required, and nothing was given for \(missing.joined(separator: ", "))"
-            )
-        }
-
-        var settled = given
-
-        for (position, (name, parameter)) in callee.parameters.enumerated() where !skipping.contains(position) {
-            settled[position] = try parameter.taking(given[position] ?? .null, called: name, in: types)
-        }
-
-        return settled
+        try callee.signature.settle(
+            given,
+            over: callee.parameters,
+            offered: false,
+            skipping: skipping.contains,
+            in: types
+        )
     }
 
     // The settled arguments under the names a native reads them by.
@@ -844,7 +831,10 @@ public struct Executor: Sendable {
     // word able to take one. What may be called is what the link proved
     // answers, and a slot declaring `pure procedure` is how a word says so.
     func call(_ closure: Closure, with arguments: [String: Value]) throws -> Value {
-        var (body, activation) = try enter(closure, settled: try closure.signature.settle(offered: arguments, in: types))
+        var (body, activation) = try enter(
+            closure,
+            settled: try closure.signature.settle(arguments, over: closure.linked.parameters, offered: true, in: types)
+        )
 
         return try closure.signature.settling(returned: try read(body, in: &activation), in: types)
     }

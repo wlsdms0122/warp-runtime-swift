@@ -48,9 +48,7 @@ public final class Linked: Sendable {
         isolation: Isolation,
         implementation: Implementation
     ) {
-        let parameters = signature.parameters
-            .sorted { left, right in left.key < right.key }
-            .map { entry in (name: entry.key, parameter: entry.value) }
+        let parameters = signature.ordered
 
         self.label = label
         self.origin = origin

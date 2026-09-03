@@ -307,7 +307,24 @@ struct ReceiverTests {
 
         // Then
         #expect(image["summarize"]?.purity != .pure)
-        #expect(image["summarize"]?.purity != .pure)
+
+        // And a path that writes the word finds no word to send
+        let reaching = try Module(
+            procedures: [
+                "entry": Procedure(
+                    signature: Signature(parameters: ["tasks": Parameter(type: .array(.string))]),
+                    body: [],
+                    result: .reference([.key("tasks"), .key("summarize")])
+                ),
+                "summarize": try #require(sut.procedures["summarize"])
+            ]
+        )
+
+        #expect {
+            try linker.link([reaching] + Module.standard + [.failing], entry: entryName)
+        } throws: { error in
+            "\(error)".contains("summarize")
+        }
     }
 
     @Test("a path to a body that reaches an effect is refused before any run")
