@@ -8,36 +8,49 @@
 import Foundation
 
 public struct Question: Sendable {
+    // The arguments a word reads: settled by the row a run sent, with the
+    // run as the way back in for a word handed a procedure, or offered by
+    // name where a caller asks the word directly, with no declaration and no
+    // run behind them.
+    private enum Arguments: Sendable {
+        case settled(Settled, Executor)
+        case offered([String: Value])
+    }
+
     // MARK: - Property
     // What this was sent to, or nil where it was sent to nothing. Nil rather
     // than null because a word decides for itself what being sent to nothing
     // means: `contains` says false rather than failing.
     public let receiver: Value?
 
-    public let arguments: [String: Value]
-
-    // The way back in, for a word handed a procedure. It is here rather than
-    // handed to `Query.evaluate` because most words never call anything, and a
-    // parameter every word declares to serve the few that do is a parameter in
-    // the wrong place.
-    private let executor: Executor?
+    // The way back in travels with the arguments rather than being handed to
+    // `Query.evaluate`: most words never call anything, and a parameter every
+    // word declares to serve the few that do is a parameter in the wrong
+    // place.
+    private let arguments: Arguments
 
     // MARK: - Initializer
     public init(receiver: Value? = nil, arguments: [String: Value] = [:]) {
-        self.init(receiver: receiver, arguments: arguments, executor: nil)
+        self.receiver = receiver
+        self.arguments = .offered(arguments)
     }
 
-    init(receiver: Value?, arguments: [String: Value], executor: Executor?) {
+    init(receiver: Value?, settled: Settled, executor: Executor) {
         self.receiver = receiver
-        self.arguments = arguments
-        self.executor = executor
+        self.arguments = .settled(settled, executor)
     }
 
     // MARK: - Public
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
     public subscript(name: String) -> Value {
-        arguments[name] ?? .null
+        switch arguments {
+        case let .settled(settled, _):
+            return settled[name]
+
+        case let .offered(offered):
+            return offered[name] ?? .null
+        }
     }
 
     // Running a procedure this word was handed. What may be handed is what the
@@ -51,7 +64,7 @@ public struct Question: Sendable {
             )
         }
 
-        guard let executor else {
+        guard case let .settled(_, executor) = self.arguments else {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 

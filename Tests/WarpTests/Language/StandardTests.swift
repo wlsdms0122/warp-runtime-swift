@@ -348,6 +348,20 @@ struct StandardTests {
         )
     }
 
+    @Test("joined asked directly reads no default, since the default is the declaration's")
+    func joinedAskedDirectlyRefusesAMissingSeparator() throws {
+        // Given: asked outside a link, nothing fills the declaration's
+        // default, and the word carries none of its own
+        let sut = JoinedQuery()
+
+        // When / Then
+        #expect {
+            try sut.evaluate(Question(receiver: .array([.string("a"), .string("b")])))
+        } throws: { error in
+            "\(error)".contains("asks a string separator, and null arrived")
+        }
+    }
+
     @Test("a codec keeps its own contract on the encoding name")
     func aCodecReadsItsEncodingArgument() throws {
         // Given — the declaration's oneOf says the same names early; this is

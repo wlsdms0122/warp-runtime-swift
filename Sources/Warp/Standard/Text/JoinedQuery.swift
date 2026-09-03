@@ -29,8 +29,10 @@ public struct JoinedQuery: Query {
             )
         }
 
-        guard case let .string(separator) = question.arguments["value"] ?? .string("") else {
-            throw ExecutionError("joined asks a non-string separator")
+        let given = question["value"]
+
+        guard case let .string(separator) = given else {
+            throw ExecutionError("joined asks a string separator, and \(given.type) arrived")
         }
 
         let written = try elements.map { element -> String in

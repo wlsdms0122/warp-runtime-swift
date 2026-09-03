@@ -391,10 +391,8 @@ public struct Executor: Sendable {
                     selector: callee.label,
                     signature: callee.signature,
                     receiver: sent(to: callee, receiver: try received(send, of: callee, in: activation) ?? held, arguments: settled),
-                    arguments: named(settled, of: callee),
-                    holds: holds.reduce(into: [:]) { table, entry in
-                        table[callee.parameters[entry.0].name] = entry.1
-                    },
+                    settled: settled,
+                    holds: holds,
                     trace: trace,
                     executor: self
                 )
@@ -424,7 +422,7 @@ public struct Executor: Sendable {
                 skipping: skipped(send, of: callee, holding: true)
             )
 
-            for (position, value) in settled.enumerated() {
+            for (position, value) in settled.values.enumerated() {
                 guard let value else { continue }
 
                 inner.cells[layout.parameters[position]] = .value(value)
@@ -644,7 +642,7 @@ public struct Executor: Sendable {
         _ handed: [Send.Handed],
         of callee: Linked,
         in activation: Activation
-    ) throws -> [(Int, Handle)] {
+    ) throws -> [(position: Int, handle: Handle)] {
         try handed.map { handed in
             guard case let .hold(handle) = activation.cells[handed.slot] else {
                 throw ExecutionError(
@@ -663,7 +661,7 @@ public struct Executor: Sendable {
         guard let receiver = send.receiver else { return nil }
 
         do {
-            return try callee.signature.settling(receiver: try read(receiver, in: activation), in: types)
+            return try callee.settling(receiver: try read(receiver, in: activation), in: types)
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
@@ -697,32 +695,23 @@ public struct Executor: Sendable {
     }
 
     // The arguments settled against the declaration, in parameter order: the
-    // signature's own boundary, over the order the row keeps.
+    // signature's own boundary, over the order the row keeps. The values are
+    // born beside the row they were settled by, so nothing else pairs them.
     private func settled(
         _ callee: Linked,
         given: [Value?],
         skipping: Skipped
-    ) throws -> [Value?] {
-        try callee.signature.settle(
-            given,
-            over: callee.parameters,
-            offered: false,
-            skipping: skipping.contains,
-            in: types
+    ) throws -> Settled {
+        Settled(
+            by: callee,
+            values: try callee.signature.settle(
+                given,
+                over: callee.parameters,
+                offered: false,
+                skipping: skipping.contains,
+                in: types
+            )
         )
-    }
-
-    // The settled arguments under the names a native reads them by.
-    private func named(_ settled: [Value?], of callee: Linked) -> [String: Value] {
-        var named: [String: Value] = [:]
-
-        for (position, value) in settled.enumerated() {
-            guard let value else { continue }
-
-            named[callee.parameters[position].name] = value
-        }
-
-        return named
     }
 
     // The pure half of a send. An effect or a body that runs answers only by
@@ -765,7 +754,7 @@ public struct Executor: Sendable {
     // What a row answers, computed without running. Both shapes it can have
     // are answerable without suspending: one because it is native and says
     // so, the other because the link proved it.
-    private func answer(_ callee: Linked, for receiver: Value?, with arguments: [Value?]) throws -> Value {
+    private func answer(_ callee: Linked, for receiver: Value?, with arguments: Settled) throws -> Value {
         let sent = sent(to: callee, receiver: receiver, arguments: arguments)
 
         switch callee.implementation {
@@ -776,7 +765,7 @@ public struct Executor: Sendable {
             return try query.evaluate(
                 Question(
                     receiver: sent == .null ? nil : sent,
-                    arguments: named(arguments, of: callee),
+                    settled: arguments,
                     executor: self
                 )
             ) ?? .null
@@ -786,7 +775,7 @@ public struct Executor: Sendable {
         case let .body(body, layout):
             var activation = try frame(of: callee, layout)
 
-            for (position, value) in arguments.enumerated() {
+            for (position, value) in arguments.values.enumerated() {
                 guard let value else { continue }
 
                 activation.cells[layout.parameters[position]] = .value(value)
@@ -808,8 +797,8 @@ public struct Executor: Sendable {
     // What a call was sent to. A receiver is a parameter, so it reaches a
     // native the same way whether it was written on the other side of the
     // dot or by its own name: the two spellings are one call.
-    private func sent(to callee: Linked, receiver: Value?, arguments: [Value?]) -> Value? {
-        receiver ?? callee.receiverPosition.flatMap { position in arguments[position] }
+    private func sent(to callee: Linked, receiver: Value?, arguments: Settled) -> Value? {
+        receiver ?? callee.receiverPosition.flatMap { position in arguments.values[position] }
     }
 
     // A pure body, read without running. Instructions bind in order and the
@@ -896,17 +885,20 @@ public struct Executor: Sendable {
             return .unfit("\(error)")
         }
 
-        var walked: [PathSegment] = [.key(activation.layout.names[slot])]
-
-        for step in steps {
+        for (index, step) in steps.enumerated() {
             let segment = spelled(step, in: activation)
-            walked.append(segment)
+
+            // The path as far as this step, spelled for a refusal. Only a
+            // refusal reads it, so a read that lands spells nothing.
+            func walked() -> [PathSegment] {
+                spelled(slot, Array(steps[...index]), in: activation)
+            }
 
             // Null stops every reading the same way, and the rule lives with
             // the segment: the link's walk over types asks the same judge, so
             // the two layers cannot drift apart.
             if current == .null {
-                switch segment.meetingNull(at: walked) {
+                switch segment.meetingNull(at: walked()) {
                 case .reads:
                     return .found(.null)
 
@@ -952,13 +944,13 @@ public struct Executor: Sendable {
 
             case let .key(key, _):
                 guard case let .record(_, object) = current else {
-                    return .unfit("\(walked.rendered) drills a field into \(current.type)")
+                    return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
                 guard let next = object[key] else {
                     guard segment.optional else {
                         return .unfit(
-                            "\(walked.rendered): '\(key)' is not there"
+                            "\(walked().rendered): '\(key)' is not there"
                                 + " — only `\(segment.mark)` reads absence"
                         )
                     }
@@ -972,13 +964,13 @@ public struct Executor: Sendable {
                 do {
                     guard let derived = try derive(linked[row], from: current) else {
                         return .unfit(
-                            "\(walked.rendered) sends '\(key)', which does not take \(current.type)"
+                            "\(walked().rendered) sends '\(key)', which does not take \(current.type)"
                         )
                     }
 
                     read = .found(derived)
                 } catch {
-                    return .unfit("\(walked.rendered) — \(error)")
+                    return .unfit("\(walked().rendered) — \(error)")
                 }
             }
 
@@ -998,14 +990,14 @@ public struct Executor: Sendable {
     // elements: the projection owns the `array<byte>` equation, lazily, so
     // one element read does not unpack a compact spelling. Past the end is a
     // defect, not absence: the array is there and says how long it is.
-    private func indexed(_ current: Value, at index: Int, walked: [PathSegment]) -> Walk {
+    private func indexed(_ current: Value, at index: Int, walked: () -> [PathSegment]) -> Walk {
         guard let elements = current.elements else {
-            return .unfit("\(walked.rendered) indexes into \(current.type), expected array")
+            return .unfit("\(walked().rendered) indexes into \(current.type), expected array")
         }
 
         guard index >= 0, index < elements.count else {
             return .unfit(
-                "\(walked.rendered) indexes past the end of \(elements.count) element(s)"
+                "\(walked().rendered) indexes past the end of \(elements.count) element(s)"
             )
         }
 
@@ -1025,7 +1017,7 @@ public struct Executor: Sendable {
         guard callee.signature.isDerivable(in: types) else { return nil }
 
         guard
-            let receiver = try? callee.signature.settling(receiver: value, in: types),
+            let receiver = try? callee.settling(receiver: value, in: types),
             let arguments = try? settled(
                 callee,
                 given: Array(repeating: nil, count: callee.parameters.count),

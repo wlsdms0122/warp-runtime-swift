@@ -70,6 +70,20 @@ public struct Parameter: Sendable, Equatable {
         return try checking(value, called: name, in: types)
     }
 
+    // A receiver checked as this parameter, except that nothing passes
+    // through. A word decides for itself what being sent to nothing means:
+    // `contains` says false rather than failing, and a path that reached null
+    // is absence rather than misuse.
+    public func checking(
+        receiver value: Value,
+        called name: String,
+        in types: TypeTable = TypeTable()
+    ) throws -> Value {
+        guard value != .null else { return value }
+
+        return try checking(value, called: name, in: types)
+    }
+
     public func checking(
         _ value: Value,
         called name: String,

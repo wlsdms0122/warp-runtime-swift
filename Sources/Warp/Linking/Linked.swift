@@ -97,6 +97,16 @@ public final class Linked: Sendable {
         )
     }
 
+    // The receiver settled against the parameter at this row's receiver
+    // position, or as it is where the row takes none.
+    func settling(receiver value: Value, in types: TypeTable) throws -> Value {
+        guard let position = receiverPosition else { return value }
+
+        let declared = parameters[position]
+
+        return try declared.parameter.checking(receiver: value, called: declared.name, in: types)
+    }
+
     // Whether this row is a written body.
     public var isWritten: Bool {
         if case .body = implementation { return true }
