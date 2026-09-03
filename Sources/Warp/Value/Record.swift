@@ -132,7 +132,7 @@ public struct Record: Sendable {
 
     // This record with every value put through `transform`, under the same
     // names in the same order, so nothing is sorted or searched.
-    public func settling(_ transform: (String, Value) throws -> Value) rethrows -> Record {
+    public func mapValues(_ transform: (String, Value) throws -> Value) rethrows -> Record {
         Record(
             name: name,
             keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }

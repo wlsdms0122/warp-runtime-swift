@@ -92,13 +92,13 @@ struct RecordTests {
         #expect(answer == .object(["a": .int(1), "b": .int(2)]))
     }
 
-    @Test("settling changes every value and nothing else")
-    func settlingKeepsNamesAndOrder() throws {
+    @Test("mapping values changes every value and nothing else")
+    func mappingValuesKeepsNamesAndOrder() throws {
         // Given
         let sut = Record(name: "app.Point", ["y": .int(2), "x": .int(1)])
 
         // When
-        let doubled = try sut.settling { _, value in
+        let doubled = try sut.mapValues { _, value in
             guard case let .int(number) = value else { throw ArgumentError("not a number") }
 
             return .int(number * 2)

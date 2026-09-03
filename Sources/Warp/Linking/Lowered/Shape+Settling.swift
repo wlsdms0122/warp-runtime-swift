@@ -132,7 +132,7 @@ extension Shape {
             if entry == .any { return value }
 
             return .record(
-                try record.settling { _, item in
+                try record.mapValues { _, item in
                     try entry.settling(item, at: path(), in: table, assuming: assuming)
                 }
             )
