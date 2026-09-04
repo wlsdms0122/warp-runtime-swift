@@ -254,38 +254,51 @@ struct LoweringTests {
         #expect(image["app.tally"]?.purity != .pure)
     }
 
-    @Test("a variable handed in place to a pure word is settled like any argument")
-    func aHandedVariableIsSettledForAPureWord() async throws {
-        // Given — a record without a name, handed to a slot declaring one; the
-        // word answers it named, as it would had the record been passed by value
-        let module = try Module(
-            types: ["Tag": .record(["a": .int])],
-            procedures: [
-                "entry": Procedure(
-                    body: [
-                        Statement(binding: .variable("held"), expression: .record(["a": .literal(.int(1))]))
-                    ],
-                    result: .dispatch(Dispatch(
-                        receiver: .dispatch(Dispatch(selector: "app.tag", arguments: ["of": .reference([.key("held")])])),
-                        selector: "std.logic.equal",
-                        arguments: ["value": .literal(.record(Record(name: "Tag", ["a": .int(1)])))]
-                    ))
-                ),
-                "app.tag": Procedure(
-                    signature: Signature(
-                        parameters: ["of": Parameter(type: .inout(.named("Tag")))],
-                        returns: .named("Tag")
+    @Test("what is handed in place is the shape the slot declares, and not one that fits it")
+    func aHandedVariableIsTheSlotsOwnShape() async throws {
+        // Given — a variable holding an unnamed record, handed to a slot
+        // declaring `Tag`. By value the boundary would settle it and the word
+        // would answer it named; in place there is nothing to settle into —
+        // the word writes through the caller's box, so what the caller reads
+        // back is whatever the word left there.
+        func module(holding held: Warp.Expression) throws -> Module {
+            try Module(
+                types: ["Tag": .record(["a": .int])],
+                procedures: [
+                    "entry": Procedure(
+                        body: [Statement(binding: .variable("held"), expression: held)],
+                        result: .dispatch(Dispatch(
+                            receiver: .dispatch(Dispatch(
+                                selector: "app.tag",
+                                arguments: ["of": .reference([.key("held")])]
+                            )),
+                            selector: "std.logic.equal",
+                            arguments: ["value": .literal(.record(Record(name: "Tag", ["a": .int(1)])))]
+                        ))
                     ),
-                    body: [],
-                    result: .reference([.key("of")])
-                )
-            ]
+                    "app.tag": Procedure(
+                        signature: Signature(
+                            parameters: ["of": Parameter(type: .inout(.named("Tag")))],
+                            returns: .named("Tag")
+                        ),
+                        body: [],
+                        result: .reference([.key("of")])
+                    )
+                ]
+            )
+        }
+
+        // When / Then — the unnamed record is refused, and the same record
+        // held as a `Tag` stands
+        #expect(throws: LinkError.self) {
+            try linker.link([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
+        }
+
+        let image = try linker.link(
+            [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard,
+            entry: "entry"
         )
 
-        // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
-
-        // Then
         #expect(try await Executor().run(image) == .bool(true))
     }
 

@@ -53,10 +53,19 @@ extension Shape {
         case (.parameter, _), (_, .parameter):
             return true
 
-        // `var` and `inout` are facts about a slot, and fitting is asked of
-        // the inner type on either side.
-        case let (.variable(inner), _), let (.inout(inner), _):
+        // `var` is a fact about a slot, and fitting is asked of the inner
+        // type.
+        case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming)
+
+        // A slot handed a variable in place is the two sides being one
+        // shape, not one that fits the other. The body writes through the
+        // caller's box and the caller reads back what the body wrote, so a
+        // shape that merely fits would let the two disagree about what is
+        // there — the body writing what its own declaration allows and the
+        // caller reading what its own declaration promised.
+        case let (.inout(inner), _):
+            return inner == other.slotUnwrapped
 
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming)

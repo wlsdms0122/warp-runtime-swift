@@ -65,6 +65,18 @@ indirect enum Shape: Sendable {
         return self
     }
 
+    // What a slot holds, through the two marks that say how it is held
+    // rather than what it is.
+    var slotUnwrapped: Shape {
+        switch self {
+        case let .variable(inner), let .inout(inner):
+            return inner.slotUnwrapped
+
+        default:
+            return self
+        }
+    }
+
     // The row this stands on, through `?`, `var` and `inout`, which hold no
     // value of their own. Nil for a shape that names no row. What follows a
     // chain of names follows this, so a name reached under a wrapper is a
