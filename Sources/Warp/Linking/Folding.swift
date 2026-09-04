@@ -79,9 +79,7 @@ struct Folding {
     }
 
     // MARK: - Public
-    // What a closure made here is called. It was written in no declaration:
-    // the link made it while settling one, and that is what a trace through
-    // it says.
+    // What a closure made here is called. It was written in no declaration.
     static let label: Name = "folding"
 
     // Whether a name is bound here.

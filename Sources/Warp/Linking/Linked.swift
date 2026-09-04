@@ -158,11 +158,7 @@ public final class Linked: Sendable {
         table.linkage === other.linkage
     }
 
-    // Why it cannot be read, for the side that met it. Two answers, because
-    // there are two ways to be somewhere a row is not at home: the reader
-    // named another link, or it named none at all — which is what a judge
-    // asked with no declarations behind it has, and what a caller holding an
-    // image can fix by handing it.
+    // Why it cannot be read, for the side that met it.
     static func unreadable(in other: ShapeTable) -> String {
         other.linkage === Linkage.none
             ? "got a procedure, and nothing here says which link to read it in"

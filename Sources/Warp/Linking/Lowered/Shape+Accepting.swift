@@ -136,11 +136,9 @@ extension Shape {
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }
 
-            // A body may declare fewer than the slot hands it: a name it
-            // never reads is a name it need not write. It may declare more
-            // only where the name stands unfilled — a name nothing hands it
-            // and a call must fill is a name no call could ever fill, and
-            // the body would read null wherever it wrote it.
+            // A body may declare fewer than the slot hands it, and may
+            // declare more only where the name stands unfilled: a name
+            // nothing hands it and a call must fill is one no call could.
             guard given.allSatisfy({ slot in
                 !slot.mustBeGiven || required.contains { name, _, _ in name == slot.name }
             }) else {
@@ -326,21 +324,15 @@ extension Shape {
         }
     }
 
-    // Whether two shapes are one shape, names resolved. Invariance, which
-    // one slot asks: a variable handed in place is written by the body and
-    // read back by the caller.
-    //
-    // `any` is no wildcard here, and neither is a type parameter. Standing
-    // for anything is what `accepts` reads on one side or the other; being
-    // the same thing is what this reads, and a body free to write anything
-    // into a variable the caller declared is the disagreement it refuses.
+    // Whether two shapes are one shape, names resolved. `any` is no wildcard
+    // here and neither is a type parameter: standing for anything is what
+    // `accepts` reads, and a body free to write anything into a variable the
+    // caller declared is the disagreement this refuses.
     func same(_ other: Shape, in table: ShapeTable) -> Bool {
         same(other, in: table, assuming: [])
     }
 
     func same(_ other: Shape, in table: ShapeTable, assuming: [(Shape, Shape)]) -> Bool {
-        // A record under a name is that name: two names are two shapes
-        // however alike, and a record written inline is neither of them.
         guard nominal(in: table) == other.nominal(in: table) else { return false }
 
         if assuming.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
@@ -348,21 +340,14 @@ extension Shape {
         let walked = assuming + [(self, other)]
 
         switch (self, other) {
-        // A name the table does not answer is refused where it is declared,
-        // so nothing is decided about it here.
+        // Refused where it is declared, so nothing is decided about it here.
         case (.undeclared, _), (_, .undeclared):
             return true
 
-        // One name is one shape. Two names stand for one where what they
-        // name does.
         case let (.named(mine), .named(theirs)):
             return mine == theirs
                 || table.shapes[mine].same(table.shapes[theirs], in: table, assuming: walked)
 
-        // Names are resolved on either side. An alias is what it names: a
-        // slot declaring `Count` and a variable holding an `int` are the
-        // same shape where `Count` is `int`, and are two shapes where it is
-        // a record.
         case let (.named(mine), _):
             return table.shapes[mine].same(other, in: table, assuming: walked)
 
@@ -387,8 +372,6 @@ extension Shape {
         }
     }
 
-    // The record row a shape stands for, through the marks that hold no
-    // value of their own. Nil for a shape that names no record.
     private func nominal(in table: ShapeTable) -> Int? {
         row.flatMap { row in table.recordRows[row] }
     }

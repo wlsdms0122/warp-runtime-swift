@@ -66,9 +66,6 @@ extension TypeExpression {
                 parameters: signature?.ordered.map { name, parameter in
                     let shape = parameter.declared.lowered(in: table)
 
-                    // Whether a call has to fill it travels with it: a body
-                    // may declare a name the slot never hands it where the
-                    // name stands unfilled, and may not where it would.
                     return (
                         name: name,
                         shape: shape,

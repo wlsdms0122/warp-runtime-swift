@@ -34,10 +34,8 @@ public struct TypeTable: Sendable {
     public static let empty = TypeTable()
 
     // MARK: - Initializer
-    // A table a caller assembled. It is declarations and not a link, so a
-    // row made by one is not at home in it: what a caller judges here is
-    // what it wrote down, and a procedure out of a run is read against the
-    // image that made it.
+    // A table a caller assembled: declarations and not a link, so no row
+    // made by one is at home in it.
     public init(
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:]
@@ -45,8 +43,8 @@ public struct TypeTable: Sendable {
         self.init(types: types, constraints: constraints, of: .none)
     }
 
-    // The same declarations as one link's. The link owns the identity its
-    // rows are numbered against, so it says which one this is.
+    // The same declarations as one link's, which owns the identity its rows
+    // are numbered against.
     init(
         types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],

@@ -337,10 +337,8 @@ public struct TypeReader: Decodable {
         ("var", { inner in .variable(inner) })
     ]
 
-    // A written type's name, said in this notation's own words. Every
-    // other refusal a type's spelling earns is a `TypeFormError`, and one
-    // that reached the caller as anything else would be the only reading
-    // that arrives without a place on it.
+    // A written type's name, said in this notation's own words: every other
+    // refusal a type's spelling earns is a `TypeFormError`.
     static func named(_ text: String) throws -> Name {
         do {
             return try Name(text)

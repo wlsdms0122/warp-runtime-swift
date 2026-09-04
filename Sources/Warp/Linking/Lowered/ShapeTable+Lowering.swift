@@ -19,8 +19,8 @@ extension ShapeTable {
         of linkage: Linkage
     ) -> ShapeTable {
         // A table of its own even where nothing is declared: a body carried
-        // out of such a link holds rows of its own, and a shared table would
-        // let those be read elsewhere.
+        // out of such a link holds rows a shared table would let be read
+        // elsewhere.
         guard !types.isEmpty || !constraints.isEmpty else {
             return ShapeTable(
                 shapes: [],
