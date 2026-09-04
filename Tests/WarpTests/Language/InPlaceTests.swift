@@ -385,17 +385,19 @@ struct InPlaceTests {
 
     @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
     func anAssembledClosureClaimsNothing() throws {
-        // Given
-        let closure = Closure.assembled(answering: .int(1))
+        // Given — assembled against the table it is judged against, so what
+        // is being asked is the claim and not which link made the row
+        let types = TypeTable()
+        let closure = Closure.assembled(answering: .int(1), in: types.shapes)
 
         // When / Then
         #expect(throws: ArgumentError.self) {
             try TypeExpression.procedure(nil, .unstated, .isolated)
-                .settling(.procedure(closure), at: "piece", in: TypeTable())
+                .settling(.procedure(closure), at: "piece", in: types)
         }
         #expect(throws: Never.self) {
             try TypeExpression.procedure(nil)
-                .settling(.procedure(closure), at: "piece", in: TypeTable())
+                .settling(.procedure(closure), at: "piece", in: types)
         }
     }
 }

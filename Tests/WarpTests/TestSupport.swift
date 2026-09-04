@@ -265,7 +265,7 @@ func refusing(_ message: Warp.Expression) -> Warp.Expression {
 extension Closure {
     // A closure a caller assembles in Swift: no body a document spelled, no
     // captures, claiming nothing. What a slot that asks nothing takes.
-    static func assembled(answering result: Value? = nil) -> Closure {
+    static func assembled(answering result: Value? = nil, in table: ShapeTable = .empty) -> Closure {
         Closure(
             linked: Linked(
                 label: "assembled",
@@ -277,7 +277,7 @@ extension Closure {
                     Body(instructions: [], result: result.map(Code.literal)),
                     Frame(size: 0, parameters: [], variables: [], names: [])
                 ),
-                in: .empty
+                in: table
             ),
             captured: []
         )

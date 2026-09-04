@@ -18,7 +18,13 @@ extension ShapeTable {
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]]
     ) -> ShapeTable {
-        guard !types.isEmpty || !constraints.isEmpty else { return .empty }
+        // A table of its own even where nothing is declared. A row means
+        // something inside one link alone, and the table is what says which
+        // link that is — so a link that shared one would let a body carried
+        // out of it be read against rows that are not its own.
+        guard !types.isEmpty || !constraints.isEmpty else {
+            return ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
+        }
 
         let labels = types.keys.sorted()
         let constraintLabels = constraints.keys.sorted()

@@ -153,11 +153,12 @@ public final class Linked: Sendable {
     }
 
     // Whether a run reading that table can read this row: the row was made
-    // by the same link, or by a table declaring nothing. Such a table has no
-    // rows, so a row made against it carries no row numbers and reads the
-    // same in any table.
+    // by the same link. A row's numbers — its slots' shapes, the procedures
+    // its body sends to, the document its variables come from — mean
+    // something inside one link alone, and the table is what says which link
+    // that is.
     func readable(in other: ShapeTable) -> Bool {
-        table === other || table.isBare
+        table === other
     }
 
     // Whether this row is a written body.
