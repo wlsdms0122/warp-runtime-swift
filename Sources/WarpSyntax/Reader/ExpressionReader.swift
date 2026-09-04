@@ -111,8 +111,11 @@ public struct ExpressionReader: Decodable {
                     }
                 )
 
+            case let .dictionary(fields):
+                return try read(record: fields, at: steps, in: decoder)
+
             case let .record(record):
-                return try read(record: record, at: steps, in: decoder)
+                return try read(record: record.asDictionary, at: steps, in: decoder)
 
             // A document is text. Nothing it parses to is ever a procedure, so
             // this arm is unreachable rather than unwritten — a closure reaches
@@ -126,7 +129,7 @@ public struct ExpressionReader: Decodable {
     }
 
     private static func read(
-        record: Record,
+        record: Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
@@ -345,7 +348,7 @@ public struct ExpressionReader: Decodable {
         case nil:
             bindings = [:]
 
-        case let .record(withRecord)?:
+        case let .dictionary(withRecord)?:
             bindings = try withRecord.entries.reduce(into: [Name: Expression]()) { bound, entry in
                 bound[entry.name] = try read(
                     entry.value,

@@ -30,18 +30,17 @@ public struct MappingQuery: Query {
 
     // MARK: - Public
     public func evaluate(_ question: Question) throws -> Value? {
-        guard case let .record(record) = question.receiver else { return nil }
+        guard let held = question.receiver?.asDictionary else { return nil }
 
         switch reading {
-        // In name order, the order the record holds: data names hold no
-        // order of its own, and a walk that answered a different order each
-        // run would make a program that reads it depend on nothing an author
-        // wrote.
+        // In name order, the order both spellings hold: a walk that answered
+        // a different order each run would make a program that reads it
+        // depend on nothing an author wrote.
         case .keys:
-            return .array(record.names.map { name in .string(name.spelling) })
+            return .array(held.names.map { name in .string(name.spelling) })
 
         case .values:
-            return .array(record.values)
+            return .array(held.values)
 
         case .setting:
             guard case let .string(key) = question["key"] else {
@@ -56,10 +55,10 @@ public struct MappingQuery: Query {
                 throw ExecutionError("setting asks a key that is a name, and \(refusal.message)")
             }
 
-            // A new record: the value written was held to no declaration, so
-            // whatever name the receiver settled to would say what nothing
-            // checked.
-            return .record(record.writing(field, with: question["value"]).named(nil))
+            // The names are data from here on: what was written was held to
+            // no declaration, so the answer is a dictionary whatever the
+            // receiver was.
+            return .dictionary(held.writing(field, with: question["value"]))
         }
     }
 

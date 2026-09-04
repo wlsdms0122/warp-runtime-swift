@@ -78,7 +78,7 @@ public struct Writer: Sendable {
                 (draft.imports ?? draft.sends).sorted().map { name in .string(name.spelling) }
             ),
             ModuleReader.CodingKeys.procedures.name:
-                .record(try draft.procedures.mapValues(value(of:)))
+                .dictionary(try draft.procedures.mapValues(value(of:)))
         ]
 
         if let description = draft.description {
@@ -86,11 +86,11 @@ public struct Writer: Sendable {
         }
 
         if !draft.types.isEmpty {
-            written[ModuleReader.CodingKeys.types.name] = .record(try draft.types.mapValues(value(of:)))
+            written[ModuleReader.CodingKeys.types.name] = .dictionary(try draft.types.mapValues(value(of:)))
         }
 
         if !draft.constraints.isEmpty {
-            written[ModuleReader.CodingKeys.constraints.name] = .record(
+            written[ModuleReader.CodingKeys.constraints.name] = .dictionary(
                 try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
@@ -98,18 +98,18 @@ public struct Writer: Sendable {
         }
 
         if !draft.constants.isEmpty {
-            written[ModuleReader.CodingKeys.const.name] = .record(
+            written[ModuleReader.CodingKeys.const.name] = .dictionary(
                 try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
 
         if !draft.variables.isEmpty {
-            written[ModuleReader.CodingKeys.variables.name] = .record(
+            written[ModuleReader.CodingKeys.variables.name] = .dictionary(
                 try draft.variables.mapValues { variable in try value(of: variable) }
             )
         }
 
-        return .record(written)
+        return .dictionary(written)
     }
 
     public func value(of procedure: Procedure) throws -> Value {
@@ -141,7 +141,7 @@ public struct Writer: Sendable {
             written["bounds"] = bounds
         }
 
-        return .record(written)
+        return .dictionary(written)
     }
 
     public func value(of type: TypeExpression) throws -> Value {
@@ -238,7 +238,7 @@ public struct Writer: Sendable {
                 )
             }
 
-            return .record(try fields.mapValues(value(of:)))
+            return .dictionary(try fields.mapValues(value(of:)))
 
         // A slot's `var` or `inout` is written in front of the inner type,
         // whichever form the inner type takes: a bare name, or a procedure
@@ -251,8 +251,9 @@ public struct Writer: Sendable {
             case let .string(written):
                 return .string("\(word) \(written)")
 
-            case let .record(form) where form.count == 1 && TypeReader.procedureKeys.contains(form.entries[0].name):
-                return .record([try Name("\(word) \(form.entries[0].name)"): form.entries[0].value])
+            case let .dictionary(form) where form.count == 1
+                && TypeReader.procedureKeys.contains(form.entries[0].name):
+                return .dictionary([try Name("\(word) \(form.entries[0].name)"): form.entries[0].value])
 
             default:
                 throw WritingError(
@@ -271,7 +272,7 @@ public struct Writer: Sendable {
             // has no `bounds` surface, and the `.parameter` case refuses any
             // bound the walk below meets — one guard, wherever the walk
             // started.
-            return .record([try Name(word): .record(try fields(of: signature))])
+            return .dictionary([try Name(word): .dictionary(try fields(of: signature))])
         }
     }
 
@@ -300,7 +301,7 @@ public struct Writer: Sendable {
             return .string(only)
         }
 
-        return .record(written)
+        return .dictionary(written)
     }
 
     // MARK: - Private
@@ -314,7 +315,7 @@ public struct Writer: Sendable {
         }
 
         if !signature.parameters.isEmpty {
-            written["parameters"] = .record(try signature.parameters.mapValues(value(of:)))
+            written["parameters"] = .dictionary(try signature.parameters.mapValues(value(of:)))
         }
 
         if let returns = signature.returns {
@@ -405,7 +406,7 @@ public struct Writer: Sendable {
             }
         }
 
-        return bounds.isEmpty ? nil : .record(bounds)
+        return bounds.isEmpty ? nil : .dictionary(bounds)
     }
 
     // One fact — only a type with a spelling of its own composes — said with

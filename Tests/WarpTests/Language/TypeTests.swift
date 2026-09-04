@@ -49,22 +49,23 @@ struct TypeTests {
         #expect(error?.message.contains("names[1]") == true)
     }
 
-    @Test("a record declares its fields and tolerates more")
+    @Test("a record settles to the fields declared, and a value carrying more loses them")
     func recordDeclaresFields() throws {
         // Given — what arrives is data from outside, and a payload gains fields
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
         let settled = try sut.settling(
-            .record(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
+            .dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
             at: "task"
         )
 
         // Then
-        #expect(settled["extra"] == .int(1))
+        #expect(settled["extra"] == nil)
+        #expect(settled["id"] == .string("a"))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.record(["id": .string("a")]), at: "task")
+            try sut.settling(.dictionary(["id": .string("a")]), at: "task")
         }
     }
 

@@ -73,8 +73,8 @@ final class ShapeTable: Sendable {
         self.recordRows = recordRows
         self.circling = circling
         self.linkage = linkage
-        self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
-        self.constraintRows = Dictionary(
+        self.rows = Swift.Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
+        self.constraintRows = Swift.Dictionary(
             uniqueKeysWithValues: constraintLabels.enumerated().map { row, label in (label, row) }
         )
     }

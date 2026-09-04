@@ -21,8 +21,9 @@ indirect enum Code: Sendable {
 
     case array([Code])
 
-    // In name order, the order fields are read in.
-    case record([(Name, Code)])
+    // The layout the link made for this literal, and the fields at its
+    // places.
+    case record(Layout, [Code])
 
     // A closure literal: the row its body was lowered into, and which cells
     // of the frame it takes with it, as (outer slot, inner slot).
@@ -61,8 +62,8 @@ extension Code {
         case let .array(elements):
             return elements.contains { element in element.reads(slots) }
 
-        case let .record(fields):
-            return fields.contains { _, field in field.reads(slots) }
+        case let .record(_, fields):
+            return fields.contains { field in field.reads(slots) }
 
         case let .closure(_, captures):
             return captures.contains { outer, _ in slots.contains(outer) }

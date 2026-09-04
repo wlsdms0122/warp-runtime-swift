@@ -158,8 +158,10 @@ public enum BinaryEncoding {
         // whatever that language decided, and the wire cannot depend on it.
         // A record under a name is written under its own tag with the name in
         // front, so a reader that met the tag knows a name follows.
-        case let .record(record):
-            if let name = record.name {
+        case .record, .dictionary:
+            guard let held = value.asDictionary else { return }
+
+            if case let .record(record) = value, let name = record.name {
                 guard name.isDeclarable else {
                     throw EncodingError.invalidValue(
                         Value.string(name.spelling),
@@ -173,10 +175,10 @@ public enum BinaryEncoding {
                 bytes.append(Tag.record.rawValue)
             }
 
-            write(UInt64(record.count), into: &bytes)
+            write(UInt64(held.count), into: &bytes)
 
-            // The record holds its entries in byte order, the order written.
-            for (key, value) in record.entries {
+            // Both spellings hold their fields in byte order, the order written.
+            for (key, value) in held.entries {
                 write(Array(key.spelling.utf8), into: &bytes)
 
                 try write(value, into: &bytes, within: depth - 1)
@@ -306,7 +308,7 @@ public enum BinaryEncoding {
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
-                    settled = .record(Record(name: name, entries: []))
+                    settled = try .holding([], named: name)
                 } else {
                     var held: [(name: Name, value: Value)] = []
 
@@ -343,7 +345,7 @@ public enum BinaryEncoding {
                     held.append((name: key, value: value))
 
                     if expecting == 1 {
-                        settled = .record(Record(name: name, entries: held))
+                        settled = try .holding(held, named: name)
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 

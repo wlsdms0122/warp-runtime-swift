@@ -337,21 +337,21 @@ struct WriterTests {
         let written = try sut.value(of: declaring)
 
         guard
-            case let .record(document) = written,
-            case let .record(procedures) = document["procedures"],
-            case let .record(entry) = procedures[entryName]
+            case let .dictionary(document) = written,
+            case let .dictionary(procedures) = document["procedures"],
+            case let .dictionary(entry) = procedures[entryName]
         else {
             Issue.record("the module did not write as a document")
 
             return
         }
 
-        #expect(entry["bounds"] == .record(["T": .string("Scalar")]))
+        #expect(entry["bounds"] == .dictionary(["T": .string("Scalar")]))
 
         guard
-            case let .record(parameters) = entry["parameters"]
+            case let .dictionary(parameters) = entry["parameters"]
         else {
-            Issue.record("the parameters did not write as a record")
+            Issue.record("the parameters did not write as a mapping")
 
             return
         }
@@ -414,7 +414,7 @@ struct WriterTests {
                 found.formUnion(keys(in: element))
             }
 
-        case let .record(record):
+        case let .dictionary(record):
             return record.entries.reduce(into: Set(record.names)) { found, entry in
                 found.formUnion(keys(in: entry.value))
             }

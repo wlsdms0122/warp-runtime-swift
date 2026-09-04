@@ -48,14 +48,11 @@ public extension RecoverableFailure {
     // does not get to redefine the word naming what happened. What it wanted
     // to say belongs under a name of its own.
     var payload: Value {
-        .record(
-            Record(
-                name: nil,
-                details.merging([
-                    "type": .string(type),
-                    "message": .string(message),
-                ]) { _, core in core }
-            )
+        .dictionary(
+            details.merging([
+                "type": .string(type),
+                "message": .string(message),
+            ]) { _, core in core }
         )
     }
 }
@@ -64,9 +61,9 @@ public extension RecoverableFailure {
 // hold the rescue's name to it. Before this it read `any`, which threw the
 // promise away: a rescue could reach anything and be judged on nothing.
 //
-// Only the guaranteed core is here. What an error adds on top is real but
-// unnamed, so it is read the way any data past a declaration is — by naming
-// the shape, with `as`.
+// Only the guaranteed core is here. Nothing settles the payload, so what an
+// error adds on top arrives with it, unnamed: it is read by naming the shape,
+// with `as`.
 public enum FailurePayload {
     public static let declared = TypeExpression.record([
         "type": .string,

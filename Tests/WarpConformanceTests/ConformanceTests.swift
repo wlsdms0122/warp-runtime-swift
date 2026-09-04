@@ -174,8 +174,10 @@ struct Case: Sendable, CustomStringConvertible {
         self.note = note
         self.program = program
 
-        if case let .record(arguments)? = written["arguments"] {
-            self.arguments = Dictionary(uniqueKeysWithValues: arguments.entries.map { entry in (entry.name, entry.value) })
+        if case let .dictionary(arguments)? = written["arguments"] {
+            self.arguments = Swift.Dictionary(
+                uniqueKeysWithValues: arguments.entries.map { entry in (entry.name, entry.value) }
+            )
         } else {
             self.arguments = [:]
         }
@@ -187,7 +189,7 @@ struct Case: Sendable, CustomStringConvertible {
         // would otherwise start asking a different question than it reads as, and
         // nobody would be told.
         guard
-            case let .record(expect)? = written["expect"],
+            case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
             let (held, expected) = expect.entries.first
         else {

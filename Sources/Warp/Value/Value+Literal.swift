@@ -53,11 +53,12 @@ extension Value: ExpressibleByArrayLiteral {
     }
 }
 
-// A duplicate key is a mistake being made twice in one literal, and there is no
-// value to answer with — the same reaction `Dictionary` has.
+// Names written in this source are data a host is handing in, so the literal
+// makes a dictionary. A duplicate key is a mistake being made twice in one
+// literal, and there is no value to answer with.
 extension Value: ExpressibleByDictionaryLiteral {
     public init(dictionaryLiteral elements: (Name, Value)...) {
-        self = .record(Dictionary(elements) { _, _ in
+        self = .dictionary(Swift.Dictionary(elements) { _, _ in
             preconditionFailure("duplicate key in a value literal")
         })
     }

@@ -55,10 +55,11 @@ extension TypeExpression {
             return .dictionary(entry.lowered(in: table))
 
         case let .record(fields):
+            let ordered = fields.sorted { left, right in left.key < right.key }
+
             return .record(
-                fields
-                    .sorted { left, right in left.key < right.key }
-                    .map { name, field in (name: name, shape: field.lowered(in: table)) }
+                Layout(fields: ordered.map(\.key)),
+                ordered.map { _, field in field.lowered(in: table) }
             )
 
         case let .procedure(signature, purity, isolation):

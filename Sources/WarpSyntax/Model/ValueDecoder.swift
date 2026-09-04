@@ -34,7 +34,7 @@ struct ValueDecoder: Decoder {
 
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let record: Record
+        let record: Dictionary
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
@@ -306,7 +306,7 @@ struct ValueDecoder: Decoder {
     // MARK: - Initializer
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .record(record) = value else {
+        guard let record = value.asDictionary else {
             throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
 

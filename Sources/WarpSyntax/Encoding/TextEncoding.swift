@@ -295,7 +295,7 @@ public enum TextEncoding {
                 case .recordClose:
                     opened.removeLast()
 
-                    settled = .record(Record(name: name, held))
+                    settled = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
 
                 case let .bare(spelling):
                     let key = try key(spelling)
@@ -518,8 +518,10 @@ public enum TextEncoding {
 
             text += String(repeating: "  ", count: indent) + "]"
 
-        case let .record(record):
-            if let name = record.name {
+        case .record, .dictionary:
+            guard let held = value.asDictionary else { return }
+
+            if case let .record(record) = value, let name = record.name {
                 guard name.isDeclarable else {
                     throw EncodingError.invalidValue(
                         Value.string(name.spelling),
@@ -530,7 +532,7 @@ public enum TextEncoding {
                 text += name.spelling + " "
             }
 
-            guard !record.isEmpty else {
+            guard !held.isEmpty else {
                 text += "{}"
 
                 break
@@ -538,8 +540,8 @@ public enum TextEncoding {
 
             text += "{\n"
 
-            // The record holds its entries in byte order, the order written.
-            for (key, value) in record.entries {
+            // Both spellings hold their fields in byte order, the order written.
+            for (key, value) in held.entries {
                 text += String(repeating: "  ", count: indent + 1)
 
                 if key.isIdentifier {

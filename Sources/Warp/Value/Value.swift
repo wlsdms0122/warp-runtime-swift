@@ -36,19 +36,49 @@ public indirect enum Value: Sendable, Equatable {
     // are two values.
     case record(Record)
 
+    // Names and values where the names are data: what a document hands in,
+    // what a host builds out of raw data, and what a word that reads names
+    // answers. A declaration is what turns one of these into a record.
+    case dictionary(Dictionary)
+
     case procedure(Closure)
 
-    // A record with no name: what a literal, a native word and a document
-    // make. The one spelling for it, so a caller never writes the nil.
+    // A record with no name, for a maker that stands on the fields it wrote.
     public static func record(_ fields: [Name: Value]) -> Value {
         .record(Record(name: nil, fields))
     }
 
-    // This value with one field written, or any other value as it is.
-    public func writing(_ field: Name, with value: Value) -> Value {
-        guard case let .record(record) = self else { return self }
+    public static func dictionary(_ entries: [Name: Value]) -> Value {
+        .dictionary(Dictionary(entries))
+    }
 
-        return .record(record.writing(field, with: value))
+    // What a reading of fields under names makes. A name is a layout's, so a
+    // reading that carries one makes a record; without one the names stay the
+    // value's own data. Either way one name holds one field, and a name
+    // written twice is refused.
+    public static func holding(
+        _ fields: some Sequence<(name: Name, value: Value)>,
+        named name: Name?
+    ) throws -> Value {
+        let held = try Dictionary(Array(fields))
+
+        guard let name else { return .dictionary(held) }
+
+        return .record(
+            try Record(
+                layout: Layout(name: name, fields: held.names),
+                checking: held.values
+            )
+        )
+    }
+
+    // This value with one entry written, or any other value as it is. A
+    // record's fields are its layout's, so an entry is written where the
+    // names are the value's own.
+    public func writing(_ name: Name, with value: Value) -> Value {
+        guard case let .dictionary(dictionary) = self else { return self }
+
+        return .dictionary(dictionary.writing(name, with: value))
     }
 
     // MARK: - Property
@@ -68,7 +98,8 @@ public indirect enum Value: Sendable, Equatable {
         switch self {
         case .procedure: true
         case let .array(items): items.contains { item in item.holdsProcedure }
-        case let .record(record): record.entries.contains { entry in entry.value.holdsProcedure }
+        case let .record(record): record.values.contains { value in value.holdsProcedure }
+        case let .dictionary(dictionary): dictionary.entries.contains { entry in entry.value.holdsProcedure }
         default: false
         }
     }
@@ -96,7 +127,7 @@ public indirect enum Value: Sendable, Equatable {
         case .array:
             return .array
 
-        case .record:
+        case .record, .dictionary:
             return .record
 
         case .procedure:
@@ -108,9 +139,11 @@ public indirect enum Value: Sendable, Equatable {
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a caller does with what a run gave it.
     public subscript(field: Name) -> Value? {
-        guard case let .record(record) = self else { return nil }
-
-        return record[field]
+        switch self {
+        case let .record(record): record[field]
+        case let .dictionary(dictionary): dictionary[field]
+        default: nil
+        }
     }
 
     // The elements a value is indexed by, and nil for what has none. This is
@@ -255,6 +288,13 @@ public indirect enum Value: Sendable, Equatable {
         case let (.record(left), .record(right)):
             return left == right
 
+        case let (.dictionary(left), .dictionary(right)):
+            return left == right
+
+        case let (.record(record), .dictionary(dictionary)),
+            let (.dictionary(dictionary), .record(record)):
+            return same(record, dictionary) { mine, theirs in mine == theirs }
+
         // Two procedures are never equal. Structural equality would compare
         // bodies, which says nothing an author asked about, and reference
         // equality would make a value's identity observable, and neither is a
@@ -361,18 +401,63 @@ public indirect enum Value: Sendable, Equatable {
         // Both hold their entries in name order, so two records match
         // entry by entry.
         case let (.record(left), .record(right)):
-            return left.name == right.name
-                && left.count == right.count
+            return left.layout == right.layout
+                && zip(left.values, right.values).allSatisfy { mine, theirs in mine.matches(theirs) }
+
+        case let (.dictionary(left), .dictionary(right)):
+            return left.count == right.count
                 && zip(left.entries, right.entries).allSatisfy { mine, theirs in
                     mine.name == theirs.name && mine.value.matches(theirs.value)
                 }
+
+        case let (.record(record), .dictionary(dictionary)),
+            let (.dictionary(dictionary), .record(record)):
+            return Value.same(record, dictionary) { mine, theirs in mine.matches(theirs) }
 
         default:
             return self == other
         }
     }
 
+    // Whether this holds fields under names: a record's layout's, or a
+    // dictionary's own.
+    public var holdsFields: Bool {
+        switch self {
+        case .record, .dictionary: true
+        default: false
+        }
+    }
+
+    // This value's fields as names beside values, and nil for what holds
+    // none. A record's names come from its layout.
+    public var asDictionary: Dictionary? {
+        switch self {
+        case let .dictionary(dictionary):
+            return dictionary
+
+        case let .record(record):
+            return record.asDictionary
+
+        default:
+            return nil
+        }
+    }
+
     // MARK: - Private
+    // Whether a record and a dictionary hold the same fields. A record that
+    // settled to a name is that name's, and no dictionary is.
+    private static func same(
+        _ record: Record,
+        _ dictionary: Dictionary,
+        by held: (Value, Value) -> Bool
+    ) -> Bool {
+        guard record.name == nil, record.count == dictionary.count else { return false }
+
+        return dictionary.entries.indices.allSatisfy { place in
+            record.names[place] == dictionary.entries[place].name
+                && held(record.values[place], dictionary.entries[place].value)
+        }
+    }
 }
 
 private extension Array {

@@ -28,6 +28,10 @@ public struct Executor: Sendable {
     // that declared it, in the order its frame reads them.
     let boxes: [Int: [Handle]]
 
+    // What a loop hands its body each round, and what a walk hands its own.
+    private static let roundLayout = Layout(fields: ["index"])
+    private static let walkLayout = Layout(fields: ["index", "item"])
+
     // MARK: - Initializer
     // What a caller has to say to make one: who watches, and what the run may
     // reach outside itself. The table comes from an image, so this is an
@@ -114,10 +118,9 @@ public struct Executor: Sendable {
         case let .array(elements):
             return .array(try elements.map { element in try read(element, in: activation) })
 
-        // The link ordered the fields by name, so the record is made as it is.
-        case let .record(fields):
+        case let .record(layout, fields):
             return .record(
-                Record(name: nil, ordered: try fields.map { name, field in (name: name, value: try read(field, in: activation)) })
+                Record(layout: layout, values: try fields.map { field in try read(field, in: activation) })
             )
 
         // Making a closure runs nothing: it is the capture, and the capture is
@@ -281,15 +284,15 @@ public struct Executor: Sendable {
 
             return .array(values)
 
-        case let .record(fields):
-            var values: [(name: Name, value: Value)] = []
+        case let .record(layout, fields):
+            var values: [Value] = []
             values.reserveCapacity(fields.count)
 
-            for (name, field) in fields {
-                values.append((name: name, value: try await evaluate(field, in: &activation, at: trace)))
+            for field in fields {
+                values.append(try await evaluate(field, in: &activation, at: trace))
             }
 
-            return .record(Record(name: nil, ordered: values))
+            return .record(Record(layout: layout, values: values))
 
         // The run's whole share of a cast: the link already decided what every
         // dot after this means, and the one thing it could not know is what
@@ -499,7 +502,7 @@ public struct Executor: Sendable {
         while true {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
-            activation.cells[round] = .value(.record(Record(name: nil, ordered: [(name: "index", value: .int(index))])))
+            activation.cells[round] = .value(.record(Record(layout: Executor.roundLayout, values: [.int(index)])))
 
             guard try bool(try read(condition, in: activation)) else {
                 guard let result = body.result else { return .null }
@@ -542,7 +545,7 @@ public struct Executor: Sendable {
 
         for (index, item) in elements.enumerated() {
             activation.cells[element] = .value(
-                .record(Record(name: nil, ordered: [(name: "index", value: .int(index)), (name: "item", value: item)]))
+                .record(Record(layout: Executor.walkLayout, values: [.int(index), item]))
             )
 
             do {
@@ -932,11 +935,11 @@ public struct Executor: Sendable {
                 }
 
             case let .key(key, _):
-                guard case let .record(record) = current else {
+                guard current.holdsFields else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
-                guard let next = record[key] else {
+                guard let next = current[key] else {
                     guard segment.optional else {
                         return .unfit(
                             "\(walked().rendered): '\(key)' is not there"

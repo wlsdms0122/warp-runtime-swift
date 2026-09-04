@@ -67,7 +67,7 @@ struct CircleTests {
         // which is an ordinary program and was enough to end the process when
         // this walk was written as recursion.
         let names = try (0..<300).map { position in try Name("p\(position)") }
-        let edges = Dictionary(
+        let edges = Swift.Dictionary(
             uniqueKeysWithValues: names.enumerated().map { position, name in
                 (name, position + 1 < names.count ? [names[position + 1]] : [])
             }

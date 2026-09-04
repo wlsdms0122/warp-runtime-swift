@@ -54,7 +54,7 @@ extension Shape {
         case let .named(row):
             let declared = table.shapes[row]
 
-            guard case let .record(record) = value, let nominal = table.record(of: self) else {
+            guard value.holdsFields, let nominal = table.record(of: self) else {
                 return try declared.settling(value, at: path(), in: table, assuming: assuming)
             }
 
@@ -62,7 +62,7 @@ extension Shape {
 
             // A tag already canonical is the same spelling. One that is not
             // is an alias or another record, told apart by the table once.
-            if let tag = record.name, tag != label {
+            if case let .record(record) = value, let tag = record.name, tag != label {
                 guard let spelled = table.row(named: tag), table.recordRows[spelled] == nominal else {
                     throw ArgumentError("\(path()): is a \(tag), and the slot declares \(label)")
                 }
@@ -124,47 +124,40 @@ extension Shape {
                 }
             )
 
+        // A dictionary slot holds the names as data, so a record settling
+        // here becomes one, its layout's names written beside their values.
         case let .dictionary(entry):
-            guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
+            guard let held = value.asDictionary else { throw mismatch(value, at: path(), in: table) }
 
-            // An entry nothing was declared for passes as it is, so the record
-            // does too.
-            if entry == .any { return value }
+            if entry == .any { return .dictionary(held) }
 
-            return .record(
-                try record.mapValues { _, item in
+            return .dictionary(
+                try held.mapValues { _, item in
                     try entry.settling(item, at: path(), in: table, assuming: assuming)
                 }
             )
 
-        // An inline record is structural: a record under any name fits it by
-        // shape and keeps the name it came with. The declared fields and the
-        // record's entries are both in name order, so one walk down the
-        // entries meets every declared field where it stands.
-        case let .record(fields):
-            guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
+        // An inline record is structural: a value holding at least these
+        // fields fits it, whatever else it holds and whatever it is named.
+        // Settling builds the slot's layout, so what settles here holds these
+        // fields and no others.
+        case let .record(layout, fields):
+            guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
 
-            var settled = record.entries
-            var cursor = 0
+            return .record(
+                Record(
+                    layout: layout,
+                    values: try zip(layout.fields, fields).map { name, field in
+                        guard let held = value[name] else {
+                            throw ArgumentError(
+                                "\(path()).\(name): required by \(rendered(in: table)), and nothing was given"
+                            )
+                        }
 
-            for (name, field) in fields {
-                while cursor < settled.count, settled[cursor].name < name {
-                    cursor += 1
-                }
-
-                guard cursor < settled.count, settled[cursor].name == name else {
-                    throw ArgumentError("\(path()).\(name): required by \(rendered(in: table)), and nothing was given")
-                }
-
-                settled[cursor].value = try field.settling(
-                    settled[cursor].value,
-                    at: "\(path()).\(name)",
-                    in: table,
-                    assuming: assuming
+                        return try field.settling(held, at: "\(path()).\(name)", in: table, assuming: assuming)
+                    }
                 )
-            }
-
-            return .record(Record(name: record.name, ordered: settled))
+            )
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
@@ -500,8 +493,10 @@ extension Shape {
         case let .dictionary(entry):
             return "dictionary<\(entry.rendered(in: table))>"
 
-        case let .record(fields):
-            let written = fields.map { name, field in "\(name): \(field.rendered(in: table))" }
+        case let .record(layout, fields):
+            let written = zip(layout.fields, fields).map { name, field in
+                "\(name): \(field.rendered(in: table))"
+            }
 
             return "{ \(written.joined(separator: ", ")) }"
 

@@ -259,9 +259,12 @@ struct Lowering {
             })
 
         case let .record(record):
-            return .record(try record.sorted { $0.key < $1.key }.map { name, field in
-                (name, try lower(field, in: scope, on: slots, label: label, at: place))
-            })
+            let ordered = record.sorted { $0.key < $1.key }
+
+            return .record(
+                Layout(fields: ordered.map(\.key)),
+                try ordered.map { _, field in try lower(field, in: scope, on: slots, label: label, at: place) }
+            )
 
         case let .closure(procedure):
             guard let block = procedure.block else {

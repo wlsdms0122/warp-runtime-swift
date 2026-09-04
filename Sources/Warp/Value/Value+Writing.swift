@@ -9,12 +9,11 @@ import Foundation
 
 extension Value {
     // This value with one part replaced: the part the path names, in a record
-    // by key and in an array by position. The rest is kept as it was. The
-    // link judged the path against the value's declared shape, and every
-    // index was read to a position before this, so a key not yet held is an
-    // entry of a record and is made. A part the value does not hold below
-    // that is refused as what it is: an entry not written yet, or a shape
-    // with no such part.
+    // and a dictionary by name and in an array by position. The rest is kept
+    // as it was. The link judged the path against the value's declared shape,
+    // and every index was read to a position before this. A record's fields
+    // are its layout's, so a name it does not hold is refused; a dictionary's
+    // names are its own, so one not held yet is made.
     func writing(_ value: Value, at path: [PathSegment], under rendered: String) throws -> Value {
         guard let segment = path.first else { return value }
 
@@ -22,8 +21,15 @@ extension Value {
 
         switch (self, segment) {
         case let (.record(record), .key(name, _)):
-            return .record(
-                record.writing(name, with: try (record[name] ?? .null).writing(value, at: rest, under: rendered))
+            guard let held = record[name] else {
+                throw ExecutionError("'\(rendered)' writes '\(name)', which \(record.name.map { "\($0) " } ?? "")has no field for")
+            }
+
+            return .record(try record.writing(name, with: try held.writing(value, at: rest, under: rendered)))
+
+        case let (.dictionary(dictionary), .key(name, _)):
+            return .dictionary(
+                dictionary.writing(name, with: try (dictionary[name] ?? .null).writing(value, at: rest, under: rendered))
             )
 
         case let (.array(elements), .index(index, _)):

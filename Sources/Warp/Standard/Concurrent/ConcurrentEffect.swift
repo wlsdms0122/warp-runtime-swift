@@ -115,9 +115,11 @@ public struct ConcurrentEffect: Effect {
     // for positional ones. Which one arrived decides the shape of the answer.
     private func closures(of invocation: Invocation) throws -> ([Piece], keyed: Bool) {
         switch try material(of: invocation) {
-        case let .record(record):
+        case .record, .dictionary:
+            guard let held = try material(of: invocation).asDictionary else { return ([], keyed: true) }
+
             return (
-                try record.entries.enumerated().map { position, entry in
+                try held.entries.enumerated().map { position, entry in
                     Piece(
                         key: entry.name,
                         position: position,
@@ -318,9 +320,8 @@ public struct ConcurrentEffect: Effect {
         }
 
         // Keyed pieces were made in name order, and their positions say so.
-        return .record(
-            Record(
-                name: nil,
+        return .dictionary(
+            Dictionary(
                 ordered: outcomes
                     .sorted { left, right in left.position < right.position }
                     .compactMap { outcome in

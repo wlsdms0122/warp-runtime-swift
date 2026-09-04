@@ -69,7 +69,7 @@ struct Rendering {
         case .procedure:
             return "<procedure>"
 
-        case .array, .record:
+        case .array, .record, .dictionary:
             // `Unwritable` is the only thing `written` throws, so the fallback
             // is the whole failure story.
             return (try? Self.written(value)) ?? "<unencodable>"
@@ -122,9 +122,18 @@ struct Rendering {
             return "[" + (try array.map(written)).joined(separator: ",") + "]"
 
         case let .record(record):
-            let fields = try record.entries.map { name, value in "\(quoted(name.spelling)):\(try written(value))" }
+            let fields = try zip(record.names, record.values).map { name, value in
+                "\(quoted(name.spelling)):\(try written(value))"
+            }
 
             return (record.name.map { name in "\(name) " } ?? "") + "{" + fields.joined(separator: ",") + "}"
+
+        case let .dictionary(dictionary):
+            let entries = try dictionary.entries.map { name, value in
+                "\(quoted(name.spelling)):\(try written(value))"
+            }
+
+            return "{" + entries.joined(separator: ",") + "}"
         }
     }
 

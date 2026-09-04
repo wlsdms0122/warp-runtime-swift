@@ -67,13 +67,15 @@ public struct ValueWriter: Encodable {
 
             try container.encode(elements.map(ValueWriter.init))
 
-        // A carrier keys its fields by Swift's equality, which folds spellings
-        // the record keeps apart. What the record holds is a name, and one
+        // A carrier keys its fields by Swift's equality, which folds
+        // spellings a value keeps apart. What a value holds is a name, and one
         // name is one spelling, so the fold has nothing to fold.
-        case let .record(record):
+        case .record, .dictionary:
+            guard let held = value.asDictionary else { return }
+
             try container.encode(
-                Dictionary(
-                    uniqueKeysWithValues: record.entries.map { entry in
+                Swift.Dictionary(
+                    uniqueKeysWithValues: held.entries.map { entry in
                         (entry.name.spelling, ValueWriter(entry.value))
                     }
                 )
