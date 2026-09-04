@@ -55,16 +55,13 @@ public indirect enum Value: Sendable, Equatable {
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
     ) throws -> Value {
+        // The dictionary proved the order and that no name repeats, so the
+        // layout is built rather than checked again.
         let held = try Value.Dictionary(Array(fields))
 
         guard let name else { return .dictionary(held) }
 
-        return .record(
-            try Record(
-                layout: Layout(name: name, fields: held.names),
-                checking: held.values
-            )
-        )
+        return .record(Record(layout: Layout(name: name, ordered: held.names), values: held.values))
     }
 
     // This value with one field written. A field a record's layout names is
@@ -78,8 +75,8 @@ public indirect enum Value: Sendable, Equatable {
             return .record(try record.writing(name, with: value))
 
         case let .record(record):
-            guard record.name == nil else {
-                throw ValueRefused("\(record.name?.spelling ?? "") declares no field '\(name)'")
+            if let settled = record.name {
+                throw ValueRefused("\(settled) declares no field '\(name)'")
             }
 
             return .dictionary(record.asDictionary.writing(name, with: value))
@@ -436,19 +433,6 @@ public indirect enum Value: Sendable, Equatable {
         switch self {
         case .record, .dictionary: true
         default: false
-        }
-    }
-
-    // This value's fields where nothing named the value itself: what a
-    // document holds, whichever spelling carries it. Nil for a value under a
-    // type's name, and for one holding no fields at all.
-    public var unnamedFields: Dictionary? {
-        switch self {
-        case let .record(record) where record.name != nil:
-            return nil
-
-        default:
-            return asDictionary
         }
     }
 

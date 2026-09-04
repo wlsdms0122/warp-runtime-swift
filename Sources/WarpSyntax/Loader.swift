@@ -252,16 +252,16 @@ public struct Loader: Sendable {
         return .dictionary(document.writing(Envelope.versionKey, with: .int(Envelope.version)))
     }
 
-    // What a document holds, or the refusal saying this was not one. A
-    // document is names and values under no name of its own: the envelope is
-    // data, and a type's name on it would say the document is a value of that
-    // type.
+    // What a document holds, or the refusal saying this was not one.
     private static func document(_ value: Value) throws -> Value.Dictionary {
-        guard let held = value.unnamedFields else {
-            throw ReadingError(
-                "a document is names and values, and this one is \(value.type)"
-                    + (value.holdsFields ? " under a type's name, which a document has none of" : "")
-            )
+        // A value under a type's name is a value of that type. The envelope is
+        // the reader's own data and stands under no name.
+        if case let .record(record) = value, let settled = record.name {
+            throw ReadingError("a document stands under no name, and this one stands under '\(settled)'")
+        }
+
+        guard let held = value.asDictionary else {
+            throw ReadingError("a document is names and values, and this one is \(value.type)")
         }
 
         return held

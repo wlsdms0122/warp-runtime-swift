@@ -114,10 +114,11 @@ public struct Name: Sendable, Hashable, Comparable {
     // holds them contiguously.
     public func hash(into hasher: inout Hasher) {
         let utf8 = spelling.utf8
-
-        guard utf8.withContiguousStorageIfAvailable({ bytes in hasher.combine(bytes: UnsafeRawBufferPointer(bytes)) }) == nil else {
-            return
+        let hashed: Void? = utf8.withContiguousStorageIfAvailable { bytes in
+            hasher.combine(bytes: UnsafeRawBufferPointer(bytes))
         }
+
+        guard hashed == nil else { return }
 
         for byte in utf8 {
             hasher.combine(byte)

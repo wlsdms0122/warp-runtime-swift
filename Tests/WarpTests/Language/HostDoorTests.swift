@@ -84,6 +84,19 @@ struct HostDoorTests {
         #expect(settled == .dictionary(["balance": .int(1)]))
     }
 
+    @Test("a layout a host builds carries no name of its own")
+    func aHostBuiltLayoutHasNoName() throws {
+        // Given — a name says a declaration, and a declaration is the link's
+        let layout = try Layout(fields: ["balance"])
+
+        // When
+        let built = try Record(layout: layout, checking: [.int(1)])
+
+        // Then
+        #expect(built.name == nil)
+        #expect(Value.record(built) == .dictionary(["balance": .int(1)]))
+    }
+
     // MARK: - Private
     private var sut: Module {
         get throws {

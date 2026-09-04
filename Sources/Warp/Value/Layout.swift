@@ -29,14 +29,18 @@ public struct Layout: Sendable, Hashable {
     public let fields: [Name]
 
     // MARK: - Initializer
-    public init(name: Name? = nil, fields: [Name]) throws {
+    // Fields in any order, none of which repeats, under no name: a name says
+    // a declaration, and a declaration is the link's. `Value.holding(_:named:)`
+    // carries one a document wrote, and `Image.settling(_:as:)` one the link
+    // declared.
+    public init(fields: [Name]) throws {
         let sorted = fields.sorted()
 
         if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one == other }) {
             throw ValueRefused("a layout names '\(repeated.0)' twice")
         }
 
-        self.name = name
+        self.name = nil
         self.fields = sorted
     }
 

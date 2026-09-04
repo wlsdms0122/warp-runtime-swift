@@ -23,23 +23,12 @@ extension Value {
         // A field the layout names is written where it stands; any other name
         // makes an entry, and what holds it holds its names as data. The link
         // judged the path, so a name that reaches here is one it allowed.
-        case let (.record(record), .key(name, _)):
-            if let held = record[name] {
-                return .record(try record.writing(name, with: try held.writing(value, at: rest, under: rendered)))
+        case let (_, .key(name, _)) where holdsFields:
+            do {
+                return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
+            } catch let refused as ValueRefused {
+                throw ExecutionError("'\(rendered)' writes '\(name)', and \(refused.message)")
             }
-
-            guard record.name == nil else {
-                throw ExecutionError("'\(rendered)' writes '\(name)', which \(record.name?.spelling ?? "") does not declare")
-            }
-
-            return .dictionary(
-                record.asDictionary.writing(name, with: try Value.null.writing(value, at: rest, under: rendered))
-            )
-
-        case let (.dictionary(dictionary), .key(name, _)):
-            return .dictionary(
-                dictionary.writing(name, with: try (dictionary[name] ?? .null).writing(value, at: rest, under: rendered))
-            )
 
         case let (.array(elements), .index(index, _)):
             guard elements.indices.contains(index) else {

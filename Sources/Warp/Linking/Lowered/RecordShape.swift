@@ -16,10 +16,6 @@ struct RecordShape: Sendable, Equatable {
     let layout: Layout
     let fields: [Shape]
 
-    var count: Int {
-        fields.count
-    }
-
     // The names beside the shapes, in the layout's order.
     var named: Zip2Sequence<[Name], [Shape]> {
         zip(layout.fields, fields)

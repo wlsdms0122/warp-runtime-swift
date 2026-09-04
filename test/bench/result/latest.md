@@ -1,7 +1,3 @@
-<!-- Measured on warp/name-and-layout. The same machine, minutes apart, gives
-main a loop of 975 ns: this branch is about 1.75x slower per round, which is a
-regression the ticket has not closed. See plan/ask-owner.md. -->
-
 rounds 1000000, median of 3
 
 | workload | ns/round | minus loop | x loop |
