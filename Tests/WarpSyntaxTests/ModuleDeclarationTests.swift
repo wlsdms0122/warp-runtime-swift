@@ -49,7 +49,7 @@ struct ModuleDeclarationTests {
         let outputs = try await run([first, second], entry: "first.entry")
 
         // Then
-        #expect(outputs["result"] == .record(["said": .string("from first")]))
+        #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
     }
 
     @Test("a bare name for another module's word is refused at the link")
@@ -110,7 +110,7 @@ struct ModuleDeclarationTests {
         let outputs = try await run([first, second], entry: "first.entry")
 
         // Then
-        #expect(outputs["result"] == .record(["said": .string("from second")]))
+        #expect(outputs["result"] == .dictionary(["said": .string("from second")]))
     }
 
     @Test("a constant is a name bound to a value, settled before any run")

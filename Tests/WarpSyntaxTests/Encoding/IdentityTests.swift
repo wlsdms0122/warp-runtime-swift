@@ -51,9 +51,9 @@ struct IdentityTests {
         // Given — the same document, and a text writing of it read back. A
         // notation is not part of what a program is, so nothing about how it
         // arrived may reach the answer.
-        let document = Value.record([
+        let document = Value.dictionary([
             "warp": .int(1),
-            "procedures": .record(["entry": .record(["body": .array([])])])
+            "procedures": .dictionary(["entry": .dictionary(["body": .array([])])])
         ])
 
         let throughText = try TextEncoding.value(from: try TextEncoding.text(from: document))
@@ -67,14 +67,14 @@ struct IdentityTests {
     @Test("two documents that say different things are two identities")
     func differentDocumentsDiffer() throws {
         // Given: two documents that declare different things.
-        let first = Value.record([
+        let first = Value.dictionary([
             "warp": .int(1),
-            "procedures": .record(["charge": .record(["body": .array([])])])
+            "procedures": .dictionary(["charge": .dictionary(["body": .array([])])])
         ])
 
-        let second = Value.record([
+        let second = Value.dictionary([
             "warp": .int(1),
-            "procedures": .record(["refund": .record(["body": .array([])])])
+            "procedures": .dictionary(["refund": .dictionary(["body": .array([])])])
         ])
 
         // Then

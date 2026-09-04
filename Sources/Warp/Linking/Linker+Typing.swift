@@ -2223,14 +2223,14 @@ extension Linker {
         case let .record(record):
             return record.name.map { name in .named(name) }
                 ?? .record(
-                    Swift.Dictionary(
+                    Dictionary(
                         zip(record.names, record.values).map { name, value in (name, type(of: value)) }
                     ) { first, _ in first }
                 )
 
         case let .dictionary(dictionary):
             return .record(
-                Swift.Dictionary(
+                Dictionary(
                     dictionary.entries.map { entry in (entry.name, type(of: entry.value)) }
                 ) { first, _ in first }
             )

@@ -26,9 +26,7 @@ indirect enum Shape: Sendable {
     case array(Shape)
     case dictionary(Shape)
 
-    // The layout a value settling here is built on, and the shape of each of
-    // its fields, at the same places.
-    case record(Layout, [Shape])
+    case record(RecordShape)
 
     // What a slot asks of a procedure value: the parameters it may be called
     // with, in position order, and what it must answer. Nil where nothing
@@ -156,9 +154,8 @@ extension Shape: Equatable {
             let (.nullable(mine), .nullable(theirs)):
             return mine == theirs
 
-        case let (.record(myLayout, mine), .record(theirLayout, theirs)):
-            return myLayout == theirLayout
-                && zip(mine, theirs).allSatisfy { one, other in one == other }
+        case let (.record(mine), .record(theirs)):
+            return mine == theirs
 
         case let (.procedure(mine, myAnswer, myPurity, myIsolation),
                   .procedure(theirs, theirAnswer, theirPurity, theirIsolation)):

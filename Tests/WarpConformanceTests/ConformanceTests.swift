@@ -175,7 +175,7 @@ struct Case: Sendable, CustomStringConvertible {
         self.program = program
 
         if case let .dictionary(arguments)? = written["arguments"] {
-            self.arguments = Swift.Dictionary(
+            self.arguments = Dictionary(
                 uniqueKeysWithValues: arguments.entries.map { entry in (entry.name, entry.value) }
             )
         } else {

@@ -82,10 +82,10 @@ struct ShapeTests {
         // already named by the alias
         let table = types.shapes
         let slot = TypeExpression.named("bank.Acct").lowered(in: table)
-        let owner = Value.record(["name": .string("a")])
+        let owner = Value.dictionary(["name": .string("a")])
 
         // When
-        let settled = try slot.settling(.record(["balance": .int(1), "owner": owner]), at: "input", in: table)
+        let settled = try slot.settling(.dictionary(["balance": .int(1), "owner": owner]), at: "input", in: table)
         let again = try slot.settling(settled, at: "input", in: table)
         let spelled = try slot.settling(
             .record(Record(name: "bank.Acct", ["balance": .int(1), "owner": owner])),

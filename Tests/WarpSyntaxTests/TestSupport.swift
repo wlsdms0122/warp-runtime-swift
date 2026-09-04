@@ -198,7 +198,7 @@ func run(
     // of the answer, and unwrapping here keeps that phrasing.
     guard let outputs = answer.asDictionary else { return [:] }
 
-    return Swift.Dictionary(uniqueKeysWithValues: outputs.entries.map { entry in (entry.name, entry.value) })
+    return Dictionary(uniqueKeysWithValues: outputs.entries.map { entry in (entry.name, entry.value) })
 }
 
 

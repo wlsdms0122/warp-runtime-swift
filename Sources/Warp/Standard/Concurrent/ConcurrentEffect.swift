@@ -111,24 +111,27 @@ public struct ConcurrentEffect: Effect {
     }
 
     // MARK: - Private
-    // The receiver — closures to run, as a record for named pieces or an array
+    // One piece per name, in the order the names stand.
+    private func pieces(of held: Value.Dictionary) throws -> [Piece] {
+        try held.entries.enumerated().map { position, entry in
+            Piece(
+                key: entry.name,
+                position: position,
+                closure: try closure(entry.value, called: entry.name.spelling),
+                arguments: []
+            )
+        }
+    }
+
+    // The receiver — closures to run, under names for named pieces or an array
     // for positional ones. Which one arrived decides the shape of the answer.
     private func closures(of invocation: Invocation) throws -> ([Piece], keyed: Bool) {
         switch try material(of: invocation) {
-        case .record, .dictionary:
-            guard let held = try material(of: invocation).asDictionary else { return ([], keyed: true) }
+        case let .record(record):
+            return (try pieces(of: record.asDictionary), keyed: true)
 
-            return (
-                try held.entries.enumerated().map { position, entry in
-                    Piece(
-                        key: entry.name,
-                        position: position,
-                        closure: try closure(entry.value, called: entry.name.spelling),
-                        arguments: []
-                    )
-                },
-                keyed: true
-            )
+        case let .dictionary(held):
+            return (try pieces(of: held), keyed: true)
 
         case let .array(elements):
             return (
@@ -321,7 +324,7 @@ public struct ConcurrentEffect: Effect {
 
         // Keyed pieces were made in name order, and their positions say so.
         return .dictionary(
-            Dictionary(
+            Value.Dictionary(
                 ordered: outcomes
                     .sorted { left, right in left.position < right.position }
                     .compactMap { outcome in

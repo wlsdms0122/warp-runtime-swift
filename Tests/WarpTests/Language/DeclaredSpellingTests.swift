@@ -44,7 +44,7 @@ struct DeclaredSpellingTests {
                     body: [],
                     result: .dispatch(Dispatch(
                         selector: "store.keep",
-                        arguments: ["value": .literal(.record(["id": .string("a")]))]
+                        arguments: ["value": .literal(.dictionary(["id": .string("a")]))]
                     ))
                 )
             ]

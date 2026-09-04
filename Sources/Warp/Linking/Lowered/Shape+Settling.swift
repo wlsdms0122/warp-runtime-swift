@@ -141,13 +141,13 @@ extension Shape {
         // fields fits it, whatever else it holds and whatever it is named.
         // Settling builds the slot's layout, so what settles here holds these
         // fields and no others.
-        case let .record(layout, fields):
+        case let .record(held):
             guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
 
             return .record(
                 Record(
-                    layout: layout,
-                    values: try zip(layout.fields, fields).map { name, field in
+                    layout: held.layout,
+                    values: try held.named.map { name, field in
                         guard let held = value[name] else {
                             throw ArgumentError(
                                 "\(path()).\(name): required by \(rendered(in: table)), and nothing was given"
@@ -493,8 +493,8 @@ extension Shape {
         case let .dictionary(entry):
             return "dictionary<\(entry.rendered(in: table))>"
 
-        case let .record(layout, fields):
-            let written = zip(layout.fields, fields).map { name, field in
+        case let .record(held):
+            let written = held.named.map { name, field in
                 "\(name): \(field.rendered(in: table))"
             }
 

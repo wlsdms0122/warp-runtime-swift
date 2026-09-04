@@ -15,7 +15,7 @@ struct FoldingTests {
     private let sut = Folding(bindings: [
                 "count": .int(3),
                 "maybe": .null,
-                "record": .record(["a": .int(1)])
+                "record": .dictionary(["a": .int(1)])
             ], natives: Module.standard)
 
     // MARK: - Initializer
@@ -88,7 +88,7 @@ struct FoldingTests {
         let value = try sut.read(reference)
 
         // Then
-        #expect(value == .record(["n": .int(3), "list": .array([.string("x")])]))
+        #expect(value == .dictionary(["n": .int(3), "list": .array([.string("x")])]))
     }
 
     @Test("format renders over its declared with bindings")
@@ -119,7 +119,7 @@ struct FoldingTests {
     @Test("a quoted payload passes verbatim, unevaluated")
     func quotedPayloadPassesVerbatim() throws {
         // Given — the payload is data: a ref-shaped record inside stays a record
-        let reference = Expression.literal(.record([
+        let reference = Expression.literal(.dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
         ]))
@@ -128,7 +128,7 @@ struct FoldingTests {
         let value = try sut.read(reference)
 
         // Then — nothing evaluated, nothing rendered
-        #expect(value == .record([
+        #expect(value == .dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
         ]))

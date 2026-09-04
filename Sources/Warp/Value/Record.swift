@@ -34,12 +34,15 @@ public struct Record: Sendable {
     }
 
     // MARK: - Initializer
-    // A record of the fields a caller hands in, under a layout of their names.
-    public init(name: Name? = nil, _ fields: [Name: Value]) {
+    // A record of the fields a caller hands in, under a layout of their
+    // names. The name is written at every site: a record with none is what a
+    // literal makes, and a dictionary is what data makes, and nothing should
+    // read as either.
+    public init(name: Name?, _ fields: [Name: Value]) {
         let ordered = fields.map { field in (name: field.key, value: field.value) }
             .sorted { one, other in one.name < other.name }
 
-        self.layout = Layout(name: name, fields: ordered.map(\.name))
+        self.layout = Layout(name: name, ordered: ordered.map(\.name))
         self.values = ordered.map(\.value)
     }
 
@@ -63,8 +66,8 @@ public struct Record: Sendable {
 
     // This record's fields as names beside values, for a reader that walks
     // names rather than a layout.
-    public var asDictionary: Dictionary {
-        Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
+    public var asDictionary: Value.Dictionary {
+        Value.Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
     }
 
     // MARK: - Public
@@ -96,7 +99,7 @@ public struct Record: Sendable {
 
     // This record under another name, with the same fields.
     public func named(_ name: Name?) -> Record {
-        Record(layout: Layout(name: name, fields: layout.fields), values: values)
+        Record(layout: Layout(name: name, ordered: layout.fields), values: values)
     }
 
     // MARK: - Private

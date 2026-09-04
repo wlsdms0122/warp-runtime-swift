@@ -162,7 +162,7 @@ struct StandardTests {
 
         // Then
         #expect(
-            answer == .record([
+            answer == .dictionary([
                 "doubled": .array([.int(2), .int(4), .int(6)]),
                 "kept": .array([.int(1), .int(3)]),
                 "total": .int(6)
@@ -487,7 +487,7 @@ struct StandardTests {
         let answer = try await run(sut, arguments: ["n": .int(11)])
 
         // Then
-        #expect(answer == .record(["whole": .int(2), "left": .int(3)]))
+        #expect(answer == .dictionary(["whole": .int(2), "left": .int(3)]))
     }
 
     @Test("an array grows and shrinks, which is a length the text did not write")
@@ -551,7 +551,7 @@ struct StandardTests {
 
         // Then
         #expect(
-            answer == .record([
+            answer == .dictionary([
                 "grown": .array([.int(0), .int(3), .int(2), .int(1)]),
                 "moved": .array([.int(0), .int(3), .int(2)])
             ])
@@ -598,15 +598,15 @@ struct StandardTests {
         // When
         let answer = try await run(
             sut,
-            arguments: ["counts": .record(["a": .int(1), "b": .int(2)])]
+            arguments: ["counts": .dictionary(["a": .int(1), "b": .int(2)])]
         )
 
         // Then
         #expect(
-            answer == .record([
+            answer == .dictionary([
                 "named": .array([.string("a"), .string("b")]),
                 "held": .array([.int(1), .int(2)]),
-                "changed": .record(["a": .int(1), "b": .int(9)])
+                "changed": .dictionary(["a": .int(1), "b": .int(9)])
             ])
         )
     }

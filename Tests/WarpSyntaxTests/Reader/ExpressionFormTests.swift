@@ -77,7 +77,7 @@ struct ExpressionFormTests {
             return
         }
 
-        #expect(payload == .record(["ref": .string("secret")]))
+        #expect(payload == .dictionary(["ref": .string("secret")]))
         #expect(validates(reference), "quoted payloads are not even validation targets")
     }
 

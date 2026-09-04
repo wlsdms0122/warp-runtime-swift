@@ -43,11 +43,6 @@ public indirect enum Value: Sendable, Equatable {
 
     case procedure(Closure)
 
-    // A record with no name, for a maker that stands on the fields it wrote.
-    public static func record(_ fields: [Name: Value]) -> Value {
-        .record(Record(name: nil, fields))
-    }
-
     public static func dictionary(_ entries: [Name: Value]) -> Value {
         .dictionary(Dictionary(entries))
     }
@@ -60,7 +55,7 @@ public indirect enum Value: Sendable, Equatable {
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
     ) throws -> Value {
-        let held = try Dictionary(Array(fields))
+        let held = try Value.Dictionary(Array(fields))
 
         guard let name else { return .dictionary(held) }
 
@@ -72,13 +67,20 @@ public indirect enum Value: Sendable, Equatable {
         )
     }
 
-    // This value with one entry written, or any other value as it is. A
-    // record's fields are its layout's, so an entry is written where the
-    // names are the value's own.
-    public func writing(_ name: Name, with value: Value) -> Value {
-        guard case let .dictionary(dictionary) = self else { return self }
+    // This value with one field written, or any other value as it is. A
+    // record's fields are its layout's, so a name it does not hold is
+    // refused; a dictionary's names are its own, so one not held yet is made.
+    public func writing(_ name: Name, with value: Value) throws -> Value {
+        switch self {
+        case let .record(record):
+            return .record(try record.writing(name, with: value))
 
-        return .dictionary(dictionary.writing(name, with: value))
+        case let .dictionary(held):
+            return .dictionary(held.writing(name, with: value))
+
+        default:
+            return self
+        }
     }
 
     // MARK: - Property
@@ -430,7 +432,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // This value's fields as names beside values, and nil for what holds
     // none. A record's names come from its layout.
-    public var asDictionary: Dictionary? {
+    public var asDictionary: Value.Dictionary? {
         switch self {
         case let .dictionary(dictionary):
             return dictionary
@@ -448,7 +450,7 @@ public indirect enum Value: Sendable, Equatable {
     // settled to a name is that name's, and no dictionary is.
     private static func same(
         _ record: Record,
-        _ dictionary: Dictionary,
+        _ dictionary: Value.Dictionary,
         by held: (Value, Value) -> Bool
     ) -> Bool {
         guard record.name == nil, record.count == dictionary.count else { return false }

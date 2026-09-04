@@ -320,12 +320,12 @@ struct TypeNotationTests {
         ])
 
         // When / Then
-        let good = try await run(sut, arguments: ["tasks": .array([.record(["id": .string("a")])])])
+        let good = try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .string("a")])])])
 
         #expect(good["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["tasks": .array([.record(["id": .int(1)])])])
+            try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .int(1)])])])
         }
     }
 }

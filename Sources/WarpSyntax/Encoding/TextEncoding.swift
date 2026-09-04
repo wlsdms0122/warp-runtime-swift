@@ -87,6 +87,53 @@ public enum TextEncoding {
     }
 
     // MARK: - Private
+    // Fields under names, with the name of the layout they stood on where
+    // there was one.
+    private static func write(
+        _ held: Value.Dictionary,
+        named name: Name?,
+        at indent: Int,
+        into text: inout String,
+        within depth: Int
+    ) throws {
+        if let name {
+            guard name.isDeclarable else {
+                throw EncodingError.invalidValue(
+                    Value.string(name.spelling),
+                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
+                )
+            }
+
+            text += name.spelling + " "
+        }
+
+        guard !held.isEmpty else {
+            text += "{}"
+
+            return
+        }
+
+        text += "{\n"
+
+        // Both spellings hold their fields in byte order, the order written.
+        for (key, value) in held.entries {
+            text += String(repeating: "  ", count: indent + 1)
+
+            if key.isIdentifier {
+                text += key.spelling
+            } else {
+                write(key.spelling, into: &text)
+            }
+
+            text += " "
+
+            try write(value, at: indent + 1, into: &text, within: depth - 1)
+
+            text += "\n"
+        }
+
+        text += String(repeating: "  ", count: indent) + "}"
+    }
     private enum Token: Equatable {
         case arrayOpen
         case arrayClose
@@ -518,46 +565,11 @@ public enum TextEncoding {
 
             text += String(repeating: "  ", count: indent) + "]"
 
-        case .record, .dictionary:
-            guard let held = value.asDictionary else { return }
+        case let .record(record):
+            try write(record.asDictionary, named: record.name, at: indent, into: &text, within: depth)
 
-            if case let .record(record) = value, let name = record.name {
-                guard name.isDeclarable else {
-                    throw EncodingError.invalidValue(
-                        Value.string(name.spelling),
-                        .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                    )
-                }
-
-                text += name.spelling + " "
-            }
-
-            guard !held.isEmpty else {
-                text += "{}"
-
-                break
-            }
-
-            text += "{\n"
-
-            // Both spellings hold their fields in byte order, the order written.
-            for (key, value) in held.entries {
-                text += String(repeating: "  ", count: indent + 1)
-
-                if key.isIdentifier {
-                    text += key.spelling
-                } else {
-                    write(key.spelling, into: &text)
-                }
-
-                text += " "
-
-                try write(value, at: indent + 1, into: &text, within: depth - 1)
-
-                text += "\n"
-            }
-
-            text += String(repeating: "  ", count: indent) + "}"
+        case let .dictionary(held):
+            try write(held, named: nil, at: indent, into: &text, within: depth)
 
         case .procedure:
             throw EncodingError.invalidValue(

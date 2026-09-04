@@ -84,9 +84,9 @@ struct CastAgreementTests {
         .array([]), .array([.int(1), .int(2)]), .array([.int(300)]),
         .array([.string("a")]), .array([.double(0.5)]),
         .bytes([]), .bytes([1, 2]),
-        .record([:]), .record(["name": .string("n")]),
-        .record(["age": .int(1)]),
-        .record(["children": .array([])])
+        .dictionary([:]), .dictionary(["name": .string("n")]),
+        .dictionary(["age": .int(1)]),
+        .dictionary(["children": .array([])])
     ]
 
     // MARK: - Initializer

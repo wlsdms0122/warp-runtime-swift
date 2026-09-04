@@ -58,8 +58,10 @@ extension TypeExpression {
             let ordered = fields.sorted { left, right in left.key < right.key }
 
             return .record(
-                Layout(fields: ordered.map(\.key)),
-                ordered.map { _, field in field.lowered(in: table) }
+                RecordShape(
+                    layout: Layout(name: nil, ordered: ordered.map(\.key)),
+                    fields: ordered.map { _, field in field.lowered(in: table) }
+                )
             )
 
         case let .procedure(signature, purity, isolation):

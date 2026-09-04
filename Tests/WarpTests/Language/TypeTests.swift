@@ -84,7 +84,7 @@ struct TypeTests {
         let sut = TypeExpression.named("Someone")
 
         // When
-        let bare = try sut.settling(.record(["name": .string("a")]), at: "who", in: types)
+        let bare = try sut.settling(.dictionary(["name": .string("a")]), at: "who", in: types)
         let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
         let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
@@ -102,7 +102,7 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .array([.record(["id": .string("a")])]),
+            .array([.dictionary(["id": .string("a")])]),
             at: "tasks",
             in: types
         )
@@ -111,7 +111,7 @@ struct TypeTests {
         #expect(settled == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.array([.record(["id": .int(1)])]), at: "tasks", in: types)
+            try sut.settling(.array([.dictionary(["id": .int(1)])]), at: "tasks", in: types)
         }
     }
 
@@ -126,9 +126,9 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .record([
+            .dictionary([
                 "value": .int(1),
-                "children": .array([.record(["value": .int(2), "children": .array([])])])
+                "children": .array([.dictionary(["value": .int(2), "children": .array([])])])
             ]),
             at: "tree",
             in: types

@@ -52,7 +52,7 @@ public struct ConditionReader: Decodable {
         // message nobody wrote. The same document would be a cast in one
         // notation and a send in the next.
         guard
-            case let .dictionary(written) = try ValueReader(from: decoder).value,
+            let written = try ValueReader(from: decoder).value.asDictionary,
             Set(written.names).isDisjoint(with: ExpressionReader.formKeys),
             !Set(written.names).isDisjoint(with: spelling.keys)
         else {

@@ -225,7 +225,7 @@ struct WriterTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(binding: .constant("payload"), expression: .literal(.record(["ref": .string("not-a-path")]))
+                        Statement(binding: .constant("payload"), expression: .literal(.dictionary(["ref": .string("not-a-path")]))
                         )
                     ]
                 )
@@ -246,7 +246,7 @@ struct WriterTests {
             return
         }
 
-        #expect(carried == .record(["ref": .string("not-a-path")]))
+        #expect(carried == .dictionary(["ref": .string("not-a-path")]))
     }
 
     @Test("a notation that gave up a word cannot write what it said")
@@ -496,8 +496,8 @@ struct WriterTests {
                 entryName: Procedure(
                     body: [
                         Statement(binding: .constant("payload"), expression: .literal(
-                                .record(["ref": .string("not-a-path"), "deep": .array([
-                                    .record(["value": .int(1)])
+                                .dictionary(["ref": .string("not-a-path"), "deep": .array([
+                                    .dictionary(["value": .int(1)])
                                 ])])
                             )
                         ),

@@ -172,7 +172,7 @@ struct LoadGateTests {
         // Given — a step array that arrived as data (through a signature) becomes
         // IR via the loader's Value door; the string stays a literal even there
         let carried = Value.array([
-            .record(["let": .string("greet"), "value": .string("hello there")])
+            .dictionary(["let": .string("greet"), "value": .string("hello there")])
         ])
 
         // When

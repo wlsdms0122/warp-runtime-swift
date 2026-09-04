@@ -275,7 +275,7 @@ struct ExecutorTests {
         )
 
         // When
-        let outputs = try await run(spec, arguments: ["data": .record([:])])
+        let outputs = try await run(spec, arguments: ["data": .dictionary([:])])
 
         // Then
         #expect(outputs["result"] == .null)
@@ -302,7 +302,7 @@ struct ExecutorTests {
 
         // When / Then
         await #expect(throws: ReferenceUnfit.self) {
-            try await run(spec, arguments: ["data": .record([:])])
+            try await run(spec, arguments: ["data": .dictionary([:])])
         }
     }
 

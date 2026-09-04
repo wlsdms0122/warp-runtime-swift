@@ -13,14 +13,19 @@ import Testing
 struct RecordTests {
     // MARK: - Test
     @Test("a layout orders its fields by their names' bytes whichever way they were given")
-    func aLayoutIsOrderedByBytes() {
+    func aLayoutIsOrderedByBytes() throws {
         // Given
-        let sut = Layout(fields: ["b", "a", "c"])
+        let sut = try Layout(fields: ["b", "a", "c"])
 
         // When / Then
         #expect(sut.fields == ["a", "b", "c"])
         #expect(sut.position(of: "b") == 1)
         #expect(sut.position(of: "z") == nil)
+    }
+
+    @Test("a layout naming one field twice is refused rather than fatal")
+    func aRepeatedFieldIsRefused() {
+        #expect(throws: ValueRefused.self) { try Layout(fields: ["a", "b", "a"]) }
     }
 
     @Test("a record built from fields holds them at their layout's places")
@@ -38,7 +43,7 @@ struct RecordTests {
     @Test("a layout handed the wrong number of values is refused")
     func aLayoutIsFilledExactly() throws {
         // Given
-        let layout = Layout(fields: ["a", "b"])
+        let layout = try Layout(fields: ["a", "b"])
 
         // When / Then
         #expect(try Record(layout: layout, checking: [.int(1), .int(2)]).values == [.int(1), .int(2)])
@@ -53,6 +58,16 @@ struct RecordTests {
 
         // When / Then
         #expect(try sut.writing("c", with: .int(30)).values == [.int(1), .int(30)])
+        #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
+    }
+
+    @Test("writing through the value door refuses a name the layout does not hold")
+    func writingThroughTheValueDoorRefuses() throws {
+        // Given
+        let sut = Value.record(Record(name: "app.Point", ["a": .int(1)]))
+
+        // When / Then
+        #expect(try sut.writing("a", with: .int(9))["a"] == .int(9))
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
     }
 

@@ -34,7 +34,7 @@ struct ValueDecoder: Decoder {
 
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let record: Dictionary
+        let record: Value.Dictionary
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]

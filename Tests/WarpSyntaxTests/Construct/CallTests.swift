@@ -52,7 +52,7 @@ struct CallTests {
         let outputs = try await run(sut, entry: "caller")
 
         // Then — the omitted `bump` settled to its default at the callee boundary
-        #expect(outputs["result"] == .record(["base": .int(41), "bump": .int(1)]))
+        #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .int(1)]))
     }
 
     @Test("a constant argument violating the callee signature is rejected at link")

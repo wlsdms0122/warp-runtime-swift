@@ -129,7 +129,7 @@ public struct ExpressionReader: Decodable {
     }
 
     private static func read(
-        record: Dictionary,
+        record: Value.Dictionary,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {

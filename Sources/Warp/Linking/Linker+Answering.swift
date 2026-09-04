@@ -56,12 +56,12 @@ extension Linker {
         reading frame: () -> TypeFrame,
         recording: (Name, TypeExpression) -> Void
     ) {
-        let declared = Swift.Dictionary(
+        let declared = Dictionary(
             unsaid.map { one in (one.symbol.declared, one) },
             uniquingKeysWith: { first, _ in first }
         )
 
-        let edges = Swift.Dictionary(
+        let edges = Dictionary(
             unsaid.map { one in (one.symbol.declared, one.sends.sorted()) },
             uniquingKeysWith: { first, _ in first }
         )

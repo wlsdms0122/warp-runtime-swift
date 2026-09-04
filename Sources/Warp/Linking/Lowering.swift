@@ -262,7 +262,7 @@ struct Lowering {
             let ordered = record.sorted { $0.key < $1.key }
 
             return .record(
-                Layout(fields: ordered.map(\.key)),
+                Layout(name: nil, ordered: ordered.map(\.key)),
                 try ordered.map { _, field in try lower(field, in: scope, on: slots, label: label, at: place) }
             )
 

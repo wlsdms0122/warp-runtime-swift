@@ -91,6 +91,38 @@ public enum BinaryEncoding {
     }
 
     // MARK: - Private
+    // Fields under names, with the name of the layout they stood on where
+    // there was one.
+    private static func write(
+        _ held: Value.Dictionary,
+        named name: Name?,
+        into bytes: inout Data,
+        within depth: Int
+    ) throws {
+        if let name {
+            guard name.isDeclarable else {
+                throw EncodingError.invalidValue(
+                    Value.string(name.spelling),
+                    .init(codingPath: [], debugDescription: "the record's name is not a type's name")
+                )
+            }
+
+            bytes.append(Tag.namedRecord.rawValue)
+            write(Array(name.spelling.utf8), into: &bytes)
+        } else {
+            bytes.append(Tag.record.rawValue)
+        }
+
+        write(UInt64(held.count), into: &bytes)
+
+        // Both spellings hold their fields in byte order, the order written.
+        for (key, value) in held.entries {
+            write(Array(key.spelling.utf8), into: &bytes)
+
+            try write(value, into: &bytes, within: depth - 1)
+        }
+    }
+
     // `within` runs out where the reader's limit runs out, so the writer cannot
     // produce a document its own reader would refuse.
     private static func write(_ value: Value, into bytes: inout Data, within depth: Int = depth) throws {
@@ -158,31 +190,11 @@ public enum BinaryEncoding {
         // whatever that language decided, and the wire cannot depend on it.
         // A record under a name is written under its own tag with the name in
         // front, so a reader that met the tag knows a name follows.
-        case .record, .dictionary:
-            guard let held = value.asDictionary else { return }
+        case let .record(record):
+            try write(record.asDictionary, named: record.name, into: &bytes, within: depth)
 
-            if case let .record(record) = value, let name = record.name {
-                guard name.isDeclarable else {
-                    throw EncodingError.invalidValue(
-                        Value.string(name.spelling),
-                        .init(codingPath: [], debugDescription: "the record's name is not a type's name")
-                    )
-                }
-
-                bytes.append(Tag.namedRecord.rawValue)
-                write(Array(name.spelling.utf8), into: &bytes)
-            } else {
-                bytes.append(Tag.record.rawValue)
-            }
-
-            write(UInt64(held.count), into: &bytes)
-
-            // Both spellings hold their fields in byte order, the order written.
-            for (key, value) in held.entries {
-                write(Array(key.spelling.utf8), into: &bytes)
-
-                try write(value, into: &bytes, within: depth - 1)
-            }
+        case let .dictionary(held):
+            try write(held, named: nil, into: &bytes, within: depth)
 
         case .procedure:
             throw EncodingError.invalidValue(

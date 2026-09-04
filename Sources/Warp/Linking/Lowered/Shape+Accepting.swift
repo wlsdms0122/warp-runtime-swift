@@ -112,15 +112,14 @@ extension Shape {
         // whose every field is the entry shape is such a mapping. Not the
         // other way round, since a `dictionary` promises nothing about which
         // fields exist.
-        case let (.dictionary(mine), .record(_, theirs)):
-            return theirs.allSatisfy { field in mine.accepts(field, in: table, assuming: assuming) }
+        case let (.dictionary(mine), .record(theirs)):
+            return theirs.fields.allSatisfy { field in mine.accepts(field, in: table, assuming: assuming) }
 
         // Width: what stands here must declare at least the fields this one
         // names, and may declare more.
-        case let (.record(myLayout, mine), .record(theirLayout, theirs)):
-            return zip(myLayout.fields, mine).allSatisfy { name, field in
-                theirLayout.position(of: name)
-                    .map { place in field.accepts(theirs[place], in: table, assuming: assuming) } ?? false
+        case let (.record(mine), .record(theirs)):
+            return mine.named.allSatisfy { name, field in
+                theirs[name].map { given in field.accepts(given, in: table, assuming: assuming) } ?? false
             }
 
         case let (.procedure(required, wanted, wantedPurity, wantedIsolation),
@@ -254,18 +253,17 @@ extension Shape {
 
         // What both name has to be able to hold at once; what only one names
         // is data the other lets ride through.
-        case let (.record(myLayout, mine), .record(theirLayout, theirs)):
-            return zip(myLayout.fields, mine).allSatisfy { name, field in
-                theirLayout.position(of: name)
-                    .map { place in field.couldBothHold(theirs[place], in: table, assuming: assuming) } ?? true
+        case let (.record(mine), .record(theirs)):
+            return mine.named.allSatisfy { name, field in
+                theirs[name].map { given in field.couldBothHold(given, in: table, assuming: assuming) } ?? true
             }
 
         // A dictionary and a record are one runtime shape read two ways, so
         // every field the record names must be able to be an entry. A list
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
-        case let (.dictionary(entry), .record(_, fields)), let (.record(_, fields), .dictionary(entry)):
-            return fields.allSatisfy { field in field.couldBothHold(entry, in: table, assuming: assuming) }
+        case let (.dictionary(entry), .record(held)), let (.record(held), .dictionary(entry)):
+            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assuming: assuming) }
 
         // Two decided kinds, which is where a value either is both or is
         // neither. Anything else this walk does not read into is the run's.
@@ -365,9 +363,9 @@ extension Shape {
             let (.inout(mine), .inout(theirs)):
             return mine.same(theirs, in: table, assuming: walked)
 
-        case let (.record(myLayout, mine), .record(theirLayout, theirs)):
-            return myLayout == theirLayout
-                && zip(mine, theirs).allSatisfy { one, other in
+        case let (.record(mine), .record(theirs)):
+            return mine.layout == theirs.layout
+                && zip(mine.fields, theirs.fields).allSatisfy { one, other in
                     one.same(other, in: table, assuming: walked)
                 }
 

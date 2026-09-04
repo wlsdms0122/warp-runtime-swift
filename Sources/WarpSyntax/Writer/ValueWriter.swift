@@ -70,16 +70,11 @@ public struct ValueWriter: Encodable {
         // A carrier keys its fields by Swift's equality, which folds
         // spellings a value keeps apart. What a value holds is a name, and one
         // name is one spelling, so the fold has nothing to fold.
-        case .record, .dictionary:
-            guard let held = value.asDictionary else { return }
+        case let .record(record):
+            try container.encode(carried(record.asDictionary))
 
-            try container.encode(
-                Swift.Dictionary(
-                    uniqueKeysWithValues: held.entries.map { entry in
-                        (entry.name.spelling, ValueWriter(entry.value))
-                    }
-                )
-            )
+        case let .dictionary(held):
+            try container.encode(carried(held))
 
         // A body is code, and a document spells code as a procedure rather than
         // as data. Writing a marker would make a document that cannot be read
@@ -96,4 +91,11 @@ public struct ValueWriter: Encodable {
     }
 
     // MARK: - Private
+    private func carried(_ held: Value.Dictionary) -> [String: ValueWriter] {
+        Dictionary(
+            uniqueKeysWithValues: held.entries.map { entry in
+                (entry.name.spelling, ValueWriter(entry.value))
+            }
+        )
+    }
 }

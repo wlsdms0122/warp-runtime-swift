@@ -23,14 +23,27 @@ public struct Layout: Sendable, Hashable {
     public let fields: [Name]
 
     // MARK: - Initializer
-    public init(name: Name? = nil, fields: [Name]) {
-        self.name = name
-        self.fields = fields.sorted()
+    // Fields in any order, none of which repeats.
+    public init(name: Name? = nil, fields: [Name]) throws {
+        let sorted = fields.sorted()
 
+        if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one == other }) {
+            throw ValueRefused("a layout names '\(repeated.0)' twice")
+        }
+
+        self.name = name
+        self.fields = sorted
+    }
+
+    // The inner door: names already in order, none repeating.
+    init(name: Name?, ordered fields: [Name]) {
         precondition(
-            zip(self.fields, self.fields.dropFirst()).allSatisfy { one, other in one < other },
-            "a layout names each field once"
+            zip(fields, fields.dropFirst()).allSatisfy { one, other in one < other },
+            "a layout's fields are ordered by name"
         )
+
+        self.name = name
+        self.fields = fields
     }
 
     // MARK: - Public

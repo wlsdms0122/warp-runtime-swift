@@ -36,7 +36,7 @@ struct ConcurrencyTests {
         let answer = try await answer(of: [sut], result: reference("both"))
 
         // Then
-        #expect(answer == .record(["left": .int(1), "right": .int(2)]))
+        #expect(answer == .dictionary(["left": .int(1), "right": .int(2)]))
     }
 
     @Test("all answers an array's closures in the array's order")

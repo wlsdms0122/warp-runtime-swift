@@ -106,7 +106,7 @@ struct NullableTests {
 
         // When / Then — the value that arrived reads its field, and the null
         // the caller left answers null
-        #expect(try await run(sut, arguments: ["task": .record(["size": .int(7)])]) == .int(7))
+        #expect(try await run(sut, arguments: ["task": .dictionary(["size": .int(7)])]) == .int(7))
         #expect(try await run(sut) == .null)
     }
 
@@ -355,7 +355,7 @@ struct NullableTests {
         )
 
         #expect(
-            try await run(sut, arguments: ["task": .record(["name": .string("a")])])
+            try await run(sut, arguments: ["task": .dictionary(["name": .string("a")])])
                 == .string("a")
         )
         #expect(try await run(sut) == .null)

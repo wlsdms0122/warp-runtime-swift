@@ -29,8 +29,8 @@ public struct Executor: Sendable {
     let boxes: [Int: [Handle]]
 
     // What a loop hands its body each round, and what a walk hands its own.
-    private static let roundLayout = Layout(fields: ["index"])
-    private static let walkLayout = Layout(fields: ["index", "item"])
+    private static let roundLayout = Layout(name: nil, ordered: ["index"])
+    private static let walkLayout = Layout(name: nil, ordered: ["index", "item"])
 
     // MARK: - Initializer
     // What a caller has to say to make one: who watches, and what the run may
