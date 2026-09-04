@@ -180,7 +180,7 @@ extension Shape {
 
             // Its rows are numbered by the table of the link that made it.
             guard closure.linked.readable(in: table) else {
-                throw ArgumentError("\(path()): got a procedure another link made, which this run cannot read")
+                throw ArgumentError("\(path()): \(Linked.unreadable(in: table))")
             }
 
             if purity == .pure, closure.purity != .pure {
@@ -197,7 +197,9 @@ extension Shape {
             }
 
             let given = Shape.procedure(
-                parameters: closure.linked.slots.map { slot in (name: slot.name, shape: slot.shape) },
+                parameters: closure.linked.slots.map { slot in
+                    (name: slot.name, shape: slot.shape, mustBeGiven: slot.mustBeGiven(in: table))
+                },
                 returns: closure.linked.returns,
                 purity: closure.purity,
                 isolation: closure.isolation
@@ -488,7 +490,7 @@ extension Shape {
 
             guard let parameters else { return word }
 
-            let written = parameters.map { name, shape in "\(name): \(shape.rendered(in: table))" }
+            let written = parameters.map { name, shape, _ in "\(name): \(shape.rendered(in: table))" }
 
             return "\(word)<(\(written.joined(separator: ", "))) -> \((returns ?? .any).rendered(in: table))>"
 
@@ -507,7 +509,7 @@ extension Shape {
             return table.labels[row].spelling
 
         case let .undeclared(label, _):
-            return label.spelling
+            return label
 
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"

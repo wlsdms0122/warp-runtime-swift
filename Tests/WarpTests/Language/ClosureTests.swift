@@ -103,6 +103,62 @@ struct ClosureTests {
         }
     }
 
+    @Test("an extra name a call need not fill is a name the body may declare")
+    func anExtraParameterThatStandsUnfilledFits() throws {
+        // Given — the slot hands one name and the body writes two, the
+        // second with a default. Nothing has to fill it, so the body reads
+        // what it declared rather than the null the width rule refuses.
+        let walking = Procedure(
+            signature: Signature(
+                parameters: [
+                    "by": Parameter(
+                        type: .procedure(Signature(parameters: ["item": Parameter(type: .int)]))
+                    )
+                ]
+            ),
+            body: [
+                Statement(
+                    binding: .constant("once"),
+                    expression: .invoke(reference("by"), arguments: ["item": .literal(.int(1))])
+                )
+            ]
+        )
+        let sut = try Module(
+            procedures: [
+                "walking": walking,
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("body"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: [
+                                        "item": Parameter(type: .int),
+                                        "index": Parameter(type: .int, default: .int(0))
+                                    ]),
+                                    body: [],
+                                    result: .literal(.int(1))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("ran"),
+                            expression: .dispatch(Dispatch(
+                                selector: "walking",
+                                arguments: ["by": reference("body")]
+                            ))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
     @Test("a slot asking for a pure procedure refuses one that reaches outside")
     func anImpureClosureIsRefusedWherePurityIsAsked() throws {
         // Given — `twice` declares that whatever it is handed answers without

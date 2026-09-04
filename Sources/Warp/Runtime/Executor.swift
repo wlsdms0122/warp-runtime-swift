@@ -25,7 +25,7 @@ public struct Executor: Sendable {
     let shapes: ShapeTable
 
     // One box per module variable, made when the run starts, by the document
-    // that declared it, in the order its layout reads them.
+    // that declared it, in the order its frame reads them.
     let boxes: [Int: [Handle]]
 
     // MARK: - Initializer
@@ -73,15 +73,15 @@ public struct Executor: Sendable {
         )
         let entry = image.entry
 
-        guard case let .body(body, layout) = entry.implementation else {
+        guard case let .body(body, frame) = entry.implementation else {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
         let settled = try entry.settle(arguments.map { name, value in (name: name, value: value) }, offered: false)
-        var activation = try executor.frame(of: entry, layout)
+        var activation = try executor.activation(of: entry, in: frame)
 
         for (position, value) in settled.enumerated() {
-            activation.cells[layout.parameters[position]] = .value(value ?? .null)
+            activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
         return try await executor.answer(body, of: entry, in: &activation, at: Trace())
@@ -208,7 +208,7 @@ public struct Executor: Sendable {
             // A new box, so a variable declared inside a block shadows rather
             // than writes an outer one of the same name.
             case let .declare(slot)?:
-                activation.cells[slot] = .hold(Handle(activation.layout.names[slot], result))
+                activation.cells[slot] = .hold(Handle(activation.frame.names[slot], result))
 
             // A write lands in a box the enclosing bodies also hold.
             case let .assign(slot, steps)?:
@@ -393,14 +393,14 @@ public struct Executor: Sendable {
                 )
             )
 
-        case let .body(body, layout):
-            var inner = try frame(of: callee, layout)
+        case let .body(body, frame):
+            var inner = try self.activation(of: callee, in: frame)
 
             // A parameter handed in place takes no value: it takes a hold on
             // the caller's variable, and what the hold reaches is read only
             // where the body reads it.
             for (position, handle) in try holds(send.handed, of: callee, in: activation) {
-                inner.cells[layout.parameters[position]] = .hold(handle)
+                inner.cells[frame.parameters[position]] = .hold(handle)
             }
 
             // A receiver is written on the other side of the dot rather than by
@@ -408,7 +408,7 @@ public struct Executor: Sendable {
             // nothing is something a word answers rather than refuses, but the
             // body reads it under the name its signature gave it.
             if let position = callee.receiverPosition, let receiver = try received(send, of: callee, in: activation) {
-                inner.cells[layout.parameters[position]] = .value(receiver)
+                inner.cells[frame.parameters[position]] = .value(receiver)
             }
 
             let settled = try settled(
@@ -420,7 +420,7 @@ public struct Executor: Sendable {
             for (position, value) in settled.values.enumerated() {
                 guard let value else { continue }
 
-                inner.cells[layout.parameters[position]] = .value(value)
+                inner.cells[frame.parameters[position]] = .value(value)
             }
 
             return try await answer(body, of: callee, in: &inner, at: trace.appending(.procedure(callee.label.spelling)))
@@ -462,24 +462,24 @@ public struct Executor: Sendable {
         given arguments: [(name: Name, value: Value)],
         offered: Bool
     ) throws -> (Body, Activation) {
-        guard case let .body(body, layout) = closure.linked.implementation else {
+        guard case let .body(body, frame) = closure.linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
         }
 
         // Its rows are numbered by the table of the link that made it.
         guard closure.linked.readable(in: shapes) else {
-            throw ExecutionError("this call names a procedure another link made, which this run cannot read")
+            throw ExecutionError("this call \(Linked.unreadable(in: shapes))")
         }
 
         let settled = try closure.linked.settle(arguments, offered: offered)
-        var activation = try frame(of: closure.linked, layout)
+        var activation = try self.activation(of: closure.linked, in: frame)
 
         for (slot, cell) in closure.captured {
             activation.cells[slot] = cell
         }
 
         for (position, value) in settled.enumerated() {
-            activation.cells[layout.parameters[position]] = .value(value ?? .null)
+            activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
         return (body, activation)
@@ -493,7 +493,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let name = activation.layout.names[round]
+        let name = activation.frame.names[round]
         var index = 0
 
         while true {
@@ -537,7 +537,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let name = activation.layout.names[element]
+        let name = activation.frame.names[element]
         let elements = try await array(of: material, naming: name, in: &activation, at: trace)
 
         for (index, item) in elements.enumerated() {
@@ -606,7 +606,7 @@ public struct Executor: Sendable {
             // did, not for what the procedure says.
             guard let recoverable = error as? any RecoverableFailure else { throw error }
 
-            await observer?.failureRescued(name: activation.layout.names[failure].spelling, error: error)
+            await observer?.failureRescued(name: activation.frame.names[failure].spelling, error: error)
 
             // While the rescue runs, the failure is a value under the declared
             // name. Its shape needs no check here: `RecoverableFailure`
@@ -619,16 +619,16 @@ public struct Executor: Sendable {
     }
 
     // The frame a row runs in, with the module variables it reads in place.
-    private func frame(of callee: Linked, _ layout: Frame) throws -> Activation {
-        var activation = Activation(layout)
+    private func activation(of callee: Linked, in frame: Frame) throws -> Activation {
+        var activation = Activation(frame)
 
-        guard !layout.variables.isEmpty else { return activation }
+        guard !frame.variables.isEmpty else { return activation }
 
         guard let held = boxes[callee.origin] else {
             throw ExecutionError("'\(callee.label)' reads its document's variables, and this run holds none")
         }
 
-        for (variable, slot) in layout.variables {
+        for (variable, slot) in frame.variables {
             activation.cells[slot] = .hold(held[variable])
         }
 
@@ -648,7 +648,7 @@ public struct Executor: Sendable {
             guard case let .hold(handle) = activation.cells[handed.slot] else {
                 throw ExecutionError(
                     "'\(callee.label)' takes '\(callee.slots[handed.position].name)' in place,"
-                        + " and '\(activation.layout.names[handed.slot])' is not a variable here"
+                        + " and '\(activation.frame.names[handed.slot])' is not a variable here"
                 )
             }
 
@@ -764,17 +764,17 @@ public struct Executor: Sendable {
 
         // A body the link proved pure runs here, synchronously. Nothing in it
         // can suspend, which is what the proof says.
-        case let .body(body, layout):
-            var activation = try frame(of: callee, layout)
+        case let .body(body, frame):
+            var activation = try self.activation(of: callee, in: frame)
 
             for (position, value) in arguments.values.enumerated() {
                 guard let value else { continue }
 
-                activation.cells[layout.parameters[position]] = .value(value)
+                activation.cells[frame.parameters[position]] = .value(value)
             }
 
             if let position = callee.receiverPosition, let sent {
-                activation.cells[layout.parameters[position]] = .value(sent)
+                activation.cells[frame.parameters[position]] = .value(sent)
             }
 
             return try callee.settling(returned: try read(body, in: &activation))
@@ -1048,7 +1048,7 @@ public struct Executor: Sendable {
 
     // The path as the author wrote it, for a sentence that reads it back.
     private func spelled(_ slot: Int, _ steps: [Step], in activation: Activation) -> [PathSegment] {
-        [.key(activation.layout.names[slot])] + spelled(steps, in: activation)
+        [.key(activation.frame.names[slot])] + spelled(steps, in: activation)
     }
 
     private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {

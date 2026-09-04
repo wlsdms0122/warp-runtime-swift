@@ -19,6 +19,11 @@ import Foundation
 // neither the other's rows nor its own numbers.
 final class Linkage: Sendable {
     // MARK: - Property
+    // No link at all: what the table a judge is handed carries when the
+    // caller named none. Nothing is at home in it, which is the answer a
+    // judge asked without a link is owed.
+    static let none = Linkage()
+
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private

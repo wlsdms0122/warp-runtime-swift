@@ -53,14 +53,14 @@ struct Lowering {
         at place: Place
     ) throws {
         let declared = table[row]
-        let frame = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:])
+        let slots = Slots(origin: declared.origin, variables: variables[declared.origin] ?? [:])
         var scope = Names()
 
         for slot in declared.slots {
-            scope.slots[slot.name] = frame.allocateParameter(slot.name)
+            scope.slots[slot.name] = slots.allocateParameter(slot.name)
         }
 
-        let body = try lower(block, in: scope, on: frame, label: declared.label, at: place)
+        let body = try lower(block, in: scope, on: slots, label: declared.label, at: place)
 
         table[row] = Linked(
             label: declared.label,
@@ -68,7 +68,7 @@ struct Lowering {
             signature: declared.signature,
             purity: declared.purity,
             isolation: declared.isolation,
-            implementation: .body(body, frame.layout),
+            implementation: .body(body, slots.frame),
             in: shapes
         )
     }
@@ -76,7 +76,7 @@ struct Lowering {
     // Lowers one expression read against a frame of constants, as a constant's
     // own expression is, and as a body's constant path is when it folds. The
     // frame starts as `names` in slot order and grows with what the
-    // expression declares; the layout says how large it is.
+    // expression declares; the frame says how large it is.
     func lower(
         _ expression: Expression,
         reading names: [Name],
@@ -84,16 +84,16 @@ struct Lowering {
         label: Name,
         at place: Place
     ) throws -> (Code, Frame) {
-        let frame = Slots(origin: origin, variables: [:])
+        let slots = Slots(origin: origin, variables: [:])
         var scope = Names()
 
         for name in names {
-            scope.slots[name] = frame.allocate(name)
+            scope.slots[name] = slots.allocate(name)
         }
 
-        let code = try lower(expression, in: scope, on: frame, label: label, at: place)
+        let code = try lower(expression, in: scope, on: slots, label: label, at: place)
 
-        return (code, frame.layout)
+        return (code, slots.frame)
     }
 
     // MARK: - Private
@@ -169,7 +169,7 @@ struct Lowering {
             return slot
         }
 
-        var layout: Frame {
+        var frame: Frame {
             Frame(size: size, parameters: parameters, variables: reads, names: names)
         }
     }
@@ -177,14 +177,14 @@ struct Lowering {
     private func lower(
         _ block: Block,
         in scope: Names,
-        on frame: Slots,
+        on slots: Slots,
         label: Name,
         at place: Place
     ) throws -> Body {
         var inner = scope
-        let instructions = try lower(block.body, in: &inner, on: frame, label: label, at: place)
+        let instructions = try lower(block.body, in: &inner, on: slots, label: label, at: place)
         let result = try block.result.map { result in
-            try lower(result, in: inner, on: frame, label: label, at: place)
+            try lower(result, in: inner, on: slots, label: label, at: place)
         }
 
         return Body(instructions: instructions, result: result)
@@ -196,29 +196,29 @@ struct Lowering {
     private func lower(
         _ statements: [Statement],
         in scope: inout Names,
-        on frame: Slots,
+        on slots: Slots,
         label: Name,
         at place: Place
     ) throws -> [Instruction] {
         var instructions: [Instruction] = []
 
         for (position, statement) in statements.enumerated() {
-            let code = try lower(statement.expression, in: scope, on: frame, label: label, at: place)
+            let code = try lower(statement.expression, in: scope, on: slots, label: label, at: place)
             let binding: Instruction.Binding?
 
             switch statement.binding {
             case let .constant(name)?:
-                let slot = frame.allocate(name)
+                let slot = slots.allocate(name)
                 scope.slots[name] = slot
                 binding = .bind(slot)
 
             case let .variable(name)?:
-                let slot = frame.allocate(name)
+                let slot = slots.allocate(name)
                 scope.slots[name] = slot
                 binding = .declare(slot)
 
             case let .assignment(path)?:
-                let (slot, steps) = try lower(path, in: scope, on: frame, at: place)
+                let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
                 binding = .assign(slot, steps)
 
             case nil:
@@ -240,7 +240,7 @@ struct Lowering {
     private func lower(
         _ expression: Expression,
         in scope: Names,
-        on frame: Slots,
+        on slots: Slots,
         label: Name,
         at place: Place
     ) throws -> Code {
@@ -249,18 +249,18 @@ struct Lowering {
             return .literal(value)
 
         case let .reference(path):
-            let (slot, steps) = try lower(path, in: scope, on: frame, at: place)
+            let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
 
             return .local(slot, steps)
 
         case let .array(array):
             return .array(try array.map { element in
-                try lower(element, in: scope, on: frame, label: label, at: place)
+                try lower(element, in: scope, on: slots, label: label, at: place)
             })
 
         case let .record(record):
             return .record(try record.sorted { $0.key < $1.key }.map { name, field in
-                (name, try lower(field, in: scope, on: frame, label: label, at: place))
+                (name, try lower(field, in: scope, on: slots, label: label, at: place))
             })
 
         case let .closure(procedure):
@@ -268,7 +268,7 @@ struct Lowering {
                 throw unjudged("a closure with no body", at: place)
             }
 
-            let inner = Slots(origin: frame.origin, variables: frame.variables, outer: (frame, scope))
+            let inner = Slots(origin: slots.origin, variables: slots.variables, outer: (slots, scope))
             var innerScope = Names()
 
             for (name, _) in procedure.signature.ordered {
@@ -279,11 +279,11 @@ struct Lowering {
             return .closure(
                 Linked(
                     label: label,
-                    origin: frame.origin,
+                    origin: slots.origin,
                     signature: procedure.signature,
                     purity: procedure.purity,
                     isolation: procedure.isolation,
-                    implementation: .body(body, inner.layout),
+                    implementation: .body(body, inner.frame),
                     in: shapes
                 ),
                 captures: inner.captures
@@ -291,45 +291,45 @@ struct Lowering {
 
         case let .invoke(callee, arguments):
             return .invoke(
-                try lower(callee, in: scope, on: frame, label: label, at: place),
+                try lower(callee, in: scope, on: slots, label: label, at: place),
                 arguments: try arguments.sorted { $0.key < $1.key }.map { name, argument in
-                    (name, try lower(argument, in: scope, on: frame, label: label, at: place))
+                    (name, try lower(argument, in: scope, on: slots, label: label, at: place))
                 }
             )
 
         case let .cast(value, type, optional):
             return .cast(
-                try lower(value, in: scope, on: frame, label: label, at: place),
+                try lower(value, in: scope, on: slots, label: label, at: place),
                 as: type.lowered(in: shapes),
                 optional: optional
             )
 
         case let .block(block):
-            return .block(try lower(block, in: scope, on: frame, label: label, at: place))
+            return .block(try lower(block, in: scope, on: slots, label: label, at: place))
 
         case let .conditional(condition, then, otherwise):
             var thenScope = scope
             var elseScope = scope
 
             return .conditional(
-                try lower(condition, in: scope, on: frame, label: label, at: place),
-                then: try lower(then, in: &thenScope, on: frame, label: label, at: place),
+                try lower(condition, in: scope, on: slots, label: label, at: place),
+                then: try lower(then, in: &thenScope, on: slots, label: label, at: place),
                 else: try otherwise.map { statements in
-                    try lower(statements, in: &elseScope, on: frame, label: label, at: place)
+                    try lower(statements, in: &elseScope, on: slots, label: label, at: place)
                 }
             )
 
         case let .loop(condition, body, round):
             var inner = scope
-            let slot = frame.allocate(round)
+            let slot = slots.allocate(round)
             inner.slots[round] = slot
 
-            let taking = try lower(condition, in: inner, on: frame, label: label, at: place)
-            let start = frame.size
-            let instructions = try lower(body.body, in: &inner, on: frame, label: label, at: place)
-            let bound = start ..< frame.size
+            let taking = try lower(condition, in: inner, on: slots, label: label, at: place)
+            let start = slots.size
+            let instructions = try lower(body.body, in: &inner, on: slots, label: label, at: place)
+            let bound = start ..< slots.size
             let result = try body.result.map { result in
-                try lower(result, in: inner, on: frame, label: label, at: place)
+                try lower(result, in: inner, on: slots, label: label, at: place)
             }
 
             // A round that ends early has bound part of what a full round
@@ -346,38 +346,38 @@ struct Lowering {
             )
 
         case let .iteration(material, body, element):
-            let over = try lower(material, in: scope, on: frame, label: label, at: place)
+            let over = try lower(material, in: scope, on: slots, label: label, at: place)
             var inner = scope
-            let slot = frame.allocate(element)
+            let slot = slots.allocate(element)
             inner.slots[element] = slot
 
             return .iteration(
                 over: over,
-                body: try lower(body, in: &inner, on: frame, label: label, at: place),
+                body: try lower(body, in: &inner, on: slots, label: label, at: place),
                 element: slot
             )
 
         case let .attempt(block, rescue, failure):
-            let attempted = try lower(block, in: scope, on: frame, label: label, at: place)
+            let attempted = try lower(block, in: scope, on: slots, label: label, at: place)
             var inner = scope
-            let slot = frame.allocate(failure)
+            let slot = slots.allocate(failure)
             inner.slots[failure] = slot
 
             return .attempt(
                 attempted,
-                rescue: try lower(rescue, in: inner, on: frame, label: label, at: place),
+                rescue: try lower(rescue, in: inner, on: slots, label: label, at: place),
                 failure: slot
             )
 
         case let .dispatch(dispatch):
-            return .send(try lower(dispatch, in: scope, on: frame, label: label, at: place))
+            return .send(try lower(dispatch, in: scope, on: slots, label: label, at: place))
 
         case let .leave(leave):
             return .leave(
                 leave.reach,
                 target: leave.target,
                 try leave.value.map { value in
-                    try lower(value, in: scope, on: frame, label: label, at: place)
+                    try lower(value, in: scope, on: slots, label: label, at: place)
                 }
             )
         }
@@ -386,7 +386,7 @@ struct Lowering {
     private func lower(
         _ dispatch: Dispatch,
         in scope: Names,
-        on frame: Slots,
+        on slots: Slots,
         label: Name,
         at place: Place
     ) throws -> Send {
@@ -413,7 +413,7 @@ struct Lowering {
                     throw unjudged("'\(name)' handed to '\(dispatch.selector)' in place without a variable", at: place)
                 }
 
-                let (slot, steps) = try lower(path, in: scope, on: frame, at: place)
+                let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
                 handed.append(Send.Handed(position: position, slot: slot, path: steps))
                 arguments.append(nil)
 
@@ -425,14 +425,14 @@ struct Lowering {
                     throw unjudged("'\(name)' sent to '\(dispatch.selector)' both in front and by name", at: place)
                 }
 
-                receiver = try lower(sent, in: scope, on: frame, label: label, at: place)
+                receiver = try lower(sent, in: scope, on: slots, label: label, at: place)
                 arguments.append(nil)
 
                 continue
             }
 
             arguments.append(try written.map { argument in
-                try lower(argument, in: scope, on: frame, label: label, at: place)
+                try lower(argument, in: scope, on: slots, label: label, at: place)
             })
         }
 
@@ -442,7 +442,7 @@ struct Lowering {
     private func lower(
         _ path: [PathSegment],
         in scope: Names,
-        on frame: Slots,
+        on slots: Slots,
         at place: Place
     ) throws -> (Int, [Step]) {
         // A mark on the head expects a name to be missing, which is not
@@ -455,7 +455,7 @@ struct Lowering {
             throw unjudged("a path '\(path.rendered)' with no name at its head", at: place)
         }
 
-        guard let slot = frame.slot(of: head, in: scope) else {
+        guard let slot = slots.slot(of: head, in: scope) else {
             throw unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
         }
 
@@ -468,7 +468,7 @@ struct Lowering {
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
-                let (slot, steps) = try lower(inner, in: scope, on: frame, at: place)
+                let (slot, steps) = try lower(inner, in: scope, on: slots, at: place)
 
                 return .at(slot, steps, optional: optional)
 

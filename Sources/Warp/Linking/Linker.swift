@@ -583,7 +583,6 @@ public struct Linker: Sendable {
             guard symbol.procedure.signature.isDerivable(in: shapes) else { continue }
 
             let bare = symbol.declared.unqualified
-                ?? symbol.declared
 
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
@@ -680,7 +679,8 @@ public struct Linker: Sendable {
     ) throws -> TypeTable {
         let table = TypeTable(
             types: declared.mapValues(\.held),
-            constraints: members.mapValues(\.held)
+            constraints: members.mapValues(\.held),
+            of: Linkage()
         )
 
         // A name that reaches a shape may name itself along the way: `Tree`

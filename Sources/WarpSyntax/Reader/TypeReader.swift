@@ -176,7 +176,7 @@ public struct TypeReader: Decodable {
                 )
             }
 
-            return .parameter(name: try Name(bare))
+            return .parameter(name: try named(bare))
         }
 
 
@@ -235,7 +235,7 @@ public struct TypeReader: Decodable {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
-            let name = try Name(text)
+            let name = try named(text)
 
             return Self.builtins[name] ?? .named(name)
         }
@@ -336,6 +336,18 @@ public struct TypeReader: Decodable {
         ("inout", { inner in .inout(inner) }),
         ("var", { inner in .variable(inner) })
     ]
+
+    // A written type's name, said in this notation's own words. Every
+    // other refusal a type's spelling earns is a `TypeFormError`, and one
+    // that reached the caller as anything else would be the only reading
+    // that arrives without a place on it.
+    static func named(_ text: String) throws -> Name {
+        do {
+            return try Name(text)
+        } catch {
+            throw TypeFormError("\(error)")
+        }
+    }
 
     // One word with nothing structural in it — what a type parameter's
     // spelling has to be, and what a `bounds` value has to be: the two halves

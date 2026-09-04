@@ -33,7 +33,7 @@ indirect enum Shape: Sendable {
     // with, in position order, and what it must answer. Nil where nothing
     // was declared. Purity and isolation are the slot's requirements.
     case procedure(
-        parameters: [(name: Name, shape: Shape)]?,
+        parameters: [(name: Name, shape: Shape, mustBeGiven: Bool)]?,
         returns: Shape?,
         purity: Purity,
         isolation: Isolation
@@ -56,7 +56,7 @@ indirect enum Shape: Sendable {
     // A table a host built by hand answers instead of failing to lower, and
     // only the judgments that reach the name are touched by it. The link
     // refuses such a name as it lowers the table, so a run never meets one.
-    case undeclared(label: Name, refusal: String)
+    case undeclared(label: String, refusal: String)
 
     // MARK: - Property
     var inoutUnwrapped: Shape {
@@ -169,7 +169,12 @@ extension Shape: Equatable {
                 return true
 
             case let (mine?, theirs?):
-                return Shape.same(mine, theirs)
+                return mine.count == theirs.count
+                    && zip(mine, theirs).allSatisfy { one, other in
+                        one.name == other.name
+                            && one.shape == other.shape
+                            && one.mustBeGiven == other.mustBeGiven
+                    }
 
             default:
                 return false

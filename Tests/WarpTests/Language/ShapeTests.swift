@@ -378,6 +378,29 @@ struct ShapeTests {
         }
     }
 
+    @Test("a judgment asked with no link says so, rather than naming another one")
+    func aJudgmentWithNoLinkSaysSo() async throws {
+        // Given: a closure out of a run, judged with no declarations behind
+        // the judgment. There is no link in hand to read its rows in, and
+        // saying "another link made it" would name a link nobody named.
+        let maker = try Module(
+            procedures: [
+                "entry": Procedure(
+                    body: [],
+                    result: .closure(Procedure(body: [], result: .literal(.int(1))))
+                )
+            ]
+        )
+        let made = try await Executor().run(try linker.link([maker] + Module.standard, entry: "entry"))
+
+        // When / Then
+        #expect {
+            try Parameter(type: .procedure(nil)).checking(made, called: "held")
+        } throws: { error in
+            "\(error)".contains("nothing here says which link")
+        }
+    }
+
     @Test("a reading naming an undeclared constraint passes membership, since nothing is proven of it")
     func anUndeclaredReadingPassesMembership() {
         // Given

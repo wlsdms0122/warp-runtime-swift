@@ -36,24 +36,25 @@ final class ShapeTable: Sendable {
     // and not a second type. Nil where a row stands for no record.
     let recordRows: [Int?]
 
+    // The rows that name themselves through a chain of names, and so stand
+    // for no shape. The lowering is where that is worked out, so it is what
+    // says so.
+    let circling: [Int]
+
     private let rows: [Name: Int]
     private let constraintRows: [Name: Int]
 
     // A table declaring nothing, for a judgment asked with no declarations
-    // behind it. One link of its own, like every other: what is judged here
-    // was linked somewhere else or nowhere.
-    static let empty = ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
+    // behind it. It belongs to no link, so no row belongs to it.
+    static let empty = ShapeTable(
+        shapes: [],
+        constraints: [],
+        labels: [],
+        constraintLabels: [],
+        recordRows: [],
+        of: .none
+    )
 
-    // The rows that name themselves through a chain of names: each lowered
-    // to the shape that refuses its own spelling. The link's one reading of
-    // which declarations reach no shape.
-    var circling: [Int] {
-        shapes.indices.filter { row in
-            guard case let .undeclared(label, _) = shapes[row] else { return false }
-
-            return label == labels[row]
-        }
-    }
 
     // MARK: - Initializer
     init(
@@ -62,13 +63,15 @@ final class ShapeTable: Sendable {
         labels: [Name],
         constraintLabels: [Name],
         recordRows: [Int?],
-        of linkage: Linkage = Linkage()
+        circling: [Int] = [],
+        of linkage: Linkage
     ) {
         self.shapes = shapes
         self.constraints = constraints
         self.labels = labels
         self.constraintLabels = constraintLabels
         self.recordRows = recordRows
+        self.circling = circling
         self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
         self.constraintRows = Dictionary(

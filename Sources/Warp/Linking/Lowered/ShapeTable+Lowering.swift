@@ -12,17 +12,15 @@ extension ShapeTable {
     // of the declared spellings, so what a link concludes does not depend on
     // the order a caller listed its modules in. A name that names itself
     // through a chain of names stands for no shape and lowers to the shape
-    // every judgment refuses, so a chain of names is always finite. A table
-    // declaring nothing is the one bare table, whichever declared nothing.
+    // every judgment refuses, so a chain of names is always finite.
     static func lowering(
         _ types: [Name: TypeExpression],
-        constraints: [Name: [TypeExpression]]
+        constraints: [Name: [TypeExpression]],
+        of linkage: Linkage
     ) -> ShapeTable {
-        // One link, one linkage. A table declaring nothing still gets one:
-        // a body carried out of such a link holds rows of its own, and a
-        // link that shared an identity would let those be read elsewhere.
-        let linkage = Linkage()
-
+        // A table of its own even where nothing is declared: a body carried
+        // out of such a link holds rows of its own, and a shared table would
+        // let those be read elsewhere.
         guard !types.isEmpty || !constraints.isEmpty else {
             return ShapeTable(
                 shapes: [],
@@ -74,7 +72,10 @@ extension ShapeTable {
         let circling = shapes.indices.filter { row in end(of: row) == nil }
 
         for row in circling {
-            shapes[row] = .undeclared(label: labels[row], refusal: "type '\(labels[row])', which names itself")
+            shapes[row] = .undeclared(
+                label: labels[row].spelling,
+                refusal: "type '\(labels[row])', which names itself"
+            )
         }
 
         // The record a row names: the last row on the way to a record shape.
@@ -90,6 +91,7 @@ extension ShapeTable {
             labels: labels,
             constraintLabels: constraintLabels,
             recordRows: recordRows,
+            circling: circling,
             of: linkage
         )
     }

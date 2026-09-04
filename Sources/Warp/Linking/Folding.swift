@@ -98,8 +98,8 @@ struct Folding {
     // code, so the table is read and never grown.
     func read(_ expression: Expression, at place: Place = .given(Self.label.spelling)) throws -> Value {
         let lowering = Lowering(table: table, rows: rows, words: words, variables: [:], shapes: shapes)
-        let (code, layout) = try lowering.lower(expression, reading: names, origin: origin, label: Self.label, at: place)
-        var activation = Activation(layout)
+        let (code, frame) = try lowering.lower(expression, reading: names, origin: origin, label: Self.label, at: place)
+        var activation = Activation(frame)
 
         for (slot, cell) in cells.enumerated() {
             activation.cells[slot] = cell

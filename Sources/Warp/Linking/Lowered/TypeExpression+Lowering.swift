@@ -64,7 +64,16 @@ extension TypeExpression {
         case let .procedure(signature, purity, isolation):
             return .procedure(
                 parameters: signature?.ordered.map { name, parameter in
-                    (name: name, shape: parameter.declared.lowered(in: table))
+                    let shape = parameter.declared.lowered(in: table)
+
+                    // Whether a call has to fill it travels with it: a body
+                    // may declare a name the slot never hands it where the
+                    // name stands unfilled, and may not where it would.
+                    return (
+                        name: name,
+                        shape: shape,
+                        mustBeGiven: shape.mustBeGiven(default: parameter.default, in: table)
+                    )
                 },
                 returns: signature?.returns?.lowered(in: table),
                 purity: purity,
@@ -82,7 +91,7 @@ extension TypeExpression {
 
         case let .named(name):
             guard let row = table.row(named: name) else {
-                return .undeclared(label: name, refusal: "type '\(name)', which nothing declares")
+                return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
             }
 
             return .named(row)
@@ -92,7 +101,7 @@ extension TypeExpression {
 
             guard let row = table.constraintRow(named: constraint) else {
                 return .undeclared(
-                    label: constraint,
+                    label: "some \(name): \(constraint)",
                     refusal: "constraint '\(constraint)', which nothing declares"
                 )
             }

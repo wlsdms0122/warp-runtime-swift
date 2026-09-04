@@ -254,6 +254,35 @@ struct LoweringTests {
         #expect(image["app.tally"]?.purity != .pure)
     }
 
+    @Test("a name is what it names, wherever a variable is handed in place")
+    func aHandedVariableReadsThroughNames() async throws {
+        // Given — `Count` is a name for `int`, and a name for a scalar is
+        // what it names: there is no representation to disagree about, so a
+        // variable holding an int is what an `inout Count` slot declares.
+        let sut = try Module(
+            types: ["Count": .int],
+            procedures: [
+                "entry": Procedure(
+                    body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
+                    result: .dispatch(Dispatch(selector: "app.bump", arguments: ["of": .reference([.key("n")])]))
+                ),
+                "app.bump": Procedure(
+                    signature: Signature(
+                        parameters: ["of": Parameter(type: .inout(.named("Count")))],
+                        returns: .named("Count")
+                    ),
+                    body: [],
+                    result: .reference([.key("of")])
+                )
+            ]
+        )
+
+        // When / Then
+        let image = try linker.link([sut] + Module.standard, entry: "entry")
+
+        #expect(try await Executor().run(image) == .int(1))
+    }
+
     @Test("what is handed in place is the shape the slot declares, and not one that fits it")
     func aHandedVariableIsTheSlotsOwnShape() async throws {
         // Given — a variable holding an unnamed record, handed to a slot
