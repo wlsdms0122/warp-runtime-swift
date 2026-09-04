@@ -46,7 +46,6 @@ struct RecordShape: Sendable {
 
 extension RecordShape: Equatable {
     static func == (lhs: RecordShape, rhs: RecordShape) -> Bool {
-        lhs.layout == rhs.layout
-            && zip(lhs.fields, rhs.fields).allSatisfy { mine, theirs in mine == theirs }
+        lhs.layout == rhs.layout && lhs.fields == rhs.fields
     }
 }

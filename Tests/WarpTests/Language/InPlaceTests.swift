@@ -400,4 +400,19 @@ struct InPlaceTests {
                 .settling(.procedure(closure), at: "piece", in: types)
         }
     }
+
+    @Test("a path write reaches a nameless record and the dictionary it equals the same way")
+    func aPathWriteReadsEitherSpelling() throws {
+        // Given — the contract says these are one value
+        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
+        let held = Value.dictionary(["a": .int(1)])
+        let path: [PathSegment] = [.key("b", optional: false)]
+
+        // When / Then
+        #expect(laid == held)
+        #expect(
+            try laid.writing(.int(2), at: path, under: "x.b")
+                == (try held.writing(.int(2), at: path, under: "x.b"))
+        )
+    }
 }

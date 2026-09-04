@@ -20,12 +20,17 @@ extension Value {
         let rest = Array(path.dropFirst())
 
         switch (self, segment) {
+        // A field the layout names is written where it stands; any other name
+        // makes an entry, and what holds it holds its names as data. The link
+        // judged the path, so a name that reaches here is one it allowed.
         case let (.record(record), .key(name, _)):
-            guard let held = record[name] else {
-                throw ExecutionError("'\(rendered)' writes '\(name)', which \(record.name.map { "\($0) " } ?? "")has no field for")
+            if let held = record[name] {
+                return .record(try record.writing(name, with: try held.writing(value, at: rest, under: rendered)))
             }
 
-            return .record(try record.writing(name, with: try held.writing(value, at: rest, under: rendered)))
+            return .dictionary(
+                record.asDictionary.writing(name, with: try Value.null.writing(value, at: rest, under: rendered))
+            )
 
         case let (.dictionary(dictionary), .key(name, _)):
             return .dictionary(

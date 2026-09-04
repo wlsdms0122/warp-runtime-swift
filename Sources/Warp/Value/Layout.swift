@@ -15,6 +15,11 @@ import Foundation
 // A name is part of the layout, so `Account` and `Vault` are two layouts over
 // one set of fields. What a field holds is not: `{title: string}` and
 // `{title: int}` are one layout under two shapes.
+//
+// Inside a link a name is a row of the shape table; outside one it is a
+// spelling, which is why a reader and a host may write one. What it means is
+// proved where the value settles into a slot that declares it, and a value
+// carrying a name no declaration answers is refused there.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property
     public let name: Name?
