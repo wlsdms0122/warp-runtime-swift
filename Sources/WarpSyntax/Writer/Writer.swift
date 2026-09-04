@@ -252,7 +252,7 @@ public struct Writer: Sendable {
                 return .string("\(word) \(written)")
 
             case let .record(form) where form.count == 1 && TypeReader.procedureKeys.contains(form.entries[0].name):
-                return .object([Name(normal: "\(word) \(form.entries[0].name)"): form.entries[0].value])
+                return .object([try Name("\(word) \(form.entries[0].name)"): form.entries[0].value])
 
             default:
                 throw WritingError(
@@ -271,7 +271,7 @@ public struct Writer: Sendable {
             // has no `bounds` surface, and the `.parameter` case refuses any
             // bound the walk below meets — one guard, wherever the walk
             // started.
-            return .object([Name(normal: word): .object(try fields(of: signature))])
+            return .object([try Name(word): .object(try fields(of: signature))])
         }
     }
 

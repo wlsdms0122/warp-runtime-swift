@@ -267,7 +267,7 @@ public struct ConcurrentEffect: Effect {
     // once.
     private func answer(_ piece: Piece, via invocation: Invocation) async throws -> Value {
         // The frame carries the bare name — rendering is what brackets it.
-        let frame = piece.key ?? Name(normal: "\(piece.position)")
+        let frame = piece.key?.spelling ?? "\(piece.position)"
 
         guard let environment = invocation.environment else {
             return try await invocation.call(

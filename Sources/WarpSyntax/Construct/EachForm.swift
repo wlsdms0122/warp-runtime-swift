@@ -19,7 +19,7 @@ public struct EachForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "each"
+    public static let key: Name = "each"
 
     // The body is decoded as a key that must be there, so a walk over nothing
     // is still written with an empty one.

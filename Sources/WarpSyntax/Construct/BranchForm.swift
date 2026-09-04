@@ -20,7 +20,7 @@ public struct BranchForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "branch"
+    public static let key: Name = "branch"
 
     // The condition slot may be written in spellings a notation named itself, so
     // the words behind them are owed wherever this form is registered and

@@ -25,9 +25,9 @@ struct RecordTests {
     }
 
     @Test("a field is found by its name, and a name not held answers nil")
-    func aFieldIsFoundByName() {
+    func aFieldIsFoundByName() throws {
         // Given
-        let names = (0 ..< 40).map { index in Name(normal: "field\(index)") }
+        let names = try (0 ..< 40).map { index in try Name("field\(index)") }
         let sut = Record(name: nil, entries: names.reversed().map { name in (name: name, value: Value.string(name.spelling)) })
 
         // When / Then
@@ -35,7 +35,7 @@ struct RecordTests {
             #expect(sut[name] == .string(name.spelling))
         }
         #expect(sut["field40"] == nil)
-        #expect(sut[""] == nil)
+        #expect(sut["held"] == nil)
         #expect(Record(name: nil, [:])["a"] == nil)
     }
 

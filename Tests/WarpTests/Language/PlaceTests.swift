@@ -725,7 +725,7 @@ struct PlaceTests {
         func declaring(_ prefix: String, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [
-                    Name(normal: "\(prefix).discounted"): Procedure(
+                    try Name("\(prefix).discounted"): Procedure(
                         signature: Signature(
                             receiver: "of",
                             parameters: ["of": Parameter(type: .int)],

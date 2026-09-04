@@ -27,7 +27,7 @@ public struct InvokeForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "invoke"
+    public static let key: Name = "invoke"
 
     private let callee: Expression
     private let arguments: [Name: Expression]

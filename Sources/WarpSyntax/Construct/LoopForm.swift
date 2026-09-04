@@ -19,7 +19,7 @@ public struct LoopForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "loop"
+    public static let key: Name = "loop"
 
     // The condition slot may be written in spellings a notation named itself, so
     // the words behind them are owed wherever this form is registered and

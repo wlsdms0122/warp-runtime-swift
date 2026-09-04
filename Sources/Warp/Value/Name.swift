@@ -16,7 +16,8 @@ import Foundation
 // language's and not any checker's own: the encodings hold record keys to it,
 // and validation holds every name a program writes as a value to it, and both
 // have to mean the same thing by "normal". A `Name` in hand has been through
-// it.
+// it, and so has been through the other half of the rule: a name is written,
+// and nothing written is no name.
 public struct Name: Sendable, Hashable, Comparable {
     // MARK: - Property
     public let spelling: String
@@ -63,6 +64,13 @@ public struct Name: Sendable, Hashable, Comparable {
 
     // MARK: - Initializer
     public init(_ spelling: String) throws {
+        // A name with nothing in it is no name: it is what a declaration is
+        // called and what a reference writes, and neither is written by
+        // writing nothing.
+        guard !spelling.isEmpty else {
+            throw NameRefused("a name is written, and this one is empty")
+        }
+
         guard spelling.precomposedStringWithCanonicalMapping.utf8.elementsEqual(spelling.utf8) else {
             throw NameRefused("the name '\(spelling)' is not in normal form C")
         }

@@ -21,7 +21,7 @@ public protocol ConstructForm: Sendable, Decodable {
     // The spelling this form proposes. `ConstructRegistry` may register it under
     // another, so a form never learns which word actually reached it — a word is
     // a fact about a notation, and a form is not one.
-    static var key: String { get }
+    static var key: Name { get }
 
     // Whether this form opens a condition slot. Answering yes is how a form owns
     // the words its notation spends there, without knowing any of them.

@@ -65,7 +65,7 @@ struct DeclaredSpellingTests {
         let mine = try Module(
             types: ["mine.Limit": .int],
             procedures: [
-                Name(normal: "mine.\(entryName)"): Procedure(
+                try Name("mine.\(entryName)"): Procedure(
                     signature: Signature(returns: .named("mine.Limit")),
                     body: [],
                     result: .literal(.int(3))
@@ -80,7 +80,7 @@ struct DeclaredSpellingTests {
         )
 
         // When / Then — `mine.entry` answers an int, which `mine.Limit` admits
-        let answer = try await run([mine, theirs], entry: Name(normal: "mine.\(entryName)"))
+        let answer = try await run([mine, theirs], entry: try Name("mine.\(entryName)"))
 
         #expect(answer == .int(3))
     }

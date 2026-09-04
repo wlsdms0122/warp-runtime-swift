@@ -199,11 +199,12 @@ public struct StatementReader: Decodable {
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
-            let key = keyed.allKeys.first?.stringValue,
-            key != Self.valueKey.spelling,
+            let written = keyed.allKeys.first?.stringValue,
+            let key = try? Name(written),
+            key != Self.valueKey,
             let form = registry.form(for: key)
         {
-            let inside = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: key))
+            let inside = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: written))
             let built: any ConstructForm
 
             do {

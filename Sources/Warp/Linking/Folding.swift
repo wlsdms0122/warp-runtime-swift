@@ -79,6 +79,11 @@ struct Folding {
     }
 
     // MARK: - Public
+    // What a closure made here is called. It was written in no declaration:
+    // the link made it while settling one, and that is what a trace through
+    // it says.
+    static let label: Name = "folding"
+
     // Whether a name is bound here.
     func holds(_ name: Name) -> Bool {
         names.contains(name)
@@ -91,9 +96,9 @@ struct Folding {
 
     // What an expression reads here. A closure it holds is carried in the
     // code, so the table is read and never grown.
-    func read(_ expression: Expression, at place: Place = .given("folding")) throws -> Value {
+    func read(_ expression: Expression, at place: Place = .given(Self.label.spelling)) throws -> Value {
         let lowering = Lowering(table: table, rows: rows, words: words, variables: [:], shapes: shapes)
-        let (code, layout) = try lowering.lower(expression, reading: names, origin: origin, label: "", at: place)
+        let (code, layout) = try lowering.lower(expression, reading: names, origin: origin, label: Self.label, at: place)
         var activation = Activation(layout)
 
         for (slot, cell) in cells.enumerated() {

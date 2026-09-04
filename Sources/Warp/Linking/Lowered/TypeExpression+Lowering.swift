@@ -92,7 +92,7 @@ extension TypeExpression {
 
             guard let row = table.constraintRow(named: constraint) else {
                 return .undeclared(
-                    label: Name(normal: "some \(name): \(constraint)"),
+                    label: constraint,
                     refusal: "constraint '\(constraint)', which nothing declares"
                 )
             }

@@ -21,7 +21,7 @@ import Warp
 //     { id: skip,   continue: outer }
 public struct ReturnForm: ConstructForm {
     // MARK: - Property
-    public static let key = "return"
+    public static let key: Name = "return"
 
     private let value: Expression?
 
@@ -50,7 +50,7 @@ public struct ReturnForm: ConstructForm {
 
 public struct BreakForm: ConstructForm {
     // MARK: - Property
-    public static let key = "break"
+    public static let key: Name = "break"
 
     private let target: Name?
 
@@ -69,7 +69,7 @@ public struct BreakForm: ConstructForm {
 
 public struct ContinueForm: ConstructForm {
     // MARK: - Property
-    public static let key = "continue"
+    public static let key: Name = "continue"
 
     private let target: Name?
 
@@ -89,7 +89,7 @@ public struct ContinueForm: ConstructForm {
 extension BreakForm {
     // Which loop, or nothing for the nearest. A loop answers what it was going
     // to answer, so there is nothing to carry and what stands here is a name.
-    static func target(from decoder: Decoder, called word: String) throws -> Name? {
+    static func target(from decoder: Decoder, called word: Name) throws -> Name? {
         switch try ValueReader(from: decoder).value {
         case .null:
             return nil

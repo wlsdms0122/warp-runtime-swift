@@ -106,12 +106,12 @@ public struct Invocation: Sendable {
     public func call(
         _ closure: Closure,
         offering arguments: [(name: Name, value: Value)],
-        piece label: Name? = nil
+        piece label: String? = nil
     ) async throws -> Value {
         try await executor.call(
             closure,
             offering: arguments,
-            at: label.map { name in trace.appending(.piece(name.spelling)) } ?? trace
+            at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }
 

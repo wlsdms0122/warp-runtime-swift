@@ -251,10 +251,6 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name), let .variable(name):
-                    guard !name.spelling.isEmpty else {
-                        throw ValidationError("statement with empty id", at: here)
-                    }
-
                     try introduced(name, beside: surroundings.constants, at: here)
 
                     guard !declared.contains(name) else {
@@ -271,7 +267,7 @@ public struct Validator: Sendable {
                         throw ValidationError(refusal, at: here)
                     }
 
-                    guard let head = path.head, !head.spelling.isEmpty else {
+                    guard let head = path.head else {
                         throw ValidationError(
                             "writes a path headed by no name — a write starts at a variable",
                             at: here

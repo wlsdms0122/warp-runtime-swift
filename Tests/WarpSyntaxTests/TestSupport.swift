@@ -47,7 +47,7 @@ struct FailEffect: Effect {
 
 struct FailForm: ConstructForm {
     // MARK: - Property
-    static let key = "fail"
+    static let key: Name = "fail"
 
     private let recoverable: Bool
 

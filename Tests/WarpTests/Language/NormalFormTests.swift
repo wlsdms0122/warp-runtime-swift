@@ -34,6 +34,17 @@ struct NormalFormTests {
         #expect(try Name(normal).spelling == normal)
     }
 
+    @Test("nothing written is no name")
+    func anEmptySpellingIsRefused() {
+        // A name is what a declaration is called and what a reference writes,
+        // and neither is written by writing nothing.
+        let nothing = ""
+
+        #expect(throws: NameRefused.self) {
+            try Name(nothing)
+        }
+    }
+
     @Test("names are equal by their bytes, not by canonical equivalence")
     func namesAreEqualByBytes() throws {
         // Swift calls the two spellings one string. A name is not a string.

@@ -31,7 +31,7 @@ public struct CallForm: ConstructForm {
     }
 
     // MARK: - Property
-    public static let key = "call"
+    public static let key: Name = "call"
 
     private let procedure: Name
     private let receiver: Expression?

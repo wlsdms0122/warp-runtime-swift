@@ -12,7 +12,7 @@ import Warp
 // like anything else.
 public struct GroupForm: ConstructForm {
     // MARK: - Property
-    public static let key = "group"
+    public static let key: Name = "group"
 
     private let block: Block
 

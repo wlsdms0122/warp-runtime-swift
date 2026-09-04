@@ -35,7 +35,7 @@ public struct ConstructRegistry: Sendable {
         ContinueForm.self
     ])
 
-    public var keys: [Name] { forms.keys.sorted().map(Name.init(normal:)) }
+    public var keys: [Name] { forms.keys.sorted() }
 
 
     // What the registered forms send, and what their slots spend on their
@@ -55,7 +55,7 @@ public struct ConstructRegistry: Sendable {
         }
     }
 
-    private var forms: [String: any ConstructForm.Type]
+    private var forms: [Name: any ConstructForm.Type]
 
     // MARK: - Initializer
     public init(forms: [any ConstructForm.Type] = []) throws {
@@ -71,8 +71,14 @@ public struct ConstructRegistry: Sendable {
     public init(forms: [String: any ConstructForm.Type]) throws {
         self.forms = [:]
 
-        for (key, form) in forms {
-            try insert(form, as: key)
+        // A word a construct is registered under is a key a document writes,
+        // so it comes through the door every name a document writes does.
+        for (written, form) in forms {
+            do {
+                try insert(form, as: try Name(written))
+            } catch let refusal as NameRefused {
+                throw ValidationError("construct key '\(written)' cannot be a word: \(refusal)", at: nil)
+            }
         }
     }
 
@@ -82,7 +88,7 @@ public struct ConstructRegistry: Sendable {
     // forms, and nothing says two words cannot mean the same thing.
     public func registering(
         _ form: any ConstructForm.Type,
-        as key: String? = nil
+        as key: Name? = nil
     ) throws -> ConstructRegistry {
         var registry = self
 
@@ -95,7 +101,7 @@ public struct ConstructRegistry: Sendable {
     // own has to be able to stop meaning ours by it, and respelling a built-in is
     // this followed by `registering(_:as:)` — the reason a rename is a change to
     // a table here rather than a change to the language.
-    public func removing(_ key: String) -> ConstructRegistry {
+    public func removing(_ key: Name) -> ConstructRegistry {
         var registry = self
 
         registry.forms[key] = nil
@@ -103,7 +109,7 @@ public struct ConstructRegistry: Sendable {
         return registry
     }
 
-    public func form(for key: String) -> (any ConstructForm.Type)? {
+    public func form(for key: Name) -> (any ConstructForm.Type)? {
         forms[key]
     }
 
@@ -125,14 +131,13 @@ public struct ConstructRegistry: Sendable {
         }
         .keys
         .min()
-        .map(Name.init(normal:))
     }
 
     // MARK: - Private
     // A key is claimed once — silently replacing a form would let a caller swap
     // out the language's own control structures without a trace. Deliberately
     // replacing one is `removing(_:)` first, which leaves the intent written down.
-    private mutating func insert(_ form: any ConstructForm.Type, as key: String) throws {
+    private mutating func insert(_ form: any ConstructForm.Type, as key: Name) throws {
         guard forms[key] == nil else {
             // A registry is assembled by a caller and not read out of a
             // document, so there is no place in one to point at.
@@ -142,7 +147,7 @@ public struct ConstructRegistry: Sendable {
         // `value` is the word an expression quotes a literal under, read
         // wherever an expression is, so a construct registered under it would
         // never be reached: the statement reader passes that word by.
-        guard key != StatementReader.valueKey.spelling else {
+        guard key != StatementReader.valueKey else {
             throw ValidationError(
                 "construct key '\(key)' is the word a statement writes its expression under,"
                     + " and no construct sits under it",
