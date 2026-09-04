@@ -32,8 +32,8 @@ extension Name {
     static func read(_ spelling: String, at steps: [Place.Step]) throws -> Name {
         do {
             return try Name(spelling)
-        } catch {
-            throw ReadingError("\(error)", at: steps)
+        } catch let refusal as NameRefused {
+            throw ReadingError(refusal.message, at: steps)
         }
     }
 }
