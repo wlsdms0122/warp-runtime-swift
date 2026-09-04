@@ -126,10 +126,17 @@ extension Shape {
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }
 
+            // A body may declare fewer than the slot hands it: a name it
+            // never reads is a name it need not write. It may not declare
+            // more — a name nothing hands it is a name no call could ever
+            // fill, and the body would read null wherever it wrote it.
+            guard given.allSatisfy({ slot in required.contains { name, _ in name == slot.name } }) else {
+                return false
+            }
+
             // The directions are opposite on purpose: what is given must
             // accept everything that will be passed to it, and what is
-            // required must accept everything it will get back. A parameter
-            // the body leaves out is not a disagreement.
+            // required must accept everything it will get back.
             for (name, shape) in required {
                 guard let taken = given.first(where: { slot in slot.name == name }) else { continue }
                 guard taken.shape.accepts(shape, in: table, assuming: assuming) else { return false }

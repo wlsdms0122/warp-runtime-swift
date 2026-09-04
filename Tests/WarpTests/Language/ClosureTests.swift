@@ -40,6 +40,69 @@ struct ClosureTests {
         #expect(answer == .string("written"))
     }
 
+    @Test("a body declaring a name the slot never hands it is refused", arguments: [
+        (["item": Parameter(type: .int)] as [Name: Parameter], true),
+        ([:], true),
+        (["item": Parameter(type: .int), "index": Parameter(type: .int)], false)
+    ])
+    func aBodyDeclaresNoMoreThanTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) throws {
+        // Given — the slot hands one name. A body reading none of it or one
+        // of it stands; a body writing a name nothing hands it could only
+        // ever read null there, so no call could fill it.
+        let walking = Procedure(
+            signature: Signature(
+                parameters: [
+                    "by": Parameter(
+                        type: .procedure(Signature(parameters: ["item": Parameter(type: .int)]))
+                    )
+                ]
+            ),
+            body: [
+                Statement(
+                    binding: .constant("once"),
+                    expression: .invoke(reference("by"), arguments: ["item": .literal(.int(1))])
+                )
+            ]
+        )
+        let sut = try Module(
+            procedures: [
+                "walking": walking,
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("body"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: declared),
+                                    body: [],
+                                    result: .literal(.int(1))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("ran"),
+                            expression: .dispatch(Dispatch(
+                                selector: "walking",
+                                arguments: ["by": reference("body")]
+                            ))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        if fits {
+            #expect(throws: Never.self) {
+                try Linker().link([sut] + Module.standard, entry: entryName)
+            }
+        } else {
+            #expect(throws: LinkError.self) {
+                try Linker().link([sut] + Module.standard, entry: entryName)
+            }
+        }
+    }
+
     @Test("a slot asking for a pure procedure refuses one that reaches outside")
     func anImpureClosureIsRefusedWherePurityIsAsked() throws {
         // Given — `twice` declares that whatever it is handed answers without
