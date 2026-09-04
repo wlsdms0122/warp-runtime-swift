@@ -28,8 +28,7 @@ final class ShapeTable: Sendable {
     let constraintLabels: [Name]
 
     // What this table's rows are numbered against. A link owns one; a table
-    // a caller assembled is a place of its own. Either way a row is read
-    // where the place that made it is being read, and nowhere else.
+    // a caller assembled is a place of its own.
     let linkage: Linkage
 
     // The row of the record a row names: the last declared name on the way

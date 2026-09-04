@@ -158,9 +158,6 @@ public final class Linked: Sendable {
         table.linkage === other.linkage
     }
 
-    // Why it cannot be read, for the side that met it. Which link this one
-    // came from is not knowable here, so the sentence says the rule rather
-    // than naming a link nobody named.
     static let unreadable = "got a procedure a row of this link cannot read"
         + " — one is read where the link that made it is being read, which"
         + " for a judgment is the image's own types"

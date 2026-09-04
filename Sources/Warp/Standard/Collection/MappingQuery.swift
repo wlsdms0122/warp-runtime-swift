@@ -48,8 +48,6 @@ public struct MappingQuery: Query {
                 throw ExecutionError("setting asks a string key")
             }
 
-            // The key becomes a field's name, and is held to what a name
-            // is like any other a program writes.
             let field: Name
 
             do {

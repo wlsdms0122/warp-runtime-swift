@@ -338,14 +338,11 @@ extension Shape {
         let walked = assuming + [(self, other)]
 
         switch (self, other) {
-        // A name the table does not answer, and a slot the call fills:
-        // nothing is knowable about either here.
         case (.undeclared, _), (_, .undeclared), (.parameter, _), (_, .parameter):
             return true
 
         // A record under a name is that name, so two names are two shapes
-        // however alike and an inline record is neither. Every other name is
-        // what it names.
+        // however alike. Every other name is what it names.
         case let (.named(mine), .named(theirs)):
             guard mine != theirs else { return true }
 
@@ -405,8 +402,8 @@ extension Shape {
                 return false
             }
 
-        // What is left holds nothing, so being the same is being the same
-        // case, and every shape that holds one is answered above.
+        // Every shape that holds another is answered above; what is left
+        // holds nothing.
         default:
             return self == other
         }
