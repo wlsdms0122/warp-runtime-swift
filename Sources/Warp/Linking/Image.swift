@@ -67,10 +67,9 @@ public struct Image: Sendable {
         rows[declared].map { row in linked[row] }
     }
 
-    // A value settled by a type this link declared: the door a host builds a
-    // record through. The declaration gives the layout and holds every field
-    // to its shape, so what comes back is what a slot of that type holds, and
-    // there is no way to write a name onto a value by hand.
+    // A value settled by a type this link declared: the declaration gives the
+    // layout and holds every field to its shape, so what comes back is what a
+    // slot of that type holds.
     public func settling(_ value: Value, as declared: Name) throws -> Value {
         guard let row = shapes.row(named: declared) else {
             throw ValueRefused("no type named '\(declared)' is declared here")

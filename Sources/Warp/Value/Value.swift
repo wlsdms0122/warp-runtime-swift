@@ -68,8 +68,7 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one field written, or any other value as it is. A
-    // record's fields are its layout's, so a name it does not hold is
-    // refused; a dictionary's names are its own, so one not held yet is made.
+    // dictionary's names are its own, so one not held yet is made.
     public func writing(_ name: Name, with value: Value) throws -> Value {
         switch self {
         case let .record(record):

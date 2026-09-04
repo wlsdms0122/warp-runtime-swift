@@ -23,7 +23,6 @@ public struct Layout: Sendable, Hashable {
     public let fields: [Name]
 
     // MARK: - Initializer
-    // Fields in any order, none of which repeats.
     public init(name: Name? = nil, fields: [Name]) throws {
         let sorted = fields.sorted()
 

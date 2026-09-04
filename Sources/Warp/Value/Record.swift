@@ -34,10 +34,7 @@ public struct Record: Sendable {
     }
 
     // MARK: - Initializer
-    // A record of the fields a caller hands in, under a layout of their
-    // names. The name is written at every site: a record with none is what a
-    // literal makes, and a dictionary is what data makes, and nothing should
-    // read as either.
+    // A record of the fields a caller hands in, under a layout of their names.
     public init(name: Name?, _ fields: [Name: Value]) {
         let ordered = fields.map { field in (name: field.key, value: field.value) }
             .sorted { one, other in one.name < other.name }
