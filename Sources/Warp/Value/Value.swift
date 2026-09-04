@@ -78,7 +78,7 @@ public indirect enum Value: Sendable, Equatable {
             return .dictionary(held.writing(name, with: value))
 
         default:
-            return self
+            throw ValueRefused("\(type) holds no fields, so '\(name)' cannot be written into it")
         }
     }
 

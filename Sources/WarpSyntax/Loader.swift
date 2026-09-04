@@ -97,9 +97,14 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        guard case let .dictionary(document) = value,
-            Envelope.declaresImports(document[Envelope.importsKey])
-        else {
+        guard case let .dictionary(written) = value else {
+            throw ReadingError(
+                "a document is names and values, and this one is \(value.type)"
+                    + (value.holdsFields ? " under a type's name, which a document has none of" : "")
+            )
+        }
+
+        guard Envelope.declaresImports(written[Envelope.importsKey]) else {
             throw ReadingError(
                 "a document says what it imports, and this one does not —"
                     + " write `\(Envelope.importsKey)`, empty where the program sends nothing"
@@ -245,7 +250,7 @@ public struct Loader: Sendable {
     // it says which reader the document is written for, and that is an answer
     // about the writing rather than about the program.
     private func stamped(_ value: Value) -> Value {
-        guard let document = value.asDictionary, document[Envelope.versionKey] == nil else { return value }
+        guard case let .dictionary(document) = value, document[Envelope.versionKey] == nil else { return value }
 
         return .dictionary(document.writing(Envelope.versionKey, with: .int(Envelope.version)))
     }
