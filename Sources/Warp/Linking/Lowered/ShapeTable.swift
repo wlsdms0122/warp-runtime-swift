@@ -27,6 +27,10 @@ final class ShapeTable: Sendable {
     let labels: [Name]
     let constraintLabels: [Name]
 
+    // The link this table was built by. A row numbered against it is read
+    // where the same link is being read, and nowhere else.
+    let linkage: Linkage
+
     // The row of the record a row names: the last declared name on the way
     // to a record shape, so an alias of a declared record is that record
     // and not a second type. Nil where a row stands for no record.
@@ -35,12 +39,10 @@ final class ShapeTable: Sendable {
     private let rows: [Name: Int]
     private let constraintRows: [Name: Int]
 
+    // A table declaring nothing, for a judgment asked with no declarations
+    // behind it. One link of its own, like every other: what is judged here
+    // was linked somewhere else or nowhere.
     static let empty = ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
-
-    // Whether this declares nothing, and so has no rows for a number to name.
-    var isBare: Bool {
-        shapes.isEmpty && constraints.isEmpty
-    }
 
     // The rows that name themselves through a chain of names: each lowered
     // to the shape that refuses its own spelling. The link's one reading of
@@ -54,12 +56,20 @@ final class ShapeTable: Sendable {
     }
 
     // MARK: - Initializer
-    init(shapes: [Shape], constraints: [[Shape]], labels: [Name], constraintLabels: [Name], recordRows: [Int?]) {
+    init(
+        shapes: [Shape],
+        constraints: [[Shape]],
+        labels: [Name],
+        constraintLabels: [Name],
+        recordRows: [Int?],
+        of linkage: Linkage = Linkage()
+    ) {
         self.shapes = shapes
         self.constraints = constraints
         self.labels = labels
         self.constraintLabels = constraintLabels
         self.recordRows = recordRows
+        self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
         self.constraintRows = Dictionary(
             uniqueKeysWithValues: constraintLabels.enumerated().map { row, label in (label, row) }

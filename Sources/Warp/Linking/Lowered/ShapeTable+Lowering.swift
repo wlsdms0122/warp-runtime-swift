@@ -18,12 +18,20 @@ extension ShapeTable {
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]]
     ) -> ShapeTable {
-        // A table of its own even where nothing is declared. A row means
-        // something inside one link alone, and the table is what says which
-        // link that is — so a link that shared one would let a body carried
-        // out of it be read against rows that are not its own.
+        // One link, one linkage. A table declaring nothing still gets one:
+        // a body carried out of such a link holds rows of its own, and a
+        // link that shared an identity would let those be read elsewhere.
+        let linkage = Linkage()
+
         guard !types.isEmpty || !constraints.isEmpty else {
-            return ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
+            return ShapeTable(
+                shapes: [],
+                constraints: [],
+                labels: [],
+                constraintLabels: [],
+                recordRows: [],
+                of: linkage
+            )
         }
 
         let labels = types.keys.sorted()
@@ -36,7 +44,8 @@ extension ShapeTable {
             constraints: [],
             labels: labels,
             constraintLabels: constraintLabels,
-            recordRows: []
+            recordRows: [],
+            of: linkage
         )
 
         var shapes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
@@ -80,7 +89,8 @@ extension ShapeTable {
             constraints: members,
             labels: labels,
             constraintLabels: constraintLabels,
-            recordRows: recordRows
+            recordRows: recordRows,
+            of: linkage
         )
     }
 }
