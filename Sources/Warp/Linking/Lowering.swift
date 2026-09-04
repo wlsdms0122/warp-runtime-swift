@@ -262,8 +262,12 @@ struct Lowering {
             let ordered = record.sorted { $0.key < $1.key }
 
             return .record(
-                Layout(name: nil, ordered: ordered.map(\.key)),
-                try ordered.map { _, field in try lower(field, in: scope, on: slots, label: label, at: place) }
+                RecordCode(
+                    layout: Layout(name: nil, ordered: ordered.map(\.key)),
+                    fields: try ordered.map { _, field in
+                        try lower(field, in: scope, on: slots, label: label, at: place)
+                    }
+                )
             )
 
         case let .closure(procedure):

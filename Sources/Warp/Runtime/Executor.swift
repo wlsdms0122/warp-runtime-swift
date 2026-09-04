@@ -118,9 +118,9 @@ public struct Executor: Sendable {
         case let .array(elements):
             return .array(try elements.map { element in try read(element, in: activation) })
 
-        case let .record(layout, fields):
+        case let .record(held):
             return .record(
-                Record(layout: layout, values: try fields.map { field in try read(field, in: activation) })
+                Record(layout: held.layout, values: try held.fields.map { field in try read(field, in: activation) })
             )
 
         // Making a closure runs nothing: it is the capture, and the capture is
@@ -284,15 +284,15 @@ public struct Executor: Sendable {
 
             return .array(values)
 
-        case let .record(layout, fields):
+        case let .record(held):
             var values: [Value] = []
-            values.reserveCapacity(fields.count)
+            values.reserveCapacity(held.fields.count)
 
-            for field in fields {
+            for field in held.fields {
                 values.append(try await evaluate(field, in: &activation, at: trace))
             }
 
-            return .record(Record(layout: layout, values: values))
+            return .record(Record(layout: held.layout, values: values))
 
         // The run's whole share of a cast: the link already decided what every
         // dot after this means, and the one thing it could not know is what

@@ -9,10 +9,10 @@ import Foundation
 import Testing
 @testable import Warp
 
-@Suite("A host builds a value through the doors, not by hand")
+@Suite("A host settles a value against a declaration the link holds")
 struct HostDoorTests {
     // MARK: - Test
-    @Test("a name is written onto a value only by settling it against a declaration")
+    @Test("settling against a declared type builds the value on that type's layout")
     func settlingByDeclarationNamesTheValue() throws {
         // Given
         let image = try Linker().link([sut], entry: "entry")
@@ -67,6 +67,21 @@ struct HostDoorTests {
         // Then
         #expect(settled["note"] == nil)
         #expect(settled["balance"] == .int(1))
+    }
+
+    @Test("a dictionary slot takes a record and answers one whose names are data")
+    func aRecordSettlesIntoADictionaryAsData() throws {
+        // Given — a name is proved where a slot declares one, and a
+        // `dictionary` slot declares none
+        let image = try Linker().link([sut], entry: "entry")
+        let named = try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Account")
+
+        // When
+        let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")
+
+        // Then
+        #expect(named == .record(Record(name: "bank.Account", ["balance": .int(1)])))
+        #expect(settled == .dictionary(["balance": .int(1)]))
     }
 
     // MARK: - Private

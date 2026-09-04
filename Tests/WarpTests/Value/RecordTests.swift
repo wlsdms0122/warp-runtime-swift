@@ -61,23 +61,27 @@ struct RecordTests {
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
     }
 
-    @Test("a name the layout does not hold makes the answer hold its names as data")
-    func writingOutsideTheLayoutAnswersData() throws {
+    @Test("a value that settled to a name keeps it, and is refused a field that name does not declare")
+    func writingHoldsASettledNameToItsDeclaration() throws {
         // Given
         let sut = Value.record(Record(name: "app.Point", ["a": .int(1)]))
 
-        // When
-        let written = try sut.writing("a", with: .int(9))
-        let widened = try sut.writing("b", with: .int(2))
+        // When / Then — a declared field is written where it stands
+        #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "app.Point", ["a": .int(9)])))
 
-        // Then — a declared field is written where it stands, and the record
-        // stays the type it settled to
-        #expect(written["a"] == .int(9))
-        #expect(written == .record(Record(name: "app.Point", ["a": .int(9)])))
-
-        // A name the declaration never had is data, and so is what holds it
-        #expect(widened == .dictionary(["a": .int(1), "b": .int(2)]))
+        // A name the declaration never had would make this something other
+        // than the type it settled to
+        #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
         #expect(throws: ValueRefused.self) { try Value.int(1).writing("a", with: .int(2)) }
+    }
+
+    @Test("a value that settled to no name holds a new one as data")
+    func writingOutsideALayoutWithNoNameAnswersData() throws {
+        // Given
+        let sut = Value.record(Record(name: nil, ["a": .int(1)]))
+
+        // When / Then
+        #expect(try sut.writing("b", with: .int(2)) == .dictionary(["a": .int(1), "b": .int(2)]))
     }
 
     @Test("a nameless record and the dictionary it equals are written the same way")

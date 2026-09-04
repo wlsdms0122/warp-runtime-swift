@@ -68,15 +68,20 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one field written. A field a record's layout names is
-    // written where it stands; any other name makes an entry, and the answer
-    // holds its names as data, because a layout is the declaration's and this
-    // name is not in it.
+    // written where it stands. Any other name is not the declaration's, so a
+    // value that settled to one is refused rather than quietly made something
+    // else, and a value that settled to none holds the new name as data, the
+    // way the dictionary it equals does.
     public func writing(_ name: Name, with value: Value) throws -> Value {
         switch self {
         case let .record(record) where record.layout.position(of: name) != nil:
             return .record(try record.writing(name, with: value))
 
         case let .record(record):
+            guard record.name == nil else {
+                throw ValueRefused("\(record.name?.spelling ?? "") declares no field '\(name)'")
+            }
+
             return .dictionary(record.asDictionary.writing(name, with: value))
 
         case let .dictionary(held):

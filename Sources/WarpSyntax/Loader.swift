@@ -97,12 +97,7 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        guard let written = value.unnamedFields else {
-            throw ReadingError(
-                "a document is names and values, and this one is \(value.type)"
-                    + (value.holdsFields ? " under a type's name, which a document has none of" : "")
-            )
-        }
+        let written = try Self.document(value)
 
         guard Envelope.declaresImports(written[Envelope.importsKey]) else {
             throw ReadingError(
@@ -152,7 +147,7 @@ public struct Loader: Sendable {
         // The value that is read and the value a refusal about it is named
         // after are one value, held once. Two calls to `stamped` would be two
         // values that happen to agree today about the one field this reads.
-        let stamped = stamped(value)
+        let stamped = try stamped(value)
 
         return try Writer(registry: registry, readBy: .canonical)
             .value(of: try spelled(stamped, in: document(of: stamped), from: notation))
@@ -249,10 +244,27 @@ public struct Loader: Sendable {
     // caller hands in is not yet a document and the version is the reason why:
     // it says which reader the document is written for, and that is an answer
     // about the writing rather than about the program.
-    private func stamped(_ value: Value) -> Value {
-        guard let document = value.unnamedFields, document[Envelope.versionKey] == nil else { return value }
+    private func stamped(_ value: Value) throws -> Value {
+        let document = try Self.document(value)
+
+        guard document[Envelope.versionKey] == nil else { return value }
 
         return .dictionary(document.writing(Envelope.versionKey, with: .int(Envelope.version)))
+    }
+
+    // What a document holds, or the refusal saying this was not one. A
+    // document is names and values under no name of its own: the envelope is
+    // data, and a type's name on it would say the document is a value of that
+    // type.
+    private static func document(_ value: Value) throws -> Value.Dictionary {
+        guard let held = value.unnamedFields else {
+            throw ReadingError(
+                "a document is names and values, and this one is \(value.type)"
+                    + (value.holdsFields ? " under a type's name, which a document has none of" : "")
+            )
+        }
+
+        return held
     }
 
     // Every reading goes through here, and so does every refusal one raises.

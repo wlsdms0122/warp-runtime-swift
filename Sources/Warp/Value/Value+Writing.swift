@@ -28,6 +28,10 @@ extension Value {
                 return .record(try record.writing(name, with: try held.writing(value, at: rest, under: rendered)))
             }
 
+            guard record.name == nil else {
+                throw ExecutionError("'\(rendered)' writes '\(name)', which \(record.name?.spelling ?? "") does not declare")
+            }
+
             return .dictionary(
                 record.asDictionary.writing(name, with: try Value.null.writing(value, at: rest, under: rendered))
             )
