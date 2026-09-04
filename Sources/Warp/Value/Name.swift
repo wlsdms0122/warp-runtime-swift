@@ -71,6 +71,16 @@ public struct Name: Sendable, Hashable, Comparable {
             throw NameRefused("a name is written, and this one is empty")
         }
 
+        // ASCII combines with nothing, so a spelling made of it is normal and
+        // the general form has nothing to find. Names are written by hand and
+        // are nearly all ASCII, and the general form composes a whole second
+        // string to answer.
+        guard spelling.utf8.contains(where: { byte in byte >= 0x80 }) else {
+            self.spelling = spelling
+
+            return
+        }
+
         guard spelling.precomposedStringWithCanonicalMapping.utf8.elementsEqual(spelling.utf8) else {
             throw NameRefused("the name '\(spelling)' is not in normal form C")
         }
@@ -100,8 +110,16 @@ public struct Name: Sendable, Hashable, Comparable {
         lhs.spelling.utf8.elementsEqual(rhs.spelling.utf8)
     }
 
+    // Hashed over the same bytes `==` reads, in one pass where the spelling
+    // holds them contiguously.
     public func hash(into hasher: inout Hasher) {
-        for byte in spelling.utf8 {
+        let utf8 = spelling.utf8
+
+        guard utf8.withContiguousStorageIfAvailable({ bytes in hasher.combine(bytes: UnsafeRawBufferPointer(bytes)) }) == nil else {
+            return
+        }
+
+        for byte in utf8 {
             hasher.combine(byte)
         }
     }
