@@ -34,10 +34,7 @@ public struct Record: Sendable {
     }
 
     // MARK: - Initializer
-    // A record of the fields a caller hands in, under a layout of their
-    // names. Inside the link, where a name comes from a declaration or from a
-    // document that wrote one; `Value.holding(_:named:)` and
-    // `Image.settling(_:as:)` are how a name reaches a value from outside.
+    // A record of the fields a caller hands in, under a layout of their names.
     init(name: Name?, _ fields: [Name: Value]) {
         let ordered = fields.map { field in (name: field.key, value: field.value) }
             .sorted { one, other in one.name < other.name }

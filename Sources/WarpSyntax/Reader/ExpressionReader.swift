@@ -114,6 +114,12 @@ public struct ExpressionReader: Decodable {
             case let .dictionary(fields):
                 return try read(record: fields, at: steps, in: decoder)
 
+            // A form is keys the notation reserved, and a name under which a
+            // value stands is not one of them. So a value the document named
+            // is data, and reading it as a form would spend the name.
+            case let .record(record) where record.name != nil:
+                return .literal(value)
+
             case let .record(record):
                 return try read(record: record.asDictionary, at: steps, in: decoder)
 

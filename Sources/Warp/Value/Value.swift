@@ -67,12 +67,17 @@ public indirect enum Value: Sendable, Equatable {
         )
     }
 
-    // This value with one field written, or any other value as it is. A
-    // dictionary's names are its own, so one not held yet is made.
+    // This value with one field written. A field a record's layout names is
+    // written where it stands; any other name makes an entry, and the answer
+    // holds its names as data, because a layout is the declaration's and this
+    // name is not in it.
     public func writing(_ name: Name, with value: Value) throws -> Value {
         switch self {
-        case let .record(record):
+        case let .record(record) where record.layout.position(of: name) != nil:
             return .record(try record.writing(name, with: value))
+
+        case let .record(record):
+            return .dictionary(record.asDictionary.writing(name, with: value))
 
         case let .dictionary(held):
             return .dictionary(held.writing(name, with: value))
@@ -426,6 +431,19 @@ public indirect enum Value: Sendable, Equatable {
         switch self {
         case .record, .dictionary: true
         default: false
+        }
+    }
+
+    // This value's fields where nothing named the value itself: what a
+    // document holds, whichever spelling carries it. Nil for a value under a
+    // type's name, and for one holding no fields at all.
+    public var unnamedFields: Dictionary? {
+        switch self {
+        case let .record(record) where record.name != nil:
+            return nil
+
+        default:
+            return asDictionary
         }
     }
 

@@ -61,14 +61,36 @@ struct RecordTests {
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
     }
 
-    @Test("writing through the value door refuses a name the layout does not hold")
-    func writingThroughTheValueDoorRefuses() throws {
+    @Test("a name the layout does not hold makes the answer hold its names as data")
+    func writingOutsideTheLayoutAnswersData() throws {
         // Given
         let sut = Value.record(Record(name: "app.Point", ["a": .int(1)]))
 
+        // When
+        let written = try sut.writing("a", with: .int(9))
+        let widened = try sut.writing("b", with: .int(2))
+
+        // Then — a declared field is written where it stands, and the record
+        // stays the type it settled to
+        #expect(written["a"] == .int(9))
+        #expect(written == .record(Record(name: "app.Point", ["a": .int(9)])))
+
+        // A name the declaration never had is data, and so is what holds it
+        #expect(widened == .dictionary(["a": .int(1), "b": .int(2)]))
+        #expect(throws: ValueRefused.self) { try Value.int(1).writing("a", with: .int(2)) }
+    }
+
+    @Test("a nameless record and the dictionary it equals are written the same way")
+    func equalValuesAreWrittenAlike() throws {
+        // Given — the contract says these are one value, so a door on top of
+        // it cannot tell them apart
+        let laid = Value.record(Record(name: nil, ["a": .int(1)]))
+        let held = Value.dictionary(["a": .int(1)])
+
         // When / Then
-        #expect(try sut.writing("a", with: .int(9))["a"] == .int(9))
-        #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
+        #expect(laid == held)
+        #expect(try laid.writing("b", with: .int(2)) == (try held.writing("b", with: .int(2))))
+        #expect(try laid.writing("a", with: .int(9)) == (try held.writing("a", with: .int(9))))
     }
 
     @Test("a record's name is part of its layout")

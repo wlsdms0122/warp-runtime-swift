@@ -97,7 +97,7 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        guard case let .dictionary(written) = value else {
+        guard let written = value.unnamedFields else {
             throw ReadingError(
                 "a document is names and values, and this one is \(value.type)"
                     + (value.holdsFields ? " under a type's name, which a document has none of" : "")
