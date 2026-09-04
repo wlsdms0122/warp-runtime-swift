@@ -9,22 +9,21 @@ import Foundation
 
 // A parameter as the run reads it: what the boundary asks of an argument,
 // and nothing else. The name for a refusal, the shape to settle against,
-// the default where nothing was given, and the spellings the settled value
-// must be one of. The declaration's type is not here; its lowering is. A
-// class, the way a row is: a boundary reads its slots without copying them.
-final class Slot: Sendable {
+// the default where nothing was given, and the members the settled value
+// must be one of. The declaration's type is not here; its lowering is.
+struct Slot: Sendable {
     // MARK: - Property
     let name: Name
     let shape: Shape
     let `default`: Value?
-    let oneOf: [String]?
+    let candidates: [Candidate]?
 
     // MARK: - Initializer
-    init(name: Name, shape: Shape, default: Value?, oneOf: [String]?) {
+    init(name: Name, shape: Shape, default: Value?, candidates: [Candidate]?) {
         self.name = name
         self.shape = shape
         self.default = `default`
-        self.oneOf = oneOf
+        self.candidates = candidates
     }
 
     // MARK: - Public
@@ -79,29 +78,30 @@ final class Slot: Sendable {
 
         let settled = try shape.settling(value, at: "input '\(name)'", in: table)
 
-        if let allowed = oneOf {
+        if let candidates {
+            let written = candidates.map(\.spelling)
+
             switch settled {
-            // A number meets the candidates by worth, the way the language
-            // compares numbers: `-0.0` is in a list that writes `0.0`. Only
-            // the canonical spellings read here, because an alias is a dead
-            // member the link already refused.
+            // A number meets the members by worth. Only the canonical
+            // spellings name one, because an alias is a dead member the link
+            // already refused.
             case .int, .double:
-                guard allowed.contains(where: { candidate in
-                    shape.numeral(candidate, in: table).map { numeral in
+                guard candidates.contains(where: { candidate in
+                    candidate.numeral.map { numeral in
                         Value.order(numeral, settled) == .orderedSame
                     } ?? false
                 }) else {
                     throw ArgumentError(
-                        "input '\(name)': '\(Self.shown(settled))' not in oneOf \(allowed)"
+                        "input '\(name)': '\(Self.shown(settled))' not in oneOf \(written)"
                     )
                 }
 
             default:
                 let scalar = Self.scalar(settled)
 
-                guard let scalar, allowed.contains(scalar) else {
+                guard let scalar, written.contains(scalar) else {
                     throw ArgumentError(
-                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in oneOf \(allowed)"
+                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in oneOf \(written)"
                     )
                 }
             }
@@ -161,11 +161,15 @@ extension Parameter {
     // `any`: the boundary tells "nothing written" from "`any` written" in no
     // way, so the slot does not either.
     func lowered(named name: Name, in table: ShapeTable) -> Slot {
-        Slot(
+        let shape = declared.lowered(in: table)
+
+        return Slot(
             name: name,
-            shape: declared.lowered(in: table),
+            shape: shape,
             default: `default`,
-            oneOf: oneOf
+            candidates: oneOf.map { written in
+                written.map { spelling in Candidate(spelling, in: shape, reading: table) }
+            }
         )
     }
 }
