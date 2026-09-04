@@ -21,7 +21,7 @@ public final class Linked: Sendable {
     // MARK: - Property
     // The declared spelling, or the spelling of the declaration a closure was
     // written in. What a trace and a refusal call this row.
-    public let label: String
+    public let label: Name
 
     // Which document declared it, whose variables its body reads.
     public let origin: Int
@@ -56,7 +56,7 @@ public final class Linked: Sendable {
 
     // MARK: - Initializer
     init(
-        label: String,
+        label: Name,
         origin: Int,
         signature: Signature,
         purity: Purity,
@@ -67,7 +67,7 @@ public final class Linked: Sendable {
         let slots = signature.lowered(in: table)
         let returns = signature.returns?.lowered(in: table)
         let receiverPosition = signature.receiver.flatMap { receiver in
-            slots.firstIndex { slot in Name.same(slot.name, receiver) }
+            slots.firstIndex { slot in slot.name == receiver }
         }
 
         self.label = label
@@ -89,7 +89,7 @@ public final class Linked: Sendable {
     // nothing folds through a body half-made. Until it is lowered such a row
     // is not written, since what it holds is the refusal.
     static func standing(
-        label: String,
+        label: Name,
         origin: Int,
         procedure: Procedure,
         pure: Bool,
@@ -133,7 +133,7 @@ public final class Linked: Sendable {
     }
 
     // The same, over arguments given by name.
-    func settle(_ given: [(name: String, value: Value)], offered: Bool) throws -> [Value?] {
+    func settle(_ given: [(name: Name, value: Value)], offered: Bool) throws -> [Value?] {
         try signature.settle(given, over: slots, offered: offered, in: table)
     }
 

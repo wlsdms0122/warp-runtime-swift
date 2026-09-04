@@ -20,18 +20,18 @@ import WarpSyntax
 // it is tested where it lives.
 struct TestConditions: ConditionSpelling {
     // MARK: - Property
-    static let subjectKey = "of"
-    static let operandKey = "value"
+    static let subjectKey: Name = "of"
+    static let operandKey: Name = "value"
 
     // A record carrying a subject is a condition written this way, and a record
     // that is not is the expression it is.
-    let keys: Set<String> = [subjectKey]
+    let keys: Set<Name> = [subjectKey]
 
     // What the table stands in for, and so what this spelling owes the link.
-    var vocabulary: Set<String> { Set(Self.words.values) }
+    var vocabulary: Set<Name> { Set(Self.words.values) }
 
     // The word a condition is spelled with, and the declaration it names.
-    static let words = [
+    static let words: [Name: Name] = [
         "equal": "std.logic.equal",
         "notEqual": "std.logic.notEqual",
         "contains": "std.collection.contains",
@@ -47,7 +47,7 @@ struct TestConditions: ConditionSpelling {
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
         let found = container.allKeys
             .map(\.stringValue)
-            .filter { key in key != Self.subjectKey }
+            .filter { key in key != Self.subjectKey.spelling }
 
         guard found.count == 1, let word = found.first else {
             throw DecodingError.dataCorrupted(
@@ -63,10 +63,10 @@ struct TestConditions: ConditionSpelling {
             Dispatch(
                 receiver: try container.decode(
                     ExpressionReader.self,
-                    forKey: AnyCodingKey(stringValue: Self.subjectKey)
+                    forKey: AnyCodingKey(stringValue: Self.subjectKey.spelling)
                 )
                 .expression,
-                selector: Self.words[word] ?? word,
+                selector: try Self.words[Name(word)] ?? Name(word),
                 arguments: [
                     Self.operandKey: try container.decode(
                         ExpressionReader.self,
@@ -96,9 +96,9 @@ extension Notation {
 // standard table owes.
 struct WordedConditions: ConditionSpelling {
     // MARK: - Property
-    let keys: Set<String> = ["holds"]
+    let keys: Set<Name> = ["holds"]
 
-    let vocabulary: Set<String> = ["example.holds"]
+    let vocabulary: Set<Name> = ["example.holds"]
 
     // MARK: - Initializer
     // MARK: - Public

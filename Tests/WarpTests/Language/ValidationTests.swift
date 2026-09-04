@@ -352,10 +352,10 @@ struct ValidationTests {
     }
 
     @Test("a module is held to the words it says it imports", arguments: [
-        [] as Set<String>,
+        [] as Set<Name>,
         ["std.collection.count", "std.math.plus"]
     ])
-    func aModuleIsHeldToItsImports(_ claimed: Set<String>) {
+    func aModuleIsHeldToItsImports(_ claimed: Set<Name>) {
         // Given — a caller decides what to grant from this list and then links
         // what it granted, so a list that says less than the program sends
         // links a word nobody allowed, and one that says more takes a grant the

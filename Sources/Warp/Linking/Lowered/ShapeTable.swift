@@ -24,18 +24,16 @@ final class ShapeTable: Sendable {
     // spellings.
     let constraints: [[Shape]]
 
-    let labels: [String]
-    let constraintLabels: [String]
+    let labels: [Name]
+    let constraintLabels: [Name]
 
     // The row of the record a row names: the last declared name on the way
     // to a record shape, so an alias of a declared record is that record
     // and not a second type. Nil where a row stands for no record.
     let recordRows: [Int?]
 
-    // Keyed by bytes, the comparison `Name.same` makes: two spellings Swift
-    // calls equal are two names here.
-    private let rows: [[UInt8]: Int]
-    private let constraintRows: [[UInt8]: Int]
+    private let rows: [Name: Int]
+    private let constraintRows: [Name: Int]
 
     static let empty = ShapeTable(shapes: [], constraints: [], labels: [], constraintLabels: [], recordRows: [])
 
@@ -51,22 +49,20 @@ final class ShapeTable: Sendable {
         shapes.indices.filter { row in
             guard case let .undeclared(label, _) = shapes[row] else { return false }
 
-            return Name.same(label, labels[row])
+            return label == labels[row]
         }
     }
 
     // MARK: - Initializer
-    init(shapes: [Shape], constraints: [[Shape]], labels: [String], constraintLabels: [String], recordRows: [Int?]) {
+    init(shapes: [Shape], constraints: [[Shape]], labels: [Name], constraintLabels: [Name], recordRows: [Int?]) {
         self.shapes = shapes
         self.constraints = constraints
         self.labels = labels
         self.constraintLabels = constraintLabels
         self.recordRows = recordRows
-        self.rows = Dictionary(
-            uniqueKeysWithValues: labels.enumerated().map { row, label in (Array(label.utf8), row) }
-        )
+        self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
         self.constraintRows = Dictionary(
-            uniqueKeysWithValues: constraintLabels.enumerated().map { row, label in (Array(label.utf8), row) }
+            uniqueKeysWithValues: constraintLabels.enumerated().map { row, label in (label, row) }
         )
     }
 
@@ -74,12 +70,12 @@ final class ShapeTable: Sendable {
     // The row a spelling declares, or nil where nothing declares it. For
     // lowering a document's type and for a record that arrived under an
     // alias; the run reads rows by number otherwise.
-    func row(named name: String) -> Int? {
-        rows[Array(name.utf8)]
+    func row(named name: Name) -> Int? {
+        rows[name]
     }
 
-    func constraintRow(named name: String) -> Int? {
-        constraintRows[Array(name.utf8)]
+    func constraintRow(named name: Name) -> Int? {
+        constraintRows[name]
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -129,7 +125,7 @@ final class ShapeTable: Sendable {
     // The same membership asked of a document's reading by the constraint's
     // spelling, for the link's walk. Nil where nothing declares the
     // constraint.
-    func admits(constraint name: String, reading: TypeExpression) -> Bool? {
+    func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
         guard let row = constraintRow(named: name) else { return nil }
 
         return admits(constraint: row, reading: reading.lowered(in: self), assuming: [])

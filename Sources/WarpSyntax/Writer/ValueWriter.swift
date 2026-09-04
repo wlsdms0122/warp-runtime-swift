@@ -68,19 +68,15 @@ public struct ValueWriter: Encodable {
             try container.encode(elements.map(ValueWriter.init))
 
         // A carrier keys its fields by Swift's equality, which folds spellings
-        // the record keeps apart. In normal form C one name is one spelling,
-        // so a name outside it is refused here the way the encodings refuse
-        // it.
+        // the record keeps apart. What the record holds is a name, and one
+        // name is one spelling, so the fold has nothing to fold.
         case let .record(record):
-            for entry in record.entries where !Name.isNormal(entry.name) {
-                throw EncodingError.invalidValue(
-                    Value.string(entry.name),
-                    .init(codingPath: encoder.codingPath, debugDescription: "the field name is not in normal form C")
-                )
-            }
-
             try container.encode(
-                Dictionary(uniqueKeysWithValues: record.entries.map { entry in (entry.name, ValueWriter(entry.value)) })
+                Dictionary(
+                    uniqueKeysWithValues: record.entries.map { entry in
+                        (entry.name.spelling, ValueWriter(entry.value))
+                    }
+                )
             )
 
         // A body is code, and a document spells code as a procedure rather than

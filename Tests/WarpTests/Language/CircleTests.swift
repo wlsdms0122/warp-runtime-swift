@@ -66,7 +66,7 @@ struct CircleTests {
         // Given — three hundred declarations calling one another in a line,
         // which is an ordinary program and was enough to end the process when
         // this walk was written as recursion.
-        let names = (0..<300).map { position in "p\(position)" }
+        let names = (0..<300).map { position in Name(normal: "p\(position)") }
         let edges = Dictionary(
             uniqueKeysWithValues: names.enumerated().map { position, name in
                 (name, position + 1 < names.count ? [names[position + 1]] : [])

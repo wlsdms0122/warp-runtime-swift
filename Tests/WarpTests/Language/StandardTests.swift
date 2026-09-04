@@ -250,7 +250,7 @@ struct StandardTests {
     func divisionByZeroRefuses() async throws {
         // Given — both are Swift traps if the answer is taken rather than
         // judged, and each arrives at run time
-        let asks: [(String, Value, Value)] = [
+        let asks: [(Name, Value, Value)] = [
             ("std.math.remainder", .int(5), .int(0)),
             ("std.math.dividedBy", .int(5), .int(0))
         ]
@@ -281,13 +281,13 @@ struct StandardTests {
         // Given — each of these falls off the edge of the machine word, and
         // the language stops rather than answering a number the digits do not
         // say
-        let asks: [(String, Value, Value)] = [
+        let asks: [(Name, Value, Value)] = [
             ("std.math.times", .int(Int.max), .int(2)),
             ("std.math.plus", .int(Int.max), .int(1)),
             ("std.math.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ word: String, _ receiver: Value, _ operand: Value) throws -> Module {
+        func asking(_ word: Name, _ receiver: Value, _ operand: Value) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -420,7 +420,7 @@ struct StandardTests {
         // int to answer, and the word's own minimum has no magnitude the word
         // holds. The refusal names the overflow, not a missing whole answer —
         // the two reasons are different facts.
-        let asks: [(String, Value)] = [
+        let asks: [(Name, Value)] = [
             ("std.math.floored", .double(1e30)),
             ("std.math.rounded", .double(1e30)),
             ("std.math.absolute", .int(Int.min))

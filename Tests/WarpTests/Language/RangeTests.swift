@@ -17,7 +17,7 @@ import Testing
 struct RangeTests {
     // MARK: - Property
     private let linker = Linker()
-    private let entryName = "entry"
+    private let entryName: Name = "entry"
 
     // MARK: - Test
     @Test("the bounds speak where the value settles")

@@ -22,14 +22,14 @@ import Foundation
 public struct Dispatch: Sendable {
     // MARK: - Property
     public let receiver: Expression?
-    public let selector: String
-    public let arguments: [String: Expression]
+    public let selector: Name
+    public let arguments: [Name: Expression]
 
     // MARK: - Initializer
     public init(
         receiver: Expression? = nil,
-        selector: String,
-        arguments: [String: Expression] = [:]
+        selector: Name,
+        arguments: [Name: Expression] = [:]
     ) {
         self.receiver = receiver
         self.selector = selector
@@ -38,7 +38,7 @@ public struct Dispatch: Sendable {
 
     // MARK: - Public
     // The expression handed under a parameter's name, receiver included.
-    public func handed(_ name: String, to signature: Signature) -> Expression? {
+    public func handed(_ name: Name, to signature: Signature) -> Expression? {
         signature.handed(name, receiver: receiver, arguments: arguments)
     }
 

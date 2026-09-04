@@ -44,20 +44,21 @@ enum BoundsReader {
             }
         }
 
-        let bounded = signature.bounded(by: bounds)
+        let named = try bounds.named(at: steps).mapValues { constraint in try Name.read(constraint, at: steps) }
+        let bounded = signature.bounded(by: named)
 
-        var mentioned: [String: Set<String>] = [:]
+        var mentioned: [Name: Set<Name>] = [:]
         bounded.parameterConstraints(into: &mentioned)
 
-        let unwritten = bounds.keys
+        let unwritten = named.keys
             .filter { name in mentioned[name] == nil }
             .sorted()
 
         guard unwritten.isEmpty else {
             throw ReadingError(
                 "bounds name"
-                    + " \(unwritten.joined(separator: ", ")), and no slot writes"
-                    + " `some \(unwritten.first ?? "")` — a bound rides on a"
+                    + " \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
+                    + " `some \(unwritten.first?.spelling ?? "")` — a bound rides on a"
                     + " parameter some slot mentions",
                 at: steps
             )

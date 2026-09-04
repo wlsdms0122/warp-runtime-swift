@@ -74,7 +74,7 @@ public struct TypeReader: Decodable {
             )
         }
 
-        self.type = .record(fields.mapValues(\.type))
+        self.type = .record(try fields.mapValues(\.type).named(at: decoder.steps))
     }
 
     // MARK: - Public
@@ -176,7 +176,7 @@ public struct TypeReader: Decodable {
                 )
             }
 
-            return .parameter(name: bare)
+            return .parameter(name: try Name(bare))
         }
 
 
@@ -235,7 +235,9 @@ public struct TypeReader: Decodable {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
-            return Self.builtins[text] ?? .named(text)
+            let name = try Name(text)
+
+            return Self.builtins[name] ?? .named(name)
         }
 
         let head = String(text[text.startIndex ..< open])
@@ -263,14 +265,18 @@ public struct TypeReader: Decodable {
     // The names this notation answers with a type of its own, and the keys that
     // make a mapping a procedure rather than a record. Both are read here and
     // both decide what a document *cannot* say, so writing one asks for them.
-    public static var builtinNames: Set<String> { Set(builtins.keys) }
+    public static var builtinNames: Set<Name> { Set(builtins.keys) }
+
     // The keys a procedure form may sit under, in the writer's spelling: a
     // slot word or none, then the modifiers, then `procedure`.
-    public static var procedureKeys: Set<String> {
+    public static var procedureKeys: Set<Name> {
         let words = [(Purity.unstated, Isolation.unstated), (.pure, .unstated), (.unstated, .isolated), (.pure, .isolated)]
             .map { purity, isolation in procedureWord(purity, isolation) }
 
-        return Set(words + slotWords.flatMap { slot, _ in words.map { word in "\(slot) \(word)" } })
+        return Set(
+            (words + slotWords.flatMap { slot, _ in words.map { word in "\(slot) \(word)" } })
+                .map(Name.init(normal:))
+        )
     }
 
     // What a procedure form's key says, read front to back: a slot word if
@@ -391,7 +397,7 @@ public struct TypeReader: Decodable {
         return excluding ? .upTo(bound) : .through(bound)
     }
 
-    private static let builtins: [String: TypeExpression] = [
+    private static let builtins: [Name: TypeExpression] = [
         "any": .any,
         // A declaration a call never comes back from. Written out loud because
         // a word that always refuses is a word an author may declare.
@@ -448,7 +454,8 @@ private struct SignatureFormReader: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         self.signature = Signature(
-            receiver: try container.decodeIfPresent(String.self, forKey: .receiver),
+            receiver: try container.decodeIfPresent(String.self, forKey: .receiver)
+                .map { spelling in try Name.read(spelling, at: decoder.steps) },
             parameters: try container
                 .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
                 .signature.parameters ?? [:],

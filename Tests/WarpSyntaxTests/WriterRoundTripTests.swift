@@ -27,7 +27,7 @@ struct WriterRoundTripTests {
         // Given — the three constructs whose `body` the document format calls
         // required. A block written as a `group` is the exception and stays
         // one: nothing there has to have it.
-        let constructs: [String: Warp.Expression] = [
+        let constructs: [Name: Warp.Expression] = [
             "spin": .loop(
                 while: .literal(.bool(false)),
                 body: Block(body: []),

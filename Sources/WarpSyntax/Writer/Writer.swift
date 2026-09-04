@@ -72,25 +72,25 @@ public struct Writer: Sendable {
         // from its link is a fact about the program. A draft that claimed
         // nothing is written with what it sends, since a document that says
         // nothing is not one and there is nobody left to ask.
-        var written: [String: Value] = [
+        var written: [Name: Value] = [
             Envelope.versionKey: .int(Envelope.version),
             Envelope.importsKey: .array(
-                (draft.imports ?? draft.sends).sorted().map(Value.string)
+                (draft.imports ?? draft.sends).sorted().map { name in .string(name.spelling) }
             ),
-            ModuleReader.CodingKeys.procedures.stringValue:
+            try ModuleReader.CodingKeys.procedures.name:
                 .object(try draft.procedures.mapValues(value(of:)))
         ]
 
         if let description = draft.description {
-            written[ModuleReader.CodingKeys.description.stringValue] = .string(description)
+            written[try ModuleReader.CodingKeys.description.name] = .string(description)
         }
 
         if !draft.types.isEmpty {
-            written[ModuleReader.CodingKeys.types.stringValue] = .object(try draft.types.mapValues(value(of:)))
+            written[try ModuleReader.CodingKeys.types.name] = .object(try draft.types.mapValues(value(of:)))
         }
 
         if !draft.constraints.isEmpty {
-            written[ModuleReader.CodingKeys.constraints.stringValue] = .object(
+            written[try ModuleReader.CodingKeys.constraints.name] = .object(
                 try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
@@ -98,13 +98,13 @@ public struct Writer: Sendable {
         }
 
         if !draft.constants.isEmpty {
-            written[ModuleReader.CodingKeys.const.stringValue] = .object(
+            written[try ModuleReader.CodingKeys.const.name] = .object(
                 try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
 
         if !draft.variables.isEmpty {
-            written[ModuleReader.CodingKeys.variables.stringValue] = .object(
+            written[try ModuleReader.CodingKeys.variables.name] = .object(
                 try draft.variables.mapValues { variable in try value(of: variable) }
             )
         }
@@ -123,10 +123,10 @@ public struct Writer: Sendable {
             )
         }
 
-        var written: [String: Value] = [:]
+        var written: [Name: Value] = [:]
 
         if let description = procedure.description {
-            written[ProcedureReader.CodingKeys.description.stringValue] = .string(description)
+            written[try ProcedureReader.CodingKeys.description.name] = .string(description)
         }
 
         // Stripped here, at the declaration, because this is the one place a
@@ -176,7 +176,7 @@ public struct Writer: Sendable {
         // knows as the type it knows. Nothing stops a module declaring a type
         // called `int`; a document just has no way to say which one it meant.
         case let .named(name):
-            guard TypeReader.builtinNames.contains(name) else { return .string(name) }
+            guard TypeReader.builtinNames.contains(name) else { return .string(name.spelling) }
 
             throw WritingError(
                 "a type declared as '\(name)' is written the same way the built-in one is,"
@@ -252,7 +252,7 @@ public struct Writer: Sendable {
                 return .string("\(word) \(written)")
 
             case let .record(form) where form.count == 1 && TypeReader.procedureKeys.contains(form.entries[0].name):
-                return .object(["\(word) \(form.entries[0].name)": form.entries[0].value])
+                return .object([Name(normal: "\(word) \(form.entries[0].name)"): form.entries[0].value])
 
             default:
                 throw WritingError(
@@ -271,12 +271,12 @@ public struct Writer: Sendable {
             // has no `bounds` surface, and the `.parameter` case refuses any
             // bound the walk below meets — one guard, wherever the walk
             // started.
-            return .object([word: .object(try fields(of: signature))])
+            return .object([Name(normal: word): .object(try fields(of: signature))])
         }
     }
 
     public func value(of parameter: Parameter) throws -> Value {
-        var written: [String: Value] = [:]
+        var written: [Name: Value] = [:]
 
         if let type = parameter.type {
             written["type"] = try value(of: type)
@@ -306,11 +306,11 @@ public struct Writer: Sendable {
     // MARK: - Private
     // A signature is written flat into whatever declares it — a procedure and a
     // procedure type both spell it as their own keys rather than nesting it.
-    func fields(of signature: Signature) throws -> [String: Value] {
-        var written: [String: Value] = [:]
+    func fields(of signature: Signature) throws -> [Name: Value] {
+        var written: [Name: Value] = [:]
 
         if let receiver = signature.receiver {
-            written["receiver"] = .string(receiver)
+            written["receiver"] = .string(receiver.spelling)
         }
 
         if !signature.parameters.isEmpty {
@@ -385,23 +385,23 @@ public struct Writer: Sendable {
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
     private func bounds(of signature: Signature) throws -> Value? {
-        var mentioned: [String: Set<String>] = [:]
+        var mentioned: [Name: Set<Name>] = [:]
         signature.parameterConstraints(into: &mentioned)
 
-        var bounds: [String: Value] = [:]
+        var bounds: [Name: Value] = [:]
 
         for (name, constraints) in mentioned.sorted(by: { $0.key < $1.key }) {
             guard constraints.count <= 1 else {
                 throw WritingError(
                     "'some \(name)' is bounded by"
-                        + " \(constraints.sorted().joined(separator: " and "))"
+                        + " \(constraints.sorted().map(\.spelling).joined(separator: " and "))"
                         + " — one parameter takes one constraint, so there is no"
                         + " `bounds` to write"
                 )
             }
 
             if let bound = constraints.first {
-                bounds[name] = .string(bound)
+                bounds[name] = .string(bound.spelling)
             }
         }
 

@@ -33,9 +33,9 @@ public struct CallForm: ConstructForm {
     // MARK: - Property
     public static let key = "call"
 
-    private let procedure: String
+    private let procedure: Name
     private let receiver: Expression?
-    private let arguments: [String: Expression]
+    private let arguments: [Name: Expression]
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -43,14 +43,18 @@ public struct CallForm: ConstructForm {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.procedure = try container.decode(String.self, forKey: .procedure)
+        self.procedure = try Name.read(
+            try container.decode(String.self, forKey: .procedure),
+            at: decoder.steps
+        )
         self.receiver = try container.decodeIfPresent(ExpressionReader.self, forKey: .of)?
             .expression
         self.arguments = try container.decodeIfPresent(
             [String: ExpressionReader].self,
             forKey: .arguments
         )?
-        .mapValues(\.expression) ?? [:]
+        .mapValues(\.expression)
+        .named(at: decoder.steps) ?? [:]
     }
 
     // MARK: - Public

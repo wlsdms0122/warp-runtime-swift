@@ -14,13 +14,13 @@ import Foundation
 // class, the way a row is: a boundary reads its slots without copying them.
 final class Slot: Sendable {
     // MARK: - Property
-    let name: String
+    let name: Name
     let shape: Shape
     let `default`: Value?
     let oneOf: [String]?
 
     // MARK: - Initializer
-    init(name: String, shape: Shape, default: Value?, oneOf: [String]?) {
+    init(name: Name, shape: Shape, default: Value?, oneOf: [String]?) {
         self.name = name
         self.shape = shape
         self.default = `default`
@@ -160,7 +160,7 @@ extension Parameter {
     // This parameter as the run reads it. An undeclared type lowers to
     // `any`: the boundary tells "nothing written" from "`any` written" in no
     // way, so the slot does not either.
-    func lowered(named name: String, in table: ShapeTable) -> Slot {
+    func lowered(named name: Name, in table: ShapeTable) -> Slot {
         Slot(
             name: name,
             shape: declared.lowered(in: table),

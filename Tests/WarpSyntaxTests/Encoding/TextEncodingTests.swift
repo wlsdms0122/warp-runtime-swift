@@ -356,12 +356,14 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a field name outside normal form C is refused on the way out too")
+    @Test("a field name outside normal form C never reaches the way out")
     func aDenormalKeyIsRefusedWhenWriting() {
-        #expect {
-            try TextEncoding.text(from: .object(["e\u{301}": .int(1)]))
-        } throws: { error in
-            "\(error)".contains("normal form")
+        // A record's keys are names, so there is no value carrying one for a
+        // writing to refuse: the refusal is at the door a name comes through.
+        let decomposed = "e\u{301}"
+
+        #expect(throws: NameRefused.self) {
+            try Name(decomposed)
         }
     }
 

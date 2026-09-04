@@ -27,8 +27,8 @@ extension Linker {
     // refused by the judgment that owns undeclared names, which says where the
     // mention lives.
     func declared(in modules: [Module]) throws -> (
-        types: [String: Declared<TypeExpression>],
-        constraints: [String: Declared<[TypeExpression]>]
+        types: [Name: Declared<TypeExpression>],
+        constraints: [Name: Declared<[TypeExpression]>]
     ) {
         // Where each name was written, gathered here and carried with what it
         // holds. This is where both halves of the joining are in hand —
@@ -44,14 +44,14 @@ extension Linker {
         // Each space is walked whole before the two are held against each
         // other, so what a link concludes cannot depend on the order the caller
         // happened to list the modules in.
-        var typePlaces: [String: Declaration] = [:]
-        var constraintPlaces: [String: Declaration] = [:]
-        var declaredTypes: [String: Declared<TypeExpression>] = [:]
-        var declaredConstraints: [String: Declared<[TypeExpression]>] = [:]
+        var typePlaces: [Name: Declaration] = [:]
+        var constraintPlaces: [Name: Declaration] = [:]
+        var declaredTypes: [Name: Declared<TypeExpression>] = [:]
+        var declaredConstraints: [Name: Declared<[TypeExpression]>] = [:]
 
         for (origin, module) in modules.enumerated() {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
-                let declaration = Declaration(place: .type(name, in: .of(module)), origin: origin)
+                let declaration = Declaration(place: .type(name.spelling, in: .of(module)), origin: origin)
 
                 // Read before written. Written first, the entry that says what
                 // this collides with is the one this call overwrote.
@@ -71,7 +71,7 @@ extension Linker {
         for (origin, module) in modules.enumerated() {
             for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
                 let declaration = Declaration(
-                    place: .constraint(name, in: .of(module)),
+                    place: .constraint(name.spelling, in: .of(module)),
                     origin: origin
                 )
 

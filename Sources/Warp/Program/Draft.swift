@@ -23,28 +23,28 @@ public struct Draft: Sendable {
 
     // What the document said it imports, and nil where it said nothing. A
     // module resolves this; here it is still only what was written.
-    public let imports: Set<String>?
+    public let imports: Set<Name>?
 
-    public let types: [String: TypeExpression]
-    public let constraints: [String: [TypeExpression]]
-    public let constants: [String: Expression]
+    public let types: [Name: TypeExpression]
+    public let constraints: [Name: [TypeExpression]]
+    public let constants: [Name: Expression]
 
     // Names bound to boxes the document's procedures share, each holding what
     // its expression settles to when a run starts. Declared like a constant
     // and read by the same spelling; unlike a constant, a body may write one.
-    public let variables: [String: Expression]
+    public let variables: [Name: Expression]
 
-    public let procedures: [String: Procedure]
+    public let procedures: [Name: Procedure]
 
     // MARK: - Initializer
     public init(
         description: String? = nil,
-        imports: Set<String>? = nil,
-        types: [String: TypeExpression] = [:],
-        constraints: [String: [TypeExpression]] = [:],
-        constants: [String: Expression] = [:],
-        variables: [String: Expression] = [:],
-        procedures: [String: Procedure]
+        imports: Set<Name>? = nil,
+        types: [Name: TypeExpression] = [:],
+        constraints: [Name: [TypeExpression]] = [:],
+        constants: [Name: Expression] = [:],
+        variables: [Name: Expression] = [:],
+        procedures: [Name: Procedure]
     ) {
         self.description = description
         self.imports = imports
@@ -62,7 +62,7 @@ public struct Draft: Sendable {
     // path safe to walk. So this is everything the program can do that touches
     // anything, and a caller reading it is reading the bounds of what it is
     // about to allow.
-    public var sends: Set<String> {
+    public var sends: Set<Name> {
         // A constant is an expression, so it sends words like any other.
         // Missing them would understate what a program does.
         let held = constants.values.flatMap(\.buried)

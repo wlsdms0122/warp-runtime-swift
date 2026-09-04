@@ -33,7 +33,7 @@ public struct BodyReader: Decodable {
             throw ReadingError(
                 "every way through this statement leaves,"
                     + " and what follows it here would never run",
-                at: decoder.steps + [.statement(statement.name, at: position)]
+                at: decoder.steps + [.statement(statement.name?.spelling, at: position)]
             )
         }
 

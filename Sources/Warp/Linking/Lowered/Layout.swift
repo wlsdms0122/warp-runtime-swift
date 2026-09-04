@@ -15,10 +15,10 @@ struct Layout: Sendable {
     let size: Int
     let parameters: [Int]
     let variables: [(variable: Int, slot: Int)]
-    let names: [String]
+    let names: [Name]
 
     // MARK: - Initializer
-    init(size: Int, parameters: [Int], variables: [(variable: Int, slot: Int)], names: [String]) {
+    init(size: Int, parameters: [Int], variables: [(variable: Int, slot: Int)], names: [Name]) {
         self.size = size
         self.parameters = parameters
         self.variables = variables

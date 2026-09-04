@@ -56,7 +56,7 @@ extension Value: ExpressibleByArrayLiteral {
 // A duplicate key is a mistake being made twice in one literal, and there is no
 // value to answer with — the same reaction `Dictionary` has.
 extension Value: ExpressibleByDictionaryLiteral {
-    public init(dictionaryLiteral elements: (String, Value)...) {
+    public init(dictionaryLiteral elements: (Name, Value)...) {
         self = .object(Dictionary(elements) { _, _ in
             preconditionFailure("duplicate key in a value literal")
         })

@@ -50,12 +50,12 @@ struct PlaceWrittenTests {
     func oneSlotIsWrittenTwoWays() {
         // Given — the language calls both a condition, so the word a place
         // reads with is decided by the construct the walk is inside.
-        let branch = Place.procedure(entryName, in: .assembled)
+        let branch = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
             .slot(.condition(of: .branch))
 
-        let loop = Place.procedure(entryName, in: .assembled)
+        let loop = Place.procedure(entryName.spelling, in: .assembled)
             .statement("spin", at: 0)
             .appending(.construct(.loop))
             .slot(.condition(of: .loop))
@@ -75,7 +75,7 @@ struct PlaceWrittenTests {
         // word. What an author may look for in their file is that word, and
         // nothing here holds a second copy of it to disagree with.
         let registry = try ConstructRegistry(forms: ["if": BranchForm.self])
-        let sut = Place.procedure(entryName, in: .assembled)
+        let sut = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
             .slot(.condition(of: .branch))

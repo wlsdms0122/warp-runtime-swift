@@ -14,24 +14,24 @@ import Foundation
 // reading.
 struct Folding {
     // MARK: - Property
-    let names: [String]
+    let names: [Name]
     let cells: [Cell]
     let origin: Int
     let table: [Linked]
-    let rows: [String: Int]
-    let words: [String: Int]
+    let rows: [Name: Int]
+    let words: [Name: Int]
     let shapes: ShapeTable
 
     // MARK: - Initializer
     init(
-        constants: [String: Value],
+        constants: [Name: Value],
         origin: Int,
         table: [Linked],
-        rows: [String: Int],
-        words: [String: Int],
+        rows: [Name: Int],
+        words: [Name: Int],
         shapes: ShapeTable
     ) {
-        let names = constants.keys.sorted(by: Name.precedes)
+        let names = constants.keys.sorted()
 
         self.names = names
         self.cells = names.map { name in .value(constants[name] ?? .null) }
@@ -47,7 +47,7 @@ struct Folding {
     // refusal it earns before it is lowered. What a constant settles from. A
     // native's purity is its own; a written body is never run here, so its
     // purity is not asked.
-    init(bindings: [String: Value], natives modules: [Module]) {
+    init(bindings: [Name: Value], natives modules: [Module]) {
         // The natives declare the shapes their own signatures name, so the
         // table is theirs.
         let shapes = TypeTable(
@@ -55,13 +55,13 @@ struct Folding {
             constraints: modules.reduce(into: [:]) { table, module in table.merge(module.constraints) { first, _ in first } }
         ).shapes
         var table: [Linked] = []
-        var rows: [String: Int] = [:]
-        var words: [String: Int] = [:]
+        var rows: [Name: Int] = [:]
+        var words: [Name: Int] = [:]
 
         for (origin, module) in modules.enumerated() {
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 rows[name] = table.count
-                words[String(name.split(separator: ".").last ?? Substring(name))] = table.count
+                words[name.unqualified] = table.count
                 table.append(
                     Linked.standing(
                         label: name,
@@ -80,7 +80,7 @@ struct Folding {
 
     // MARK: - Public
     // Whether a name is bound here.
-    func holds(_ name: String) -> Bool {
+    func holds(_ name: Name) -> Bool {
         names.contains(name)
     }
 

@@ -13,7 +13,7 @@ import Foundation
 // environment.
 public struct Invocation: Sendable {
     // MARK: - Property
-    public let selector: String
+    public let selector: Name
 
     // The declaration being sent, so a word reads its arguments by the names
     // the declaration gave them.
@@ -38,7 +38,7 @@ public struct Invocation: Sendable {
 
     // MARK: - Initializer
     init(
-        selector: String,
+        selector: Name,
         signature: Signature,
         receiver: Value?,
         settled: Settled,
@@ -58,12 +58,12 @@ public struct Invocation: Sendable {
     // MARK: - Public
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
-    public subscript(name: String) -> Value {
+    public subscript(name: Name) -> Value {
         settled[name]
     }
 
     // What a parameter handed in place holds now.
-    public func held(_ name: String) throws -> Value {
+    public func held(_ name: Name) throws -> Value {
         guard let hold = hold(of: name) else {
             throw ExecutionError(
                 "'\(selector)' reads '\(name)' in place, and it was not handed a variable"
@@ -77,7 +77,7 @@ public struct Invocation: Sendable {
     // declaring a parameter `inout` answers into the caller's variable this
     // way, and a word writing an argument that is not a path is a word the
     // link should have refused.
-    public func write(_ name: String, _ value: Value) throws {
+    public func write(_ name: Name, _ value: Value) throws {
         guard let hold = hold(of: name) else {
             throw ExecutionError(
                 "'\(selector)' writes '\(name)' in place, and it was not handed a variable"
@@ -90,7 +90,7 @@ public struct Invocation: Sendable {
     // Nil for an argument that is absent or null, rather than the empty string
     // stringifying null would give: "unset" and "set to nothing" are different
     // instructions to a caller.
-    public func string(_ name: String) -> String? {
+    public func string(_ name: Name) -> String? {
         switch self[name] {
         case .null:
             return nil
@@ -105,18 +105,18 @@ public struct Invocation: Sendable {
     // where it happened rather than only which word was running.
     public func call(
         _ closure: Closure,
-        offering arguments: [(name: String, value: Value)],
-        piece label: String? = nil
+        offering arguments: [(name: Name, value: Value)],
+        piece label: Name? = nil
     ) async throws -> Value {
         try await executor.call(
             closure,
             offering: arguments,
-            at: label.map { name in trace.appending(.piece(name)) } ?? trace
+            at: label.map { name in trace.appending(.piece(name.spelling)) } ?? trace
         )
     }
 
     // MARK: - Private
-    private func hold(of name: String) -> Handle? {
+    private func hold(of name: Name) -> Handle? {
         guard let position = settled.position(of: name) else { return nil }
 
         return holds.first { hold in hold.position == position }?.handle

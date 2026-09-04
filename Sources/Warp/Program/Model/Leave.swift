@@ -32,7 +32,7 @@ public struct Leave: Sendable {
 
     // Which loop, where more than one encloses this. Nothing means the nearest,
     // the way it does everywhere else — a name is for reaching past it.
-    public let target: String?
+    public let target: Name?
 
     // What a procedure answers by leaving. Only `procedure` carries one: a loop
     // answers what it was going to answer, so ending one early asks nothing new
@@ -40,7 +40,7 @@ public struct Leave: Sendable {
     public let value: Expression?
 
     // MARK: - Initializer
-    public init(reach: Reach, target: String? = nil, value: Expression? = nil) {
+    public init(reach: Reach, target: Name? = nil, value: Expression? = nil) {
         self.reach = reach
         self.target = target
         self.value = value

@@ -34,7 +34,7 @@ extension Linker {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
     // are the only names declared before the first statement.
-    func environment(of signature: Signature) -> [String: TypeExpression] {
+    func environment(of signature: Signature) -> [Name: TypeExpression] {
         signature.parameters.mapValues(\.declared)
     }
 
@@ -51,7 +51,7 @@ extension Linker {
     func reading(
         from block: Block,
         at place: Place,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame
     ) throws -> TypeExpression {
         let walked = try inspected(
@@ -72,7 +72,7 @@ extension Linker {
     func resolvedSites(
         in block: Block,
         at place: Place,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         folding: Folding?,
         origin: Int? = nil
@@ -92,7 +92,7 @@ extension Linker {
     func resolvedSites(
         in expression: Expression,
         at place: Place,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         folding: Folding?
     ) throws -> (Expression, [CallSite]) {
@@ -117,8 +117,8 @@ extension Linker {
     // anything gathers readings for this. Judging against every name in a
     // mention set costs nothing when the set holds its one.
     func constraintRefusal(
-        mentions: [String: Set<String>],
-        readings: [String: TypeExpression],
+        mentions: [Name: Set<Name>],
+        readings: [Name: TypeExpression],
         in shapes: ShapeTable
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
@@ -164,7 +164,7 @@ extension Linker {
             return .refusal(named.joined(separator: ", "))
         }
 
-        var mentions: [String: Set<String>] = [:]
+        var mentions: [Name: Set<Name>] = [:]
         declared.parameterConstraints(into: &mentions)
 
         if let refusal = constraintRefusal(
@@ -186,12 +186,12 @@ extension Linker {
     func bound(
         of signature: Signature,
         at dispatch: Dispatch,
-        readings sent: [String: TypeExpression],
+        readings sent: [Name: TypeExpression],
         receiver received: TypeExpression?,
         in shapes: ShapeTable
     ) -> Bound {
-        var bound: [String: TypeExpression] = [:]
-        var disagreeing: [String: TypeExpression] = [:]
+        var bound: [Name: TypeExpression] = [:]
+        var disagreeing: [Name: TypeExpression] = [:]
 
         for name in dispatch.arguments.keys.sorted() {
             guard let parameter = signature.parameters[name], let reading = sent[name] else {
@@ -231,7 +231,7 @@ extension Linker {
     private func answered(
         by signature: Signature?,
         at dispatch: Dispatch,
-        readings sent: @autoclosure () throws -> [String: TypeExpression],
+        readings sent: @autoclosure () throws -> [Name: TypeExpression],
         receiver received: @autoclosure () throws -> TypeExpression?,
         in shapes: ShapeTable
     ) rethrows -> TypeExpression {
@@ -281,7 +281,7 @@ extension Linker {
     // read at all, so there is nothing to judge and nothing to refuse.
     func reading(
         of path: [PathSegment],
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
@@ -585,7 +585,7 @@ extension Linker {
     // walk stops — a word inside one would otherwise stay a key forever.
     private func asWritten(
         _ segments: [PathSegment],
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame
     ) -> PathReading {
         var judged: [PathSegment] = []
@@ -623,7 +623,7 @@ extension Linker {
 
     private func indexReference(
         _ inner: [PathSegment],
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame
     ) -> IndexReading {
         switch reading(of: inner, in: environment, with: frame) {
@@ -733,7 +733,7 @@ extension Linker {
     }
 
     private func reached(
-        _ key: String,
+        _ key: Name,
         on current: TypeExpression,
         walked: [PathSegment],
         with frame: TypeFrame
@@ -766,8 +766,8 @@ extension Linker {
             )
         }
 
-        var readings: [String: TypeExpression] = [:]
-        var disagreeing: [String: TypeExpression] = [:]
+        var readings: [Name: TypeExpression] = [:]
+        var disagreeing: [Name: TypeExpression] = [:]
 
         parameter.declared.binding(
             against: current,
@@ -796,7 +796,7 @@ extension Linker {
     // whether every finishing way through made the write. A definite write
     // retypes the name; an indefinite one joins with what the name held.
     private struct Flow {
-        var written: [String: (type: TypeExpression, definite: Bool)] = [:]
+        var written: [Name: (type: TypeExpression, definite: Bool)] = [:]
 
         // What was written on ways that left. It flows past nothing here —
         // no run comes back from a leave — but a `break` ends only its loop
@@ -805,7 +805,7 @@ extension Linker {
         // escaped write is ever certain, and the type says so by having no
         // room for the claim. A flow that leaves holds everything it wrote
         // here and nothing under `written`.
-        var escaped: [String: TypeExpression] = [:]
+        var escaped: [Name: TypeExpression] = [:]
 
         // Whether every way through leaves.
         var leaves = false
@@ -846,7 +846,7 @@ extension Linker {
         return (join(held.type, later.type), held.definite)
     }
 
-    private func apply(_ flowed: Flow, to environment: inout [String: TypeExpression]) {
+    private func apply(_ flowed: Flow, to environment: inout [Name: TypeExpression]) {
         for (name, write) in flowed.written {
             // A box whose type is fixed was checked where it was written, and
             // a write into it changes nothing about what it holds.
@@ -930,7 +930,7 @@ extension Linker {
     private func inspected(
         _ expression: Expression,
         at place: Place,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> Inspection {
@@ -1167,15 +1167,15 @@ extension Linker {
         // field's write means to the next is the same fact at the run.
         case let .record(record):
             var environment = environment
-            var rewritten: [String: Expression] = [:]
+            var rewritten: [Name: Expression] = [:]
             var calls: [CallSite] = []
             var flowed = Flow()
-            var fields: [String: TypeExpression] = [:]
+            var fields: [Name: TypeExpression] = [:]
 
-            for (name, field) in record.sorted(by: { Name.precedes($0.key, $1.key) }) {
+            for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try inspected(
                     field,
-                    at: place.key(name),
+                    at: place.key(name.spelling),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1240,7 +1240,7 @@ extension Linker {
                 calls = inner.calls
             }
 
-            var reading: Set<String> = []
+            var reading: Set<Name> = []
 
             if case let .judging(_, origin?) = ask {
                 reading = frame.variables[origin] ?? []
@@ -1297,7 +1297,7 @@ extension Linker {
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key })
             where argument.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.argument(name))
+                throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             let called = try inspected(
@@ -1307,13 +1307,13 @@ extension Linker {
                 with: frame,
                 ask: ask
             )
-            var rewritten: [String: Expression] = [:]
+            var rewritten: [Name: Expression] = [:]
             var calls = called.calls
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
                 let inner = try inspected(
                     argument,
-                    at: place.argument(name),
+                    at: place.argument(name.spelling),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1351,7 +1351,7 @@ extension Linker {
                         readings: try dispatch.arguments.reduce(into: [:]) { read, argument in
                             read[argument.key] = try inspected(
                                 argument.value,
-                                at: place.argument(argument.key),
+                                at: place.argument(argument.key.spelling),
                                 in: environment,
                                 with: frame,
                                 ask: ask
@@ -1391,7 +1391,7 @@ extension Linker {
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
             where argument.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.argument(name))
+                throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             var receiver: Inspection?
@@ -1406,14 +1406,14 @@ extension Linker {
                 )
             }
 
-            var arguments: [String: Expression] = [:]
-            var sent: [String: TypeExpression] = [:]
+            var arguments: [Name: Expression] = [:]
+            var sent: [Name: TypeExpression] = [:]
             var calls = receiver?.calls ?? []
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
                 let inner = try inspected(
                     argument,
-                    at: place.argument(name),
+                    at: place.argument(name.spelling),
                     in: environment,
                     with: frame,
                     ask: ask
@@ -1719,7 +1719,7 @@ extension Linker {
     private func inspected(
         block: Block,
         at place: Place,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> (block: Block, calls: [CallSite], reading: TypeExpression, flow: Flow) {
@@ -1788,7 +1788,7 @@ extension Linker {
     private typealias BodyWalk = (
         body: [Statement],
         calls: [CallSite],
-        environment: [String: TypeExpression],
+        environment: [Name: TypeExpression],
         reading: TypeExpression,
         flow: Flow
     )
@@ -1802,12 +1802,12 @@ extension Linker {
     private func inspected(
         _ body: [Statement],
         at place: Place,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> BodyWalk {
         var environment = environment
-        var locals: Set<String> = []
+        var locals: Set<Name> = []
         var flowed = Flow()
         var rewritten: [Statement] = []
         var calls: [CallSite] = []
@@ -2091,9 +2091,9 @@ extension Linker {
     // The environment a loop's insides read: the enclosing names plus the
     // round. One maker, because the fixpoint and its asker both read it.
     private func rounded(
-        _ environment: [String: TypeExpression],
-        as round: String
-    ) -> [String: TypeExpression] {
+        _ environment: [Name: TypeExpression],
+        as round: Name
+    ) -> [Name: TypeExpression] {
         environment.merging([round: Self.roundType]) { _, new in new }
     }
 
@@ -2103,10 +2103,10 @@ extension Linker {
     // byte. It takes the reading rather than the expression, so no asker
     // walks the material a second time for it.
     private func walking(
-        _ element: String,
+        _ element: Name,
         holding reading: TypeExpression,
-        in environment: [String: TypeExpression]
-    ) -> [String: TypeExpression] {
+        in environment: [Name: TypeExpression]
+    ) -> [Name: TypeExpression] {
         let item: TypeExpression
 
         if case let .array(held) = reading.unrefined {
@@ -2125,9 +2125,9 @@ extension Linker {
     // out — plus the failure under its name.
     private func caught(
         soaking flow: Flow,
-        failure: String,
-        in environment: [String: TypeExpression]
-    ) -> [String: TypeExpression] {
+        failure: Name,
+        in environment: [Name: TypeExpression]
+    ) -> [Name: TypeExpression] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
@@ -2149,9 +2149,9 @@ extension Linker {
     // body writes falls to `any`, over-wide and never wrong; the judging
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
-        from entry: [String: TypeExpression],
-        read: ([String: TypeExpression]) throws -> (round: Round, flow: Flow)
-    ) rethrows -> (environment: [String: TypeExpression], last: Round, converged: Bool) {
+        from entry: [Name: TypeExpression],
+        read: ([Name: TypeExpression]) throws -> (round: Round, flow: Flow)
+    ) rethrows -> (environment: [Name: TypeExpression], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try read(seeded)
         var steps = 0
@@ -2300,7 +2300,7 @@ extension Linker {
     // shape that may be null is not written into, and neither is `any`.
     func writable(
         _ path: [PathSegment],
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame
     ) -> Writable {
         guard case let .key(head, _)? = path.first, let box = environment[head] else {
@@ -2399,7 +2399,7 @@ extension Linker {
     private func handedInPlace(
         by dispatch: Dispatch,
         to callee: Symbol,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         at place: Place,
         when ask: Ask
@@ -2414,7 +2414,7 @@ extension Linker {
 
             let at = name == signature.receiver && dispatch.receiver != nil
                 ? place.slot(.receiver)
-                : place.argument(name)
+                : place.argument(name.spelling)
 
             guard case let .reference(path) = argument, let head = path.head else {
                 try refuse(
@@ -2450,7 +2450,7 @@ extension Linker {
         _ written: TypeExpression,
         writtenTo path: [PathSegment],
         holding fixed: TypeExpression?,
-        in environment: [String: TypeExpression],
+        in environment: [Name: TypeExpression],
         with frame: TypeFrame,
         at place: Place,
         when ask: Ask

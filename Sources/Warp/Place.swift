@@ -167,7 +167,7 @@ public struct Place: Sendable, Equatable {
     // A statement and the construct it writes, which is how every walk reaches
     // what one holds.
     public func statement(_ statement: Statement, at position: Int) -> Place {
-        self.statement(statement.name, at: position)
+        self.statement(statement.name?.spelling, at: position)
             .appending(.construct(statement.expression.construct))
     }
 

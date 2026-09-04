@@ -14,7 +14,7 @@ import Testing
 struct NullableTests {
     // MARK: - Property
     private let linker = Linker()
-    private let entryName = "entry"
+    private let entryName: Name = "entry"
 
     // MARK: - Test
     @Test("a nullable slot takes its value, null, and nothing else")
@@ -598,7 +598,7 @@ struct NullableTests {
 struct IndexReferenceJudgmentTests {
     // MARK: - Property
     private let linker = Linker()
-    private let entryName = "entry"
+    private let entryName: Name = "entry"
 
     // MARK: - Test
     @Test("a constant settles from native words alone")
@@ -674,7 +674,7 @@ struct IndexReferenceJudgmentTests {
         // Given — `helper` folds a constant path through a written word; a
         // word (`loud`) that happens to call `helper` must not change what
         // `helper` means, because nothing about `helper`'s text changed
-        let procedures: [String: Procedure] = [
+        let procedures: [Name: Procedure] = [
             "shout": Procedure(
                 signature: Signature(
                     receiver: "of",

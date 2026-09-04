@@ -52,7 +52,7 @@ public struct BreakForm: ConstructForm {
     // MARK: - Property
     public static let key = "break"
 
-    private let target: String?
+    private let target: Name?
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -71,7 +71,7 @@ public struct ContinueForm: ConstructForm {
     // MARK: - Property
     public static let key = "continue"
 
-    private let target: String?
+    private let target: Name?
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -89,13 +89,13 @@ public struct ContinueForm: ConstructForm {
 extension BreakForm {
     // Which loop, or nothing for the nearest. A loop answers what it was going
     // to answer, so there is nothing to carry and what stands here is a name.
-    static func target(from decoder: Decoder, called word: String) throws -> String? {
+    static func target(from decoder: Decoder, called word: String) throws -> Name? {
         switch try ValueReader(from: decoder).value {
         case .null:
             return nil
 
         case let .string(name):
-            return name
+            return try Name.read(name, at: decoder.steps)
 
         case let other:
             throw ReadingError(

@@ -82,14 +82,15 @@ struct PlaceTests {
 
     @Test("a signature's slots are named under the key a procedure declares them with")
     func parametersAreNamedAsTheDocumentNamesThem() throws {
-        // Given — a name a document may not write, so the refusal is the
+        // Given — a default no document can hold, so the refusal is the
         // declaration's own rather than anything a body did with it
         // When
         let error = #expect(throws: ValidationError.self) {
             try Module(
+                constants: ["amount": .literal(.int(1))],
                 procedures: [
                     entryName: Procedure(
-                        signature: Signature(parameters: ["cafe\u{301}": Parameter(type: .int)]),
+                        signature: Signature(parameters: ["amount": Parameter(type: .int)]),
                         body: []
                     )
                 ]
@@ -97,7 +98,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.parameters.cafe\u{301}")
+        #expect(error?.place?.rendered == "procedures.entry.parameters.amount")
     }
 
     @Test("the place is carried as data, and the sentence is only the reason")
@@ -237,7 +238,7 @@ struct PlaceTests {
         // claim the types already prove for the walk that reads them.
         let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].dispatch"
 
-        func module(sending selector: String, with argument: Warp.Expression) throws -> Module {
+        func module(sending selector: Name, with argument: Warp.Expression) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(body: [
@@ -295,7 +296,7 @@ struct PlaceTests {
         let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
-                .buried(at: .procedure(entryName, in: .assembled))
+                .buried(at: .procedure(entryName.spelling, in: .assembled))
                 .first { _, expression in
                     guard case .dispatch = expression else { return false }
 
@@ -359,7 +360,7 @@ struct PlaceTests {
         // Given — two documents. A reader with them in hand tells them apart
         // by identity, and the person reading the line has only the line, so
         // the line says it too.
-        func module(declaring name: String, as identity: Identity) throws -> Module {
+        func module(declaring name: Name, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [
                     name: Procedure(body: [
@@ -523,7 +524,7 @@ struct PlaceTests {
         // collision between two documents, and only the caller knows which file
         // either arrived in — a refusal naming neither sends it opening all of
         // them.
-        func declaring(_ procedure: String, as identity: Identity) throws -> Module {
+        func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))],
                 identity: identity,
@@ -724,7 +725,7 @@ struct PlaceTests {
         func declaring(_ prefix: String, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [
-                    "\(prefix).discounted": Procedure(
+                    Name(normal: "\(prefix).discounted"): Procedure(
                         signature: Signature(
                             receiver: "of",
                             parameters: ["of": Parameter(type: .int)],

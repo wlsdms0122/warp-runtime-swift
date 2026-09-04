@@ -22,13 +22,13 @@ public struct Statement: Sendable {
     // into a variable through its fields and elements, and the head of the path
     // is the variable it writes.
     public enum Binding: Sendable, Equatable {
-        case constant(String)
-        case variable(String)
+        case constant(Name)
+        case variable(Name)
         case assignment([PathSegment])
 
         // The name a statement introduces, where it introduces one. A write
         // introduces nothing.
-        public var introduced: String? {
+        public var introduced: Name? {
             switch self {
             case let .constant(name), let .variable(name):
                 return name
@@ -40,7 +40,7 @@ public struct Statement: Sendable {
 
         // What the statement is called by: the name it binds, or the head of
         // the path it writes.
-        public var name: String? {
+        public var name: Name? {
             switch self {
             case let .constant(name), let .variable(name):
                 return name
@@ -55,7 +55,7 @@ public struct Statement: Sendable {
         public var spelled: String {
             switch self {
             case let .constant(name), let .variable(name):
-                return name
+                return name.spelling
 
             case let .assignment(path):
                 return path.rendered
@@ -85,7 +85,7 @@ public struct Statement: Sendable {
 
     // MARK: - Public
     // The name a statement is called by, for a place that points at it.
-    public var name: String? { binding?.name }
+    public var name: Name? { binding?.name }
 
     // MARK: - Private
 }

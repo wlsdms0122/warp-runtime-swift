@@ -40,12 +40,12 @@ public indirect enum Value: Sendable, Equatable {
 
     // A record with no name: what a literal, a native word and a document
     // make. The one spelling for it, so a caller never writes the nil.
-    public static func object(_ fields: [String: Value]) -> Value {
+    public static func object(_ fields: [Name: Value]) -> Value {
         .record(Record(name: nil, fields))
     }
 
     // This value with one field written, or any other value as it is.
-    public func writing(_ field: String, with value: Value) -> Value {
+    public func writing(_ field: Name, with value: Value) -> Value {
         guard case let .record(record) = self else { return self }
 
         return .record(record.writing(field, with: value))
@@ -107,7 +107,7 @@ public indirect enum Value: Sendable, Equatable {
     // A field of a record, and nil for anything else. Several answers travel as
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a caller does with what a run gave it.
-    public subscript(field: String) -> Value? {
+    public subscript(field: Name) -> Value? {
         guard case let .record(record) = self else { return nil }
 
         return record[field]
@@ -361,10 +361,10 @@ public indirect enum Value: Sendable, Equatable {
         // Both hold their entries in name order, so two records match
         // entry by entry.
         case let (.record(left), .record(right)):
-            return Name.same(left.name, right.name)
+            return left.name == right.name
                 && left.count == right.count
                 && zip(left.entries, right.entries).allSatisfy { mine, theirs in
-                    Name.same(mine.name, theirs.name) && mine.value.matches(theirs.value)
+                    mine.name == theirs.name && mine.value.matches(theirs.value)
                 }
 
         default:

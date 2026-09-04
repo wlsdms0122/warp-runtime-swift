@@ -40,13 +40,13 @@ struct ValueDecoder: Decoder {
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            object.names.compactMap { key in Key(stringValue: key) }
+            object.names.compactMap { key in Key(stringValue: key.spelling) }
         }
 
         // MARK: - Initializer
         // MARK: - Public
         func contains(_ key: Key) -> Bool {
-            object[key.stringValue] != nil
+            (try? Name(key.stringValue)).flatMap { name in object[name] } != nil
         }
 
         func decodeNil(forKey key: Key) throws -> Bool {
@@ -82,7 +82,7 @@ struct ValueDecoder: Decoder {
 
         // MARK: - Private
         private func value(forKey key: Key) throws -> Value {
-            guard let value = object[key.stringValue] else {
+            guard let name = try? Name(key.stringValue), let value = object[name] else {
                 throw ReadingError(
                     "no value for key '\(key.stringValue)'",
                     at: steps + [.key(key.stringValue)]

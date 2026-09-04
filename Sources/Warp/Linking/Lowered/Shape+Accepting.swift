@@ -109,7 +109,7 @@ extension Shape {
         // names, and may declare more.
         case let (.record(mine), .record(theirs)):
             return mine.allSatisfy { name, field in
-                theirs.first { given in Name.same(given.name, name) }
+                theirs.first { given in given.name == name }
                     .map { given in field.accepts(given.shape, in: table, assuming: assuming) } ?? false
             }
 
@@ -131,7 +131,7 @@ extension Shape {
             // required must accept everything it will get back. A parameter
             // the body leaves out is not a disagreement.
             for (name, shape) in required {
-                guard let taken = given.first(where: { slot in Name.same(slot.name, name) }) else { continue }
+                guard let taken = given.first(where: { slot in slot.name == name }) else { continue }
                 guard taken.shape.accepts(shape, in: table, assuming: assuming) else { return false }
             }
 
@@ -238,7 +238,7 @@ extension Shape {
         // is data the other lets ride through.
         case let (.record(mine), .record(theirs)):
             return mine.allSatisfy { name, field in
-                theirs.first { given in Name.same(given.name, name) }
+                theirs.first { given in given.name == name }
                     .map { given in field.couldBothHold(given.shape, in: table, assuming: assuming) } ?? true
             }
 

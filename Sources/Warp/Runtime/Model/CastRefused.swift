@@ -35,7 +35,7 @@ public struct CastRefused: RecoverableFailure {
     // for a rescue that wants to say which cast it was. A field past the
     // declared core rides through the rescue's boundary the way any data past
     // a declaration does, so a rescue reaches it by naming the shape.
-    public var details: [String: Value] { ["shape": .string(shape)] }
+    public var details: [Name: Value] { ["shape": .string(shape)] }
 
     // MARK: - Initializer
     public init(_ message: String, shape: String, trace: Trace? = nil) {

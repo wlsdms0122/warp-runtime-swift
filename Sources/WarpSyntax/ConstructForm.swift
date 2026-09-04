@@ -46,7 +46,7 @@ public protocol ConstructForm: Sendable, Decodable {
     //
     // These are the form's own — a word it decided to send. What its slots spend
     // is not here; it is above.
-    static func vocabulary(with notation: Notation) -> Set<String>
+    static func vocabulary(with notation: Notation) -> Set<Name>
 
     // Throws when the form cannot be the statement it was written as — the
     // one case today being a form that binds through the statement's name,
@@ -59,7 +59,7 @@ public extension ConstructForm {
 
     static var requiresBody: Bool { false }
 
-    static func vocabulary(with notation: Notation) -> Set<String> { [] }
+    static func vocabulary(with notation: Notation) -> Set<Name> { [] }
 
     // The name a binding construct binds through. It is the statement's own —
     // which is why these constructs cannot be written nameless: with no name,
@@ -69,7 +69,7 @@ public extension ConstructForm {
     // decoder that knew where the reading was, and the statement this belongs
     // to is what the reader that asked for the lowering is holding. So the
     // sentence is said here and where it happened is said there.
-    func named(_ id: String?, in construct: String, binding: String) throws -> String {
+    func named(_ id: String?, in construct: String, binding: String) throws -> Name {
         guard let id else {
             throw ReadingError(
                 "a \(construct) binds its \(binding) under the"
@@ -77,6 +77,6 @@ public extension ConstructForm {
             )
         }
 
-        return id
+        return try Name.read(id, at: [])
     }
 }

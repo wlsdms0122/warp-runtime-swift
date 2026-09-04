@@ -51,7 +51,7 @@ public struct ModuleReader: Decodable {
         // reading is addressed where it is, so being where the answer is is
         // the whole of what puts an author on the right line.
         let written = try container.superDecoder(forKey: .procedures)
-        let procedures = try written.read([String: ProcedureReader].self)
+        let procedures = try written.read([String: ProcedureReader].self).named(at: written.steps)
 
         guard !procedures.isEmpty else {
             throw ReadingError(
@@ -88,10 +88,12 @@ public struct ModuleReader: Decodable {
     // door sees the value rather than a container.
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
-    ) throws -> Set<String>? {
+    ) throws -> Set<Name>? {
         guard try Envelope.declaresImports(in: container, forKey: .imports) else { return nil }
 
-        return Set(try container.superDecoder(forKey: .imports).read([String].self))
+        let written = try container.superDecoder(forKey: .imports)
+
+        return try Set(written.read([String].self)).named(at: written.steps)
     }
 
     // One of the slots a module declares a record of things under, read
@@ -102,10 +104,12 @@ public struct ModuleReader: Decodable {
         _ type: T.Type,
         in container: KeyedDecodingContainer<CodingKeys>,
         forKey key: CodingKeys
-    ) throws -> [String: T] {
+    ) throws -> [Name: T] {
         guard container.contains(key), try !container.decodeNil(forKey: key) else { return [:] }
 
-        return try container.superDecoder(forKey: key).read([String: T].self)
+        let written = try container.superDecoder(forKey: key)
+
+        return try written.read([String: T].self).named(at: written.steps)
     }
 
     // A document says which language it is written for, and one that does not is
@@ -124,7 +128,7 @@ public struct ModuleReader: Decodable {
     // sender).
     private static func checkVersion(in decoder: Decoder) throws {
         let envelope = try decoder.container(keyedBy: AnyCodingKey.self)
-        let key = AnyCodingKey(stringValue: Envelope.versionKey)
+        let key = AnyCodingKey(stringValue: Envelope.versionKey.spelling)
 
         // About the document and not about anything in it: what is missing is
         // the one thing that would have made this a document, and there is

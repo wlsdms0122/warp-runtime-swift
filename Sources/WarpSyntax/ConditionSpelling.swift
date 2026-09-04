@@ -35,12 +35,12 @@ public protocol ConditionSpelling: Sendable {
     // says a document may not write it; it does not hand the word back to mean
     // something else, which would make the same document mean two things in two
     // notations.
-    var keys: Set<String> { get }
+    var keys: Set<Name> { get }
 
     // Words these spellings reach, which a link has to declare for them to reach
     // anything. A condition slot spends them on the notation's behalf, so the
     // forms that read one ask for them here rather than knowing any of them.
-    var vocabulary: Set<String> { get }
+    var vocabulary: Set<Name> { get }
 
     // The condition a record spells. Reached only for a record carrying one of
     // `keys`, and free to refuse — a key this notation named but no longer

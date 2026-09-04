@@ -24,12 +24,12 @@ public protocol Query: Sendable {
     // Checks arguments that are already constant, at load. Type is the
     // signature's business; this is for what a type cannot say — that a regex
     // pattern compiles. An author typo surfaces before any run.
-    func validate(_ arguments: [String: Value]) throws
+    func validate(_ arguments: [Name: Value]) throws
 
     func evaluate(_ question: Question) throws -> Value?
 }
 
 public extension Query {
-    func validate(_ arguments: [String: Value]) throws {
+    func validate(_ arguments: [Name: Value]) throws {
     }
 }

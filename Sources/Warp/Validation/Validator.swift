@@ -24,13 +24,13 @@ public struct Validator: Sendable {
     // The door for a caller holding statements it assembled itself, without a
     // document: the same gate the load path passes, against the heads visible
     // where the body will run.
-    public func validate(body: [Statement], visible: Set<String>) throws {
+    public func validate(body: [Statement], visible: Set<Name>) throws {
         try validate(body, visible: visible, at: .given("lowered"))
     }
 
     // A single expression, checked where a caller is about to evaluate one it
     // assembled itself.
-    public func validate(_ expression: Expression, visible: Set<String>) throws {
+    public func validate(_ expression: Expression, visible: Set<Name>) throws {
         try validate(expression, visible: visible, at: .given("expression"))
     }
 
@@ -46,12 +46,11 @@ public struct Validator: Sendable {
         // else. Which is also why it is checked here rather than per procedure:
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { $0.key < $1.key }) {
-            try normal(name, at: .constant(name, in: .of(module)))
             try validate(
                 expression,
                 visible: constants,
                 surroundings: .procedure(constants: constants),
-                at: .constant(name, in: .of(module))
+                at: .constant(name.spelling, in: .of(module))
             )
         }
 
@@ -59,13 +58,11 @@ public struct Validator: Sendable {
         // constant sees: the constants beside it, and no variable — a
         // variable holds nothing until the run starts.
         for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
-            try normal(name, at: .variable(name, in: .of(module)))
-
             guard !constants.contains(name) else {
                 throw ValidationError(
                     "'\(name)' is declared as a constant and as a variable, and"
                         + " one name holds one thing",
-                    at: .variable(name, in: .of(module))
+                    at: .variable(name.spelling, in: .of(module))
                 )
             }
 
@@ -73,21 +70,17 @@ public struct Validator: Sendable {
                 expression,
                 visible: constants,
                 surroundings: .procedure(constants: constants),
-                at: .variable(name, in: .of(module))
+                at: .variable(name.spelling, in: .of(module))
             )
         }
 
         // A declared type's name is a record's name in every encoding, so it
         // is held to the one grammar those encodings write bare.
-        for name in module.types.keys.sorted() where !Name.isName(name) {
+        for name in module.types.keys.sorted() where !name.isDeclarable {
             throw ValidationError(
                 "'\(name)' is not a type's name — a type is named by identifiers joined by dots",
-                at: .type(name, in: .of(module))
+                at: .type(name.spelling, in: .of(module))
             )
-        }
-
-        for name in module.procedures.keys.sorted() {
-            try normal(name, at: .procedure(name, in: .of(module)))
         }
 
         for name in module.procedures.keys.sorted() {
@@ -97,7 +90,7 @@ public struct Validator: Sendable {
                 procedure,
                 constants: constants,
                 variables: variables,
-                at: .procedure(name, in: .of(module))
+                at: .procedure(name.spelling, in: .of(module))
             )
         }
 
@@ -113,8 +106,8 @@ public struct Validator: Sendable {
     // scope.
     public func validate(
         _ procedure: Procedure,
-        constants: Set<String> = [],
-        variables: Set<String> = []
+        constants: Set<Name> = [],
+        variables: Set<Name> = []
     ) throws {
         try validate(procedure, constants: constants, variables: variables, at: .given("procedure"))
     }
@@ -135,8 +128,8 @@ public struct Validator: Sendable {
         // asks for one the program has no use for — and a module sending
         // thirty words would otherwise leave an author diffing two of them by
         // eye to find the one that moved.
-        let undisclosed = sends.subtracting(module.imports).sorted()
-        let unspent = module.imports.subtracting(sends).sorted()
+        let undisclosed = sends.subtracting(module.imports).sorted().map(\.spelling)
+        let unspent = module.imports.subtracting(sends).sorted().map(\.spelling)
 
         let said = [
             undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
@@ -153,9 +146,9 @@ public struct Validator: Sendable {
     // signature — a procedure's and a closure's — and a rule written at one of
     // them is a rule the other does not have.
     private func validate(
-        _ parameter: String,
+        _ parameter: Name,
         of signature: Signature,
-        beside constants: Set<String>,
+        beside constants: Set<Name>,
         at here: Place
     ) throws {
         try introduced(parameter, beside: constants, at: here)
@@ -169,13 +162,12 @@ public struct Validator: Sendable {
             throw ValidationError(Value.procedureIsNotData, at: here)
         }
 
-        try normal(fallback, at: here)
     }
 
     private func validate(
         _ procedure: Procedure,
-        constants: Set<String>,
-        variables: Set<String>,
+        constants: Set<Name>,
+        variables: Set<Name>,
         at place: Place
     ) throws {
         let parameters = Set(procedure.signature.parameters.keys)
@@ -186,7 +178,7 @@ public struct Validator: Sendable {
                 parameter,
                 of: procedure.signature,
                 beside: bound,
-                at: place.slot(.parameters).key(parameter)
+                at: place.slot(.parameters).key(parameter.spelling)
             )
         }
 
@@ -214,12 +206,12 @@ public struct Validator: Sendable {
     @discardableResult
     private func validate(
         _ body: [Statement],
-        visible startVisible: Set<String>,
-        variables startVariables: Set<String> = [],
-        declared startDeclared: Set<String> = [],
+        visible startVisible: Set<Name>,
+        variables startVariables: Set<Name> = [],
+        declared startDeclared: Set<Name> = [],
         surroundings: Surroundings = .procedure,
         at place: Place
-    ) throws -> (visible: Set<String>, variables: Set<String>) {
+    ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
         var variables = startVariables
         var declared = startDeclared
@@ -259,7 +251,7 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name), let .variable(name):
-                    guard !name.isEmpty else {
+                    guard !name.spelling.isEmpty else {
                         throw ValidationError("statement with empty id", at: here)
                     }
 
@@ -279,14 +271,12 @@ public struct Validator: Sendable {
                         throw ValidationError(refusal, at: here)
                     }
 
-                    guard let head = path.head, !head.isEmpty else {
+                    guard let head = path.head, !head.spelling.isEmpty else {
                         throw ValidationError(
                             "writes a path headed by no name — a write starts at a variable",
                             at: here
                         )
                     }
-
-                    try normal(head, at: here)
 
                     guard variables.contains(head) else {
                         let reason = if visible.contains(head) {
@@ -349,8 +339,8 @@ public struct Validator: Sendable {
 
     private func validate(
         _ expression: Expression,
-        visible: Set<String>,
-        variables: Set<String> = [],
+        visible: Set<Name>,
+        variables: Set<Name> = [],
         surroundings: Surroundings = .procedure,
         at place: Place
     ) throws {
@@ -365,8 +355,6 @@ public struct Validator: Sendable {
                 throw ValidationError(Value.procedureIsNotData, at: place)
             }
 
-            try normal(value, at: place)
-
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)
 
@@ -380,13 +368,13 @@ public struct Validator: Sendable {
 
         case let .record(record):
             for (name, field) in record.sorted(by: { $0.key < $1.key }) {
-                try refuseAnswerless(field, at: place.key(name))
+                try refuseAnswerless(field, at: place.key(name.spelling))
                 try validate(
                     field,
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.key(name)
+                    at: place.key(name.spelling)
                 )
             }
 
@@ -445,7 +433,7 @@ public struct Validator: Sendable {
                     parameter,
                     of: procedure.signature,
                     beside: surroundings.constants,
-                    at: inside.slot(.parameters).key(parameter)
+                    at: inside.slot(.parameters).key(parameter.spelling)
                 )
             }
 
@@ -471,9 +459,8 @@ public struct Validator: Sendable {
             )
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                let here = place.argument(name)
+                let here = place.argument(name.spelling)
 
-                try normal(name, at: here)
                 try refuseConstruct(argument, at: here)
                 try validate(
                     argument,
@@ -595,9 +582,8 @@ public struct Validator: Sendable {
             }
 
             for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
-                let here = place.argument(name)
+                let here = place.argument(name.spelling)
 
-                try normal(name, at: here)
                 try refuseConstruct(argument, at: here)
                 try validate(
                     argument,
@@ -648,9 +634,9 @@ public struct Validator: Sendable {
 
     private func validate(
         _ block: Block,
-        visible: Set<String>,
-        variables: Set<String> = [],
-        declared: Set<String> = [],
+        visible: Set<Name>,
+        variables: Set<Name> = [],
+        declared: Set<Name> = [],
         surroundings: Surroundings = .procedure,
         at place: Place
     ) throws {
@@ -722,12 +708,10 @@ public struct Validator: Sendable {
 
         guard let target = leave.target else { return }
 
-        try normal(target, at: place)
-
         guard surroundings.rounds.contains(target) else {
             throw ValidationError(
                 "names '\(target)', which is not a loop around it"
-                    + " — the ones here are \(surroundings.rounds.reversed().joined(separator: ", "));"
+                    + " — the ones here are \(surroundings.rounds.reversed().map(\.spelling).joined(separator: ", "));"
                     + " the nearest is '\(nearest)'",
                 at: place
             )
@@ -736,16 +720,10 @@ public struct Validator: Sendable {
 
     private func validate(
         paths: [[PathSegment]],
-        visible: Set<String>,
+        visible: Set<Name>,
         at place: Place
     ) throws {
         for path in paths {
-            for segment in path {
-                if let name = segment.named {
-                    try normal(name, at: place)
-                }
-            }
-
             if let refusal = path.markedHead {
                 throw ValidationError(refusal, at: place)
             }
@@ -769,46 +747,6 @@ public struct Validator: Sendable {
         }
     }
 
-    // One name, one spelling. Record keys settled this at the encodings; a name
-    // a document writes as a value — a statement's, a binding's, a reference's
-    // — settles here, so a declaration and a reference can only meet by being
-    // the same bytes. Compared as bytes on purpose: Swift's `==` would call two
-    // spellings equal, which is the confusion being refused.
-    private func normal(_ name: String, at place: Place) throws {
-        guard Name.isNormal(name) else {
-            throw ValidationError(
-                "the name '\(name)' is not in normal form C",
-                at: place
-            )
-        }
-    }
-
-    // The field names a value carries, however deep, held to the same rule.
-    // A record a document wrote met it at the encoding; one a caller
-    // assembled in Swift meets it here, before a link folds its fields by
-    // Swift's equality.
-    private func normal(_ value: Value, at place: Place) throws {
-        switch value {
-        case let .array(elements):
-            for element in elements {
-                try normal(element, at: place)
-            }
-
-        case let .record(record):
-            if let name = record.name {
-                try normal(name, at: place)
-            }
-
-            for (name, field) in record.entries {
-                try normal(name, at: place)
-                try normal(field, at: place)
-            }
-
-        default:
-            break
-        }
-    }
-
     // A name a body introduces: a parameter, a statement's id, or the one a
     // construct hands its body. Every such name passes here, so the module's
     // bound names are checked at whatever depth the name appears — a sub scope
@@ -817,12 +755,10 @@ public struct Validator: Sendable {
     // Linking folds a constant wherever its name is read, so a name introduced
     // under that spelling would never be the one that answers.
     private func introduced(
-        _ name: String,
-        beside constants: Set<String>,
+        _ name: Name,
+        beside constants: Set<Name>,
         at place: Place
     ) throws {
-        try normal(name, at: place)
-
         guard constants.contains(name) else { return }
 
         throw ValidationError(
@@ -842,23 +778,23 @@ private struct Surroundings: Sendable {
     // MARK: - Property
     // The loops around here, nearest last. A name reaches past the nearer ones,
     // and nothing here means there is no loop to end.
-    let rounds: [String]
+    let rounds: [Name]
 
     // The module's bound names, carried so every signature met on the way —
     // a closure's included — refuses a parameter that would take one's
     // place: linking folds a constant wherever its name is read, so a
     // parameter under that name would never be the one that answers.
-    let constants: Set<String>
+    let constants: Set<Name>
 
     // A procedure's own body: no loop yet.
     static let procedure = Surroundings(rounds: [], constants: [])
 
-    static func procedure(constants: Set<String>) -> Surroundings {
+    static func procedure(constants: Set<Name>) -> Surroundings {
         Surroundings(rounds: [], constants: constants)
     }
 
     // MARK: - Public
-    func inside(_ round: String) -> Surroundings {
+    func inside(_ round: Name) -> Surroundings {
         Surroundings(rounds: rounds + [round], constants: constants)
     }
 

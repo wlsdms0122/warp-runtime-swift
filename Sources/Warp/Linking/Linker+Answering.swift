@@ -40,8 +40,8 @@ extension Linker {
         let symbol: Symbol
 
         let block: Block
-        let environment: [String: TypeExpression]
-        let sends: Set<String>
+        let environment: [Name: TypeExpression]
+        let sends: Set<Name>
     }
 
     // Every unwritten answer, read off its body, one at a time in the order
@@ -54,7 +54,7 @@ extension Linker {
     func answers(
         of unsaid: [Unsaid],
         reading frame: () -> TypeFrame,
-        recording: (String, TypeExpression) -> Void
+        recording: (Name, TypeExpression) -> Void
     ) {
         let declared = Dictionary(
             unsaid.map { one in (one.symbol.declared, one) },
@@ -114,8 +114,8 @@ extension Linker {
     // that turns out not to be a send only ever adds an edge, and an edge
     // only ever turns a reading into `any`. Missing one would do the
     // opposite.
-    func sent(in block: Block, reaching words: [String: Symbol]) -> Set<String> {
-        var sent: Set<String> = []
+    func sent(in block: Block, reaching words: [Name: Symbol]) -> Set<Name> {
+        var sent: Set<Name> = []
 
         func gather(_ path: [PathSegment]) {
             for segment in path {

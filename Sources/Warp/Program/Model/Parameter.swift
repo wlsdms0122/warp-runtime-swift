@@ -50,7 +50,7 @@ public struct Parameter: Sendable, Equatable {
     // into the slot the run reads, and the value settled by it.
     public func taking(
         _ value: Value,
-        called name: String,
+        called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
         try lowered(named: name, in: types.shapes).taking(value, in: types.shapes)
@@ -58,7 +58,7 @@ public struct Parameter: Sendable, Equatable {
 
     public func checking(
         receiver value: Value,
-        called name: String,
+        called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
         try lowered(named: name, in: types.shapes).checking(receiver: value, in: types.shapes)
@@ -66,7 +66,7 @@ public struct Parameter: Sendable, Equatable {
 
     public func checking(
         _ value: Value,
-        called name: String,
+        called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
         try lowered(named: name, in: types.shapes).checking(value, in: types.shapes)

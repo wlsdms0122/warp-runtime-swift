@@ -56,7 +56,7 @@ public struct Notation: Sendable {
     // A condition's words are not here: a condition is read through `when` and
     // `while`, so a notation with neither spends nothing on them however many it
     // offers. The forms that read one ask for them by name, below.
-    public var vocabulary: Set<String> {
+    public var vocabulary: Set<Name> {
         guard let interpolation else { return [] }
 
         return [interpolation.read, interpolation.joined]
@@ -65,7 +65,7 @@ public struct Notation: Sendable {
     // What a condition slot spends, for the forms that have one. Answered here
     // rather than assembled by each of them, so that whether a notation has a
     // condition spelling at all stays this type's business.
-    public var conditionVocabulary: Set<String> {
+    public var conditionVocabulary: Set<Name> {
         condition?.vocabulary ?? []
     }
 

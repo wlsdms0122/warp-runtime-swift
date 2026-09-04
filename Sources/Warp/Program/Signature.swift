@@ -19,9 +19,9 @@ public struct Signature: Sendable, Equatable {
     // declared, the same as every other parameter — a reserved spelling would be
     // the alternative. Declaring a receiver is the whole of what makes a word
     // reachable through a path: it is what lets `x.name` find it.
-    public let receiver: String?
+    public let receiver: Name?
 
-    public let parameters: [String: Parameter]
+    public let parameters: [Name: Parameter]
 
     // What a call returns, or nil where nothing was declared. Absence is spelled
     // by being absent rather than by a type meaning "no claim" — `any` is a
@@ -37,8 +37,8 @@ public struct Signature: Sendable, Equatable {
 
     // MARK: - Initializer
     public init(
-        receiver: String? = nil,
-        parameters: [String: Parameter] = [:],
+        receiver: Name? = nil,
+        parameters: [Name: Parameter] = [:],
         returns: TypeExpression? = nil
     ) {
         self.receiver = receiver
@@ -110,7 +110,7 @@ public struct Signature: Sendable, Equatable {
         let slots = lowered(in: table)
 
         return slots.derivable(
-            receiver: receiver.flatMap { name in slots.firstIndex { slot in Name.same(slot.name, name) } },
+            receiver: receiver.flatMap { name in slots.firstIndex { slot in slot.name == name } },
             returns: returns?.lowered(in: table),
             in: table
         )
@@ -121,9 +121,9 @@ public struct Signature: Sendable, Equatable {
     // and the call wrote one in front. One rule, asked wherever a call is
     // read.
     public func handed(
-        _ name: String,
+        _ name: Name,
         receiver: Expression?,
-        arguments: [String: Expression]
+        arguments: [Name: Expression]
     ) -> Expression? {
         name == self.receiver
             ? receiver ?? arguments[name]
@@ -134,9 +134,9 @@ public struct Signature: Sendable, Equatable {
     // read the settled values instead of re-evaluating. By name, for a caller
     // outside a run: the entry's arguments, a closure assembled in Swift.
     public func settle(
-        _ given: [String: Value],
+        _ given: [Name: Value],
         in types: TypeTable = .empty
-    ) throws -> [String: Value] {
+    ) throws -> [Name: Value] {
         let slots = lowered(in: types.shapes)
 
         return named(try settle(given, over: slots, offered: false, in: types.shapes), over: slots)
@@ -147,18 +147,18 @@ public struct Signature: Sendable, Equatable {
     // which of those the author wanted is the author's business: declaring a
     // name only to leave it unread is a declaration nobody meant.
     public func settle(
-        offered given: [String: Value],
+        offered given: [Name: Value],
         in types: TypeTable = .empty
-    ) throws -> [String: Value] {
+    ) throws -> [Name: Value] {
         let slots = lowered(in: types.shapes)
 
         return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
     }
 
     // The parameters in the order arguments stand in.
-    public var ordered: [(name: String, parameter: Parameter)] {
+    public var ordered: [(name: Name, parameter: Parameter)] {
         parameters
-            .sorted { left, right in Name.precedes(left.key, right.key) }
+            .sorted { left, right in left.key < right.key }
             .map { entry in (name: entry.key, parameter: entry.value) }
     }
 
@@ -166,7 +166,7 @@ public struct Signature: Sendable, Equatable {
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused unless the caller offers.
     func settle(
-        _ given: [String: Value],
+        _ given: [Name: Value],
         over slots: [Slot],
         offered: Bool,
         in table: ShapeTable
@@ -178,7 +178,7 @@ public struct Signature: Sendable, Equatable {
     // them to a closure and a call of a value hands them to what it named.
     // Each slot finds its name along the list, so neither side hashes.
     func settle(
-        _ given: [(name: String, value: Value)],
+        _ given: [(name: Name, value: Value)],
         over slots: [Slot],
         offered: Bool,
         in table: ShapeTable
@@ -186,13 +186,13 @@ public struct Signature: Sendable, Equatable {
         if !offered {
             let undeclared = given
                 .map { entry in entry.name }
-                .filter { name in !slots.contains { slot in Name.same(slot.name, name) } }
-                .sorted(by: Name.precedes)
+                .filter { name in !slots.contains { slot in slot.name == name } }
+                .sorted()
 
             guard undeclared.isEmpty else {
                 throw ArgumentError(
                     "parameters: not declared in the signature:"
-                        + " \(undeclared.joined(separator: ", "))"
+                        + " \(undeclared.map(\.spelling).joined(separator: ", "))"
                 )
             }
         }
@@ -200,13 +200,13 @@ public struct Signature: Sendable, Equatable {
         // A name given twice is two instructions for one slot, and neither
         // is the one to keep.
         for (index, entry) in given.enumerated() {
-            guard given[..<index].contains(where: { earlier in Name.same(earlier.name, entry.name) }) else { continue }
+            guard given[..<index].contains(where: { earlier in earlier.name == entry.name }) else { continue }
 
             throw ArgumentError("parameters: '\(entry.name)' is given more than once")
         }
 
         return try settle(
-            slots.map { slot in given.first { entry in Name.same(entry.name, slot.name) }?.value },
+            slots.map { slot in given.first { entry in entry.name == slot.name }?.value },
             over: slots,
             offered: offered,
             in: table
@@ -234,7 +234,7 @@ public struct Signature: Sendable, Equatable {
         // and a null it offered is a value, an element of the walked
         // collection and not a blank, so only a position it never offered is
         // missing.
-        var missing: [String] = []
+        var missing: [Name] = []
 
         for (position, slot) in slots.enumerated() where !skipping(position) {
             let blank = offered ? given[position] == nil : (given[position] ?? .null) == .null
@@ -246,7 +246,8 @@ public struct Signature: Sendable, Equatable {
 
         guard missing.isEmpty else {
             throw ArgumentError(
-                "parameters: required, and nothing was given for \(missing.joined(separator: ", "))"
+                "parameters: required, and nothing was given for"
+                    + " \(missing.map(\.spelling).joined(separator: ", "))"
             )
         }
 
@@ -268,8 +269,8 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
-    private func named(_ settled: [Value?], over slots: [Slot]) -> [String: Value] {
-        var named: [String: Value] = [:]
+    private func named(_ settled: [Value?], over slots: [Slot]) -> [Name: Value] {
+        var named: [Name: Value] = [:]
 
         for (position, value) in settled.enumerated() {
             guard let value else { continue }

@@ -55,7 +55,8 @@ public struct ProcedureReader: Decodable {
             signature: try BoundsReader.apply(
                 try container.decodeIfPresent([String: String].self, forKey: .bounds),
                 to: Signature(
-                    receiver: try container.decodeIfPresent(String.self, forKey: .receiver),
+                    receiver: try container.decodeIfPresent(String.self, forKey: .receiver)
+                        .map { spelling in try Name.read(spelling, at: decoder.steps) },
                     parameters: try container
                         .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
                         .signature.parameters ?? [:],

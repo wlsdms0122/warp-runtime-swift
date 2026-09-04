@@ -23,24 +23,24 @@ import Foundation
 // the walks over expressions may lean on it; call depth is not.
 enum Circles {
     // MARK: - Internal
-    static func among(_ edges: [String: [String]]) -> [[String]] {
+    static func among(_ edges: [Name: [Name]]) -> [[Name]] {
         // Where each was met, and the earliest any way on from it can reach
         // back to — a component closes where the two agree.
-        var met: [String: Int] = [:]
-        var reaches: [String: Int] = [:]
-        var standing: Set<String> = []
-        var path: [String] = []
+        var met: [Name: Int] = [:]
+        var reaches: [Name: Int] = [:]
+        var standing: Set<Name> = []
+        var path: [Name] = []
         var next = 0
-        var found: [[String]] = []
+        var found: [[Name]] = []
 
         // One name being walked, and how far along its sends the walk is.
         struct Step {
-            let name: String
-            let sends: [String]
+            let name: Name
+            let sends: [Name]
             var position = 0
         }
 
-        func meet(_ name: String) {
+        func meet(_ name: Name) {
             met[name] = next
             reaches[name] = next
             next += 1
@@ -48,7 +48,7 @@ enum Circles {
             standing.insert(name)
         }
 
-        func carry(_ reach: Int?, to name: String) {
+        func carry(_ reach: Int?, to name: Name) {
             guard let reach, let held = reaches[name] else { return }
 
             reaches[name] = min(held, reach)
@@ -84,7 +84,7 @@ enum Circles {
                 // reached got back to anything met before it, everything still
                 // standing above it is one component.
                 if reaches[step.name] == met[step.name] {
-                    var circle: [String] = []
+                    var circle: [Name] = []
 
                     while let last = path.popLast() {
                         standing.remove(last)

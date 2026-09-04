@@ -15,18 +15,18 @@ import Foundation
 // its name stay the same, so a refusal names the variable it is about.
 struct Handle: Sendable {
     // MARK: - Property
-    let head: String
+    let head: Name
     let box: Variable
     let path: [PathSegment]
 
     // MARK: - Initializer
-    init(_ head: String, _ value: Value) {
+    init(_ head: Name, _ value: Value) {
         self.head = head
         self.box = Variable(value)
         self.path = []
     }
 
-    init(head: String, box: Variable, path: [PathSegment]) {
+    init(head: Name, box: Variable, path: [PathSegment]) {
         self.head = head
         self.box = box
         self.path = path

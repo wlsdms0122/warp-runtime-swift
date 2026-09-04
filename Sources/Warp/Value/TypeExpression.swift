@@ -73,7 +73,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     case object(TypeExpression)
 
     // Named fields with types. The value may carry more.
-    case record([String: TypeExpression])
+    case record([Name: TypeExpression])
 
     // A value that can be called: what it may be called with, and what it must
     // be. Nil is a declaration that has not been written — "some procedure" —
@@ -107,7 +107,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // A type a module declared. Kept rather than expanded so that a type may
     // name itself — `Tree` with children of `array<Tree>` is a shape, not a
     // regress — which means resolving one needs the table it was declared in.
-    case named(String)
+    case named(Name)
 
     // A type parameter, filled by whatever the call site puts there. The name
     // is what ties one signature's mentions together: `first` takes
@@ -123,7 +123,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // type — a module binds a name to the types it admits — so a signature
     // writes the name and never the membership, and there is no inline union
     // for the membership to leak out through.
-    case parameter(name: String, constraint: String? = nil)
+    case parameter(name: Name, constraint: Name? = nil)
 
     // What a walk *through* a type parameter reached. Still a shape the call
     // decides — a dot on it stands as written, the way a dot on the parameter
@@ -153,7 +153,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // The path is segments and not their spelling for the same reason: `.a`
     // and `?.a` land on one field, and a spelling would make them two unknowns
     // that never meet.
-    case reading(of: String, path: [PathSegment])
+    case reading(of: Name, path: [PathSegment])
 
     // MARK: - Property
     // MARK: - Initializer
@@ -264,13 +264,13 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
         case let .record(fields):
             let written = fields
-                .sorted { left, right in Name.precedes(left.key, right.key) }
+                .sorted { left, right in left.key < right.key }
                 .map { name, field in "\(name): \(field.rendered)" }
 
             return "{ \(written.joined(separator: ", ")) }"
 
         case let .named(name):
-            return name
+            return name.spelling
 
         case let .nullable(inner):
             return "\(inner.rendered)?"
@@ -456,7 +456,7 @@ extension TypeExpression {
     // link refuses *cyclic name chains*, which makes a walk that only follows
     // names finite; this one goes into fields as well, so it is outside that
     // guarantee and carries its own, the way `accepts` does.
-    private func resolved(in types: TypeTable, assuming: Set<String>) -> TypeExpression {
+    private func resolved(in types: TypeTable, assuming: Set<Name>) -> TypeExpression {
         switch self {
         case let .named(name):
             guard !assuming.contains(name), let declared = types.resolve(name) else {

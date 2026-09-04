@@ -40,7 +40,7 @@ public indirect enum Expression: Sendable {
     case literal(Value)
     case reference([PathSegment])
     case array([Expression])
-    case record([String: Expression])
+    case record([Name: Expression])
 
     // A procedure written where a value is wanted. Evaluating it captures the
     // scope it was written in, which is the whole of what makes it a closure.
@@ -51,7 +51,7 @@ public indirect enum Expression: Sendable {
     // this asks the value in hand, and only a run can. Two spellings because
     // they are two questions: fusing them would mean a local name could quietly
     // stand in for a linked one, and linking would stop being a promise.
-    case invoke(Expression, arguments: [String: Expression])
+    case invoke(Expression, arguments: [Name: Expression])
 
     // Reading a value as a shape the text names. `any` declares nothing, so a
     // dot on one is refused at the link — this is the door: the author says
@@ -74,13 +74,13 @@ public indirect enum Expression: Sendable {
     // to write — a counter and `std.control.abort` say it exactly — and
     // stopping one is the receiver's cancellation; a kernel budget would
     // promise neither side anything it can rely on.
-    case loop(while: Expression, body: Block, round: String)
+    case loop(while: Expression, body: Block, round: Name)
     // The one repetition whose body is statements alone — a walk answers
     // nothing. A pure mapping is `std.collection.map`'s to say; an effectful
     // round with something to keep writes it to an outer variable. Either
     // way, nothing is the walk's own answer.
-    case iteration(over: Expression, body: [Statement], element: String)
-    case attempt(Block, rescue: Block, failure: String)
+    case iteration(over: Expression, body: [Statement], element: Name)
+    case attempt(Block, rescue: Block, failure: Name)
     case dispatch(Dispatch)
 
     // Carrying on somewhere further out than the next statement. The one shape

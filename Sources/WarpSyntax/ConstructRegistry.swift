@@ -35,7 +35,7 @@ public struct ConstructRegistry: Sendable {
         ContinueForm.self
     ])
 
-    public var keys: [String] { forms.keys.sorted() }
+    public var keys: [Name] { forms.keys.sorted().map(Name.init(normal:)) }
 
 
     // What the registered forms send, and what their slots spend on their
@@ -45,8 +45,8 @@ public struct ConstructRegistry: Sendable {
     // The second half is added here rather than by each form. A form that reads
     // a condition says so and nothing else — what a condition costs is between
     // the notation and this table.
-    public func vocabulary(with notation: Notation) -> Set<String> {
-        forms.values.reduce(into: Set()) { words, form in
+    public func vocabulary(with notation: Notation) -> Set<Name> {
+        forms.values.reduce(into: Set<Name>()) { words, form in
             words.formUnion(form.vocabulary(with: notation))
 
             if form.readsCondition {
@@ -119,12 +119,13 @@ public struct ConstructRegistry: Sendable {
     // Nothing where the form is not registered: a notation that gave up a word
     // cannot write what that word said, and answering with the built-in spelling
     // would put a key in the document that reading it back would refuse.
-    public func key(for form: any ConstructForm.Type) -> String? {
+    public func key(for form: any ConstructForm.Type) -> Name? {
         forms.filter { _, registered in
             ObjectIdentifier(registered) == ObjectIdentifier(form)
         }
         .keys
         .min()
+        .map(Name.init(normal:))
     }
 
     // MARK: - Private
@@ -141,7 +142,7 @@ public struct ConstructRegistry: Sendable {
         // `value` is the word an expression quotes a literal under, read
         // wherever an expression is, so a construct registered under it would
         // never be reached: the statement reader passes that word by.
-        guard key != StatementReader.valueKey else {
+        guard key != StatementReader.valueKey.spelling else {
             throw ValidationError(
                 "construct key '\(key)' is the word a statement writes its expression under,"
                     + " and no construct sits under it",

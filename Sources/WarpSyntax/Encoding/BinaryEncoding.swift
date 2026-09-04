@@ -160,15 +160,15 @@ public enum BinaryEncoding {
         // front, so a reader that met the tag knows a name follows.
         case let .record(record):
             if let name = record.name {
-                guard Name.isName(name) else {
+                guard name.isDeclarable else {
                     throw EncodingError.invalidValue(
-                        Value.string(name),
+                        Value.string(name.spelling),
                         .init(codingPath: [], debugDescription: "the record's name is not a type's name")
                     )
                 }
 
                 bytes.append(Tag.namedRecord.rawValue)
-                write(Array(name.utf8), into: &bytes)
+                write(Array(name.spelling.utf8), into: &bytes)
             } else {
                 bytes.append(Tag.record.rawValue)
             }
@@ -177,20 +177,7 @@ public enum BinaryEncoding {
 
             // The record holds its entries in byte order, the order written.
             for (key, value) in record.entries {
-                // A name outside NFC would give one name several byte
-                // spellings, and byte order would stop being an order on
-                // names — refused on the way out exactly as on the way in.
-                guard Name.isNormal(key) else {
-                    throw EncodingError.invalidValue(
-                        Value.string(key),
-                        .init(
-                            codingPath: [],
-                            debugDescription: "the field name is not in normal form C"
-                        )
-                    )
-                }
-
-                write(Array(key.utf8), into: &bytes)
+                write(Array(key.spelling.utf8), into: &bytes)
 
                 try write(value, into: &bytes, within: depth - 1)
             }
@@ -234,7 +221,7 @@ public enum BinaryEncoding {
     // code has to promise never to reach.
     private enum Opened {
         case array(expecting: Int, held: [Value])
-        case record(expecting: Int, held: [(name: String, value: Value)], key: String, previous: [UInt8], name: String?)
+        case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
     }
 
     // One pass over the bytes with an explicit stack, because the depth of a
@@ -315,17 +302,13 @@ public enum BinaryEncoding {
                 }
 
             case .record, .namedRecord:
-                let name = tag == .namedRecord ? try text(from: &reading) : nil
-
-                if let name, !Name.isName(name) {
-                    throw refused("the record's name is not a type's name")
-                }
+                let name = try tag == .namedRecord ? Self.name(from: &reading) : nil
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
                     settled = .record(Record(name: name, entries: []))
                 } else {
-                    var held: [(name: String, value: Value)] = []
+                    var held: [(name: Name, value: Value)] = []
 
                     held.reserveCapacity(count)
 
@@ -380,7 +363,7 @@ public enum BinaryEncoding {
     private static func field(
         from reading: inout Cursor,
         after previous: [UInt8]?
-    ) throws -> (String, [UInt8]) {
+    ) throws -> (Name, [UInt8]) {
         let key = try text(from: &reading)
         let raw = Array(key.utf8)
 
@@ -388,11 +371,22 @@ public enum BinaryEncoding {
             throw refused("the record's keys are not written in order")
         }
 
-        guard Name.isNormal(key) else {
+        guard let name = try? Name(key) else {
             throw refused("the field name is not in normal form C")
         }
 
-        return (key, raw)
+        return (name, raw)
+    }
+
+    // A record's own name, as the bytes wrote it.
+    private static func name(from reading: inout Cursor) throws -> Name {
+        let spelling = try text(from: &reading)
+
+        guard let name = try? Name(spelling), name.isDeclarable else {
+            throw refused("the record's name is not a type's name")
+        }
+
+        return name
     }
 
 

@@ -104,7 +104,7 @@ public enum TextEncoding {
     // for its next field name.
     private enum Opened {
         case array([Value])
-        case record(held: [String: Value], key: String?, name: String?)
+        case record(held: [Name: Value], key: Name?, name: Name?)
     }
 
     private static func tokenized(_ text: String) throws -> [Token] {
@@ -297,14 +297,18 @@ public enum TextEncoding {
 
                     settled = .record(Record(name: name, held))
 
-                case let .bare(key) where Name.isIdentifier(key):
+                case let .bare(spelling) where (try? Name(spelling))?.isIdentifier == true:
+                    let key = try key(spelling)
+
                     try expect(key, in: held)
 
                     opened[opened.count - 1] = .record(held: held, key: key, name: name)
 
                     continue
 
-                case let .string(key):
+                case let .string(spelling):
+                    let key = try key(spelling)
+
                     try expect(key, in: held)
 
                     opened[opened.count - 1] = .record(held: held, key: key, name: name)
@@ -347,9 +351,9 @@ public enum TextEncoding {
                 // A bare word in front of a record is the record's name: the
                 // declared type the value settled to.
                 case let .bare(bare):
-                    if tokens.first == .recordOpen, Name.isName(bare) {
+                    if tokens.first == .recordOpen, let name = try? Name(bare), name.isDeclarable {
                         tokens.removeFirst()
-                        opened.append(.record(held: [:], key: nil, name: bare))
+                        opened.append(.record(held: [:], key: nil, name: name))
 
                         continue
                     }
@@ -422,15 +426,20 @@ public enum TextEncoding {
         }
     }
 
+    // A key's spelling as the name it stands for, said in this reader's own
+    // words.
+    private static func key(_ spelling: String) throws -> Name {
+        do {
+            return try Name(spelling)
+        } catch {
+            throw refused("\(error)")
+        }
+    }
+
     // A field name is read in any position, since layout is the writer's, and
     // refused where the record already holds it: two values under one key are
     // two documents, not one document twice.
-    private static func expect(_ key: String, in held: [String: Value]) throws {
-        guard Name.isNormal(key) else {
-            throw refused("the field name is not in normal form C")
-        }
-
-        // Both sides are normal form C by now, so equal here is equal by bytes
+    private static func expect(_ key: Name, in held: [Name: Value]) throws {
         guard held[key] == nil else {
             throw refused("the record writes '\(key)' twice")
         }
@@ -507,14 +516,14 @@ public enum TextEncoding {
 
         case let .record(record):
             if let name = record.name {
-                guard Name.isName(name) else {
+                guard name.isDeclarable else {
                     throw EncodingError.invalidValue(
-                        Value.string(name),
+                        Value.string(name.spelling),
                         .init(codingPath: [], debugDescription: "the record's name is not a type's name")
                     )
                 }
 
-                text += name + " "
+                text += name.spelling + " "
             }
 
             guard !record.isEmpty else {
@@ -527,23 +536,12 @@ public enum TextEncoding {
 
             // The record holds its entries in byte order, the order written.
             for (key, value) in record.entries {
-                // The same rule the reader holds: one name, one byte spelling
-                guard Name.isNormal(key) else {
-                    throw EncodingError.invalidValue(
-                        Value.string(key),
-                        .init(
-                            codingPath: [],
-                            debugDescription: "the field name is not in normal form C"
-                        )
-                    )
-                }
-
                 text += String(repeating: "  ", count: indent + 1)
 
-                if Name.isIdentifier(key) {
-                    text += key
+                if key.isIdentifier {
+                    text += key.spelling
                 } else {
-                    write(key, into: &text)
+                    write(key.spelling, into: &text)
                 }
 
                 text += " "

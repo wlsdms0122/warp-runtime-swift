@@ -26,14 +26,14 @@ indirect enum Shape: Sendable {
     case array(Shape)
     case object(Shape)
 
-    // Fields in name order, as `Name.precedes` orders them.
-    case record([(name: String, shape: Shape)])
+    // Fields in name order, as `Name`'s `<` orders them.
+    case record([(name: Name, shape: Shape)])
 
     // What a slot asks of a procedure value: the parameters it may be called
     // with, in position order, and what it must answer. Nil where nothing
     // was declared. Purity and isolation are the slot's requirements.
     case procedure(
-        parameters: [(name: String, shape: Shape)]?,
+        parameters: [(name: Name, shape: Shape)]?,
         returns: Shape?,
         purity: Purity,
         isolation: Isolation
@@ -48,7 +48,7 @@ indirect enum Shape: Sendable {
 
     // A type parameter the call fills. The label is the spelling a refusal
     // shows; the constraint is the row of the membership it is bounded by.
-    case parameter(label: String, constraint: Int?)
+    case parameter(label: Name, constraint: Int?)
 
     // A name the table does not answer: nothing declares it, or it names
     // itself. Nothing can be said about it, so every judgment over readings
@@ -56,7 +56,7 @@ indirect enum Shape: Sendable {
     // A table a host built by hand answers instead of failing to lower, and
     // only the judgments that reach the name are touched by it. The link
     // refuses such a name as it lowers the table, so a run never meets one.
-    case undeclared(label: String, refusal: String)
+    case undeclared(label: Name, refusal: String)
 
     // MARK: - Property
     var inoutUnwrapped: Shape {
@@ -167,20 +167,20 @@ extension Shape: Equatable {
             return mine == theirs
 
         case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
-            return Name.same(myLabel, theirLabel) && mine == theirs
+            return myLabel == theirLabel && mine == theirs
 
         case let (.undeclared(mine, _), .undeclared(theirs, _)):
-            return Name.same(mine, theirs)
+            return mine == theirs
 
         default:
             return false
         }
     }
 
-    private static func same(_ mine: [(name: String, shape: Shape)], _ theirs: [(name: String, shape: Shape)]) -> Bool {
+    private static func same(_ mine: [(name: Name, shape: Shape)], _ theirs: [(name: Name, shape: Shape)]) -> Bool {
         mine.count == theirs.count
             && zip(mine, theirs).allSatisfy { one, other in
-                Name.same(one.name, other.name) && one.shape == other.shape
+                one.name == other.name && one.shape == other.shape
             }
     }
 }

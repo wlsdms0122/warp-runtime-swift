@@ -261,11 +261,11 @@ struct BoundaryTests {
         // Given — `int` is the machine word: a sum past its edge has no int to
         // answer, and the language stops rather than wrapping or answering a
         // silent fraction.
-        for (word, left, right) in [
+        for (word, left, right) in [(Name, Int, Int)]([
             ("std.math.plus", Int.max, 1),
             ("std.math.minus", Int.min, 1),
             ("std.math.times", Int.max, 2)
-        ] {
+        ]) {
             // When / Then
             await #expect {
                 try await answering(word, .int(left), .int(right))
@@ -281,11 +281,11 @@ struct BoundaryTests {
         // the fraction path could answer infinity: a value a program can carry
         // to exactly the first place that tries to write it down. Found by
         // running `1e308 plus 1e308` and being answered inf.
-        for (word, left, right) in [
+        for (word, left, right) in [(Name, Double, Double)]([
             ("std.math.plus", 1e308, 1e308),
             ("std.math.minus", -1e308, 1e308),
             ("std.math.times", 1e308, 10.0)
-        ] {
+        ]) {
             // When / Then
             await #expect {
                 try await answering(word, .double(left), .double(right))
@@ -331,7 +331,7 @@ struct BoundaryTests {
     // One word, sent to one value with one operand — the shape every arithmetic
     // word takes, so the cases above say what they are about and nothing else.
     private func answering(
-        _ selector: String,
+        _ selector: Name,
         _ receiver: Value,
         _ operand: Value
     ) async throws -> Value {

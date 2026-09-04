@@ -30,7 +30,7 @@ public struct InvokeForm: ConstructForm {
     public static let key = "invoke"
 
     private let callee: Expression
-    private let arguments: [String: Expression]
+    private let arguments: [Name: Expression]
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -43,7 +43,8 @@ public struct InvokeForm: ConstructForm {
             [String: ExpressionReader].self,
             forKey: .arguments
         )?
-        .mapValues(\.expression) ?? [:]
+        .mapValues(\.expression)
+        .named(at: decoder.steps) ?? [:]
     }
 
     // MARK: - Public

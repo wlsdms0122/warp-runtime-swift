@@ -484,7 +484,7 @@ struct LeaveTests {
 
     // MARK: - Public
     // MARK: - Private
-    private func answer(_ module: Module, _ arguments: [String: Value] = [:]) async throws -> Value {
+    private func answer(_ module: Module, _ arguments: [Name: Value] = [:]) async throws -> Value {
         let image = try Linker().link(
             [module] + Module.standard + [.testing],
             entry: entryName

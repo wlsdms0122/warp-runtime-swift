@@ -12,11 +12,11 @@ import Foundation
 // a rescue reads the same set of failures on every run.
 public struct ConcurrentFailed: RecoverableFailure {
     // MARK: - Property
-    public let failures: [String: String]
+    public let failures: [Name: String]
 
     public let type = "concurrent_failed"
 
-    public var details: [String: Value] {
+    public var details: [Name: Value] {
         ["failures": .object(failures.mapValues(Value.string))]
     }
 
@@ -31,7 +31,7 @@ public struct ConcurrentFailed: RecoverableFailure {
     public let trace: Trace?
 
     // MARK: - Initializer
-    public init(failures: [String: String], trace: Trace? = nil) {
+    public init(failures: [Name: String], trace: Trace? = nil) {
         self.failures = failures
         self.trace = trace
     }

@@ -22,7 +22,7 @@ indirect enum Code: Sendable {
     case array([Code])
 
     // In name order, the order fields are read in.
-    case record([(String, Code)])
+    case record([(Name, Code)])
 
     // A closure literal: the row its body was lowered into, and which cells
     // of the frame it takes with it, as (outer slot, inner slot).
@@ -30,7 +30,7 @@ indirect enum Code: Sendable {
 
     // Calling a value. Which signature it has is the value's, so the
     // arguments travel by name and settle where the closure is known.
-    case invoke(Code, arguments: [(String, Code)])
+    case invoke(Code, arguments: [(Name, Code)])
 
     case cast(Code, as: Shape, optional: Bool)
     case block(Body)
@@ -44,7 +44,7 @@ indirect enum Code: Sendable {
     case iteration(over: Code, body: [Instruction], element: Int)
     case attempt(Body, rescue: Body, failure: Int)
     case send(Send)
-    case leave(Leave.Reach, target: String?, Code?)
+    case leave(Leave.Reach, target: Name?, Code?)
 }
 
 extension Code {

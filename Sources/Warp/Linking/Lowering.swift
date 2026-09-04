@@ -20,11 +20,11 @@ struct Lowering {
     private(set) var table: [Linked]
 
     // Rows by declared spelling, and by the bare spelling a path word writes.
-    let rows: [String: Int]
-    let words: [String: Int]
+    let rows: [Name: Int]
+    let words: [Name: Int]
 
     // Each document's variables by name, in the order a run makes their boxes.
-    let variables: [Int: [String: Int]]
+    let variables: [Int: [Name: Int]]
 
     // The declared types as the run reads them, for a cast's shape and a
     // closure's row.
@@ -33,9 +33,9 @@ struct Lowering {
     // MARK: - Initializer
     init(
         table: [Linked],
-        rows: [String: Int],
-        words: [String: Int],
-        variables: [Int: [String: Int]],
+        rows: [Name: Int],
+        words: [Name: Int],
+        variables: [Int: [Name: Int]],
         shapes: ShapeTable
     ) {
         self.table = table
@@ -79,9 +79,9 @@ struct Lowering {
     // expression declares; the layout says how large it is.
     func lower(
         _ expression: Expression,
-        reading names: [String],
+        reading names: [Name],
         origin: Int,
-        label: String,
+        label: Name,
         at place: Place
     ) throws -> (Code, Layout) {
         let frame = Slots(origin: origin, variables: [:])
@@ -100,7 +100,7 @@ struct Lowering {
     // The names visible at one point of a body, by slot. A value, so a block
     // takes a copy and what it introduces dies with it.
     private struct Names {
-        var slots: [String: Int] = [:]
+        var slots: [Name: Int] = [:]
     }
 
     // The slots of one body being lowered. A closure's slots know the slots
@@ -108,18 +108,18 @@ struct Lowering {
     // the first time the closure reads a name it did not declare.
     private final class Slots {
         let origin: Int
-        let variables: [String: Int]
+        let variables: [Name: Int]
         let outer: (slots: Slots, names: Names)?
 
-        private(set) var names: [String] = []
+        private(set) var names: [Name] = []
         private(set) var parameters: [Int] = []
         private(set) var reads: [(variable: Int, slot: Int)] = []
         private(set) var captures: [(Int, Int)] = []
 
-        private var variableSlots: [String: Int] = [:]
-        private var capturedSlots: [String: Int] = [:]
+        private var variableSlots: [Name: Int] = [:]
+        private var capturedSlots: [Name: Int] = [:]
 
-        init(origin: Int, variables: [String: Int], outer: (slots: Slots, names: Names)? = nil) {
+        init(origin: Int, variables: [Name: Int], outer: (slots: Slots, names: Names)? = nil) {
             self.origin = origin
             self.variables = variables
             self.outer = outer
@@ -127,13 +127,13 @@ struct Lowering {
 
         var size: Int { names.count }
 
-        func allocate(_ name: String) -> Int {
+        func allocate(_ name: Name) -> Int {
             names.append(name)
 
             return names.count - 1
         }
 
-        func allocateParameter(_ name: String) -> Int {
+        func allocateParameter(_ name: Name) -> Int {
             let slot = allocate(name)
             parameters.append(slot)
 
@@ -145,7 +145,7 @@ struct Lowering {
         // then the module's variables. A closure reaches a module variable
         // through the body it was written in, so the hold it takes is that
         // body's.
-        func slot(of name: String, in names: Names) -> Int? {
+        func slot(of name: Name, in names: Names) -> Int? {
             if let slot = names.slots[name] { return slot }
 
             if let slot = capturedSlots[name] { return slot }
@@ -178,7 +178,7 @@ struct Lowering {
         _ block: Block,
         in scope: Names,
         on frame: Slots,
-        label: String,
+        label: Name,
         at place: Place
     ) throws -> Body {
         var inner = scope
@@ -197,7 +197,7 @@ struct Lowering {
         _ statements: [Statement],
         in scope: inout Names,
         on frame: Slots,
-        label: String,
+        label: Name,
         at place: Place
     ) throws -> [Instruction] {
         var instructions: [Instruction] = []
@@ -229,7 +229,7 @@ struct Lowering {
                 Instruction(
                     binding: binding,
                     code: code,
-                    label: statement.name ?? "[\(position)]"
+                    label: statement.name?.spelling ?? "[\(position)]"
                 )
             )
         }
@@ -241,7 +241,7 @@ struct Lowering {
         _ expression: Expression,
         in scope: Names,
         on frame: Slots,
-        label: String,
+        label: Name,
         at place: Place
     ) throws -> Code {
         switch expression {
@@ -259,7 +259,7 @@ struct Lowering {
             })
 
         case let .record(record):
-            return .record(try record.sorted { Name.precedes($0.key, $1.key) }.map { name, field in
+            return .record(try record.sorted { $0.key < $1.key }.map { name, field in
                 (name, try lower(field, in: scope, on: frame, label: label, at: place))
             })
 
@@ -387,7 +387,7 @@ struct Lowering {
         _ dispatch: Dispatch,
         in scope: Names,
         on frame: Slots,
-        label: String,
+        label: Name,
         at place: Place
     ) throws -> Send {
         guard let row = rows[dispatch.selector] else {

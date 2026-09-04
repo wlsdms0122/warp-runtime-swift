@@ -60,7 +60,7 @@ public struct Executor: Sendable {
     // linked" is not a state this type can be put in.
     public func run(
         _ image: Image,
-        arguments: [String: Value] = [:]
+        arguments: [Name: Value] = [:]
     ) async throws -> Value {
         let executor = Executor(
             observer: observer,
@@ -93,7 +93,7 @@ public struct Executor: Sendable {
     // those the closure's author wanted is the author's business.
     func call(
         _ closure: Closure,
-        offering arguments: [(name: String, value: Value)],
+        offering arguments: [(name: Name, value: Value)],
         at trace: Trace
     ) async throws -> Value {
         var (body, activation) = try enter(closure, given: arguments, offered: true)
@@ -282,7 +282,7 @@ public struct Executor: Sendable {
             return .array(values)
 
         case let .record(fields):
-            var values: [(name: String, value: Value)] = []
+            var values: [(name: Name, value: Value)] = []
             values.reserveCapacity(fields.count)
 
             for (name, field) in fields {
@@ -423,7 +423,7 @@ public struct Executor: Sendable {
                 inner.cells[layout.parameters[position]] = .value(value)
             }
 
-            return try await answer(body, of: callee, in: &inner, at: trace.appending(.procedure(callee.label)))
+            return try await answer(body, of: callee, in: &inner, at: trace.appending(.procedure(callee.label.spelling)))
         }
     }
 
@@ -432,7 +432,7 @@ public struct Executor: Sendable {
     // closure is worth passing at all.
     private func invoke(
         _ callee: Code,
-        arguments: [(String, Code)],
+        arguments: [(Name, Code)],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -459,7 +459,7 @@ public struct Executor: Sendable {
     // anything reads its rows.
     private func enter(
         _ closure: Closure,
-        given arguments: [(name: String, value: Value)],
+        given arguments: [(name: Name, value: Value)],
         offered: Bool
     ) throws -> (Body, Activation) {
         guard case let .body(body, layout) = closure.linked.implementation else {
@@ -564,7 +564,7 @@ public struct Executor: Sendable {
     // be one in the same way.
     private func array(
         of material: Code,
-        naming element: String,
+        naming element: Name,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> AnyRandomAccessCollection<Value> {
@@ -606,7 +606,7 @@ public struct Executor: Sendable {
             // did, not for what the procedure says.
             guard let recoverable = error as? any RecoverableFailure else { throw error }
 
-            await observer?.failureRescued(name: activation.layout.names[failure], error: error)
+            await observer?.failureRescued(name: activation.layout.names[failure].spelling, error: error)
 
             // While the rescue runs, the failure is a value under the declared
             // name. Its shape needs no check here: `RecoverableFailure`
@@ -824,7 +824,7 @@ public struct Executor: Sendable {
     // Running a closure here rather than in `evaluate`, which is what makes a
     // word able to take one. What may be called is what the link proved
     // answers, and a slot declaring `pure procedure` is how a word says so.
-    func call(_ closure: Closure, with arguments: [(name: String, value: Value)]) throws -> Value {
+    func call(_ closure: Closure, with arguments: [(name: Name, value: Value)]) throws -> Value {
         var (body, activation) = try enter(closure, given: arguments, offered: true)
 
         return try closure.settling(returned: try read(body, in: &activation))

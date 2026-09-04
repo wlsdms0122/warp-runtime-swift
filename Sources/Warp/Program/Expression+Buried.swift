@@ -76,14 +76,14 @@ public extension Expression {
         // which one an author is shown would be a fact of the run rather than
         // of the text. Its own place because two of them reported from the
         // same one would say a thing is wrong and not say which.
-        func arguments(_ children: [String: Expression]) -> [(Trail, Expression)] {
+        func arguments(_ children: [Name: Expression]) -> [(Trail, Expression)] {
             named(children, under: stepping(here, .slot(.arguments)))
         }
 
-        func named(_ children: [String: Expression], under place: Trail) -> [(Trail, Expression)] {
+        func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Expression)] {
             children.sorted { mine, theirs in mine.key < theirs.key }
                 .flatMap { name, child in
-                    child.buried(at: stepping(place, .key(name)), stepping: stepping)
+                    child.buried(at: stepping(place, .key(name.spelling)), stepping: stepping)
                 }
         }
 
@@ -165,7 +165,7 @@ public extension [Statement] {
         enumerated().flatMap { position, statement in
             statement.expression.buried(
                 at: stepping(
-                    stepping(trail, .statement(name: statement.name, at: position)),
+                    stepping(trail, .statement(name: statement.name?.spelling, at: position)),
                     .construct(statement.expression.construct)
                 ),
                 stepping: stepping

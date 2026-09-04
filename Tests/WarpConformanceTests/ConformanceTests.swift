@@ -110,7 +110,7 @@ struct Case: Sendable, CustomStringConvertible {
     static let version = 1
     static let earliest = 1
 
-    static let versionKey = "test"
+    static let versionKey: Name = "test"
 
     enum Stage: String, Sendable {
         case load
@@ -127,7 +127,7 @@ struct Case: Sendable, CustomStringConvertible {
     let name: String
     let note: String
     let program: Value
-    let arguments: [String: Value]
+    let arguments: [Name: Value]
     let expectation: Expectation
 
     var description: String { name }

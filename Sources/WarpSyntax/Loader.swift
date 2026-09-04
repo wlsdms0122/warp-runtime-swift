@@ -39,7 +39,7 @@ public struct Loader: Sendable {
     // What a notation says with a word rather than a construct is a choice it
     // made, so the debt is its own to state. Leaving it unstated would have the
     // bundles read as optional while the spellings quietly required them.
-    public func vocabulary(of notation: Notation) -> Set<String> {
+    public func vocabulary(of notation: Notation) -> Set<Name> {
         registry.vocabulary(with: notation).union(notation.vocabulary)
     }
 

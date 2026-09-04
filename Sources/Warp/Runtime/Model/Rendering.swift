@@ -122,7 +122,7 @@ struct Rendering {
             return "[" + (try array.map(written)).joined(separator: ",") + "]"
 
         case let .record(record):
-            let fields = try record.entries.map { name, value in "\(quoted(name)):\(try written(value))" }
+            let fields = try record.entries.map { name, value in "\(quoted(name.spelling)):\(try written(value))" }
 
             return (record.name.map { name in "\(name) " } ?? "") + "{" + fields.joined(separator: ",") + "}"
         }

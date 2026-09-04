@@ -33,8 +33,8 @@ extension TypeExpression {
     // way to declare a name twice.
     func binding(
         against given: TypeExpression,
-        into bound: inout [String: TypeExpression],
-        disagreeing: inout [String: TypeExpression],
+        into bound: inout [Name: TypeExpression],
+        disagreeing: inout [Name: TypeExpression],
         in table: ShapeTable
     ) {
         switch (self, given) {
@@ -103,7 +103,7 @@ extension TypeExpression {
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.record(mine), .record(theirs)):
-            for (name, field) in mine.sorted(by: { Name.precedes($0.key, $1.key) }) {
+            for (name, field) in mine.sorted { $0.key < $1.key } {
                 guard let opposite = theirs[name] else { continue }
 
                 field.binding(against: opposite, into: &bound, disagreeing: &disagreeing, in: table)
@@ -116,7 +116,7 @@ extension TypeExpression {
             binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.procedure(.some(mine), _, _), .procedure(.some(theirs), _, _)):
-            for (name, parameter) in mine.parameters.sorted(by: { Name.precedes($0.key, $1.key) }) {
+            for (name, parameter) in mine.parameters.sorted { $0.key < $1.key } {
                 guard let opposite = theirs.parameters[name] else { continue }
 
                 parameter.declared.binding(against: opposite.declared, into: &bound, disagreeing: &disagreeing, in: table)
@@ -132,7 +132,7 @@ extension TypeExpression {
     // This type with every parameter replaced by what it was read as. A
     // parameter nothing filled reads `any`, which is what a declaration says
     // when it says nothing.
-    func filling(_ bound: [String: TypeExpression]) -> TypeExpression {
+    func filling(_ bound: [Name: TypeExpression]) -> TypeExpression {
         switch self {
         case let .parameter(name, _):
             return bound[name] ?? .any
@@ -176,7 +176,7 @@ extension TypeExpression {
     // parameter bounded once, and two occurrences carrying different
     // constraints are two claims about one name — a disagreement the link
     // refuses rather than picks from.
-    func parameterConstraints(into table: inout [String: Set<String>]) {
+    func parameterConstraints(into table: inout [Name: Set<Name>]) {
         switch self {
         case let .parameter(name, constraint):
             table[name, default: []].formUnion(constraint.map { bound in [bound] } ?? [])
@@ -234,7 +234,7 @@ extension TypeExpression {
 }
 
 public extension Signature {
-    func filling(_ bound: [String: TypeExpression]) -> Signature {
+    func filling(_ bound: [Name: TypeExpression]) -> Signature {
         Signature(
             receiver: receiver,
             parameters: parameters.mapValues { parameter in
@@ -264,7 +264,7 @@ public extension Signature {
     // one parameter filled by one call. Only a parameter behind a `named`
     // type is not collected, because the link refuses one anywhere but a
     // procedure signature and never fills one through the name.
-    func parameterConstraints(into table: inout [String: Set<String>]) {
+    func parameterConstraints(into table: inout [Name: Set<Name>]) {
         for parameter in parameters.values {
             parameter.declared.parameterConstraints(into: &table)
         }
@@ -280,7 +280,7 @@ public extension Signature {
     // An occurrence already carrying a bound keeps it: a nested signature may
     // have declared its own, and overwriting would silently pick between two
     // claims the link refuses out loud.
-    func bounded(by bounds: [String: String]) -> Signature {
+    func bounded(by bounds: [Name: Name]) -> Signature {
         guard !bounds.isEmpty else { return self }
 
         return Signature(
@@ -302,7 +302,7 @@ extension TypeExpression {
     // The occurrence side of `Signature.bounded(by:)`, walked through every
     // place a type parameter may sit — a nested signature's parameters
     // included, because they are the outer signature's own slots.
-    func bounded(by bounds: [String: String]) -> TypeExpression {
+    func bounded(by bounds: [Name: Name]) -> TypeExpression {
         switch self {
         case let .parameter(name, constraint):
             return .parameter(name: name, constraint: constraint ?? bounds[name])

@@ -38,7 +38,7 @@ public struct MappingQuery: Query {
         // run would make a program that reads it depend on nothing an author
         // wrote.
         case .keys:
-            return .array(record.names.map(Value.string))
+            return .array(record.names.map { name in .string(name.spelling) })
 
         case .values:
             return .array(record.values)
@@ -50,14 +50,14 @@ public struct MappingQuery: Query {
 
             // The key becomes a field's name, and a name is one byte
             // spelling: the rule every name a program writes is held to.
-            guard Name.isNormal(key) else {
+            guard let field = try? Name(key) else {
                 throw ExecutionError("setting asks a key in normal form C, and '\(key)' is not")
             }
 
             // A new object: the value written was held to no declaration, so
             // whatever name the receiver settled to would say what nothing
             // checked.
-            return .record(record.writing(key, with: question["value"]).named(nil))
+            return .record(record.writing(field, with: question["value"]).named(nil))
         }
     }
 

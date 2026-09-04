@@ -79,7 +79,7 @@ func path(_ text: String) -> [PathSegment] {
 // asks the same question.
 func validates(
     _ expression: Warp.Expression,
-    visible: Set<String> = []
+    visible: Set<Name> = []
 ) -> Bool {
     do {
         try Validator().validate(
@@ -120,7 +120,7 @@ extension Loader {
 
 // The entry name these tests link against. Nothing is special about it — which
 // procedure a run starts from is an argument to linking.
-let entryName = "entry"
+let entryName: Name = "entry"
 
 extension Loader {
     // Reading a document without saying which document it is. These tests are
@@ -167,13 +167,13 @@ extension Loader {
     // test — the imports are supposed to say which layer a test is about.
     func loadProcedure(
         _ value: Value,
-        named name: String = entryName,
-        importing imports: [String] = [],
+        named name: Name = entryName,
+        importing imports: [Name] = [],
         from notation: Notation = .testing
     ) throws -> Module {
         try loadDocument(
             [
-                "imports": .array(imports.map(Value.string)),
+                "imports": .array(imports.map { name in .string(name.spelling) }),
                 "procedures": [name: value]
             ],
             from: notation
@@ -183,11 +183,11 @@ extension Loader {
 
 func run(
     _ modules: [Module],
-    entry: String = entryName,
-    arguments: [String: Value] = [:],
+    entry: Name = entryName,
+    arguments: [Name: Value] = [:],
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
-) async throws -> [String: Value] {
+) async throws -> [Name: Value] {
     let image = try Linker().link(modules + vocabulary, entry: entry)
 
     let answer = try await Executor(environment: environment)
@@ -204,11 +204,11 @@ func run(
 
 func run(
     _ module: Module,
-    entry: String = entryName,
-    arguments: [String: Value] = [:],
+    entry: Name = entryName,
+    arguments: [Name: Value] = [:],
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
-) async throws -> [String: Value] {
+) async throws -> [Name: Value] {
     try await run(
         [module],
         entry: entry,
@@ -247,7 +247,7 @@ func some(_ conditions: Warp.Expression...) -> Warp.Expression {
     chained("std.logic.or", conditions)
 }
 
-private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> Warp.Expression {
+private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
     .dispatch(
         Dispatch(
             receiver: .array(

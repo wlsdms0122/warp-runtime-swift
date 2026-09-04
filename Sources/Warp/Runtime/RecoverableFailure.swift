@@ -27,11 +27,11 @@ public protocol RecoverableFailure: WarpError {
 
     // Whatever this failure carries beyond the two every failure holds. Empty
     // for most; a `concurrent_failed` keys every piece's reason by the piece.
-    var details: [String: Value] { get }
+    var details: [Name: Value] { get }
 }
 
 public extension RecoverableFailure {
-    var details: [String: Value] { [:] }
+    var details: [Name: Value] { [:] }
 
     // Deliberately not a protocol requirement: the shape is assembled here and
     // nowhere else, so a conformance cannot hand over a payload without `type`

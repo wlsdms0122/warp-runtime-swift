@@ -23,14 +23,14 @@ import Foundation
 struct Leaving: Error {
     // MARK: - Property
     let reach: Leave.Reach
-    let target: String?
+    let target: Name?
 
     // What a procedure answers by leaving. A loop answers what it was going to
     // answer, so this is nothing for the other two reaches.
     let value: Value
 
     // MARK: - Initializer
-    init(reach: Leave.Reach, target: String?, value: Value = .null) {
+    init(reach: Leave.Reach, target: Name?, value: Value = .null) {
         self.reach = reach
         self.target = target
         self.value = value
@@ -40,7 +40,7 @@ struct Leaving: Error {
     // Whether a loop should take this. An unnamed one is for the nearest, so the
     // first loop it reaches answers it; a named one passes through every loop
     // but the one it named.
-    func claimed(by round: String) -> Bool {
+    func claimed(by round: Name) -> Bool {
         guard reach != .procedure else { return false }
 
         return target == nil || target == round

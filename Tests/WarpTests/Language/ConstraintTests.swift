@@ -381,7 +381,7 @@ struct ConstraintTests {
     func aNameOnlyCycleRefusesAtTheLink() throws {
         // Given — a shape may name itself through a shape, and a name that
         // only names names never becomes one
-        let cycles: [[String: TypeExpression]] = [
+        let cycles: [[Name: TypeExpression]] = [
             ["Loop": .named("Loop")],
             ["A": .named("B"), "B": .named("A")]
         ]

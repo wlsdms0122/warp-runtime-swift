@@ -15,10 +15,10 @@ extension Linker {
     // MARK: - Internal
     func isolated(
         among symbols: [Symbol],
-        pure: Set<String>,
-        signatures: [String: Signature]
-    ) -> Set<String> {
-        let bodies = symbols.reduce(into: [String: (block: Block, declaring: Set<String>)]()) { table, symbol in
+        pure: Set<Name>,
+        signatures: [Name: Signature]
+    ) -> Set<Name> {
+        let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (block, Set(symbol.procedure.signature.parameters.keys))
@@ -49,19 +49,19 @@ extension Linker {
     // variable, or one a closure captured.
     func isIsolated(
         _ block: Block,
-        declaring parameters: Set<String>,
-        given isolated: Set<String>,
-        signatures: [String: Signature]
+        declaring parameters: Set<Name>,
+        given isolated: Set<Name>,
+        signatures: [Name: Signature]
     ) -> Bool {
         Isolating(isolated: isolated, signatures: signatures).holds(block, declared: parameters)
     }
 
     // MARK: - Private
     private struct Isolating {
-        let isolated: Set<String>
-        let signatures: [String: Signature]
+        let isolated: Set<Name>
+        let signatures: [Name: Signature]
 
-        func holds(_ block: Block, declared: Set<String>) -> Bool {
+        func holds(_ block: Block, declared: Set<Name>) -> Bool {
             var declared = declared
 
             return holds(block.body, declared: &declared)
@@ -70,7 +70,7 @@ extension Linker {
 
         // A body in order. Each statement is judged against what was declared
         // before it, and a variable it introduces is declared for the rest.
-        private func holds(_ body: [Statement], declared: inout Set<String>) -> Bool {
+        private func holds(_ body: [Statement], declared: inout Set<Name>) -> Bool {
             for statement in body {
                 switch statement.binding {
                 case let .assignment(path)?:
@@ -90,13 +90,13 @@ extension Linker {
             return true
         }
 
-        private func holds(_ body: [Statement], declared: Set<String>) -> Bool {
+        private func holds(_ body: [Statement], declared: Set<Name>) -> Bool {
             var inner = declared
 
             return holds(body, declared: &inner)
         }
 
-        private func holds(_ expression: Expression, declared: Set<String>) -> Bool {
+        private func holds(_ expression: Expression, declared: Set<Name>) -> Bool {
             switch expression {
             case .literal, .reference:
                 return true

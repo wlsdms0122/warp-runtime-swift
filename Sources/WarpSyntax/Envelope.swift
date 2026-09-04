@@ -33,8 +33,8 @@ public enum Envelope {
     public static let version = 1
     public static let earliest = 1
 
-    public static let versionKey = "warp"
-    public static let importsKey = "imports"
+    public static let versionKey: Name = "warp"
+    public static let importsKey: Name = "imports"
 
     // MARK: - Public
     // Whether a document declares what it imports.

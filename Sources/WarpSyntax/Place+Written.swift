@@ -59,7 +59,7 @@ public extension Place {
         // A receiver is written the same word wherever one is — a message in
         // statement position, a message in a value, a cast — so the word is
         // the expression grammar's rather than any one form's.
-        case .receiver: ExpressionReader.subjectKey
+        case .receiver: ExpressionReader.subjectKey.spelling
 
         // A call and an invocation are written with the same two words, which
         // `PlaceWrittenTests` holds them to. So one of them answers for both,
@@ -69,7 +69,7 @@ public extension Place {
 
         // A closure is written wherever data is, so its key is the expression
         // grammar's rather than any form's.
-        case .closure: ExpressionReader.closureKey
+        case .closure: ExpressionReader.closureKey.spelling
 
         case .then: BranchForm.CodingKeys.then.stringValue
         case .otherwise: BranchForm.CodingKeys.else.stringValue
@@ -111,8 +111,8 @@ public extension Place {
         case .literal, .reference, .array, .record, .closure, .cast: nil
         }
 
-        guard let form else { return StatementReader.valueKey }
+        guard let form else { return StatementReader.valueKey.spelling }
 
-        return registry.key(for: form) ?? construct.rendered
+        return registry.key(for: form)?.spelling ?? construct.rendered
     }
 }

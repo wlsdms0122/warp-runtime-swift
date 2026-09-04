@@ -62,7 +62,7 @@ extension Shape {
 
             // A tag already canonical is the same spelling. One that is not
             // is an alias or another record, told apart by the table once.
-            if let tag = record.name, !Name.same(tag, label) {
+            if let tag = record.name, tag != label {
                 guard let spelled = table.row(named: tag), table.recordRows[spelled] == nominal else {
                     throw ArgumentError("\(path()): is a \(tag), and the slot declares \(label)")
                 }
@@ -148,11 +148,11 @@ extension Shape {
             var cursor = 0
 
             for (name, field) in fields {
-                while cursor < settled.count, Name.precedes(settled[cursor].name, name) {
+                while cursor < settled.count, settled[cursor].name < name {
                     cursor += 1
                 }
 
-                guard cursor < settled.count, Name.same(settled[cursor].name, name) else {
+                guard cursor < settled.count, settled[cursor].name == name else {
                     throw ArgumentError("\(path()).\(name): required by \(rendered(in: table)), and nothing was given")
                 }
 
@@ -504,10 +504,10 @@ extension Shape {
             return "{ \(written.joined(separator: ", ")) }"
 
         case let .named(row):
-            return table.labels[row]
+            return table.labels[row].spelling
 
         case let .undeclared(label, _):
-            return label
+            return label.spelling
 
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"

@@ -47,19 +47,19 @@ public struct ExpressionReader: Decodable {
     // turns records that were data into forms. Under a movable boundary the same
     // document means different things in different notations, and the way an author
     // finds out is a payload silently becoming a reference.
-    static let formKeys: Set<String> = [
+    static let formKeys: Set<Name> = [
         "ref", "value", "format", "with", closureKey, "call", "as", "as?",
     ]
 
     // The key a closure literal is written under. Named because a place read
     // in a document's words asks for it, and a word spelled in two files is a
     // word the two can come to disagree about.
-    static let closureKey = "closure"
+    static let closureKey: Name = "closure"
 
     // What a cast reads and what a message is sent to are written under one
     // key, and the two readers meet only in the text — so the word is here
     // rather than in each of them.
-    static let subjectKey = "of"
+    static let subjectKey: Name = "of"
 
     public let expression: Expression
 
@@ -137,10 +137,10 @@ public struct ExpressionReader: Decodable {
             // In the record's order, so that a record with two bad fields
             // refuses the same one every run.
             return .record(
-                try object.entries.reduce(into: [String: Expression]()) { fields, entry in
+                try object.entries.reduce(into: [Name: Expression]()) { fields, entry in
                     fields[entry.name] = try read(
                         entry.value,
-                        at: steps + [.key(entry.name)],
+                        at: steps + [.key(entry.name.spelling)],
                         in: decoder
                     )
                 }
@@ -178,7 +178,7 @@ public struct ExpressionReader: Decodable {
             }
 
             let optional = object.names.contains("as?")
-            let key = optional ? "as?" : "as"
+            let key: Name = optional ? "as?" : "as"
 
             guard object.count == 2, let written = object[key], let read = object[Self.subjectKey] else {
                 throw ExpressionFormError(
@@ -208,8 +208,8 @@ public struct ExpressionReader: Decodable {
 
                     type = try TypeReader(from: ValueDecoder(
                         value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key)],
-                        steps: steps + [.key(key)],
+                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key.spelling)],
+                        steps: steps + [.key(key.spelling)],
                         userInfo: decoder.userInfo
                     ))
                     .type
@@ -219,7 +219,7 @@ public struct ExpressionReader: Decodable {
             }
 
             return .cast(
-                try Self.read(read, at: steps + [.key(Self.subjectKey)], in: decoder),
+                try Self.read(read, at: steps + [.key(Self.subjectKey.spelling)], in: decoder),
                 as: type,
                 optional: optional
             )
@@ -244,8 +244,8 @@ public struct ExpressionReader: Decodable {
                 return .closure(
                     try ProcedureReader(from: ValueDecoder(
                         value: written,
-                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey)],
-                        steps: steps + [.key(Self.closureKey)],
+                        codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey.spelling)],
+                        steps: steps + [.key(Self.closureKey.spelling)],
                         userInfo: decoder.userInfo
                     ))
                     .procedure
@@ -339,17 +339,17 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError("{ format: } takes a template string")
         }
 
-        let bindings: [String: Expression]
+        let bindings: [Name: Expression]
 
         switch object["with"] {
         case nil:
             bindings = [:]
 
         case let .record(withRecord)?:
-            bindings = try withRecord.entries.reduce(into: [String: Expression]()) { bound, entry in
+            bindings = try withRecord.entries.reduce(into: [Name: Expression]()) { bound, entry in
                 bound[entry.name] = try read(
                     entry.value,
-                    at: steps + [.key("with"), .key(entry.name)],
+                    at: steps + [.key("with"), .key(entry.name.spelling)],
                     in: decoder
                 )
             }
@@ -386,7 +386,7 @@ public struct ExpressionReader: Decodable {
     // being a shape only the template walk knew how to read.
     private static func lowered(
         _ segments: [TemplateSegment],
-        over bindings: [String: Expression],
+        over bindings: [Name: Expression],
         spending interpolation: Interpolation
     ) throws -> Expression {
         let pieces: [Expression] = try segments.map { segment in
@@ -425,7 +425,7 @@ public struct ExpressionReader: Decodable {
     // has already made the author declare a binding for.
     private static func substituted(
         _ path: [PathSegment],
-        over bindings: [String: Expression]
+        over bindings: [Name: Expression]
     ) throws -> Expression {
         guard let head = path.head, let bound = bindings[head] else {
             throw ExpressionFormError(
@@ -457,7 +457,7 @@ public struct ExpressionReader: Decodable {
     // index reference holds one; the rest name nothing.
     private static func closing(
         _ segment: PathSegment,
-        over bindings: [String: Expression]
+        over bindings: [Name: Expression]
     ) throws -> PathSegment {
         guard case let .indexRef(inner, optionally) = segment else { return segment }
 
@@ -473,7 +473,7 @@ public struct ExpressionReader: Decodable {
 
     private static func validateClosed(
         _ segments: [TemplateSegment],
-        over declared: Set<String>
+        over declared: Set<Name>
     ) throws {
         for segment in segments {
             guard case let .ref(path) = segment else { continue }
@@ -482,7 +482,7 @@ public struct ExpressionReader: Decodable {
                 guard let head = referenced.head, declared.contains(head) else {
                     throw ExpressionFormError(
                         "{ format: } placeholder ${\(referenced.rendered)} names"
-                            + " '\(referenced.head ?? referenced.rendered)', which is"
+                            + " '\(referenced.head?.spelling ?? referenced.rendered)', which is"
                             + " not declared in `with` — a format template sees only"
                             + " its own bindings"
                     )

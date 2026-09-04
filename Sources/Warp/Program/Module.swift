@@ -27,34 +27,34 @@ public struct Module: Sendable {
     // otherwise grant a word the program never uses, or link a program that
     // sends one the list never mentioned. Which of those two the module is
     // refused for is `Validator`'s to say.
-    public let imports: Set<String>
+    public let imports: Set<Name>
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type — a module declares, and what it declares differs only in
     // what kind of thing the name stands for.
-    public let types: [String: TypeExpression]
+    public let types: [Name: TypeExpression]
 
     // Constraints this module declares: a name bound to the types a bounded
     // parameter under that name admits. Declared the same way a type is and
     // kept apart from the types, because nothing is ever *of* a constraint —
     // it bounds `some T`, and a slot cannot declare it directly.
-    public let constraints: [String: [TypeExpression]]
+    public let constraints: [Name: [TypeExpression]]
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second name table in path
     // position — where a declared spelling cannot be told from drilling into a
     // record.
-    public let constants: [String: Expression]
+    public let constants: [Name: Expression]
 
     // Names bound to boxes this module's procedures share for one run. Private
     // to the module the way a constant is, and for the same reason: a name is
     // a scope question. Another module changes one only through a procedure
     // declared beside it.
-    public let variables: [String: Expression]
+    public let variables: [Name: Expression]
 
-    public let procedures: [String: Procedure]
+    public let procedures: [Name: Procedure]
 
     // Which document this was read out of, where it was read out of one.
     //
@@ -86,12 +86,12 @@ public struct Module: Sendable {
     // fact instead. Either way `imports` afterwards is what the module sends.
     public init(
         description: String? = nil,
-        imports: Set<String>? = nil,
-        types: [String: TypeExpression] = [:],
-        constraints: [String: [TypeExpression]] = [:],
-        constants: [String: Expression] = [:],
-        variables: [String: Expression] = [:],
-        procedures: [String: Procedure],
+        imports: Set<Name>? = nil,
+        types: [Name: TypeExpression] = [:],
+        constraints: [Name: [TypeExpression]] = [:],
+        constants: [Name: Expression] = [:],
+        variables: [Name: Expression] = [:],
+        procedures: [Name: Procedure],
         identity: Identity? = nil
     ) throws {
         try self.init(
@@ -142,7 +142,7 @@ public struct Module: Sendable {
     }
 
     // MARK: - Internal
-    var sends: Set<String> { draft.sends }
+    var sends: Set<Name> { draft.sends }
 
     // MARK: - Private
 }

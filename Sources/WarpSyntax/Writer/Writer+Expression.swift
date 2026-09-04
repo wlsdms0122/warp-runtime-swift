@@ -26,7 +26,7 @@ public extension Writer {
             )
         }
 
-        var written: [String: Value] = [:]
+        var written: [Name: Value] = [:]
 
         if let binding = statement.binding {
             written[key(of: binding)] = .string(binding.spelled)
@@ -67,8 +67,8 @@ public extension Writer {
     // way deeper down. What `reserving` names is read at every depth.
     func value(
         of expression: Expression,
-        reserving reserved: Set<String> = [],
-        constructs: Set<String> = []
+        reserving reserved: Set<Name> = [],
+        constructs: Set<Name> = []
     ) throws -> Value {
         let reserved = reserved.union(ExpressionReader.formKeys)
 
@@ -135,7 +135,7 @@ public extension Writer {
     // MARK: - Private
     // What the reading side would take for a condition rather than for data.
     // Nothing for a document, which has no notation to take it for one.
-    private var conditionKeys: Set<String> {
+    private var conditionKeys: Set<Name> {
         readBy.condition?.keys ?? []
     }
 
@@ -145,13 +145,13 @@ public extension Writer {
     private func construct(
         of expression: Expression,
         named id: String?
-    ) throws -> (String, Value) {
+    ) throws -> (Name, Value) {
         switch expression {
         case let .dispatch(dispatch):
             return (try spelling(CallForm.self), try message(of: dispatch))
 
         case let .invoke(callee, arguments):
-            var written: [String: Value] = ["procedure": try value(of: callee)]
+            var written: [Name: Value] = ["procedure": try value(of: callee)]
 
             if !arguments.isEmpty {
                 written["arguments"] = .object(
@@ -168,7 +168,7 @@ public extension Writer {
         // envelope is written — `takesNoName`, the one predicate every door
         // asks.
         case let .conditional(condition, then, otherwise):
-            var written: [String: Value] = [
+            var written: [Name: Value] = [
                 "when": try value(of: condition, reserving: conditionKeys),
                 "then": .array(try then.map(value(of:)))
             ]
@@ -182,7 +182,7 @@ public extension Writer {
         case let .loop(condition, body, round):
             try named(round, matches: id, in: "loop", binding: "round")
 
-            var written: [String: Value] = [
+            var written: [Name: Value] = [
                 "while": try value(of: condition, reserving: conditionKeys)
             ]
 
@@ -193,7 +193,7 @@ public extension Writer {
         case let .iteration(material, body, element):
             try named(element, matches: id, in: "each", binding: "element")
 
-            var written: [String: Value] = ["in": try value(of: material)]
+            var written: [Name: Value] = ["in": try value(of: material)]
 
             written.merge(
                 try fields(of: Block(body: body), in: EachForm.self)
@@ -213,10 +213,10 @@ public extension Writer {
                 return (try spelling(ReturnForm.self), carried)
 
             case .construct:
-                return (try spelling(BreakForm.self), leave.target.map(Value.string) ?? .null)
+                return (try spelling(BreakForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
 
             case .round:
-                return (try spelling(ContinueForm.self), leave.target.map(Value.string) ?? .null)
+                return (try spelling(ContinueForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
             }
 
         case let .attempt(attempted, rescue, failure):
@@ -236,7 +236,7 @@ public extension Writer {
     }
 
     private func message(of dispatch: Dispatch) throws -> Value {
-        var written: [String: Value] = ["procedure": .string(dispatch.selector)]
+        var written: [Name: Value] = ["procedure": .string(dispatch.selector.spelling)]
 
         if let receiver = dispatch.receiver {
             written[ExpressionReader.subjectKey] = try value(of: receiver)
@@ -265,8 +265,8 @@ public extension Writer {
     internal func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?
-    ) throws -> [String: Value] {
-        var written: [String: Value] = [:]
+    ) throws -> [Name: Value] {
+        var written: [Name: Value] = [:]
 
         if form?.requiresBody == true || !block.body.isEmpty {
             written["body"] = .array(try block.body.map(value(of:)))
@@ -279,7 +279,7 @@ public extension Writer {
         return written
     }
 
-    private func spelling(_ form: any ConstructForm.Type) throws -> String {
+    private func spelling(_ form: any ConstructForm.Type) throws -> Name {
         guard let key = registry.key(for: form) else {
             throw WritingError(
                 "this notation registers no word for \(form) — a shape it gave up"
@@ -296,12 +296,12 @@ public extension Writer {
     // make the two agree, and finds out here rather than at a run that reads a
     // name nothing bound.
     private func named(
-        _ bound: String,
+        _ bound: Name,
         matches id: String?,
         in construct: String,
         binding: String
     ) throws {
-        guard bound != id else { return }
+        guard bound.spelling != id else { return }
 
         throw WritingError(
             "a \(construct) binds its \(binding) under the name of the statement it is"
@@ -309,7 +309,7 @@ public extension Writer {
         )
     }
 
-    private func key(of binding: Statement.Binding) -> String {
+    private func key(of binding: Statement.Binding) -> Name {
         switch binding {
         case .constant: "let"
         case .variable: "var"
@@ -334,10 +334,10 @@ public extension Writer {
     // construct's key where the record is the one field under a statement's
     // `value` — the reader's own two conditions, asked here as the writer.
     private static func taken(
-        _ keys: Set<String>,
-        reserving reserved: Set<String>,
-        constructs: Set<String>
-    ) -> Set<String> {
+        _ keys: Set<Name>,
+        reserving reserved: Set<Name>,
+        constructs: Set<Name>
+    ) -> Set<Name> {
         var taken = keys.intersection(reserved)
 
         if keys.count == 1 {
@@ -349,8 +349,8 @@ public extension Writer {
 
     private static func spelling(
         of value: Value,
-        reserving reserved: Set<String>,
-        constructs: Set<String> = []
+        reserving reserved: Set<Name>,
+        constructs: Set<Name> = []
     ) throws -> Spelling {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:

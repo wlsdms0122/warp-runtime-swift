@@ -54,7 +54,7 @@ struct FailEffect: Effect {
 
 // A reference from segment names, written directly — a path is what the language
 // has, and the spelling belongs to whatever produced it.
-func reference(_ names: String...) -> Warp.Expression {
+func reference(_ names: Name...) -> Warp.Expression {
     .reference(names.map { name in .key(name) })
 }
 
@@ -62,14 +62,14 @@ func reference(_ names: String...) -> Warp.Expression {
 
 // The entry name these tests link against. Any name would do — which procedure a
 // run starts from is an argument, so there is nothing special about this one.
-let entryName = "entry"
+let entryName: Name = "entry"
 
 // Link the set and run. The way a caller does it, and the way the model reads:
 // the caller states its whole world, then names one procedure in it.
 func run(
     _ modules: [Module],
-    entry: String = entryName,
-    arguments: [String: Value] = [:],
+    entry: Name = entryName,
+    arguments: [Name: Value] = [:],
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
@@ -84,8 +84,8 @@ func run(
 // One module, for a test that wrote its whole world as one.
 func run(
     _ module: Module,
-    entry: String = entryName,
-    arguments: [String: Value] = [:],
+    entry: Name = entryName,
+    arguments: [Name: Value] = [:],
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
@@ -101,8 +101,8 @@ func run(
 // One procedure, linked alone or beside others.
 func run(
     _ procedure: Procedure,
-    beside others: [String: Procedure] = [:],
-    arguments: [String: Value] = [:],
+    beside others: [Name: Procedure] = [:],
+    arguments: [Name: Value] = [:],
     vocabulary: [Module] = Module.standard,
 ) async throws -> Value {
     try await run(
@@ -117,8 +117,8 @@ func run(
 func answer(
     of body: [Statement],
     result: Warp.Expression,
-    beside others: [String: Procedure] = [:],
-    arguments: [String: Value] = [:],
+    beside others: [Name: Procedure] = [:],
+    arguments: [Name: Value] = [:],
     signature: Signature = Signature(),
     vocabulary: [Module] = Module.standard,
 ) async throws -> Value? {
@@ -134,12 +134,12 @@ func answer(
 
 func validates(
     _ expression: Warp.Expression,
-    visible: Set<String> = []
+    visible: Set<Name> = []
 ) -> Bool {
     validates(body: [Statement(binding: .constant("probe"), expression: expression)], visible: visible)
 }
 
-func validates(body: [Statement], visible: Set<String> = []) -> Bool {
+func validates(body: [Statement], visible: Set<Name> = []) -> Bool {
     do {
         try Validator().validate(body: body, visible: visible)
 
@@ -221,7 +221,7 @@ func some(_ conditions: Warp.Expression...) -> Warp.Expression {
     chained("std.logic.or", conditions)
 }
 
-private func chained(_ selector: String, _ conditions: [Warp.Expression]) -> Warp.Expression {
+private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
     .dispatch(
         Dispatch(
             receiver: .array(

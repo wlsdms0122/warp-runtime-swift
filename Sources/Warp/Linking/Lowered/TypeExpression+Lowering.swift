@@ -57,7 +57,7 @@ extension TypeExpression {
         case let .record(fields):
             return .record(
                 fields
-                    .sorted { left, right in Name.precedes(left.key, right.key) }
+                    .sorted { left, right in left.key < right.key }
                     .map { name, field in (name: name, shape: field.lowered(in: table)) }
             )
 
@@ -92,7 +92,7 @@ extension TypeExpression {
 
             guard let row = table.constraintRow(named: constraint) else {
                 return .undeclared(
-                    label: "some \(name): \(constraint)",
+                    label: Name(normal: "some \(name): \(constraint)"),
                     refusal: "constraint '\(constraint)', which nothing declares"
                 )
             }

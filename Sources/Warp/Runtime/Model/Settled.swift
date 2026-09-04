@@ -26,15 +26,15 @@ struct Settled: Sendable {
     // MARK: - Public
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
-    subscript(name: String) -> Value {
+    subscript(name: Name) -> Value {
         guard let position = position(of: name) else { return .null }
 
         return values[position] ?? .null
     }
 
     // Where a name stands in the row, or nil for a name the row lacks.
-    func position(of name: String) -> Int? {
-        callee.slots.firstIndex { slot in Name.same(slot.name, name) }
+    func position(of name: Name) -> Int? {
+        callee.slots.firstIndex { slot in slot.name == name }
     }
 
     // MARK: - Private

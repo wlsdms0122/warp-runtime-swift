@@ -22,13 +22,13 @@ public struct Image: Sendable {
     public let start: Int
 
     // Every declared spelling, by row.
-    public let rows: [String: Int]
+    public let rows: [Name: Int]
 
     // Which declarations a run from the entry can reach, by declared
     // spelling. Transitive: a declaration reached only through another is
     // in here too. A fact of the link for whoever asks it; the run reads
     // rows by number and never asks.
-    public let reached: Set<String>
+    public let reached: Set<Name>
 
     // Every shape the linked modules declared. A named type survives into the
     // run as a row of the table's lowering rather than being expanded at
@@ -40,16 +40,16 @@ public struct Image: Sendable {
     // What each document's variables start a run holding, by the document's
     // position in the link, in the order the layouts read them. A run makes
     // one box per variable from these, in this order.
-    public let variables: [Int: [(name: String, value: Value)]]
+    public let variables: [Int: [(name: Name, value: Value)]]
 
     // MARK: - Initializer
     init(
         linked: [Linked],
         start: Int,
-        rows: [String: Int],
-        reached: Set<String>,
+        rows: [Name: Int],
+        reached: Set<Name>,
         types: TypeTable,
-        variables: [Int: [(name: String, value: Value)]]
+        variables: [Int: [(name: Name, value: Value)]]
     ) {
         self.linked = linked
         self.start = start
@@ -63,7 +63,7 @@ public struct Image: Sendable {
     public var entry: Linked { linked[start] }
 
     // The row under a declared spelling.
-    public subscript(declared: String) -> Linked? {
+    public subscript(declared: Name) -> Linked? {
         rows[declared].map { row in linked[row] }
     }
 

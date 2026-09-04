@@ -14,7 +14,7 @@ struct Symbol: Sendable {
     // MARK: - Property
     // The key this declaration is written under in its module, which is the
     // whole of its name.
-    let declared: String
+    let declared: Name
 
     // Which document this was written in.
     let document: Place.Document
@@ -26,7 +26,7 @@ struct Symbol: Sendable {
     let procedure: Procedure
 
     // Where this declaration's words are, in the document that wrote it.
-    var place: Place { .procedure(declared, in: document) }
+    var place: Place { .procedure(declared.spelling, in: document) }
 
     // What a sentence calls this declaration when it names one among several.
     // The position is the document's discriminator where it has no identity,

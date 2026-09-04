@@ -38,21 +38,21 @@ public struct ConcurrentEffect: Effect {
     // What one piece answered — a struct rather than a tuple, which the task
     // group needs for its child results.
     private struct Outcome: Sendable {
-        let key: String?
+        let key: Name?
         let position: Int
         let value: Value?
         let failure: (any Error)?
 
-        var label: String { key ?? "[\(position)]" }
+        var label: Name { key ?? Name(normal: "[\(position)]") }
     }
 
     // One closure to run: its name if its author gave one, where it sat, and
     // what it is offered. How a piece is reported is `Outcome`'s to derive.
     private struct Piece: Sendable {
-        let key: String?
+        let key: Name?
         let position: Int
         let closure: Closure
-        let arguments: [(name: String, value: Value)]
+        let arguments: [(name: Name, value: Value)]
     }
 
     // MARK: - Property
@@ -121,7 +121,7 @@ public struct ConcurrentEffect: Effect {
                     Piece(
                         key: entry.name,
                         position: position,
-                        closure: try closure(entry.value, called: entry.name),
+                        closure: try closure(entry.value, called: entry.name.spelling),
                         arguments: []
                     )
                 },
@@ -267,7 +267,7 @@ public struct ConcurrentEffect: Effect {
     // once.
     private func answer(_ piece: Piece, via invocation: Invocation) async throws -> Value {
         // The frame carries the bare name — rendering is what brackets it.
-        let frame = piece.key ?? "\(piece.position)"
+        let frame = piece.key ?? Name(normal: "\(piece.position)")
 
         guard let environment = invocation.environment else {
             return try await invocation.call(
@@ -286,7 +286,7 @@ public struct ConcurrentEffect: Effect {
         }
     }
 
-    private func failures(among outcomes: [Outcome]) -> [String: any Error] {
+    private func failures(among outcomes: [Outcome]) -> [Name: any Error] {
         outcomes.reduce(into: [:]) { failures, outcome in
             if let failure = outcome.failure {
                 failures[outcome.label] = failure
@@ -296,7 +296,7 @@ public struct ConcurrentEffect: Effect {
 
     // Deterministic by piece label — a dictionary walk must not decide which
     // author mistake gets reported.
-    private func failure(among failures: [String: any Error]) -> any Error {
+    private func failure(among failures: [Name: any Error]) -> any Error {
         let ordered = failures.sorted { left, right in left.key < right.key }
 
         if let authorMistake = ordered.first(where: { _, error in

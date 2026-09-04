@@ -19,7 +19,7 @@ struct TypeFrame: Sendable {
     // A walk that meets a send finds the declaration here, once, and hands it
     // on with the call. The same spellings key `signatures`, where the link
     // has filled in what each declaration answers.
-    let symbols: [String: Symbol]
+    let symbols: [Name: Symbol]
 
     // Keyed by the resolved selector for a call — and by that alone: the
     // bare spelling a path writes lives in `words`, because the two spellings
@@ -28,7 +28,7 @@ struct TypeFrame: Sendable {
     // Whole signatures rather than what each answers, because a declaration
     // with a type parameter in it does not answer anything until a call site
     // fills it — and what fills it is read from the arguments.
-    let signatures: [String: Signature]
+    let signatures: [Name: Signature]
 
     // The declared types as the documents wrote them. The walk expands a
     // name through this when it reads into a shape (`resolve`), since a
@@ -44,20 +44,20 @@ struct TypeFrame: Sendable {
     // only required slot is the receiver, by the name a walk reaches them
     // under. Its own table rather than a mask over `signatures`, so the gate
     // and the declaration it answers with cannot disagree.
-    let words: [String: Signature]
+    let words: [Name: Signature]
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
     // decides whether it fits a slot asking for purity.
-    let pure: Set<String>
+    let pure: Set<Name>
 
     // Which declarations touch no name another body could touch at the same
     // time, worked out from the bodies the way purity is.
-    let isolated: Set<String>
+    let isolated: Set<Name>
 
     // Each document's variables by name. A body reading one answers by the
     // run's state, so purity is read against these.
-    let variables: [Int: Set<String>]
+    let variables: [Int: Set<Name>]
 
     // MARK: - Initializer
     // MARK: - Public
@@ -65,7 +65,7 @@ struct TypeFrame: Sendable {
     // path may make it. There is no way to ask what a name answers without
     // asking whether a path may send it — a softer question was how a word
     // nobody may reach got a type.
-    func signature(reachedBy name: String) -> Signature? {
+    func signature(reachedBy name: Name) -> Signature? {
         words[name]
     }
 

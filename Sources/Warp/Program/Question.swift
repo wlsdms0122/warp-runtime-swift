@@ -14,7 +14,7 @@ public struct Question: Sendable {
     // run behind them.
     private enum Arguments: Sendable {
         case settled(Settled, Executor)
-        case offered([String: Value])
+        case offered([Name: Value])
     }
 
     // MARK: - Property
@@ -30,7 +30,7 @@ public struct Question: Sendable {
     private let arguments: Arguments
 
     // MARK: - Initializer
-    public init(receiver: Value? = nil, arguments: [String: Value] = [:]) {
+    public init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
         self.receiver = receiver
         self.arguments = .offered(arguments)
     }
@@ -43,7 +43,7 @@ public struct Question: Sendable {
     // MARK: - Public
     // What a named argument holds. An argument nobody wrote and one written as
     // null are the same fact here, the same as they are everywhere else.
-    public subscript(name: String) -> Value {
+    public subscript(name: Name) -> Value {
         switch arguments {
         case let .settled(settled, _):
             return settled[name]
@@ -57,7 +57,7 @@ public struct Question: Sendable {
     // link proved answers without running, which a word states by declaring the
     // parameter `pure procedure`, so reaching here means the judgement was
     // already made.
-    public func call(_ procedure: Value, with arguments: [(name: String, value: Value)] = []) throws -> Value {
+    public func call(_ procedure: Value, with arguments: [(name: Name, value: Value)] = []) throws -> Value {
         guard case let .procedure(closure) = procedure else {
             throw ExecutionError(
                 "this call names \(procedure.type), and only a procedure can be called"

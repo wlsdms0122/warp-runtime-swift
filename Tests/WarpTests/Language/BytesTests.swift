@@ -17,7 +17,7 @@ import Testing
 struct BytesTests {
     // MARK: - Property
     private let linker = Linker()
-    private let entryName = "entry"
+    private let entryName: Name = "entry"
 
     // MARK: - Test
     @Test("bytes and an array share their worth, not their spelling")
@@ -335,7 +335,7 @@ struct BytesTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func word(_ selector: String, on receiver: Value) throws -> Module {
+        func word(_ selector: Name, on receiver: Value) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(

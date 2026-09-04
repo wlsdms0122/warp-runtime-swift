@@ -18,11 +18,11 @@ import Foundation
 struct Bound: Sendable {
     // MARK: - Property
     // The first reading of each type parameter.
-    let readings: [String: TypeExpression]
+    let readings: [Name: TypeExpression]
 
     // For a parameter read two ways, the second reading. Keeping both is what
     // lets a refusal name them.
-    let disagreeing: [String: TypeExpression]
+    let disagreeing: [Name: TypeExpression]
 
     // MARK: - Initializer
     // MARK: - Public

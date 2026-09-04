@@ -22,8 +22,8 @@ import Foundation
 // `?[` on an index — the one mark that says absence is expected here. A plain
 // segment refuses what an optional one reads as null.
 public enum PathSegment: Sendable, Equatable {
-    case key(String, optional: Bool)
-    case word(String, optional: Bool)
+    case key(Name, optional: Bool)
+    case word(Name, optional: Bool)
     case index(Int, optional: Bool)
     case indexRef([PathSegment], optional: Bool)
 }
@@ -31,8 +31,8 @@ public enum PathSegment: Sendable, Equatable {
 public extension PathSegment {
     // The plain spellings — most segments are written without the mark, and
     // a construction site that says nothing about absence means it.
-    static func key(_ name: String) -> PathSegment { .key(name, optional: false) }
-    static func word(_ name: String) -> PathSegment { .word(name, optional: false) }
+    static func key(_ name: Name) -> PathSegment { .key(name, optional: false) }
+    static func word(_ name: Name) -> PathSegment { .word(name, optional: false) }
     static func index(_ index: Int) -> PathSegment { .index(index, optional: false) }
     static func indexRef(_ path: [PathSegment]) -> PathSegment { .indexRef(path, optional: false) }
 
@@ -68,7 +68,7 @@ public extension PathSegment {
 
     // The name a dot segment reads or sends — nil for an index, which reads
     // a position, not a name.
-    var named: String? {
+    var named: Name? {
         switch self {
         case let .key(name, _), let .word(name, _):
             return name
@@ -110,9 +110,9 @@ extension PathSegment {
     // it. Internal, like the rule it feeds: `unwrapped` is the walk's own
     // state, and nothing outside the walk can answer it.
     enum Landing {
-        case field(String)
+        case field(Name)
         case entry
-        case word(String)
+        case word(Name)
         case element
     }
 
@@ -174,7 +174,7 @@ public extension Array where Element == PathSegment {
         for segment in self {
             switch segment {
             case let .key(key, optional), let .word(key, optional):
-                rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key
+                rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key.spelling
 
             case let .index(index, optional):
                 rendered += (optional ? "?[" : "[") + "\(index)]"
@@ -201,7 +201,7 @@ public extension Array where Element == PathSegment {
 
     // The root name this path reads from — nil when the path doesn't start
     // with a name, which no scope can serve.
-    var head: String? {
+    var head: Name? {
         guard case let .key(head, _)? = first else { return nil }
 
         return head

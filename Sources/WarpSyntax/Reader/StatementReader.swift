@@ -37,10 +37,10 @@ public struct StatementReader: Decodable {
         func binding(_ written: String) throws -> Statement.Binding {
             switch self {
             case .constant:
-                return .constant(written)
+                return .constant(try Name.read(written, at: []))
 
             case .variable:
-                return .variable(written)
+                return .variable(try Name.read(written, at: []))
 
             case .assignment:
                 do {
@@ -54,7 +54,7 @@ public struct StatementReader: Decodable {
 
     // The one key a statement writes its expression under. A construct sits
     // inside it under the construct's own key.
-    public static let valueKey = "value"
+    public static let valueKey: Name = "value"
 
     public let statement: Statement
 
@@ -124,12 +124,12 @@ public struct StatementReader: Decodable {
 
         try KeyGate().rejectUnknownKeys(
             in: decoder,
-            known: EnvelopeKeys.allCases.map(\.stringValue) + [Self.valueKey],
+            known: EnvelopeKeys.allCases.map(\.stringValue) + [Self.valueKey.spelling],
             context: "statement"
         )
 
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
-        let valueKey = AnyCodingKey(stringValue: Self.valueKey)
+        let valueKey = AnyCodingKey(stringValue: Self.valueKey.spelling)
 
         guard names.count <= 1 else {
             throw ReadingError(
@@ -200,7 +200,7 @@ public struct StatementReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first?.stringValue,
-            key != Self.valueKey,
+            key != Self.valueKey.spelling,
             let form = registry.form(for: key)
         {
             let inside = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: key))

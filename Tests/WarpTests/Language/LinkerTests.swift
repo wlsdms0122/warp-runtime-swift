@@ -265,7 +265,7 @@ struct LinkerTests {
         // Both spellings of one program, differing only in whether the closure
         // sorts before or after what it reads. An answer that is not the same
         // twice is a program whose meaning is in its names.
-        func module(closure: String, reading constant: String) throws -> Module {
+        func module(closure: Name, reading constant: Name) throws -> Module {
             try Module(
                 constants: [
                     closure: .closure(Procedure(body: [], result: reference(constant))),

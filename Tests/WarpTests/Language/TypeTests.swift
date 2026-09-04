@@ -73,7 +73,7 @@ struct TypeTests {
         ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])
     func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        #expect(Name.isName(name) == holds)
+        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
     }
 
     @Test("an alias of a declared record names the record on either side")

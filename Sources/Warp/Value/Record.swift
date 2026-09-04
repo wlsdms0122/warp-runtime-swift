@@ -14,10 +14,10 @@ import Foundation
 // `Value.record`'s to say.
 public struct Record: Sendable {
     // MARK: - Property
-    public let name: String?
+    public let name: Name?
 
-    // In ascending byte order of `name`, as `Name.precedes` orders them.
-    public let entries: [(name: String, value: Value)]
+    // In ascending byte order of `name`, as `Name`'s `<` orders them.
+    public let entries: [(name: Name, value: Value)]
 
     public var count: Int {
         entries.count
@@ -27,7 +27,7 @@ public struct Record: Sendable {
         entries.isEmpty
     }
 
-    public var names: [String] {
+    public var names: [Name] {
         entries.map(\.name)
     }
 
@@ -36,15 +36,15 @@ public struct Record: Sendable {
     }
 
     // MARK: - Initializer
-    public init(name: String? = nil, _ fields: [String: Value]) {
+    public init(name: Name? = nil, _ fields: [Name: Value]) {
         self.name = name
         self.entries = fields.map { field in (name: field.key, value: field.value) }
-            .sorted { one, other in Name.precedes(one.name, other.name) }
+            .sorted { one, other in one.name < other.name }
     }
 
     // Entries in any order, later ones winning over earlier ones of the same
     // name. One entry stands without a comparison.
-    public init(name: String? = nil, entries: [(name: String, value: Value)]) {
+    public init(name: Name? = nil, entries: [(name: Name, value: Value)]) {
         self.name = name
 
         guard entries.count > 1 else {
@@ -54,13 +54,13 @@ public struct Record: Sendable {
         }
 
         var sorted = entries
-        sorted.sort { one, other in Name.precedes(one.name, other.name) }
+        sorted.sort { one, other in one.name < other.name }
 
-        var held: [(name: String, value: Value)] = []
+        var held: [(name: Name, value: Value)] = []
         held.reserveCapacity(sorted.count)
 
         for entry in sorted {
-            if let last = held.last, Name.same(last.name, entry.name) {
+            if let last = held.last, last.name == entry.name {
                 held[held.count - 1] = entry
             } else {
                 held.append(entry)
@@ -75,9 +75,9 @@ public struct Record: Sendable {
     // entries with their values changed. Every reading of a record stands
     // on this order, so it is checked here rather than trusted: a pass over
     // the names is less than the sort it stands in for.
-    init(name: String?, ordered entries: [(name: String, value: Value)]) {
+    init(name: Name?, ordered entries: [(name: Name, value: Value)]) {
         precondition(
-            zip(entries, entries.dropFirst()).allSatisfy { one, other in Name.precedes(one.name, other.name) },
+            zip(entries, entries.dropFirst()).allSatisfy { one, other in one.name < other.name },
             "a record's entries are ordered by name"
         )
 
@@ -88,7 +88,7 @@ public struct Record: Sendable {
     // Entries this record already holds, in the order it holds them, for
     // the makers below that change a value, a name or one place and so
     // cannot disturb the order.
-    private init(name: String?, keeping entries: [(name: String, value: Value)]) {
+    private init(name: Name?, keeping entries: [(name: Name, value: Value)]) {
         self.name = name
         self.entries = entries
     }
@@ -96,7 +96,7 @@ public struct Record: Sendable {
     // MARK: - Public
     // The field of this name, or nil where none is held. A binary search
     // over the names' bytes.
-    public subscript(field: String) -> Value? {
+    public subscript(field: Name) -> Value? {
         let (position, found) = position(of: field)
 
         return found ? entries[position].value : nil
@@ -104,7 +104,7 @@ public struct Record: Sendable {
 
     // This record with one field written: the value replaced where the name
     // is held, and the field put where it sorts where it is not.
-    public func writing(_ field: String, with value: Value) -> Record {
+    public func writing(_ field: Name, with value: Value) -> Record {
         var written = entries
         let (position, found) = position(of: field)
 
@@ -119,7 +119,7 @@ public struct Record: Sendable {
 
     // This record without the field of this name, or as it is where none is
     // held.
-    public func removing(_ field: String) -> Record {
+    public func removing(_ field: Name) -> Record {
         let (position, found) = position(of: field)
 
         guard found else { return self }
@@ -132,7 +132,7 @@ public struct Record: Sendable {
 
     // This record with every value put through `transform`, under the same
     // names in the same order, so nothing is sorted or searched.
-    public func mapValues(_ transform: (String, Value) throws -> Value) rethrows -> Record {
+    public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Record {
         Record(
             name: name,
             keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
@@ -140,37 +140,37 @@ public struct Record: Sendable {
     }
 
     // This record under another name, with the same fields.
-    public func named(_ name: String?) -> Record {
+    public func named(_ name: Name?) -> Record {
         Record(name: name, keeping: entries)
     }
 
     // MARK: - Private
     // Where a name is, or where it would go: the first position whose name
     // does not precede it, and whether the name there is it.
-    private func position(of field: String) -> (Int, Bool) {
+    private func position(of field: Name) -> (Int, Bool) {
         var low = 0
         var high = entries.count
 
         while low < high {
             let middle = (low + high) / 2
 
-            if Name.precedes(entries[middle].name, field) {
+            if entries[middle].name < field {
                 low = middle + 1
             } else {
                 high = middle
             }
         }
 
-        return (low, low < entries.count && Name.same(entries[low].name, field))
+        return (low, low < entries.count && entries[low].name == field)
     }
 }
 
 extension Record: Equatable {
     public static func == (lhs: Record, rhs: Record) -> Bool {
-        Name.same(lhs.name, rhs.name)
+        lhs.name == rhs.name
             && lhs.entries.count == rhs.entries.count
             && zip(lhs.entries, rhs.entries).allSatisfy { one, other in
-                Name.same(one.name, other.name) && one.value == other.value
+                one.name == other.name && one.value == other.value
             }
     }
 }

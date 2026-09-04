@@ -124,7 +124,7 @@ public struct TemplateParser: Sendable {
                     )
                 }
             } else {
-                segments.append(.key(key, optional: optional))
+                segments.append(.key(try name(key), optional: optional))
                 optional = false
                 expectsKey = false
                 appended = true
@@ -246,6 +246,16 @@ public struct TemplateParser: Sendable {
     }
 
     // MARK: - Private
+    // A segment's spelling as the name it stands for, said in this parser's
+    // own words so an author reading a template's refusal reads one voice.
+    private func name(_ spelling: String) throws -> Name {
+        do {
+            return try Name(spelling)
+        } catch {
+            throw TemplateSyntaxError("\(error)")
+        }
+    }
+
     // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an empty
     // `[]` is an author mistake rejected at parse, not carried into the model.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {

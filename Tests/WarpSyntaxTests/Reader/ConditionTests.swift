@@ -13,7 +13,7 @@ import Testing
 @Suite
 struct ConditionTests {
     // MARK: - Property
-    private let scope: [String: Value] = ["kind": .string("a"), "n": .int(3), "none": .null, "gone": .null]
+    private let scope: [Name: Value] = ["kind": .string("a"), "n": .int(3), "none": .null, "gone": .null]
 
     // MARK: - Initializer
     // MARK: - Test

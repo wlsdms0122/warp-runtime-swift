@@ -15,13 +15,13 @@ extension ShapeTable {
     // every judgment refuses, so a chain of names is always finite. A table
     // declaring nothing is the one bare table, whichever declared nothing.
     static func lowering(
-        _ types: [String: TypeExpression],
-        constraints: [String: [TypeExpression]]
+        _ types: [Name: TypeExpression],
+        constraints: [Name: [TypeExpression]]
     ) -> ShapeTable {
         guard !types.isEmpty || !constraints.isEmpty else { return .empty }
 
-        let labels = types.keys.sorted(by: Name.precedes)
-        let constraintLabels = constraints.keys.sorted(by: Name.precedes)
+        let labels = types.keys.sorted()
+        let constraintLabels = constraints.keys.sorted()
 
         // The index first, so a declaration naming another lowers against
         // rows that already exist whichever is declared first.

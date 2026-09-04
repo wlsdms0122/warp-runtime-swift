@@ -27,12 +27,12 @@ struct RecordTests {
     @Test("a field is found by its name, and a name not held answers nil")
     func aFieldIsFoundByName() {
         // Given
-        let names = (0 ..< 40).map { index in "field\(index)" }
-        let sut = Record(name: nil, entries: names.reversed().map { name in (name: name, value: .string(name)) })
+        let names = (0 ..< 40).map { index in Name(normal: "field\(index)") }
+        let sut = Record(name: nil, entries: names.reversed().map { name in (name: name, value: Value.string(name.spelling)) })
 
         // When / Then
         for name in names {
-            #expect(sut[name] == .string(name))
+            #expect(sut[name] == .string(name.spelling))
         }
         #expect(sut["field40"] == nil)
         #expect(sut[""] == nil)
@@ -113,67 +113,36 @@ struct RecordTests {
     @Test("two spellings Swift calls equal are two fields")
     func equivalentSpellingsAreTwoFields() {
         // Given
-        let composed = "caf\u{E9}"
+        let composed: Name = "caf\u{E9}"
         let decomposed = "cafe\u{301}"
 
-        // When
-        let sut = Record(name: nil, entries: [(name: composed, value: .int(1)), (name: decomposed, value: .int(2))])
-
-        // Then
-        #expect(composed == decomposed)
-        #expect(sut.count == 2)
-        #expect(sut[composed] == .int(1))
-        #expect(sut[decomposed] == .int(2))
+        // When / Then — the decomposed spelling is not a name, so a record
+        // holding both is a record nothing can build
+        #expect(composed.spelling == decomposed)
+        #expect(throws: NameRefused.self) { try Name(decomposed) }
     }
 
     @Test("a record's own name is compared as bytes, the way its fields are")
-    func aNameIsComparedAsBytes() {
+    func aNameIsComparedAsBytes() throws {
         // Given
         let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
-        let decomposed = Record(name: "app.Cafe\u{301}", ["a": .int(1)])
+        let decomposed = "app.Cafe\u{301}"
 
-        // When / Then
-        #expect(composed != decomposed)
-        #expect(!Value.record(composed).matches(.record(decomposed)))
+        // When / Then — the decomposed spelling is no name, so there is no
+        // second record to compare with
+        #expect(throws: NameRefused.self) { try Name(decomposed) }
         #expect(Record(name: nil, ["a": .int(1)]) != composed)
+        #expect(composed != Record(name: "app.Vault", ["a": .int(1)]))
     }
 
-    @Test("a literal a caller assembled is held to normal form C at the module")
-    func aLiteralIsHeldToNormalForm() {
-        // Given
-        let record = Record(name: nil, entries: [(name: "cafe\u{301}", value: .int(1))])
+    @Test("a name a caller assembles in Swift is held to normal form C")
+    func aCallerIsHeldToNormalForm() {
+        // A caller reaches a record's fields and its name through `Name`, so
+        // a spelling that is not one is refused where it is written rather
+        // than at whatever later reads it.
+        let decomposed = "cafe\u{301}"
 
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                procedures: ["entry": Procedure(body: [], result: .literal(.record(record)))]
-            )
-        } throws: { error in
-            "\(error)".contains("not in normal form C")
-        }
-    }
-
-    @Test("a default a caller assembled is held to normal form C at the module")
-    func aDefaultIsHeldToNormalForm() {
-        // Given
-        let record = Record(name: "app.Cafe\u{301}", ["a": .int(1)])
-
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                procedures: [
-                    "entry": Procedure(
-                        signature: Signature(parameters: ["x": Parameter(type: .any, default: .record(record))]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            "\(error)".contains("not in normal form C")
-        }
+        #expect(throws: NameRefused.self) { try Name(decomposed) }
     }
 
     @Test("setting refuses a key that is not one byte spelling")

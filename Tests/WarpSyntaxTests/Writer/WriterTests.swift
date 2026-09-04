@@ -77,7 +77,7 @@ struct WriterTests {
         // which is how a message names its receiver everywhere — so it leaves no
         // key here that a survival could be told apart by. A spelling whose key
         // is not also a word is asked about below.
-        let spellings: Set<String> = ["format", "with"]
+        let spellings: Set<Name> = ["format", "with"]
 
         // Then
         #expect(Self.keys(in: written).isDisjoint(with: spellings))
@@ -162,7 +162,7 @@ struct WriterTests {
                 ]
             ]
         ]
-        let arguments: [String: Value] = [
+        let arguments: [Name: Value] = [
             "names": .array([.string("a"), .string("bb")]),
             "word": .string("hey")
         ]
@@ -407,10 +407,10 @@ struct WriterTests {
     // Every key anywhere in a document. A spelling is a word, and a word could
     // be written at any depth, so asking whether one survived is asking about
     // the whole of it.
-    private static func keys(in value: Value) -> Set<String> {
+    private static func keys(in value: Value) -> Set<Name> {
         switch value {
         case let .array(elements):
-            return elements.reduce(into: Set()) { found, element in
+            return elements.reduce(into: Set<Name>()) { found, element in
                 found.formUnion(keys(in: element))
             }
 

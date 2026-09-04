@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Warp
 
 // What a template lowers to, for a notation that offers one.
 //
@@ -23,13 +24,13 @@ import Foundation
 public struct Interpolation: Sendable, Equatable {
     // MARK: - Property
     // What every piece is asked, so that a value of any kind arrives as text.
-    public let read: String
+    public let read: Name
 
     // What puts the pieces together.
-    public let joined: String
+    public let joined: Name
 
     // MARK: - Initializer
-    public init(read: String, joined: String) {
+    public init(read: Name, joined: Name) {
         self.read = read
         self.joined = joined
     }

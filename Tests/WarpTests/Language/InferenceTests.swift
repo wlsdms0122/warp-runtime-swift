@@ -1699,7 +1699,7 @@ struct InferenceTests {
         // head only reads nullable after as many settles as the chain is
         // long. A walk that stopped counting early would return the head
         // still plain and link a lie.
-        let names = ["a", "b", "c", "d", "e", "f"]
+        let names: [Name] = ["a", "b", "c", "d", "e", "f"]
         let chain: [Statement] = zip(names, names.dropFirst()).map { name, next in
             Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
         } + [Statement(binding: .assignment([.key("f")]), expression: .literal(.null))]
