@@ -250,7 +250,7 @@ public struct Loader: Sendable {
     // it says which reader the document is written for, and that is an answer
     // about the writing rather than about the program.
     private func stamped(_ value: Value) -> Value {
-        guard case let .dictionary(document) = value, document[Envelope.versionKey] == nil else { return value }
+        guard let document = value.unnamedFields, document[Envelope.versionKey] == nil else { return value }
 
         return .dictionary(document.writing(Envelope.versionKey, with: .int(Envelope.version)))
     }

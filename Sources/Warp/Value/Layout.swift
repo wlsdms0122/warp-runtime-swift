@@ -17,9 +17,10 @@ import Foundation
 // `{title: int}` are one layout under two shapes.
 //
 // Inside a link a name is a row of the shape table; outside one it is a
-// spelling, which is why a reader and a host may write one. What it means is
-// proved where the value settles into a slot that declares it, and a value
-// carrying a name no declaration answers is refused there.
+// spelling, which is why a reader and a host may write one. A slot that
+// declares a type proves it: a value arriving there under another name is
+// refused. A slot that declares nothing proves nothing, so a name travelling
+// through `any` is the spelling it was written as.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property
     public let name: Name?

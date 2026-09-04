@@ -57,6 +57,11 @@ public struct Record: Sendable {
 
     // The inner door: the maker already stands on the layout.
     init(layout: Layout, values: [Value]) {
+        precondition(
+            layout.fields.count == values.count,
+            "a record has one value per field its layout names"
+        )
+
         self.layout = layout
         self.values = values
     }

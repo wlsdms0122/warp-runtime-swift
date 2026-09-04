@@ -11,7 +11,7 @@ import Foundation
 // here is built on, and the shape of the field at each of its places. One
 // shape per field, checked where the pair is made, so every reading may take
 // the two together.
-struct RecordShape: Sendable {
+struct RecordShape: Sendable, Equatable {
     // MARK: - Property
     let layout: Layout
     let fields: [Shape]
@@ -42,10 +42,4 @@ struct RecordShape: Sendable {
     }
 
     // MARK: - Private
-}
-
-extension RecordShape: Equatable {
-    static func == (lhs: RecordShape, rhs: RecordShape) -> Bool {
-        lhs.layout == rhs.layout && lhs.fields == rhs.fields
-    }
 }
