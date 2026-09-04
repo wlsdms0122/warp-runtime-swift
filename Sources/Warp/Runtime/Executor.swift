@@ -468,7 +468,7 @@ public struct Executor: Sendable {
 
         // Its rows are numbered by the table of the link that made it.
         guard closure.linked.readable(in: shapes) else {
-            throw ExecutionError("this call \(Linked.unreadable(in: shapes))")
+            throw ExecutionError("this call \(Linked.unreadable)")
         }
 
         let settled = try closure.linked.settle(arguments, offered: offered)

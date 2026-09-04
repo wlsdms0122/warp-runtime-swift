@@ -40,9 +40,6 @@ extension Name {
 
 extension CodingKey {
     // A notation's reserved word as the name it stands for. These spellings
-    // are written in this source rather than read out of a document, so one
-    // that cannot be a name is a mistake here.
-    var name: Name {
-        get throws { try Name(stringValue) }
-    }
+    // are written in this source rather than read out of a document.
+    var name: Name { Name(normal: stringValue) }
 }

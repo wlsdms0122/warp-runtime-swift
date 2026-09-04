@@ -158,13 +158,12 @@ public final class Linked: Sendable {
         table.linkage === other.linkage
     }
 
-    // Why it cannot be read, for the side that met it.
-    static func unreadable(in other: ShapeTable) -> String {
-        other.linkage === Linkage.none
-            ? "got a procedure, and nothing here says which link to read it in"
-                + " — a judgment about one is asked with the image's types"
-            : "got a procedure another link made, which this run cannot read"
-    }
+    // Why it cannot be read, for the side that met it. Which link this one
+    // came from is not knowable here, so the sentence says the rule rather
+    // than naming a link nobody named.
+    static let unreadable = "got a procedure a row of this link cannot read"
+        + " — one is read where the link that made it is being read, which"
+        + " for a judgment is the image's own types"
 
     // Whether this row is a written body.
     public var isWritten: Bool {

@@ -77,20 +77,20 @@ public struct Writer: Sendable {
             Envelope.importsKey: .array(
                 (draft.imports ?? draft.sends).sorted().map { name in .string(name.spelling) }
             ),
-            try ModuleReader.CodingKeys.procedures.name:
+            ModuleReader.CodingKeys.procedures.name:
                 .object(try draft.procedures.mapValues(value(of:)))
         ]
 
         if let description = draft.description {
-            written[try ModuleReader.CodingKeys.description.name] = .string(description)
+            written[ModuleReader.CodingKeys.description.name] = .string(description)
         }
 
         if !draft.types.isEmpty {
-            written[try ModuleReader.CodingKeys.types.name] = .object(try draft.types.mapValues(value(of:)))
+            written[ModuleReader.CodingKeys.types.name] = .object(try draft.types.mapValues(value(of:)))
         }
 
         if !draft.constraints.isEmpty {
-            written[try ModuleReader.CodingKeys.constraints.name] = .object(
+            written[ModuleReader.CodingKeys.constraints.name] = .object(
                 try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
@@ -98,13 +98,13 @@ public struct Writer: Sendable {
         }
 
         if !draft.constants.isEmpty {
-            written[try ModuleReader.CodingKeys.const.name] = .object(
+            written[ModuleReader.CodingKeys.const.name] = .object(
                 try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
 
         if !draft.variables.isEmpty {
-            written[try ModuleReader.CodingKeys.variables.name] = .object(
+            written[ModuleReader.CodingKeys.variables.name] = .object(
                 try draft.variables.mapValues { variable in try value(of: variable) }
             )
         }
@@ -126,7 +126,7 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if let description = procedure.description {
-            written[try ProcedureReader.CodingKeys.description.name] = .string(description)
+            written[ProcedureReader.CodingKeys.description.name] = .string(description)
         }
 
         // Stripped here, at the declaration, because this is the one place a

@@ -342,8 +342,8 @@ public struct TypeReader: Decodable {
     static func named(_ text: String) throws -> Name {
         do {
             return try Name(text)
-        } catch {
-            throw TypeFormError("\(error)")
+        } catch let refusal as NameRefused {
+            throw TypeFormError(refusal.message)
         }
     }
 

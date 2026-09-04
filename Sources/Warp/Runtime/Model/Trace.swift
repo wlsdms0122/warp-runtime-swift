@@ -14,16 +14,16 @@ import Foundation
 public struct Trace: Sendable, Equatable {
     // MARK: - Property
     // The frames from the outermost in.
-    public var frames: [Frame] {
-        var frames: [Frame] = []
+    public var hops: [Hop] {
+        var hops: [Hop] = []
         var link = last
 
         while let current = link {
-            frames.append(current.frame)
+            hops.append(current.hop)
             link = current.parent
         }
 
-        return frames.reversed()
+        return hops.reversed()
     }
 
     // How the place reads in a message.
@@ -33,8 +33,8 @@ public struct Trace: Sendable, Equatable {
     // Names are joined with dots and occurrences are bracketed, so the spelling
     // says which parts of a place the text decided and which parts the run did.
     public var rendered: String {
-        frames.reduce(into: "") { written, frame in
-            switch frame {
+        hops.reduce(into: "") { written, hop in
+            switch hop {
             case let .procedure(name), let .statement(name):
                 written += written.isEmpty ? name : ".\(name)"
 
@@ -50,8 +50,8 @@ public struct Trace: Sendable, Equatable {
     private let last: Link?
 
     // MARK: - Initializer
-    public init(frames: [Frame] = []) {
-        self.last = frames.reduce(nil) { parent, frame in Link(frame, under: parent) }
+    public init(hops: [Hop] = []) {
+        self.last = hops.reduce(nil) { parent, hop in Link(hop, under: parent) }
     }
 
     private init(last: Link?) {
@@ -59,21 +59,21 @@ public struct Trace: Sendable, Equatable {
     }
 
     // MARK: - Public
-    public func appending(_ frame: Frame) -> Trace {
-        Trace(last: Link(frame, under: last))
+    public func appending(_ hop: Hop) -> Trace {
+        Trace(last: Link(hop, under: last))
     }
 
     public static func == (lhs: Trace, rhs: Trace) -> Bool {
-        lhs.frames == rhs.frames
+        lhs.hops == rhs.hops
     }
 
     // MARK: - Private
     private final class Link: Sendable {
-        let frame: Frame
+        let hop: Hop
         let parent: Link?
 
-        init(_ frame: Frame, under parent: Link?) {
-            self.frame = frame
+        init(_ hop: Hop, under parent: Link?) {
+            self.hop = hop
             self.parent = parent
         }
     }
@@ -91,7 +91,7 @@ public extension Trace {
     // which piece of the work a concurrent word gave this closure call is — neither
     // readable from the text, and they are the difference between naming a
     // statement and naming an occurrence of one.
-    enum Frame: Sendable, Equatable {
+    enum Hop: Sendable, Equatable {
         case procedure(String)
         case statement(String)
         case round(Int)

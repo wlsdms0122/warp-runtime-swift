@@ -283,6 +283,51 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .int(1))
     }
 
+    @Test("a name is what it names at whatever depth a shape holds one")
+    func aHandedVariableReadsNamesAtDepth() throws {
+        // Given — the alias sits inside a procedure's parameter rather than
+        // at the top of the slot. A name is what it names wherever it is
+        // written, so the walk reaches it there too.
+        let sut = try Module(
+            types: ["Count": .int],
+            procedures: [
+                "entry": Procedure(
+                    body: [
+                        Statement(binding: .variable("body"), expression: .closure(
+                            Procedure(
+                                signature: Signature(parameters: ["x": Parameter(type: .int)]),
+                                body: [],
+                                result: .literal(.null)
+                            )
+                        ))
+                    ],
+                    result: .dispatch(Dispatch(selector: "app.take", arguments: ["of": .reference([.key("body")])]))
+                ),
+                "app.take": Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "of": Parameter(
+                                type: .inout(.procedure(
+                                    Signature(parameters: ["x": Parameter(type: .named("Count"))]),
+                                    .pure,
+                                    .isolated
+                                ))
+                            )
+                        ],
+                        returns: .null
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try linker.link([sut] + Module.standard, entry: "entry")
+        }
+    }
+
     @Test("what is handed in place is the shape the slot declares, and not one that fits it")
     func aHandedVariableIsTheSlotsOwnShape() async throws {
         // Given — a variable holding an unnamed record, handed to a slot

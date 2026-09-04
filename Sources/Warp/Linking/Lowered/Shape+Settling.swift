@@ -180,7 +180,7 @@ extension Shape {
 
             // Its rows are numbered by the table of the link that made it.
             guard closure.linked.readable(in: table) else {
-                throw ArgumentError("\(path()): \(Linked.unreadable(in: table))")
+                throw ArgumentError("\(path()): \(Linked.unreadable)")
             }
 
             if purity == .pure, closure.purity != .pure {

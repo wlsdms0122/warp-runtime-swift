@@ -378,11 +378,11 @@ struct ShapeTests {
         }
     }
 
-    @Test("a judgment asked with no link says so, rather than naming another one")
-    func aJudgmentWithNoLinkSaysSo() async throws {
+    @Test("a judgment says the rule, rather than naming a link nobody named")
+    func aJudgmentWithNoLinkSaysTheRule() async throws {
         // Given: a closure out of a run, judged with no declarations behind
-        // the judgment. There is no link in hand to read its rows in, and
-        // saying "another link made it" would name a link nobody named.
+        // the judgment. Which link this one came from is not knowable where
+        // it is met, so naming one would be inventing it.
         let maker = try Module(
             procedures: [
                 "entry": Procedure(
@@ -397,7 +397,7 @@ struct ShapeTests {
         #expect {
             try Parameter(type: .procedure(nil)).checking(made, called: "held")
         } throws: { error in
-            "\(error)".contains("nothing here says which link")
+            "\(error)".contains("read where the link that made it is being read")
         }
     }
 

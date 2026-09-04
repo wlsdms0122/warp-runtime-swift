@@ -371,18 +371,26 @@ public enum BinaryEncoding {
             throw refused("the record's keys are not written in order")
         }
 
-        guard let name = try? Name(key) else {
-            throw refused("the field name is not in normal form C")
+        do {
+            return (try Name(key), raw)
+        } catch let refusal as NameRefused {
+            throw refused(refusal.message)
         }
-
-        return (name, raw)
     }
 
     // A record's own name, as the bytes wrote it.
     private static func name(from reading: inout Cursor) throws -> Name {
         let spelling = try text(from: &reading)
 
-        guard let name = try? Name(spelling), name.isDeclarable else {
+        let name: Name
+
+        do {
+            name = try Name(spelling)
+        } catch let refusal as NameRefused {
+            throw refused(refusal.message)
+        }
+
+        guard name.isDeclarable else {
             throw refused("the record's name is not a type's name")
         }
 

@@ -40,7 +40,7 @@ public struct TypeTable: Sendable {
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:]
     ) {
-        self.init(types: types, constraints: constraints, of: .none)
+        self.init(types: types, constraints: constraints, of: Linkage())
     }
 
     // The same declarations as one link's, which owns the identity its rows

@@ -144,7 +144,7 @@ public struct StatementReader: Decodable {
         let binding: Statement.Binding?
 
         do {
-            binding = try name.map { name in try name.binding(try Self.name(name, in: envelope)) }
+            binding = try name.map { name in try name.binding(Self.name(name, in: envelope)) }
         } catch let refusal as ReadingError {
             throw refusal.asked(at: decoder.steps)
         }

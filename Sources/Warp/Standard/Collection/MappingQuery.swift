@@ -48,10 +48,14 @@ public struct MappingQuery: Query {
                 throw ExecutionError("setting asks a string key")
             }
 
-            // The key becomes a field's name, and a name is one byte
-            // spelling: the rule every name a program writes is held to.
-            guard let field = try? Name(key) else {
-                throw ExecutionError("setting asks a key in normal form C, and '\(key)' is not")
+            // The key becomes a field's name, and is held to what a name
+            // is like any other a program writes.
+            let field: Name
+
+            do {
+                field = try Name(key)
+            } catch let refusal as NameRefused {
+                throw ExecutionError("setting asks a key that is a name, and \(refusal.message)")
             }
 
             // A new object: the value written was held to no declaration, so

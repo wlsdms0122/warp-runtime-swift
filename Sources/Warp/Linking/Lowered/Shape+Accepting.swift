@@ -333,26 +333,33 @@ extension Shape {
     }
 
     func same(_ other: Shape, in table: ShapeTable, assuming: [(Shape, Shape)]) -> Bool {
-        guard nominal(in: table) == other.nominal(in: table) else { return false }
-
         if assuming.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
 
         let walked = assuming + [(self, other)]
 
         switch (self, other) {
-        // Refused where it is declared, so nothing is decided about it here.
-        case (.undeclared, _), (_, .undeclared):
+        // A name the table does not answer, and a slot the call fills:
+        // nothing is knowable about either here.
+        case (.undeclared, _), (_, .undeclared), (.parameter, _), (_, .parameter):
             return true
 
+        // A record under a name is that name, so two names are two shapes
+        // however alike and an inline record is neither. Every other name is
+        // what it names.
         case let (.named(mine), .named(theirs)):
-            return mine == theirs
-                || table.shapes[mine].same(table.shapes[theirs], in: table, assuming: walked)
+            guard mine != theirs else { return true }
+
+            return table.recordRows[mine] == nil
+                && table.recordRows[theirs] == nil
+                && table.shapes[mine].same(table.shapes[theirs], in: table, assuming: walked)
 
         case let (.named(mine), _):
-            return table.shapes[mine].same(other, in: table, assuming: walked)
+            return table.recordRows[mine] == nil
+                && table.shapes[mine].same(other, in: table, assuming: walked)
 
         case let (_, .named(theirs)):
-            return same(table.shapes[theirs], in: table, assuming: walked)
+            return table.recordRows[theirs] == nil
+                && same(table.shapes[theirs], in: table, assuming: walked)
 
         case let (.nullable(mine), .nullable(theirs)),
             let (.array(mine), .array(theirs)),
@@ -367,14 +374,44 @@ extension Shape {
                     one.name == other.name && one.shape.same(other.shape, in: table, assuming: walked)
                 }
 
+        case let (.procedure(mine, myAnswer, myPurity, myIsolation),
+                  .procedure(theirs, theirAnswer, theirPurity, theirIsolation)):
+            guard myPurity == theirPurity, myIsolation == theirIsolation else { return false }
+
+            switch (myAnswer, theirAnswer) {
+            case (nil, nil):
+                break
+
+            case let (myAnswer?, theirAnswer?):
+                guard myAnswer.same(theirAnswer, in: table, assuming: walked) else { return false }
+
+            default:
+                return false
+            }
+
+            switch (mine, theirs) {
+            case (nil, nil):
+                return true
+
+            case let (mine?, theirs?):
+                return mine.count == theirs.count
+                    && zip(mine, theirs).allSatisfy { one, other in
+                        one.name == other.name
+                            && one.mustBeGiven == other.mustBeGiven
+                            && one.shape.same(other.shape, in: table, assuming: walked)
+                    }
+
+            default:
+                return false
+            }
+
+        // What is left holds nothing, so being the same is being the same
+        // case, and every shape that holds one is answered above.
         default:
             return self == other
         }
     }
 
-    private func nominal(in table: ShapeTable) -> Int? {
-        row.flatMap { row in table.recordRows[row] }
-    }
 
     // One value of every kind a decided shape can hold, for asking the judge
     // rather than restating it.

@@ -297,8 +297,12 @@ public enum TextEncoding {
 
                     settled = .record(Record(name: name, held))
 
-                case let .bare(spelling) where (try? Name(spelling))?.isIdentifier == true:
+                case let .bare(spelling):
                     let key = try key(spelling)
+
+                    guard key.isIdentifier else {
+                        throw refused("a record writes a field name here")
+                    }
 
                     try expect(key, in: held)
 
@@ -431,8 +435,8 @@ public enum TextEncoding {
     private static func key(_ spelling: String) throws -> Name {
         do {
             return try Name(spelling)
-        } catch {
-            throw refused("\(error)")
+        } catch let refusal as NameRefused {
+            throw refused(refusal.message)
         }
     }
 
