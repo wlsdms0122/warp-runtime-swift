@@ -278,7 +278,7 @@ extension Closure {
                 isolation: .unstated,
                 implementation: .body(
                     Body(instructions: [], result: nil),
-                    Layout(size: 0, parameters: [], variables: [], names: [])
+                    Frame(size: 0, parameters: [], variables: [], names: [])
                 ),
                 in: .empty
             ),

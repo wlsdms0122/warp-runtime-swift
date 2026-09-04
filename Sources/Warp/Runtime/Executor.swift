@@ -619,7 +619,7 @@ public struct Executor: Sendable {
     }
 
     // The frame a row runs in, with the module variables it reads in place.
-    private func frame(of callee: Linked, _ layout: Layout) throws -> Activation {
+    private func frame(of callee: Linked, _ layout: Frame) throws -> Activation {
         var activation = Activation(layout)
 
         guard !layout.variables.isEmpty else { return activation }

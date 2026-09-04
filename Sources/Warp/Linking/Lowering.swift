@@ -83,7 +83,7 @@ struct Lowering {
         origin: Int,
         label: Name,
         at place: Place
-    ) throws -> (Code, Layout) {
+    ) throws -> (Code, Frame) {
         let frame = Slots(origin: origin, variables: [:])
         var scope = Names()
 
@@ -169,8 +169,8 @@ struct Lowering {
             return slot
         }
 
-        var layout: Layout {
-            Layout(size: size, parameters: parameters, variables: reads, names: names)
+        var layout: Frame {
+            Frame(size: size, parameters: parameters, variables: reads, names: names)
         }
     }
 

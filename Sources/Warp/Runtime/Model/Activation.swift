@@ -14,15 +14,15 @@ import Foundation
 struct Activation: Sendable {
     // MARK: - Property
     var cells: [Cell]
-    let layout: Layout
+    let layout: Frame
 
     // MARK: - Initializer
-    init(_ layout: Layout) {
+    init(_ layout: Frame) {
         self.cells = Array(repeating: .value(.null), count: layout.size)
         self.layout = layout
     }
 
-    init(cells: [Cell], layout: Layout) {
+    init(cells: [Cell], layout: Frame) {
         self.cells = cells
         self.layout = layout
     }

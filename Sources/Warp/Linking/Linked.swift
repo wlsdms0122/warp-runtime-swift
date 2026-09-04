@@ -13,7 +13,7 @@ import Foundation
 // it and a closure value holds its own row.
 public final class Linked: Sendable {
     enum Implementation: Sendable {
-        case body(Body, Layout)
+        case body(Body, Frame)
         case query(any Query)
         case effect(any Effect)
     }
