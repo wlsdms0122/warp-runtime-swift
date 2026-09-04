@@ -51,8 +51,8 @@ extension TypeExpression {
         case let .array(element):
             return .array(element.lowered(in: table))
 
-        case let .object(entry):
-            return .object(entry.lowered(in: table))
+        case let .dictionary(entry):
+            return .dictionary(entry.lowered(in: table))
 
         case let .record(fields):
             return .record(

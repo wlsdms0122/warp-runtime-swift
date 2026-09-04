@@ -7,11 +7,11 @@
 
 import Foundation
 
-// Reading an object as data rather than as a shape. A record's fields are
-// declared and read by name; an object's are data, and these are how a program
+// Reading a record as data rather than as a shape. Declared fields are read
+// by name; these words read names that are data, and are how a program
 // walks them without knowing what they are called.
 //
-// `setting` answers a new object, so an author writes a changed mapping without
+// `setting` answers a new record, so an author writes a changed mapping without
 // the language growing a way to write into one.
 public struct MappingQuery: Query {
     public enum Reading: Sendable {
@@ -33,7 +33,7 @@ public struct MappingQuery: Query {
         guard case let .record(record) = question.receiver else { return nil }
 
         switch reading {
-        // In name order, the order the record holds: an object holds no
+        // In name order, the order the record holds: data names hold no
         // order of its own, and a walk that answered a different order each
         // run would make a program that reads it depend on nothing an author
         // wrote.
@@ -56,7 +56,7 @@ public struct MappingQuery: Query {
                 throw ExecutionError("setting asks a key that is a name, and \(refusal.message)")
             }
 
-            // A new object: the value written was held to no declaration, so
+            // A new record: the value written was held to no declaration, so
             // whatever name the receiver settled to would say what nothing
             // checked.
             return .record(record.writing(field, with: question["value"]).named(nil))

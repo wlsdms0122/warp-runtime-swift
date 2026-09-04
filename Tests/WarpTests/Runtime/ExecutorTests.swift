@@ -254,7 +254,7 @@ struct ExecutorTests {
                 "entry": Procedure(
                     signature: Signature(
                         parameters: [
-                            "data": Parameter(type: .object(.any))
+                            "data": Parameter(type: .dictionary(.any))
                         ]
                     ),
                     body: [
@@ -275,7 +275,7 @@ struct ExecutorTests {
         )
 
         // When
-        let outputs = try await run(spec, arguments: ["data": .object([:])])
+        let outputs = try await run(spec, arguments: ["data": .record([:])])
 
         // Then
         #expect(outputs["result"] == .null)
@@ -290,7 +290,7 @@ struct ExecutorTests {
                 "entry": Procedure(
                     signature: Signature(
                         parameters: [
-                            "data": Parameter(type: .object(.any))
+                            "data": Parameter(type: .dictionary(.any))
                         ],
                         returns: .any
                     ),
@@ -302,7 +302,7 @@ struct ExecutorTests {
 
         // When / Then
         await #expect(throws: ReferenceUnfit.self) {
-            try await run(spec, arguments: ["data": .object([:])])
+            try await run(spec, arguments: ["data": .record([:])])
         }
     }
 

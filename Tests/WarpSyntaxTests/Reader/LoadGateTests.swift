@@ -153,7 +153,7 @@ struct LoadGateTests {
         // Given — there is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
-            "parameters": ["run": "object"],
+            "parameters": ["run": "dictionary"],
             "body": [["let": "whoami", "value": ["ref": "run.id"]]]
         ]
         let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run.id"]]]]
@@ -172,7 +172,7 @@ struct LoadGateTests {
         // Given — a step array that arrived as data (through a signature) becomes
         // IR via the loader's Value door; the string stays a literal even there
         let carried = Value.array([
-            .object(["let": .string("greet"), "value": .string("hello there")])
+            .record(["let": .string("greet"), "value": .string("hello there")])
         ])
 
         // When

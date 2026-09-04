@@ -129,7 +129,7 @@ extension PathSegment {
         guard optional, !unwrapped else { return nil }
 
         switch landing {
-        // Which names an object holds is the run's fact, so a mark here
+        // Which names a dictionary holds is the run's fact, so a mark here
         // always has an absence to expect — the one landing that earns no
         // refusal.
         case .entry:

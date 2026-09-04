@@ -17,7 +17,7 @@ public struct ConcurrentFailed: RecoverableFailure {
     public let type = "concurrent_failed"
 
     public var details: [Name: Value] {
-        ["failures": .object(failures.mapValues(Value.string))]
+        ["failures": .record(failures.mapValues(Value.string))]
     }
 
     public var message: String {

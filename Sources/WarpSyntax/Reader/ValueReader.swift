@@ -91,8 +91,8 @@ public struct ValueReader: Decodable {
             return
         }
 
-        if let object = try? container.decode([String: ValueReader].self) {
-            self.value = .object(try object.mapValues(\.value).named(at: decoder.steps))
+        if let fields = try? container.decode([String: ValueReader].self) {
+            self.value = .record(try fields.mapValues(\.value).named(at: decoder.steps))
 
             return
         }

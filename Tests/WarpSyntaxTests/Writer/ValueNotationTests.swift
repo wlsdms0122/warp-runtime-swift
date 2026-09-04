@@ -25,8 +25,8 @@ struct ValueNotationTests {
             .double(3.5),
             .string("warp"),
             .array([.int(1), .string("two"), .null]),
-            .object(["id": .string("a"), "done": .bool(false)]),
-            .object(["nested": .array([.object(["deep": .int(1)])])])
+            .record(["id": .string("a"), "done": .bool(false)]),
+            .record(["nested": .array([.record(["deep": .int(1)])])])
         ]
     )
     func writingRoundTrips(_ sut: Value) throws {
@@ -79,10 +79,10 @@ struct ValueNotationTests {
         // unkeyed list and would quietly make bytes of it.
         struct Held: Decodable { let blob: Data }
 
-        #expect(try decoding(Held.self, from: .object(["blob": .bytes([1, 2])])).blob == Data([1, 2]))
+        #expect(try decoding(Held.self, from: .record(["blob": .bytes([1, 2])])).blob == Data([1, 2]))
 
         #expect(throws: (any Error).self) {
-            try decoding(Held.self, from: .object(["blob": .array([.int(1), .int(2)])]))
+            try decoding(Held.self, from: .record(["blob": .array([.int(1), .int(2)])]))
         }
     }
 

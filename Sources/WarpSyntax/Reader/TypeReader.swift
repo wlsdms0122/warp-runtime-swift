@@ -12,7 +12,7 @@ import Warp
 //
 //   string / any / procedure   — a built-in, by its own name
 //   array<string>              — a built-in applied to another type
-//   object<Task>               — the same, for a map of string keys
+//   dictionary<Task>               — the same, for a map of string keys
 //   Task                       — a name some module declares
 //   { id: string, done: bool } — a record, written as the record it describes
 //   { procedure: { parameters:, returns: } }
@@ -252,12 +252,12 @@ public struct TypeReader: Decodable {
         case "array":
             return .array(try parse(inner))
 
-        case "object":
-            return .object(try parse(inner))
+        case "dictionary":
+            return .dictionary(try parse(inner))
 
         default:
             throw TypeFormError(
-                "type '\(head)' takes no argument — only `array<…>` and `object<…>` do"
+                "type '\(head)' takes no argument — only `array<…>` and `dictionary<…>` do"
             )
         }
     }
@@ -423,7 +423,7 @@ public struct TypeReader: Decodable {
         // Bare, these mean "a list of anything" and "a map of anything" — the
         // most a declaration could say before it could say more.
         "array": .array(.any),
-        "object": .object(.any),
+        "dictionary": .dictionary(.any),
         "procedure": .procedure(nil)
     ]
 

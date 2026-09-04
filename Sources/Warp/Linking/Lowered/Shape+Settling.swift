@@ -124,7 +124,7 @@ extension Shape {
                 }
             )
 
-        case let .object(entry):
+        case let .dictionary(entry):
             guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
 
             // An entry nothing was declared for passes as it is, so the record
@@ -398,7 +398,7 @@ extension Shape {
         // to a default, so that a kind added to the type language has to be
         // answered for here too.
         case .never, .null, .bool, .double, .string, .bytes,
-             .array, .object, .record, .procedure, .undeclared:
+             .array, .dictionary, .record, .procedure, .undeclared:
             return false
         }
     }
@@ -497,8 +497,8 @@ extension Shape {
         case let .array(element):
             return "array<\(element.rendered(in: table))>"
 
-        case let .object(entry):
-            return "object<\(entry.rendered(in: table))>"
+        case let .dictionary(entry):
+            return "dictionary<\(entry.rendered(in: table))>"
 
         case let .record(fields):
             let written = fields.map { name, field in "\(name): \(field.rendered(in: table))" }

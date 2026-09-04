@@ -144,7 +144,7 @@ public indirect enum Expression: Sendable {
         case let .record(record):
             let values = record.compactMapValues(\.constantValue)
 
-            return values.count == record.count ? .object(values) : nil
+            return values.count == record.count ? .record(values) : nil
 
         default:
             return nil

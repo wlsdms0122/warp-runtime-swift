@@ -225,7 +225,7 @@ struct WriterTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(binding: .constant("payload"), expression: .literal(.object(["ref": .string("not-a-path")]))
+                        Statement(binding: .constant("payload"), expression: .literal(.record(["ref": .string("not-a-path")]))
                         )
                     ]
                 )
@@ -246,7 +246,7 @@ struct WriterTests {
             return
         }
 
-        #expect(carried == .object(["ref": .string("not-a-path")]))
+        #expect(carried == .record(["ref": .string("not-a-path")]))
     }
 
     @Test("a notation that gave up a word cannot write what it said")
@@ -346,7 +346,7 @@ struct WriterTests {
             return
         }
 
-        #expect(entry["bounds"] == .object(["T": .string("Scalar")]))
+        #expect(entry["bounds"] == .record(["T": .string("Scalar")]))
 
         guard
             case let .record(parameters) = entry["parameters"]
@@ -496,8 +496,8 @@ struct WriterTests {
                 entryName: Procedure(
                     body: [
                         Statement(binding: .constant("payload"), expression: .literal(
-                                .object(["ref": .string("not-a-path"), "deep": .array([
-                                    .object(["value": .int(1)])
+                                .record(["ref": .string("not-a-path"), "deep": .array([
+                                    .record(["value": .int(1)])
                                 ])])
                             )
                         ),
@@ -532,7 +532,7 @@ struct WriterTests {
                     "word": ["type": "string", "default": "hey", "hint": "what to match"],
                     "kind": ["type": "string", "oneOf": ["a", "b"]]
                 ],
-                "returns": "object<any>",
+                "returns": "dictionary<any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["a": ["ref": "word"], "b": 2]],
@@ -643,7 +643,7 @@ struct WriterTests {
                         "counted": ["type": "int", "default": 1, "hint": "how many"],
                         "kind": ["type": "string", "oneOf": ["a", "b"]]
                     ],
-                    "returns": "object<any>",
+                    "returns": "dictionary<any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["a": ["ref": "word"], "b": 2]],

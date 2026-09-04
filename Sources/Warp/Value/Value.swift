@@ -40,7 +40,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // A record with no name: what a literal, a native word and a document
     // make. The one spelling for it, so a caller never writes the nil.
-    public static func object(_ fields: [Name: Value]) -> Value {
+    public static func record(_ fields: [Name: Value]) -> Value {
         .record(Record(name: nil, fields))
     }
 
@@ -97,7 +97,7 @@ public indirect enum Value: Sendable, Equatable {
             return .array
 
         case .record:
-            return .object
+            return .record
 
         case .procedure:
             return .procedure
@@ -339,7 +339,7 @@ public indirect enum Value: Sendable, Equatable {
     // The equality conditions test with — strict except that worth unifies
     // across spellings: int and double across numeric width, and bytes beside
     // an array of what its elements are worth, applied recursively through
-    // arrays and objects.
+    // arrays and records.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
         case (.int, .double), (.double, .int):

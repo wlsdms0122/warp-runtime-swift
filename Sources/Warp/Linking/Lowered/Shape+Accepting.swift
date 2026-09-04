@@ -105,14 +105,14 @@ extension Shape {
         case let (.array(mine), .array(theirs)):
             return mine.accepts(theirs, in: table, assuming: assuming)
 
-        case let (.object(mine), .object(theirs)):
+        case let (.dictionary(mine), .dictionary(theirs)):
             return mine.accepts(theirs, in: table, assuming: assuming)
 
-        // A record is an object whose fields happen to be known: a record
+        // A record is a dictionary whose fields happen to be known: a record
         // whose every field is the entry shape is such a mapping. Not the
-        // other way round, since an `object` promises nothing about which
+        // other way round, since a `dictionary` promises nothing about which
         // fields exist.
-        case let (.object(mine), .record(theirs)):
+        case let (.dictionary(mine), .record(theirs)):
             return theirs.allSatisfy { _, field in mine.accepts(field, in: table, assuming: assuming) }
 
         // Width: what stands here must declare at least the fields this one
@@ -260,11 +260,11 @@ extension Shape {
                     .map { given in field.couldBothHold(given.shape, in: table, assuming: assuming) } ?? true
             }
 
-        // An object and a record are one runtime shape read two ways, so
+        // A dictionary and a record are one runtime shape read two ways, so
         // every field the record names must be able to be an entry. A list
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
-        case let (.object(entry), .record(fields)), let (.record(fields), .object(entry)):
+        case let (.dictionary(entry), .record(fields)), let (.record(fields), .dictionary(entry)):
             return fields.allSatisfy { _, field in field.couldBothHold(entry, in: table, assuming: assuming) }
 
         // Two decided kinds, which is where a value either is both or is
@@ -319,7 +319,7 @@ extension Shape {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.spells(candidate, in: table)
 
-        case .null, .never, .bytes, .array, .object, .record, .procedure:
+        case .null, .never, .bytes, .array, .dictionary, .record, .procedure:
             return false
         }
     }
@@ -360,7 +360,7 @@ extension Shape {
 
         case let (.nullable(mine), .nullable(theirs)),
             let (.array(mine), .array(theirs)),
-            let (.object(mine), .object(theirs)),
+            let (.dictionary(mine), .dictionary(theirs)),
             let (.variable(mine), .variable(theirs)),
             let (.inout(mine), .inout(theirs)):
             return mine.same(theirs, in: table, assuming: walked)
@@ -414,7 +414,7 @@ extension Shape {
     // rather than restating it.
     private static let witnesses: [Value] = [
         .null, .bool(false), .int(0), .double(0), .string(""),
-        .array([]), .object([:]), .bytes([])
+        .array([]), .record([:]), .bytes([])
     ]
 
     private func settles(_ value: Value, in table: ShapeTable) -> Bool {

@@ -24,7 +24,7 @@ indirect enum Shape: Sendable {
     case number
     case ranged(TypeExpression.Refinement)
     case array(Shape)
-    case object(Shape)
+    case dictionary(Shape)
 
     // Fields in name order, as `Name`'s `<` orders them.
     case record([(name: Name, shape: Shape)])
@@ -124,7 +124,7 @@ indirect enum Shape: Sendable {
     // Whether this names one of the kinds a value simply is.
     var isDecidedKind: Bool {
         switch self {
-        case .bool, .int, .double, .string, .null, .number, .array, .object, .record:
+        case .bool, .int, .double, .string, .null, .number, .array, .dictionary, .record:
             return true
 
         default:
@@ -150,7 +150,7 @@ extension Shape: Equatable {
         case let (.ranged(mine), .ranged(theirs)):
             return mine == theirs
 
-        case let (.array(mine), .array(theirs)), let (.object(mine), .object(theirs)),
+        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)),
             let (.variable(mine), .variable(theirs)), let (.inout(mine), .inout(theirs)),
             let (.nullable(mine), .nullable(theirs)):
             return mine == theirs

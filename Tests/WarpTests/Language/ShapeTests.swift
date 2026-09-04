@@ -40,7 +40,7 @@ struct ShapeTests {
             .nullable(.named("bank.Owner")),
             .parameter(name: "T", constraint: "app.Ordered"),
             .procedure(Signature(parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .int), .pure),
-            .object(.named("app.Maybe"))
+            .dictionary(.named("app.Maybe"))
         ]
 
         // When / Then
@@ -82,10 +82,10 @@ struct ShapeTests {
         // already named by the alias
         let table = types.shapes
         let slot = TypeExpression.named("bank.Acct").lowered(in: table)
-        let owner = Value.object(["name": .string("a")])
+        let owner = Value.record(["name": .string("a")])
 
         // When
-        let settled = try slot.settling(.object(["balance": .int(1), "owner": owner]), at: "input", in: table)
+        let settled = try slot.settling(.record(["balance": .int(1), "owner": owner]), at: "input", in: table)
         let again = try slot.settling(settled, at: "input", in: table)
         let spelled = try slot.settling(
             .record(Record(name: "bank.Acct", ["balance": .int(1), "owner": owner])),

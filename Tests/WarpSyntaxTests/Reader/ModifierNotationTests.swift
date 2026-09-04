@@ -49,7 +49,7 @@ struct ModifierNotationTests {
         ])
 
         // Then
-        #expect(written == .object(["inout pure procedure": .object(["returns": "int"])]))
+        #expect(written == .record(["inout pure procedure": .record(["returns": "int"])]))
         #expect(module.procedures["entry"]?.signature.parameters["f"]?.type == type)
     }
 
@@ -71,7 +71,7 @@ struct ModifierNotationTests {
             imports: [],
             procedures: [
                 "entry": Procedure(
-                    body: [Statement(binding: .constant("x"), expression: .literal(.object(["loop": .int(1)])))],
+                    body: [Statement(binding: .constant("x"), expression: .literal(.record(["loop": .int(1)])))],
                     result: .reference([.key("x")])
                 )
             ]
@@ -87,8 +87,8 @@ struct ModifierNotationTests {
             return
         }
 
-        #expect(body.first?["value"] == .object(["value": .object(["loop": 1])]))
-        #expect(read.procedures["entry"]?.body.first?.expression.constantValue == .object(["loop": .int(1)]))
+        #expect(body.first?["value"] == .record(["value": .record(["loop": 1])]))
+        #expect(read.procedures["entry"]?.body.first?.expression.constantValue == .record(["loop": .int(1)]))
     }
 
     @Test("a module's var and a set path survive the round trip")

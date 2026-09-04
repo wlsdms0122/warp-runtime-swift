@@ -12,7 +12,7 @@ extension Value {
     // by key and in an array by position. The rest is kept as it was. The
     // link judged the path against the value's declared shape, and every
     // index was read to a position before this, so a key not yet held is an
-    // entry of an object and is made. A part the value does not hold below
+    // entry of a record and is made. A part the value does not hold below
     // that is refused as what it is: an entry not written yet, or a shape
     // with no such part.
     func writing(_ value: Value, at path: [PathSegment], under rendered: String) throws -> Value {

@@ -45,7 +45,7 @@ struct ConcurrentTests {
 
         // Then — every piece walked through the environment's isolation boundary
         #expect(boundary.isolatedCount == 2)
-        #expect(outputs["result"] == .object(["left": .int(1), "right": .int(2)]))
+        #expect(outputs["result"] == .record(["left": .int(1), "right": .int(2)]))
     }
 
     @Test("all-recoverable failures rescue")

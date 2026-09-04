@@ -805,7 +805,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("reason"), expression: .cast(
                                 .reference([.key("failed")]),
-                                as: .record(["failures": .object(.string)]),
+                                as: .record(["failures": .dictionary(.string)]),
                                 optional: false
                             )
                         )
@@ -1094,8 +1094,8 @@ struct InferenceTests {
         _ = try linker.link([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("an object and a record are one shape read two ways, so a cast between them stands")
-    func aCastBetweenAnObjectAndARecordStands() throws {
+    @Test("a dictionary and a record are one shape read two ways, so a cast between them stands")
+    func aCastBetweenADictionaryAndARecordStands() throws {
         // Given — the boundary settles both from the same runtime value, so
         // refusing this would refuse a cast that succeeds
         let sut = try Module(
@@ -1103,7 +1103,7 @@ struct InferenceTests {
                 "entry": Procedure(
                     signature: Signature(
                         parameters: [
-                            "payload": Parameter(type: .object(.string))
+                            "payload": Parameter(type: .dictionary(.string))
                         ]
                     ),
                     body: [

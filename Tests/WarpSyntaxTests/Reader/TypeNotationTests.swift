@@ -22,7 +22,7 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("string") == .string)
         #expect(try TypeReader.parse("array") == .array(.any))
         #expect(try TypeReader.parse("array<string>") == .array(.string))
-        #expect(try TypeReader.parse("object<array<int>>") == .object(.array(.int)))
+        #expect(try TypeReader.parse("dictionary<array<int>>") == .dictionary(.array(.int)))
         #expect(try TypeReader.parse("procedure") == .procedure(nil))
         #expect(try TypeReader.parse("never") == .never)
     }
@@ -320,12 +320,12 @@ struct TypeNotationTests {
         ])
 
         // When / Then
-        let good = try await run(sut, arguments: ["tasks": .array([.object(["id": .string("a")])])])
+        let good = try await run(sut, arguments: ["tasks": .array([.record(["id": .string("a")])])])
 
         #expect(good["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["tasks": .array([.object(["id": .int(1)])])])
+            try await run(sut, arguments: ["tasks": .array([.record(["id": .int(1)])])])
         }
     }
 }

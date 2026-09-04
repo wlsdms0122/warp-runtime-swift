@@ -129,7 +129,7 @@ struct BytesTests {
             .named("Nobody"),
             .named("Named"),
             .array(.int),
-            .object(.int),
+            .dictionary(.int),
             .record([:])
         ]
 
@@ -450,7 +450,7 @@ struct BytesTests {
         // Given — infinity arrives only from a host's own word, and the
         // rendering must not leak it as invalid JSON
         #expect(Rendering(.array([.double(.infinity)])).text() == "<unencodable>")
-        #expect(Rendering(.object(["a": .double(.nan)])).text() == "<unencodable>")
+        #expect(Rendering(.record(["a": .double(.nan)])).text() == "<unencodable>")
         #expect(Rendering(.array([.double(1.5), .int(1)])).text() == "[1.5,1]")
 
         // The rendering writes the document's spelling, not the host's — the

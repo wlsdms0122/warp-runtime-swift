@@ -38,14 +38,14 @@ public extension Writer {
             case .variable? = statement.binding,
             case .literal(.null) = statement.expression
         {
-            return .object(written)
+            return .record(written)
         }
 
         let (key, body) = try construct(of: statement.expression, named: statement.binding?.spelled)
 
-        written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .object([key: body])
+        written[StatementReader.valueKey] = key == StatementReader.valueKey ? body : .record([key: body])
 
-        return .object(written)
+        return .record(written)
     }
 
     // Where the expression is going decides what may be written bare there. The
@@ -78,11 +78,11 @@ public extension Writer {
         case let .literal(value):
             switch try Self.spelling(of: value, reserving: reserved, constructs: constructs) {
             case .plainly: return value
-            case .quoted: return .object(["value": value])
+            case .quoted: return .record(["value": value])
             }
 
         case let .reference(path):
-            return .object(["ref": .string(path.rendered)])
+            return .record(["ref": .string(path.rendered)])
 
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
@@ -101,22 +101,22 @@ public extension Writer {
                 )
             }
 
-            return .object(try fields.mapValues { field in try value(of: field) })
+            return .record(try fields.mapValues { field in try value(of: field) })
 
         case let .closure(procedure):
-            return .object([ExpressionReader.closureKey: try value(of: procedure)])
+            return .record([ExpressionReader.closureKey: try value(of: procedure)])
 
         // The mark rides on the key, the way `?.` rides on a segment: one
         // spelling says the mismatch refuses and the other says it reads as
         // null, and the shape itself is written once either way.
         case let .cast(read, type, optional):
-            return .object([
+            return .record([
                 optional ? "as?" : "as": try value(of: type),
                 ExpressionReader.subjectKey: try value(of: read),
             ])
 
         case let .dispatch(dispatch):
-            return .object(["call": try message(of: dispatch)])
+            return .record(["call": try message(of: dispatch)])
 
         // Everything left is a construct, and this notation spells constructs in
         // statement position only. Some of them need to be there — a loop, an
@@ -154,15 +154,15 @@ public extension Writer {
             var written: [Name: Value] = ["procedure": try value(of: callee)]
 
             if !arguments.isEmpty {
-                written["arguments"] = .object(
+                written["arguments"] = .record(
                     try arguments.mapValues { argument in try value(of: argument) }
                 )
             }
 
-            return (try spelling(InvokeForm.self), .object(written))
+            return (try spelling(InvokeForm.self), .record(written))
 
         case let .block(block):
-            return (try spelling(GroupForm.self), .object(try fields(of: block, in: GroupForm.self)))
+            return (try spelling(GroupForm.self), .record(try fields(of: block, in: GroupForm.self)))
 
         // A name on a branch was already refused where the statement's
         // envelope is written — `takesNoName`, the one predicate every door
@@ -177,7 +177,7 @@ public extension Writer {
                 written["else"] = .array(try otherwise.map(value(of:)))
             }
 
-            return (try spelling(BranchForm.self), .object(written))
+            return (try spelling(BranchForm.self), .record(written))
 
         case let .loop(condition, body, round):
             try named(round, matches: id, in: "loop", binding: "round")
@@ -188,7 +188,7 @@ public extension Writer {
 
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
 
-            return (try spelling(LoopForm.self), .object(written))
+            return (try spelling(LoopForm.self), .record(written))
 
         case let .iteration(material, body, element):
             try named(element, matches: id, in: "each", binding: "element")
@@ -199,7 +199,7 @@ public extension Writer {
                 try fields(of: Block(body: body), in: EachForm.self)
             ) { one, _ in one }
 
-            return (try spelling(EachForm.self), .object(written))
+            return (try spelling(EachForm.self), .record(written))
 
         case let .leave(leave):
             switch leave.reach {
@@ -224,9 +224,9 @@ public extension Writer {
 
             var written = try fields(of: attempted, in: AttemptForm.self)
 
-            written["rescue"] = .object(try fields(of: rescue, in: nil))
+            written["rescue"] = .record(try fields(of: rescue, in: nil))
 
-            return (try spelling(AttemptForm.self), .object(written))
+            return (try spelling(AttemptForm.self), .record(written))
 
         // Whatever is left needs no name, so it is written as the expression it
         // is under the word that says "this statement is just a value".
@@ -243,12 +243,12 @@ public extension Writer {
         }
 
         if !dispatch.arguments.isEmpty {
-            written["arguments"] = .object(
+            written["arguments"] = .record(
                 try dispatch.arguments.mapValues { argument in try value(of: argument) }
             )
         }
 
-        return .object(written)
+        return .record(written)
     }
 
     // The keys a block writes, with whoever reads it asked whether an empty

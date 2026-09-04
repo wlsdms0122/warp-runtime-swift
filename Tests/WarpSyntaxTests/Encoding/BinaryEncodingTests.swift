@@ -21,13 +21,13 @@ struct BinaryEncodingTests {
     func everyKindComesBack() throws {
         // Given — one of everything a document can hold, nested enough to make
         // the walk mean something
-        let document = Value.object([
+        let document = Value.record([
             "null": .null,
             "flags": .array([.bool(true), .bool(false)]),
             "counts": .array([.int(0), .int(-1), .int(Int.max), .int(Int.min)]),
             "ratio": .double(3.5),
             "name": .string("héllo, 世界"),
-            "empty": .object([:]),
+            "empty": .record([:]),
             "nothing": .array([])
         ])
 
@@ -57,8 +57,8 @@ struct BinaryEncodingTests {
 
         // Then
         #expect(
-            try BinaryEncoding.data(from: .object(forward))
-                == BinaryEncoding.data(from: .object(backward))
+            try BinaryEncoding.data(from: .record(forward))
+                == BinaryEncoding.data(from: .record(backward))
         )
     }
 
@@ -67,7 +67,7 @@ struct BinaryEncodingTests {
         // Given — a document small enough to lay out by hand. If this test
         // moves, the format moved, and the format version had better move with
         // it — a round-trip test alone would happily follow the code anywhere.
-        let document = Value.object([
+        let document = Value.record([
             "a": .int(1),
             "b": .array([.bool(true), .null]),
             "c": .string("hi"),
@@ -253,7 +253,7 @@ struct BinaryEncodingTests {
             0x02, 0xc3, 0xa9, 0x00          // "é" (NFC): null
         ])
 
-        #expect(try BinaryEncoding.value(from: normal) == .object(["é": .null]))
+        #expect(try BinaryEncoding.value(from: normal) == .record(["é": .null]))
     }
 
     @Test("bytes that end inside bytes are refused")
@@ -311,7 +311,7 @@ struct BinaryEncodingTests {
         // Given — a healthy document cut at every possible place. Whatever byte
         // it loses, the answer is a refusal and never a smaller document.
         let bytes = try BinaryEncoding.data(
-            from: .object(["a": .array([.int(300), .string("hi"), .double(1.5)])])
+            from: .record(["a": .array([.int(300), .string("hi"), .double(1.5)])])
         )
 
         for end in 5..<bytes.count {

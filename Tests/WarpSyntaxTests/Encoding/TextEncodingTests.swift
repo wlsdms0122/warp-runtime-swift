@@ -21,14 +21,14 @@ struct TextEncodingTests {
     @Test("every kind of value survives the round trip")
     func everyKindComesBack() throws {
         // Given
-        let document = Value.object([
+        let document = Value.record([
             "null": .null,
             "flags": .array([.bool(true), .bool(false)]),
             "counts": .array([.int(0), .int(-1), .int(Int.max), .int(Int.min)]),
             "ratio": .double(3.5),
             "name": .string("héllo, 世界"),
             "spaced key": .string("a\nb\t\"c\""),
-            "empty": .object([:]),
+            "empty": .record([:]),
             "nothing": .array([])
         ])
 
@@ -41,7 +41,7 @@ struct TextEncodingTests {
         // Given — the same document the binary golden holds, laid out for eyes.
         // If this test moves, the format moved, and the format version had
         // better move with it.
-        let document = Value.object([
+        let document = Value.record([
             "a": .int(1),
             "b": .array([.bool(true), .null]),
             "c": .string("hi"),
@@ -97,7 +97,7 @@ struct TextEncodingTests {
     func anyLayoutReadsToTheOneValue() throws {
         // Given: the writer's text, and the same document laid out inline,
         // over-indented, and without the final newline
-        let document = Value.object(["a": .int(1), "b": .string("A")])
+        let document = Value.record(["a": .int(1), "b": .string("A")])
         let canonical = try TextEncoding.text(from: document)
 
         for text in [
@@ -116,7 +116,7 @@ struct TextEncodingTests {
     func aShuffledKeyReads() throws {
         #expect(
             try TextEncoding.value(from: "warpt 1\n{\n  b 1\n  a 2\n}\n")
-                == .object(["a": .int(2), "b": .int(1)])
+                == .record(["a": .int(2), "b": .int(1)])
         )
 
         #expect {
@@ -142,7 +142,7 @@ struct TextEncodingTests {
     @Test("a key that is not a word is written in quotes, and read back")
     func aQuotedKeyComesBack() throws {
         // Given
-        let document = Value.object(["spaced key": .int(1), "가나다": .int(2)])
+        let document = Value.record(["spaced key": .int(1), "가나다": .int(2)])
 
         // When
         let text = try TextEncoding.text(from: document)
@@ -237,7 +237,7 @@ struct TextEncodingTests {
         // is what tells a key from a value here
         #expect(
             try TextEncoding.value(from: "warpt 1\n{\n  null 1\n}\n")
-                == .object(["null": .int(1)])
+                == .record(["null": .int(1)])
         )
     }
 

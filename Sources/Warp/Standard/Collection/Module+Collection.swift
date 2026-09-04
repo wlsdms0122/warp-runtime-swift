@@ -9,7 +9,7 @@ import Foundation
 
 public extension Module {
     static let collection = try! Module(
-        description: "Words about arrays and objects. A string counts and contains too.",
+        description: "Words about arrays and records. A string counts and contains too.",
         procedures: [
             "std.collection.append": Procedure(
                 description: "Writes one element onto the end of the array a variable"
@@ -205,37 +205,37 @@ public extension Module {
                 implementation: .query(WalkingQuery(.reduce))
             ),
             "std.collection.keys": Procedure(
-                description: "The names an object holds, in order.",
+                description: "The names a record holds, in order.",
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .object(.any))
+                        "of": Parameter(type: .dictionary(.any))
                     ],
                     returns: .array(.string)
                 ),
                 implementation: .query(MappingQuery(.keys))
             ),
             "std.collection.values": Procedure(
-                description: "What an object holds, by its names in order.",
+                description: "What a record holds, by its names in order.",
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .object(.parameter(name: "Entry")))
+                        "of": Parameter(type: .dictionary(.parameter(name: "Entry")))
                     ],
                     returns: .array(.parameter(name: "Entry"))
                 ),
                 implementation: .query(MappingQuery(.values))
             ),
             "std.collection.setting": Procedure(
-                description: "The object with one name bound to another value.",
+                description: "The record with one name bound to another value.",
                 signature: Signature(
                     receiver: "of",
                     parameters: [
-                        "of": Parameter(type: .object(.any)),
+                        "of": Parameter(type: .dictionary(.any)),
                         "key": Parameter(type: .string),
                         "value": Parameter(type: .any)
                     ],
-                    returns: .object(.any)
+                    returns: .dictionary(.any)
                 ),
                 implementation: .query(MappingQuery(.setting))
             )

@@ -23,7 +23,7 @@ import Testing
 //
 // This is the same shape of guard `holdsEveryByte` earned: two hand-written
 // answers to one question, held together by asking the judge. Every pair the
-// restatement got wrong — `object` beside `record`, `int?` beside `string?`,
+// restatement got wrong — `dictionary` beside `record`, `int?` beside `string?`,
 // `bytes` beside `array<int>`, an int where a double is named, `int?` beside
 // `null` — is a witness this walk would have produced on its own.
 @Suite("The link calls impossible only what no value satisfies")
@@ -62,7 +62,7 @@ struct CastAgreementTests {
         // Elements with nothing in common, because an empty list is of every
         // element type there is and the pair is not impossible for it.
         .array(.string),
-        .object(.string), .object(.any), .object(.int),
+        .dictionary(.string), .dictionary(.any), .dictionary(.int),
         .record(["name": .string]),
         .record(["age": .int]),
         .record([:]),
@@ -84,9 +84,9 @@ struct CastAgreementTests {
         .array([]), .array([.int(1), .int(2)]), .array([.int(300)]),
         .array([.string("a")]), .array([.double(0.5)]),
         .bytes([]), .bytes([1, 2]),
-        .object([:]), .object(["name": .string("n")]),
-        .object(["age": .int(1)]),
-        .object(["children": .array([])])
+        .record([:]), .record(["name": .string("n")]),
+        .record(["age": .int(1)]),
+        .record(["children": .array([])])
     ]
 
     // MARK: - Initializer

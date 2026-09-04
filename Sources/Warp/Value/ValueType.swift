@@ -22,7 +22,7 @@ public enum ValueType: String, Sendable, CaseIterable {
     case string
     case bytes
     case array
-    case object
+    case record
 
     // A value that can be called.
     case procedure

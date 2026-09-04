@@ -78,7 +78,7 @@ public struct Writer: Sendable {
                 (draft.imports ?? draft.sends).sorted().map { name in .string(name.spelling) }
             ),
             ModuleReader.CodingKeys.procedures.name:
-                .object(try draft.procedures.mapValues(value(of:)))
+                .record(try draft.procedures.mapValues(value(of:)))
         ]
 
         if let description = draft.description {
@@ -86,11 +86,11 @@ public struct Writer: Sendable {
         }
 
         if !draft.types.isEmpty {
-            written[ModuleReader.CodingKeys.types.name] = .object(try draft.types.mapValues(value(of:)))
+            written[ModuleReader.CodingKeys.types.name] = .record(try draft.types.mapValues(value(of:)))
         }
 
         if !draft.constraints.isEmpty {
-            written[ModuleReader.CodingKeys.constraints.name] = .object(
+            written[ModuleReader.CodingKeys.constraints.name] = .record(
                 try draft.constraints.mapValues { members in
                     .array(try members.map(value(of:)))
                 }
@@ -98,18 +98,18 @@ public struct Writer: Sendable {
         }
 
         if !draft.constants.isEmpty {
-            written[ModuleReader.CodingKeys.const.name] = .object(
+            written[ModuleReader.CodingKeys.const.name] = .record(
                 try draft.constants.mapValues { constant in try value(of: constant) }
             )
         }
 
         if !draft.variables.isEmpty {
-            written[ModuleReader.CodingKeys.variables.name] = .object(
+            written[ModuleReader.CodingKeys.variables.name] = .record(
                 try draft.variables.mapValues { variable in try value(of: variable) }
             )
         }
 
-        return .object(written)
+        return .record(written)
     }
 
     public func value(of procedure: Procedure) throws -> Value {
@@ -141,7 +141,7 @@ public struct Writer: Sendable {
             written["bounds"] = bounds
         }
 
-        return .object(written)
+        return .record(written)
     }
 
     public func value(of type: TypeExpression) throws -> Value {
@@ -215,8 +215,8 @@ public struct Writer: Sendable {
         case let .array(element):
             return .string("array<\(try spelt(element, at: "inside array<…>"))>")
 
-        case let .object(element):
-            return .string("object<\(try spelt(element, at: "inside object<…>"))>")
+        case let .dictionary(element):
+            return .string("dictionary<\(try spelt(element, at: "inside dictionary<…>"))>")
 
         // Spelt with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own — a record has no
@@ -238,7 +238,7 @@ public struct Writer: Sendable {
                 )
             }
 
-            return .object(try fields.mapValues(value(of:)))
+            return .record(try fields.mapValues(value(of:)))
 
         // A slot's `var` or `inout` is written in front of the inner type,
         // whichever form the inner type takes: a bare name, or a procedure
@@ -252,7 +252,7 @@ public struct Writer: Sendable {
                 return .string("\(word) \(written)")
 
             case let .record(form) where form.count == 1 && TypeReader.procedureKeys.contains(form.entries[0].name):
-                return .object([try Name("\(word) \(form.entries[0].name)"): form.entries[0].value])
+                return .record([try Name("\(word) \(form.entries[0].name)"): form.entries[0].value])
 
             default:
                 throw WritingError(
@@ -271,7 +271,7 @@ public struct Writer: Sendable {
             // has no `bounds` surface, and the `.parameter` case refuses any
             // bound the walk below meets — one guard, wherever the walk
             // started.
-            return .object([try Name(word): .object(try fields(of: signature))])
+            return .record([try Name(word): .record(try fields(of: signature))])
         }
     }
 
@@ -300,7 +300,7 @@ public struct Writer: Sendable {
             return .string(only)
         }
 
-        return .object(written)
+        return .record(written)
     }
 
     // MARK: - Private
@@ -314,7 +314,7 @@ public struct Writer: Sendable {
         }
 
         if !signature.parameters.isEmpty {
-            written["parameters"] = .object(try signature.parameters.mapValues(value(of:)))
+            written["parameters"] = .record(try signature.parameters.mapValues(value(of:)))
         }
 
         if let returns = signature.returns {
@@ -341,8 +341,8 @@ public struct Writer: Sendable {
         case let .array(element):
             return .array(stripped(element))
 
-        case let .object(entry):
-            return .object(stripped(entry))
+        case let .dictionary(entry):
+            return .dictionary(stripped(entry))
 
         case let .record(fields):
             return .record(fields.mapValues(stripped))
@@ -405,7 +405,7 @@ public struct Writer: Sendable {
             }
         }
 
-        return bounds.isEmpty ? nil : .object(bounds)
+        return bounds.isEmpty ? nil : .record(bounds)
     }
 
     // One fact — only a type with a spelling of its own composes — said with

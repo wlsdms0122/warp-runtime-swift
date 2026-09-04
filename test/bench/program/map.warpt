@@ -72,7 +72,7 @@ warpt 1
       result {
         ref "held"
       }
-      returns "object<int>"
+      returns "dictionary<int>"
     }
   }
   warp 1

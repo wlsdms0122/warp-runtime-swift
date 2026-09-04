@@ -99,7 +99,7 @@ extension TypeExpression {
         case (.array(let mine), .bytes):
             mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, in: table)
 
-        case let (.object(mine), .object(theirs)):
+        case let (.dictionary(mine), .dictionary(theirs)):
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         case let (.record(mine), .record(theirs)):
@@ -147,8 +147,8 @@ extension TypeExpression {
         case let .array(element):
             return .array(element.filling(bound))
 
-        case let .object(entry):
-            return .object(entry.filling(bound))
+        case let .dictionary(entry):
+            return .dictionary(entry.filling(bound))
 
         case let .record(fields):
             return .record(fields.mapValues { field in field.filling(bound) })
@@ -186,7 +186,7 @@ extension TypeExpression {
         case .reading:
             return
 
-        case let .array(element), let .object(element), let .nullable(element):
+        case let .array(element), let .dictionary(element), let .nullable(element):
             element.parameterConstraints(into: &table)
 
         case let .record(fields):
@@ -215,7 +215,7 @@ extension TypeExpression {
         case .parameter, .reading:
             return true
 
-        case let .array(element), let .object(element), let .nullable(element):
+        case let .array(element), let .dictionary(element), let .nullable(element):
             return element.isGeneric
 
         case let .record(fields):
@@ -313,8 +313,8 @@ extension TypeExpression {
         case let .array(element):
             return .array(element.bounded(by: bounds))
 
-        case let .object(entry):
-            return .object(entry.bounded(by: bounds))
+        case let .dictionary(entry):
+            return .dictionary(entry.bounded(by: bounds))
 
         case let .record(fields):
             return .record(fields.mapValues { field in field.bounded(by: bounds) })

@@ -10,7 +10,7 @@ import Warp
 
 // The expression grammar. `Expression` has shapes and no spelling; this is the
 // spelling — no front end may hide an expression inside a string, so any
-// notation that can write an object can write every expression:
+// notation that can write a record can write every expression:
 //
 //   scalar             — a literal, and strings are always literal text
 //   { ref: a.b[0] }    — a name to resolve in the consuming scope
@@ -37,7 +37,7 @@ import Warp
 // old `${}` grammar carried does not exist here.
 public struct ExpressionReader: Decodable {
     // MARK: - Property
-    // The object keys that make a record an expression form. A record that
+    // The keys that make a record an expression form. A record that
     // carries one of these as plain data must be quoted — `{ value: ... }`.
     //
     // Fixed, where construct words are a `ConstructRegistry` a caller composes. The
@@ -112,7 +112,7 @@ public struct ExpressionReader: Decodable {
                 )
 
             case let .record(record):
-                return try read(object: record, at: steps, in: decoder)
+                return try read(record: record, at: steps, in: decoder)
 
             // A document is text. Nothing it parses to is ever a procedure, so
             // this arm is unreachable rather than unwritten — a closure reaches
@@ -126,18 +126,18 @@ public struct ExpressionReader: Decodable {
     }
 
     private static func read(
-        object: Record,
+        record: Record,
         at steps: [Place.Step],
         in decoder: Decoder?
     ) throws -> Expression {
-        let formKeys = Set(object.names).intersection(Self.formKeys)
+        let formKeys = Set(record.names).intersection(Self.formKeys)
 
         // No form key: an ordinary record of expressions.
         guard !formKeys.isEmpty else {
             // In the record's order, so that a record with two bad fields
             // refuses the same one every run.
             return .record(
-                try object.entries.reduce(into: [Name: Expression]()) { fields, entry in
+                try record.entries.reduce(into: [Name: Expression]()) { fields, entry in
                     fields[entry.name] = try read(
                         entry.value,
                         at: steps + [.key(entry.name.spelling)],
@@ -147,16 +147,16 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        if object.names.contains("ref") {
-            guard object.count == 1 else {
+        if record.names.contains("ref") {
+            guard record.count == 1 else {
                 throw ExpressionFormError(
                     "a record with `ref` must be exactly { ref: <path> } —"
                         + " wrap it in { value: ... } if the keys are plain data"
-                        + " (found keys: \(object.names))"
+                        + " (found keys: \(record.names))"
                 )
             }
 
-            guard case let .string(rendered)? = object["ref"] else {
+            guard case let .string(rendered)? = record["ref"] else {
                 throw ExpressionFormError(
                     "{ ref: } takes a path string like a.b[0]"
                 )
@@ -169,22 +169,22 @@ public struct ExpressionReader: Decodable {
             }
         }
 
-        if object.names.contains("as") || object.names.contains("as?") {
-            guard !(object.names.contains("as") && object.names.contains("as?")) else {
+        if record.names.contains("as") || record.names.contains("as?") {
+            guard !(record.names.contains("as") && record.names.contains("as?")) else {
                 throw ExpressionFormError(
                     "a cast names one shape — `as` and `as?` are the two ways to"
                         + " read a mismatch, not two shapes to read"
                 )
             }
 
-            let optional = object.names.contains("as?")
+            let optional = record.names.contains("as?")
             let key: Name = optional ? "as?" : "as"
 
-            guard object.count == 2, let written = object[key], let read = object[Self.subjectKey] else {
+            guard record.count == 2, let written = record[key], let read = record[Self.subjectKey] else {
                 throw ExpressionFormError(
                     "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }"
                         + " — wrap it in { value: ... } if the keys are plain data"
-                        + " (found keys: \(object.names))"
+                        + " (found keys: \(record.names))"
                 )
             }
 
@@ -225,11 +225,11 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        if object.names.contains(Self.closureKey) {
-            guard object.count == 1, let written = object[Self.closureKey] else {
+        if record.names.contains(Self.closureKey) {
+            guard record.count == 1, let written = record[Self.closureKey] else {
                 throw ExpressionFormError(
                     "a record with `closure` must be exactly { closure: <procedure> }"
-                        + " (found keys: \(object.names))"
+                        + " (found keys: \(record.names))"
                 )
             }
 
@@ -260,11 +260,11 @@ public struct ExpressionReader: Decodable {
             }
         }
 
-        if object.names.contains("call") {
-            guard object.count == 1, let written = object["call"] else {
+        if record.names.contains("call") {
+            guard record.count == 1, let written = record["call"] else {
                 throw ExpressionFormError(
                     "a record with `call` must be exactly { call: <message> }"
-                        + " (found keys: \(object.names))"
+                        + " (found keys: \(record.names))"
                 )
             }
 
@@ -292,12 +292,12 @@ public struct ExpressionReader: Decodable {
             }
         }
 
-        if object.names.contains("value") {
-            guard object.count == 1, let payload = object["value"] else {
+        if record.names.contains("value") {
+            guard record.count == 1, let payload = record["value"] else {
                 throw ExpressionFormError(
                     "a record with `value` must be exactly { value: <data> } —"
                         + " wrap the whole record in { value: ... } if the keys are"
-                        + " plain data (found keys: \(object.names))"
+                        + " plain data (found keys: \(record.names))"
                 )
             }
 
@@ -318,30 +318,30 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        guard object.names.contains("format") else {
+        guard record.names.contains("format") else {
             // Only `with` remains — with is format's companion, meaningless alone.
             throw ExpressionFormError(
                 "`with` only accompanies `format` — wrap the record in"
                     + " { value: ... } if the keys are plain data"
-                    + " (found keys: \(object.names))"
+                    + " (found keys: \(record.names))"
             )
         }
 
-        guard Set(object.names).subtracting(["format", "with"]).isEmpty else {
+        guard Set(record.names).subtracting(["format", "with"]).isEmpty else {
             throw ExpressionFormError(
                 "a record with `format` must be exactly { format: <template>,"
                     + " with: <bindings> } — wrap it in { value: ... } if the keys"
-                    + " are plain data (found keys: \(object.names))"
+                    + " are plain data (found keys: \(record.names))"
             )
         }
 
-        guard case let .string(template)? = object["format"] else {
+        guard case let .string(template)? = record["format"] else {
             throw ExpressionFormError("{ format: } takes a template string")
         }
 
         let bindings: [Name: Expression]
 
-        switch object["with"] {
+        switch record["with"] {
         case nil:
             bindings = [:]
 

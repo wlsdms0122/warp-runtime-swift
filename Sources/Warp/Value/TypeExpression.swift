@@ -69,8 +69,8 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
     // A map of string keys to one shape — a record whose field names are data
     // rather than declaration. Keys are always strings because that is what
-    // `Value.object` holds.
-    case object(TypeExpression)
+    // `Value.record` holds.
+    case dictionary(TypeExpression)
 
     // Named fields with types. The value may carry more.
     case record([Name: TypeExpression])
@@ -259,8 +259,8 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .array(element):
             return "array<\(element.rendered)>"
 
-        case let .object(entry):
-            return "object<\(entry.rendered)>"
+        case let .dictionary(entry):
+            return "dictionary<\(entry.rendered)>"
 
         case let .record(fields):
             let written = fields
@@ -468,8 +468,8 @@ extension TypeExpression {
         case let .array(element):
             return .array(element.resolved(in: types, assuming: assuming))
 
-        case let .object(element):
-            return .object(element.resolved(in: types, assuming: assuming))
+        case let .dictionary(element):
+            return .dictionary(element.resolved(in: types, assuming: assuming))
 
         case let .nullable(element):
             return .nullable(element.resolved(in: types, assuming: assuming))

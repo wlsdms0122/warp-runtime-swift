@@ -1028,7 +1028,7 @@ public struct Linker: Sendable {
                 )
             }
 
-        case let .array(element), let .object(element):
+        case let .array(element), let .dictionary(element):
             try mentioned(in: element, at: place, parameterized: parameterized, resolve: table)
 
         // The reader refuses a `?` that says nothing new — but the reader

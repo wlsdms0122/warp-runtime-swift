@@ -77,8 +77,8 @@ struct RecordTests {
         #expect(sut.removing("a").name == "app.Point")
     }
 
-    @Test("setting a field answers a new object, whatever name the receiver had")
-    func settingAnswersAnObject() throws {
+    @Test("setting a field answers a new record, whatever name the receiver had")
+    func settingAnswersARecord() throws {
         // Given
         let question = Question(
             receiver: .record(Record(name: "app.Point", ["a": .int(1)])),
@@ -89,7 +89,7 @@ struct RecordTests {
         let answer = try MappingQuery(.setting).evaluate(question)
 
         // Then
-        #expect(answer == .object(["a": .int(1), "b": .int(2)]))
+        #expect(answer == .record(["a": .int(1), "b": .int(2)]))
     }
 
     @Test("mapping values changes every value and nothing else")
@@ -149,7 +149,7 @@ struct RecordTests {
     func settingRefusesAKeyOutsideNormalForm() {
         // Given
         let question = Question(
-            receiver: .object(["a": .int(1)]),
+            receiver: .record(["a": .int(1)]),
             arguments: ["key": .string("cafe\u{301}"), "value": .int(2)]
         )
 
@@ -164,12 +164,12 @@ struct RecordTests {
     @Test("a record equals another by name and by every entry, and matches across numeric width")
     func equalityAndMatching() {
         // Given
-        let whole = Value.object(["a": .int(1), "b": .string("x")])
-        let fraction = Value.object(["a": .double(1), "b": .string("x")])
+        let whole = Value.record(["a": .int(1), "b": .string("x")])
+        let fraction = Value.record(["a": .double(1), "b": .string("x")])
         let named = Value.record(Record(name: "app.T", ["a": .int(1), "b": .string("x")]))
 
         // When / Then
-        #expect(whole == Value.object(["b": .string("x"), "a": .int(1)]))
+        #expect(whole == Value.record(["b": .string("x"), "a": .int(1)]))
         #expect(whole != fraction)
         #expect(whole.matches(fraction))
         #expect(whole != named)

@@ -34,19 +34,19 @@ struct ValueDecoder: Decoder {
 
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let object: Record
+        let record: Record
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            object.names.compactMap { key in Key(stringValue: key.spelling) }
+            record.names.compactMap { key in Key(stringValue: key.spelling) }
         }
 
         // MARK: - Initializer
         // MARK: - Public
         func contains(_ key: Key) -> Bool {
-            (try? Name(key.stringValue)).flatMap { name in object[name] } != nil
+            (try? Name(key.stringValue)).flatMap { name in record[name] } != nil
         }
 
         func decodeNil(forKey key: Key) throws -> Bool {
@@ -82,7 +82,7 @@ struct ValueDecoder: Decoder {
 
         // MARK: - Private
         private func value(forKey key: Key) throws -> Value {
-            guard let name = try? Name(key.stringValue), let value = object[name] else {
+            guard let name = try? Name(key.stringValue), let value = record[name] else {
                 throw ReadingError(
                     "no value for key '\(key.stringValue)'",
                     at: steps + [.key(key.stringValue)]
@@ -306,12 +306,12 @@ struct ValueDecoder: Decoder {
     // MARK: - Initializer
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .record(object) = value else {
-            throw ReadingError("expected object, found \(value.type)", at: steps)
+        guard case let .record(record) = value else {
+            throw ReadingError("expected a record, found \(value.type)", at: steps)
         }
 
         return KeyedDecodingContainer(KeyedContainer(
-            object: object,
+            record: record,
             codingPath: codingPath,
             steps: steps,
             userInfo: userInfo

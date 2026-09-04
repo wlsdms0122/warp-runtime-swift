@@ -339,7 +339,7 @@ struct ValidationTests {
         // A run's own values arrive as arguments like everything else.
         let read = Procedure(body: [Statement(binding: .constant("read"), expression: reference("run", "id"))])
         let taken = Procedure(
-            signature: Signature(parameters: ["run": Parameter(type: .object(.any))]),
+            signature: Signature(parameters: ["run": Parameter(type: .dictionary(.any))]),
             body: [Statement(binding: .constant("read"), expression: reference("run", "id"))]
         )
 

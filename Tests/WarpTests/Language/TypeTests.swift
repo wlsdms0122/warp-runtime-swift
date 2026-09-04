@@ -56,7 +56,7 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .object(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
+            .record(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
             at: "task"
         )
 
@@ -64,7 +64,7 @@ struct TypeTests {
         #expect(settled["extra"] == .int(1))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.object(["id": .string("a")]), at: "task")
+            try sut.settling(.record(["id": .string("a")]), at: "task")
         }
     }
 
@@ -83,7 +83,7 @@ struct TypeTests {
         let sut = TypeExpression.named("Someone")
 
         // When
-        let bare = try sut.settling(.object(["name": .string("a")]), at: "who", in: types)
+        let bare = try sut.settling(.record(["name": .string("a")]), at: "who", in: types)
         let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
         let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
@@ -101,7 +101,7 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .array([.object(["id": .string("a")])]),
+            .array([.record(["id": .string("a")])]),
             at: "tasks",
             in: types
         )
@@ -110,7 +110,7 @@ struct TypeTests {
         #expect(settled == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.array([.object(["id": .int(1)])]), at: "tasks", in: types)
+            try sut.settling(.array([.record(["id": .int(1)])]), at: "tasks", in: types)
         }
     }
 
@@ -125,9 +125,9 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .object([
+            .record([
                 "value": .int(1),
-                "children": .array([.object(["value": .int(2), "children": .array([])])])
+                "children": .array([.record(["value": .int(2), "children": .array([])])])
             ]),
             at: "tree",
             in: types
@@ -160,7 +160,7 @@ struct TypeTests {
     @Test("a type reads back in the spelling it was declared with")
     func typesRenderAsWritten() {
         #expect(TypeExpression.array(.string).rendered == "array<string>")
-        #expect(TypeExpression.object(.named("Task")).rendered == "object<Task>")
+        #expect(TypeExpression.dictionary(.named("Task")).rendered == "dictionary<Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "array<array<int>>")
         #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: string, b: int }")
     }
@@ -249,22 +249,22 @@ struct TypeTests {
         )
     }
 
-    @Test("an object slot takes a record whose fields all fit it")
-    func objectTakesAKnownRecord() {
-        // Given — a record is an object whose fields happen to be known, and
+    @Test("a dictionary slot takes a record whose fields all fit it")
+    func aDictionaryTakesAKnownRecord() {
+        // Given — a record is a dictionary whose fields happen to be known, and
         // knowing them is not a reason to refuse it
-        let sut = TypeExpression.object(.any)
+        let sut = TypeExpression.dictionary(.any)
 
         // When / Then
         #expect(sut.accepts(.record(["axes": .string, "depth": .int])))
-        #expect(TypeExpression.object(.string).accepts(.record(["axes": .string])))
-        #expect(!TypeExpression.object(.int).accepts(.record(["axes": .string])))
+        #expect(TypeExpression.dictionary(.string).accepts(.record(["axes": .string])))
+        #expect(!TypeExpression.dictionary(.int).accepts(.record(["axes": .string])))
     }
 
-    @Test("a record slot does not take a bare object")
-    func recordDoesNotTakeAnObject() {
-        // Given — a record names fields it requires; an object promises none
-        #expect(!TypeExpression.record(["axes": .string]).accepts(.object(.string)))
+    @Test("a record slot does not take a bare dictionary")
+    func aRecordDoesNotTakeADictionary() {
+        // Given — a record names fields it requires; a dictionary promises none
+        #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
     }
 
 }

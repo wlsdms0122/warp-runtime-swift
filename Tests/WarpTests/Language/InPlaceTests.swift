@@ -227,7 +227,7 @@ struct InPlaceTests {
                     body: [
                         Statement(
                             binding: .variable("table"),
-                            expression: .cast(.record([:]), as: .object(.int), optional: false)
+                            expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
                         ),
                         Statement(
                             expression: .dispatch(Dispatch(selector: "fill", arguments: ["slot": reference("table", "k")]))

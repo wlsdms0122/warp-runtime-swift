@@ -14,9 +14,9 @@ struct ReferenceLookupTests {
     // MARK: - Property
     private let sut = Folding(bindings: [
                 "name": .string("spec"),
-                "run": .object(["id": .string("r-1")]),
+                "run": .record(["id": .string("r-1")]),
                 "items": .array([.int(1), .int(2), .int(3)]),
-                "step": .object(["out": .string("done"), "list": .array([.string("a")])]),
+                "step": .record(["out": .string("done"), "list": .array([.string("a")])]),
                 "index": .int(1)
             ], natives: Module.standard)
 
