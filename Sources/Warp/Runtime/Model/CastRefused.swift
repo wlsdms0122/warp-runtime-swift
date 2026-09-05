@@ -31,10 +31,8 @@ public struct CastRefused: RecoverableFailure {
 
     public let type = "cast_refused"
 
-    // The shape that was named rides on top of the two every payload holds,
-    // for a rescue that wants to say which cast it was. A field past the
-    // declared core rides through the rescue's boundary the way any data past
-    // a declaration does, so a rescue reaches it by naming the shape.
+    // The shape that was named rides in the payload's box, for a rescue that
+    // wants to say which cast it was.
     public var details: [Name: Value] { ["shape": .string(shape)] }
 
     // MARK: - Initializer

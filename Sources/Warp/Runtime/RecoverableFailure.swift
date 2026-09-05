@@ -18,15 +18,16 @@ import Foundation
 //
 // While a rescue runs, the failure exists as a value: the executor binds
 // `payload` under the failed statement's id, so a rescue body can read what went
-// wrong through `<id>.message` and whatever else that failure carries. Every
-// payload holds at least `type` and `message`; each error adds its own fields on
-// top — the runtime owns the mechanism, the error owns the vocabulary.
+// wrong through `<id>.message` and, under `<id>.details`, whatever else that
+// failure carries. The envelope is the same for every failure and what rides
+// inside it is the failing word's own — the runtime owns the mechanism, the
+// error owns the vocabulary.
 public protocol RecoverableFailure: WarpError {
     // One word naming what happened — `aborted`, `concurrent_failed`.
     var type: String { get }
 
-    // Whatever this failure carries beyond the two every failure holds. Empty
-    // for most; a `concurrent_failed` keys every piece's reason by the piece.
+    // Whatever this failure carries beyond the envelope. Empty for most; a
+    // `concurrent_failed` keys every piece's reason by the piece.
     var details: [Name: Value] { get }
 }
 
@@ -34,39 +35,35 @@ public extension RecoverableFailure {
     var details: [Name: Value] { [:] }
 
     // Deliberately not a protocol requirement: the shape is assembled here and
-    // nowhere else, so a conformance cannot hand over a payload without `type`
-    // or `message`. The link declares this shape and holds a rescue's name to
-    // it, and a declaration a conformance could quietly break is a promise
-    // rather than a fact — this is a promise the type system keeps.
+    // nowhere else, so a conformance cannot hand over a payload the link's
+    // declaration does not describe. A declaration a conformance could quietly
+    // break is a promise rather than a fact, and this is a promise the type
+    // system keeps.
     //
-    // It replaces a check at the other end: the run used to judge the payload
-    // as the rescue began, which caught a broken conformance only on the runs
-    // that reached it, and turned a recoverable failure into one nothing could
-    // catch at the moment something wanted to catch it.
-    // The two the link declares win any collision: they are what every
-    // rescue is promised, so a failure that also put a `type` in `details`
-    // does not get to redefine the word naming what happened. What it wanted
-    // to say belongs under a name of its own.
+    // What a failure carries rides in a box of its own rather than beside the
+    // envelope's names, so no failure can redefine the word naming what
+    // happened by adding a field.
     var payload: Value {
-        .dictionary(
-            details.merging([
-                "type": .string(type),
-                "message": .string(message),
-            ]) { _, core in core }
-        )
+        .dictionary([
+            "type": .string(type),
+            "message": .string(message),
+            "details": .dictionary(details),
+        ])
     }
 }
 
 // The shape the sentence above promises, said once as a type so the link can
-// hold the rescue's name to it. Before this it read `any`, which threw the
-// promise away: a rescue could reach anything and be judged on nothing.
+// hold the rescue's name to it.
 //
-// Only the guaranteed core is here. Nothing settles the payload, so what an
-// error adds on top arrives with it, unnamed: it is read by naming the shape,
-// with `as`.
+// The envelope is the whole declaration: `type` and `message` are what every
+// failure holds, and `details` is the box the failing word fills. Declaring
+// the box as a dictionary of `any` is what lets a rescue reach what a failure
+// carried by naming it, without the shape of the box being part of what a
+// runtime must implement.
 public enum FailurePayload {
     public static let declared = TypeExpression.record([
         "type": .string,
         "message": .string,
+        "details": .dictionary(.any),
     ])
 }
