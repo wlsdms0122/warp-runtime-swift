@@ -27,21 +27,21 @@ import Foundation
 // the step over whole is what lets a caller keep both; a word would have made
 // this walk choose between them on every stage's behalf.
 
+// What a walk finds: a statement, or an expression. A stage keeps the one it
+// is after and the walk keeps neither — what is buried where is a fact of the
+// language, and which of it matters is the stage's own question.
+public enum Buried: Sendable {
+    case statement(Statement)
+    case expression(Expression)
+}
+
 // What can be walked for everything it holds. Three types answer it, and the
 // convenient ways to ask are written once here rather than three times
 // over — the same duplication this file exists to remove, at the smaller
 // scale where it is easy not to notice.
-//
-// What a stage keeps is its own. A statement and an expression are offered as
-// the walk reaches them, so a stage after types a name declares and a stage
-// after the shapes a cast names take the same walk and keep different things.
 public protocol Burying {
-    func buried<Trail, Found>(
-        at trail: Trail,
-        stepping: (Trail, Place.Step) -> Trail,
-        keepingStatement: (Trail, Statement) -> [(Trail, Found)],
-        keepingExpression: (Trail, Expression) -> [(Trail, Found)]
-    ) -> [(Trail, Found)]
+    // Everything held in here, each with where it was found.
+    func walked<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail) -> [(Trail, Buried)]
 }
 
 public extension Burying {
@@ -50,12 +50,11 @@ public extension Burying {
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Expression)] {
-        buried(
-            at: trail,
-            stepping: stepping,
-            keepingStatement: { _, _ in [] },
-            keepingExpression: { trail, expression in [(trail, expression)] }
-        )
+        walked(at: trail, stepping: stepping).compactMap { found -> (Trail, Expression)? in
+            guard case let .expression(expression) = found.1 else { return nil }
+
+            return (found.0, expression)
+        }
     }
 
     // The walk a stage that reports takes.
@@ -71,14 +70,15 @@ public extension Burying {
 
     // Every type a name in here says it holds, each with where it was said.
     func declaring(at place: Place) -> [(Place, TypeExpression)] {
-        buried(
-            at: place,
-            stepping: { place, step in place.appending(step) },
-            keepingStatement: { trail, statement in
-                statement.binding?.declared.map { declared in [(trail, declared)] } ?? []
-            },
-            keepingExpression: { _, _ in [] }
-        )
+        walked(at: place) { place, step in place.appending(step) }
+            .compactMap { found -> (Place, TypeExpression)? in
+                guard
+                    case let .statement(statement) = found.1,
+                    let declared = statement.binding?.declared
+                else { return nil }
+
+                return (found.0, declared)
+            }
     }
 }
 
@@ -87,23 +87,19 @@ extension Block: Burying {}
 extension [Statement]: Burying {}
 
 public extension Expression {
-    func buried<Trail, Found>(
+    func walked<Trail>(
         at trail: Trail,
-        stepping: (Trail, Place.Step) -> Trail,
-        keepingStatement: (Trail, Statement) -> [(Trail, Found)],
-        keepingExpression: (Trail, Expression) -> [(Trail, Found)]
-    ) -> [(Trail, Found)] {
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Buried)] {
         // A closure names its own place: the literal and the body it carries
         // are found under one name, so a report says which closure without
         // having to say it twice.
         let here: Trail = if case .closure = self { stepping(trail, .slot(.closure)) } else { trail }
 
-        func inner(_ expression: Expression, under slot: Place.Slot? = nil) -> [(Trail, Found)] {
-            expression.buried(
+        func inner(_ expression: Expression, under slot: Place.Slot? = nil) -> [(Trail, Buried)] {
+            expression.walked(
                 at: slot.map { slot in stepping(here, .slot(slot)) } ?? here,
-                stepping: stepping,
-                keepingStatement: keepingStatement,
-                keepingExpression: keepingExpression
+                stepping: stepping
             )
         }
 
@@ -113,46 +109,23 @@ public extension Expression {
         // which one an author is shown would be a fact of the run rather than
         // of the text. Its own place because two of them reported from the
         // same one would say a thing is wrong and not say which.
-        func arguments(_ children: [Name: Expression]) -> [(Trail, Found)] {
+        func arguments(_ children: [Name: Expression]) -> [(Trail, Buried)] {
             named(children, under: stepping(here, .slot(.arguments)))
         }
 
-        func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Found)] {
+        func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Buried)] {
             children.sorted { mine, theirs in mine.key < theirs.key }
                 .flatMap { name, child in
-                    child.buried(
-                        at: stepping(place, .key(name.spelling)),
-                        stepping: stepping,
-                        keepingStatement: keepingStatement,
-                        keepingExpression: keepingExpression
-                    )
+                    child.walked(at: stepping(place, .key(name.spelling)), stepping: stepping)
                 }
         }
 
-        func block(_ block: Block, at trail: Trail) -> [(Trail, Found)] {
-            block.buried(
-                at: trail,
-                stepping: stepping,
-                keepingStatement: keepingStatement,
-                keepingExpression: keepingExpression
-            )
-        }
-
-        func statements(_ body: [Statement], at trail: Trail) -> [(Trail, Found)] {
-            body.buried(
-                at: trail,
-                stepping: stepping,
-                keepingStatement: keepingStatement,
-                keepingExpression: keepingExpression
-            )
-        }
-
-        let held: [(Trail, Found)] = switch self {
+        let held: [(Trail, Buried)] = switch self {
         case .literal, .reference:
             []
 
         case let .closure(procedure):
-            procedure.block.map { held in block(held, at: here) } ?? []
+            procedure.block?.walked(at: here, stepping: stepping) ?? []
 
         case let .cast(value, _, _):
             inner(value, under: .receiver)
@@ -164,12 +137,7 @@ public extension Expression {
 
         case let .array(array):
             array.enumerated().flatMap { position, element in
-                element.buried(
-                    at: stepping(here, .index(position)),
-                    stepping: stepping,
-                    keepingStatement: keepingStatement,
-                    keepingExpression: keepingExpression
-                )
+                element.walked(at: stepping(here, .index(position)), stepping: stepping)
             }
 
         case let .record(record):
@@ -182,51 +150,40 @@ public extension Expression {
             (dispatch.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])
                 + arguments(dispatch.arguments)
 
-        case let .block(held):
-            block(held, at: here)
+        case let .block(block):
+            block.walked(at: here, stepping: stepping)
 
         case let .conditional(condition, then, otherwise):
             inner(condition, under: .condition(of: .branch))
-                + statements(then, at: stepping(here, .slot(.then)))
-                + (otherwise.map { held in statements(held, at: stepping(here, .slot(.otherwise))) } ?? [])
+                + then.walked(at: stepping(here, .slot(.then)), stepping: stepping)
+                + (otherwise?.walked(at: stepping(here, .slot(.otherwise)), stepping: stepping) ?? [])
 
         case let .loop(condition, body, _):
             inner(condition, under: .condition(of: .loop))
-                + block(body, at: here)
+                + body.walked(at: here, stepping: stepping)
 
         case let .iteration(material, body, _):
             inner(material, under: .material)
-                + statements(body, at: stepping(here, .slot(.body)))
+                + body.walked(at: stepping(here, .slot(.body)), stepping: stepping)
 
         case let .attempt(attempted, rescue, _):
-            block(attempted, at: here)
-                + block(rescue, at: stepping(here, .slot(.rescue)))
+            attempted.walked(at: here, stepping: stepping)
+                + rescue.walked(at: stepping(here, .slot(.rescue)), stepping: stepping)
         }
 
-        return keepingExpression(here, self) + held
+        return [(here, .expression(self))] + held
     }
 }
 
 public extension Block {
-    func buried<Trail, Found>(
+    func walked<Trail>(
         at trail: Trail,
-        stepping: (Trail, Place.Step) -> Trail,
-        keepingStatement: (Trail, Statement) -> [(Trail, Found)],
-        keepingExpression: (Trail, Expression) -> [(Trail, Found)]
-    ) -> [(Trail, Found)] {
-        body.buried(
-            at: stepping(trail, .slot(.body)),
-            stepping: stepping,
-            keepingStatement: keepingStatement,
-            keepingExpression: keepingExpression
-        ) + (result.map { result in
-            result.buried(
-                at: stepping(trail, .slot(.result)),
-                stepping: stepping,
-                keepingStatement: keepingStatement,
-                keepingExpression: keepingExpression
-            )
-        } ?? [])
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Buried)] {
+        body.walked(at: stepping(trail, .slot(.body)), stepping: stepping)
+            + (result.map { result in
+                result.walked(at: stepping(trail, .slot(.result)), stepping: stepping)
+            } ?? [])
     }
 }
 
@@ -234,21 +191,17 @@ public extension [Statement] {
     // A statement is found under its own name — or, one run for its effect
     // alone, under its position, which is the only thing there is to call it —
     // and then under the construct it writes, the way a document nests it.
-    func buried<Trail, Found>(
+    func walked<Trail>(
         at trail: Trail,
-        stepping: (Trail, Place.Step) -> Trail,
-        keepingStatement: (Trail, Statement) -> [(Trail, Found)],
-        keepingExpression: (Trail, Expression) -> [(Trail, Found)]
-    ) -> [(Trail, Found)] {
+        stepping: (Trail, Place.Step) -> Trail
+    ) -> [(Trail, Buried)] {
         enumerated().flatMap { position, statement in
             let here = stepping(trail, .statement(name: statement.name?.spelling, at: position))
 
-            return keepingStatement(here, statement)
-                + statement.expression.buried(
+            return [(here, Buried.statement(statement))]
+                + statement.expression.walked(
                     at: stepping(here, .construct(statement.expression.construct)),
-                    stepping: stepping,
-                    keepingStatement: keepingStatement,
-                    keepingExpression: keepingExpression
+                    stepping: stepping
                 )
         }
     }

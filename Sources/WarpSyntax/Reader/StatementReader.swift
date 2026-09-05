@@ -208,6 +208,10 @@ public struct StatementReader: Decodable {
             )
         }
 
+        if declared != nil, expression.namesItsOwn {
+            throw ReadingError(Expression.declarationOnABoundName, at: decoder.steps)
+        }
+
         if binding != nil, expression.takesNoName {
             throw ReadingError(
                 "a branch answers nothing, so its name"

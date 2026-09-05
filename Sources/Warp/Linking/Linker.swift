@@ -774,51 +774,49 @@ public struct Linker: Sendable {
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
-                    let found = Place.procedure(name.spelling, in: .of(module))
-                    let buried = block.buried(at: found)
-
-                    for (place, inner) in closures(in: buried) {
-                        try judge(inner.signature, at: place, in: table)
-                    }
-
-                    // A cast names a shape, which is a mention like a
-                    // signature's — so it is held here, in the same pass and
-                    // by the same rule. Asking it where types are inferred
-                    // instead would ask only of what that walk reaches:
-                    // a procedure both impure and unreachable is walked by
-                    // neither the frontier nor the pure set, and its casts
-                    // would name whatever they liked.
-                    for (place, named) in castTypes(in: buried) {
-                        try judge(cast: named, at: place, in: table)
-                    }
-
-                    // What a name says it holds is a mention too, and it is
-                    // held here for the reason a cast is.
-                    for (place, declared) in block.declaring(at: found) {
-                        try mentioned(in: declared, at: place, parameterized: true, resolve: table)
-                    }
+                    try judge(buried: block, at: .procedure(name.spelling, in: .of(module)), in: table)
                 }
             }
 
             for (name, constant) in module.constants.sorted { $0.key < $1.key } {
-                let found = Place.constant(name.spelling, in: .of(module))
-                let buried = constant.buried(at: found)
+                try judge(buried: constant, at: .constant(name.spelling, in: .of(module)), in: table)
+            }
 
-                for (place, inner) in closures(in: buried) {
-                    try judge(inner.signature, at: place, in: table)
-                }
-
-                for (place, named) in castTypes(in: buried) {
-                    try judge(cast: named, at: place, in: table)
-                }
-
-                for (place, declared) in constant.declaring(at: found) {
-                    try mentioned(in: declared, at: place, parameterized: true, resolve: table)
-                }
+            for (name, variable) in module.variables.sorted { $0.key < $1.key } {
+                try judge(buried: variable, at: .variable(name.spelling, in: .of(module)), in: table)
             }
         }
 
         return table
+    }
+
+    // Every type a body mentions, held where it is written: the signatures its
+    // closures carry, the shapes its casts name, and what its names say they
+    // hold. Three name spaces bury a body — a procedure's, a constant's and a
+    // variable's — and one of them was once missing a judgment the other two
+    // made, so the three ask this rather than each holding a copy.
+    //
+    // Asking it where types are inferred instead would ask only of what that
+    // walk reaches: a procedure both impure and unreachable is walked by
+    // neither the frontier nor the pure set, and its mentions would name
+    // whatever they liked.
+    private func judge(buried held: some Burying, at place: Place, in table: TypeTable) throws {
+        let buried = held.buried(at: place)
+
+        for (place, inner) in closures(in: buried) {
+            try judge(inner.signature, at: place, in: table)
+        }
+
+        for (place, named) in castTypes(in: buried) {
+            try judge(cast: named, at: place, in: table)
+        }
+
+        // A name saying what it holds is a mention like the other two, and
+        // unparameterized: what fills a type parameter is a call filling the
+        // slot that names it, and a name inside a body is no such slot.
+        for (place, declared) in held.declaring(at: place) {
+            try mentioned(in: declared, at: place, parameterized: false, resolve: table)
+        }
     }
 
     // Everything a signature is held to where it is declared: every type it

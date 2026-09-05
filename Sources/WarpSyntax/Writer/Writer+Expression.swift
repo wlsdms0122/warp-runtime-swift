@@ -26,6 +26,10 @@ public extension Writer {
             )
         }
 
+        if statement.binding?.declared != nil, statement.expression.namesItsOwn {
+            throw WritingError(Expression.declarationOnABoundName)
+        }
+
         var written: [Name: Value] = [:]
 
         if let binding = statement.binding {

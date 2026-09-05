@@ -140,6 +140,129 @@ struct DeclaredNameTests {
         }
     }
 
+    @Test("what a name says it holds is what the run puts in it")
+    func aDeclarationSettlesTheValue() async throws {
+        // Given — the value is a whole number and the name says it holds a
+        // fraction. A declaration is a boundary like a parameter's, so what
+        // crosses it is settled
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
+                    ],
+                    result: .record(["got": reference("held")])
+                )
+            ]
+        )
+
+        // When
+        let answer = try await Executor().run(try Linker().link([sut] + Module.standard, entry: entryName))
+
+        // Then
+        #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
+    }
+
+    @Test("a name declaring a range is refused a value outside it")
+    func aDeclaredRangeRefusesWhatIsOutsideIt() async throws {
+        // Given
+        let sut = try Module(
+            types: ["app.Byte": .ranged(.whole(from: 0, to: .through(255)))],
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("held", declared: .named("app.Byte")),
+                            expression: .literal(.int(300))
+                        )
+                    ],
+                    result: reference("held")
+                )
+            ]
+        )
+        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+
+        // When / Then
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            "\(error)".contains("300 is outside")
+        }
+    }
+
+    @Test("a construct that binds the name says what it holds, and the author does not")
+    func aConstructBoundNameTakesNoDeclaration() throws {
+        // Given — a walk binds the element under the statement's name
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("walk", declared: .int),
+                            expression: .iteration(over: .array([.literal(.int(1))]), body: [], element: "walk")
+                        )
+                    ],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("this construct binds the name")
+        }
+    }
+
+    @Test("a name declaring a type parameter is refused, because no call fills a name")
+    func aDeclaredTypeParameterIsRefused() throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    body: [
+                        Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1)))
+                    ],
+                    result: reference("held")
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: (any Error).self) {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a declaration inside a module variable is held the way one inside a procedure is")
+    func aDeclarationInsideAModuleVariableIsHeld() throws {
+        // Given
+        let sut = try Module(
+            variables: [
+                "started": .closure(
+                    Procedure(
+                        body: [
+                            Statement(
+                                binding: .constant("inner", declared: .named("app.Missing")),
+                                expression: .literal(.int(1))
+                            )
+                        ],
+                        result: .literal(.int(1))
+                    )
+                )
+            ],
+            procedures: [entryName: Procedure(body: [], result: .literal(.int(1)))]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("app.Missing")
+        }
+    }
+
     @Test("a closure under a name that says what it holds is handed in place, and the word writes it back")
     func aDeclaredClosureIsHandedInPlace() async throws {
         // Given — the link derives `pure isolated` for a closure literal, and

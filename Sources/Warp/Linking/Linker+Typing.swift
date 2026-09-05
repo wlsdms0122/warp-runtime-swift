@@ -1879,6 +1879,10 @@ extension Linker {
                 )
             }
 
+            if statement.binding?.declared != nil, statement.expression.namesItsOwn {
+                try refuse(Expression.declarationOnABoundName, at: here, when: ask)
+            }
+
             switch statement.binding {
             // A name that says what it holds holds that. One that says
             // nothing holds what the link worked out from what it was given.
@@ -2479,7 +2483,10 @@ extension Linker {
                 when: ask
             )
 
-            return given
+            // The reading ask has no refusal to throw, and what the name holds
+            // is what it declared either way — handing back what it was given
+            // would leave the two walks reading one name as two types.
+            return declared
         }
 
         return declared

@@ -177,6 +177,19 @@ public indirect enum Expression: Sendable {
         }
     }
 
+    // Whether the construct decides what the statement's name holds: a loop's
+    // round, a walk's element, an attempt's failure. The name is the
+    // construct's to bind, so what it holds is not the author's to declare.
+    public var namesItsOwn: Bool {
+        switch self {
+        case .loop, .iteration, .attempt:
+            return true
+
+        default:
+            return false
+        }
+    }
+
     // The sentences the construct rule refuses with, stated once beside the
     // predicate that decides them — the check wraps them as validation
     // refusals and the link as link refusals, so the two stages cannot say
@@ -184,6 +197,9 @@ public indirect enum Expression: Sendable {
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data"
             + " — a body a word is to run travels as a closure"
+    public static let declarationOnABoundName =
+        "this construct binds the name — a loop's round, a walk's element,"
+            + " an attempt's failure — so what it holds is not declared here"
     public static let constructInCondition =
         "a construct runs a body, and a condition is data"
             + " — what a body decides reaches a condition through a word"

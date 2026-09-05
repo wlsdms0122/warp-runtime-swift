@@ -152,6 +152,20 @@ public struct Executor: Sendable {
     }
 
     // MARK: - Private
+    // What a name takes: the value settled to what the name said it holds, or
+    // the value as it stands where the name said nothing. A declaration is a
+    // boundary like a parameter's, so it is crossed by the one judge.
+    private func held(
+        _ value: Value,
+        as settling: Shape?,
+        in slot: Int,
+        of activation: Activation
+    ) throws -> Value {
+        guard let settling else { return value }
+
+        return try settling.settling(value, at: "'\(activation.frame.names[slot])'", in: shapes)
+    }
+
     // A body run as a procedure: what it answers is caught here, and what it
     // answers is settled against what it declared.
     //
@@ -205,13 +219,18 @@ public struct Executor: Sendable {
             let result = try await run(instruction, in: &activation, at: trace)
 
             switch instruction.binding {
-            case let .bind(slot)?:
-                activation.cells[slot] = .value(result)
+            case let .bind(slot, settling)?:
+                activation.cells[slot] = .value(try held(result, as: settling, in: slot, of: activation))
 
             // A new box, so a variable declared inside a block shadows rather
             // than writes an outer one of the same name.
-            case let .declare(slot)?:
-                activation.cells[slot] = .hold(Handle(activation.frame.names[slot], result))
+            case let .declare(slot, settling)?:
+                activation.cells[slot] = .hold(
+                    Handle(
+                        activation.frame.names[slot],
+                        try held(result, as: settling, in: slot, of: activation)
+                    )
+                )
 
             // A write lands in a box the enclosing bodies also hold.
             case let .assign(slot, steps)?:
@@ -814,8 +833,8 @@ public struct Executor: Sendable {
 
             let value = try read(instruction.code, in: activation)
 
-            if case let .bind(slot)? = instruction.binding {
-                activation.cells[slot] = .value(value)
+            if case let .bind(slot, settling)? = instruction.binding {
+                activation.cells[slot] = .value(try held(value, as: settling, in: slot, of: activation))
             }
         }
 
