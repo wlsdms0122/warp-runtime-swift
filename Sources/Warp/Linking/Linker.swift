@@ -774,7 +774,8 @@ public struct Linker: Sendable {
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
-                    let buried = block.buried(at: .procedure(name.spelling, in: .of(module)))
+                    let found = Place.procedure(name.spelling, in: .of(module))
+                    let buried = block.buried(at: found)
 
                     for (place, inner) in closures(in: buried) {
                         try judge(inner.signature, at: place, in: table)
@@ -790,11 +791,18 @@ public struct Linker: Sendable {
                     for (place, named) in castTypes(in: buried) {
                         try judge(cast: named, at: place, in: table)
                     }
+
+                    // What a name says it holds is a mention too, and it is
+                    // held here for the reason a cast is.
+                    for (place, declared) in block.declaring(at: found) {
+                        try mentioned(in: declared, at: place, parameterized: true, resolve: table)
+                    }
                 }
             }
 
             for (name, constant) in module.constants.sorted { $0.key < $1.key } {
-                let buried = constant.buried(at: .constant(name.spelling, in: .of(module)))
+                let found = Place.constant(name.spelling, in: .of(module))
+                let buried = constant.buried(at: found)
 
                 for (place, inner) in closures(in: buried) {
                     try judge(inner.signature, at: place, in: table)
@@ -802,6 +810,10 @@ public struct Linker: Sendable {
 
                 for (place, named) in castTypes(in: buried) {
                     try judge(cast: named, at: place, in: table)
+                }
+
+                for (place, declared) in constant.declaring(at: found) {
+                    try mentioned(in: declared, at: place, parameterized: true, resolve: table)
                 }
             }
         }

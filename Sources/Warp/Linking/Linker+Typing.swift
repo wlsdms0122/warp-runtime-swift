@@ -2471,8 +2471,6 @@ extension Linker {
     ) throws -> TypeExpression {
         guard let declared else { return given }
 
-        try mentioned(in: declared, at: place, parameterized: true, resolve: frame.types)
-
         guard declared.accepts(given, in: frame.shapes) else {
             try refuse(
                 "holds \(declared.rendered), and what it was given is"

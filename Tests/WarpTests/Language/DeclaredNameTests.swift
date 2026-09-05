@@ -83,6 +83,40 @@ struct DeclaredNameTests {
         }
     }
 
+    @Test("a declaration is held where a body is read rather than where one is reached")
+    func aDeclarationIsHeldInABodyNothingReaches() throws {
+        // Given — a procedure that runs an effect, so it is not in the pure
+        // set, and that nothing calls, so it is not on the frontier. Its text
+        // still has to compile
+        let sut = try Module(
+            imports: ["std.control.abort"],
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.int(1))),
+                "stray": Procedure(
+                    body: [
+                        Statement(
+                            expression: .dispatch(
+                                Dispatch(receiver: .literal(.string("x")), selector: "std.control.abort")
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("held", declared: .named("app.Missing")),
+                            expression: .literal(.int(1))
+                        )
+                    ],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("app.Missing")
+        }
+    }
+
     @Test("a variable that says what it holds is held to it, and a write does not retype it")
     func aDeclaredVariableIsNotRetypedByAWrite() throws {
         // Given
