@@ -207,12 +207,12 @@ struct Lowering {
             let binding: Instruction.Binding?
 
             switch statement.binding {
-            case let .constant(name)?:
+            case let .constant(name, _)?:
                 let slot = slots.allocate(name)
                 scope.slots[name] = slot
                 binding = .bind(slot)
 
-            case let .variable(name)?:
+            case let .variable(name, _)?:
                 let slot = slots.allocate(name)
                 scope.slots[name] = slot
                 binding = .declare(slot)

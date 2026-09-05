@@ -30,6 +30,10 @@ public extension Writer {
 
         if let binding = statement.binding {
             written[key(of: binding)] = .string(binding.spelled)
+
+            if let declared = binding.declared {
+                written[StatementReader.typeKey] = try value(of: declared)
+            }
         }
 
         // A variable holding null is what a bare `var` introduces, and the bare

@@ -1,0 +1,97 @@
+//
+//  DeclaredNameNotationTests.swift
+//  WarpSyntax
+//
+//  Created by JSilver on 9/6/26.
+//
+
+import Foundation
+import Testing
+import Warp
+@testable import WarpSyntax
+
+@Suite("A statement says what its name holds under 'type'")
+struct DeclaredNameNotationTests {
+    // MARK: - Property
+    private let loader = Loader()
+    private let writer = Writer()
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a name reads back holding what the document said it holds")
+    func aDeclarationIsRead() throws {
+        // Given
+        let sut = try loader.loadProcedure([
+            "body": [["let": "held", "type": "double", "value": 1]],
+            "result": ["ref": "held"]
+        ])
+
+        // When
+        let binding = sut.procedures[entryName]?.block?.body.first?.binding
+
+        // Then
+        #expect(binding == .constant("held", declared: .double))
+    }
+
+    @Test("a variable that says what it holds reads back with it, bare or not")
+    func aBareVariableKeepsItsDeclaration() throws {
+        // Given
+        let sut = try loader.loadProcedure([
+            "body": [["var": "held", "type": "int?"]],
+            "result": ["ref": "held"]
+        ])
+
+        // When
+        let binding = sut.procedures[entryName]?.block?.body.first?.binding
+
+        // Then
+        #expect(binding == .variable("held", declared: .nullable(.int)))
+    }
+
+    @Test("a document the writer wrote reads back holding the same declaration")
+    func aDeclarationRoundTrips() throws {
+        // Given
+        let sut = try loader.loadProcedure([
+            "body": [["var": "held", "type": ["procedure": ["returns": "int"]], "value": ["closure": ["result": 1]]]],
+            "result": ["ref": "held"]
+        ])
+
+        // When
+        let again = try loader.load(try writer.value(of: sut), identity: nil)
+
+        // Then
+        #expect(
+            again.procedures[entryName]?.block?.body.first?.binding
+                == sut.procedures[entryName]?.block?.body.first?.binding
+        )
+    }
+
+    @Test("a write says nothing about what a name holds, so it takes no type")
+    func aWriteTakesNoType() throws {
+        // When / Then
+        #expect {
+            try loader.loadProcedure([
+                "body": [
+                    ["var": "held", "value": 1],
+                    ["set": "held", "type": "int", "value": 2]
+                ],
+                "result": ["ref": "held"]
+            ])
+        } throws: { error in
+            "\(error)".contains("writes 'type', which says what a name holds")
+        }
+    }
+
+    @Test("a statement run for its effect introduces no name to declare")
+    func anUnnamedStatementTakesNoType() throws {
+        // When / Then
+        #expect {
+            try loader.loadProcedure([
+                "body": [["type": "int", "value": 1]],
+                "result": 1
+            ])
+        } throws: { error in
+            "\(error)".contains("writes 'type', which says what a name holds")
+        }
+    }
+}

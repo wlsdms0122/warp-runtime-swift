@@ -250,7 +250,7 @@ public struct Validator: Sendable {
                 }
 
                 switch binding {
-                case let .constant(name), let .variable(name):
+                case let .constant(name, _), let .variable(name, _):
                     try introduced(name, beside: surroundings.constants, at: here)
 
                     guard !declared.contains(name) else {
@@ -311,11 +311,11 @@ public struct Validator: Sendable {
             case .constant? where isIteration(statement.expression):
                 break
 
-            case let .constant(id)?:
+            case let .constant(id, _)?:
                 visible.insert(id)
                 variables.remove(id)
 
-            case let .variable(id)?:
+            case let .variable(id, _)?:
                 visible.insert(id)
                 variables.insert(id)
 

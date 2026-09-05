@@ -26,6 +26,9 @@ import Warp
 // with the answer dropped — and exactly one construct key; the envelope never
 // grew back. A leaving construct takes no name at all: it never finishes, so
 // the name could never bind.
+//
+// A name may say what it holds, under `type`. `set` writes a name something
+// else declared, so it takes no type of its own.
 public struct StatementReader: Decodable {
     private enum EnvelopeKeys: String, CodingKey, CaseIterable {
         case constant = "let"
@@ -34,13 +37,13 @@ public struct StatementReader: Decodable {
 
         // The binding the key spells, given what it was written with: a name
         // under `let` and `var`, a path under `set`.
-        func binding(_ written: String) throws -> Statement.Binding {
+        func binding(_ written: String, declaring declared: TypeExpression?) throws -> Statement.Binding {
             switch self {
             case .constant:
-                return .constant(try Name.read(written, at: []))
+                return .constant(try Name.read(written, at: []), declared: declared)
 
             case .variable:
-                return .variable(try Name.read(written, at: []))
+                return .variable(try Name.read(written, at: []), declared: declared)
 
             case .assignment:
                 do {
@@ -55,6 +58,9 @@ public struct StatementReader: Decodable {
     // The one key a statement writes its expression under. A construct sits
     // inside it under the construct's own key.
     public static let valueKey: Name = "value"
+
+    // What the name says it holds, where it says.
+    public static let typeKey: Name = "type"
 
     public let statement: Statement
 
@@ -92,6 +98,30 @@ public struct StatementReader: Decodable {
 
     // MARK: - Public
     // MARK: - Private
+    // What the statement says its name holds. A `set` reaches a name something
+    // else declared, and a statement with no name has none to declare.
+    private static func declared(
+        in container: KeyedDecodingContainer<AnyCodingKey>,
+        named name: EnvelopeKeys?,
+        at steps: [Place.Step]
+    ) throws -> TypeExpression? {
+        let key = AnyCodingKey(stringValue: Self.typeKey.spelling)
+
+        guard container.contains(key) else { return nil }
+
+        guard let name, name != .assignment else {
+            throw ReadingError(
+                "writes '\(Self.typeKey)', which says what a name holds —"
+                    + " '\(EnvelopeKeys.constant.stringValue)' and"
+                    + " '\(EnvelopeKeys.variable.stringValue)' introduce a name,"
+                    + " and this statement introduces none",
+                at: steps
+            )
+        }
+
+        return try container.decode(TypeReader.self, forKey: key).type
+    }
+
     // What a naming key holds, read the one way it is read.
     private static func name(
         _ key: EnvelopeKeys,
@@ -124,7 +154,8 @@ public struct StatementReader: Decodable {
 
         try KeyGate().rejectUnknownKeys(
             in: decoder,
-            known: EnvelopeKeys.allCases.map(\.stringValue) + [Self.valueKey.spelling],
+            known: EnvelopeKeys.allCases.map(\.stringValue)
+                + [Self.valueKey.spelling, Self.typeKey.spelling],
             context: "statement"
         )
 
@@ -141,10 +172,11 @@ public struct StatementReader: Decodable {
         }
 
         let name = names.first
+        let declared = try Self.declared(in: container, named: name, at: decoder.steps)
         let binding: Statement.Binding?
 
         do {
-            binding = try name.map { name in try name.binding(Self.name(name, in: envelope)) }
+            binding = try name.map { name in try name.binding(Self.name(name, in: envelope), declaring: declared) }
         } catch let refusal as ReadingError {
             throw refusal.asked(at: decoder.steps)
         }

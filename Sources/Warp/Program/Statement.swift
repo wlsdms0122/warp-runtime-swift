@@ -21,17 +21,34 @@ public struct Statement: Sendable {
     // this type can hold. A write names a path rather than a name: `set` reaches
     // into a variable through its fields and elements, and the head of the path
     // is the variable it writes.
+    //
+    // A name may say what it holds. The declaration is on the two cases that
+    // introduce a name, so a write cannot carry one: `set` reaches a name
+    // something else declared.
     public enum Binding: Sendable, Equatable {
-        case constant(Name)
-        case variable(Name)
+        case constant(Name, declared: TypeExpression? = nil)
+        case variable(Name, declared: TypeExpression? = nil)
         case assignment([PathSegment])
 
         // The name a statement introduces, where it introduces one. A write
         // introduces nothing.
         public var introduced: Name? {
             switch self {
-            case let .constant(name), let .variable(name):
+            case let .constant(name, _), let .variable(name, _):
                 return name
+
+            case .assignment:
+                return nil
+            }
+        }
+
+        // What the name says it holds, where it says. Nil is not `any`: a name
+        // that declares nothing holds what the link worked out for it, and one
+        // that declares `any` holds `any`.
+        public var declared: TypeExpression? {
+            switch self {
+            case let .constant(_, declared), let .variable(_, declared):
+                return declared
 
             case .assignment:
                 return nil
@@ -42,7 +59,7 @@ public struct Statement: Sendable {
         // the path it writes.
         public var name: Name? {
             switch self {
-            case let .constant(name), let .variable(name):
+            case let .constant(name, _), let .variable(name, _):
                 return name
 
             case let .assignment(path):
@@ -54,7 +71,7 @@ public struct Statement: Sendable {
         // path as one string.
         public var spelled: String {
             switch self {
-            case let .constant(name), let .variable(name):
+            case let .constant(name, _), let .variable(name, _):
                 return name.spelling
 
             case let .assignment(path):

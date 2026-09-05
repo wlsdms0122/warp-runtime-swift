@@ -82,7 +82,7 @@ extension Linker {
 
                 guard holds(statement.expression, declared: declared) else { return false }
 
-                if case let .variable(name)? = statement.binding {
+                if case let .variable(name, _)? = statement.binding {
                     declared.insert(name)
                 }
             }

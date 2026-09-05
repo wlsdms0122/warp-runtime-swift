@@ -1880,15 +1880,20 @@ extension Linker {
             }
 
             switch statement.binding {
-            case let .constant(id)?:
+            // A name that says what it holds holds that. One that says
+            // nothing holds what the link worked out from what it was given.
+            case let .constant(id, declared)?:
                 locals.insert(id)
-                environment[id] = inner.reading
+                environment[id] = try held(inner.reading, declaredAs: declared, at: here, with: frame, when: ask)
 
             // A variable stands in the environment as a box, so a later
-            // write can tell it from a fixed name.
-            case let .variable(id)?:
+            // write can tell it from a fixed name. A box that said what it
+            // holds is fixed at that, and a write into it is held to it.
+            case let .variable(id, declared)?:
                 locals.insert(id)
-                environment[id] = .variable(inner.reading)
+
+                let holds = try held(inner.reading, declaredAs: declared, at: here, with: frame, when: ask)
+                environment[id] = declared == nil ? .variable(holds) : .inout(holds)
 
             // A write to a whole variable retypes it, the way a declaration
             // did — unless the box's type is fixed elsewhere, in which case
@@ -2453,6 +2458,33 @@ extension Linker {
                 try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
         }
+    }
+
+    // What a name holds: what it declared, held against what it was given, or
+    // what the link worked out where it declared nothing.
+    private func held(
+        _ given: TypeExpression,
+        declaredAs declared: TypeExpression?,
+        at place: Place,
+        with frame: TypeFrame,
+        when ask: Ask
+    ) throws -> TypeExpression {
+        guard let declared else { return given }
+
+        try mentioned(in: declared, at: place, parameterized: true, resolve: frame.types)
+
+        guard declared.accepts(given, in: frame.shapes) else {
+            try refuse(
+                "holds \(declared.rendered), and what it was given is"
+                    + " \(given.rendered)",
+                at: place,
+                when: ask
+            )
+
+            return given
+        }
+
+        return declared
     }
 
     private func refuseUnfit(
