@@ -11,7 +11,7 @@ import Foundation
 // and nothing else. The name for a refusal, the shape to settle against,
 // the default where nothing was given, and the members the settled value
 // must be one of. The declaration's type is not here; its lowering is.
-struct Slot: Sendable {
+final class Slot: Sendable {
     // MARK: - Property
     let name: Name
     let shape: Shape

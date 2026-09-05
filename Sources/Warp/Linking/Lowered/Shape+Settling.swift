@@ -27,244 +27,11 @@ extension Shape {
         case .any:
             return value
 
-        // A value arrived where nothing was supposed to, so the arrival is the
-        // refusal: there is no shape to compare it against.
-        case .never:
-            throw ArgumentError("\(path()): declares never, and nothing is ever that")
-
-        case let .undeclared(_, refusal):
-            throw UndeclaredTypeError("\(path()): declares \(refusal)")
-
-        // Either shape arrives as itself. Settling to one of them would be the
-        // declaration picking, and it declined to.
-        case .number:
-            switch value {
-            case .int, .double:
-                return value
-
-            default:
-                throw mismatch(value, at: path(), in: table)
-            }
-
-        // A declared record is nominal. A record arriving without a name
-        // settles to the declared shape and takes the name; one arriving
-        // under this name is settled again and keeps it; one arriving under
-        // another name is refused, whatever its shape. A declared name that is
-        // not a record shape settles as the shape it stands for.
-        case let .named(row):
-            let declared = table.shapes[row]
-
-            guard value.holdsFields, let nominal = table.record(of: self) else {
-                return try declared.settling(value, at: path(), in: table, assuming: assuming)
-            }
-
-            let label = table.labels[nominal]
-
-            // A tag already canonical is the same spelling. One that is not
-            // is an alias or another record, told apart by the table once.
-            if case let .record(record) = value, let tag = record.name, tag != label {
-                guard let spelled = table.row(named: tag), table.recordRows[spelled] == nominal else {
-                    throw ArgumentError("\(path()): is a \(tag), and the slot declares \(label)")
-                }
-            }
-
-            guard case let .record(settled) = try declared.settling(value, at: path(), in: table, assuming: assuming) else {
-                throw mismatch(value, at: path(), in: table)
-            }
-
-            return .record(settled.named(label))
-
-        // Null arrives as itself; anything else is held to the declared half.
-        case let .nullable(inner):
-            guard value != .null else { return value }
-
-            return try inner.settling(value, at: path(), in: table, assuming: assuming)
-
-        // A type parameter the call site filled, and the link is where it was
-        // filled. Unbounded, there is nothing left to compare against. A
-        // bounded one still holds its constraint here: what arrived through
-        // `any` was never read at the link, so membership is judged against
-        // the types the constraint admits, and the value passes untouched. A
-        // parameter stands for what arrived; it does not settle it.
         case let .parameter(_, constraint):
-            guard let constraint, !assuming.contains(constraint) else { return value }
+            return try standing(value, boundBy: constraint, at: path(), in: table, assuming: assuming)
 
-            guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered(in: table)), and '\(table.constraintLabels[constraint])' does not"
-                        + " admit \(value.type)"
-                )
-            }
-
-            return value
-
-        case let .array(element):
-            // Bytes are an array of bytes in a compact spelling, so they arrive
-            // here as the array they are. Where the declaration leaves every
-            // byte as it is, the compact spelling crosses whole: the slot
-            // asked for an array and one is what it has, and unpacking it would
-            // spend an element per byte to answer nothing.
-            if case .bytes = value, element.holdsEveryByte(in: table, boundAssuming: assuming) {
-                return value
-            }
-
-            // An element nothing was declared for passes as it is, so the
-            // array does too: settling each element to itself would copy the
-            // array to say nothing.
-            if element == .any, case .array = value { return value }
-
-            // Otherwise the slot's spelling wins the way `double` settles a
-            // whole number, and both spellings are read through the one
-            // projection that owns the equation.
-            guard let items = value.elements else { throw mismatch(value, at: path(), in: table) }
-
-            return .array(
-                try items.enumerated().map { index, item in
-                    try element.settling(item, at: "\(path())[\(index)]", in: table, assuming: assuming)
-                }
-            )
-
-        // A dictionary slot holds the names as data, so a record settling
-        // here becomes one, its layout's names written beside their values.
-        case let .dictionary(entry):
-            guard let held = value.asDictionary else { throw mismatch(value, at: path(), in: table) }
-
-            if entry == .any { return .dictionary(held) }
-
-            return .dictionary(
-                try held.mapValues { _, item in
-                    try entry.settling(item, at: path(), in: table, assuming: assuming)
-                }
-            )
-
-        // An inline record is structural: a value holding at least these
-        // fields fits it, whatever else it holds and whatever it is named.
-        // Settling builds the slot's layout, so what settles here holds these
-        // fields and no others.
-        case let .record(held):
-            guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
-
-            return .record(
-                Record(
-                    layout: held.layout,
-                    values: try held.named.map { name, field in
-                        guard let held = value[name] else {
-                            throw ArgumentError(
-                                "\(path()).\(name): required by \(rendered(in: table)), and nothing was given"
-                            )
-                        }
-
-                        return try field.settling(held, at: "\(path()).\(name)", in: table, assuming: assuming)
-                    }
-                )
-            )
-
-        // A slot writes `var` or `inout` about itself; what stands in it is a
-        // value of the inner type.
-        case let .variable(inner), let .inout(inner):
-            return try inner.settling(value, at: path(), in: table, assuming: assuming)
-
-        // A closure carries what the link derived about its text, its purity
-        // and its isolation, and a slot that asks for either reads the
-        // carried fact. A closure that reached here through `any` or through
-        // an undeclared field is judged here for the first time.
-        case let .procedure(required, returns, purity, isolation):
-            guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
-
-            // Its rows are numbered by the table of the link that made it.
-            guard closure.linked.readable(in: table) else {
-                throw ArgumentError("\(path()): \(Linked.unreadable)")
-            }
-
-            if purity == .pure, closure.purity != .pure {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered(in: table)), got a procedure that runs"
-                )
-            }
-
-            if isolation == .isolated, !closure.runsBeside {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered(in: table)), got a procedure that writes"
-                        + " what another body could touch"
-                )
-            }
-
-            let given = Shape.procedure(
-                parameters: closure.linked.slots.map { slot in
-                    (name: slot.name, shape: slot.shape, mustBeGiven: slot.mustBeGiven(in: table))
-                },
-                returns: closure.linked.returns,
-                purity: closure.purity,
-                isolation: closure.isolation
-            )
-
-            guard Shape.procedure(parameters: required, returns: returns, purity: .unstated, isolation: .unstated).accepts(given, in: table) else {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
-                )
-            }
-
-            return value
-
-        // The bounds speak where the value does: a number inside them settles
-        // as the kind's own value, and one outside is refused by the range
-        // the declaration wrote.
-        case let .ranged(refinement):
-            switch refinement.settling(value) {
-            case let .settled(settled):
-                return settled
-
-            case .otherKind:
-                throw mismatch(value, at: path(), in: table)
-
-            case let .outside(number):
-                throw ArgumentError("\(path()): \(number) is outside \(rendered(in: table))")
-            }
-
-        // Bytes take their own spelling as themselves, and an array whose
-        // every element is a byte's worth, settled to the compact spelling
-        // the slot declared. The element judge is `byte`'s own, so what is
-        // outside says which element and by how much.
-        case .bytes:
-            switch value {
-            case .bytes:
-                return value
-
-            case let .array(elements):
-                let bytes = try elements.enumerated().map { index, item in
-                    let settled = try Shape.byteElement.settling(
-                        item,
-                        at: "\(path())[\(index)]",
-                        in: table,
-                        assuming: assuming
-                    )
-
-                    // `byte`'s own judge already spoke: what settled is an
-                    // int inside 0...255, which the canonical small form
-                    // holds. A miss here is this file's own defect.
-                    guard
-                        case let .int(number) = settled,
-                        let byte = UInt8(exactly: number)
-                    else {
-                        preconditionFailure("a settled byte was not one")
-                    }
-
-                    return byte
-                }
-
-                return .bytes(bytes)
-
-            default:
-                throw mismatch(value, at: path(), in: table)
-            }
-
-        // The scalars, plus the one widening the language has, one way only:
-        // an int where a double is declared. Nothing narrows; an int slot
-        // refuses every fraction, `2.0` included.
-        case .null, .bool, .int, .double, .string:
-            guard let settled = scalar(value) else { throw mismatch(value, at: path(), in: table) }
-
-            return settled
+        default:
+            return try judging(value, at: path(), in: table, assuming: assuming)
         }
     }
 
@@ -512,6 +279,316 @@ extension Shape {
     }
 
     // MARK: - Private
+    // Every shape that reads the value it is given. The two that do not are
+    // answered by `settling` and never arrive here; reaching this by another
+    // door sends them back to it.
+    private func judging(
+        _ value: Value,
+        at path: @autoclosure () -> String,
+        in table: ShapeTable,
+        assuming: [Int]
+    ) throws -> Value {
+        switch self {
+        case .any, .parameter:
+            return try settling(value, at: path(), in: table, assuming: assuming)
+
+        // A value arrived where nothing was supposed to, so the arrival is the
+        // refusal: there is no shape to compare it against.
+        case .never:
+            throw ArgumentError("\(path()): declares never, and nothing is ever that")
+
+        case let .undeclared(_, refusal):
+            throw UndeclaredTypeError("\(path()): declares \(refusal)")
+
+        // Either shape arrives as itself. Settling to one of them would be the
+        // declaration picking, and it declined to.
+        case .number:
+            switch value {
+            case .int, .double:
+                return value
+
+            default:
+                throw mismatch(value, at: path(), in: table)
+            }
+
+        // A declared record is nominal. A record arriving without a name
+        // settles to the declared shape and takes the name; one arriving
+        // under this name is settled again and keeps it; one arriving under
+        // another name is refused, whatever its shape. A declared name that is
+        // not a record shape settles as the shape it stands for.
+        case let .named(row):
+            return try settlingNamed(value, row: row, at: path(), in: table, assuming: assuming)
+
+        // Null arrives as itself; anything else is held to the declared half.
+        case let .nullable(inner):
+            guard value != .null else { return value }
+
+            return try inner.settling(value, at: path(), in: table, assuming: assuming)
+
+        case let .array(element):
+            // Bytes are an array of bytes in a compact spelling, so they arrive
+            // here as the array they are. Where the declaration leaves every
+            // byte as it is, the compact spelling crosses whole: the slot
+            // asked for an array and one is what it has, and unpacking it would
+            // spend an element per byte to answer nothing.
+            if case .bytes = value, element.holdsEveryByte(in: table, boundAssuming: assuming) {
+                return value
+            }
+
+            // An element nothing was declared for passes as it is, so the
+            // array does too: settling each element to itself would copy the
+            // array to say nothing.
+            if element == .any, case .array = value { return value }
+
+            // Otherwise the slot's spelling wins the way `double` settles a
+            // whole number, and both spellings are read through the one
+            // projection that owns the equation.
+            guard let items = value.elements else { throw mismatch(value, at: path(), in: table) }
+
+            return .array(
+                try items.enumerated().map { index, item in
+                    try element.settling(item, at: "\(path())[\(index)]", in: table, assuming: assuming)
+                }
+            )
+
+        // A dictionary slot holds the names as data, so a record settling
+        // here becomes one, its layout's names written beside their values.
+        case let .dictionary(entry):
+            guard let held = value.asDictionary else { throw mismatch(value, at: path(), in: table) }
+
+            if entry == .any { return .dictionary(held) }
+
+            return .dictionary(
+                try held.mapValues { _, item in
+                    try entry.settling(item, at: path(), in: table, assuming: assuming)
+                }
+            )
+
+        // An inline record is structural: a value holding at least these
+        // fields fits it, whatever else it holds and whatever it is named.
+        // Settling builds the slot's layout, so what settles here holds these
+        // fields and no others.
+        case let .record(held):
+            return try settlingFields(value, of: held, at: path(), in: table, assuming: assuming)
+
+        // A slot writes `var` or `inout` about itself; what stands in it is a
+        // value of the inner type.
+        case let .variable(inner), let .inout(inner):
+            return try inner.settling(value, at: path(), in: table, assuming: assuming)
+
+        // A closure carries what the link derived about its text, its purity
+        // and its isolation, and a slot that asks for either reads the
+        // carried fact. A closure that reached here through `any` or through
+        // an undeclared field is judged here for the first time.
+        case let .procedure(required, returns, purity, isolation):
+            return try settlingProcedure(
+                value,
+                parameters: required,
+                returns: returns,
+                purity: purity,
+                isolation: isolation,
+                at: path(),
+                in: table
+            )
+
+        // The bounds speak where the value does: a number inside them settles
+        // as the kind's own value, and one outside is refused by the range
+        // the declaration wrote.
+        case let .ranged(refinement):
+            switch refinement.settling(value) {
+            case let .settled(settled):
+                return settled
+
+            case .otherKind:
+                throw mismatch(value, at: path(), in: table)
+
+            case let .outside(number):
+                throw ArgumentError("\(path()): \(number) is outside \(rendered(in: table))")
+            }
+
+        // Bytes take their own spelling as themselves, and an array whose
+        // every element is a byte's worth, settled to the compact spelling
+        // the slot declared. The element judge is `byte`'s own, so what is
+        // outside says which element and by how much.
+        case .bytes:
+            return try settlingBytes(value, at: path(), in: table, assuming: assuming)
+
+        // The scalars, plus the one widening the language has, one way only:
+        // an int where a double is declared. Nothing narrows; an int slot
+        // refuses every fraction, `2.0` included.
+        case .null, .bool, .int, .double, .string:
+            guard let settled = scalar(value) else { throw mismatch(value, at: path(), in: table) }
+
+            return settled
+        }
+    }
+
+    // A type parameter the call site filled, and the link is where it was
+    // filled. Unbounded, there is nothing left to compare against. A bounded
+    // one still holds its constraint here: what arrived through `any` was
+    // never read at the link, so membership is judged against the types the
+    // constraint admits, and the value passes untouched. A parameter stands
+    // for what arrived; it does not settle it.
+    private func standing(
+        _ value: Value,
+        boundBy constraint: Int?,
+        at path: @autoclosure () -> String,
+        in table: ShapeTable,
+        assuming: [Int]
+    ) throws -> Value {
+        guard let constraint, !assuming.contains(constraint) else { return value }
+
+        guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), and '\(table.constraintLabels[constraint])' does not"
+                    + " admit \(value.type)"
+            )
+        }
+
+        return value
+    }
+
+    private func settlingNamed(
+        _ value: Value,
+        row: Int,
+        at path: @autoclosure () -> String,
+        in table: ShapeTable,
+        assuming: [Int]
+    ) throws -> Value {
+        let declared = table.shapes[row]
+
+        guard value.holdsFields, let nominal = table.record(of: self) else {
+            return try declared.settling(value, at: path(), in: table, assuming: assuming)
+        }
+
+        let label = table.labels[nominal]
+
+        // A tag already canonical is the same spelling. One that is not
+        // is an alias or another record, told apart by the table once.
+        if case let .record(record) = value, let tag = record.name, tag != label {
+            guard let spelled = table.row(named: tag), table.recordRows[spelled] == nominal else {
+                throw ArgumentError("\(path()): is a \(tag), and the slot declares \(label)")
+            }
+        }
+
+        guard case let .record(settled) = try declared.settling(value, at: path(), in: table, assuming: assuming) else {
+            throw mismatch(value, at: path(), in: table)
+        }
+
+        return .record(settled.named(label))
+    }
+
+    private func settlingFields(
+        _ value: Value,
+        of held: RecordShape,
+        at path: @autoclosure () -> String,
+        in table: ShapeTable,
+        assuming: [Int]
+    ) throws -> Value {
+        guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
+
+        return .record(
+            Record(
+                layout: held.layout,
+                values: try held.named.map { name, field in
+                    guard let given = value[name] else {
+                        throw ArgumentError(
+                            "\(path()).\(name): required by \(rendered(in: table)), and nothing was given"
+                        )
+                    }
+
+                    return try field.settling(given, at: "\(path()).\(name)", in: table, assuming: assuming)
+                }
+            )
+        )
+    }
+
+    private func settlingBytes(
+        _ value: Value,
+        at path: @autoclosure () -> String,
+        in table: ShapeTable,
+        assuming: [Int]
+    ) throws -> Value {
+        switch value {
+        case .bytes:
+            return value
+
+        case let .array(elements):
+            let bytes = try elements.enumerated().map { index, item in
+                let settled = try Shape.byteElement.settling(
+                    item,
+                    at: "\(path())[\(index)]",
+                    in: table,
+                    assuming: assuming
+                )
+
+                // `byte`'s own judge already spoke: what settled is an int
+                // inside 0...255, which the canonical small form holds. A
+                // miss here is this file's own defect.
+                guard
+                    case let .int(number) = settled,
+                    let byte = UInt8(exactly: number)
+                else {
+                    preconditionFailure("a settled byte was not one")
+                }
+
+                return byte
+            }
+
+            return .bytes(bytes)
+
+        default:
+            throw mismatch(value, at: path(), in: table)
+        }
+    }
+
+    private func settlingProcedure(
+        _ value: Value,
+        parameters required: [(name: Name, shape: Shape, mustBeGiven: Bool)]?,
+        returns: Shape?,
+        purity: Purity,
+        isolation: Isolation,
+        at path: @autoclosure () -> String,
+        in table: ShapeTable
+    ) throws -> Value {
+        guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
+
+        // Its rows are numbered by the table of the link that made it.
+        guard closure.linked.readable(in: table) else {
+            throw ArgumentError("\(path()): \(Linked.unreadable)")
+        }
+
+        if purity == .pure, closure.purity != .pure {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), got a procedure that runs"
+            )
+        }
+
+        if isolation == .isolated, !closure.runsBeside {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), got a procedure that writes"
+                    + " what another body could touch"
+            )
+        }
+
+        let given = Shape.procedure(
+            parameters: closure.linked.slots.map { slot in
+                (name: slot.name, shape: slot.shape, mustBeGiven: slot.mustBeGiven(in: table))
+            },
+            returns: closure.linked.returns,
+            purity: closure.purity,
+            isolation: closure.isolation
+        )
+
+        guard Shape.procedure(parameters: required, returns: returns, purity: .unstated, isolation: .unstated).accepts(given, in: table) else {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
+            )
+        }
+
+        return value
+    }
+
     // The one conversion the language performs, and it goes one way: every
     // whole number is a fraction, so a slot asking for a fraction can take a
     // whole one and lose nothing.
