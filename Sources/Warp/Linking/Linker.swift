@@ -458,7 +458,7 @@ public struct Linker: Sendable {
                     throw LinkError(
                         "answers \(answer.type), and its"
                             + " declaration promises \(returns): \(error)",
-                        at: symbol.place.slot(.result)
+                        at: symbol.place.part(.result)
                     )
                 }
             }

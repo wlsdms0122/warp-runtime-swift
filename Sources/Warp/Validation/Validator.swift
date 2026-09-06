@@ -138,7 +138,7 @@ public struct Validator: Sendable {
 
         throw ValidationError(
             said.compactMap { said in said }.joined(separator: ", and "),
-            at: Place([.slot(.imports)], in: .of(module))
+            at: Place([.part(.imports)], in: .of(module))
         )
     }
 
@@ -178,7 +178,7 @@ public struct Validator: Sendable {
                 parameter,
                 of: procedure.signature,
                 beside: bound,
-                at: place.slot(.parameters).key(parameter.spelling)
+                at: place.part(.parameters).key(parameter.spelling)
             )
         }
 
@@ -356,13 +356,13 @@ public struct Validator: Sendable {
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, _, _):
-            try refuseAnswerless(value, at: place.slot(.receiver))
+            try refuseAnswerless(value, at: place.part(.receiver))
             try validate(
                 value,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.receiver)
+                at: place.part(.receiver)
             )
 
         // A closure sees where it was written plus what it declares, which is
@@ -397,7 +397,7 @@ public struct Validator: Sendable {
             )
 
         case let .closure(procedure):
-            let inside = place.slot(.closure)
+            let inside = place.part(.closure)
             let parameters = Set(procedure.signature.parameters.keys)
 
             // The same rule the top-level signature gets. A closure's parameter
@@ -407,7 +407,7 @@ public struct Validator: Sendable {
                     parameter,
                     of: procedure.signature,
                     beside: surroundings.constants,
-                    at: inside.slot(.parameters).key(parameter.spelling)
+                    at: inside.part(.parameters).key(parameter.spelling)
                 )
             }
 
@@ -423,13 +423,13 @@ public struct Validator: Sendable {
             )
 
         case let .apply(callee, arguments):
-            try refuseConstruct(callee, at: place.slot(.callee))
+            try refuseConstruct(callee, at: place.part(.callee))
             try validate(
                 callee,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.callee)
+                at: place.part(.callee)
             )
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
@@ -451,21 +451,21 @@ public struct Validator: Sendable {
         case let .conditional(condition, then, otherwise):
             try refuseConstructCondition(
                 condition,
-                at: place.slot(.condition(of: .conditional))
+                at: place.part(.condition(of: .conditional))
             )
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition(of: .conditional))
+                at: place.part(.condition(of: .conditional))
             )
             try validate(
                 then,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.then)
+                at: place.part(.then)
             )
 
             if let otherwise {
@@ -474,7 +474,7 @@ public struct Validator: Sendable {
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.slot(.otherwise)
+                    at: place.part(.otherwise)
                 )
             }
 
@@ -485,13 +485,13 @@ public struct Validator: Sendable {
 
             let inner = visible.union([round])
 
-            try refuseConstructCondition(condition, at: place.slot(.condition(of: .loop)))
+            try refuseConstructCondition(condition, at: place.part(.condition(of: .loop)))
             try validate(
                 condition,
                 visible: inner,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition(of: .loop))
+                at: place.part(.condition(of: .loop))
             )
             try validate(
                 body,
@@ -517,7 +517,7 @@ public struct Validator: Sendable {
                 // An empty rescue would swallow a failure into null without a
                 // trace. If the alternate path produces nothing, the author's
                 // honest form is no rescue at all.
-                throw ValidationError("must not be empty", at: place.slot(.rescue))
+                throw ValidationError("must not be empty", at: place.part(.rescue))
             }
 
             try validate(
@@ -525,18 +525,18 @@ public struct Validator: Sendable {
                 visible: visible.union([failure]),
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.rescue)
+                at: place.part(.rescue)
             )
 
         case let .call(call):
             if let receiver = call.receiver {
-                try refuseConstruct(receiver, at: place.slot(.receiver))
+                try refuseConstruct(receiver, at: place.part(.receiver))
                 try validate(
                     receiver,
                     visible: visible,
                     variables: variables,
                     surroundings: surroundings,
-                    at: place.slot(.receiver)
+                    at: place.part(.receiver)
                 )
             }
 
@@ -604,7 +604,7 @@ public struct Validator: Sendable {
             variables: variables,
             declared: declared,
             surroundings: surroundings,
-            at: place.slot(.body)
+            at: place.part(.body)
         )
 
         if let result = block.result {
@@ -614,7 +614,7 @@ public struct Validator: Sendable {
                 throw ValidationError(
                     "nothing runs after leaving,"
                         + " and this result would never be reached",
-                    at: place.slot(.result)
+                    at: place.part(.result)
                 )
             }
 
@@ -622,14 +622,14 @@ public struct Validator: Sendable {
             // exists to hold an answer) has nothing to take from one. Refused
             // for that reason, rather than as a type that fails to fit
             // downstream.
-            try refuseAnswerless(result, at: place.slot(.result))
+            try refuseAnswerless(result, at: place.part(.result))
 
             try validate(
                 result,
                 visible: inner.visible,
                 variables: inner.variables,
                 surroundings: surroundings,
-                at: place.slot(.result)
+                at: place.part(.result)
             )
         }
     }

@@ -53,12 +53,12 @@ struct PlaceWrittenTests {
         let conditional = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition(of: .conditional))
+            .part(.condition(of: .conditional))
 
         let loop = Place.procedure(entryName.spelling, in: .assembled)
             .statement("spin", at: 0)
             .appending(.construct(.loop))
-            .slot(.condition(of: .loop))
+            .part(.condition(of: .loop))
 
         // Then
         #expect(conditional.written(by: .standard).rendered?.hasSuffix(".conditional.when") == true)
@@ -78,7 +78,7 @@ struct PlaceWrittenTests {
         let sut = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition(of: .conditional))
+            .part(.condition(of: .conditional))
 
         // Then
         #expect(sut.written(by: registry).rendered?.hasSuffix(".if.when") == true)

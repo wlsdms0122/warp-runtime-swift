@@ -94,11 +94,11 @@ public extension Expression {
         // A closure names its own place: the literal and the body it carries
         // are found under one name, so a report says which closure without
         // having to say it twice.
-        let here: Trail = if case .closure = self { stepping(trail, .slot(.closure)) } else { trail }
+        let here: Trail = if case .closure = self { stepping(trail, .part(.closure)) } else { trail }
 
-        func inner(_ expression: Expression, under slot: Place.Slot? = nil) -> [(Trail, Buried)] {
+        func inner(_ expression: Expression, under part: Place.Part? = nil) -> [(Trail, Buried)] {
             expression.walked(
-                at: slot.map { slot in stepping(here, .slot(slot)) } ?? here,
+                at: part.map { part in stepping(here, .part(part)) } ?? here,
                 stepping: stepping
             )
         }
@@ -110,7 +110,7 @@ public extension Expression {
         // of the text. Its own place because two of them reported from the same
         // one would say a thing is wrong and not say which.
         func arguments(_ children: [Name: Expression]) -> [(Trail, Buried)] {
-            named(children, under: stepping(here, .slot(.arguments)))
+            named(children, under: stepping(here, .part(.arguments)))
         }
 
         func named(_ children: [Name: Expression], under place: Trail) -> [(Trail, Buried)] {
@@ -155,8 +155,8 @@ public extension Expression {
 
         case let .conditional(condition, then, otherwise):
             inner(condition, under: .condition(of: .conditional))
-                + then.walked(at: stepping(here, .slot(.then)), stepping: stepping)
-                + (otherwise?.walked(at: stepping(here, .slot(.otherwise)), stepping: stepping) ?? [])
+                + then.walked(at: stepping(here, .part(.then)), stepping: stepping)
+                + (otherwise?.walked(at: stepping(here, .part(.otherwise)), stepping: stepping) ?? [])
 
         case let .loop(condition, body, _):
             inner(condition, under: .condition(of: .loop))
@@ -164,7 +164,7 @@ public extension Expression {
 
         case let .attempt(attempted, rescue, _):
             attempted.walked(at: here, stepping: stepping)
-                + rescue.walked(at: stepping(here, .slot(.rescue)), stepping: stepping)
+                + rescue.walked(at: stepping(here, .part(.rescue)), stepping: stepping)
         }
 
         return [(here, .expression(self))] + held
@@ -176,9 +176,9 @@ public extension Block {
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Buried)] {
-        body.walked(at: stepping(trail, .slot(.body)), stepping: stepping)
+        body.walked(at: stepping(trail, .part(.body)), stepping: stepping)
             + (result.map { result in
-                result.walked(at: stepping(trail, .slot(.result)), stepping: stepping)
+                result.walked(at: stepping(trail, .part(.result)), stepping: stepping)
             } ?? [])
     }
 }

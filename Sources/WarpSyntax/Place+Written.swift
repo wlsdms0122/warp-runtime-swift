@@ -29,7 +29,7 @@ public extension Place {
         Place(
             steps.map { step in
                 switch step {
-                case let .slot(slot): .key(Self.key(of: slot))
+                case let .part(part): .key(Self.key(of: part))
                 case let .construct(shape): .landmark(Self.key(of: shape, by: registry))
                 default: step
                 }
@@ -39,11 +39,11 @@ public extension Place {
     }
 
     // MARK: - Private
-    // The key a document writes a slot under, from the reader that reads it
+    // The key a document writes a part under, from the reader that reads it
     // there. A word spelled here as well would be the second of two places
     // deciding what a document says, and the two meet only in stored text.
-    private static func key(of slot: Slot) -> String {
-        switch slot {
+    private static func key(of part: Place.Part) -> String {
+        switch part {
         case .procedures: ModuleReader.CodingKeys.procedures.stringValue
         case .constants: ModuleReader.CodingKeys.const.stringValue
         case .variables: ModuleReader.CodingKeys.variables.stringValue
@@ -75,7 +75,7 @@ public extension Place {
         case .otherwise: ConditionalForm.CodingKeys.else.stringValue
         case .rescue: AttemptForm.CodingKeys.rescue.stringValue
 
-        // The one slot two constructs write differently, which is why the slot
+        // The one part two constructs write differently, which is why the part
         // says which one holds it. Answered by name and not by a default, so a
         // third construct that holds a condition arrives here as a compiler
         // error rather than as a word nobody chose.

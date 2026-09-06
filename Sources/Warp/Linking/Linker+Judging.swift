@@ -64,16 +64,16 @@ extension Linker {
         for (input, parameter) in signature.parameters.sorted { $0.key < $1.key } {
             try mentioned(
                 in: parameter.declared.inoutUnwrapped,
-                at: place.slot(.parameters).key(input.spelling),
+                at: place.part(.parameters).key(input.spelling),
                 parameterized: true,
                 resolve: table
             )
-            try judge(parameter, called: input, at: place.slot(.parameters).key(input.spelling), in: table)
+            try judge(parameter, called: input, at: place.part(.parameters).key(input.spelling), in: table)
         }
 
         try mentioned(
             in: signature.returns ?? .any,
-            at: place.slot(.returns),
+            at: place.part(.returns),
             parameterized: true,
             resolve: table
         )
@@ -466,7 +466,7 @@ extension Linker {
         if let receiver = callee.signature.receiver, call.receiver != nil, call.arguments[receiver] != nil {
             throw LinkError(
                 "sending '\(call.selector)' with '\(receiver)' both in front and by name",
-                at: site.place.slot(.arguments)
+                at: site.place.part(.arguments)
             )
         }
 
@@ -524,7 +524,7 @@ extension Linker {
             throw LinkError(
                 "sending '\(call.selector)' with"
                     + " \(undeclared.map(\.spelling).joined(separator: ", ")), which it does not declare",
-                at: site.place.slot(.arguments)
+                at: site.place.part(.arguments)
             )
         }
 
@@ -542,7 +542,7 @@ extension Linker {
             throw LinkError(
                 "sending '\(call.selector)' without"
                     + " \(missing.map(\.spelling).joined(separator: ", ")), which it requires",
-                at: site.place.slot(.arguments)
+                at: site.place.part(.arguments)
             )
         }
 
@@ -575,7 +575,7 @@ extension Linker {
             } catch {
                 throw LinkError(
                     "sending '\(call.selector)': \(error)",
-                    at: site.place.slot(.arguments)
+                    at: site.place.part(.arguments)
                 )
             }
         }
@@ -611,7 +611,7 @@ extension Linker {
                 throw LinkError(
                     "sending '\(call.selector)' to \(written.rendered(in: shapes)),"
                         + " where \(slot.shape.rendered(in: shapes)) is declared",
-                    at: site.place.slot(.receiver)
+                    at: site.place.part(.receiver)
                 )
             }
         }

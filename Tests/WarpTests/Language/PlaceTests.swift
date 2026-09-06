@@ -437,7 +437,7 @@ struct PlaceTests {
         // And carried as the shape rather than as any word, so the side that
         // spells it is the side that knows what its reader is looking at
         #expect(sut.steps.contains(.construct(.call)))
-        #expect(sut.steps.contains(.slot(.arguments)))
+        #expect(sut.steps.contains(.part(.arguments)))
 
         // What the author named is the one thing carried as it was typed
         #expect(sut.steps.contains(.key("amount")))

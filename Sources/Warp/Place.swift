@@ -16,7 +16,7 @@ import Foundation
 // anything runs has only the first to give.
 //
 // The steps are kept rather than a string assembled from them, because a place
-// is read at more than one level and each spells it for its own reader. A slot
+// is read at more than one level and each spells it for its own reader. A part
 // and a construct travel as themselves; the names an author gave things travel
 // as the words they typed. A string spells both the same way and neither can be
 // recovered from it.
@@ -65,8 +65,8 @@ public struct Place: Sendable, Equatable {
             case let .key(name), let .landmark(name):
                 written += joined ? name : ".\(name)"
 
-            case let .slot(slot):
-                written += joined ? slot.rendered : ".\(slot.rendered)"
+            case let .part(part):
+                written += joined ? part.rendered : ".\(part.rendered)"
 
             case let .construct(construct):
                 written += joined ? construct.rendered : ".\(construct.rendered)"
@@ -109,32 +109,32 @@ public struct Place: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // The four things a module declares, each in the slot that holds it and
+    // The four things a module declares, each in the part that holds it and
     // then under the name the author gave it. Which document is stated and
     // never defaulted, so that a caller meaning to say which text it was in
     // cannot get "none" by saying nothing.
     public static func procedure(_ name: String, in document: Document) -> Place {
-        Place([.slot(.procedures), .key(name)], in: document)
+        Place([.part(.procedures), .key(name)], in: document)
     }
 
     public static func constant(_ name: String, in document: Document) -> Place {
-        Place([.slot(.constants), .key(name)], in: document)
+        Place([.part(.constants), .key(name)], in: document)
     }
 
     public static func variable(_ name: String, in document: Document) -> Place {
-        Place([.slot(.variables), .key(name)], in: document)
+        Place([.part(.variables), .key(name)], in: document)
     }
 
     public static func type(_ name: String, in document: Document) -> Place {
-        Place([.slot(.types), .key(name)], in: document)
+        Place([.part(.types), .key(name)], in: document)
     }
 
     public static func constraint(_ name: String, in document: Document) -> Place {
-        Place([.slot(.constraints), .key(name)], in: document)
+        Place([.part(.constraints), .key(name)], in: document)
     }
 
     public static func contract(_ name: String, in document: Document) -> Place {
-        Place([.slot(.contracts), .key(name)], in: document)
+        Place([.part(.contracts), .key(name)], in: document)
     }
 
     // A caller holding a program it assembled itself, with no document under
@@ -147,17 +147,17 @@ public struct Place: Sendable, Equatable {
 
     public func key(_ name: String) -> Place { appending(.key(name)) }
 
-    // The slot a part of a program sits in. Four walks report places into these
-    // slots and each destructures the language for itself; naming the slots
-    // here is what keeps them from disagreeing about where one thing is. What a
-    // walk cannot be stopped from doing is forgetting a slot, so the suite asks
-    // the four of them for the same place and compares.
-    public func slot(_ slot: Slot) -> Place { appending(.slot(slot)) }
+    // The part of a program something sits in. Four walks report places into
+    // these parts and each destructures the language for itself; naming the
+    // parts here is what keeps them from disagreeing about where one thing is.
+    // What a walk cannot be stopped from doing is forgetting one, so the suite
+    // asks the four of them for the same place and compares.
+    public func part(_ part: Part) -> Place { appending(.part(part)) }
 
     // What a call is written with. Two steps and not one. A document nests them
     // under a key of their own, and an argument named beside a statement would
     // be a name meaning two things.
-    public func argument(_ name: String) -> Place { slot(.arguments).key(name) }
+    public func argument(_ name: String) -> Place { part(.arguments).key(name) }
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
@@ -218,15 +218,18 @@ public extension Place {
         }
     }
 
-    // Every slot a program has, by the language's own name for it. No spelling
-    // rides along: what a document writes a slot under is the reading side's,
-    // and a word declared in two places is a word the two can come to disagree
-    // about with nothing going wrong loudly enough to notice.
+    // Every part a program has, by the language's own name for it. A part is
+    // where something sits in the shape of a program; the boundary's `Slot` is
+    // what a call fills, and the two are named apart because they are two
+    // things. No spelling rides along: what a document writes a part under is
+    // the reading side's, and a word declared in two places is a word the two
+    // can come to disagree about with nothing going wrong loudly enough to
+    // notice.
     //
-    // One case per slot and not per key. A conditional and a loop both hold a
+    // One case per part and not per key. A conditional and a loop both hold a
     // condition; that a document writes the two under different words is a fact
     // about the document.
-    enum Slot: Sendable, Equatable {
+    enum Part: Sendable, Equatable {
         case procedures
         case constants
         case variables
@@ -247,8 +250,8 @@ public extension Place {
 
         // A condition, and which construct holds it. The construct is carried
         // because a document does not write the two under one word (a
-        // conditional asks `when` and a loop asks `while`) and a slot that had
-        // to be told by whatever step came before it is a slot that can be
+        // conditional asks `when` and a loop asks `while`) and a part that had
+        // to be told by whatever step came before it is a part that can be
         // reached from somewhere nobody remembered to tell.
         //
         // Only what can hold one, so a side spelling this has nothing to
@@ -259,7 +262,7 @@ public extension Place {
         case otherwise
         case rescue
 
-        // What the language calls this slot.
+        // What the language calls this part.
         var rendered: String {
             switch self {
             case .procedures: "procedures"
@@ -301,10 +304,10 @@ public extension Place {
         // argument's. The author typed it, so it is carried as it was typed.
         case key(String)
 
-        // A slot of the program, which every side names for itself. Carried as
-        // the slot and not as a word, so the side spelling it is the side that
+        // A part of the program, which every side names for itself. Carried as
+        // the part and not as a word, so the side spelling it is the side that
         // knows what its reader is looking at.
-        case slot(Slot)
+        case part(Part)
 
         // The shape a statement writes, carried the same way and for the same
         // reason: two texts spelling one shape two ways arrive as one shape.
