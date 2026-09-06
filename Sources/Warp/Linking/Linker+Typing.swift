@@ -65,7 +65,7 @@ extension Linker {
         return join(walked.flow.answered, walked.reading)
     }
 
-    // A block with every dot judged and every send gathered, each site carrying
+    // A block with every dot judged and every call gathered, each site carrying
     // what was in scope where it was written. Statements are read in order
     // because that is what a body means. A name holds what the statement before
     // it bound.
@@ -107,7 +107,7 @@ extension Linker {
         return (inner.rewritten, inner.calls)
     }
 
-    // The one membership judgment every surface shares: dispatch reads it over
+    // The one membership judgment every surface shares: call reads it over
     // the whole signature, a path over the receiver's slot. Answers the
     // refusal, or nil where every constrained parameter admits its reading.
     //
@@ -139,7 +139,7 @@ extension Linker {
         return nil
     }
 
-    // The judgment every send shares, whichever surface writes it. A dispatch
+    // The judgment every call shares, whichever surface writes it. A call
     // writes the arguments, a path writes only the receiver. What the readings
     // put in the declaration's type parameters is read once: a parameter read
     // two ways is refused rather than folded, a bounded one is judged against
@@ -185,7 +185,7 @@ extension Linker {
     // way.
     func bound(
         of signature: Signature,
-        at dispatch: Dispatch,
+        at call: Call,
         readings sent: [Name: TypeExpression],
         receiver received: TypeExpression?,
         in shapes: ShapeTable
@@ -193,7 +193,7 @@ extension Linker {
         var bound: [Name: TypeExpression] = [:]
         var disagreeing: [Name: TypeExpression] = [:]
 
-        for name in dispatch.arguments.keys.sorted() {
+        for name in call.arguments.keys.sorted() {
             guard let parameter = signature.parameters[name], let reading = sent[name] else {
                 continue
             }
@@ -224,13 +224,13 @@ extension Linker {
         return Bound(readings: bound, disagreeing: disagreeing)
     }
 
-    // What a send answers: the declaration's returns, filled from the operands
+    // What a call answers: the declaration's returns, filled from the operands
     // where the declaration is generic. One statement of the rule, whichever
     // ask gathered the readings, and the operands are asked for lazily, so a
     // non-generic call never pays for taking them.
     private func answered(
         by signature: Signature?,
-        at dispatch: Dispatch,
+        at call: Call,
         readings sent: @autoclosure () throws -> [Name: TypeExpression],
         receiver received: @autoclosure () throws -> TypeExpression?,
         in shapes: ShapeTable
@@ -241,7 +241,7 @@ extension Linker {
         return returns.filling(
             bound(
                 of: signature,
-                at: dispatch,
+                at: call,
                 readings: try sent(),
                 receiver: try received(),
                 in: shapes
@@ -262,7 +262,7 @@ extension Linker {
     // values. Each dot is judged by the shape the walk has reached: a shape
     // with fields reads one, a shape without them sends a word, and the
     // judgment is spelled into the answered path (`key` for a read, `word` for
-    // a send) so a run never asks the value.
+    // a call) so a run never asks the value.
     //
     // A field the shape does not declare is refused, `?.` or not. The type
     // proved the absence, and a spelling that reads expected absence does not
@@ -553,8 +553,8 @@ extension Linker {
                 current = entry
                 resolved.append(segment)
 
-            // A dot on a shape without fields is a word send, judged by the one
-            // machine every word send goes through, and the judgment is spelled
+            // A dot on a shape without fields is a word call, judged by the one
+            // machine every word call goes through, and the judgment is spelled
             // into the path, so the run sends without asking. The same `?.`
             // rule as a record's field: the receiver here is proven non-null,
             // so an optional spelling that unwrapped nothing claims an absence
@@ -721,9 +721,9 @@ extension Linker {
         }
     }
 
-    // A word send written as a path. The receiver fills the word's one slot, so
-    // the send is judged exactly as a written call is (reachability,
-    // acceptance, then the judgment every send shares) and the walk goes on
+    // A word call written as a path. The receiver fills the word's one slot, so
+    // the call is judged exactly as a written call is (reachability,
+    // acceptance, then the judgment every call shares) and the walk goes on
     // with what the word answers, the receiver's reading filled in.
     private enum WordReach {
         case answers(TypeExpression)
@@ -865,7 +865,7 @@ extension Linker {
     }
 
     // The two asks the one walk answers. Judging is the link's own pass (every
-    // dot rewritten, every send gathered, every refusal thrown) and it happens
+    // dot rewritten, every call gathered, every refusal thrown) and it happens
     // once per site. Reading answers the type and flow questions alone and
     // refuses nothing (what cannot be read is `any`) because its askers read a
     // body out of place or more than once: an operand typed where it stands, a
@@ -1278,7 +1278,7 @@ extension Linker {
         // check refuses a construct in one, and a program that came straight to
         // the link meets the same predicate here) so nothing writes and there
         // is no flow to carry.
-        case let .invoke(callee, arguments):
+        case let .apply(callee, arguments):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
             }
@@ -1319,7 +1319,7 @@ extension Linker {
             }
 
             return Inspection(
-                rewritten: .invoke(called.rewritten, arguments: rewritten),
+                rewritten: .apply(called.rewritten, arguments: rewritten),
                 calls: calls,
                 reading: .any
             )
@@ -1333,17 +1333,17 @@ extension Linker {
         // The operands are data the pure half reads (the check holds a
         // construct out of them, and the link asks the same predicate itself)
         // so nothing here writes: every operand stands in the one environment
-        // the dispatch stands in.
-        case let .dispatch(dispatch):
-            let signature = frame.signatures[dispatch.selector]
+        // the call stands in.
+        case let .call(call):
+            let signature = frame.signatures[call.selector]
 
             guard case .judging = ask else {
                 return Inspection(
                     rewritten: expression,
                     reading: try answered(
                         by: signature,
-                        at: dispatch,
-                        readings: try dispatch.arguments.reduce(into: [:]) { read, argument in
+                        at: call,
+                        readings: try call.arguments.reduce(into: [:]) { read, argument in
                             read[argument.key] = try inspected(
                                 argument.value,
                                 at: place.argument(argument.key.spelling),
@@ -1352,7 +1352,7 @@ extension Linker {
                                 ask: ask
                             ).reading
                         },
-                        receiver: try dispatch.receiver.map { receiver in
+                        receiver: try call.receiver.map { receiver in
                             try inspected(
                                 receiver,
                                 at: place.slot(.receiver),
@@ -1370,9 +1370,9 @@ extension Linker {
             // it. Its answer is unknown, and a dot on an unknown answer would
             // be refused first for what the dot reads, which is not what the
             // author got wrong.
-            guard let callee = frame.symbols[dispatch.selector] else {
+            guard let callee = frame.symbols[call.selector] else {
                 throw LinkError(
-                    "sends '\(dispatch.selector)', which no module in this link declares",
+                    "sends '\(call.selector)', which no module in this link declares",
                     at: place
                 )
             }
@@ -1380,18 +1380,18 @@ extension Linker {
             // The guard above already said judging, so this refusal has no
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
-            if dispatch.receiver?.holdsConstruct == true {
+            if call.receiver?.holdsConstruct == true {
                 throw LinkError(Expression.constructInOperand, at: place.slot(.receiver))
             }
 
-            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key })
+            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key })
             where argument.holdsConstruct {
                 throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             var receiver: Inspection?
 
-            if let written = dispatch.receiver {
+            if let written = call.receiver {
                 receiver = try inspected(
                     written,
                     at: place.slot(.receiver),
@@ -1405,7 +1405,7 @@ extension Linker {
             var sent: [Name: TypeExpression] = [:]
             var calls = receiver?.calls ?? []
 
-            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
+            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
                 let inner = try inspected(
                     argument,
                     at: place.argument(name.spelling),
@@ -1420,7 +1420,7 @@ extension Linker {
             }
 
             try handedInPlace(
-                by: dispatch,
+                by: call,
                 to: callee,
                 in: environment,
                 with: frame,
@@ -1428,17 +1428,17 @@ extension Linker {
                 when: ask
             )
 
-            let rewritten = Dispatch(
+            let rewritten = Call(
                 receiver: receiver?.rewritten,
-                selector: dispatch.selector,
+                selector: call.selector,
                 arguments: arguments
             )
 
             return Inspection(
-                rewritten: .dispatch(rewritten),
+                rewritten: .call(rewritten),
                 calls: [
                     CallSite(
-                        dispatch: rewritten,
+                        call: rewritten,
                         place: place,
                         callee: callee,
                         readings: sent,
@@ -1447,7 +1447,7 @@ extension Linker {
                 ] + calls,
                 reading: answered(
                     by: signature,
-                    at: dispatch,
+                    at: call,
                     readings: sent,
                     receiver: receiver?.reading,
                     in: frame.shapes
@@ -2404,7 +2404,7 @@ extension Linker {
     // ways, and every write lands in it as it is made, so nothing here keeps
     // them apart.
     private func handedInPlace(
-        by dispatch: Dispatch,
+        by call: Call,
         to callee: Symbol,
         in environment: [Name: TypeExpression],
         with frame: TypeFrame,
@@ -2417,9 +2417,9 @@ extension Linker {
 
         for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key })
         where parameter.declared.isInout {
-            guard let argument = dispatch.handed(name, to: signature) else { continue }
+            guard let argument = call.handed(name, to: signature) else { continue }
 
-            let at = name == signature.receiver && dispatch.receiver != nil
+            let at = name == signature.receiver && call.receiver != nil
                 ? place.slot(.receiver)
                 : place.argument(name.spelling)
 

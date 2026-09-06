@@ -109,7 +109,7 @@ struct RangeTests {
                 ),
                 entryName: Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "paint",
                         arguments: ["level": .literal(.int(256))]
                     ))
@@ -249,7 +249,7 @@ struct RangeTests {
         }
     }
 
-    @Test("a dot on a range is a word send, the way it is on an int")
+    @Test("a dot on a range is a word call, the way it is on an int")
     func aDotOnARangeSendsAWord() async throws {
         // Given. A range's value has no fields; the dot reaches vocabulary
         let sut = try Module(
@@ -286,7 +286,7 @@ struct RangeTests {
                         parameters: ["level": Parameter(type: .ranged(.whole(from: 0, to: .through(255))))]
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: ["value": reference("level")]
                     ))

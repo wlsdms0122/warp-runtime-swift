@@ -19,16 +19,16 @@ import Foundation
 //                does not hold reads as null
 //   array     . Elements are expressions
 //   record    . Fields are expressions
-//   dispatch  . A message: a selector, a receiver, arguments. The one calling
-//                shape, and the only open one
+//   call      . A message: a selector, a receiver, arguments. The one
+//                calling shape, and the only open one
 //
 // The control shapes carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the id of whatever bound it.
 //
-// `dispatch` is the one open case. A procedure, a bundled word and a caller's
-// own all lower to it, because they differ only in where the selector is found,
-// and finding it is the link's job, not the grammar's.
+// `call` is the one open case. A procedure, a bundled word and a caller's own
+// all lower to it, because they differ only in where the selector is found, and
+// finding it is the link's job, not the grammar's.
 //
 // There is no operator here. Equality, negation and the connectives are words
 // like any other, so the grammar says what a program *is* and never what one
@@ -46,12 +46,12 @@ public indirect enum Expression: Sendable {
     // scope it was written in, which is the whole of what makes it a closure.
     case closure(Procedure)
 
-    // Calling a value rather than a name. `dispatch` asks a table and a call
-    // graph what a selector means, and the linker settles that before any run;
-    // this asks the value in hand, and only a run can. Two spellings because
-    // they are two questions: fusing them would mean a local name could quietly
-    // stand in for a linked one, and linking would stop being a promise.
-    case invoke(Expression, arguments: [Name: Expression])
+    // Calling a value rather than a name. `call` asks a table and a call graph
+    // what a selector means, and the linker settles that before any run; this
+    // asks the value in hand, and only a run can. Two spellings because they are
+    // two questions: fusing them would mean a local name could quietly stand in
+    // for a linked one, and linking would stop being a promise.
+    case apply(Expression, arguments: [Name: Expression])
 
     // Reading a value as a shape the text names. `any` declares nothing, so a
     // dot on one is refused at the link. This is the door: the author says what
@@ -81,7 +81,7 @@ public indirect enum Expression: Sendable {
     // nothing is the walk's own answer.
     case iteration(over: Expression, body: [Statement], element: Name)
     case attempt(Block, rescue: Block, failure: Name)
-    case dispatch(Dispatch)
+    case call(Call)
 
     // Carrying on somewhere further out than the next statement. The one shape
     // that never even finishes: what comes after it in its body does not run,
@@ -108,13 +108,13 @@ public indirect enum Expression: Sendable {
         case .record: .record
         case .closure: .closure
         case .cast: .cast
-        case .invoke: .invoke
+        case .apply: .apply
         case .block: .block
         case .conditional: .conditional
         case .loop: .loop
         case .iteration: .iteration
         case .attempt: .attempt
-        case .dispatch: .dispatch
+        case .call: .call
         case let .leave(leave): .leave(leave.reach)
         }
     }
@@ -220,13 +220,13 @@ public indirect enum Expression: Sendable {
         case let .record(record):
             return record.values.contains { field in field.holdsConstruct }
 
-        case let .invoke(callee, arguments):
+        case let .apply(callee, arguments):
             return callee.holdsConstruct
                 || arguments.values.contains { argument in argument.holdsConstruct }
 
-        case let .dispatch(dispatch):
-            return dispatch.receiver?.holdsConstruct ?? false
-                || dispatch.arguments.values.contains { argument in argument.holdsConstruct }
+        case let .call(call):
+            return call.receiver?.holdsConstruct ?? false
+                || call.arguments.values.contains { argument in argument.holdsConstruct }
 
         // A cast runs no body (it names a shape and judges what arrives against
         // it) so it holds a construct only where the value it reads does.

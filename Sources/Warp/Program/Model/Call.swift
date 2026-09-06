@@ -1,5 +1,5 @@
 //
-//  Dispatch.swift
+//  Call.swift
 //  Warp
 //
 //  Created by JSilver on 8/16/26.
@@ -19,7 +19,7 @@ import Foundation
 // The receiver is optional because not every message has one. `x.count` and
 // `{ of: x, contains: y }` are sent *to* something; a procedure call is not. The
 // language declines to invent a receiver for the ones that have none.
-public struct Dispatch: Sendable {
+public struct Call: Sendable {
     // MARK: - Property
     public let receiver: Expression?
     public let selector: Name

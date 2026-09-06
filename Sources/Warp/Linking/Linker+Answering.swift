@@ -108,7 +108,7 @@ extension Linker {
     // path sends words too, and a word's answer is an answer like any other.
     //
     // Read off the one walk `Expression` owns, and read wide: a name gathered
-    // that turns out not to be a send only ever adds an edge, and an edge
+    // that turns out not to be a call only ever adds an edge, and an edge
     // only ever turns a reading into `any`. Missing one would do the
     // opposite.
     func sent(in block: Block, reaching words: [Name: Symbol]) -> Set<Name> {
@@ -128,8 +128,8 @@ extension Linker {
 
         for expression in block.buried {
             switch expression {
-            case let .dispatch(dispatch):
-                sent.insert(dispatch.selector)
+            case let .call(call):
+                sent.insert(call.selector)
 
             case let .reference(path):
                 gather(path)

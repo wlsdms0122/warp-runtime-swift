@@ -182,11 +182,11 @@ struct TypeTests {
         )
         let entry = Procedure(
             body: [
-                Statement(binding: .constant("said"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("said"), expression: .call(
+                        Call(
                             selector: "wants",
                             arguments: [
-                                "word": .dispatch(Dispatch(selector: "counts"))
+                                "word": .call(Call(selector: "counts"))
                             ]
                         )
                     )
@@ -216,11 +216,11 @@ struct TypeTests {
         )
         let entry = Procedure(
             body: [
-                Statement(binding: .constant("said"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("said"), expression: .call(
+                        Call(
                             selector: "wants",
                             arguments: [
-                                "word": .dispatch(Dispatch(selector: "counts"))
+                                "word": .call(Call(selector: "counts"))
                             ]
                         )
                     )
@@ -242,7 +242,7 @@ struct TypeTests {
         // answer worked out from its own is not one the text states.
         let circling = Procedure(
             body: [],
-            result: .dispatch(Dispatch(selector: "counts"))
+            result: .call(Call(selector: "counts"))
         )
 
         _ = try Linker().link(

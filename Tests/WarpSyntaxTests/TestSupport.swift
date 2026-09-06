@@ -59,8 +59,8 @@ struct FailForm: ConstructForm {
 
     // MARK: - Public
     func expression(boundTo id: String?) -> Warp.Expression {
-        .dispatch(
-            Dispatch(
+        .call(
+            Call(
                 selector: "test.fail",
                 arguments: ["recoverable": .literal(.bool(recoverable))]
             )
@@ -228,15 +228,15 @@ func run(
 // Equality and the connectives are words, so a test writing one writes the send
 // the reader lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
+    .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
+    .call(Call(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
 }
 
 func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: condition, selector: "std.logic.not"))
+    .call(Call(receiver: condition, selector: "std.logic.not"))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something that
@@ -250,8 +250,8 @@ func some(_ conditions: Warp.Expression...) -> Warp.Expression {
 }
 
 private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
-    .dispatch(
-        Dispatch(
+    .call(
+        Call(
             receiver: .array(
                 conditions.map { condition in
                     .closure(

@@ -405,8 +405,8 @@ public struct ExpressionReader: Decodable {
                 return .literal(.string(literal))
 
             case let .ref(path):
-                return .dispatch(
-                    Dispatch(
+                return .call(
+                    Call(
                         receiver: try substituted(path, over: bindings),
                         selector: interpolation.read
                     )
@@ -420,13 +420,13 @@ public struct ExpressionReader: Decodable {
             return .literal(.string(only))
         }
 
-        return .dispatch(Dispatch(receiver: .array(pieces), selector: interpolation.joined))
+        return .call(Call(receiver: .array(pieces), selector: interpolation.joined))
     }
 
     // A placeholder names a binding and then drills into it, so what it reads is
     // the binding's expression with the rest of the path walked from there. A
     // binding that is itself a reference keeps one path rather than growing a
-    // dispatch around itself.
+    // call around itself.
     //
     // Every name in the path is substituted, not only the head. An index
     // reference is a path of its own inside this one, and leaving it as written

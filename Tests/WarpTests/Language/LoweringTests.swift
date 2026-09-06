@@ -70,7 +70,7 @@ struct LoweringTests {
                                 result: .reference([.key("x")])
                             )
                         )),
-                        Statement(binding: .constant("got"), expression: .invoke(.reference([.key("held")]), arguments: [:]))
+                        Statement(binding: .constant("got"), expression: .apply(.reference([.key("held")]), arguments: [:]))
                     ],
                     result: .array([.reference([.key("x")]), .reference([.key("got")])])
                 )
@@ -98,7 +98,7 @@ struct LoweringTests {
                             Procedure(body: [], result: .reference([.key("b")]))
                         ))
                     ],
-                    result: .invoke(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [:])
                 )
             ]
         )
@@ -128,7 +128,7 @@ struct LoweringTests {
         // reads nothing the body bound
         func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
             .loop(
-                while: .dispatch(Dispatch(
+                while: .call(Call(
                     receiver: .reference([.key("round"), .key("index")]),
                     selector: "std.math.lessThan",
                     arguments: ["value": .literal(.int(1))]
@@ -186,7 +186,7 @@ struct LoweringTests {
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.int(1)),
                         selector: "pair",
                         arguments: ["second": .literal(.int(3)), "first": .literal(.int(2))]
@@ -218,16 +218,16 @@ struct LoweringTests {
         // Then
         guard
             case let .body(body, _) = image.entry.implementation,
-            case let .send(send)? = body.result
+            case let .call(call)? = body.result
         else {
-            Issue.record("the send was not lowered")
+            Issue.record("the call was not lowered")
 
             return
         }
 
-        #expect(image.linked[send.procedure].slots.map(\.name) == ["first", "of", "second"])
-        #expect(send.receiver != nil)
-        #expect(send.arguments.map { argument in argument == nil } == [false, true, false])
+        #expect(image.linked[call.procedure].slots.map(\.name) == ["first", "of", "second"])
+        #expect(call.receiver != nil)
+        #expect(call.arguments.map { argument in argument == nil } == [false, true, false])
         #expect(try await Executor().run(image) == .array([.int(1), .int(2), .int(3)]))
     }
 
@@ -264,7 +264,7 @@ struct LoweringTests {
             procedures: [
                 "entry": Procedure(
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
-                    result: .dispatch(Dispatch(selector: "app.bump", arguments: ["of": .reference([.key("n")])]))
+                    result: .call(Call(selector: "app.bump", arguments: ["of": .reference([.key("n")])]))
                 ),
                 "app.bump": Procedure(
                     signature: Signature(
@@ -301,7 +301,7 @@ struct LoweringTests {
                             )
                         ))
                     ],
-                    result: .dispatch(Dispatch(selector: "app.take", arguments: ["of": .reference([.key("body")])]))
+                    result: .call(Call(selector: "app.take", arguments: ["of": .reference([.key("body")])]))
                 ),
                 "app.take": Procedure(
                     signature: Signature(
@@ -341,8 +341,8 @@ struct LoweringTests {
                 procedures: [
                     "entry": Procedure(
                         body: [Statement(binding: .variable("held"), expression: held)],
-                        result: .dispatch(Dispatch(
-                            receiver: .dispatch(Dispatch(
+                        result: .call(Call(
+                            receiver: .call(Call(
                                 selector: "app.tag",
                                 arguments: ["of": .reference([.key("held")])]
                             )),
@@ -416,7 +416,7 @@ struct LoweringTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],
-                    result: .dispatch(Dispatch(receiver: .reference([.key("held")]), selector: "app.echo"))
+                    result: .call(Call(receiver: .reference([.key("held")]), selector: "app.echo"))
                 ),
                 "app.echo": Procedure(
                     signature: Signature(

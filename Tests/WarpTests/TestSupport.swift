@@ -15,7 +15,7 @@ import WarpStandard
 // at once and cannot say which one broke. What is written here is the language
 // on its own: procedures authored as Swift values, paths written as segments
 // rather than parsed from text. The standard vocabulary comes in because a
-// program has to send somewhere, and what those words answer is tested where
+// program has to call somewhere, and what those words answer is tested where
 // they live.
 
 struct TestRecoverableFailure: RecoverableFailure {
@@ -200,18 +200,18 @@ struct ShoutEffect: Effect {
 
 // MARK: - Conditions
 
-// Equality and the connectives are words, so a test writing one writes the send
+// Equality and the connectives are words, so a test writing one writes the call
 // the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
+    .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
 }
 
 func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
+    .call(Call(receiver: subject, selector: "std.logic.notEqual", arguments: ["value": operand]))
 }
 
 func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: condition, selector: "std.logic.not"))
+    .call(Call(receiver: condition, selector: "std.logic.not"))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something that
@@ -225,8 +225,8 @@ func some(_ conditions: Warp.Expression...) -> Warp.Expression {
 }
 
 private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
-    .dispatch(
-        Dispatch(
+    .call(
+        Call(
             receiver: .array(
                 conditions.map { condition in
                     .closure(
@@ -248,7 +248,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
 // value asked how it reads. The notation spells this `{ format:, with: }` and
 // lowers it to exactly this.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: .array(pieces), selector: "std.text.joined"))
+    .call(Call(receiver: .array(pieces), selector: "std.text.joined"))
 }
 
 func literal(_ text: String) -> Warp.Expression {
@@ -256,13 +256,13 @@ func literal(_ text: String) -> Warp.Expression {
 }
 
 func spelling(_ value: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: value, selector: "std.text.text"))
+    .call(Call(receiver: value, selector: "std.text.text"))
 }
 
 // MARK: - Refusal
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: message, selector: "std.control.abort"))
+    .call(Call(receiver: message, selector: "std.control.abort"))
 }
 
 extension Closure {
@@ -277,7 +277,7 @@ extension Closure {
                 purity: .unstated,
                 isolation: .unstated,
                 implementation: .body(
-                    Body(instructions: [], result: result.map(Code.literal)),
+                    Body(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], names: [])
                 ),
                 in: table

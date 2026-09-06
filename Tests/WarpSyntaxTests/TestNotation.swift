@@ -59,8 +59,8 @@ struct TestConditions: ConditionSpelling {
             )
         }
 
-        return .dispatch(
-            Dispatch(
+        return .call(
+            Call(
                 receiver: try container.decode(
                     ExpressionReader.self,
                     forKey: AnyCodingKey(stringValue: Self.subjectKey.spelling)
@@ -103,8 +103,8 @@ struct WordedConditions: ConditionSpelling {
     // MARK: - Initializer
     // MARK: - Public
     func condition(from decoder: Decoder) throws -> Warp.Expression {
-        .dispatch(
-            Dispatch(
+        .call(
+            Call(
                 receiver: try decoder.container(keyedBy: AnyCodingKey.self)
                     .decode(ExpressionReader.self, forKey: AnyCodingKey(stringValue: "holds"))
                     .expression,

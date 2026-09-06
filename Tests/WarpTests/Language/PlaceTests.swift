@@ -53,14 +53,14 @@ struct PlaceTests {
         // Given. An argument reported from the statement's own place says a
         // thing is wrong and does not say which of the several written there.
         let sut = place(
-            refusing: Statement(binding: .constant("sent"), expression: .dispatch(
-                    Dispatch(selector: "send", arguments: ["amount": reference("missing")])
+            refusing: Statement(binding: .constant("sent"), expression: .call(
+                    Call(selector: "send", arguments: ["amount": reference("missing")])
                 )
             )
         )
 
         // Then
-        #expect(sut?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.amount")
+        #expect(sut?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
@@ -123,7 +123,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(binding: .constant("sent"), expression: .dispatch(Dispatch(selector: "nowhere")))
+                    Statement(binding: .constant("sent"), expression: .call(Call(selector: "nowhere")))
                 ])
             ]
         )
@@ -134,7 +134,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].dispatch")
+        #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
     @Test("the link narrows to the argument it refused, not to the call holding it")
@@ -145,8 +145,8 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(binding: .constant("sent"), expression: .dispatch(
-                            Dispatch(selector: "helper", arguments: [
+                    Statement(binding: .constant("sent"), expression: .call(
+                            Call(selector: "helper", arguments: [
                                 "first": .literal(.int(1)),
                                 "second": .literal(.string("two")),
                                 "third": .literal(.int(3))
@@ -172,7 +172,7 @@ struct PlaceTests {
 
         // Then
         #expect(
-            error?.place?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.second"
+            error?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.second"
         )
     }
 
@@ -185,8 +185,8 @@ struct PlaceTests {
         let linked = try Module(
             procedures: [
                 entryName: Procedure(body: [
-                    Statement(binding: .constant("sent"), expression: .dispatch(
-                            Dispatch(selector: "helper", arguments: ["amount": .literal(.string("x"))])
+                    Statement(binding: .constant("sent"), expression: .call(
+                            Call(selector: "helper", arguments: ["amount": .literal(.string("x"))])
                         )
                     )
                 ]),
@@ -202,8 +202,8 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     entryName: Procedure(body: [
-                        Statement(binding: .constant("sent"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("sent"), expression: .call(
+                                Call(
                                     selector: "helper",
                                     arguments: ["amount": reference("missing")]
                                 )
@@ -219,8 +219,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.amount")
-        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].dispatch.arguments.amount")
+        #expect(load?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
+        #expect(link?.place?.rendered == "procedures.entry.body.sent[0].call.arguments.amount")
     }
 
     @Test("every walk that reports a place steps through the same slots to reach one")
@@ -234,7 +234,7 @@ struct PlaceTests {
         // a name nothing declares for the walk that checks the document against
         // itself, a word nothing declares for the walk that resolves names, a
         // claim the types already prove for the walk that reads them.
-        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].dispatch"
+        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].call"
 
         func module(sending selector: Name, with argument: Warp.Expression) throws -> Module {
             try Module(
@@ -243,8 +243,8 @@ struct PlaceTests {
                         Statement(binding: .constant("guarded"), expression: .attempt(
                                 Block(body: []),
                                 rescue: Block(body: [
-                                    Statement(binding: .constant("sent"), expression: .dispatch(
-                                            Dispatch(
+                                    Statement(binding: .constant("sent"), expression: .call(
+                                            Call(
                                                 selector: selector,
                                                 arguments: ["amount": argument]
                                             )
@@ -296,7 +296,7 @@ struct PlaceTests {
                 .procedures[entryName]?.block?
                 .buried(at: .procedure(entryName.spelling, in: .assembled))
                 .first { _, expression in
-                    guard case .dispatch = expression else { return false }
+                    guard case .call = expression else { return false }
 
                     return true
                 }
@@ -313,7 +313,7 @@ struct PlaceTests {
         let sut = try Module(
             procedures: [
                 "wallet.entry": Procedure(body: [
-                    Statement(binding: .constant("sent"), expression: .dispatch(Dispatch(selector: "nowhere")))
+                    Statement(binding: .constant("sent"), expression: .call(Call(selector: "nowhere")))
                 ])
             ],
             identity: reading,
@@ -327,7 +327,7 @@ struct PlaceTests {
         // Then
         #expect(error?.place?.document == Place.Document(identity: reading))
         #expect(error?.place?.steps.contains(.key("wallet.entry")) == true)
-        #expect(error?.place?.rendered == "d0cf00/procedures.wallet.entry.body.sent[0].dispatch")
+        #expect(error?.place?.rendered == "d0cf00/procedures.wallet.entry.body.sent[0].call")
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
@@ -425,29 +425,29 @@ struct PlaceTests {
     @Test("a statement's construct is the language's word, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
         // Given. One shape, two texts: `{ call: … }` and `{ value: { call: … }
-        // }` are both a dispatch by the time anything here sees one, so the
+        // }` are both a call by the time anything here sees one, so the
         // word for the construct is this implementation's rather than something
         // a reader may go looking for in a file.
         let sut = try #require(
             place(
-                refusing: Statement(binding: .constant("sent"), expression: .dispatch(
-                        Dispatch(selector: "send", arguments: ["amount": reference("missing")])
+                refusing: Statement(binding: .constant("sent"), expression: .call(
+                        Call(selector: "send", arguments: ["amount": reference("missing")])
                     )
                 )
             )
         )
 
         // Then. The word is spelled for the person reading the line
-        #expect(sut.rendered?.contains(".sent[0].dispatch.") == true)
+        #expect(sut.rendered?.contains(".sent[0].call.") == true)
 
         // And carried as the shape rather than as any word, so the side that
         // spells it is the side that knows what its reader is looking at
-        #expect(sut.steps.contains(.construct(.dispatch)))
+        #expect(sut.steps.contains(.construct(.call)))
         #expect(sut.steps.contains(.slot(.arguments)))
 
         // What the author named is the one thing carried as it was typed
         #expect(sut.steps.contains(.key("amount")))
-        #expect(sut.steps.contains(.key("dispatch")) == false)
+        #expect(sut.steps.contains(.key("call")) == false)
     }
 
     @Test("what a return carries is checked, and placed where the return is")
@@ -477,8 +477,8 @@ struct PlaceTests {
             procedures: [
                 entryName: Procedure(body: [
                     Statement(
-                        expression: .dispatch(
-                            Dispatch(selector: "stop", arguments: ["message": .literal(.string("x"))])
+                        expression: .call(
+                            Call(selector: "stop", arguments: ["message": .literal(.string("x"))])
                         )
                     ),
                     Statement(binding: .constant("after"), expression: .literal(.int(1)))
@@ -511,7 +511,7 @@ struct PlaceTests {
 
         // Then
         #expect(load?.place?.rendered == "procedures.entry.body[0].leave")
-        #expect(link?.place?.rendered == "procedures.entry.body[0].dispatch")
+        #expect(link?.place?.rendered == "procedures.entry.body[0].call")
     }
 
     @Test("a name two documents declare is refused at the one that could not be added")
@@ -668,7 +668,7 @@ struct PlaceTests {
         // reads keeps it anyway, because something does read it.
         let sut = try Module(
             constants: [
-                "beta": .dispatch(Dispatch(
+                "beta": .call(Call(
                     receiver: reference("gamma"),
                     selector: "std.math.plus",
                     arguments: ["value": reference("delta")]

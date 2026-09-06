@@ -94,7 +94,7 @@ struct ExecutorTests {
                 "entry": Procedure(
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("fragile"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                                        Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]))
                                         )
@@ -129,7 +129,7 @@ struct ExecutorTests {
                 "entry": Procedure(
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("fragile"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                                        Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]))
                                         )
@@ -169,7 +169,7 @@ struct ExecutorTests {
                 "entry": Procedure(
                     body: [
                         Statement(binding: .constant("broken"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("broken"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                                        Statement(binding: .constant("broken"), expression: .call(Call(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(false))
                                                     ]))
                                         )
@@ -196,7 +196,7 @@ struct ExecutorTests {
             procedures: [
                 "entry": Procedure(
                     body: [
-                        Statement(binding: .constant("fragile"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("fragile"), expression: .call(Call(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(true))
                                     ]))
                         )

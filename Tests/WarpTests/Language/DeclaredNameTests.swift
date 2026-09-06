@@ -96,8 +96,8 @@ struct DeclaredNameTests {
                 "stray": Procedure(
                     body: [
                         Statement(
-                            expression: .dispatch(
-                                Dispatch(receiver: .literal(.string("x")), selector: "std.control.abort")
+                            expression: .call(
+                                Call(receiver: .literal(.string("x")), selector: "std.control.abort")
                             )
                         ),
                         Statement(
@@ -279,12 +279,12 @@ struct DeclaredNameTests {
                             expression: .closure(Procedure(signature: takes, body: [], result: reference("x")))
                         ),
                         Statement(
-                            expression: .dispatch(
-                                Dispatch(selector: "swap", arguments: ["step": .reference([.key("step")])])
+                            expression: .call(
+                                Call(selector: "swap", arguments: ["step": .reference([.key("step")])])
                             )
                         )
                     ],
-                    result: .invoke(reference("step"), arguments: ["x": .literal(.int(2))])
+                    result: .apply(reference("step"), arguments: ["x": .literal(.int(2))])
                 ),
                 "swap": Procedure(
                     signature: Signature(parameters: ["step": Parameter(type: .inout(.procedure(takes)))]),
@@ -320,12 +320,12 @@ struct DeclaredNameTests {
                             expression: .closure(Procedure(signature: takes, body: [], result: reference("x")))
                         ),
                         Statement(
-                            expression: .dispatch(
-                                Dispatch(selector: "swap", arguments: ["step": .reference([.key("step")])])
+                            expression: .call(
+                                Call(selector: "swap", arguments: ["step": .reference([.key("step")])])
                             )
                         )
                     ],
-                    result: .invoke(reference("step"), arguments: ["x": .literal(.int(2))])
+                    result: .apply(reference("step"), arguments: ["x": .literal(.int(2))])
                 ),
                 "swap": Procedure(
                     signature: Signature(parameters: ["step": Parameter(type: .inout(.procedure(takes)))]),

@@ -14,7 +14,7 @@ import Foundation
 // A dot means what the link decided it means. A document writes `key` segments;
 // the link reads each against the type the walk has reached and rewrites the
 // ones that are sends into `word` segments, so by the time a run reads a path,
-// a `key` is only ever a field and a `word` is only ever a send, and the value
+// a `key` is only ever a field and a `word` is only ever a call, and the value
 // that arrives has no say in which.
 //
 // Optionality is one axis across every access, not a family of spellings: each

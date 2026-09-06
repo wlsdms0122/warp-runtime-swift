@@ -30,7 +30,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(returns: .bool),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.bool(true)),
                         selector: "std.math.lessThan",
                         arguments: ["value": .literal(.bool(false))]
@@ -56,7 +56,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.string("a")),
                         selector: "std.math.plus",
                         arguments: ["value": .literal(.string("b"))]
@@ -85,7 +85,7 @@ struct ConstraintTests {
                         returns: .bool
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: reference("left"),
                         selector: "std.math.lessThan",
                         arguments: ["value": .literal(.int(1))]
@@ -120,7 +120,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: ["value": .literal(.int(7))]
                     ))
@@ -152,7 +152,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: ["value": .literal(.double(1.5))]
                     ))
@@ -251,7 +251,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: [
                             "left": .literal(.double(1.0)),
@@ -628,7 +628,7 @@ struct ConstraintTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "read",
                         arguments: ["node": reference("node")]
                     ))
@@ -643,7 +643,7 @@ struct ConstraintTests {
 
     @Test("a path fills a word's receiver and is judged like a call")
     func aPathReceiverIsJudgedAtTheLink() throws {
-        // Given. `"abc".absolute` and `absolute(of: "abc")` mean the same send,
+        // Given. `"abc".absolute` and `absolute(of: "abc")` mean the same call,
         // so they refuse on the same surface
         let sut = try Module(
             procedures: [
@@ -665,7 +665,7 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a path send refuses a parameter read two ways")
+    @Test("a path call refuses a parameter read two ways")
     func aPathSendRefusesADisagreeingReading() throws {
         // Given. The receiver's procedure shape fills one parameter twice, and
         // a parameter read as a whole number and as text has no answer on the
@@ -807,7 +807,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.int(1)),
                         selector: "std.math.absolute",
                         arguments: ["of": .literal(.string("x"))]
@@ -927,7 +927,7 @@ struct ConstraintTests {
         // Given. A native word resolves its receiver through its invocation,
         // which is the one door outside the executor's own resolvers. The
         // receiver's path ends in a word, so a resolver assembled without the
-        // word table would read absence where the link approved a send.
+        // word table would read absence where the link approved a call.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -936,7 +936,7 @@ struct ConstraintTests {
                         returns: .array(.int)
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .reference([.key("items"), .key("reversed")]),
                         selector: "std.concurrent.map",
                         arguments: [
@@ -998,7 +998,7 @@ struct ConstraintTests {
                         returns: .bool
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: reference("left"),
                         selector: "std.math.lessThan",
                         arguments: ["value": reference("right")]
@@ -1007,7 +1007,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(returns: .bool),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "smallest",
                         arguments: [
                             "left": .literal(.int(1)),

@@ -59,8 +59,8 @@ public struct CallForm: ConstructForm {
 
     // MARK: - Public
     public func expression(boundTo id: String?) -> Expression {
-        .dispatch(
-            Dispatch(
+        .call(
+            Call(
                 receiver: receiver,
                 selector: procedure,
                 arguments: arguments

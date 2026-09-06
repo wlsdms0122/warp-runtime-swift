@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 
 // `call:` names a symbol, never a document. Naming the document would write a
-// linkage fact into the call site, which is the one thing dispatch decided an
+// linkage fact into the call site, which is the one thing call decided an
 // author should never have to write.
 @Suite
 struct CallTests {

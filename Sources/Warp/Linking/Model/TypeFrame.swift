@@ -16,7 +16,7 @@ import Foundation
 struct TypeFrame: Sendable {
     // MARK: - Property
     // Every declaration under its declared spelling, as the author wrote it.
-    // A walk that meets a send finds the declaration here, once, and hands it
+    // A walk that meets a call finds the declaration here, once, and hands it
     // on with the call. The same spellings key `signatures`, where the link
     // has filled in what each declaration answers.
     let symbols: [Name: Symbol]
@@ -40,7 +40,7 @@ struct TypeFrame: Sendable {
     // the run judge by one table.
     var shapes: ShapeTable { types.shapes }
 
-    // What a bare spelling a path writes may send: the pure declarations whose
+    // What a bare spelling a path writes may call: the pure declarations whose
     // only required slot is the receiver, by the name a walk reaches them
     // under. Its own table rather than a mask over `signatures`, so the gate
     // and the declaration it answers with cannot disagree.
@@ -61,9 +61,9 @@ struct TypeFrame: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // The whole declaration, for the one send a path makes, and only where a
+    // The whole declaration, for the one call a path makes, and only where a
     // path may make it. There is no way to ask what a name answers without
-    // asking whether a path may send it. A softer question was how a word
+    // asking whether a path may call it. A softer question was how a word
     // nobody may reach got a type.
     func signature(reachedBy name: Name) -> Signature? {
         words[name]

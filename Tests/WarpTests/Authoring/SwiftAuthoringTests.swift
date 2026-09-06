@@ -100,8 +100,8 @@ struct SwiftAuthoringTests {
         let linker = Linker()
         let procedure = Procedure(
             body: [
-                Statement(binding: .constant("shout"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("shout"), expression: .call(
+                        Call(
                             selector: "app.shout",
                             arguments: ["text": .literal(.string("hey"))]
                         )
@@ -130,16 +130,16 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
-                Statement(binding: .constant("counted"), expression: .dispatch(
-                        Dispatch(receiver: .reference([.key("names")]), selector: "std.collection.count")
+                Statement(binding: .constant("counted"), expression: .call(
+                        Call(receiver: .reference([.key("names")]), selector: "std.collection.count")
                     )
                 ),
-                Statement(binding: .constant("shouted"), expression: .dispatch(
-                        Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
+                Statement(binding: .constant("shouted"), expression: .call(
+                        Call(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                     )
                 ),
-                Statement(binding: .constant("called"), expression: .dispatch(
-                        Dispatch(selector: "echo", arguments: ["word": .literal(.string("yo"))])
+                Statement(binding: .constant("called"), expression: .call(
+                        Call(selector: "echo", arguments: ["word": .literal(.string("yo"))])
                     )
                 )
             ],

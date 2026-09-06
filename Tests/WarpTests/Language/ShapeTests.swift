@@ -126,7 +126,7 @@ struct ShapeTests {
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.int(1)),
                         selector: "std.math.lessThan",
                         arguments: ["value": .literal(.int(2))]
@@ -154,7 +154,7 @@ struct ShapeTests {
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.array([.int(1), .int(2)])),
                         selector: "std.collection.map",
                         arguments: [
@@ -162,7 +162,7 @@ struct ShapeTests {
                                 Procedure(
                                     signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .int),
                                     body: [],
-                                    result: .dispatch(Dispatch(
+                                    result: .call(Call(
                                         receiver: .reference([.key("item")]),
                                         selector: "std.math.plus",
                                         arguments: ["value": .literal(.int(10))]
@@ -333,7 +333,7 @@ struct ShapeTests {
                 "entry": Procedure(
                     signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
                     body: [],
-                    result: .invoke(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [:])
                 )
             ]
         )
@@ -365,7 +365,7 @@ struct ShapeTests {
                 "entry": Procedure(
                     signature: Signature(parameters: ["held": Parameter(type: .procedure(nil))]),
                     body: [],
-                    result: .invoke(.reference([.key("held")]), arguments: [:])
+                    result: .apply(.reference([.key("held")]), arguments: [:])
                 )
             ]
         )

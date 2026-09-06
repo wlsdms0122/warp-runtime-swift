@@ -9,7 +9,7 @@ import Foundation
 
 // A type as the run reads it: the declaration's type with every name the
 // link resolved written in as a row of the shape table. What a document
-// spells stays `TypeExpression`; this is the link's product, the way `Code`
+// spells stays `TypeExpression`; this is the link's product, the way `Operation`
 // is the product of an `Expression`. Every judgment over a value or a
 // reading lives here, and the document's type reaches it by lowering.
 indirect enum Shape: Sendable {

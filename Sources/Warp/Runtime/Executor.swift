@@ -107,7 +107,7 @@ public struct Executor: Sendable {
 
     // The synchronous reading of one code against one frame: the half of the
     // language that answers without running.
-    func read(_ code: Code, in activation: Activation) throws -> Value {
+    func read(_ code: Operation, in activation: Activation) throws -> Value {
         switch code {
         case let .literal(value):
             return value
@@ -139,14 +139,14 @@ public struct Executor: Sendable {
         case let .cast(value, shape, optional):
             return try shape.reading(try read(value, in: activation), optional: optional, in: shapes)
 
-        case let .send(send):
-            return try self.send(send, in: activation)
+        case let .call(call):
+            return try self.call(call, in: activation)
 
         // Running a body or reaching outside is async and may fail in a way an
         // attempt can catch, so it belongs to `evaluate`. Reaching here means
         // a construct was written where only data can be read: inside a
         // condition, or among an effect's settled arguments.
-        case .invoke, .block, .conditional, .loop, .iteration, .attempt, .leave:
+        case .apply, .block, .conditional, .loop, .iteration, .attempt, .leave:
             throw ExecutionError("this expression runs, so it cannot be read as data here")
         }
     }
@@ -286,7 +286,7 @@ public struct Executor: Sendable {
     // The evaluator for what runs. The containers recurse here so an effect
     // written inside one is run; every other data case is `read`'s.
     private func evaluate(
-        _ code: Code,
+        _ code: Operation,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -325,11 +325,11 @@ public struct Executor: Sendable {
                 in: shapes
             )
 
-        case let .send(send):
-            return try await self.send(send, in: &activation, at: trace)
+        case let .call(call):
+            return try await self.call(call, in: &activation, at: trace)
 
-        case let .invoke(callee, arguments):
-            return try await invoke(callee, arguments: arguments, in: &activation, at: trace)
+        case let .apply(callee, arguments):
+            return try await apply(callee, arguments: arguments, in: &activation, at: trace)
 
         case let .block(body):
             return try await run(body, in: &activation, at: trace)
@@ -382,22 +382,22 @@ public struct Executor: Sendable {
 
     // One lookup, because there is one table. What happens is decided by how
     // the row is implemented, not by which container it was found in.
-    private func send(_ send: Send, in activation: inout Activation, at trace: Trace) async throws -> Value {
-        let callee = linked[send.procedure]
+    private func call(_ call: CallOperation, in activation: inout Activation, at trace: Trace) async throws -> Value {
+        let callee = linked[call.procedure]
 
         switch callee.implementation {
         // A query answers without running, so the pure half is the whole
         // implementation. It is here only so that `x.count` and the same
         // word written as a statement mean the same thing.
         case .query:
-            return try self.send(send, in: activation)
+            return try self.call(call, in: activation)
 
         case let .effect(effect):
-            let holds = try holds(send.handed, of: callee, in: activation)
+            let holds = try holds(call.handed, of: callee, in: activation)
             let settled = try settled(
                 callee,
-                given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
-                skipping: skipped(send, of: callee, holding: true)
+                given: try call.arguments.map { argument in try argument.map { try read($0, in: activation) } },
+                skipping: skipped(call, of: callee, holding: true)
             )
             // A receiver handed in place is read for the effect as what its
             // hold holds now, the way the effect reads any receiver.
@@ -407,7 +407,7 @@ public struct Executor: Sendable {
                 Invocation(
                     selector: callee.label,
                     signature: callee.signature,
-                    receiver: sent(to: callee, receiver: try received(send, of: callee, in: activation) ?? held, arguments: settled),
+                    receiver: sent(to: callee, receiver: try received(call, of: callee, in: activation) ?? held, arguments: settled),
                     settled: settled,
                     holds: holds,
                     trace: trace,
@@ -421,7 +421,7 @@ public struct Executor: Sendable {
             // A parameter handed in place takes no value: it takes a hold on
             // the caller's variable, and what the hold reaches is read only
             // where the body reads it.
-            for (position, handle) in try holds(send.handed, of: callee, in: activation) {
+            for (position, handle) in try holds(call.handed, of: callee, in: activation) {
                 inner.cells[frame.parameters[position]] = .hold(handle)
             }
 
@@ -429,14 +429,14 @@ public struct Executor: Sendable {
             // name. It is not settled as an argument, since being sent to
             // nothing is something a word answers rather than refuses, but the
             // body reads it under the name its signature gave it.
-            if let position = callee.receiverPosition, let receiver = try received(send, of: callee, in: activation) {
+            if let position = callee.receiverPosition, let receiver = try received(call, of: callee, in: activation) {
                 inner.cells[frame.parameters[position]] = .value(receiver)
             }
 
             let settled = try settled(
                 callee,
-                given: try send.arguments.map { argument in try argument.map { try read($0, in: activation) } },
-                skipping: skipped(send, of: callee, holding: true)
+                given: try call.arguments.map { argument in try argument.map { try read($0, in: activation) } },
+                skipping: skipped(call, of: callee, holding: true)
             )
 
             for (position, value) in settled.values.enumerated() {
@@ -452,9 +452,9 @@ public struct Executor: Sendable {
     // Calling a value. The body runs in the cells the closure captured and not
     // in the caller's: that is what lexical scope means, and it is the reason a
     // closure is worth passing at all.
-    private func invoke(
-        _ callee: Code,
-        arguments: [(Name, Code)],
+    private func apply(
+        _ callee: Operation,
+        arguments: [(Name, Operation)],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -508,7 +508,7 @@ public struct Executor: Sendable {
     }
 
     private func loop(
-        while condition: Code,
+        while condition: Operation,
         body: Body,
         round: Int,
         keeps: Range<Int>?,
@@ -553,7 +553,7 @@ public struct Executor: Sendable {
     }
 
     private func iterate(
-        over material: Code,
+        over material: Operation,
         body: [Instruction],
         element: Int,
         in activation: inout Activation,
@@ -585,7 +585,7 @@ public struct Executor: Sendable {
     // another or all at once, what they walk has to be an array, and it fails to
     // be one in the same way.
     private func array(
-        of material: Code,
+        of material: Operation,
         naming element: Name,
         in activation: inout Activation,
         at trace: Trace
@@ -662,7 +662,7 @@ public struct Executor: Sendable {
     // makes lands in that box as it is made, so a call that fails after
     // writing has written.
     private func holds(
-        _ handed: [Send.Handed],
+        _ handed: [CallOperation.Handed],
         of callee: Linked,
         in activation: Activation
     ) throws -> [(position: Int, handle: Handle)] {
@@ -680,8 +680,8 @@ public struct Executor: Sendable {
 
     // The receiver a call wrote in front, settled against what the parameter
     // naming it declares. Nil where the call wrote none.
-    private func received(_ send: Send, of callee: Linked, in activation: Activation) throws -> Value? {
-        guard let receiver = send.receiver else { return nil }
+    private func received(_ call: CallOperation, of callee: Linked, in activation: Activation) throws -> Value? {
+        guard let receiver = call.receiver else { return nil }
 
         do {
             return try callee.settling(receiver: try read(receiver, in: activation))
@@ -701,15 +701,15 @@ public struct Executor: Sendable {
     // wrote one in front, and the ones handed in place where the callee
     // takes holds. A pure body takes no hold, so what it was handed is
     // settled as a value.
-    private func skipped(_ send: Send, of callee: Linked, holding: Bool) -> Skipped {
+    private func skipped(_ call: CallOperation, of callee: Linked, holding: Bool) -> Skipped {
         Skipped(
-            handed: holding ? send.handed : [],
-            receiver: send.receiver == nil ? nil : callee.receiverPosition
+            handed: holding ? call.handed : [],
+            receiver: call.receiver == nil ? nil : callee.receiverPosition
         )
     }
 
     private struct Skipped {
-        let handed: [Send.Handed]
+        let handed: [CallOperation.Handed]
         let receiver: Int?
 
         func contains(_ position: Int) -> Bool {
@@ -728,11 +728,11 @@ public struct Executor: Sendable {
         Settled(by: callee, values: try callee.settle(given, offered: false, skipping: skipping.contains))
     }
 
-    // The pure half of a send. An effect or a body that runs answers only by
+    // The pure half of a call. An effect or a body that runs answers only by
     // running, so a condition that names one is refused here rather than
     // quietly starting something in the middle of a comparison.
-    private func send(_ send: Send, in activation: Activation) throws -> Value {
-        let callee = linked[send.procedure]
+    private func call(_ call: CallOperation, in activation: Activation) throws -> Value {
+        let callee = linked[call.procedure]
 
         guard callee.purity == .pure else {
             throw ExecutionError(
@@ -741,16 +741,16 @@ public struct Executor: Sendable {
             )
         }
 
-        let receiver = try received(send, of: callee, in: activation)
-        var given = try send.arguments.map { argument in try argument.map { try read($0, in: activation) } }
+        let receiver = try received(call, of: callee, in: activation)
+        var given = try call.arguments.map { argument in try argument.map { try read($0, in: activation) } }
 
         // A pure body writes nothing, so a variable handed to it in place is
         // read as what it holds, and settled the way any argument is.
-        for handed in send.handed {
+        for handed in call.handed {
             given[handed.position] = try found(handed.slot, handed.path, in: activation)
         }
 
-        let arguments = try settled(callee, given: given, skipping: skipped(send, of: callee, holding: false))
+        let arguments = try settled(callee, given: given, skipping: skipped(call, of: callee, holding: false))
 
         do {
             return try answer(callee, for: receiver, with: arguments)
@@ -759,7 +759,7 @@ public struct Executor: Sendable {
         } catch {
             // A word blaming a shape is answerable only if the author can see
             // which name held it.
-            guard case let .local(slot, steps)? = send.receiver else { throw error }
+            guard case let .local(slot, steps)? = call.receiver else { throw error }
 
             throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: "\(error)")
         }

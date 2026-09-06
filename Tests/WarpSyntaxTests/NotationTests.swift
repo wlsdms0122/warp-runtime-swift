@@ -234,14 +234,14 @@ struct NotationTests {
         // Then
         guard
             case let .body(block) = sut.procedures[entryName]?.implementation,
-            case let .dispatch(dispatch) = block.body.first?.expression
+            case let .call(call) = block.body.first?.expression
         else {
             Issue.record("a template is the words that put text together")
 
             return
         }
 
-        #expect(dispatch.selector == Notation.testing.interpolation?.joined)
+        #expect(call.selector == Notation.testing.interpolation?.joined)
     }
 
     @Test("a form key wins over a notation's condition, in every notation")

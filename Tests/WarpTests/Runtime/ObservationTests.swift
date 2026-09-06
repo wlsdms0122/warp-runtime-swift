@@ -126,8 +126,8 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("both"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("both"), expression: .call(
+                                Call(
                                     receiver: .literal(.array([.int(1), .int(2)])),
                                     selector: "std.concurrent.map",
                                     arguments: [
@@ -170,7 +170,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "helper"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "helper"))
                         )
                     ]
                 ),
@@ -204,7 +204,7 @@ struct ObservationTests {
                         // call as `never` too, and a statement that never
                         // finishes takes no name, so the place is its position.
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "helper"))
+                            expression: .call(Call(selector: "helper"))
                         )
                     ]
                 ),
@@ -242,7 +242,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("doomed"), expression: .dispatch(Dispatch(selector: "app.fail"))
+                        Statement(binding: .constant("doomed"), expression: .call(Call(selector: "app.fail"))
                         )
                     ]
                 )
@@ -276,8 +276,8 @@ struct ObservationTests {
                         Statement(binding: .constant("fragile"), expression: .attempt(
                                 Block(
                                     body: [
-                                        Statement(binding: .constant("doomed"), expression: .dispatch(
-                                                Dispatch(
+                                        Statement(binding: .constant("doomed"), expression: .call(
+                                                Call(
                                                     selector: "app.fail",
                                                     arguments: [
                                                         "recoverable": .literal(.bool(true))

@@ -22,11 +22,11 @@ struct Instruction: Sendable {
 
     // MARK: - Property
     let binding: Binding?
-    let code: Code
+    let code: Operation
     let label: String
 
     // MARK: - Initializer
-    init(binding: Binding?, code: Code, label: String) {
+    init(binding: Binding?, code: Operation, label: String) {
         self.binding = binding
         self.code = code
         self.label = label

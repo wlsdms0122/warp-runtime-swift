@@ -9,7 +9,7 @@ import Foundation
 
 // Checks that every name a procedure reads is one it can see, before it runs.
 //
-// The walk is structural, and it stays structural through dispatch: a message
+// The walk is structural, and it stays structural through call: a message
 // carries expressions whose insides this can read, so what exists inside a
 // caller's body is read here rather than asked of whatever answers the
 // selector. Which means validation never consults the word table. A document is
@@ -133,7 +133,7 @@ public struct Validator: Sendable {
 
         let said = [
             undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
-            unspent.isEmpty ? nil : "imports \(unspent), which it does not send"
+            unspent.isEmpty ? nil : "imports \(unspent), which it does not call"
         ]
 
         throw ValidationError(
@@ -444,7 +444,7 @@ public struct Validator: Sendable {
                 at: inside
             )
 
-        case let .invoke(callee, arguments):
+        case let .apply(callee, arguments):
             try refuseConstruct(callee, at: place.slot(.callee))
             try validate(
                 callee,
@@ -565,8 +565,8 @@ public struct Validator: Sendable {
                 at: place.slot(.rescue)
             )
 
-        case let .dispatch(dispatch):
-            if let receiver = dispatch.receiver {
+        case let .call(call):
+            if let receiver = call.receiver {
                 try refuseConstruct(receiver, at: place.slot(.receiver))
                 try validate(
                     receiver,
@@ -577,7 +577,7 @@ public struct Validator: Sendable {
                 )
             }
 
-            for (name, argument) in dispatch.arguments.sorted(by: { $0.key < $1.key }) {
+            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
                 let here = place.argument(name.spelling)
 
                 try refuseConstruct(argument, at: here)

@@ -124,8 +124,8 @@ public extension Writer {
                 ExpressionReader.subjectKey: try value(of: read),
             ])
 
-        case let .dispatch(dispatch):
-            return .dictionary(["call": try message(of: dispatch)])
+        case let .call(call):
+            return .dictionary(["call": try message(of: call)])
 
         // Everything left is a construct, and this notation spells constructs
         // in statement position only. Some of them need to be there (a loop, an
@@ -156,10 +156,10 @@ public extension Writer {
         named id: String?
     ) throws -> (Name, Value) {
         switch expression {
-        case let .dispatch(dispatch):
-            return (try spelling(CallForm.self), try message(of: dispatch))
+        case let .call(call):
+            return (try spelling(CallForm.self), try message(of: call))
 
-        case let .invoke(callee, arguments):
+        case let .apply(callee, arguments):
             var written: [Name: Value] = ["procedure": try value(of: callee)]
 
             if !arguments.isEmpty {
@@ -243,16 +243,16 @@ public extension Writer {
         }
     }
 
-    private func message(of dispatch: Dispatch) throws -> Value {
-        var written: [Name: Value] = ["procedure": .string(dispatch.selector.spelling)]
+    private func message(of call: Call) throws -> Value {
+        var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
 
-        if let receiver = dispatch.receiver {
+        if let receiver = call.receiver {
             written[ExpressionReader.subjectKey] = try value(of: receiver)
         }
 
-        if !dispatch.arguments.isEmpty {
+        if !call.arguments.isEmpty {
             written["arguments"] = .dictionary(
-                try dispatch.arguments.mapValues { argument in try value(of: argument) }
+                try call.arguments.mapValues { argument in try value(of: argument) }
             )
         }
 
@@ -396,13 +396,13 @@ public extension Writer {
         case .array: "an array"
         case .record: "a record"
         case .closure: "a closure"
-        case .invoke: "an invocation"
+        case .apply: "an invocation"
         case .block: "a group"
         case .conditional: "a branch"
         case .loop: "a loop"
         case .iteration: "an iteration"
         case .attempt: "an attempt"
-        case .dispatch: "a message"
+        case .call: "a message"
         case .cast: "a cast"
         }
     }

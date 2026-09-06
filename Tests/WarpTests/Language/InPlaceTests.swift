@@ -24,8 +24,8 @@ struct InPlaceTests {
                     body: [
                         Statement(
                             binding: .assignment([.key("total")]),
-                            expression: .dispatch(
-                                Dispatch(
+                            expression: .call(
+                                Call(
                                     receiver: reference("total"),
                                     selector: "std.math.plus",
                                     arguments: ["value": .literal(.int(1))]
@@ -99,8 +99,8 @@ struct InPlaceTests {
                                 Block(
                                     body: [
                                         Statement(
-                                            expression: .dispatch(
-                                                Dispatch(
+                                            expression: .call(
+                                                Call(
                                                     selector: "poke",
                                                     arguments: ["count": .reference([.key("xs"), .index(1)])]
                                                 )
@@ -120,8 +120,8 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
                         Statement(
-                            expression: .dispatch(
-                                Dispatch(receiver: .literal(.string("after")), selector: "std.control.abort")
+                            expression: .call(
+                                Call(receiver: .literal(.string("after")), selector: "std.control.abort")
                             )
                         )
                     ]
@@ -173,7 +173,7 @@ struct InPlaceTests {
                 entryName: Procedure(
                     signature: Signature(returns: .array(.int)),
                     body: [],
-                    result: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
+                    result: .call(Call(selector: "poke", arguments: ["first": .reference([.key("items"), .index(0)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: ["first": Parameter(type: .inout(.int))], returns: .array(.int)),
@@ -198,7 +198,7 @@ struct InPlaceTests {
                 entryName: Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .dispatch(Dispatch(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
+                    result: .call(Call(selector: "poke", arguments: ["second": .reference([.key("items"), .index(1)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: ["second": Parameter(type: .inout(.int))], returns: .int),
@@ -231,7 +231,7 @@ struct InPlaceTests {
                             expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
                         ),
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "fill", arguments: ["slot": reference("table", "k")]))
+                            expression: .call(Call(selector: "fill", arguments: ["slot": reference("table", "k")]))
                         )
                     ],
                     result: reference("table", "k")
@@ -258,7 +258,7 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
@@ -289,7 +289,7 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: ["first": .reference([.key("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
@@ -321,7 +321,7 @@ struct InPlaceTests {
                     signature: Signature(parameters: ["all": Parameter(type: .inout(.record(["items": .array(.int)])))]),
                     body: [
                         Statement(
-                            expression: .dispatch(Dispatch(selector: "other.grow", arguments: ["list": reference("all", "items")]))
+                            expression: .call(Call(selector: "other.grow", arguments: ["list": reference("all", "items")]))
                         )
                     ],
                     result: .literal(.null)

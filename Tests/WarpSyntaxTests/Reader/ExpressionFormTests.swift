@@ -137,7 +137,7 @@ struct ExpressionFormTests {
         // Then. Nothing in the language knows what a template is: what is left
         // is an array written one after another, each value asked how it reads
         guard
-            case let .dispatch(joined) = reference,
+            case let .call(joined) = reference,
             case let .array(pieces) = joined.receiver
         else {
             Issue.record("expected a joined array, got \(reference)")
@@ -149,7 +149,7 @@ struct ExpressionFormTests {
         #expect(pieces.count == 2)
         #expect(pieces.first?.constantValue == .string("hello, "))
 
-        guard case let .dispatch(spelled)? = pieces.last else {
+        guard case let .call(spelled)? = pieces.last else {
             Issue.record("expected the placeholder to ask how its value reads")
 
             return
@@ -173,9 +173,9 @@ struct ExpressionFormTests {
         // Then. The index must have been substituted too, or it resolves
         // against whatever scope the statement runs in
         guard
-            case let .dispatch(joined) = reference,
+            case let .call(joined) = reference,
             case let .array(pieces) = joined.receiver,
-            case let .dispatch(spelled)? = pieces.last,
+            case let .call(spelled)? = pieces.last,
             case let .reference(path)? = spelled.receiver
         else {
             Issue.record("expected a spelled reference, got \(reference)")

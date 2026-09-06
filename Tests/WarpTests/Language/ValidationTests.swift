@@ -163,8 +163,8 @@ struct ValidationTests {
         // anything runs. The body a word is to run travels as a closure.
         let arm = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
         let sut = [
-            Statement(binding: .constant("said"), expression: .dispatch(
-                    Dispatch(selector: "app.shout", arguments: [
+            Statement(binding: .constant("said"), expression: .call(
+                    Call(selector: "app.shout", arguments: [
                         "text": .conditional(.literal(.bool(true)), then: arm, else: nil)
                     ])
                 )
@@ -175,7 +175,7 @@ struct ValidationTests {
         #expect(!validates(body: sut))
         #expect(
             !validates(body: [
-                Statement(binding: .constant("said"), expression: .invoke(
+                Statement(binding: .constant("said"), expression: .apply(
                         .closure(Procedure(body: [])),
                         arguments: [
                             "value": .array([
@@ -365,7 +365,7 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(binding: .constant("counted"), expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("counted"), expression: .call(Call(
                                     receiver: .literal(.array([.int(1)])),
                                     selector: "std.collection.count"
                                 ))
@@ -389,7 +389,7 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(binding: .constant("counted"), expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("counted"), expression: .call(Call(
                                     receiver: .literal(.array([.int(1)])),
                                     selector: "std.collection.count"
                                 ))
@@ -404,7 +404,7 @@ struct ValidationTests {
         #expect(
             error?.message
                 == "sends [\"std.collection.count\"], which it does not import,"
-                    + " and imports [\"std.math.minus\"], which it does not send"
+                    + " and imports [\"std.math.minus\"], which it does not call"
         )
     }
 
@@ -417,7 +417,7 @@ struct ValidationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("counted"), expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("counted"), expression: .call(Call(
                                 receiver: .literal(.array([.int(1)])),
                                 selector: "std.collection.count"
                             ))
@@ -438,7 +438,7 @@ struct ValidationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "greet"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "greet"))
                         )
                     ]
                 ),
@@ -460,7 +460,7 @@ struct ValidationTests {
             procedures: [
                 "wallet.pay": Procedure(
                     body: [
-                        Statement(binding: .constant("charged"), expression: .dispatch(Dispatch(selector: "wallet.fee"))
+                        Statement(binding: .constant("charged"), expression: .call(Call(selector: "wallet.fee"))
                         )
                     ]
                 ),

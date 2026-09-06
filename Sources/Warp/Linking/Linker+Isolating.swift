@@ -101,7 +101,7 @@ extension Linker {
             case .literal, .reference:
                 return true
 
-            case .invoke:
+            case .apply:
                 return false
 
             case let .cast(value, _, _):
@@ -118,22 +118,22 @@ extension Linker {
             case .closure:
                 return true
 
-            case let .dispatch(dispatch):
-                guard isolated.contains(dispatch.selector), let signature = signatures[dispatch.selector] else {
+            case let .call(call):
+                guard isolated.contains(call.selector), let signature = signatures[call.selector] else {
                     return false
                 }
 
                 for (name, parameter) in signature.parameters where parameter.declared.isInout {
                     guard
-                        case let .reference(path)? = dispatch.handed(name, to: signature),
+                        case let .reference(path)? = call.handed(name, to: signature),
                         let head = path.head
                     else { continue }
 
                     guard declared.contains(head) else { return false }
                 }
 
-                return (dispatch.receiver.map { receiver in holds(receiver, declared: declared) } ?? true)
-                    && dispatch.arguments.values.allSatisfy { argument in holds(argument, declared: declared) }
+                return (call.receiver.map { receiver in holds(receiver, declared: declared) } ?? true)
+                    && call.arguments.values.allSatisfy { argument in holds(argument, declared: declared) }
 
             case let .block(block):
                 return holds(block, declared: declared)

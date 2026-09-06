@@ -213,8 +213,8 @@ struct VariableTests {
     func closureOwnsItsVariables() async throws {
         // Given. What is refused is reaching outward, not variables
         let sut = [
-            Statement(binding: .constant("both"), expression: .dispatch(
-                    Dispatch(
+            Statement(binding: .constant("both"), expression: .call(
+                    Call(
                         receiver: .record([
                             "left": .closure(
                                 Procedure(

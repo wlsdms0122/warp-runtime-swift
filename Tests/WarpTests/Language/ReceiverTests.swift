@@ -31,7 +31,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "shout", arguments: [
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "shout", arguments: [
                                         "of": .reference([.key("word")])
                                     ]))
                         )
@@ -153,7 +153,7 @@ struct ReceiverTests {
                 ),
                 "dirty": Procedure(
                     body: [
-                        Statement(binding: .constant("done"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("done"), expression: .call(Call(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(true))
                                     ]))
                         )
@@ -161,9 +161,9 @@ struct ReceiverTests {
                 ),
                 "entry": Procedure(
                     body: [
-                        Statement(binding: .constant("a"), expression: .dispatch(Dispatch(selector: "clean"))
+                        Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))
                         ),
-                        Statement(binding: .constant("b"), expression: .dispatch(Dispatch(selector: "dirty"))
+                        Statement(binding: .constant("b"), expression: .call(Call(selector: "dirty"))
                         )
                     ]
                 )
@@ -193,7 +193,7 @@ struct ReceiverTests {
                 returns: .string
             ),
             body: [],
-            result: .dispatch(Dispatch(receiver: reference("of"), selector: "std.text.joined"))
+            result: .call(Call(receiver: reference("of"), selector: "std.text.joined"))
         )
         let sut = try Module(
             procedures: [
@@ -293,7 +293,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("boom"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("boom"), expression: .call(Call(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(false))
                                     ]))
                         )
@@ -308,7 +308,7 @@ struct ReceiverTests {
         // Then
         #expect(image["summarize"]?.purity != .pure)
 
-        // And a path that writes the word finds no word to send
+        // And a path that writes the word finds no word to call
         let reaching = try Module(
             procedures: [
                 "entry": Procedure(
@@ -351,7 +351,7 @@ struct ReceiverTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("boom"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                        Statement(binding: .constant("boom"), expression: .call(Call(selector: "app.fail", arguments: [
                                         "recoverable": .literal(.bool(false))
                                     ]))
                         )
@@ -368,7 +368,7 @@ struct ReceiverTests {
 
     @Test("a word reached from a path is checked against the receiver it declared")
     func aPathChecksTheReceiver() async throws {
-        // Given. The receiver's declared type is what makes the dot a send: the
+        // Given. The receiver's declared type is what makes the dot a call: the
         // link reads `array<any>`, finds no field there, and judges the word
         // against the receiver it declared
         let sut = try Module(
@@ -509,7 +509,7 @@ struct ReceiverTests {
 
     @Test("a word that answers never is not something a path may reach")
     func neverIsNotDerivable() {
-        // Given. A walk decides on its own whether to send what it reaches, and
+        // Given. A walk decides on its own whether to call what it reaches, and
         // leaving is not a decision a walk gets to make quietly
         let sut = Module.control.procedures["std.control.abort"]
 

@@ -43,7 +43,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(returns: .named("store.Task")),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "store.keep",
                         arguments: ["value": .literal(.dictionary(["id": .string("a")]))]
                     ))
@@ -197,7 +197,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: ["value": .literal(.int(3))]
                     ))
@@ -220,7 +220,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.array([.bool(true), .bool(false)])),
                         selector: "std.collection.sorted"
                     ))
@@ -280,7 +280,7 @@ struct DeclaredSpellingTests {
                         parameters: ["absent": Parameter(type: .any, default: .null)]
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: reference("absent"),
                         selector: "std.math.min",
                         arguments: ["value": .literal(.int(1))]
@@ -344,7 +344,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(returns: .string),
                     body: [
-                        Statement(binding: .constant("kept"), expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("kept"), expression: .call(Call(
                                 selector: "keep",
                                 arguments: ["value": .literal(.string("a"))]
                             ))
@@ -369,7 +369,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.string("a")),
                         selector: "std.math.plus",
                         arguments: ["value": .literal(.string("b"))]
@@ -394,7 +394,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(returns: .string),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.string("b")),
                         selector: "std.math.min",
                         arguments: ["value": .literal(.string("a"))]
@@ -418,7 +418,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     signature: Signature(),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.array([.int(2), .int(1)])),
                         selector: "std.collection.sorted"
                     ))

@@ -94,13 +94,13 @@ public extension Place {
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
         let form: (any ConstructForm.Type)? = switch construct {
-        case .invoke: InvokeForm.self
+        case .apply: InvokeForm.self
         case .block: GroupForm.self
         case .conditional: BranchForm.self
         case .loop: LoopForm.self
         case .iteration: EachForm.self
         case .attempt: AttemptForm.self
-        case .dispatch: CallForm.self
+        case .call: CallForm.self
         case let .leave(reach):
             switch reach {
             case .procedure: ReturnForm.self

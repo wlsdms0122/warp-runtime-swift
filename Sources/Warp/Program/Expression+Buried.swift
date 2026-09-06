@@ -143,12 +143,12 @@ public extension Expression {
         case let .record(record):
             named(record, under: here)
 
-        case let .invoke(callee, written):
+        case let .apply(callee, written):
             inner(callee, under: .callee) + arguments(written)
 
-        case let .dispatch(dispatch):
-            (dispatch.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])
-                + arguments(dispatch.arguments)
+        case let .call(call):
+            (call.receiver.map { receiver in inner(receiver, under: .receiver) } ?? [])
+                + arguments(call.arguments)
 
         case let .block(block):
             block.walked(at: here, stepping: stepping)

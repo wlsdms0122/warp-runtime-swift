@@ -22,13 +22,13 @@ public enum Construct: Sendable, Equatable {
     case closure
     case cast
 
-    case invoke
+    case apply
     case block
     case conditional
     case loop
     case iteration
     case attempt
-    case dispatch
+    case call
     case leave(Leave.Reach)
 
     // MARK: - Public
@@ -47,13 +47,13 @@ public enum Construct: Sendable, Equatable {
         case .record: "record"
         case .closure: "closure"
         case .cast: "cast"
-        case .invoke: "invoke"
+        case .apply: "apply"
         case .block: "block"
         case .conditional: "conditional"
         case .loop: "loop"
         case .iteration: "iteration"
         case .attempt: "attempt"
-        case .dispatch: "dispatch"
+        case .call: "call"
         case .leave: "leave"
         }
     }

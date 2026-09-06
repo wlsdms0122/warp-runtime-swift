@@ -1,5 +1,5 @@
 //
-//  DispatchTests.swift
+//  CallTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/17/26.
@@ -14,7 +14,7 @@ import WarpStandard
 // the only difference is where the selector was found. These ask the language
 // that directly, without a notation in between to spell the three differently.
 @Suite
-struct DispatchTests {
+struct CallTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -30,16 +30,16 @@ struct DispatchTests {
             result: .record(["said": reference("text")])
         )
         let sut: [Statement] = [
-            Statement(binding: .constant("counted"), expression: .dispatch(
-                    Dispatch(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "std.collection.count")
+            Statement(binding: .constant("counted"), expression: .call(
+                    Call(receiver: .array([.literal(.int(1)), .literal(.int(2))]), selector: "std.collection.count")
                 )
             ),
-            Statement(binding: .constant("shouted"), expression: .dispatch(
-                    Dispatch(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
+            Statement(binding: .constant("shouted"), expression: .call(
+                    Call(selector: "app.shout", arguments: ["text": .literal(.string("hi"))])
                 )
             ),
-            Statement(binding: .constant("echoed"), expression: .dispatch(
-                    Dispatch(selector: "echo", arguments: ["text": .literal(.string("back"))])
+            Statement(binding: .constant("echoed"), expression: .call(
+                    Call(selector: "echo", arguments: ["text": .literal(.string("back"))])
                 )
             )
         ]
@@ -68,8 +68,8 @@ struct DispatchTests {
     func decliningWordReadsAsAbsence() async throws {
         // Given. `count` has nothing to say about an int, and a word saying
         // nothing is the same answer as a field nobody set
-        let sut = Warp.Expression.dispatch(
-            Dispatch(receiver: .literal(.int(7)), selector: "std.collection.count")
+        let sut = Warp.Expression.call(
+            Call(receiver: .literal(.int(7)), selector: "std.collection.count")
         )
 
         // When
@@ -82,7 +82,7 @@ struct DispatchTests {
         #expect(answer == .null)
     }
 
-    @Test("a trailing path segment that names no field is a send")
+    @Test("a trailing path segment that names no field is a call")
     func trailingSegmentIsASend() async throws {
         // Given. `${items.count}` is `obj.count`: the front end cannot know
         // whether the last segment is a field or a word, so it does not decide
@@ -128,8 +128,8 @@ struct DispatchTests {
         // while an effect was an opaque Swift value.
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("shouted"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("shouted"), expression: .call(
+                        Call(
                             selector: "app.shout",
                             arguments: [
                                 "text": .literal(.string("hi")),
@@ -152,7 +152,7 @@ struct DispatchTests {
         // Given
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("shouted"), expression: .dispatch(Dispatch(selector: "app.shout"))
+                Statement(binding: .constant("shouted"), expression: .call(Call(selector: "app.shout"))
                 )
             ]
         )
@@ -169,8 +169,8 @@ struct DispatchTests {
         // judged here, and a constant is one
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("shouted"), expression: .dispatch(
-                        Dispatch(selector: "app.shout", arguments: ["text": .literal(.int(7))])
+                Statement(binding: .constant("shouted"), expression: .call(
+                        Call(selector: "app.shout", arguments: ["text": .literal(.int(7))])
                     )
                 )
             ]
@@ -187,7 +187,7 @@ struct DispatchTests {
         // Given. A self-contained procedure that calls something should be told
         // it had nowhere to look, rather than handed an empty answer
         let sut = Procedure(
-            body: [Statement(binding: .constant("gone"), expression: .dispatch(Dispatch(selector: "nowhere")))]
+            body: [Statement(binding: .constant("gone"), expression: .call(Call(selector: "nowhere")))]
         )
 
         // When / Then
@@ -206,7 +206,7 @@ struct DispatchTests {
                     expression: .conditional(
                         .literal(.bool(false)),
                         then: [
-                            Statement(binding: .constant("gone"), expression: .dispatch(Dispatch(selector: "nowhere"))
+                            Statement(binding: .constant("gone"), expression: .call(Call(selector: "nowhere"))
                             )
                         ],
                         else: nil
@@ -234,8 +234,8 @@ struct DispatchTests {
                         expression: .conditional(
                             differs(reference("n"), .literal(.int(0))),
                             then: [
-                                Statement(binding: .constant("recur"), expression: .dispatch(
-                                        Dispatch(
+                                Statement(binding: .constant("recur"), expression: .call(
+                                        Call(
                                             selector: "countdown",
                                             arguments: ["n": .literal(.int(0))]
                                         )
@@ -250,8 +250,8 @@ struct DispatchTests {
         )
         let sut = Procedure(
             body: [
-                Statement(binding: .constant("run"), expression: .dispatch(
-                        Dispatch(selector: "countdown", arguments: ["n": .literal(.int(1))])
+                Statement(binding: .constant("run"), expression: .call(
+                        Call(selector: "countdown", arguments: ["n": .literal(.int(1))])
                     )
                 )
             ],

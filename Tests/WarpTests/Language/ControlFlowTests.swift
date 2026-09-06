@@ -197,8 +197,8 @@ struct ControlFlowTests {
         // condition and `abort` past the bound say it exactly, and the failure
         // is a word's failure like any other
         let sut = Warp.Expression.loop(
-            while: .dispatch(
-                Dispatch(
+            while: .call(
+                Call(
                     receiver: reference("round", "index"),
                     selector: "std.math.lessThan",
                     arguments: ["value": .literal(.int(3))]
@@ -207,8 +207,8 @@ struct ControlFlowTests {
             body: Block(body: [
                 Statement(
                     expression: .conditional(
-                        .dispatch(
-                            Dispatch(
+                        .call(
+                            Call(
                                 receiver: reference("round", "index"),
                                 selector: "std.logic.equal",
                                 arguments: ["value": .literal(.int(2))]
@@ -216,8 +216,8 @@ struct ControlFlowTests {
                         ),
                         then: [
                             Statement(
-                                expression: .dispatch(
-                                    Dispatch(
+                                expression: .call(
+                                    Call(
                                         receiver: .literal(.string("too many rounds")),
                                         selector: "std.control.abort"
                                     )
@@ -247,8 +247,8 @@ struct ControlFlowTests {
         let sut = Warp.Expression.iteration(
             over: .array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]),
             body: [
-                Statement(binding: .assignment([.key("sum")]), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .assignment([.key("sum")]), expression: .call(
+                        Call(
                             receiver: reference("sum"),
                             selector: "std.math.plus",
                             arguments: ["value": reference("element", "item")]
@@ -313,8 +313,8 @@ struct ControlFlowTests {
         // Given
         let sut = Warp.Expression.attempt(
             Block(body: [
-                Statement(binding: .constant("boom"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("boom"), expression: .call(
+                        Call(
                             selector: "app.fail",
                             arguments: ["recoverable": .literal(.bool(true))]
                         )
@@ -342,8 +342,8 @@ struct ControlFlowTests {
         // procedure that is wrong
         let sut = Warp.Expression.attempt(
             Block(body: [
-                Statement(binding: .constant("boom"), expression: .dispatch(
-                        Dispatch(
+                Statement(binding: .constant("boom"), expression: .call(
+                        Call(
                             selector: "app.fail",
                             arguments: ["recoverable": .literal(.bool(false))]
                         )

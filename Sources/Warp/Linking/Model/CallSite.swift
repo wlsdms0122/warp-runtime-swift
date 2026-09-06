@@ -12,7 +12,7 @@ import Foundation
 // statement holding it, sends the author searching the whole document.
 struct CallSite: Sendable {
     // MARK: - Property
-    let dispatch: Dispatch
+    let call: Call
     let place: Place
 
     // The declaration the selector names, found by the walk that gathered
@@ -28,13 +28,13 @@ struct CallSite: Sendable {
 
     // MARK: - Initializer
     init(
-        dispatch: Dispatch,
+        call: Call,
         place: Place,
         callee: Symbol,
         readings: [Name: TypeExpression],
         received: TypeExpression?
     ) {
-        self.dispatch = dispatch
+        self.call = call
         self.place = place
         self.callee = callee
         self.readings = readings

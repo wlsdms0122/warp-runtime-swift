@@ -1,5 +1,5 @@
 //
-//  Code.swift
+//  Operation.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -13,15 +13,15 @@ import Foundation
 // it sends, and an argument stands at the position of the parameter it fills.
 // What only a run can know, the shape of a value or the signature of a
 // closure value, is still asked at the run.
-indirect enum Code: Sendable {
+indirect enum Operation: Sendable {
     case literal(Value)
 
     // A slot of the frame, read through a path.
     case local(Int, [Step])
 
-    case array([Code])
+    case array([Operation])
 
-    case record(RecordCode)
+    case record(RecordOperation)
 
     // A closure literal: the row its body was lowered into, and which cells
     // of the frame it takes with it, as (outer slot, inner slot).
@@ -29,24 +29,24 @@ indirect enum Code: Sendable {
 
     // Calling a value. Which signature it has is the value's, so the
     // arguments travel by name and settle where the closure is known.
-    case invoke(Code, arguments: [(Name, Code)])
+    case apply(Operation, arguments: [(Name, Operation)])
 
-    case cast(Code, as: Shape, optional: Bool)
+    case cast(Operation, as: Shape, optional: Bool)
     case block(Body)
-    case conditional(Code, then: [Instruction], else: [Instruction]?)
+    case conditional(Operation, then: [Instruction], else: [Instruction]?)
 
     // `keeps` is the range of body slots the result reads: the result reads
     // what the last finished round bound, so a round cut short is put back
     // before the result reads. Nil where the result reads none of them.
-    case loop(while: Code, body: Body, round: Int, keeps: Range<Int>?)
+    case loop(while: Operation, body: Body, round: Int, keeps: Range<Int>?)
 
-    case iteration(over: Code, body: [Instruction], element: Int)
+    case iteration(over: Operation, body: [Instruction], element: Int)
     case attempt(Body, rescue: Body, failure: Int)
-    case send(Send)
-    case leave(Leave.Reach, target: Name?, Code?)
+    case call(CallOperation)
+    case leave(Leave.Reach, target: Name?, Operation?)
 }
 
-extension Code {
+extension Operation {
     // Whether this reads any slot in the range, through a path's index
     // references as well. A closure's captures are reads of its own.
     func reads(_ slots: Range<Int>) -> Bool {
@@ -66,7 +66,7 @@ extension Code {
         case let .closure(_, captures):
             return captures.contains { outer, _ in slots.contains(outer) }
 
-        case let .invoke(callee, arguments):
+        case let .apply(callee, arguments):
             return callee.reads(slots) || arguments.contains { _, argument in argument.reads(slots) }
 
         case let .cast(value, _, _):
@@ -89,10 +89,10 @@ extension Code {
         case let .attempt(body, rescue, _):
             return body.reads(slots) || rescue.reads(slots)
 
-        case let .send(send):
-            return send.receiver?.reads(slots) == true
-                || send.arguments.contains { argument in argument?.reads(slots) == true }
-                || send.handed.contains { handed in
+        case let .call(call):
+            return call.receiver?.reads(slots) == true
+                || call.arguments.contains { argument in argument?.reads(slots) == true }
+                || call.handed.contains { handed in
                     slots.contains(handed.slot) || handed.path.contains { step in step.reads(slots) }
                 }
 

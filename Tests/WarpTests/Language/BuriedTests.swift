@@ -39,11 +39,11 @@ struct BuriedTests {
                 body: [Statement(binding: .constant("inside"), expression: marker("closure body"))],
                 result: marker("closure result")
             )),
-            .invoke(marker("invoke callee"), arguments: ["to": marker("invoke argument")]),
-            .dispatch(Dispatch(
-                receiver: marker("dispatch receiver"),
+            .apply(marker("apply callee"), arguments: ["to": marker("apply argument")]),
+            .call(Call(
+                receiver: marker("call receiver"),
                 selector: "word",
-                arguments: ["with": marker("dispatch argument")]
+                arguments: ["with": marker("call argument")]
             )),
             .block(Block(
                 body: [Statement(binding: .constant("held"), expression: marker("block body"))],
@@ -82,8 +82,8 @@ struct BuriedTests {
         #expect(found == [
             "cast operand", "leave value", "record field",
             "closure body", "closure result",
-            "invoke callee", "invoke argument",
-            "dispatch receiver", "dispatch argument",
+            "apply callee", "apply argument",
+            "call receiver", "call argument",
             "block body", "block result",
             "branch condition", "branch then", "branch else",
             "loop condition", "loop body",
@@ -159,7 +159,7 @@ struct BuriedTests {
         #expect(casts == ["entry.alpha", "entry.beta", "entry.gamma"])
 
         // And the same holds for what a call is written with.
-        let sent = Warp.Expression.dispatch(Dispatch(
+        let sent = Warp.Expression.call(Call(
             selector: "send",
             arguments: [
                 "second": .cast(.literal(.int(2)), as: .string, optional: false),

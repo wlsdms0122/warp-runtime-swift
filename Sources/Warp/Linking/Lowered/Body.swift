@@ -10,10 +10,10 @@ import Foundation
 struct Body: Sendable {
     // MARK: - Property
     let instructions: [Instruction]
-    let result: Code?
+    let result: Operation?
 
     // MARK: - Initializer
-    init(instructions: [Instruction], result: Code?) {
+    init(instructions: [Instruction], result: Operation?) {
         self.instructions = instructions
         self.result = result
     }

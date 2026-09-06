@@ -28,7 +28,7 @@ public struct Trace: Sendable, Equatable {
 
     // How the place reads in a message.
     //
-    //   hello.greet.many[2].send
+    //   hello.greet.many[2].call
     //
     // Names are joined with dots and occurrences are bracketed, so the spelling
     // says which parts of a place the text decided and which parts the run did.

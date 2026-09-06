@@ -105,7 +105,7 @@ struct NeverTests {
                     body: [
                         Statement(binding: .variable("x"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
                                 "count": .reference([.key("kept")])
                             ]))
                         )
@@ -152,7 +152,7 @@ struct NeverTests {
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
                                 "word": .reference([.key("y")])
                             ]))
                         )
@@ -177,7 +177,7 @@ struct NeverTests {
                     body: [
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
                                 "count": .reference([.key("y")])
                             ]))
                         )
@@ -223,7 +223,7 @@ struct NeverTests {
 
     @Test("a body that ends by leaving still carries its judged dots")
     func aLeavingBodyKeepsItsJudgedDots() async throws {
-        // Given. `items.count` is a word send the link spells into the path,
+        // Given. `items.count` is a word call the link spells into the path,
         // and the spelling must reach the image whether the body finishes or
         // leaves
         let sut = Procedure(
@@ -291,7 +291,7 @@ struct NeverTests {
                 entryName: Procedure(
                     body: [
                         Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "wants", arguments: [
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
                                 "count": .reference([.key("kept")])
                             ]))
                         )

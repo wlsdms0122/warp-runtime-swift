@@ -49,7 +49,7 @@ public struct InvokeForm: ConstructForm {
 
     // MARK: - Public
     public func expression(boundTo id: String?) -> Expression {
-        .invoke(callee, arguments: arguments)
+        .apply(callee, arguments: arguments)
     }
 
     // MARK: - Private

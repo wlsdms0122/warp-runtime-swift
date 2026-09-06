@@ -24,7 +24,7 @@ struct LinkerTests {
         // it fails is its own: `text` refuses to spell nothing
         let sut = try Module(
             constants: [
-                "greeting": .dispatch(Dispatch(receiver: .literal(.null), selector: "std.text.text"))
+                "greeting": .call(Call(receiver: .literal(.null), selector: "std.text.text"))
             ],
             procedures: [entryName: Procedure(body: [])]
         )
@@ -231,15 +231,15 @@ struct LinkerTests {
         let sut = try Module(
             constants: [
                 "zebra": .literal(.int(2)),
-                "yak": .dispatch(
-                    Dispatch(
+                "yak": .call(
+                    Call(
                         receiver: reference("zebra"),
                         selector: "std.math.times",
                         arguments: ["value": reference("zebra")]
                     )
                 ),
-                "xerus": .dispatch(
-                    Dispatch(
+                "xerus": .call(
+                    Call(
                         receiver: reference("yak"),
                         selector: "std.math.plus",
                         arguments: ["value": reference("zebra")]
@@ -276,7 +276,7 @@ struct LinkerTests {
                 procedures: [
                     entryName: Procedure(
                         body: [
-                            Statement(binding: .constant("got"), expression: .invoke(reference(closure), arguments: [:])
+                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [:])
                             )
                         ],
                         result: reference("got")
@@ -348,7 +348,7 @@ struct LinkerTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("got"), expression: .invoke(reference("apply"), arguments: [:])
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [:])
                         )
                     ],
                     result: reference("got")
@@ -382,7 +382,7 @@ struct LinkerTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("got"), expression: .invoke(reference("apply", "run"), arguments: [:])
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [:])
                         )
                     ],
                     result: reference("got")
@@ -404,11 +404,11 @@ struct LinkerTests {
         let sut = try Module(
             constants: [
                 "host": .literal(.string("warp.dev")),
-                "url": .dispatch(
-                    Dispatch(
+                "url": .call(
+                    Call(
                         receiver: .array([
                             .literal(.string("https://")),
-                            .dispatch(Dispatch(receiver: reference("host"), selector: "std.text.text"))
+                            .call(Call(receiver: reference("host"), selector: "std.text.text"))
                         ]),
                         selector: "std.text.joined"
                     )
@@ -440,7 +440,7 @@ struct LinkerTests {
                                         Statement(binding: .constant("safe"), expression: .literal(.string("fine"))
                                         )
                                     ], else: [
-                                        Statement(binding: .constant("risky"), expression: .dispatch(Dispatch(selector: "missing"))
+                                        Statement(binding: .constant("risky"), expression: .call(Call(selector: "missing"))
                                         )
                                     ])
                         )
@@ -463,12 +463,12 @@ struct LinkerTests {
                 "caller": Procedure(
                     body: [
                         Statement(binding: .constant("attempt"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("attempt"), expression: .dispatch(Dispatch(selector: "app.fail", arguments: [
+                                        Statement(binding: .constant("attempt"), expression: .call(Call(selector: "app.fail", arguments: [
                                                         "recoverable": .literal(.bool(true))
                                                     ]))
                                         )
                                     ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recover"), expression: .dispatch(Dispatch(selector: "missing"))
+                                        Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing"))
                                         )
                                     ]), failure: "attempt")
                         )
@@ -490,13 +490,13 @@ struct LinkerTests {
             procedures: [
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "middle"))
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
                         )
                     ]
                 ),
                 "middle": Procedure(
                     body: [
-                        Statement(binding: .constant("deeper"), expression: .dispatch(Dispatch(selector: "leaf"))
+                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf"))
                         )
                     ]
                 )
@@ -517,7 +517,7 @@ struct LinkerTests {
             procedures: [
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "middle"))
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "middle"))
                         )
                     ]
                 )
@@ -527,7 +527,7 @@ struct LinkerTests {
             procedures: [
                 "middle": Procedure(
                     body: [
-                        Statement(binding: .constant("deeper"), expression: .dispatch(Dispatch(selector: "leaf"))
+                        Statement(binding: .constant("deeper"), expression: .call(Call(selector: "leaf"))
                         )
                     ]
                 )
@@ -559,7 +559,7 @@ struct LinkerTests {
             procedures: [
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "leaf"))
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "leaf"))
                         )
                     ]
                 )
@@ -678,7 +678,7 @@ struct LinkerTests {
             procedures: [
                 "loopy": Procedure(
                     body: [
-                        Statement(binding: .constant("again"), expression: .dispatch(Dispatch(selector: "loopy"))
+                        Statement(binding: .constant("again"), expression: .call(Call(selector: "loopy"))
                         )
                     ]
                 )
@@ -710,7 +710,7 @@ struct LinkerTests {
                 ),
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "callee", arguments: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
                                         "base": .literal(.int(1)),
                                         "bonus": .literal(.int(2))
                                     ]))
@@ -744,7 +744,7 @@ struct LinkerTests {
                 ),
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "callee"))
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee"))
                         )
                     ]
                 )
@@ -781,7 +781,7 @@ struct LinkerTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "callee", arguments: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
                                         "base": .reference([.key("text")])
                                     ]))
                         )
@@ -818,9 +818,9 @@ struct LinkerTests {
                 ),
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("held"), expression: .dispatch(Dispatch(selector: "opaque"))
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
                         ),
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "callee", arguments: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
                                         "base": .reference([.key("held")])
                                     ]))
                         )
@@ -828,7 +828,7 @@ struct LinkerTests {
                 ),
                 "opaque": Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(selector: "opaque"))
+                    result: .call(Call(selector: "opaque"))
                 )
             ]
         )
@@ -851,9 +851,9 @@ struct LinkerTests {
                 ),
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("held"), expression: .dispatch(Dispatch(selector: "opaque"))
+                        Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))
                         ),
-                        Statement(binding: .constant("call"), expression: .dispatch(Dispatch(selector: "callee", arguments: [
+                        Statement(binding: .constant("call"), expression: .call(Call(selector: "callee", arguments: [
                                         "base": .reference([.key("held")])
                                     ]))
                         )
@@ -901,8 +901,8 @@ struct LinkerTests {
                 entryName: Procedure(
                     signature: Signature(returns: .int),
                     body: [
-                        Statement(binding: .constant("got"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("got"), expression: .call(
+                                Call(
                                     receiver: .literal(.int(1)),
                                     selector: "plus",
                                     arguments: ["value": .literal(.int(2))]
@@ -920,7 +920,7 @@ struct LinkerTests {
         }
 
         #expect(error?.message == "sends 'plus', which no module in this link declares")
-        #expect(error?.place?.rendered == "procedures.entry.body.got[0].dispatch")
+        #expect(error?.place?.rendered == "procedures.entry.body.got[0].call")
     }
 
     @Test("a dotted spelling resolves beside the full link")
@@ -931,8 +931,8 @@ struct LinkerTests {
             procedures: [
                 "caller": Procedure(
                     body: [
-                        Statement(binding: .constant("both"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("both"), expression: .call(
+                                Call(
                                     receiver: .array([
                                         .closure(Procedure(body: [], result: .literal(.int(1))))
                                     ]),

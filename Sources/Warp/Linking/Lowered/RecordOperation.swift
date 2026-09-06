@@ -1,5 +1,5 @@
 //
-//  RecordCode.swift
+//  RecordOperation.swift
 //  Warp
 //
 //  Created by JSilver on 9/5/26.
@@ -11,13 +11,13 @@ import Foundation
 // the code that fills each of its places. One field per place, checked where
 // the pair is made, so the run reads the two together and never has to ask
 // whether they still line up.
-struct RecordCode: Sendable {
+struct RecordOperation: Sendable {
     // MARK: - Property
     let layout: Layout
-    let fields: [Code]
+    let fields: [Operation]
 
     // MARK: - Initializer
-    init(layout: Layout, fields: [Code]) {
+    init(layout: Layout, fields: [Operation]) {
         precondition(
             layout.fields.count == fields.count,
             "a record literal has one field per place its layout names"

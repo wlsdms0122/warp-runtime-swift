@@ -66,7 +66,7 @@ struct NullableTests {
                         Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)])
                         )
                     ],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "half",
                         arguments: ["of": .reference([.key("read")])]
                     ))
@@ -134,7 +134,7 @@ struct NullableTests {
         }
     }
 
-    @Test("a word send through the optional dot unwraps the nullable")
+    @Test("a word call through the optional dot unwraps the nullable")
     func anOptionalWordOverANullable() async throws {
         // Given. Text or null; `?.count` counts the text that arrived and
         // answers null for the null
@@ -226,7 +226,7 @@ struct NullableTests {
                     body: [
                         // The written call omits `limit`; the type answers the
                         // omission with null, so the link takes the call.
-                        Statement(binding: .constant("called"), expression: .dispatch(Dispatch(
+                        Statement(binding: .constant("called"), expression: .call(Call(
                                 selector: "labelled",
                                 arguments: ["of": .reference([.key("word")])]
                             ))
@@ -391,7 +391,7 @@ struct NullableTests {
             error is LinkError && "\(error)".contains("read with `.`")
         }
 
-        // A word's receiver is proven non-null by the time the send is
+        // A word's receiver is proven non-null by the time the call is
         // judged, so the same rule holds on the word surface.
         let onAWord = try Module(
             procedures: [
@@ -607,7 +607,7 @@ struct IndexReferenceJudgmentTests {
         // start, refused out loud
         let sut = try Module(
             constants: [
-                "loud": .dispatch(Dispatch(
+                "loud": .call(Call(
                     selector: "shout",
                     arguments: ["of": .literal(.string("hi"))]
                 ))
@@ -695,12 +695,12 @@ struct IndexReferenceJudgmentTests {
                     returns: .int
                 ),
                 body: [],
-                result: .dispatch(Dispatch(selector: "helper", arguments: [:]))
+                result: .call(Call(selector: "helper", arguments: [:]))
             ),
             entryName: Procedure(
                 signature: Signature(returns: .int),
                 body: [],
-                result: .dispatch(Dispatch(selector: "helper", arguments: [:]))
+                result: .call(Call(selector: "helper", arguments: [:]))
             )
         ]
 
@@ -758,14 +758,14 @@ struct IndexReferenceJudgmentTests {
     @Test("a closure a constant holds has its sends checked")
     func aConstantClosureIsChecked() throws {
         // Given. The closure runs later, so evaluating the constant proves
-        // nothing about the send inside it; the gate every gathered send passes
+        // nothing about the call inside it; the gate every gathered call passes
         // catches the argument nobody declares
         let sut = try Module(
             constants: [
                 "f": .closure(Procedure(
                     signature: Signature(returns: .string),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "std.text.uppercased",
                         arguments: [
                             "of": .literal(.string("a")),
@@ -920,7 +920,7 @@ struct IndexReferenceJudgmentTests {
     @Test("a pure body nobody reaches still has its sends checked")
     func anUnreachedPureBodyIsChecked() throws {
         // Given. `shout` is derivable, so its body lands in the image and runs
-        // whenever a path reaches it; a send it writes wrongly is the link's to
+        // whenever a path reaches it; a call it writes wrongly is the link's to
         // refuse whether or not the entry ever mentions it
         let sut = try Module(
             procedures: [
@@ -931,7 +931,7 @@ struct IndexReferenceJudgmentTests {
                         returns: .string
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "std.text.uppercased",
                         arguments: [
                             "of": .reference([.key("of")]),
@@ -1009,7 +1009,7 @@ struct ParameterReceiverTests {
                 "entry": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .record(["count": .literal(.string("mine"))]),
                         selector: "peek",
                         arguments: [:]
@@ -1044,7 +1044,7 @@ struct ParameterReceiverTests {
                 "entry": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .record([
                             "inner": .record(["count": .literal(.string("mine"))])
                         ]),
@@ -1099,7 +1099,7 @@ struct ParameterReceiverTests {
                 "entry": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "peek",
                         arguments: [
                             "of": .record(["inner": .record(["count": .literal(.string("mine"))])]),
@@ -1162,7 +1162,7 @@ struct ParameterReceiverTests {
                     entryName: Procedure(
                         signature: Signature(returns: .any),
                         body: [],
-                        result: .dispatch(Dispatch(
+                        result: .call(Call(
                             selector: "peek",
                             arguments: [
                                 "of": .record(["inner": .record(["count": .literal(.int(1))])]),
@@ -1217,7 +1217,7 @@ struct ParameterReceiverTests {
                 entryName: Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "peek",
                         arguments: [
                             "of": .record([
@@ -1265,7 +1265,7 @@ struct ParameterReceiverTests {
                 entryName: Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "peek",
                         arguments: [
                             "of": .record(["inner": .record(["count": .literal(.int(1))])]),

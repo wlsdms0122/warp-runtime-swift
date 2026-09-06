@@ -22,8 +22,8 @@ struct ConcurrencyTests {
     @Test("all answers a record's closures under the record's keys")
     func allAnswersARecord() async throws {
         // Given
-        let sut = Statement(binding: .constant("both"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("both"), expression: .call(
+                Call(
                     receiver: .record([
                         "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                         "right": .closure(Procedure(body: [], result: .literal(.int(2))))
@@ -43,8 +43,8 @@ struct ConcurrencyTests {
     @Test("all answers an array's closures in the array's order")
     func allAnswersAnArrayInOrder() async throws {
         // Given
-        let sut = Statement(binding: .constant("all"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("all"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(Procedure(body: [], result: .literal(.int(1)))),
                         .closure(Procedure(body: [], result: .literal(.int(2)))),
@@ -65,8 +65,8 @@ struct ConcurrencyTests {
     @Test("map walks a collection and answers in the collection's order")
     func mapAnswersInOrder() async throws {
         // Given. The concurrent reading of what `each` walks
-        let sut = Statement(binding: .constant("kept"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("kept"), expression: .call(
+                Call(
                     receiver: .literal(.array([.int(1), .int(2), .int(3)])),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -95,8 +95,8 @@ struct ConcurrencyTests {
     func mapOffersTheIndex() async throws {
         // Given. The closure asks for `index` and not `item`, and the offer
         // covers it: which of the two the author reads is the author's business
-        let sut = Statement(binding: .constant("placed"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("placed"), expression: .call(
+                Call(
                     receiver: .literal(.array([.string("a"), .string("b")])),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -126,8 +126,8 @@ struct ConcurrencyTests {
         // Given. The sequential walk hands a null element straight to its body,
         // and running the same walk at once must not turn that into "nothing
         // was given": what a word offers is what arrived
-        let sut = Statement(binding: .constant("kept"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("kept"), expression: .call(
+                Call(
                     receiver: .literal(.array([.int(1), .null, .int(3)])),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -155,8 +155,8 @@ struct ConcurrencyTests {
     @Test("a map over nothing answers nothing, rather than failing")
     func mapOverNothingAnswersEmpty() async throws {
         // Given
-        let sut = Statement(binding: .constant("none"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("none"), expression: .call(
+                Call(
                     receiver: .literal(.array([])),
                     selector: "std.concurrent.map",
                     arguments: [
@@ -185,14 +185,14 @@ struct ConcurrencyTests {
     func firstAnswersTheSuccess() async throws {
         // Given. One closure cannot succeed, and a first only needs one that
         // can
-        let sut = Statement(binding: .constant("either"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("either"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(
                             Procedure(
                                 body: [
-                                    Statement(binding: .constant("doomed"), expression: .dispatch(
-                                            Dispatch(
+                                    Statement(binding: .constant("doomed"), expression: .call(
+                                            Call(
                                                 selector: "app.fail",
                                                 arguments: ["recoverable": .literal(.bool(true))]
                                             )
@@ -226,14 +226,14 @@ struct ConcurrencyTests {
         // test does. Returning from the word awaits every sibling, so without
         // the ask this would take the sibling's time, not the winner's.
         let waiting = CancellationWatch()
-        let sut = Statement(binding: .constant("either"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("either"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(Procedure(body: [], result: .literal(.string("answered")))),
                         .closure(
                             Procedure(
                                 body: [
-                                    Statement(binding: .constant("slow"), expression: .dispatch(Dispatch(selector: "app.wait"))
+                                    Statement(binding: .constant("slow"), expression: .call(Call(selector: "app.wait"))
                                     )
                                 ],
                                 result: reference("slow")
@@ -266,14 +266,14 @@ struct ConcurrencyTests {
     @Test("a first nothing wins fails like all does")
     func firstWithoutASuccessFails() async throws {
         // Given
-        let sut = Statement(binding: .constant("either"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("either"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(
                             Procedure(
                                 body: [
-                                    Statement(binding: .constant("doomed"), expression: .dispatch(
-                                            Dispatch(
+                                    Statement(binding: .constant("doomed"), expression: .call(
+                                            Call(
                                                 selector: "app.fail",
                                                 arguments: ["recoverable": .literal(.bool(true))]
                                             )
@@ -306,8 +306,8 @@ struct ConcurrencyTests {
         let doomed = Warp.Expression.closure(
             Procedure(
                 body: [
-                    Statement(binding: .constant("doomed"), expression: .dispatch(
-                            Dispatch(
+                    Statement(binding: .constant("doomed"), expression: .call(
+                            Call(
                                 selector: "app.fail",
                                 arguments: ["recoverable": .literal(.bool(true))]
                             )
@@ -317,8 +317,8 @@ struct ConcurrencyTests {
                 result: reference("doomed")
             )
         )
-        let sut = Statement(binding: .constant("both"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("both"), expression: .call(
+                Call(
                     receiver: .record(["first": doomed, "second": doomed]),
                     selector: "std.concurrent.all"
                 )
@@ -342,8 +342,8 @@ struct ConcurrencyTests {
     @Test("a piece that is not a closure is refused, named by where it sat")
     func aValueAmongTheClosuresIsRefused() async throws {
         // Given
-        let sut = Statement(binding: .constant("both"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("both"), expression: .call(
+                Call(
                     receiver: .array([
                         .closure(Procedure(body: [], result: .literal(.int(1)))),
                         .literal(.int(2))
@@ -365,8 +365,8 @@ struct ConcurrencyTests {
     func mapRefusesUnfitMaterial() async throws {
         // Given. The material arrives as `any`, so only the run can judge it,
         // and the boundary every word shares is what judges it
-        let sut = Statement(binding: .constant("walked"), expression: .dispatch(
-                Dispatch(
+        let sut = Statement(binding: .constant("walked"), expression: .call(
+                Call(
                     receiver: reference("subject"),
                     selector: "std.concurrent.map",
                     arguments: [

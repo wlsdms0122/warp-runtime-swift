@@ -212,21 +212,21 @@ struct BytesTests {
         // Given. Each word declares an array receiver, and bytes are one
         let asks: [(Warp.Expression, Value)] = [
             (
-                .dispatch(Dispatch(
+                .call(Call(
                     receiver: reference("data"),
                     selector: "std.collection.count"
                 )),
                 .int(2)
             ),
             (
-                .dispatch(Dispatch(
+                .call(Call(
                     receiver: reference("data"),
                     selector: "std.collection.first"
                 )),
                 .int(104)
             ),
             (
-                .dispatch(Dispatch(
+                .call(Call(
                     receiver: reference("data"),
                     selector: "std.collection.reversed"
                 )),
@@ -235,7 +235,7 @@ struct BytesTests {
                 .bytes([105, 104])
             ),
             (
-                .dispatch(Dispatch(
+                .call(Call(
                     receiver: reference("data"),
                     selector: "std.collection.contains",
                     arguments: ["value": .literal(.int(105))]
@@ -278,7 +278,7 @@ struct BytesTests {
                         parameters: ["data": Parameter(type: .any)]
                     ),
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: reference("data"),
                         selector: "std.text.joined"
                     ))
@@ -313,7 +313,7 @@ struct BytesTests {
                             expression: .iteration(
                                 over: reference("data"),
                                 body: [
-                                    Statement(binding: .assignment([.key("sum")]), expression: .dispatch(Dispatch(
+                                    Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
                                             receiver: reference("sum"),
                                             selector: "std.math.plus",
                                             arguments: ["value": reference("element", "item")]
@@ -341,7 +341,7 @@ struct BytesTests {
                 procedures: [
                     entryName: Procedure(
                         body: [],
-                        result: .dispatch(Dispatch(
+                        result: .call(Call(
                             receiver: .literal(receiver),
                             selector: selector
                         ))
@@ -371,7 +371,7 @@ struct BytesTests {
             procedures: [
                 entryName: Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         receiver: .literal(.bytes([104])),
                         selector: "std.text.decoded",
                         arguments: ["encoding": .literal(.string("utf16"))]
@@ -402,7 +402,7 @@ struct BytesTests {
                 ),
                 entryName: Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: [
                             "value": .literal(.array([
@@ -478,7 +478,7 @@ struct BytesTests {
                 ),
                 entryName: Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(
+                    result: .call(Call(
                         selector: "keep",
                         arguments: ["value": .literal(.bytes([104, 105]))]
                     ))

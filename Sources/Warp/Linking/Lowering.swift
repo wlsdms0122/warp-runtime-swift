@@ -83,7 +83,7 @@ struct Lowering {
         origin: Int,
         label: Name,
         at place: Place
-    ) throws -> (Code, Frame) {
+    ) throws -> (Operation, Frame) {
         let slots = Slots(origin: origin, variables: [:])
         var scope = Names()
 
@@ -243,7 +243,7 @@ struct Lowering {
         on slots: Slots,
         label: Name,
         at place: Place
-    ) throws -> Code {
+    ) throws -> Operation {
         switch expression {
         case let .literal(value):
             return .literal(value)
@@ -262,7 +262,7 @@ struct Lowering {
             let ordered = record.sorted { $0.key < $1.key }
 
             return .record(
-                RecordCode(
+                RecordOperation(
                     layout: Layout(name: nil, ordered: ordered.map(\.key)),
                     fields: try ordered.map { _, field in
                         try lower(field, in: scope, on: slots, label: label, at: place)
@@ -296,8 +296,8 @@ struct Lowering {
                 captures: inner.captures
             )
 
-        case let .invoke(callee, arguments):
-            return .invoke(
+        case let .apply(callee, arguments):
+            return .apply(
                 try lower(callee, in: scope, on: slots, label: label, at: place),
                 arguments: try arguments.sorted { $0.key < $1.key }.map { name, argument in
                     (name, try lower(argument, in: scope, on: slots, label: label, at: place))
@@ -376,8 +376,8 @@ struct Lowering {
                 failure: slot
             )
 
-        case let .dispatch(dispatch):
-            return .send(try lower(dispatch, in: scope, on: slots, label: label, at: place))
+        case let .call(call):
+            return .call(try lower(call, in: scope, on: slots, label: label, at: place))
 
         case let .leave(leave):
             return .leave(
@@ -391,45 +391,45 @@ struct Lowering {
     }
 
     private func lower(
-        _ dispatch: Dispatch,
+        _ call: Call,
         in scope: Names,
         on slots: Slots,
         label: Name,
         at place: Place
-    ) throws -> Send {
-        guard let row = rows[dispatch.selector] else {
-            throw unjudged("a send to '\(dispatch.selector)', which has no row", at: place)
+    ) throws -> CallOperation {
+        guard let row = rows[call.selector] else {
+            throw unjudged("a call to '\(call.selector)', which has no row", at: place)
         }
 
         let callee = table[row]
 
-        if let stray = dispatch.arguments.keys.first(where: { name in callee.signature.parameters[name] == nil }) {
-            throw unjudged("an argument '\(stray)' that '\(dispatch.selector)' does not declare", at: place)
+        if let stray = call.arguments.keys.first(where: { name in callee.signature.parameters[name] == nil }) {
+            throw unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
         }
 
-        var receiver: Code?
-        var arguments: [Code?] = []
-        var handed: [Send.Handed] = []
+        var receiver: Operation?
+        var arguments: [Operation?] = []
+        var handed: [CallOperation.Handed] = []
 
         for (position, slot) in callee.slots.enumerated() {
             let name = slot.name
-            let written = dispatch.handed(name, to: callee.signature)
+            let written = call.handed(name, to: callee.signature)
 
             if case .inout = slot.shape {
                 guard case let .reference(path)? = written else {
-                    throw unjudged("'\(name)' handed to '\(dispatch.selector)' in place without a variable", at: place)
+                    throw unjudged("'\(name)' handed to '\(call.selector)' in place without a variable", at: place)
                 }
 
                 let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
-                handed.append(Send.Handed(position: position, slot: slot, path: steps))
+                handed.append(CallOperation.Handed(position: position, slot: slot, path: steps))
                 arguments.append(nil)
 
                 continue
             }
 
-            if name == callee.signature.receiver, let sent = dispatch.receiver {
-                guard dispatch.arguments[name] == nil else {
-                    throw unjudged("'\(name)' sent to '\(dispatch.selector)' both in front and by name", at: place)
+            if name == callee.signature.receiver, let sent = call.receiver {
+                guard call.arguments[name] == nil else {
+                    throw unjudged("'\(name)' sent to '\(call.selector)' both in front and by name", at: place)
                 }
 
                 receiver = try lower(sent, in: scope, on: slots, label: label, at: place)
@@ -449,7 +449,7 @@ struct Lowering {
             })
         }
 
-        return Send(procedure: row, receiver: receiver, arguments: arguments, handed: handed)
+        return CallOperation(procedure: row, receiver: receiver, arguments: arguments, handed: handed)
     }
 
     private func lower(

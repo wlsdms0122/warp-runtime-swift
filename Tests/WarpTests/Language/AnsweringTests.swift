@@ -42,7 +42,7 @@ struct AnsweringTests {
                 ),
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "counts"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "counts"))
                         )
                     ],
                     result: .reference([.key("said"), .key("total")])
@@ -64,11 +64,11 @@ struct AnsweringTests {
                 "innermost": Procedure(body: [], result: .record(["total": .literal(.int(3))])),
                 "middle": Procedure(
                     body: [],
-                    result: .dispatch(Dispatch(selector: "innermost"))
+                    result: .call(Call(selector: "innermost"))
                 ),
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "middle"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "middle"))
                         )
                     ],
                     result: .reference([.key("said"), .key("total")])
@@ -117,7 +117,7 @@ struct AnsweringTests {
                     ),
                     entryName: Procedure(
                         body: [
-                            Statement(binding: .constant("said"), expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("said"), expression: .call(Call(
                                     selector: "counts",
                                     arguments: ["flag": .literal(.bool(true))]
                                 ))
@@ -148,11 +148,11 @@ struct AnsweringTests {
         // refusal an author cannot act on.
         let sut = try Module(
             procedures: [
-                "ping": Procedure(body: [], result: .dispatch(Dispatch(selector: "pong"))),
-                "pong": Procedure(body: [], result: .dispatch(Dispatch(selector: "ping"))),
+                "ping": Procedure(body: [], result: .call(Call(selector: "pong"))),
+                "pong": Procedure(body: [], result: .call(Call(selector: "ping"))),
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "ping"))
+                        Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
                         )
                     ],
                     result: .literal(.null)
@@ -169,16 +169,16 @@ struct AnsweringTests {
         func reading(circling: Bool) throws -> Module {
             try Module(
                 procedures: [
-                    "ping": Procedure(body: [], result: .dispatch(Dispatch(selector: "pong"))),
+                    "ping": Procedure(body: [], result: .call(Call(selector: "pong"))),
                     "pong": Procedure(
                         body: [],
                         result: circling
-                            ? .dispatch(Dispatch(selector: "ping"))
+                            ? .call(Call(selector: "ping"))
                             : .record(["total": .literal(.int(1))])
                     ),
                     entryName: Procedure(
                         body: [
-                            Statement(binding: .constant("said"), expression: .dispatch(Dispatch(selector: "ping"))
+                            Statement(binding: .constant("said"), expression: .call(Call(selector: "ping"))
                             )
                         ],
                         result: .reference([.key("said"), .key("total")])
@@ -214,7 +214,7 @@ struct AnsweringTests {
                     ),
                     entryName: Procedure(
                         body: [
-                            Statement(binding: .constant("said"), expression: .dispatch(Dispatch(
+                            Statement(binding: .constant("said"), expression: .call(Call(
                                     selector: "peek",
                                     arguments: [
                                         "of": .record(["inner": .literal(.int(1))])

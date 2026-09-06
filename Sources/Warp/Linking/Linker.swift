@@ -10,7 +10,7 @@ import Foundation
 // Takes every module this run was given and one name to start from, and answers
 // with an image, or refuses.
 //
-// A link is handed its whole world at once. The words a program can send are
+// A link is handed its whole world at once. The words a program can call are
 // the words the caller put in front of it, so what to link is the caller's
 // statement and joining the names up is this. A module's `imports` says what it
 // asks for and never where to find it, and the entry is an argument rather than
@@ -21,7 +21,7 @@ import Foundation
 // linking follows the whole call graph and refuses on the first name it cannot
 // resolve rather than on the first one a run happens to reach.
 //
-// Every send goes through the same gate: a library word and a procedure are
+// Every call goes through the same gate: a library word and a procedure are
 // checked against a signature by the same code, and the only difference is
 // where the signature came from. The installed table, or another module in the
 // same link.
@@ -75,7 +75,7 @@ public struct Linker: Sendable {
         let symbols = try symbols(of: modules)
 
         // Every declaration under its declared spelling. The spellings are
-        // unique, since the symbol gathering refused a double, and every send
+        // unique, since the symbol gathering refused a double, and every call
         // in every body asks this table.
         let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
             table[symbol.declared] = symbol
@@ -113,7 +113,7 @@ public struct Linker: Sendable {
         // it may read. The table carries the fact, so no resolver needs a flag
         // saying when it runs. Selectors and path words are two tables, because
         // they are two questions: what a selector reaches, and what a bare
-        // spelling a walk writes may send. One table masked by a set let one
+        // spelling a walk writes may call. One table masked by a set let one
         // spelling answer with the other question's declaration.
         //
         // Both are filled with the answers read off bodies whose declaration
@@ -199,7 +199,7 @@ public struct Linker: Sendable {
 
         let declaredFrame = frame()
 
-        // Settled after the words are known, because a constant may send one:
+        // Settled after the words are known, because a constant may call one:
         // interpolation is `joined` now, and a constant that spells a URL out of
         // other constants is spelling it with words like any other expression.
         let constants = try constants(
@@ -271,7 +271,7 @@ public struct Linker: Sendable {
         // to the value it is. The image holds only this form, so a run never
         // asks a value what a name does.
         //
-        // Every send the body writes is checked here too: whatever table put
+        // Every call the body writes is checked here too: whatever table put
         // this body in the image, the body runs, so the frontier's promise
         // (callee declared, arguments taken) is kept per body rather than per
         // reachability.
@@ -323,7 +323,7 @@ public struct Linker: Sendable {
 
             try checked(answer.calls, in: frame)
 
-            // Lowered once every send in it passed the gate, so nothing
+            // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
                 try lowering.settle(try row(of: symbol), body: rewritten, at: symbol.place)
@@ -436,7 +436,7 @@ public struct Linker: Sendable {
         }
     }
 
-    // The one gate every gathered send passes, wherever its body sits. A
+    // The one gate every gathered call passes, wherever its body sits. A
     // procedure, a word, a constant's closure. The call carries the declaration
     // the walk found for it, and is judged against that.
     private func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
@@ -525,14 +525,14 @@ public struct Linker: Sendable {
         case let .record(record):
             return record.values.allSatisfy(isPure)
 
-        case let .dispatch(dispatch):
-            return pure.contains(dispatch.selector)
-                && (dispatch.receiver.map(isPure) ?? true)
-                && dispatch.arguments.values.allSatisfy(isPure)
+        case let .call(call):
+            return pure.contains(call.selector)
+                && (call.receiver.map(isPure) ?? true)
+                && call.arguments.values.allSatisfy(isPure)
 
         // Calling a value is settled at run time, so nothing here can say what
         // it reaches. A body that does it is not answerable purely.
-        case .invoke:
+        case .apply:
             return false
 
         case .block, .conditional, .loop, .iteration, .attempt:
@@ -568,7 +568,7 @@ public struct Linker: Sendable {
         var contested: [Name: [Symbol]] = [:]
 
         // Two tables, because a name answers two different questions. What a
-        // selector reaches, and what a bare spelling a path writes may send.
+        // selector reaches, and what a bare spelling a path writes may call.
         // One table held both and let a declaration whose declared spelling
         // matched another's bare last segment quietly answer the wrong
         // question. Symbols rather than procedures, because the bodies are
@@ -1209,7 +1209,7 @@ public struct Linker: Sendable {
 
                 // A closure a constant holds runs later, so evaluating the
                 // constant proves nothing about the sends inside it. They pass
-                // the same gate every gathered send does.
+                // the same gate every gathered call does.
                 try checked(calls, in: frame)
 
                 do {
@@ -1363,15 +1363,15 @@ public struct Linker: Sendable {
         against callee: Procedure,
         with frame: TypeFrame
     ) throws {
-        let dispatch = site.dispatch
+        let call = site.call
         let shapes = frame.shapes
 
         // One parameter takes one argument. A receiver written in front of
         // the dot and again by name is refused before either is read, since
         // the one by name would be neither read nor run.
-        if let receiver = callee.signature.receiver, dispatch.receiver != nil, dispatch.arguments[receiver] != nil {
+        if let receiver = callee.signature.receiver, call.receiver != nil, call.arguments[receiver] != nil {
             throw LinkError(
-                "sending '\(dispatch.selector)' with '\(receiver)' both in front and by name",
+                "sending '\(call.selector)' with '\(receiver)' both in front and by name",
                 at: site.place.slot(.arguments)
             )
         }
@@ -1380,7 +1380,7 @@ public struct Linker: Sendable {
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgment (a parameter read two ways has
         // no answer, a bounded one takes only what its constraint admits) is
-        // the one every send surface shares, so this only gathers what the call
+        // the one every call surface shares, so this only gathers what the call
         // wrote into each slot. This is what one signature says in place of the
         // several a language with overloading would need: `some N` on both
         // sides and on the way out is a whole number and a whole number
@@ -1394,7 +1394,7 @@ public struct Linker: Sendable {
             declared,
             filledWith: bound(
                 of: declared,
-                at: dispatch,
+                at: call,
                 readings: site.readings,
                 receiver: site.received,
                 in: shapes
@@ -1403,20 +1403,20 @@ public struct Linker: Sendable {
         ) {
         case let .refusal(reason):
             throw LinkError(
-                "sending '\(dispatch.selector)': \(reason)",
+                "sending '\(call.selector)': \(reason)",
                 at: site.place
             )
 
         case let .fits(filled):
             signature = filled
         }
-        let undeclared = dispatch.arguments.keys
+        let undeclared = call.arguments.keys
             .filter { name in signature.parameters[name] == nil }
             .sorted()
 
         guard undeclared.isEmpty else {
             throw LinkError(
-                "sending '\(dispatch.selector)' with"
+                "sending '\(call.selector)' with"
                     + " \(undeclared.map(\.spelling).joined(separator: ", ")), which it does not declare",
                 at: site.place.slot(.arguments)
             )
@@ -1424,8 +1424,8 @@ public struct Linker: Sendable {
 
         // A receiver is written on the other side of the dot rather than by
         // name, so a site that sends one has supplied that parameter.
-        let supplied = Set(dispatch.arguments.keys)
-            .union(dispatch.receiver == nil ? [] : [signature.receiver].compactMap { $0 })
+        let supplied = Set(call.arguments.keys)
+            .union(call.receiver == nil ? [] : [signature.receiver].compactMap { $0 })
 
         let missing = signature.parameters
             .filter { name, parameter in
@@ -1436,7 +1436,7 @@ public struct Linker: Sendable {
 
         guard missing.isEmpty else {
             throw LinkError(
-                "sending '\(dispatch.selector)' without"
+                "sending '\(call.selector)' without"
                     + " \(missing.map(\.spelling).joined(separator: ", ")), which it requires",
                 at: site.place.slot(.arguments)
             )
@@ -1445,7 +1445,7 @@ public struct Linker: Sendable {
         // An argument that needs a scope cannot be judged here. Only the ones
         // that already are what they will be. `taking` rather than `checking`,
         // so a constant passes exactly the gate the run would apply to it.
-        for (name, argument) in dispatch.arguments.sorted(by: { left, right in left.key < right.key }) {
+        for (name, argument) in call.arguments.sorted(by: { left, right in left.key < right.key }) {
             guard
                 let parameter = signature.parameters[name],
                 let constant = argument.constantValue
@@ -1457,7 +1457,7 @@ public struct Linker: Sendable {
                 _ = try parameter.lowered(named: name, in: shapes).taking(constant, in: shapes)
             } catch {
                 throw LinkError(
-                    "sending '\(dispatch.selector)': \(error)",
+                    "sending '\(call.selector)': \(error)",
                     at: site.place.argument(name.spelling)
                 )
             }
@@ -1469,13 +1469,13 @@ public struct Linker: Sendable {
         // arguments would have to know the vocabulary; judging belongs where
         // names resolve.
         if case let .query(query) = callee.implementation {
-            let constants = dispatch.arguments.compactMapValues(\.constantValue)
+            let constants = call.arguments.compactMapValues(\.constantValue)
 
             do {
                 try query.validate(constants)
             } catch {
                 throw LinkError(
-                    "sending '\(dispatch.selector)': \(error)",
+                    "sending '\(call.selector)': \(error)",
                     at: site.place.slot(.arguments)
                 )
             }
@@ -1486,7 +1486,7 @@ public struct Linker: Sendable {
         // makes declaring an answer worth anything before a run: both sides are
         // declarations, and a declaration is text. The site carries the walk's
         // readings, so nothing is walked again for the asking.
-        for name in dispatch.arguments.keys.sorted() {
+        for name in call.arguments.keys.sorted() {
             guard let parameter = signature.parameters[name] else { continue }
 
             let written = site.readings[name] ?? .any
@@ -1494,7 +1494,7 @@ public struct Linker: Sendable {
             guard !parameter.declared.accepts(written, in: shapes) else { continue }
 
             throw LinkError(
-                "sending '\(dispatch.selector)' with \(name),"
+                "sending '\(call.selector)' with \(name),"
                     + " which holds \(written) where \(parameter.declared) is declared",
                 at: site.place.argument(name.spelling)
             )
@@ -1509,7 +1509,7 @@ public struct Linker: Sendable {
         {
             guard parameter.declared.accepts(written, in: shapes) else {
                 throw LinkError(
-                    "sending '\(dispatch.selector)' to \(written),"
+                    "sending '\(call.selector)' to \(written),"
                         + " where \(parameter.declared) is declared",
                     at: site.place.slot(.receiver)
                 )

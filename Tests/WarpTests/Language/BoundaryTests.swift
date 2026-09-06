@@ -39,8 +39,8 @@ struct BoundaryTests {
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             receiver: .literal(.int(1)),
                             selector: "std.math.plus",
                             arguments: ["value": .literal(.string("a"))]
@@ -68,12 +68,12 @@ struct BoundaryTests {
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             selector: "wants",
                             arguments: [
-                                "it": .dispatch(
-                                    Dispatch(
+                                "it": .call(
+                                    Call(
                                         receiver: .literal(.int(1)),
                                         selector: "std.math.plus",
                                         arguments: ["value": .literal(.int(2))]
@@ -139,8 +139,8 @@ struct BoundaryTests {
                 "entry": Procedure(
                     signature: Signature(parameters: ["names": Parameter(type: .array(.string))]),
                     body: [],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             receiver: .reference([.key("names")]),
                             selector: "std.collection.appending",
                             arguments: ["value": .literal(.int(1))]
@@ -173,8 +173,8 @@ struct BoundaryTests {
                 "entry": Procedure(
                     signature: Signature(parameters: ["xs": Parameter(type: .array(.any))]),
                     body: [
-                        Statement(binding: .constant("one"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("one"), expression: .call(
+                                Call(
                                     receiver: .reference([.key("xs")]),
                                     selector: "std.collection.appending",
                                     arguments: ["value": .literal(.int(1))]
@@ -182,8 +182,8 @@ struct BoundaryTests {
                             )
                         )
                     ],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             receiver: .reference([.key("one")]),
                             selector: "std.collection.appending",
                             arguments: ["value": .literal(.string("a"))]
@@ -213,8 +213,8 @@ struct BoundaryTests {
                         parameters: ["trees": Parameter(type: .array(.named("Tree")))]
                     ),
                     body: [],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             receiver: .reference([.key("trees")]),
                             selector: "std.collection.appending",
                             arguments: ["value": .record(["a": .literal(.int(1))])]
@@ -241,8 +241,8 @@ struct BoundaryTests {
                 "entry": Procedure(
                     signature: Signature(parameters: ["counts": Parameter(type: .array(.number))]),
                     body: [],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             receiver: .reference([.key("counts")]),
                             selector: "std.collection.appending",
                             arguments: ["value": .literal(.int(1))]
@@ -341,8 +341,8 @@ struct BoundaryTests {
             procedures: [
                 "entry": Procedure(
                     body: [],
-                    result: .dispatch(
-                        Dispatch(
+                    result: .call(
+                        Call(
                             receiver: .literal(receiver),
                             selector: selector,
                             arguments: ["value": .literal(operand)]

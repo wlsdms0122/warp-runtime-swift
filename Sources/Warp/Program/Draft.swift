@@ -76,9 +76,9 @@ public struct Draft: Sendable {
 
         return held
             .reduce(into: Set()) { sent, expression in
-                guard case let .dispatch(dispatch) = expression else { return }
+                guard case let .call(call) = expression else { return }
 
-                sent.insert(dispatch.selector)
+                sent.insert(call.selector)
             }
             .subtracting(declared)
     }

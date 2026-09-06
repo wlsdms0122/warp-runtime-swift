@@ -462,11 +462,11 @@ struct WriterTests {
                 entryName: Procedure(
                     signature: Signature(parameters: ["word": Parameter(type: .string)]),
                     body: [
-                        Statement(binding: .constant("joined"), expression: .dispatch(
-                                Dispatch(
+                        Statement(binding: .constant("joined"), expression: .call(
+                                Call(
                                     receiver: .array([
-                                        .dispatch(
-                                            Dispatch(
+                                        .call(
+                                            Call(
                                                 receiver: .reference([.key("word")]),
                                                 selector: "std.text.text"
                                             )
@@ -479,8 +479,8 @@ struct WriterTests {
                         ),
                         Statement(binding: .constant("held"), expression: .record([
                                 "line": .reference([.key("joined")]),
-                                "size": .dispatch(
-                                    Dispatch(
+                                "size": .call(
+                                    Call(
                                         receiver: .reference([.key("word")]),
                                         selector: "std.collection.count"
                                     )

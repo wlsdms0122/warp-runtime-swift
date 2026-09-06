@@ -103,7 +103,7 @@ struct PlaceWrittenTests {
             try loader.reading { try Linker().link([module], entry: entryName) }
         }
 
-        // Then. `call` is the word the author wrote, and `dispatch` is what the
+        // Then. `call` is the word the author wrote, and `call` is what the
         // language calls the shape
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
@@ -112,7 +112,7 @@ struct PlaceWrittenTests {
             try Linker().link([module], entry: entryName)
         }
 
-        #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].dispatch")
+        #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
     @Test("a call and an invocation are written with the same two words")

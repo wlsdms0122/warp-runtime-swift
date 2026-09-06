@@ -31,28 +31,28 @@ func literal(_ text: String) -> Warp.Expression {
 // A template as the language holds one: pieces written one after another, each
 // value asked how it reads.
 func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: .array(pieces), selector: "std.text.joined"))
+    .call(Call(receiver: .array(pieces), selector: "std.text.joined"))
 }
 
 func spelling(_ value: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: value, selector: "std.text.text"))
+    .call(Call(receiver: value, selector: "std.text.text"))
 }
 
 func refusing(_ message: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: message, selector: "std.control.abort"))
+    .call(Call(receiver: message, selector: "std.control.abort"))
 }
 
 // Equality and the connectives are words, so a test writing one writes the
 // send the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .dispatch(Dispatch(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
+    .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something
 // that has not been answered yet.
 func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    .dispatch(
-        Dispatch(
+    .call(
+        Call(
             receiver: .array(
                 conditions.map { condition in
                     .closure(

@@ -101,7 +101,7 @@ public struct Signature: Sendable, Equatable {
     // A declaration that answers `never` is reachable by neither: a path reads a
     // value, and this one leaves instead of producing one. Letting it in would
     // put the word that must not be missable where a walk decides on its own
-    // whether to send it.
+    // whether to call it.
     public func isDerivable(in types: TypeTable) -> Bool {
         isDerivable(in: types.shapes)
     }

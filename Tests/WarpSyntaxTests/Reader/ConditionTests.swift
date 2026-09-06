@@ -31,7 +31,7 @@ struct ConditionTests {
             differs(.reference(path("kind")), .literal(.string("b")))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .array([.literal(.int(3)), .literal(.int(4))]), selector: "std.collection.contains", arguments: ["value": .reference(path("n"))]))
+            .call(Call(receiver: .array([.literal(.int(3)), .literal(.int(4))]), selector: "std.collection.contains", arguments: ["value": .reference(path("n"))]))
         ))
         #expect(try sut.evaluate(
             differs(.reference(path("n")), .literal(.null))
@@ -60,7 +60,7 @@ struct ConditionTests {
 
         // And one_of can draw its candidates from the scope
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("candidates")), selector: "std.collection.contains", arguments: ["value": .reference(path("left"))]))
+            .call(Call(receiver: .reference(path("candidates")), selector: "std.collection.contains", arguments: ["value": .reference(path("left"))]))
         ))
     }
 
@@ -100,25 +100,25 @@ struct ConditionTests {
 
         // Then
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "std.collection.contains", arguments: ["value": .literal(.string("spec"))]))
+            .call(Call(receiver: .reference(path("title")), selector: "std.collection.contains", arguments: ["value": .literal(.string("spec"))]))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("tags")), selector: "std.collection.contains", arguments: ["value": .literal(.string("b"))]))
+            .call(Call(receiver: .reference(path("tags")), selector: "std.collection.contains", arguments: ["value": .literal(.string("b"))]))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("hello"))]))
+            .call(Call(receiver: .reference(path("title")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("hello"))]))
         ))
         #expect(try sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("title")), selector: "std.text.regex", arguments: ["value": .literal(.string("sp.c$"))]))
+            .call(Call(receiver: .reference(path("title")), selector: "std.text.regex", arguments: ["value": .literal(.string("sp.c$"))]))
         ))
         #expect(try !sut.evaluate(
-            .dispatch(Dispatch(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
+            .call(Call(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
         ))
 
         // A text atom asking a number is shape misuse, not a false answer
         #expect(throws: ReferenceUnfit.self) {
             try sut.evaluate(
-                .dispatch(Dispatch(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
+                .call(Call(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
             )
         }
     }
