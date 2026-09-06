@@ -438,8 +438,14 @@ struct Lowering {
                 continue
             }
 
+            // A literal argument is a value the link knows, so the image
+            // holds it as the slot takes it rather than as it was written.
             arguments.append(try written.map { argument in
-                try lower(argument, in: scope, on: slots, label: label, at: place)
+                let code = try lower(argument, in: scope, on: slots, label: label, at: place)
+
+                guard case let .literal(value) = code else { return code }
+
+                return .literal(try slot.taking(value, in: shapes))
             })
         }
 
