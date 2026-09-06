@@ -60,16 +60,14 @@ extension Linker {
             table[symbol.declared] = symbol.procedure.implementation.nativelyFailing ?? .these([])
         }
 
-        let bodies = symbols.reduce(into: [Name: Block]()) { table, symbol in
-            guard let block = symbol.procedure.block else { return }
-
-            table[symbol.declared] = block
-        }
+        let bodies = symbols
+            .compactMap { symbol in symbol.procedure.block.map { block in (symbol.declared, block) } }
+            .sorted { $0.0 < $1.0 }
 
         while true {
             var grown = false
 
-            for (name, block) in bodies.sorted(by: { $0.key < $1.key }) {
+            for (name, block) in bodies {
                 let read = self.failing(block, given: failing)
 
                 guard read != failing[name] else { continue }
