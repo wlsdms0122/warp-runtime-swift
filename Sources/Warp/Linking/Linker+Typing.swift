@@ -1242,14 +1242,14 @@ extension Linker {
             }
 
             let pure = body.map { block in isPure(block, given: frame.pure, reading: reading) } ?? false
-            let isolated = pure || (body.map { block in
+            let isolated = body.map { block in
                 isIsolated(
                     block,
                     declaring: Set(procedure.signature.parameters.keys),
                     given: frame.isolated,
                     signatures: frame.signatures
                 )
-            } ?? false)
+            } ?? false
 
             if case .judging = ask, let body {
                 rewritten = .closure(

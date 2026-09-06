@@ -16,5 +16,14 @@ import Foundation
 // vocabulary, never a new kind of expression, so nothing installed can quietly
 // redefine what `loop` means.
 public protocol Effect: Sendable {
+    // Whether this touches no name another body could touch at the same time.
+    // A word holding state between calls says false, and the link stops
+    // deriving isolation through it and through whatever calls it.
+    var isolated: Bool { get }
+
     func run(_ invocation: Invocation) async throws -> Value
+}
+
+public extension Effect {
+    var isolated: Bool { true }
 }

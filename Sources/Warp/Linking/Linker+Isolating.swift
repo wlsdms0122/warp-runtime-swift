@@ -7,31 +7,31 @@
 
 import Foundation
 
-// Which bodies touch no name another body could touch at the same time. Worked
-// out the way purity is: every declaration starts isolated, and one is struck
-// when its body writes a name it did not declare, hands one in place, calls a
-// value, or calls a declaration that was struck, until nothing more is struck.
+// Which declarations touch no name another body could touch at the same time.
+// Worked out the way purity is: a native says so about itself, a body starts
+// isolated, and one is struck when its body writes a name it did not declare,
+// hands one in place, calls a value, or calls a declaration that was struck,
+// until nothing more is struck.
 extension Linker {
     // MARK: - Internal
-    func isolated(
-        among symbols: [Symbol],
-        pure: Set<Name>,
-        signatures: [Name: Signature]
-    ) -> Set<Name> {
+    func isolated(among symbols: [Symbol], signatures: [Name: Signature]) -> Set<Name> {
         let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (block, Set(symbol.procedure.signature.parameters.keys))
         }
 
-        var isolated = Set(symbols.map(\.declared))
+        var isolated = Set(
+            symbols
+                .filter { symbol in symbol.procedure.implementation.isNativelyIsolated != false }
+                .map(\.declared)
+        )
 
         while true {
             let struck = isolated.filter { name in
                 guard let body = bodies[name] else { return false }
 
-                return !pure.contains(name)
-                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, signatures: signatures)
+                return !isIsolated(body.block, declaring: body.declaring, given: isolated, signatures: signatures)
             }
 
             guard !struck.isEmpty else { return isolated }

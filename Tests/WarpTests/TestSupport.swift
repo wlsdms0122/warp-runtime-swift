@@ -170,6 +170,17 @@ extension Module {
         ]
     )
 
+    // A word that answers from a box it keeps between calls, and says so. Two
+    // bodies calling it meet in that box.
+    static let ticketing = try! Module(
+        procedures: [
+            "app.ticket": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .query(TicketQuery())
+            )
+        ]
+    )
+
     static let failing = try! Module(
         procedures: [
             "app.fail": Procedure(
@@ -180,6 +191,27 @@ extension Module {
             )
         ]
     )
+}
+
+final class TicketQuery: Query, @unchecked Sendable {
+    // MARK: - Property
+    let isolated = false
+
+    private let lock = NSLock()
+    private var issued = 0
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question) throws -> Value? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        issued += 1
+
+        return .int(issued)
+    }
+
+    // MARK: - Private
 }
 
 struct ShoutEffect: Effect {

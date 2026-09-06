@@ -44,6 +44,23 @@ public enum Implementation: Sendable {
         }
     }
 
+    // Whether this touches no name another body could touch at the same time.
+    // A native says so about itself; for a body what it writes and what it
+    // calls decide, so the linker works it out and this answers only for the
+    // two that declare.
+    public var isNativelyIsolated: Bool? {
+        switch self {
+        case let .query(query):
+            return query.isolated
+
+        case let .effect(effect):
+            return effect.isolated
+
+        case .body:
+            return nil
+        }
+    }
+
     public var block: Block? {
         guard case let .body(block) = self else { return nil }
 

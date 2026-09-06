@@ -34,10 +34,11 @@ public struct Closure: Sendable {
         try linked.settling(returned: value)
     }
 
-    // Whether this may run beside another body: it was derived isolated, or it
-    // is pure, since what runs nothing touches nothing.
+    // Whether this may run beside another body. Purity does not answer it: a
+    // pure body can still call a native word that holds state, and that word
+    // is what two of these would meet in.
     public var runsBeside: Bool {
-        isolation == .isolated || purity == .pure
+        isolation == .isolated
     }
 
     // MARK: - Private

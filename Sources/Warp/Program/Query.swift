@@ -21,6 +21,11 @@ import Foundation
 // not a failure. A path that derives nothing reads as absent, the same as a
 // field that was never set.
 public protocol Query: Sendable {
+    // Whether this touches no name another body could touch at the same time.
+    // A word holding state between calls says false, and the link stops
+    // deriving isolation through it and through whatever calls it.
+    var isolated: Bool { get }
+
     // Checks arguments that are already constant, at load. Type is the
     // signature's business; this is for what a type cannot say. That a regex
     // pattern compiles. An author typo surfaces before any run.
@@ -30,6 +35,8 @@ public protocol Query: Sendable {
 }
 
 public extension Query {
+    var isolated: Bool { true }
+
     func validate(_ arguments: [Name: Value]) throws {
     }
 }

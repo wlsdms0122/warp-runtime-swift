@@ -135,7 +135,7 @@ public struct Linker: Sendable {
             spellings[entry.value.declared, default: []].append(entry.key)
         }
 
-        let isolatedDeclarations = isolated(among: symbols, pure: settled, signatures: signatures)
+        let isolatedDeclarations = isolated(among: symbols, signatures: signatures)
 
         // The table a run reads, one row per declaration in name order. A
         // native answers as it is from the start; a written body stands as

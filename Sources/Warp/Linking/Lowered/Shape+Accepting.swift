@@ -124,13 +124,12 @@ extension Shape {
 
         case let (.procedure(required, wanted, wantedPurity, wantedIsolation),
                   .procedure(given, offered, offeredPurity, offeredIsolation)):
-            // A slot asking for purity takes only what says it is pure, and
-            // one asking for isolation only what says it is isolated, or
-            // pure, since what runs nothing touches nothing.
+            // A slot asking for purity takes only what says it is pure, and one
+            // asking for isolation only what says it is isolated. The two are
+            // separate claims: a pure body answers without running and can
+            // still reach a native word that holds state.
             guard wantedPurity != .pure || offeredPurity == .pure else { return false }
-            guard wantedIsolation != .isolated || offeredIsolation == .isolated || offeredPurity == .pure else {
-                return false
-            }
+            guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
 
             // Nothing was said on one side or the other, so nothing is refused.
             guard let required, let given else { return true }
