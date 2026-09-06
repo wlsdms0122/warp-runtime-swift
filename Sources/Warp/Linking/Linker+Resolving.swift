@@ -164,6 +164,7 @@ extension Linker {
                 in: declaration.held,
                 at: declaration.place,
                 parameterized: false,
+                declaring: true,
                 resolve: table
             )
         }

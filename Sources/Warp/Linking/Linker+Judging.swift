@@ -123,6 +123,8 @@ extension Linker {
         in type: TypeExpression,
         at place: Place,
         parameterized: Bool,
+        declaring: Bool = false,
+        nested: Bool = false,
         resolve table: TypeTable
     ) throws {
         switch type {
@@ -187,6 +189,7 @@ extension Linker {
                     in: parameter.declared.inoutUnwrapped,
                     at: place.key(name.spelling),
                     parameterized: parameterized,
+                    nested: nested,
                     resolve: table
                 )
                 try judge(parameter, called: name, at: place.key(name.spelling), in: table)
@@ -213,8 +216,22 @@ extension Linker {
                 )
             }
 
+            // A value handed on once is followed by the name that holds it, so
+            // it stands where a name can hold it and nowhere else. Inside
+            // another shape there is no name to follow, and what the shape
+            // does with what it carries is not something the link can read.
+            guard !nested || !handedOnce(.named(name), in: table) else {
+                throw LinkError(
+                    "carries '\(name)' inside another shape, and a value written"
+                        + " `once` is followed by the name that holds it."
+                        + " Nothing follows one inside a list, a record or"
+                        + " another declaration",
+                    at: place
+                )
+            }
+
         case let .array(element), let .dictionary(element):
-            try mentioned(in: element, at: place, parameterized: parameterized, resolve: table)
+            try mentioned(in: element, at: place, parameterized: parameterized, nested: true, resolve: table)
 
         // The reader refuses a `?` that says nothing new, but the reader sees
         // spellings, and a name may hide one of the refused shapes behind it.
@@ -259,6 +276,7 @@ extension Linker {
                     in: held,
                     at: place.key(name.spelling),
                     parameterized: parameterized,
+                    nested: true,
                     resolve: table
                 )
             }
@@ -276,6 +294,21 @@ extension Linker {
                     + " is written through. `var` is written on a field in `types`",
                 at: place
             )
+
+        // Only a declared type is handed on once. The obligation rides with
+        // the name, so a slot mentioning the name has it and a slot writing
+        // the word would be claiming it for a shape nothing declared it of.
+        case let .once(inner):
+            guard declaring else {
+                throw LinkError(
+                    "writes `\(type.rendered)`, and only a declared type is"
+                        + " handed on once. `once` is written on a type in `types`,"
+                        + " and a slot naming that type carries it",
+                    at: place
+                )
+            }
+
+            try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
         }
     }
 

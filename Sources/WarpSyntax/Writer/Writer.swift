@@ -252,6 +252,12 @@ public struct Writer: Sendable {
         // whichever form the inner type takes: a bare name, or a procedure
         // form under its one key. An inline record has no front to write it
         // on, and a declaration's field is the one place the words go anyway.
+        // Written under its own key, which is where a record can carry it: the
+        // shape a declared type is handed on once is usually written inline,
+        // and there is no front of a record to write a word on.
+        case let .once(inner):
+            return .dictionary([try Name(TypeReader.onceKey): try value(of: inner)])
+
         case let .variable(inner), let .inout(inner):
             let word = type.isInout ? "inout" : "var"
 
@@ -366,6 +372,9 @@ public struct Writer: Sendable {
 
         case let .inout(inner):
             return .inout(stripped(inner))
+
+        case let .once(inner):
+            return .once(stripped(inner))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return type

@@ -142,6 +142,9 @@ extension TypeExpression {
         case .reading:
             return .any
 
+        case let .once(inner):
+            return .once(inner.filling(bound))
+
         case let .array(element):
             return .array(element.filling(bound))
 
@@ -184,7 +187,7 @@ extension TypeExpression {
         case .reading:
             return
 
-        case let .array(element), let .dictionary(element), let .nullable(element):
+        case let .array(element), let .dictionary(element), let .nullable(element), let .once(element):
             element.parameterConstraints(into: &table)
 
         case let .record(fields):
@@ -213,7 +216,7 @@ extension TypeExpression {
         case .parameter, .reading:
             return true
 
-        case let .array(element), let .dictionary(element), let .nullable(element):
+        case let .array(element), let .dictionary(element), let .nullable(element), let .once(element):
             return element.isGeneric
 
         case let .record(fields):
@@ -307,6 +310,9 @@ extension TypeExpression {
 
         case .reading:
             return self
+
+        case let .once(inner):
+            return .once(inner.bounded(by: bounds))
 
         case let .array(element):
             return .array(element.bounded(by: bounds))

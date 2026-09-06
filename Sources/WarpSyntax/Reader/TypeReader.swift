@@ -62,6 +62,20 @@ public struct TypeReader: Decodable {
             return
         }
 
+        // A declared type handed on once, told apart by its key the way the
+        // procedure form is. A record cannot have a lone field by that name,
+        // which the writer refuses to produce for the same reason.
+        if
+            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
+            keyed.allKeys.count == 1,
+            let key = keyed.allKeys.first,
+            key.stringValue == Self.onceKey
+        {
+            self.type = .once(try keyed.decode(TypeReader.self, forKey: key).type)
+
+            return
+        }
+
         guard
             let fields = try? decoder
                 .singleValueContainer()
@@ -78,6 +92,9 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Public
+    // The one key a type handed on once is written under.
+    public static let onceKey = "once"
+
     public static func parse(_ written: String) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: .whitespaces)
 

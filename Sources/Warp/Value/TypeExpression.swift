@@ -98,6 +98,16 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // a variable, and what arrives is the inner type.
     case `inout`(TypeExpression)
 
+    // A value that is handed on exactly once. Written on a declared type, so
+    // the obligation rides with the name wherever it is mentioned rather than
+    // being something a slot could take off.
+    //
+    // Unlike `var` and `inout` this says nothing about the slot: what it marks
+    // is the value, and what it costs is that every body holding one has to
+    // give it away on every way through. It is gone by the time anything is
+    // lowered, because the whole of it is proven at the link.
+    case once(TypeExpression)
+
     // The declared type, or null. The one union the language has, and it is
     // null-only on purpose. `?.` answers this, and a parameter declaring it may
     // default to null; a general union would put back the "is it this or that"
@@ -235,6 +245,9 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
         case let .inout(inner):
             return "inout \(inner.rendered)"
+
+        case let .once(inner):
+            return "once \(inner.rendered)"
 
         case let .procedure(signature, purity, isolation):
             let word = [

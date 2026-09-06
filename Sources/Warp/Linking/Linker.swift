@@ -369,6 +369,17 @@ public struct Linker: Sendable {
 
             try checked(answer.calls, in: frame)
 
+            // Read off the body the link is about to lower, so what is proven
+            // is what runs. The environment is the one the body was judged in.
+            if let rewritten = answer.procedure.block {
+                try consumed(
+                    rewritten,
+                    at: symbol.place,
+                    holding: opening(symbol, of: declared.signature),
+                    in: frame
+                )
+            }
+
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {

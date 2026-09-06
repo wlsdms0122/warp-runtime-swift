@@ -89,6 +89,11 @@ extension TypeExpression {
         case let .nullable(inner):
             return .nullable(inner.lowered(in: table))
 
+        // The mark does not survive lowering. What it says is proven at the
+        // link and there is nothing left for a run to keep.
+        case let .once(inner):
+            return inner.lowered(in: table)
+
         // Types and memberships are two spaces and no name is in both, so a
         // mention is looked for in each. A membership standing as a type is a
         // value of one of its members.
