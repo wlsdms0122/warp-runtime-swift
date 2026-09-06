@@ -142,7 +142,7 @@ struct ShapeTests {
 
         // Then
         #expect(row.slots.map(\.name) == ["of", "value"])
-        #expect(row.slots.map(\.shape) == [.parameter(label: "T", constraint: ordered), .parameter(label: "T", constraint: ordered)])
+        #expect(row.slots.map(\.shape) == [.parameter(label: "T", bound: .membership(ordered)), .parameter(label: "T", bound: .membership(ordered))])
         #expect(row.returns == .bool)
         #expect(try await Executor().run(image) == .bool(true))
     }

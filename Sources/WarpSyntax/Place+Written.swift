@@ -49,6 +49,7 @@ public extension Place {
         case .variables: ModuleReader.CodingKeys.variables.stringValue
         case .types: ModuleReader.CodingKeys.types.stringValue
         case .constraints: ModuleReader.CodingKeys.constraints.stringValue
+        case .contracts: ModuleReader.CodingKeys.contracts.stringValue
         case .imports: ModuleReader.CodingKeys.imports.stringValue
 
         case .parameters: ProcedureReader.CodingKeys.parameters.stringValue

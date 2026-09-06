@@ -111,8 +111,8 @@ extension Linker {
     // the whole signature, a path over the receiver's slot. Answers the
     // refusal, or nil where every constrained parameter admits its reading.
     //
-    // Membership only. That one parameter takes one constraint, and that a
-    // named constraint is declared, are the declaration's own facts. Held by
+    // That one parameter takes one bound, and that a named bound is declared,
+    // are the declaration's own facts. Held by
     // the judgment every signature passes where it is declared, before anything
     // gathers readings for this. Judging against every name in a mention set
     // costs nothing when the set holds its one.
@@ -124,14 +124,27 @@ extension Linker {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             guard let reading = readings[parameter] else { continue }
 
-            for constraint in names.sorted() {
-                guard let admitted = shapes.admits(constraint: constraint, reading: reading) else {
+            for bound in names.sorted() {
+                // A bound names a membership or a contract, and the two ask
+                // different questions of the same reading: what a membership
+                // admits is a set of shapes, what a contract asks is a set of
+                // words the reading's own type answers.
+                if shapes.satisfying[bound] != nil {
+                    guard shapes.satisfies(contract: bound, reading: reading.lowered(in: shapes)) else {
+                        return "'\(parameter)' is read as \(reading.rendered),"
+                            + " which does not answer every word '\(bound)' asks"
+                    }
+
+                    continue
+                }
+
+                guard let admitted = shapes.admits(constraint: bound, reading: reading) else {
                     continue
                 }
 
                 guard admitted else {
                     return "'\(parameter)' is read as \(reading.rendered),"
-                        + " which '\(constraint)' does not admit"
+                        + " which '\(bound)' does not admit"
                 }
             }
         }
@@ -1336,7 +1349,7 @@ extension Linker {
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
         case let .call(call):
-            let signature = frame.signatures[call.selector]
+            let signature = frame.signatures[call.selector] ?? frame.contractWords[call.selector]?.signature
 
             guard case .judging = ask else {
                 return Inspection(
@@ -1364,6 +1377,20 @@ extension Linker {
                         },
                         in: frame.shapes
                     )
+                )
+            }
+
+            // A call through a contract names no declaration. What answers it
+            // is the receiver's own type, so it is judged here against what
+            // the contract said and nowhere against a callee.
+            if let asked = frame.contractWords[call.selector] {
+                return try inspected(
+                    contract: asked,
+                    call: call,
+                    at: place,
+                    in: environment,
+                    with: frame,
+                    ask: ask
                 )
             }
 
@@ -1670,6 +1697,105 @@ extension Linker {
                 )
             )
         }
+    }
+
+    // A call through a contract. Nothing here names a declaration: what the
+    // contract asked is the whole of the judgment, and which body runs is
+    // decided at the run by the name the receiver wears.
+    private func inspected(
+        contract asked: ContractWord,
+        call: Call,
+        at place: Place,
+        in environment: [Name: TypeExpression],
+        with frame: TypeFrame,
+        ask: Ask
+    ) throws -> Inspection {
+        guard let written = call.receiver else {
+            throw LinkError(
+                "sends '\(call.selector)' with nothing in front of it."
+                    + " A contract's word is answered about the value it is"
+                    + " sent to, so there is nothing here to answer it",
+                at: place
+            )
+        }
+
+        if written.holdsConstruct {
+            throw LinkError(Expression.constructInOperand, at: place.slot(.receiver))
+        }
+
+        let receiver = try inspected(
+            written,
+            at: place.slot(.receiver),
+            in: environment,
+            with: frame,
+            ask: ask
+        )
+
+        guard frame.shapes.satisfies(
+            contract: asked.contract,
+            reading: receiver.reading.lowered(in: frame.shapes)
+        ) else {
+            throw LinkError(
+                "sends '\(call.selector)' to \(receiver.reading.rendered),"
+                    + " which does not answer every word '\(asked.contract)' asks",
+                at: place.slot(.receiver)
+            )
+        }
+
+        var arguments: [Name: Expression] = [:]
+        var calls = receiver.calls
+
+        for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
+            guard let parameter = asked.signature.parameters[name] else {
+                throw LinkError(
+                    "sends '\(call.selector)' with '\(name)', which"
+                        + " '\(asked.contract)' does not name",
+                    at: place.argument(name.spelling)
+                )
+            }
+
+            if argument.holdsConstruct {
+                throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
+            }
+
+            let inner = try inspected(
+                argument,
+                at: place.argument(name.spelling),
+                in: environment,
+                with: frame,
+                ask: ask
+            )
+
+            guard parameter.declared.accepts(inner.reading, in: frame.shapes) else {
+                throw LinkError(
+                    "hands \(inner.reading.rendered) where '\(asked.contract)'"
+                        + " writes \(parameter.declared.rendered)",
+                    at: place.argument(name.spelling)
+                )
+            }
+
+            arguments[name] = inner.rewritten
+            calls += inner.calls
+        }
+
+        for (name, parameter) in asked.signature.parameters.sorted(by: { $0.key < $1.key })
+        where call.arguments[name] == nil {
+            guard parameter.default != nil || parameter.declared.declaresNull(in: frame.shapes) else {
+                throw LinkError(
+                    "sends '\(call.selector)' without '\(name)', which"
+                        + " '\(asked.contract)' asks for",
+                    at: place.slot(.arguments)
+                )
+            }
+        }
+
+        return Inspection(
+            rewritten: ask.rewrites
+                ? .call(Call(receiver: receiver.rewritten, selector: call.selector, arguments: arguments))
+                : .call(call),
+            calls: calls,
+            reading: asked.signature.returns ?? .any
+        )
     }
 
     // A block: its body, then the result in the environment the body left

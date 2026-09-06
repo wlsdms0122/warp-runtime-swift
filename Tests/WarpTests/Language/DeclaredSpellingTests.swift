@@ -431,7 +431,7 @@ struct DeclaredSpellingTests {
         #expect {
             try linker.link([sut, .collection], entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("names constraint 'std.Comparable'")
+            error is LinkError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
         }
 
         #expect(throws: Never.self) {

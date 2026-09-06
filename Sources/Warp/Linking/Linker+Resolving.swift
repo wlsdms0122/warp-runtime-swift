@@ -88,11 +88,13 @@ extension Linker {
     func types(
         of modules: [Module],
         declared: [Name: Declared<TypeExpression>],
-        constraints members: [Name: Declared<[TypeExpression]>]
+        constraints members: [Name: Declared<[TypeExpression]>],
+        contracts: [Name: Declared<[Name: Signature]>]
     ) throws -> TypeTable {
         let table = TypeTable(
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
+            contracts: contracts.mapValues(\.held),
             of: Linkage()
         )
 

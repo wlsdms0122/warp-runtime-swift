@@ -7,9 +7,10 @@
 
 import Foundation
 
-// Type and constraint names are their declared spelling, the way procedure
-// names are: the standard bundles declare `std.Numeric` under that key, and a
-// document declaring a bare `Numeric` of its own declares a different name.
+// Type, constraint and contract names are their declared spelling, the way
+// procedure names are: the standard bundles declare `std.Numeric` under that
+// key, and a document declaring a bare `Numeric` of its own declares a
+// different name.
 extension Linker {
     // A declaration's place together with where the caller put the module that
     // wrote it. The position is what tells two documents apart when neither was
@@ -21,14 +22,15 @@ extension Linker {
         var spelled: String { place.document.spelled(at: origin) }
     }
 
-    // The two spaces gathered whole, here and nowhere else, so the uniqueness
+    // The three spaces gathered whole, here and nowhere else, so the uniqueness
     // this pass refuses on is the same fact the tables are built from: each
     // table is filled as its space is walked. A mention nothing declares is
     // refused by the judgment that owns undeclared names, which says where the
     // mention lives.
     func declared(in modules: [Module]) throws -> (
         types: [Name: Declared<TypeExpression>],
-        constraints: [Name: Declared<[TypeExpression]>]
+        constraints: [Name: Declared<[TypeExpression]>],
+        contracts: [Name: Declared<[Name: Signature]>]
     ) {
         // Where each name was written, gathered here and carried with what it
         // holds. This is where both halves of the joining are in hand. Anywhere
@@ -46,8 +48,10 @@ extension Linker {
         // happened to list the modules in.
         var typePlaces: [Name: Declaration] = [:]
         var constraintPlaces: [Name: Declaration] = [:]
+        var contractPlaces: [Name: Declaration] = [:]
         var declaredTypes: [Name: Declared<TypeExpression>] = [:]
         var declaredConstraints: [Name: Declared<[TypeExpression]>] = [:]
+        var declaredContracts: [Name: Declared<[Name: Signature]>] = [:]
 
         for (origin, module) in modules.enumerated() {
             for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
@@ -98,6 +102,45 @@ extension Linker {
             }
         }
 
-        return (declaredTypes, declaredConstraints)
+        for (origin, module) in modules.enumerated() {
+            for (name, words) in module.contracts.sorted(by: { $0.key < $1.key }) {
+                let declaration = Declaration(
+                    place: .contract(name.spelling, in: .of(module)),
+                    origin: origin
+                )
+
+                if let declared = typePlaces[name] ?? constraintPlaces[name] {
+                    throw LinkError(
+                        "'\(name)' is declared as a contract in this link and as"
+                            + " something else by \(declared.spelled). One name"
+                            + " cannot stand for two of a shape, a membership and"
+                            + " a contract at once",
+                        at: declaration.place
+                    )
+                }
+
+                if let first = contractPlaces[name] {
+                    throw LinkError(
+                        "contract '\(name)' is declared more than once in this"
+                            + " link, by \(first.spelled) and \(declaration.spelled)",
+                        at: declaration.place
+                    )
+                }
+
+                guard !words.isEmpty else {
+                    throw LinkError(
+                        "asks nothing, so every type satisfies it. A contract is"
+                            + " the words a value answers, and one with no words"
+                            + " says nothing a slot could lean on",
+                        at: declaration.place
+                    )
+                }
+
+                contractPlaces[name] = declaration
+                declaredContracts[name] = Declared(words, at: declaration.place)
+            }
+        }
+
+        return (declaredTypes, declaredConstraints, declaredContracts)
     }
 }

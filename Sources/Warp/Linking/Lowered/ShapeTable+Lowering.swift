@@ -16,6 +16,7 @@ extension ShapeTable {
     static func lowering(
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
+        satisfying: [Name: Set<Name>] = [:],
         of linkage: Linkage
     ) -> ShapeTable {
         // A table of its own even where nothing is declared: a body carried
@@ -28,6 +29,7 @@ extension ShapeTable {
                 labels: [],
                 constraintLabels: [],
                 recordRows: [],
+                satisfying: satisfying,
                 of: linkage
             )
         }
@@ -92,6 +94,7 @@ extension ShapeTable {
             constraintLabels: constraintLabels,
             recordRows: recordRows,
             circling: circling,
+            satisfying: satisfying,
             of: linkage
         )
     }

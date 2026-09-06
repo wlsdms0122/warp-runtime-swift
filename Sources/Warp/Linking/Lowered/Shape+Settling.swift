@@ -29,11 +29,11 @@ extension Shape {
 
         // Both ask the membership and neither settles: a value stands as what
         // it arrived as, and which member it matched is a question a cast asks.
-        case let .parameter(_, constraint):
-            return try standing(value, boundBy: constraint, at: path(), in: table, assuming: assuming)
+        case let .parameter(_, bound):
+            return try standing(value, boundBy: bound, at: path(), in: table, assuming: assuming)
 
         case let .member(constraint):
-            return try standing(value, boundBy: constraint, at: path(), in: table, assuming: assuming)
+            return try standing(value, boundBy: .membership(constraint), at: path(), in: table, assuming: assuming)
 
         default:
             return try judging(value, at: path(), in: table, assuming: assuming)
@@ -132,8 +132,8 @@ extension Shape {
         // bounded one still asks each value for its membership, and a member
         // that takes every byte answers that question for all of them at
         // once.
-        case let .parameter(_, constraint):
-            guard let constraint else { return true }
+        case let .parameter(_, bound):
+            guard case let .membership(constraint)? = bound else { return true }
 
             return holdsEveryByte(
                 of: constraint,
@@ -266,8 +266,17 @@ extension Shape {
         case let .ranged(refinement):
             return refinement.rendered
 
-        case let .parameter(label, constraint):
-            return constraint.map { bound in "some \(label): \(table.constraintLabels[bound])" } ?? "some \(label)"
+        case let .parameter(label, bound):
+            switch bound {
+            case let .membership(row):
+                return "some \(label): \(table.constraintLabels[row])"
+
+            case let .contract(name):
+                return "some \(label): \(name)"
+
+            case nil:
+                return "some \(label)"
+            }
 
         case let .member(constraint):
             return table.constraintLabels[constraint].spelling
@@ -470,12 +479,27 @@ extension Shape {
     // for what arrived; it does not settle it.
     private func standing(
         _ value: Value,
-        boundBy constraint: Int?,
+        boundBy bound: Shape.Bound?,
         at path: @autoclosure () -> String,
         in table: ShapeTable,
         assuming: [Int]
     ) throws -> Value {
-        guard let constraint, !assuming.contains(constraint) else { return value }
+        // A contract is answered by the value's own name: what the link found
+        // to satisfy it is what a value may arrive as.
+        if case let .contract(name)? = bound {
+            guard table.satisfies(contract: name, type: value.nominal) == true else {
+                let arrived = value.nominal.map { held in "'\(held)'" } ?? "\(value.type)"
+
+                throw ArgumentError(
+                    "\(path()): expected \(rendered(in: table)), and \(arrived)"
+                        + " does not answer every word '\(name)' asks"
+                )
+            }
+
+            return value
+        }
+
+        guard case let .membership(constraint)? = bound, !assuming.contains(constraint) else { return value }
 
         let deeper = assuming + [constraint]
         var refusals: [String] = []

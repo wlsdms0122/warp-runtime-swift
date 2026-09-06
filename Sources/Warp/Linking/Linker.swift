@@ -66,17 +66,15 @@ public struct Linker: Sendable {
         // their uniqueness, so it hands over the tables that fact was proved on.
         try once(modules)
 
-        let (declaredTypes, declaredConstraints) = try declared(in: modules)
+        let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
 
-        let types = try self.types(
+        let declaring = try self.types(
             of: modules,
             declared: declaredTypes,
-            constraints: declaredConstraints
+            constraints: declaredConstraints,
+            contracts: declaredContracts
         )
 
-        // Every judgment the link asks and every row it builds reads the
-        // table the run will read.
-        let shapes = types.shapes
         let symbols = try self.symbols(of: modules)
 
         // Every declaration under its declared spelling. The spellings are
@@ -85,6 +83,39 @@ public struct Linker: Sendable {
         let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
             table[symbol.declared] = symbol
         }
+
+        // Which types answer which contracts. Read off the declarations, so it
+        // is worked out here rather than where the types were declared, and
+        // the table is remade holding it. The rows are numbered from the
+        // declarations alone, so a shape lowered against either table is the
+        // same shape.
+        let witnessed = try witnesses(
+            of: declaredContracts,
+            over: declaredTypes,
+            among: space,
+            in: declaring
+        )
+        let types = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
+
+        // The spelling a call writes to reach a contract's word: the
+        // contract's name and the word's, with a dot between them. Built here
+        // once, so nothing downstream takes a name apart again.
+        let contractWords = declaredContracts.reduce(into: [Name: ContractWord]()) { table, entry in
+            for (word, signature) in entry.value.held {
+                let spelling = Name(normal: "\(entry.key.spelling).\(word.spelling)")
+
+                table[spelling] = ContractWord(
+                    contract: entry.key,
+                    word: word,
+                    signature: signature,
+                    answering: (witnessed[entry.key] ?? [:]).compactMapValues { words in words[word] }
+                )
+            }
+        }
+
+        // Every judgment the link asks and every row it builds reads the
+        // table the run will read.
+        let shapes = types.shapes
 
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
@@ -110,7 +141,12 @@ public struct Linker: Sendable {
             table[entry.offset] = Set(entry.element.variables.keys)
         }
         let settled = pure(among: symbols, reading: moduleVariables)
-        let (selectorSymbols, wordSymbols) = try derivable(among: symbols, pure: settled, in: shapes)
+        let (selectorSymbols, wordSymbols) = try derivable(
+            among: symbols,
+            pure: settled,
+            answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
+            in: shapes
+        )
 
         // The tables as the author spelled them, and the form the link's own
         // settling reads: a written body is swapped for the refusal it would
@@ -174,6 +210,7 @@ public struct Linker: Sendable {
             variables: orderedVariables.mapValues { names in
                 names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
             },
+            contractWords: contractWords,
             shapes: shapes
         )
 
@@ -201,6 +238,7 @@ public struct Linker: Sendable {
                 pure: settled,
                 isolated: isolatedDeclarations,
                 failing: failingDeclarations,
+                contractWords: contractWords,
                 variables: moduleVariables
             )
         }

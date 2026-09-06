@@ -400,11 +400,20 @@ extension Linker {
                 )
             }
 
-            guard let bound = names.first, table.constraint(bound) == nil else { continue }
+            // A bound names a membership or a contract. The two are separate
+            // spaces and no name is in both, so a mention reaches whichever
+            // declares it.
+            guard
+                let bound = names.first,
+                table.constraint(bound) == nil,
+                table.contracts[bound] == nil
+            else {
+                continue
+            }
 
             throw LinkError(
-                "`some \(parameter)` names constraint '\(bound)',"
-                    + " which no module in this link declares",
+                "`some \(parameter)` names '\(bound)', which no module in this"
+                    + " link declares as a membership or a contract",
                 at: place
             )
         }

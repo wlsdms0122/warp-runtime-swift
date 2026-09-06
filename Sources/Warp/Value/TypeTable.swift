@@ -25,9 +25,21 @@ public struct TypeTable: Sendable {
     public let types: [Name: TypeExpression]
     public let constraints: [Name: [TypeExpression]]
 
+    // Contracts declared in this link: a name bound to the words a value must
+    // answer. Beside the constraints for the same reason those are beside the
+    // types. A membership is a closed set of shapes and a contract is the open
+    // set of shapes that declare some words, so listing answers one and not
+    // the other.
+    public let contracts: [Name: [Name: Signature]]
+
     // The same declarations as the run reads them, lowered once here. Every
     // judgment this table answers is asked of the lowered one.
     let shapes: ShapeTable
+
+    // The link these rows are numbered against, kept so the table can be
+    // remade with what a later pass worked out and still hand back the rows a
+    // body already holds.
+    private let linkage: Linkage
 
     // A table declaring nothing, for a judgment asked with no declarations
     // behind it.
@@ -38,9 +50,10 @@ public struct TypeTable: Sendable {
     // made by one is at home in it.
     public init(
         types: [Name: TypeExpression] = [:],
-        constraints: [Name: [TypeExpression]] = [:]
+        constraints: [Name: [TypeExpression]] = [:],
+        contracts: [Name: [Name: Signature]] = [:]
     ) {
-        self.init(types: types, constraints: constraints, of: Linkage())
+        self.init(types: types, constraints: constraints, contracts: contracts, of: Linkage())
     }
 
     // The same declarations as one link's, which owns the identity its rows
@@ -48,14 +61,38 @@ public struct TypeTable: Sendable {
     init(
         types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
+        contracts: [Name: [Name: Signature]] = [:],
+        satisfying: [Name: Set<Name>] = [:],
         of linkage: Linkage
     ) {
         self.types = types
         self.constraints = constraints
-        self.shapes = ShapeTable.lowering(types, constraints: constraints, of: linkage)
+        self.contracts = contracts
+        self.linkage = linkage
+        self.shapes = ShapeTable.lowering(
+            types,
+            constraints: constraints,
+            satisfying: satisfying,
+            of: linkage
+        )
     }
 
     // MARK: - Public
+    // The same declarations with the satisfaction worked out. Which types
+    // answer a contract's words is read off the procedures, which are gathered
+    // after this table is first built, so the table is remade rather than
+    // holding an answer it did not have. The rows are numbered from the
+    // declarations alone, so they are the rows the first table had.
+    func satisfying(_ satisfying: [Name: Set<Name>]) -> TypeTable {
+        TypeTable(
+            types: types,
+            constraints: constraints,
+            contracts: contracts,
+            satisfying: satisfying,
+            of: linkage
+        )
+    }
+
     public func resolve(_ name: Name) -> TypeExpression? {
         types[name]
     }

@@ -41,6 +41,15 @@ public struct Module: Sendable {
     // bounds `some T`, and a slot cannot declare it directly.
     public let constraints: [Name: [TypeExpression]]
 
+    // Contracts this module declares: a name bound to the words a value must
+    // answer to stand under it.
+    //
+    // Kept apart from the constraints for the reason the two are different
+    // questions. A constraint is a closed set of shapes and a value of one is
+    // one of them; a contract is an open set, and what puts a type in it is
+    // that it declares the words. Only one of those can be judged by listing.
+    public let contracts: [Name: [Name: Signature]]
+
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second name table in path
@@ -89,6 +98,7 @@ public struct Module: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
+        contracts: [Name: [Name: Signature]] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure],
@@ -100,6 +110,7 @@ public struct Module: Sendable {
                 imports: imports,
                 types: types,
                 constraints: constraints,
+                contracts: contracts,
                 constants: constants,
                 variables: variables,
                 procedures: procedures
@@ -115,6 +126,7 @@ public struct Module: Sendable {
         self.description = draft.description
         self.types = draft.types
         self.constraints = draft.constraints
+        self.contracts = draft.contracts
         self.constants = draft.constants
         self.variables = draft.variables
         self.procedures = draft.procedures
@@ -135,6 +147,7 @@ public struct Module: Sendable {
             imports: imports,
             types: types,
             constraints: constraints,
+            contracts: contracts,
             constants: constants,
             variables: variables,
             procedures: procedures

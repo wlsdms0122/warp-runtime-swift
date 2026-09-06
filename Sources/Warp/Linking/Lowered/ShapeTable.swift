@@ -41,6 +41,12 @@ final class ShapeTable: Sendable {
     // says so.
     let circling: [Int]
 
+    // Which types satisfy each declared contract, by the contract's own
+    // spelling. A contract's members are not a shape the table lowers: what
+    // puts a type in one is that it declares the words, which the link works
+    // out from the declarations rather than from the type language.
+    let satisfying: [Name: Set<Name>]
+
     private let rows: [Name: Int]
     private let constraintRows: [Name: Int]
 
@@ -64,6 +70,7 @@ final class ShapeTable: Sendable {
         constraintLabels: [Name],
         recordRows: [Int?],
         circling: [Int] = [],
+        satisfying: [Name: Set<Name>] = [:],
         of linkage: Linkage
     ) {
         self.shapes = shapes
@@ -72,6 +79,7 @@ final class ShapeTable: Sendable {
         self.constraintLabels = constraintLabels
         self.recordRows = recordRows
         self.circling = circling
+        self.satisfying = satisfying
         self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
         self.constraintRows = Dictionary(
@@ -89,6 +97,43 @@ final class ShapeTable: Sendable {
 
     func constraintRow(named name: Name) -> Int? {
         constraintRows[name]
+    }
+
+    // Whether a type of this spelling answers every word a contract asks. Nil
+    // where nothing declares the contract, the way an undeclared constraint
+    // answers nil: what an undeclared name means is the asking surface's.
+    func satisfies(contract name: Name, type: Name?) -> Bool? {
+        guard let members = satisfying[name] else { return nil }
+        guard let type else { return false }
+
+        return members.contains(type)
+    }
+
+    // Whether a reading is of a type that answers a contract. One-sided the
+    // way every judgment before the run is: only what is provably outside is
+    // refused, and a reading nothing can be said about passes here and is
+    // judged again where the value arrives.
+    func satisfies(contract name: Name, reading: Shape) -> Bool {
+        switch reading {
+        case .any, .undeclared, .never:
+            return true
+
+        case let .named(row):
+            return satisfies(contract: name, type: labels[row]) ?? false
+
+        // A parameter stands for whatever fills it, and a call fills it with
+        // something the same bound was asked of.
+        case let .parameter(_, bound):
+            guard case let .contract(held)? = bound else { return false }
+
+            return held == name
+
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return satisfies(contract: name, reading: inner)
+
+        default:
+            return false
+        }
     }
 
     // Whether a value is a member of a constraint. A member speaks through
@@ -117,8 +162,12 @@ final class ShapeTable: Sendable {
         case .any:
             return true
 
-        case let .parameter(_, constraint):
-            guard let constraint else { return true }
+        // A parameter bounded by a membership stands for some member of it, so
+        // it fits where every one of those would. One bounded by a contract
+        // stands for a type nothing here lists, so nothing is provable and it
+        // passes the way an unbounded one does.
+        case let .parameter(_, bound):
+            guard case let .membership(constraint)? = bound else { return true }
             guard !assuming.contains(constraint) else { return true }
 
             return constraints[constraint].allSatisfy { member in

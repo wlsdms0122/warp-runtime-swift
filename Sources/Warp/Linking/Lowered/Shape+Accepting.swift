@@ -328,8 +328,8 @@ extension Shape {
         // An unbounded type parameter is filled by the call, so nothing about
         // the candidates is knowable here. A bounded one takes only what some
         // member of its constraint could spell.
-        case let .parameter(_, constraint):
-            guard let constraint else { return true }
+        case let .parameter(_, bound):
+            guard case let .membership(constraint)? = bound else { return true }
 
             return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
 

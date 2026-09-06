@@ -133,6 +133,10 @@ public struct Place: Sendable, Equatable {
         Place([.slot(.constraints), .key(name)], in: document)
     }
 
+    public static func contract(_ name: String, in document: Document) -> Place {
+        Place([.slot(.contracts), .key(name)], in: document)
+    }
+
     // A caller holding a program it assembled itself, with no document under
     // it. There is no key to name, so the place says what was handed in, and no
     // document either, which is a third thing and not a module that wrote no
@@ -228,6 +232,7 @@ public extension Place {
         case variables
         case types
         case constraints
+        case contracts
         case imports
 
         case parameters
@@ -262,6 +267,7 @@ public extension Place {
             case .variables: "variables"
             case .types: "types"
             case .constraints: "constraints"
+            case .contracts: "contracts"
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"

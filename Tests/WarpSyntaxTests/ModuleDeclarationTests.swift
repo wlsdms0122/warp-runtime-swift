@@ -179,6 +179,57 @@ struct ModuleDeclarationTests {
             try loader.loadDocument(fixture).validated()
         }
     }
+
+    @Test("a document declares a contract, and a word reaches it through the contract's name")
+    func aDocumentDeclaresAContract() async throws {
+        // Given. Two shapes that describe themselves, and one word that knows
+        // neither
+        let sut = try loader.loadDocument([
+            "types": [
+                "bank.Account": ["balance": "int"],
+                "bank.Card": ["last": "string"]
+            ],
+            "contracts": [
+                "app.Describable": ["describe": ["returns": "string"]]
+            ],
+            "procedures": [
+                "entry": [
+                    "body": [
+                        [
+                            "let": "card",
+                            "value": ["as": "bank.Card", "of": ["last": "42"]]
+                        ]
+                    ],
+                    "result": ["result": ["call": ["of": ["ref": "card"], "procedure": "app.tell"]]]
+                ],
+                "app.tell": [
+                    "receiver": "it",
+                    "parameters": ["it": "some T"],
+                    "bounds": ["T": "app.Describable"],
+                    "returns": "string",
+                    "result": ["call": ["of": ["ref": "it"], "procedure": "app.Describable.describe"]]
+                ],
+                "bank.Account.describe": [
+                    "receiver": "of",
+                    "parameters": ["of": "bank.Account"],
+                    "returns": "string",
+                    "result": "an account"
+                ],
+                "bank.Card.describe": [
+                    "receiver": "of",
+                    "parameters": ["of": "bank.Card"],
+                    "returns": "string",
+                    "result": "a card"
+                ]
+            ]
+        ])
+
+        // When / Then
+        let outputs = try await run(sut, entry: "entry")
+
+        #expect(outputs["result"] == .string("a card"))
+    }
+
 }
 
 private extension Module {

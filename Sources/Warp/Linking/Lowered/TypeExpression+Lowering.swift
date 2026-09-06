@@ -103,17 +103,23 @@ extension TypeExpression {
 
             return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
 
-        case let .parameter(name, constraint):
-            guard let constraint else { return .parameter(label: name, constraint: nil) }
+        // A bound names a membership or a contract, and the two are separate
+        // spaces, so it is looked for in each.
+        case let .parameter(name, bound):
+            guard let bound else { return .parameter(label: name, bound: nil) }
 
-            guard let row = table.constraintRow(named: constraint) else {
-                return .undeclared(
-                    label: "some \(name): \(constraint)",
-                    refusal: "constraint '\(constraint)', which nothing declares"
-                )
+            if let row = table.constraintRow(named: bound) {
+                return .parameter(label: name, bound: .membership(row))
             }
 
-            return .parameter(label: name, constraint: row)
+            if table.satisfying[bound] != nil {
+                return .parameter(label: name, bound: .contract(bound))
+            }
+
+            return .undeclared(
+                label: "some \(name): \(bound)",
+                refusal: "'\(bound)', which nothing declares as a membership or a contract"
+            )
 
         case .reading:
             return .any

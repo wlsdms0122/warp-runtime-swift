@@ -232,6 +232,7 @@ extension Linker {
     func derivable(
         among symbols: [Symbol],
         pure: Set<Name>,
+        answering contracts: Set<Name>,
         in shapes: ShapeTable
     ) throws -> (selectors: [Name: Symbol], words: [Name: Symbol]) {
         var selectors: [Name: Symbol] = [:]
@@ -257,6 +258,13 @@ extension Linker {
             selectors[symbol.declared] = symbol
 
             guard symbol.procedure.signature.isDerivable(in: shapes) else { continue }
+
+            // A declaration that answers a contract's word is reached through
+            // the contract and not by a bare spelling. Two types answering one
+            // word is the ordinary case, and a bare segment cannot say which
+            // of them is meant, which is the very thing this table refuses.
+            // The contract is the spelling that tells them apart.
+            guard !contracts.contains(symbol.declared) else { continue }
 
             let bare = symbol.declared.unqualified
 

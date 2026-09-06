@@ -97,6 +97,14 @@ public struct Writer: Sendable {
             )
         }
 
+        if !draft.contracts.isEmpty {
+            written[ModuleReader.CodingKeys.contracts.name] = .dictionary(
+                try draft.contracts.mapValues { words in
+                    .dictionary(try words.mapValues { word in .dictionary(try fields(of: word)) })
+                }
+            )
+        }
+
         if !draft.constants.isEmpty {
             written[ModuleReader.CodingKeys.const.name] = .dictionary(
                 try draft.constants.mapValues { constant in try value(of: constant) }

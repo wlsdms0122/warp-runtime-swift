@@ -27,6 +27,13 @@ public struct Draft: Sendable {
 
     public let types: [Name: TypeExpression]
     public let constraints: [Name: [TypeExpression]]
+
+    // Contracts this module declares: a name bound to the words a value must
+    // answer to stand under it. Each word is a signature the implementing
+    // declaration is held to, written without the receiver, which is the
+    // implementing type itself.
+    public let contracts: [Name: [Name: Signature]]
+
     public let constants: [Name: Expression]
 
     // Names bound to boxes the document's procedures share, each holding what
@@ -42,6 +49,7 @@ public struct Draft: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
+        contracts: [Name: [Name: Signature]] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure]
@@ -50,6 +58,7 @@ public struct Draft: Sendable {
         self.imports = imports
         self.types = types
         self.constraints = constraints
+        self.contracts = contracts
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
@@ -71,8 +80,14 @@ public struct Draft: Sendable {
 
         // Its own by the spelling the link knows it as. A module names a
         // sibling the way any other module does, so what it declares is not
-        // something it imports.
-        let declared = Set(procedures.keys)
+        // something it imports. A contract's word is one of its own too: the
+        // spelling a call writes to reach one is the contract's name and the
+        // word's, and this document declared the contract.
+        let declared = Set(procedures.keys).union(
+            contracts.flatMap { contract, words in
+                words.keys.map { word in Name(normal: "\(contract.spelling).\(word.spelling)") }
+            }
+        )
 
         return held
             .reduce(into: Set()) { sent, expression in

@@ -61,6 +61,11 @@ struct TypeFrame: Sendable {
     // what its body may fail with.
     let failing: [Name: Failing]
 
+    // Every contract's words, under the spelling a call writes to reach one.
+    // Beside the symbols rather than in them: a name here answers with no
+    // declaration, and which declaration runs is the receiver's to say.
+    let contractWords: [Name: ContractWord]
+
     // Each document's variables by name. A body reading one answers by the
     // run's state, so purity is read against these.
     let variables: [Int: Set<Name>]

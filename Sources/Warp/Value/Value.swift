@@ -266,6 +266,15 @@ public indirect enum Value: Sendable, Equatable {
         return .bytes(bytes)
     }
 
+
+    // The name this value wears, where it wears one. A record settled under a
+    // declared type carries its label; nothing else names itself.
+    public var nominal: Name? {
+        guard case let .record(record) = self else { return nil }
+
+        return record.name
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     public static func == (lhs: Value, rhs: Value) -> Bool {

@@ -46,8 +46,16 @@ indirect enum Shape: Sendable {
     case named(Int)
 
     // A type parameter the call fills. The label is the spelling a refusal
-    // shows; the constraint is the row of the membership it is bounded by.
-    case parameter(label: Name, constraint: Int?)
+    // shows; the bound is what the signature held it to.
+    case parameter(label: Name, bound: Bound?)
+
+    // What a type parameter is held to. Two, because the two are answered
+    // differently: a membership lists shapes and the table lowered them into
+    // rows, a contract lists words and what answers it is a type's own name.
+    enum Bound: Sendable, Equatable {
+        case membership(Int)
+        case contract(Name)
+    }
 
     // A declared membership standing as a type, by its row: a value of one of
     // the types it admits. What a slot holds here is decided, and which of the

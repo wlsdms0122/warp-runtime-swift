@@ -194,7 +194,7 @@ struct ConstraintTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("names constraint 'Sortable'")
+            error is LinkError && "\(error)".contains("names 'Sortable', which no module in this link declares")
         }
     }
 
@@ -853,7 +853,7 @@ struct ConstraintTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("names constraint 'Nope'")
+            error is LinkError && "\(error)".contains("names 'Nope', which no module in this link declares")
         }
     }
 

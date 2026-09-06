@@ -26,6 +26,11 @@ struct Lowering {
     // Each document's variables by name, in the order a run makes their boxes.
     let variables: [Int: [Name: Int]]
 
+    // Every contract's words, under the spelling a call writes to reach one.
+    // A selector in here names no row: it names the table of rows the run
+    // picks from.
+    let contractWords: [Name: ContractWord]
+
     // The declared types as the run reads them, for a cast's shape and a
     // closure's row.
     let shapes: ShapeTable
@@ -36,12 +41,14 @@ struct Lowering {
         rows: [Name: Int],
         words: [Name: Int],
         variables: [Int: [Name: Int]],
+        contractWords: [Name: ContractWord] = [:],
         shapes: ShapeTable
     ) {
         self.table = table
         self.rows = rows
         self.words = words
         self.variables = variables
+        self.contractWords = contractWords
         self.shapes = shapes
     }
 
@@ -367,6 +374,15 @@ struct Lowering {
             )
 
         case let .call(call):
+            // A selector naming a contract's word names no row. Which row
+            // answers is the receiver's, so every one the link found is
+            // lowered here and the run picks by the name it reads.
+            if let asked = contractWords[call.selector] {
+                return .dispatch(
+                    try lower(call, through: asked, in: scope, on: slots, label: label, at: place)
+                )
+            }
+
             return .call(try lower(call, in: scope, on: slots, label: label, at: place))
 
         case let .leave(leave):
@@ -378,6 +394,40 @@ struct Lowering {
                 }
             )
         }
+    }
+
+    private func lower(
+        _ call: Call,
+        through asked: ContractWord,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> DispatchOperation {
+        guard let written = call.receiver else {
+            throw unjudged("a call to '\(call.selector)' with nothing in front of it", at: place)
+        }
+
+        let receiver = try lower(written, in: scope, on: slots, label: label, at: place)
+
+        // The receiver is dropped from each call: it is read once here, and
+        // the run hands what it read to whichever row it picked.
+        let sent = Call(selector: call.selector, arguments: call.arguments)
+
+        return DispatchOperation(
+            contract: asked.contract,
+            word: asked.word,
+            receiver: receiver,
+            calls: try asked.answering.mapValues { declaration in
+                try lower(
+                    Call(receiver: nil, selector: declaration, arguments: sent.arguments),
+                    in: scope,
+                    on: slots,
+                    label: label,
+                    at: place
+                )
+            }
+        )
     }
 
     private func lower(
