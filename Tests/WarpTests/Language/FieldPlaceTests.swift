@@ -282,14 +282,14 @@ struct FieldPlaceTests {
     private func steps(of image: Image) throws -> [Step] {
         guard
             case let .body(body, _) = image.entry.implementation,
-            case let .local(_, steps)? = body.result
+            case let .local(address)? = body.result
         else {
             Issue.record("the entry does not answer with a path")
 
             return []
         }
 
-        return steps
+        return address.steps
     }
 }
 
@@ -305,8 +305,8 @@ extension Step: Equatable {
         case let (.index(mine, myMark), .index(theirs, theirMark)):
             return mine == theirs && myMark == theirMark
 
-        case let (.at(mine, myInner, myMark), .at(theirs, theirInner, theirMark)):
-            return mine == theirs && myInner == theirInner && myMark == theirMark
+        case let (.at(mine, myMark), .at(theirs, theirMark)):
+            return mine.slot == theirs.slot && mine.steps == theirs.steps && myMark == theirMark
 
         case let (.word(mine, myName, myMark), .word(theirs, theirName, theirMark)):
             return mine == theirs && myName == theirName && myMark == theirMark

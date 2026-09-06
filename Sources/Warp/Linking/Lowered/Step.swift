@@ -22,13 +22,13 @@ enum Step: Sendable {
     case key(Name, optional: Bool)
 
     case index(Int, optional: Bool)
-    case at(Int, [Step], optional: Bool)
+    case at(Address, optional: Bool)
     case word(Int, Name, optional: Bool)
 
     var optional: Bool {
         switch self {
         case let .field(_, _, optional), let .key(_, optional), let .index(_, optional),
-            let .at(_, _, optional), let .word(_, _, optional):
+            let .at(_, optional), let .word(_, _, optional):
             return optional
         }
     }
@@ -36,8 +36,8 @@ enum Step: Sendable {
 
 extension Step {
     func reads(_ slots: Range<Int>) -> Bool {
-        guard case let .at(slot, steps, _) = self else { return false }
+        guard case let .at(address, _) = self else { return false }
 
-        return slots.contains(slot) || steps.contains { step in step.reads(slots) }
+        return address.reads(slots)
     }
 }

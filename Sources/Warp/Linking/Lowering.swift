@@ -258,8 +258,8 @@ struct Lowering {
             // declaration. A box that said nothing reaches nothing, and what
             // was written stands as it was handed.
             case let .assignment(path)?:
-                let (slot, steps, reached) = try lower(path, in: scope, on: slots, at: place)
-                binding = .assign(slot, steps, settling: reached?.slotUnwrapped)
+                let (address, reached) = try lower(path, in: scope, on: slots, at: place)
+                binding = .assign(address, settling: reached?.slotUnwrapped)
 
             case nil:
                 binding = nil
@@ -292,8 +292,8 @@ struct Lowering {
                 )
             )
 
-        case let .local(slot, steps):
-            return steps.reduce(slots.shape(of: slot)) { reached, step in
+        case let .local(address):
+            return address.steps.reduce(slots.shape(of: address.slot)) { reached, step in
                 switch step {
                 case let .field(_, name, _):
                     return reached?.place(of: name, in: shapes)?.shape
@@ -332,9 +332,9 @@ struct Lowering {
             return .literal(value)
 
         case let .reference(path):
-            let (slot, steps, _) = try lower(path, in: scope, on: slots, at: place)
+            let (address, _) = try lower(path, in: scope, on: slots, at: place)
 
-            return .local(slot, steps)
+            return .local(address)
 
         case let .array(array):
             return .array(try array.map { element in
@@ -536,8 +536,8 @@ struct Lowering {
                     throw unjudged("'\(name)' handed to '\(call.selector)' in place without a variable", at: place)
                 }
 
-                let (slot, steps, _) = try lower(path, in: scope, on: slots, at: place)
-                handed.append(CallOperation.Handed(position: position, slot: slot, path: steps))
+                let (address, _) = try lower(path, in: scope, on: slots, at: place)
+                handed.append(CallOperation.Handed(position: position, address: address))
                 arguments.append(nil)
 
                 continue
@@ -573,7 +573,7 @@ struct Lowering {
         in scope: Names,
         on slots: Slots,
         at place: Place
-    ) throws -> (slot: Int, steps: [Step], reached: Shape?) {
+    ) throws -> (address: Address, reached: Shape?) {
         // A mark on the head expects a name to be missing, which is not
         // absence but a reading gone wrong.
         if let refusal = path.markedHead {
@@ -613,10 +613,10 @@ struct Lowering {
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
-                let (slot, steps, _) = try lower(inner, in: scope, on: slots, at: place)
+                let (address, _) = try lower(inner, in: scope, on: slots, at: place)
                 reached = reached?.element(in: shapes)
 
-                return .at(slot, steps, optional: optional)
+                return .at(address, optional: optional)
 
             case let .word(name, optional):
                 guard let row = words[name] else {
@@ -629,7 +629,7 @@ struct Lowering {
             }
         }
 
-        return (slot, steps, reached)
+        return (Address(slot: slot, steps: steps), reached)
     }
 
     // What the link should have refused before lowering and did not. Not a

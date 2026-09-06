@@ -20,8 +20,7 @@ struct CallOperation: Sendable {
 
     struct Handed: Sendable {
         let position: Int
-        let slot: Int
-        let path: [Step]
+        let address: Address
     }
 
     // MARK: - Initializer

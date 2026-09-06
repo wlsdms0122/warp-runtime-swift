@@ -17,7 +17,7 @@ indirect enum Operation: Sendable {
     case literal(Value)
 
     // A slot of the frame, read through a path.
-    case local(Int, [Step])
+    case local(Address)
 
     case array([Operation])
 
@@ -57,8 +57,8 @@ extension Operation {
         case .literal:
             return false
 
-        case let .local(slot, steps):
-            return slots.contains(slot) || steps.contains { step in step.reads(slots) }
+        case let .local(address):
+            return address.reads(slots)
 
         case let .array(elements):
             return elements.contains { element in element.reads(slots) }
@@ -92,17 +92,13 @@ extension Operation {
         case let .call(call):
             return call.receiver?.reads(slots) == true
                 || call.arguments.contains { argument in argument?.reads(slots) == true }
-                || call.handed.contains { handed in
-                    slots.contains(handed.slot) || handed.path.contains { step in step.reads(slots) }
-                }
+                || call.handed.contains { handed in handed.address.reads(slots) }
 
         case let .dispatch(dispatch):
             return dispatch.receiver.reads(slots)
                 || dispatch.calls.values.contains { call in
                     call.arguments.contains { argument in argument?.reads(slots) == true }
-                        || call.handed.contains { handed in
-                            slots.contains(handed.slot) || handed.path.contains { step in step.reads(slots) }
-                        }
+                        || call.handed.contains { handed in handed.address.reads(slots) }
                 }
 
         case let .leave(_, _, value):

@@ -17,7 +17,7 @@ struct Instruction: Sendable {
     enum Binding: Sendable {
         case bind(Int, settling: Shape?)
         case declare(Int, settling: Shape?)
-        case assign(Int, [Step], settling: Shape?)
+        case assign(Address, settling: Shape?)
     }
 
     // MARK: - Property
@@ -38,8 +38,7 @@ struct Instruction: Sendable {
 
 extension Instruction {
     func reads(_ slots: Range<Int>) -> Bool {
-        if case let .assign(slot, steps, _)? = binding,
-           slots.contains(slot) || steps.contains(where: { step in step.reads(slots) }) {
+        if case let .assign(address, _)? = binding, address.reads(slots) {
             return true
         }
 

@@ -111,8 +111,8 @@ public struct Executor: Sendable {
         case let .literal(value):
             return value
 
-        case let .local(slot, steps):
-            return try found(slot, steps, in: activation)
+        case let .local(address):
+            return try found(address, in: activation)
 
         case let .array(elements):
             return .array(try elements.map { element in try read(element, in: activation) })
@@ -237,16 +237,16 @@ public struct Executor: Sendable {
                 )
 
             // A write lands in a box the enclosing bodies also hold.
-            case let .assign(slot, steps, settling)?:
-                guard case let .hold(handle) = activation.cells[slot] else {
+            case let .assign(address, settling)?:
+                guard case let .hold(handle) = activation.cells[address.slot] else {
                     throw ExecutionError(
-                        "'\(spelled(slot, steps, in: activation).rendered)' writes a name that is not a variable here"
+                        "'\(spelled(address, in: activation).rendered)' writes a name that is not a variable here"
                     )
                 }
 
                 try handle.write(
-                    try held(result, as: settling, in: slot, of: activation),
-                    at: try positioned(slot, steps, in: activation)
+                    try held(result, as: settling, in: address.slot, of: activation),
+                    at: try positioned(address, in: activation)
                 )
 
             // A nameless statement ran for its effect, and the answer is
@@ -575,7 +575,7 @@ public struct Executor: Sendable {
         // owns the bytes equation, so `each` walks bytes the way an index
         // reads them.
         guard let elements = resolved.elements else {
-            guard case let .local(slot, steps) = material else {
+            guard case let .local(address) = material else {
                 throw ExecutionError(
                     "the material of iteration '\(element)' resolved to"
                         + " \(resolved.type), expected array"
@@ -583,7 +583,7 @@ public struct Executor: Sendable {
             }
 
             throw ReferenceUnfit(
-                path: spelled(slot, steps, in: activation),
+                path: spelled(address, in: activation),
                 reason: "iteration material is \(resolved.type), expected array"
             )
         }
@@ -646,14 +646,14 @@ public struct Executor: Sendable {
         in activation: Activation
     ) throws -> [(position: Int, handle: Handle)] {
         try handed.map { handed in
-            guard case let .hold(handle) = activation.cells[handed.slot] else {
+            guard case let .hold(handle) = activation.cells[handed.address.slot] else {
                 throw ExecutionError(
                     "'\(callee.label)' takes '\(callee.slots[handed.position].name)' in place,"
-                        + " and '\(activation.frame.names[handed.slot])' is not a variable here"
+                        + " and '\(activation.frame.names[handed.address.slot])' is not a variable here"
                 )
             }
 
-            return (handed.position, handle.extended(by: try positioned(handed.slot, handed.path, in: activation)))
+            return (handed.position, handle.extended(by: try positioned(handed.address, in: activation)))
         }
     }
 
@@ -701,9 +701,9 @@ public struct Executor: Sendable {
             // A refusal about the receiver is answerable only if the author can
             // see which name held it: the locus is the receiver's path when it
             // has one, and nothing to add when it does not.
-            guard case let .local(slot, steps) = receiver else { throw error }
+            guard case let .local(address) = receiver else { throw error }
 
-            throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: "\(error)")
+            throw ReferenceUnfit(path: spelled(address, in: activation), reason: "\(error)")
         }
     }
 
@@ -769,7 +769,7 @@ public struct Executor: Sendable {
         // A pure body writes nothing, so a variable handed to it in place is
         // read as what it holds, and settled the way any argument is.
         for handed in call.handed {
-            given[handed.position] = try found(handed.slot, handed.path, in: activation)
+            given[handed.position] = try found(handed.address, in: activation)
         }
 
         let arguments = try settled(callee, given: given, skipping: skipped(call, of: callee, holding: false, receiving: handed))
@@ -781,9 +781,9 @@ public struct Executor: Sendable {
         } catch {
             // A word blaming a shape is answerable only if the author can see
             // which name held it.
-            guard case let .local(slot, steps)? = call.receiver else { throw error }
+            guard case let .local(address)? = call.receiver else { throw error }
 
-            throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: "\(error)")
+            throw ReferenceUnfit(path: spelled(address, in: activation), reason: "\(error)")
         }
     }
 
@@ -885,13 +885,13 @@ public struct Executor: Sendable {
     // What a slot path holds. The head is never absent, since every slot is
     // there from the frame's making; a hold whose surroundings changed under
     // it refuses, and every deeper absence is answered inside the walk.
-    private func found(_ slot: Int, _ steps: [Step], in activation: Activation) throws -> Value {
-        switch lookup(slot, steps, in: activation) {
+    private func found(_ address: Address, in activation: Activation) throws -> Value {
+        switch lookup(address, in: activation) {
         case let .found(value):
             return value
 
         case let .unfit(reason):
-            throw ReferenceUnfit(path: spelled(slot, steps, in: activation), reason: reason)
+            throw ReferenceUnfit(path: spelled(address, in: activation), reason: reason)
         }
     }
 
@@ -909,7 +909,8 @@ public struct Executor: Sendable {
     // What may genuinely be absent, a missing entry or a null on the way, is
     // read as null only where the author spelled `?.`, and refused everywhere
     // else.
-    private func lookup(_ slot: Int, _ steps: [Step], in activation: Activation) -> Walk {
+    private func lookup(_ address: Address, in activation: Activation) -> Walk {
+        let (slot, steps) = (address.slot, address.steps)
         var current: Value
 
         do {
@@ -924,7 +925,7 @@ public struct Executor: Sendable {
             // The path as far as this step, spelled for a refusal. Only a
             // refusal reads it, so a read that lands spells nothing.
             func walked() -> [PathSegment] {
-                spelled(slot, Array(steps[...index]), in: activation)
+                spelled(Address(slot: slot, steps: Array(steps[...index])), in: activation)
             }
 
             // Null stops every reading the same way, and the rule lives with
@@ -947,10 +948,10 @@ public struct Executor: Sendable {
                 read = indexed(current, at: index, walked: walked)
 
             // The name is a path of its own, read against the same frame.
-            case let .at(inner, innerSteps, _):
-                let name = spelled(inner, innerSteps, in: activation).rendered
+            case let .at(inner, _):
+                let name = spelled(inner, in: activation).rendered
 
-                switch lookup(inner, innerSteps, in: activation) {
+                switch lookup(inner, in: activation) {
                 case let .found(.int(index)):
                     read = indexed(current, at: index, walked: walked)
 
@@ -1064,8 +1065,8 @@ public struct Executor: Sendable {
 
     // Every index reference read to a position: a write lands on one
     // position, and a hold is extended by positions.
-    private func positioned(_ head: Int, _ steps: [Step], in activation: Activation) throws -> [PathSegment] {
-        try steps.map { step in
+    private func positioned(_ address: Address, in activation: Activation) throws -> [PathSegment] {
+        try address.steps.map { step in
             switch step {
             case let .field(_, name, optional), let .key(name, optional):
                 return .key(name, optional: optional)
@@ -1073,11 +1074,11 @@ public struct Executor: Sendable {
             case let .index(index, optional):
                 return .index(index, optional: optional)
 
-            case let .at(slot, inner, optional):
-                guard case let .int(index) = try found(slot, inner, in: activation) else {
+            case let .at(inner, optional):
+                guard case let .int(index) = try found(inner, in: activation) else {
                     throw ExecutionError(
-                        "'\(spelled(head, steps, in: activation).rendered)' indexes with"
-                            + " '\(spelled(slot, inner, in: activation).rendered)', which is not an int"
+                        "'\(spelled(address, in: activation).rendered)' indexes with"
+                            + " '\(spelled(inner, in: activation).rendered)', which is not an int"
                     )
                 }
 
@@ -1090,8 +1091,8 @@ public struct Executor: Sendable {
     }
 
     // The path as the author wrote it, for a sentence that reads it back.
-    private func spelled(_ slot: Int, _ steps: [Step], in activation: Activation) -> [PathSegment] {
-        [.key(activation.frame.names[slot])] + spelled(steps, in: activation)
+    private func spelled(_ address: Address, in activation: Activation) -> [PathSegment] {
+        [.key(activation.frame.names[address.slot])] + spelled(address.steps, in: activation)
     }
 
     private func spelled(_ steps: [Step], in activation: Activation) -> [PathSegment] {
@@ -1106,8 +1107,8 @@ public struct Executor: Sendable {
         case let .index(index, optional):
             return .index(index, optional: optional)
 
-        case let .at(slot, inner, optional):
-            return .indexRef(spelled(slot, inner, in: activation), optional: optional)
+        case let .at(inner, optional):
+            return .indexRef(spelled(inner, in: activation), optional: optional)
 
         case let .word(_, name, optional):
             return .word(name, optional: optional)
