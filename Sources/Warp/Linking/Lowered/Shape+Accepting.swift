@@ -90,6 +90,17 @@ extension Shape {
 
             return accepts(table.shapes[row], in: table, assuming: assuming + [(self, other)])
 
+        // A membership standing as a type takes whatever it admits. In the
+        // other direction a value of it is one of the members and nothing says
+        // which, so it stands only where every one of them would.
+        case let (.member(row), _):
+            return table.admits(constraint: row, reading: other, assuming: [])
+
+        case let (_, .member(row)):
+            return table.constraints[row].allSatisfy { member in
+                accepts(member, in: table, assuming: assuming)
+            }
+
         // A nullable slot takes null, the declared half, and anything
         // nullable whose declared half it takes. What may be null does not
         // stand where null was never declared.
@@ -231,6 +242,20 @@ extension Shape {
 
         if provesNothing || other.provesNothing { return true }
 
+        // A value of a membership is one of its members, so a value could be
+        // both wherever one member could.
+        if case let .member(row) = self {
+            return table.constraints[row].contains { member in
+                member.couldBothHold(other, in: table, assuming: assuming)
+            }
+        }
+
+        if case let .member(row) = other {
+            return table.constraints[row].contains { member in
+                couldBothHold(member, in: table, assuming: assuming)
+            }
+        }
+
         if case .undeclared = self { return true }
         if case .undeclared = other { return true }
 
@@ -306,6 +331,11 @@ extension Shape {
         case let .parameter(_, constraint):
             guard let constraint else { return true }
 
+            return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
+
+        // A value here is one of the members, so a candidate any of them
+        // spells is one a call could match.
+        case let .member(constraint):
             return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
 
         case let .named(row):

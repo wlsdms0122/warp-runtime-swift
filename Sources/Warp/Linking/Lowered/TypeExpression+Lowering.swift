@@ -89,12 +89,19 @@ extension TypeExpression {
         case let .nullable(inner):
             return .nullable(inner.lowered(in: table))
 
+        // Types and memberships are two spaces and no name is in both, so a
+        // mention is looked for in each. A membership standing as a type is a
+        // value of one of its members.
         case let .named(name):
-            guard let row = table.row(named: name) else {
-                return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
+            if let row = table.row(named: name) {
+                return .named(row)
             }
 
-            return .named(row)
+            if let row = table.constraintRow(named: name) {
+                return .member(row)
+            }
+
+            return .undeclared(label: name.spelling, refusal: "type '\(name)', which nothing declares")
 
         case let .parameter(name, constraint):
             guard let constraint else { return .parameter(label: name, constraint: nil) }

@@ -27,7 +27,12 @@ extension Shape {
         case .any:
             return value
 
+        // Both ask the membership and neither settles: a value stands as what
+        // it arrived as, and which member it matched is a question a cast asks.
         case let .parameter(_, constraint):
+            return try standing(value, boundBy: constraint, at: path(), in: table, assuming: assuming)
+
+        case let .member(constraint):
             return try standing(value, boundBy: constraint, at: path(), in: table, assuming: assuming)
 
         default:
@@ -86,6 +91,11 @@ extension Shape {
         case let .named(row):
             return table.shapes[row].declaresNull(in: table)
 
+        // A value of a membership is one of its members, so null is spelled
+        // here wherever a member spells it.
+        case let .member(constraint):
+            return table.constraints[constraint].contains { member in member.declaresNull(in: table) }
+
         default:
             return false
         }
@@ -124,22 +134,23 @@ extension Shape {
         // once.
         case let .parameter(_, constraint):
             guard let constraint else { return true }
-            guard !boundAssuming.contains(constraint) else { return true }
 
-            let deeper = boundAssuming + [constraint]
+            return holdsEveryByte(
+                of: constraint,
+                in: table,
+                namedAssuming: namedAssuming,
+                boundAssuming: boundAssuming
+            )
 
-            if table.constraints[constraint].contains(where: { member in
-                member.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAssuming: deeper)
-            }) {
-                return true
-            }
-
-            // No one member covers it, so the complete question is asked with
-            // the boundary's own primitive: members that divide the range
-            // between them still take every byte.
-            return (0 ... 255).allSatisfy { byte in
-                table.admits(constraint: constraint, value: .int(byte), assuming: deeper)
-            }
+        // A value here is one of the members, so the membership answers this
+        // the way it answers for a parameter it bounds.
+        case let .member(constraint):
+            return holdsEveryByte(
+                of: constraint,
+                in: table,
+                namedAssuming: namedAssuming,
+                boundAssuming: boundAssuming
+            )
 
         case let .ranged(refinement):
             return refinement.holdsEveryByte
@@ -196,6 +207,31 @@ extension Shape {
         }
     }
 
+    // Whether the types a membership admits take every byte between them.
+    private func holdsEveryByte(
+        of constraint: Int,
+        in table: ShapeTable,
+        namedAssuming: [Int],
+        boundAssuming: [Int]
+    ) -> Bool {
+        guard !boundAssuming.contains(constraint) else { return true }
+
+        let deeper = boundAssuming + [constraint]
+
+        if table.constraints[constraint].contains(where: { member in
+            member.holdsEveryByte(in: table, namedAssuming: namedAssuming, boundAssuming: deeper)
+        }) {
+            return true
+        }
+
+        // No one member covers it, so the complete question is asked with the
+        // boundary's own primitive: members that divide the range between them
+        // still take every byte.
+        return (0 ... 255).allSatisfy { byte in
+            table.admits(constraint: constraint, value: .int(byte), assuming: deeper)
+        }
+    }
+
     // How the shape reads in a message: the spelling the author wrote, with
     // a row's label standing where the author wrote the name.
     func rendered(in table: ShapeTable) -> String {
@@ -232,6 +268,9 @@ extension Shape {
 
         case let .parameter(label, constraint):
             return constraint.map { bound in "some \(label): \(table.constraintLabels[bound])" } ?? "some \(label)"
+
+        case let .member(constraint):
+            return table.constraintLabels[constraint].spelling
 
         case let .variable(inner):
             return "var \(inner.rendered(in: table))"
@@ -289,7 +328,7 @@ extension Shape {
         assuming: [Int]
     ) throws -> Value {
         switch self {
-        case .any, .parameter:
+        case .any, .parameter, .member:
             return try settling(value, at: path(), in: table, assuming: assuming)
 
         // A value arrived where nothing was supposed to, so the arrival is the
@@ -438,14 +477,37 @@ extension Shape {
     ) throws -> Value {
         guard let constraint, !assuming.contains(constraint) else { return value }
 
-        guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), and '\(table.constraintLabels[constraint])' does not"
-                    + " admit \(value.type)"
-            )
+        let deeper = assuming + [constraint]
+        var refusals: [String] = []
+
+        // Each member in turn, so the refusal carries why every one of them
+        // said no. A membership holding one shape of collection refuses a bad
+        // element, and the element is what the author has to go and fix.
+        for member in table.constraints[constraint] {
+            if let scalar = member.admitsAsScalar(value) {
+                guard scalar else {
+                    refusals.append("as \(member.rendered(in: table)), got \(value.type)")
+
+                    continue
+                }
+
+                return value
+            }
+
+            do {
+                _ = try member.settling(value, at: path(), in: table, assuming: deeper)
+
+                return value
+            } catch {
+                refusals.append("as \(member.rendered(in: table)), \(error)")
+            }
         }
 
-        return value
+        throw ArgumentError(
+            "\(path()): expected \(rendered(in: table)), and nothing"
+                + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
+                + " \(refusals.joined(separator: ". "))"
+        )
     }
 
     private func settlingNamed(

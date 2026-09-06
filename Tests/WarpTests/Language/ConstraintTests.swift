@@ -98,7 +98,7 @@ struct ConstraintTests {
         await #expect {
             try await run(sut, arguments: ["left": .bool(true)])
         } throws: { error in
-            "\(error)".contains("'std.Comparable' does not admit bool")
+            "\(error)".contains("nothing 'std.Comparable' admits takes bool")
         }
     }
 

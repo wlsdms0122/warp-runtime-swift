@@ -202,8 +202,9 @@ struct ConcurrentEffect: Effect {
             )
         }
 
-        // The pieces arrive through `any`, so the slot could not ask; each
-        // piece is asked here, as it is started.
+        // The slot asks for isolated closures, so a piece that reached here
+        // has already been settled against that. Asked again at the word's own
+        // door, where a host that assembled the invocation itself arrives.
         guard closure.runsBeside else {
             throw ExecutionError(
                 "\(name) runs isolated closures, and piece \(label) writes"

@@ -14,14 +14,22 @@ public extension Module {
     // bundle. A program whose caller left it out cannot fan out at all.
     static let concurrent = try! Module(
         description: "Running closures at once.",
+        constraints: [
+            // What a fan-out is handed: closures under keys, or closures in
+            // order. Two shapes and no third, which is what a membership says
+            // and what `any` could not.
+            "std.concurrent.Pieces": [
+                .array(.procedure(nil, .unstated, .isolated)),
+                .dictionary(.procedure(nil, .unstated, .isolated))
+            ]
+        ],
         procedures: [
             // `std.collection.first` and `std.concurrent.first` are two names
             // in one link, so concurrency shows at the call site.
             //
-            // `of` and what comes back are declared `any` because both take two
-            // shapes (a record of closures or an array of them) and a union is
-            // not a thing a type here can say. The precision is not lost so
-            // much as unsayable; `map`, whose shapes are single, says it all.
+            // What comes back is `any` because it is shaped like what went in,
+            // and a membership names a set of shapes rather than tying one of
+            // them to another. `map`, whose shapes are single, says it all.
             "std.concurrent.all": Procedure(
                 description: "Runs every closure, and answers every answer."
                     + " A record's under its keys, an array's in its order."
@@ -29,7 +37,7 @@ public extension Module {
                     + " failure reported.",
                 signature: Signature(
                     receiver: "of",
-                    parameters: ["of": Parameter(type: .any)],
+                    parameters: ["of": Parameter(type: .named("std.concurrent.Pieces"))],
                     returns: .any
                 ),
                 implementation: .effect(ConcurrentEffect(.all))
@@ -40,7 +48,7 @@ public extension Module {
                     + " one fact here that is.",
                 signature: Signature(
                     receiver: "of",
-                    parameters: ["of": Parameter(type: .any)],
+                    parameters: ["of": Parameter(type: .named("std.concurrent.Pieces"))],
                     returns: .any
                 ),
                 implementation: .effect(ConcurrentEffect(.first))

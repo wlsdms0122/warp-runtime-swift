@@ -49,6 +49,11 @@ indirect enum Shape: Sendable {
     // shows; the constraint is the row of the membership it is bounded by.
     case parameter(label: Name, constraint: Int?)
 
+    // A declared membership standing as a type, by its row: a value of one of
+    // the types it admits. What a slot holds here is decided, and which of the
+    // members it is only a cast tells apart.
+    case member(Int)
+
     // A name the table does not answer: nothing declares it, or it names
     // itself. Nothing can be said about it, so every judgment over readings
     // lets it pass, and the value judge refuses it in the refusal's words.
@@ -184,6 +189,9 @@ extension Shape: Equatable {
 
         case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
             return myLabel == theirLabel && mine == theirs
+
+        case let (.member(mine), .member(theirs)):
+            return mine == theirs
 
         case let (.undeclared(mine, _), .undeclared(theirs, _)):
             return mine == theirs
