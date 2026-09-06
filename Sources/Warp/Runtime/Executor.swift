@@ -29,7 +29,6 @@ public struct Executor: Sendable {
     let boxes: [Int: [Handle]]
 
     // What a loop hands its body each round, and what a walk hands its own.
-    private static let roundLayout = Layout(name: nil, ordered: ["index"])
     private static let walkLayout = Layout(name: nil, ordered: ["index", "item"])
 
     // MARK: - Initializer
@@ -527,7 +526,7 @@ public struct Executor: Sendable {
         while true {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
-            activation.cells[round] = .value(.record(Record(layout: Executor.roundLayout, values: [.int(index)])))
+            activation.cells[round] = .value(.record(Record(layout: RecordShape.round.layout, values: [.int(index)])))
 
             guard try bool(try read(condition, in: activation)) else {
                 guard let result = body.result else { return .null }
@@ -973,6 +972,16 @@ public struct Executor: Sendable {
                     return .unfit(reason)
                 }
 
+            // The place the link proved. A value settles to the shape the
+            // link laid out, so the field stands where its layout puts it and
+            // there is no name to find.
+            case let .field(position, _, _):
+                guard case let .record(record) = current else {
+                    return .unfit("\(walked().rendered) drills a field into \(current.type)")
+                }
+
+                read = .found(record.values[position])
+
             case let .key(key, _):
                 guard current.holdsFields else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
@@ -1055,7 +1064,7 @@ public struct Executor: Sendable {
     private func positioned(_ head: Int, _ steps: [Step], in activation: Activation) throws -> [PathSegment] {
         try steps.map { step in
             switch step {
-            case let .key(name, optional):
+            case let .field(_, name, optional), let .key(name, optional):
                 return .key(name, optional: optional)
 
             case let .index(index, optional):
@@ -1088,7 +1097,7 @@ public struct Executor: Sendable {
 
     private func spelled(_ step: Step, in activation: Activation) -> PathSegment {
         switch step {
-        case let .key(name, optional):
+        case let .field(_, name, optional), let .key(name, optional):
             return .key(name, optional: optional)
 
         case let .index(index, optional):

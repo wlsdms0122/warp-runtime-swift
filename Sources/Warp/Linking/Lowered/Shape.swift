@@ -177,6 +177,53 @@ indirect enum Shape: Sendable {
         }
     }
 
+    // Where a field stands in this shape, and what stands there. Nil where
+    // the link did not prove a layout: a dictionary, a value that arrived
+    // through `any`, or a shape a call still decides. A box is read through,
+    // since a path reads what the box holds.
+    //
+    // The place is the value's, not only the shape's. A value settling to a
+    // record shape is built on that shape's layout, so a field the link
+    // proved stands where the layout puts it.
+    func place(of field: Name, in table: ShapeTable) -> (position: Int, shape: Shape)? {
+        switch self {
+        case let .record(held):
+            guard let position = held.layout.position(of: field) else { return nil }
+
+            return (position, held.fields[position])
+
+        case let .named(row):
+            return table.shapes[row].place(of: field, in: table)
+
+        case let .variable(inner), let .inout(inner):
+            return inner.place(of: field, in: table)
+
+        default:
+            return nil
+        }
+    }
+
+    // What an element of this stands as, for a walk taking an index. Nil
+    // where the link proved no element shape.
+    func element(in table: ShapeTable) -> Shape? {
+        switch self {
+        case let .array(element):
+            return element
+
+        case .bytes:
+            return .byteElement
+
+        case let .named(row):
+            return table.shapes[row].element(in: table)
+
+        case let .variable(inner), let .inout(inner):
+            return inner.element(in: table)
+
+        default:
+            return nil
+        }
+    }
+
     // Whether two procedure shapes declare the same slots and the same answer.
     // What each requires of the value is beside that, so a join may keep the
     // slots while reading the two requirements together.

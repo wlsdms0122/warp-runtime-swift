@@ -607,7 +607,7 @@ extension Linker {
     }
 
     // MARK: - Private
-    private static let roundType = Shape.record(["index": .int])
+    private static let roundType = Shape.record(.round)
 
     // The segments a stopped walk hands back: as written, except that an index
     // reference is a path of its own and is judged wherever the outer walk

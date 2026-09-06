@@ -64,7 +64,9 @@ struct Lowering {
         var scope = Names()
 
         for slot in declared.slots {
-            scope.slots[slot.name] = slots.allocateParameter(slot.name)
+            let allocated = slots.allocateParameter(slot.name)
+            scope.slots[slot.name] = allocated
+            slots.hold(allocated, slot.shape)
         }
 
         let body = try lower(block, in: scope, on: slots, label: declared.label, at: place)
@@ -127,6 +129,11 @@ struct Lowering {
         private var variableSlots: [Name: Int] = [:]
         private var capturedSlots: [Name: Int] = [:]
 
+        // What the link proved stands in a slot, for the slots it proved
+        // anything about. A path reads its head here, so a field of a shape
+        // the link laid out is lowered to the place it stands in.
+        private var held: [Int: Shape] = [:]
+
         init(origin: Int, variables: [Name: Int], outer: (slots: Slots, names: Names)? = nil) {
             self.origin = origin
             self.variables = variables
@@ -139,6 +146,16 @@ struct Lowering {
             names.append(name)
 
             return names.count - 1
+        }
+
+        // A slot holds what the link proved, and holds nothing where it
+        // proved nothing.
+        func hold(_ slot: Int, _ shape: Shape?) {
+            held[slot] = shape
+        }
+
+        func shape(of slot: Int) -> Shape? {
+            held[slot]
         }
 
         func allocateParameter(_ name: Name) -> Int {
@@ -162,6 +179,7 @@ struct Lowering {
                 let slot = allocate(name)
                 capturedSlots[name] = slot
                 captures.append((taken, slot))
+                hold(slot, outer.slots.shape(of: taken))
 
                 return slot
             }
@@ -215,11 +233,20 @@ struct Lowering {
             let binding: Instruction.Binding?
 
             switch statement.binding {
+            // A name that says what it holds settles to it, so what stands in
+            // the slot is the declared shape. One that says nothing holds what
+            // the code it was given stands as.
             case let .constant(name, declared)?:
                 let slot = slots.allocate(name)
+                let settling = declared?.lowered(in: shapes)
                 scope.slots[name] = slot
-                binding = .bind(slot, settling: declared?.lowered(in: shapes))
+                slots.hold(slot, settling ?? shape(of: code, on: slots))
+                binding = .bind(slot, settling: settling)
 
+            // A box stands for what is in it now, and a write puts in what it
+            // was handed. So a box holds no proven shape: what the link laid
+            // out is what a value settled to, and only a name bound once
+            // settles.
             case let .variable(name, declared)?:
                 let slot = slots.allocate(name)
                 scope.slots[name] = slot
@@ -243,6 +270,49 @@ struct Lowering {
         }
 
         return instructions
+    }
+
+    // What lowered code stands as, for the readings the link can prove
+    // without judging anything: a record literal stands on the layout this
+    // walk made for it, a call on what its row answers, a cast on what it
+    // casts to, and a path on what it reaches. Nil everywhere else, which
+    // leaves the fields below it to be read by name.
+    private func shape(of code: Operation, on slots: Slots) -> Shape? {
+        switch code {
+        case let .record(held):
+            return .record(
+                RecordShape(
+                    layout: held.layout,
+                    fields: held.fields.map { field in shape(of: field, on: slots) ?? .any }
+                )
+            )
+
+        case let .local(slot, steps):
+            return steps.reduce(slots.shape(of: slot)) { reached, step in
+                switch step {
+                case let .field(_, name, _):
+                    return reached?.place(of: name, in: shapes)?.shape
+
+                case .index, .at:
+                    return reached?.element(in: shapes)
+
+                case let .word(row, _, _):
+                    return table[row].returns
+
+                case .key:
+                    return nil
+                }
+            }
+
+        case let .call(call):
+            return table[call.procedure].returns
+
+        case let .cast(_, shape, optional):
+            return optional ? nil : shape
+
+        default:
+            return nil
+        }
     }
 
     private func lower(
@@ -339,6 +409,7 @@ struct Lowering {
             var inner = scope
             let slot = slots.allocate(round)
             inner.slots[round] = slot
+            slots.hold(slot, .record(.round))
 
             let taking = try lower(condition, in: inner, on: slots, label: label, at: place)
             let start = slots.size
@@ -512,16 +583,33 @@ struct Lowering {
             throw unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
         }
 
+        // What stands where the walk is, so a field of a shape the link laid
+        // out is lowered to the place it stands in. It runs out as soon as the
+        // walk reaches something the link did not prove, and every step from
+        // there reads by name.
+        var reached = slots.shape(of: slot)
+
         let steps = try path.dropFirst().map { segment -> Step in
             switch segment {
             case let .key(name, optional):
-                return .key(name, optional: optional)
+                guard let place = reached?.place(of: name, in: shapes) else {
+                    reached = nil
+
+                    return .key(name, optional: optional)
+                }
+
+                reached = place.shape
+
+                return .field(place.position, name, optional: optional)
 
             case let .index(index, optional):
+                reached = reached?.element(in: shapes)
+
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
                 let (slot, steps) = try lower(inner, in: scope, on: slots, at: place)
+                reached = reached?.element(in: shapes)
 
                 return .at(slot, steps, optional: optional)
 
@@ -529,6 +617,8 @@ struct Lowering {
                 guard let row = words[name] else {
                     throw unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
                 }
+
+                reached = table[row].returns
 
                 return .word(row, name, optional: optional)
             }

@@ -32,6 +32,11 @@ struct RecordShape: Sendable, Equatable {
         self.fields = fields
     }
 
+    // What a loop binds each round. The link judges a round against it and
+    // the run builds each round on its layout, so the place the link lowers
+    // is the place the value puts the field at.
+    static let round = RecordShape(layout: Layout(name: nil, ordered: ["index"]), fields: [.int])
+
     // MARK: - Public
     subscript(field: Name) -> Shape? {
         layout.position(of: field).map { place in fields[place] }
