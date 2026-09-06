@@ -9,23 +9,23 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A cast is judged twice — once by the link, which sees two shapes and asks
+// A cast is judged twice. Once by the link, which sees two shapes and asks
 // whether any value is both, and once by the run, which sees the value that
 // actually arrived and asks whether it is the named shape. The two have to
-// agree, and only one of them can be wrong in a way nobody finds out about:
-// the link refusing a cast the run would have taken closes a door with no
-// value on either side of it to show for it.
+// agree, and only one of them can be wrong in a way nobody finds out about: the
+// link refusing a cast the run would have taken closes a door with no value on
+// either side of it to show for it.
 //
 // So the contract is one-directional. Wherever a value settles into both
 // shapes, the link must not call the pair impossible. The other way round is
-// deliberately free — `couldBothHold` refuses only what it can prove, and
+// deliberately free. `couldBothHold` refuses only what it can prove, and
 // everything it cannot read into is left to the run.
 //
 // This is the same shape of guard `holdsEveryByte` earned: two hand-written
 // answers to one question, held together by asking the judge. Every pair the
-// restatement got wrong — `dictionary` beside `record`, `int?` beside `string?`,
+// restatement got wrong (`dictionary` beside `record`, `int?` beside `string?`,
 // `bytes` beside `array<int>`, an int where a double is named, `int?` beside
-// `null` — is a witness this walk would have produced on its own.
+// `null`) is a witness this walk would have produced on its own.
 @Suite("The link calls impossible only what no value satisfies")
 struct CastAgreementTests {
     // MARK: - Property
@@ -95,9 +95,9 @@ struct CastAgreementTests {
     func theLinkNeverRefusesWhatARunWouldTake() {
         for mine in shapes {
             for theirs in shapes {
-                // The witness: one value both judges take. Where there is
-                // none, the link is free — it may still allow the pair, and
-                // leaving what it cannot prove to the run is the whole bias.
+                // The witness: one value both judges take. Where there is none,
+                // the link is free. It may still allow the pair, and leaving
+                // what it cannot prove to the run is the whole bias.
                 guard let witness = values.first(where: { value in
                     settles(mine, value) && settles(theirs, value)
                 }) else { continue }
@@ -112,7 +112,7 @@ struct CastAgreementTests {
 
     @Test("the question reads the same from either side")
     func theQuestionIsSymmetric() {
-        // Given — "could some value be both" names no side, so an answer that
+        // Given. "could some value be both" names no side, so an answer that
         // depended on which shape was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
         // side has one, which is exactly where an asymmetry would hide.
@@ -129,7 +129,7 @@ struct CastAgreementTests {
 
     @Test("two ranges with nothing between them are called impossible")
     func rangesThatCannotMeetAreRefused() {
-        // Given — the other direction of the contract, which the sweep above
+        // Given. The other direction of the contract, which the sweep above
         // cannot reach: it only checks pairs some value satisfies, and a pair
         // no value satisfies is exactly what this walk is for. The bounds are
         // the whole of what tells these apart, so a walk that drops them

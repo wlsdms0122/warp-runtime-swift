@@ -10,8 +10,8 @@ import Testing
 @testable import Warp
 
 // `${x.count}` works because `count` is a declaration, and so is anything else
-// that declares a receiver — which is the whole of what method syntax means here.
-// It is not reserved for native code.
+// that declares a receiver, which is the whole of what method syntax means
+// here. It is not reserved for native code.
 @Suite("A declaration may be sent to something")
 struct ReceiverTests {
     // MARK: - Property
@@ -97,7 +97,7 @@ struct ReceiverTests {
         // When
         let image = try linker.link([written] + Module.standard, entry: entryName)
 
-        // Then — one table, and what separates them is only how each is written
+        // Then. One table, and what separates them is only how each is written
         let shout = try #require(image["shout"])
         let count = try #require(image["std.collection.count"])
 
@@ -109,7 +109,7 @@ struct ReceiverTests {
 
     @Test("a call sends its receiver even where the parameter is required")
     func receiverSuppliesItsParameter() async throws {
-        // Given — the receiver is written on the other side of the dot, so the
+        // Given. The receiver is written on the other side of the dot, so the
         // linker must not read its parameter as one nobody supplied
         let sut = try Module(
             procedures: [
@@ -173,7 +173,7 @@ struct ReceiverTests {
         // When
         let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
 
-        // Then — `clean` computes; `dirty` reaches an effect, and everything
+        // Then. `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
         #expect(image["clean"]?.purity == .pure)
         #expect(image["dirty"]?.purity != .pure)
@@ -183,7 +183,7 @@ struct ReceiverTests {
 
     @Test("a body that sends a word is still something a path may reach")
     func aBodyThatSendsIsStillPure() throws {
-        // Given — purity is judged over the name a body wrote, and what that
+        // Given. Purity is judged over the name a body wrote, and what that
         // name means depends on where it was written. `label` sends `joined`,
         // which is pure, so `label` is pure and a path may reach it
         let label = Procedure(
@@ -218,9 +218,9 @@ struct ReceiverTests {
 
     @Test("a procedure someone wrote is reachable from a path")
     func writtenProcedureIsReachableFromAPath() async throws {
-        // Given — this is what unifying bought. `summarize` is a body, not
-        // native, and `${tasks.summarize}` reaches it because the link proved it
-        // answers without running.
+        // Given. This is what unifying bought. `summarize` is a body, not
+        // native, and `${tasks.summarize}` reaches it because the link proved
+        // it answers without running.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -271,7 +271,7 @@ struct ReceiverTests {
 
     @Test("a body that reaches an effect is not reachable from a path")
     func impureProcedureIsNotReachableFromAPath() throws {
-        // Given — the proof is what opens the path, so losing it closes it
+        // Given. The proof is what opens the path, so losing it closes it
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -329,7 +329,7 @@ struct ReceiverTests {
 
     @Test("a path to a body that reaches an effect is refused before any run")
     func aPathToAnImpureProcedureIsRefused() throws {
-        // Given — the same shape, reached
+        // Given. The same shape, reached
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -368,9 +368,9 @@ struct ReceiverTests {
 
     @Test("a word reached from a path is checked against the receiver it declared")
     func aPathChecksTheReceiver() async throws {
-        // Given — the receiver's declared type is what makes the dot a send:
-        // the link reads `array<any>`, finds no field there, and judges the
-        // word against the receiver it declared
+        // Given. The receiver's declared type is what makes the dot a send: the
+        // link reads `array<any>`, finds no field there, and judges the word
+        // against the receiver it declared
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -405,8 +405,8 @@ struct ReceiverTests {
 
     @Test("a dot on an undeclared shape reads data alone")
     func aDotOnAnyDoesNotReachAWord() async throws {
-        // Given — nothing is known about `any`, so nothing is rewritten: the
-        // dot stays a read, and a value without fields refuses it at run even
+        // Given. Nothing is known about `any`, so nothing is rewritten: the dot
+        // stays a read, and a value without fields refuses it at run even
         // though a word by that name exists. A word on an undeclared value is
         // reached by declaring the value.
         let sut = try Module(
@@ -488,10 +488,10 @@ struct ReceiverTests {
 
     @Test("a word that refuses mid-path says why, rather than reading as absence")
     func aRefusalInAPathIsNotAbsence() async throws {
-        // Given — `floored` takes a double and then finds no whole answer in
-        // it: a fraction that is not a number has nothing to floor. That is
-        // not the word declining the shape, so reporting nothing was there
-        // would report the one thing known to be false.
+        // Given. `floored` takes a double and then finds no whole answer in it:
+        // a fraction that is not a number has nothing to floor. That is not the
+        // word declining the shape, so reporting nothing was there would report
+        // the one thing known to be false.
         let sut = reference("x", "floored")
 
         // When / Then
@@ -509,7 +509,7 @@ struct ReceiverTests {
 
     @Test("a word that answers never is not something a path may reach")
     func neverIsNotDerivable() {
-        // Given — a walk decides on its own whether to send what it reaches, and
+        // Given. A walk decides on its own whether to send what it reaches, and
         // leaving is not a decision a walk gets to make quietly
         let sut = Module.control.procedures["std.control.abort"]
 

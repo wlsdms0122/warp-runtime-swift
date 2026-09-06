@@ -22,7 +22,7 @@ struct StandardTests {
     // MARK: - Test
     @Test("a bundle left out is a bundle whose names do not resolve")
     func aBundleLeftOutDoesNotResolve() throws {
-        // Given — a program that only counts, linked without the bundle that
+        // Given. A program that only counts, linked without the bundle that
         // declares counting
         let sut = try Module(
             procedures: [
@@ -50,7 +50,7 @@ struct StandardTests {
 
     @Test("a connective leaves the rest unasked once the answer is settled")
     func connectivesShortCircuit() async throws {
-        // Given — the later side divides by zero, which refuses when it is
+        // Given. The later side divides by zero, which refuses when it is
         // asked. `all` is settled by the first false, so it never is
         let sut = try Module(
             procedures: [
@@ -80,7 +80,7 @@ struct StandardTests {
 
     @Test("a word takes a procedure the author wrote and runs it")
     func aWalkTakesAProcedure() async throws {
-        // Given — map, filter and reduce are declarations rather than
+        // Given. Map, filter and reduce are declarations rather than
         // constructs. Nothing in the grammar knows they exist
         let doubling = Procedure(
             signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .int),
@@ -173,7 +173,7 @@ struct StandardTests {
 
     @Test("a walk declares what it hands over, and a body reads what it wants")
     func aWalkOffersRatherThanRequires() async throws {
-        // Given — `reduce` hands over `carried` and `item`. Counting only needs
+        // Given. `reduce` hands over `carried` and `item`. Counting only needs
         // the first, and declaring the second to leave it unread would be a
         // declaration the author never meant
         let counting = Procedure(
@@ -217,7 +217,7 @@ struct StandardTests {
 
     @Test("a walk refuses a procedure that reaches outside")
     func aWalkRefusesAnImpureProcedure() throws {
-        // Given — `map` declares `pure procedure`, so a body that shouts is
+        // Given. `map` declares `pure procedure`, so a body that shouts is
         // refused before any run rather than suspending inside a path
         let loud = Procedure(
             signature: Signature(parameters: ["item": Parameter(type: .string)]),
@@ -249,7 +249,7 @@ struct StandardTests {
 
     @Test("a divisor of zero refuses rather than taking the process")
     func divisionByZeroRefuses() async throws {
-        // Given — both are Swift traps if the answer is taken rather than
+        // Given. Both are Swift traps if the answer is taken rather than
         // judged, and each arrives at run time
         let asks: [(Name, Value, Value)] = [
             ("std.math.remainder", .int(5), .int(0)),
@@ -279,9 +279,8 @@ struct StandardTests {
 
     @Test("arithmetic off the word's edge is a fault, not a wrap")
     func wholeArithmeticOverflowFaults() async throws {
-        // Given — each of these falls off the edge of the machine word, and
-        // the language stops rather than answering a number the digits do not
-        // say
+        // Given. Each of these falls off the edge of the machine word, and the
+        // language stops rather than answering a number the digits do not say
         let asks: [(Name, Value, Value)] = [
             ("std.math.times", .int(Int.max), .int(2)),
             ("std.math.plus", .int(Int.max), .int(1)),
@@ -311,13 +310,13 @@ struct StandardTests {
         }
 
         // `Int.min remainder -1` trips the hardware's division, but the
-        // remainder itself is 0 — an answer the word holds, so it answers.
+        // remainder itself is 0. An answer the word holds, so it answers.
         #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("a quotient is a fraction even between wholes")
     func aQuotientIsAFraction() async throws {
-        // Given — dividedBy never answers an int; `floored` is where a whole
+        // Given. DividedBy never answers an int; `floored` is where a whole
         // division's whole half is read back
         func divided(_ left: Int, _ right: Int) throws -> Module {
             try Module(
@@ -339,10 +338,10 @@ struct StandardTests {
         #expect(try await run(divided(7, 2)) == .double(3.5))
         #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
 
-        // The quotient is binary64's own: each whole operand widens first —
-        // the same widening every mixed operation performs — and the division
-        // rounds once more. 2^53 + 1 widens to 2^53, and the answer is the
-        // widened pair's, bit for bit.
+        // The quotient is binary64's own: each whole operand widens first (the
+        // same widening every mixed operation performs) and the division rounds
+        // once more. 2^53 + 1 widens to 2^53, and the answer is the widened
+        // pair's, bit for bit.
         #expect(
             try await run(divided(9_007_199_254_740_993, 3))
                 == .double(9_007_199_254_740_992.0 / 3.0)
@@ -365,9 +364,9 @@ struct StandardTests {
 
     @Test("a codec keeps its own contract on the encoding name")
     func aCodecReadsItsEncodingArgument() throws {
-        // Given — the declaration's oneOf says the same names early; this is
-        // the implementation refusing a name it has no mapping for, so a
-        // drifted declaration cannot make it answer in the wrong encoding
+        // Given. The declaration's oneOf says the same names early; this is the
+        // implementation refusing a name it has no mapping for, so a drifted
+        // declaration cannot make it answer in the wrong encoding
         let sut = CodecQuery(.decoded)
 
         // When / Then
@@ -390,8 +389,8 @@ struct StandardTests {
 
     @Test("text spells a whole number the same way at every size and depth")
     func textSpellsWholeNumbersUniformly() async throws {
-        // Given — the quotes must not change with the value's size: a number
-        // is a number wherever it sits, and only text wears quotes
+        // Given. The quotes must not change with the value's size: a number is
+        // a number wherever it sits, and only text wears quotes
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -417,10 +416,10 @@ struct StandardTests {
 
     @Test("rounding and magnitude stop at the word's edge")
     func roundingPastTheWordFaults() async throws {
-        // Given — a fraction whose whole part is past the machine word has no
+        // Given. A fraction whose whole part is past the machine word has no
         // int to answer, and the word's own minimum has no magnitude the word
-        // holds. The refusal names the overflow, not a missing whole answer —
-        // the two reasons are different facts.
+        // holds. The refusal names the overflow, not a missing whole answer.
+        // The two reasons are different facts.
         let asks: [(Name, Value)] = [
             ("std.math.floored", .double(1e30)),
             ("std.math.rounded", .double(1e30)),
@@ -451,7 +450,7 @@ struct StandardTests {
 
     @Test("a whole division reads both halves")
     func wholeDivisionIsWritable() async throws {
-        // Given — `dividedBy` always answers a double, so a whole division is
+        // Given. `dividedBy` always answers a double, so a whole division is
         // that floored, and what it left over is `remainder`
         let sut = try Module(
             procedures: [
@@ -493,7 +492,7 @@ struct StandardTests {
 
     @Test("an array grows and shrinks, which is a length the text did not write")
     func anArrayIsBuiltRatherThanSpelled() async throws {
-        // Given — a body walking a grid: the head moves and wraps, the trail
+        // Given. A body walking a grid: the head moves and wraps, the trail
         // takes it on and lets its own end go. Nothing here is a length the
         // author could have counted, and `each` cannot write it because `each`
         // answers one element for every element it was given.
@@ -540,7 +539,7 @@ struct StandardTests {
             ]
         )
 
-        // When — the head sits at the last column, so stepping wraps it to 0
+        // When. The head sits at the last column, so stepping wraps it to 0
         let answer = try await run(
             sut,
             arguments: [
@@ -678,7 +677,7 @@ struct StandardTests {
 
     @Test("ordering reads as a condition, which is what it was missing")
     func comparisonReadsAsACondition() async throws {
-        // Given — `{ of: x, lessThan: y }` is the condition grammar sending a
+        // Given. `{ of: x, lessThan: y }` is the condition grammar sending a
         // word, so ordering needed no grammar of its own
         let sut = try Module(
             procedures: [
@@ -801,7 +800,7 @@ struct StandardTests {
 
     @Test("what a word answers is declared, so the link reads it")
     func standardAnswersAreDeclared() throws {
-        // Given — `count` declares that it answers an int, and `split` declares
+        // Given. `count` declares that it answers an int, and `split` declares
         // that it is sent a string
         let sut = try Module(
             procedures: [
@@ -834,9 +833,9 @@ struct StandardTests {
 
     @Test("bytes do not order")
     func bytesDoNotOrder() async throws {
-        // Given — bytes are an opaque value: equal or not, counted, and
-        // nothing else. `Comparable` does not admit them, and a literal is a
-        // reading the link can judge, so the refusal lands before the run.
+        // Given. Bytes are an opaque value: equal or not, counted, and nothing
+        // else. `Comparable` does not admit them, and a literal is a reading
+        // the link can judge, so the refusal lands before the run.
         let sut = Warp.Expression.dispatch(
             Dispatch(
                 receiver: .literal(.bytes([0x01])),
@@ -855,7 +854,7 @@ struct StandardTests {
 
     @Test("a walk hands a null element over as the element it is")
     func aWalkCarriesNullElements() async throws {
-        // Given — `map` offers each element to the procedure it was given, and
+        // Given. `map` offers each element to the procedure it was given, and
         // an element that is null was still an element of the collection
         let sut = Warp.Expression.dispatch(
             Dispatch(
@@ -887,9 +886,9 @@ struct StandardTests {
 
     @Test("two spellings of one text are one value")
     func stringsCompareAsAPersonReads() async throws {
-        // Given — Unicode writes `é` two ways, and the two are different bytes.
+        // Given. Unicode writes `é` two ways, and the two are different bytes.
         // A name is held to one spelling (normal form C), but a string value
-        // arrives from the world spelled however the world spelled it — so
+        // arrives from the world spelled however the world spelled it, so
         // equality reads the text the way a person does, not the bytes.
         let sut = Warp.Expression.dispatch(
             Dispatch(
@@ -911,7 +910,7 @@ struct StandardTests {
 
     @Test("a whole and a fraction meet exactly at every size")
     func wholeAndFractionMeetExactly() throws {
-        // Given — 2^53 + 1 rounds to 2^53 in binary64, so a judgment that
+        // Given. 2^53 + 1 rounds to 2^53 in binary64, so a judgment that
         // converts would call two different worths the same. Worth does not
         // follow the rounding, in any consumer of the one order.
         let above = Value.int(9007199254740993)
@@ -927,7 +926,7 @@ struct StandardTests {
         #expect(Value.order(.int(.min), .double(-0x1p63)) == .orderedSame)
         #expect(Value.order(.int(0), .double(.nan)) == nil)
 
-        // min and max pick between the values as they arrived — the int wins
+        // min and max pick between the values as they arrived. The int wins
         // here, and no conversion flattens it into a tie.
         let picked = try ComparisonQuery(.max).evaluate(
             Question(receiver: above, arguments: ["value": below])
@@ -938,9 +937,9 @@ struct StandardTests {
 
     @Test("what orders with nothing is not sorted around")
     func aFractionThatIsNotANumberRefusesToSort() {
-        // Given — NaN answers no comparison, so any placement of it would be
-        // an order sorted could not answer for; refused, the way a mixed
-        // array is, rather than placed arbitrarily
+        // Given. NaN answers no comparison, so any placement of it would be an
+        // order sorted could not answer for; refused, the way a mixed array is,
+        // rather than placed arbitrarily
         #expect {
             try BuildingQuery(.sorted).evaluate(
                 Question(receiver: .array([.double(1.5), .double(.nan)]))
@@ -957,7 +956,7 @@ struct StandardTests {
         // Given
         let sut = refusing(interpolated(literal("no: "), spelling(reference("reason"))))
 
-        // When / Then — nameless and last, with no result: nothing may be
+        // When / Then. Nameless and last, with no result: nothing may be
         // written after what never finishes, so the procedure ends with it
         await #expect {
             try await run(
@@ -974,7 +973,7 @@ struct StandardTests {
 
     @Test("a refusal is caught by an attempt around it")
     func abortIsRecoverable() async throws {
-        // Given — `RecoverableFailure` is what separates the world refusing from
+        // Given. `RecoverableFailure` is what separates the world refusing from
         // the author being wrong, and a refusal is the first kind
         let sut = Warp.Expression.attempt(
             Block(body: [Statement(expression: refusing(literal("stopped")))]),
@@ -994,7 +993,7 @@ struct StandardTests {
 
     @Test("an arm that refuses does not decide what the arm that stays holds")
     func refusalDoesNotWidenTheOtherArm() throws {
-        // Given — `returns: never` is what keeps the branch a string. Were it
+        // Given. `returns: never` is what keeps the branch a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
             procedures: [
@@ -1026,7 +1025,7 @@ struct StandardTests {
             ]
         )
 
-        // When / Then — the branch holds a string, and `wants` declares an int
+        // When / Then. The branch holds a string, and `wants` declares an int
         #expect(throws: LinkError.self) {
             try linker.link([sut] + Module.standard, entry: entryName)
         }

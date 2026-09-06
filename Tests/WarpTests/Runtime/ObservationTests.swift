@@ -55,7 +55,7 @@ struct ObservationTests {
 
     @Test("a statement inside a body is announced under the place it ran in")
     func nestedStatementsAreAnnounced() async throws {
-        // Given — observation follows the run, not the top level of the text
+        // Given. Observation follows the run, not the top level of the text
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
@@ -88,7 +88,7 @@ struct ObservationTests {
 
     @Test("the same statement run twice is announced as two different places")
     func roundsAreToldApart() async throws {
-        // Given — the text says `step` once, and the run reaches it once a round
+        // Given. The text says `step` once, and the run reaches it once a round
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
@@ -164,7 +164,7 @@ struct ObservationTests {
 
     @Test("a call into a body keeps the statement that called it")
     func aCallPushesRatherThanReplaces() async throws {
-        // Given — a place is how the run got here, not where it ended up
+        // Given. A place is how the run got here, not where it ended up
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
@@ -194,14 +194,14 @@ struct ObservationTests {
 
     @Test("a refusal carries the place it happened, not the one it passed through")
     func aRefusalCarriesItsInnermostPlace() async throws {
-        // Given — the mistake is inside the body, two statements deep
+        // Given. The mistake is inside the body, two statements deep
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
                         // Nameless on both sides. `helper` declares no answer
                         // and its body never finishes, so the link reads the
-                        // call as `never` too — and a statement that never
+                        // call as `never` too, and a statement that never
                         // finishes takes no name, so the place is its position.
                         Statement(
                             expression: .dispatch(Dispatch(selector: "helper"))

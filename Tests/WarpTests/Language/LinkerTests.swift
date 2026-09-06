@@ -20,7 +20,7 @@ struct LinkerTests {
     // MARK: - Test
     @Test("a constant that cannot be settled says why, not that it is a cycle")
     func aRefusedConstantSaysWhy() throws {
-        // Given — `greeting` names nothing that is missing, so the only reason
+        // Given. `greeting` names nothing that is missing, so the only reason
         // it fails is its own: `text` refuses to spell nothing
         let sut = try Module(
             constants: [
@@ -43,8 +43,8 @@ struct LinkerTests {
 
     @Test("a default the parameter itself would refuse is refused at link")
     func aDefaultOutsideTheTypeIsRefused() throws {
-        // Given — the fallback only ever runs for the one call that leans on
-        // it, which is exactly the call that could not see this coming
+        // Given. The fallback only ever runs for the one call that leans on it,
+        // which is exactly the call that could not see this coming
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: []),
@@ -98,8 +98,9 @@ struct LinkerTests {
 
     @Test("an omitted argument arrives as the settled default")
     func aDefaultArrivesSettled() async throws {
-        // Given — the fallback walks the same gate an argument does, so a whole
-        // number defaulting a fraction slot arrives as the fraction it settles to
+        // Given. The fallback walks the same gate an argument does, so a whole
+        // number defaulting a fraction slot arrives as the fraction it settles
+        // to
         let answer = try await answer(
             of: [],
             result: reference("count"),
@@ -108,13 +109,14 @@ struct LinkerTests {
             )
         )
 
-        // Then — Swift-level equality is kind-strict, so this is the settled kind
+        // Then. Swift-level equality is kind-strict, so this is the settled
+        // kind
         #expect(answer == .double(1))
     }
 
     @Test("a oneOf no candidate of which fits the type is refused at link")
     func anUnsatisfiableOneOfIsRefused() throws {
-        // Given — admitting nothing is a fact about the type and the set
+        // Given. Admitting nothing is a fact about the type and the set
         // together, not about the set being empty
         let sut = try Module(
             procedures: [
@@ -138,8 +140,8 @@ struct LinkerTests {
 
     @Test("a null default on a type that does not admit null is refused at link")
     func aNullDefaultOutsideTheTypeIsRefused() throws {
-        // Given — the explicitly-null default is the value the body receives,
-        // so the declaration must admit it like any other value
+        // Given. The explicitly-null default is the value the body receives, so
+        // the declaration must admit it like any other value
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: []),
@@ -162,7 +164,7 @@ struct LinkerTests {
 
     @Test("a parameter nested in a procedure type is judged like a top-level one")
     func aNestedParameterDeclarationIsJudged() throws {
-        // Given — the declaration facts are the same wherever the parameter is
+        // Given. The declaration facts are the same wherever the parameter is
         // written, so the judgment rides the same recursion that resolves the
         // nested type names
         let sut = try Module(
@@ -198,7 +200,7 @@ struct LinkerTests {
 
     @Test("a oneOf that admits nothing is refused at link")
     func anEmptyOneOfIsRefused() throws {
-        // Given — no call could ever fit it, so the declaration is the defect
+        // Given. No call could ever fit it, so the declaration is the defect
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: []),
@@ -221,7 +223,7 @@ struct LinkerTests {
 
     @Test("constants settle in the order they read each other, however deep")
     func constantsSettleInReadingOrder() async throws {
-        // Given — a chain written so that alphabetical order is the reverse of
+        // Given. A chain written so that alphabetical order is the reverse of
         // reading order, and long enough that settling whatever can be settled
         // and going round again would take more than one pass. What each one
         // reads is settled before it because the order says so, not because
@@ -256,10 +258,10 @@ struct LinkerTests {
 
     @Test("a closure constant reads a constant beside it whatever the two are called")
     func aClosureConstantCapturesItsSiblings() async throws {
-        // Given — making a closure freezes the scope it was made in, so a
+        // Given. Making a closure freezes the scope it was made in, so a
         // sibling its body reads has to be settled by then. Nothing in the body
         // runs while the constants settle, which is what makes it look like no
-        // dependency at all — and read that way, what the closure captures is
+        // dependency at all, and read that way, what the closure captures is
         // whatever happened to be settled when its turn came round.
         //
         // Both spellings of one program, differing only in whether the closure
@@ -294,7 +296,7 @@ struct LinkerTests {
 
     @Test("a closure a constant holds may not introduce a sibling's name")
     func aClosureConstantMayNotShadowASibling() async throws {
-        // Given — the rule a body is held to at load, met here from the caller's
+        // Given. The rule a body is held to at load, met here from the caller's
         // side. Neither shape links, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
         // place.
@@ -317,7 +319,7 @@ struct LinkerTests {
             )
         }
 
-        // When / Then — the two ways a closure introduces a name of its own
+        // When / Then. The two ways a closure introduces a name of its own
         for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
             await #expect(throws: ValidationError.self) {
                 try await run(module(introducing: introduced))
@@ -327,7 +329,7 @@ struct LinkerTests {
 
     @Test("a closure reading a constant from inside a block still has it")
     func aClosureReadsASiblingFromInsideABlock() async throws {
-        // Given — how deep in the closure the name is read makes no difference
+        // Given. How deep in the closure the name is read makes no difference
         // to when it has to be settled: the capture happens once, when the
         // closure is made. The spelling puts the closure first in name order,
         // which is the order it would settle in if nothing said otherwise.
@@ -363,7 +365,7 @@ struct LinkerTests {
 
     @Test("a closure a constant holds inside a record reads the constants beside it")
     func aClosureInsideARecordCapturesItsSiblings() async throws {
-        // Given — what captures is the closure and not the constant holding it,
+        // Given. What captures is the closure and not the constant holding it,
         // so a closure nested in a record has the same demand on the order as
         // one written on its own.
         let sut = try Module(
@@ -397,7 +399,7 @@ struct LinkerTests {
 
     @Test("a constant may reach a word the same way a body does")
     func aConstantReachesAWord() async throws {
-        // Given — folding happens after the words are known, so a constant that
+        // Given. Folding happens after the words are known, so a constant that
         // interpolates is a constant that sends
         let sut = try Module(
             constants: [
@@ -424,7 +426,7 @@ struct LinkerTests {
 
     @Test("a call on a path this run would never take is still resolved")
     func unreachedCallIsLinked() throws {
-        // Given — the else arm cannot be taken with this input, and the warrant
+        // Given. The else arm cannot be taken with this input, and the warrant
         // for checking it anyway is compilation: unreached code still compiles
         let sut = try Module(
             procedures: [
@@ -483,7 +485,7 @@ struct LinkerTests {
 
     @Test("resolution follows the callee's own calls")
     func linkingIsTransitive() throws {
-        // Given — `caller` names nothing missing; `middle` does
+        // Given. `caller` names nothing missing; `middle` does
         let sut = try Module(
             procedures: [
                 "caller": Procedure(
@@ -509,7 +511,7 @@ struct LinkerTests {
 
     @Test("names resolve across every module in the link, flat")
     func symbolsResolveAcrossModules() throws {
-        // Given — no module says anything about the others; what to link is the
+        // Given. No module says anything about the others; what to link is the
         // caller's statement and joining the names up is the linker's work
         let caller = try Module(
             procedures: [
@@ -551,8 +553,8 @@ struct LinkerTests {
 
     @Test("a module left out of the link is a module that does not exist")
     func omittedModuleIsUnresolved() throws {
-        // Given — the set is the whole world, so leaving one out is not a
-        // lookup that fails later but a name nothing declares
+        // Given. The set is the whole world, so leaving one out is not a lookup
+        // that fails later but a name nothing declares
         let caller = try Module(
             procedures: [
                 "caller": Procedure(
@@ -585,7 +587,7 @@ struct LinkerTests {
 
     @Test("two modules declaring one name are refused")
     func duplicateSymbolIsRefused() throws {
-        // Given — one flat namespace is what taking the whole world at once
+        // Given. One flat namespace is what taking the whole world at once
         // costs, and two declarations of a name have no way to be told apart
         let left = try Module(
             procedures: [
@@ -636,7 +638,7 @@ struct LinkerTests {
 
     @Test("any declaration can be the entry")
     func anyProcedureCanBeTheEntry() async throws {
-        // Given — nothing marks one of them, so which runs is this argument
+        // Given. Nothing marks one of them, so which runs is this argument
         let sut = try Module(
             procedures: [
                 "first": Procedure(
@@ -757,7 +759,7 @@ struct LinkerTests {
 
     @Test("an argument named rather than written is judged by what the name holds")
     func referenceArgumentIsJudged() throws {
-        // Given — the type is wrong, and both sides said so in their own text:
+        // Given. The type is wrong, and both sides said so in their own text:
         // `text` was declared a string and `base` is declared an int
         let sut = try Module(
             procedures: [
@@ -796,11 +798,11 @@ struct LinkerTests {
 
     @Test("what no body settles is not something the link can be wrong about")
     func anAnswerNothingSettlesIsNotJudged() throws {
-        // Given — `held` comes back from a call that declares no answer, and
+        // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
-        // from its own is not one the text states, so nothing is known about
-        // it and nothing is refused. That is the bound on the promise:
-        // inference answers where the text settles and `any` everywhere else.
+        // from its own is not one the text states, so nothing is known about it
+        // and nothing is refused. That is the bound on the promise: inference
+        // answers where the text settles and `any` everywhere else.
         let sut = try Module(
             procedures: [
                 "callee": Procedure(
@@ -837,10 +839,10 @@ struct LinkerTests {
 
     @Test("a body that settles an answer is held to it, declared or not")
     func anAnswerReadOffABodyIsJudged() throws {
-        // Given — the same shape, with a body whose answer the text does
-        // settle: a body with no result hands back null, and null is not a
-        // whole number. What the declaration says stays what it says; what the
-        // link reads a call as is what the body hands back.
+        // Given. The same shape, with a body whose answer the text does settle:
+        // a body with no result hands back null, and null is not a whole
+        // number. What the declaration says stays what it says; what the link
+        // reads a call as is what the body hands back.
         let sut = try Module(
             procedures: [
                 "callee": Procedure(
@@ -923,8 +925,8 @@ struct LinkerTests {
 
     @Test("a dotted spelling resolves beside the full link")
     func aDottedSpellingResolvesBesideTheFullLink() throws {
-        // Given — `std.concurrent.all` is sent beside every standard bundle,
-        // and its spelling names one declaration among all of them
+        // Given. `std.concurrent.all` is sent beside every standard bundle, and
+        // its spelling names one declaration among all of them
         let sut = try Module(
             procedures: [
                 "caller": Procedure(

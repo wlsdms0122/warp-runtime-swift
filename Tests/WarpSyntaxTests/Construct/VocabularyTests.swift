@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 import WarpStandard
 
-// Vocabulary is modules — not a second container beside them with its own
+// Vocabulary is modules, not a second container beside them with its own
 // registration, namespace and lookup order. These are the facts that follow.
 @Suite("Vocabulary is modules")
 struct VocabularyTests {
@@ -22,7 +22,7 @@ struct VocabularyTests {
     // MARK: - Test
     @Test("a word is a declaration, so a module can add one")
     func moduleAddsWords() async throws {
-        // Given — `count` and `contains` are declarations, not language
+        // Given. `count` and `contains` are declarations, not language
         // structure; anyone adds their own the same way
         let extra = try Module(
             procedures: [
@@ -75,7 +75,7 @@ struct VocabularyTests {
 
     @Test("a word left out of the link is a word that does not exist")
     func omittedVocabularyDoesNotResolve() throws {
-        // Given — nothing is privileged, so the standard module is a file like
+        // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
         let sut = try loader.loadProcedure([
             "parameters": ["names": "array<string>"],
@@ -93,7 +93,7 @@ struct VocabularyTests {
 
     @Test("two modules declaring one path word is refused, because a path names no module")
     func ambiguousDerivationRefused() throws {
-        // Given — `${x.count}` writes no module, so there is no spelling that
+        // Given. `${x.count}` writes no module, so there is no spelling that
         // would tell two of them apart
         let rival = try Module(
             procedures: [
@@ -117,7 +117,7 @@ struct VocabularyTests {
 
     @Test("a claimed construct key is never silently replaced")
     func claimedConstructKeyRejected() {
-        // Given / When / Then — nobody may silently replace `loop`
+        // Given / When / Then. Nobody may silently replace `loop`
         #expect(throws: ValidationError.self) {
             try ConstructRegistry.standard.registering(LoopForm.self)
         }

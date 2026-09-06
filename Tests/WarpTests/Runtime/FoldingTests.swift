@@ -47,7 +47,7 @@ struct FoldingTests {
 
     @Test("a null binding inside format is unfit")
     func nullBindingInFormatThrowsUnfit() {
-        // Given — interpolating a name means the author assumed a value exists
+        // Given. Interpolating a name means the author assumed a value exists
         let reference = interpolated(literal("amount="), spelling(reference("maybe")))
 
         // When / Then
@@ -58,7 +58,7 @@ struct FoldingTests {
 
     @Test("a field nobody set reads as null where the author marked it")
     func absentPathReadsAsNull() throws {
-        // Given — the head of every reference is checked at load, so what is
+        // Given. The head of every reference is checked at load, so what is
         // left to be absent at run time is a field nobody set
         let reference = Expression.reference([.key("record"), .key("gone", optional: true)])
 
@@ -106,7 +106,7 @@ struct FoldingTests {
 
     @Test("in a closed scope a binding named after an ambient head is just a binding")
     func closedScopeServesBindingNamedAfterAmbientHead() throws {
-        // Given — a closed surface has no reserved heads: a binding named `run`
+        // Given. A closed surface has no reserved heads: a binding named `run`
         // is just a binding, not the ambient namespace of that name
         let reference = interpolated(literal("who="), spelling(reference("count")))
 
@@ -119,7 +119,7 @@ struct FoldingTests {
 
     @Test("a quoted payload passes verbatim, unevaluated")
     func quotedPayloadPassesVerbatim() throws {
-        // Given — the payload is data: a ref-shaped record inside stays a record
+        // Given. The payload is data: a ref-shaped record inside stays a record
         let reference = Expression.literal(.dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
@@ -128,7 +128,7 @@ struct FoldingTests {
         // When
         let value = try sut.read(reference)
 
-        // Then — nothing evaluated, nothing rendered
+        // Then. Nothing evaluated, nothing rendered
         #expect(value == .dictionary([
             "ref": .string("count"),
             "note": .string("${count}")

@@ -22,7 +22,8 @@ struct ClosureNotationTests {
     // MARK: - Test
     @Test("an author writes a construct that takes a body")
     func authorWrittenControlStructure() async throws {
-        // Given — `twice` is a procedure, not a native word and not a language case
+        // Given. `twice` is a procedure, not a native word and not a language
+        // case
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
@@ -175,7 +176,7 @@ struct ClosureNotationTests {
 
     @Test("a slot that declares what it wants refuses a closure that does not fit")
     func closureIsCheckedAgainstItsSlot() throws {
-        // Given — `twice` says the body it takes answers a string, and the
+        // Given. `twice` says the body it takes answers a string, and the
         // closure written at the call site says it answers an int
         let fixture: Value = [
             "procedures": [

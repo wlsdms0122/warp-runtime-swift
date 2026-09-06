@@ -23,8 +23,8 @@ struct DeclaredSpellingTests {
     // MARK: - Test
     @Test("a type name is its declared spelling, in the declaring module too")
     func aTypeNameIsItsQualifiedSpelling() async throws {
-        // Given — `store` declares `Task`, and both `store` and the entry
-        // module mention it as `store.Task`
+        // Given. `store` declares `Task`, and both `store` and the entry module
+        // mention it as `store.Task`
         let store = try Module(
             types: ["store.Task": .record(["id": .string])],
             procedures: [
@@ -54,15 +54,16 @@ struct DeclaredSpellingTests {
         // When
         let image = try linker.link([sut, store] + Module.standard, entry: entryName)
 
-        // Then — the declaration is under the declared spelling alone
+        // Then. The declaration is under the declared spelling alone
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
         #expect(image.types.resolve("Task") == nil)
     }
 
     @Test("a module names its own type by its declared spelling")
     func ownTypeIsNamedByItsSpelling() async throws {
-        // Given — two modules declare a `Limit`, and `mine` mentions its own as
-        // `mine.Limit` from inside: an int, where the other module's is a string
+        // Given. Two modules declare a `Limit`, and `mine` mentions its own as
+        // `mine.Limit` from inside: an int, where the other module's is a
+        // string
         let mine = try Module(
             types: ["mine.Limit": .int],
             procedures: [
@@ -80,7 +81,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then — `mine.entry` answers an int, which `mine.Limit` admits
+        // When / Then. `mine.entry` answers an int, which `mine.Limit` admits
         let answer = try await run([mine, theirs], entry: try Name("mine.\(entryName)"))
 
         #expect(answer == .int(3))
@@ -88,7 +89,7 @@ struct DeclaredSpellingTests {
 
     @Test("a bare name is not a spelling of any dotted declaration")
     func aBareNameSpellsNoDottedDeclaration() throws {
-        // Given — two modules declare `one.Limit` and `two.Limit`, and a third
+        // Given. Two modules declare `one.Limit` and `two.Limit`, and a third
         // mentions `Limit`, which neither of those spellings is
         let one = try Module(
             types: ["one.Limit": .int],
@@ -123,7 +124,7 @@ struct DeclaredSpellingTests {
 
     @Test("the dotted spelling says which, where the bare one cannot")
     func theDottedSpellingResolvesTheTie() async throws {
-        // Given — the same link, with the mention spelled out
+        // Given. The same link, with the mention spelled out
         let one = try Module(
             types: ["one.Limit": .int],
             procedures: [
@@ -154,7 +155,7 @@ struct DeclaredSpellingTests {
 
     @Test("two modules declaring one name refuse")
     func oneNameDeclaredTwiceRefuses() throws {
-        // Given — two modules declare one spelling, which collide the way two
+        // Given. Two modules declare one spelling, which collide the way two
         // `.c` files' symbols do
         let one = try Module(
             types: ["Limit": .int],
@@ -179,7 +180,7 @@ struct DeclaredSpellingTests {
 
     @Test("a constraint is named by its declared spelling")
     func aConstraintIsNamedByItsSpelling() async throws {
-        // Given — `std` declares `Comparable`, and a document-shaped module
+        // Given. `std` declares `Comparable`, and a document-shaped module
         // bounds its own parameter with that spelling, `std.Comparable`
         let sut = try Module(
             procedures: [
@@ -212,8 +213,8 @@ struct DeclaredSpellingTests {
 
     @Test("sorting what Comparable does not admit refuses at the link")
     func sortingTheUnorderableRefuses() throws {
-        // Given — `sorted` is bounded by the shared ground's `Comparable`,
-        // and booleans are a reading the link can see
+        // Given. `sorted` is bounded by the shared ground's `Comparable`, and
+        // booleans are a reading the link can see
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -237,8 +238,8 @@ struct DeclaredSpellingTests {
 
     @Test("a bare spelling names only the bare declaration")
     func aBareSpellingNamesTheBareDeclaration() async throws {
-        // Given — one module declares `Limit`, another declares `one.Limit`,
-        // and a third mentions `Limit`: the first declaration's spelling, and
+        // Given. One module declares `Limit`, another declares `one.Limit`, and
+        // a third mentions `Limit`: the first declaration's spelling, and
         // nothing else's
         let shared = try Module(
             types: ["Limit": .int],
@@ -262,7 +263,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then — an int answers, which only the bare `Limit` admits
+        // When / Then. An int answers, which only the bare `Limit` admits
         let answer = try await run([sut, shared, dotted], vocabulary: [])
 
         #expect(answer == .int(3))
@@ -270,8 +271,8 @@ struct DeclaredSpellingTests {
 
     @Test("min without a receiver refuses in its own words")
     func minWithoutAReceiverRefusesInItsOwnWords() async throws {
-        // Given — the receiver is a reference that reads null, which a word
-        // is sent as nothing
+        // Given. The receiver is a reference that reads null, which a word is
+        // sent as nothing
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -288,8 +289,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then — the refusal is the ordering word's own, not
-        // arithmetic's
+        // When / Then. The refusal is the ordering word's own, not arithmetic's
         await #expect {
             try await run(sut)
         } throws: { error in
@@ -299,8 +299,7 @@ struct DeclaredSpellingTests {
 
     @Test("a name declared as a type and a constraint refuses in either order")
     func aCrossSpaceCollisionRefusesInEitherOrder() throws {
-        // Given — one module declares `Limit` as a constraint, another as a
-        // type
+        // Given. One module declares `Limit` as a constraint, another as a type
         let membership = try Module(
             constraints: ["Limit": [.int]],
             procedures: [
@@ -314,8 +313,8 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then — the link sees its whole world at once, so the order
-        // the caller listed the modules cannot change the conclusion
+        // When / Then. The link sees its whole world at once, so the order the
+        // caller listed the modules cannot change the conclusion
         for modules in [[membership, shape], [shape, membership]] {
             #expect {
                 try linker.link(modules, entry: entryName)
@@ -327,8 +326,8 @@ struct DeclaredSpellingTests {
 
     @Test("a document's bare constraint does not capture what std meant")
     func aBareDeclarationDoesNotCaptureTheStandardName() async throws {
-        // Given — a module declares its own `Numeric`, admitting text, and
-        // still leans on std.math for arithmetic
+        // Given. A module declares its own `Numeric`, admitting text, and still
+        // leans on std.math for arithmetic
         let sut = try Module(
             constraints: ["Numeric": [.string]],
             procedures: [
@@ -356,7 +355,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then — the module's own bound reads its own declaration, and
+        // When / Then. The module's own bound reads its own declaration, and
         // text passes it
         let answer = try await run(sut)
 
@@ -388,8 +387,8 @@ struct DeclaredSpellingTests {
 
     @Test("min and max order the way the comparison words do")
     func minAndMaxOrderLikeTheComparisons() async throws {
-        // Given — strings order lexicographically under Comparable, which
-        // bounds `min` the way it bounds `lessThan`
+        // Given. Strings order lexicographically under Comparable, which bounds
+        // `min` the way it bounds `lessThan`
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -412,7 +411,7 @@ struct DeclaredSpellingTests {
 
     @Test("a bundle mentioning the shared constraints needs std in the link")
     func aBundleNeedsTheSharedGround() throws {
-        // Given — collection's `sorted` mentions `Comparable`, which only the
+        // Given. Collection's `sorted` mentions `Comparable`, which only the
         // foundation module declares
         let sut = try Module(
             procedures: [
@@ -427,7 +426,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then — without the foundation the constraint name resolves to
+        // When / Then, without the foundation the constraint name resolves to
         // nothing, and the declaration that mentions it is refused
         #expect {
             try linker.link([sut, .collection], entry: entryName)

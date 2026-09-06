@@ -49,13 +49,13 @@ struct GroupTests {
         // When
         let outputs = try await run(spec, arguments: ["who": .string("spec")])
 
-        // Then — inner bindings stay inside; the group speaks with one output
+        // Then. Inner bindings stay inside; the group speaks with one output
         #expect(outputs["result"] == .string("hello, spec!"))
     }
 
     @Test("a group with no declared result answers nothing")
     func groupWithoutAResultAnswersNothing() async throws {
-        // Given — a group is a body, and a body answers what it says it answers.
+        // Given. A group is a body, and a body answers what it says it answers.
         // Reading the last statement would make appending one change what the
         // group was worth, silently.
         let spec = try loader.loadProcedure([
@@ -79,7 +79,7 @@ struct GroupTests {
 
     @Test("a group body reading its own id is rejected at load")
     func groupSelfReadRejected() {
-        // Given — group binds nothing for its body; `${g.x}` inside it is a typo
+        // Given. Group binds nothing for its body; `${g.x}` inside it is a typo
         let fixture: Value = [
             "body": [["let": "g", "value": ["group": ["body": [["let": "inner", "value": ["ref": "g.x"]]]]]]]
         ]

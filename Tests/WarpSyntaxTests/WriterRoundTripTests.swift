@@ -15,7 +15,7 @@ import Warp
 // The one promise a canonical writer makes that nothing else checks: a document
 // it produced is a document. A key the writer leaves out because it happened to
 // be empty is a key the far side may be waiting for, and the cost lands on the
-// arrival rather than here — which is the wrong end for it to land on.
+// arrival rather than here, which is the wrong end for it to land on.
 @Suite("A document the writer wrote reads back")
 struct WriterRoundTripTests {
     // MARK: - Property
@@ -24,7 +24,7 @@ struct WriterRoundTripTests {
     // MARK: - Test
     @Test("a construct whose body is empty still writes the key its reader wants")
     func anEmptyBodyIsStillWritten() throws {
-        // Given — the three constructs whose `body` the document format calls
+        // Given. The three constructs whose `body` the document format calls
         // required. A block written as a `group` is the exception and stays
         // one: nothing there has to have it.
         let constructs: [Name: Warp.Expression] = [

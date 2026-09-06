@@ -36,8 +36,8 @@ struct ModifierNotationTests {
 
     @Test("a slot word and a modifier on one procedure form survive the round trip")
     func slotWordAndModifierRoundTrip() throws {
-        // Given — a parameter typed `inout pure procedure<...>`, which the writer
-        // spells as a form under one key
+        // Given. A parameter typed `inout pure procedure<...>`, which the
+        // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))
 
         // When
@@ -64,7 +64,7 @@ struct ModifierNotationTests {
 
     @Test("a record field named like a construct is data on the way out and back")
     func aFieldNamedLikeAConstructStaysData() throws {
-        // Given — a statement whose value is a record literal with one field
+        // Given. A statement whose value is a record literal with one field
         // spelled like a construct key
         let loader = Loader()
         let module = try Module(
@@ -81,7 +81,7 @@ struct ModifierNotationTests {
         let written = try Writer(registry: loader.registry).value(of: module)
         let read = try loader.load(written)
 
-        // Then — quoted under `value`, and read back as the record it was
+        // Then. Quoted under `value`, and read back as the record it was
         guard case let .array(body)? = written["procedures"]?["entry"]?["body"] else {
             Issue.record("the body was not written as an array")
             return

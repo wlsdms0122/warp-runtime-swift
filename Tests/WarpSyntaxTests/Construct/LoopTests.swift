@@ -19,7 +19,7 @@ struct LoopTests {
     // MARK: - Test
     @Test("loop repeats while its where holds")
     func loopRepeatsWhileConditionHolds() async throws {
-        // Given — the loop writes a variable declared outside it and reads its
+        // Given. The loop writes a variable declared outside it and reads its
         // own round index through ${gate.index}
         let spec = try loader.loadProcedure([
             "body": [
@@ -39,13 +39,13 @@ struct LoopTests {
         // When
         let outputs = try await run(spec)
 
-        // Then — rounds 0/1/2 ran; at index 3 the where turned false
+        // Then. Rounds 0/1/2 ran; at index 3 the where turned false
         #expect(outputs["result"] == .int(2))
     }
 
     @Test("a loop runs unbounded, like while")
     func loopRunsUnbounded() async throws {
-        // Given — the language carries no budget; the world (here, the
+        // Given. The language carries no budget; the world (here, the
         // condition) ends the repetition
         let spec = try loader.loadProcedure([
             "body": [
@@ -71,7 +71,7 @@ struct LoopTests {
 
     @Test("a guard key on loop is refused at decode")
     func aGuardKeyIsRefusedAtDecode() throws {
-        // Given — repetition carries no budget of its own: an author bounds a
+        // Given. Repetition carries no budget of its own: an author bounds a
         // loop with a counter and a word, and a receiver stops one with
         // cancellation. The key is gone rather than ignored.
         #expect(throws: ReadingError.self) {
@@ -92,7 +92,7 @@ struct LoopTests {
 
     @Test("an empty-body loop still observes cancellation")
     func emptyBodyObservesCancellation() async throws {
-        // Given — an empty body must still observe cancellation, or the caller's
+        // Given. An empty body must still observe cancellation, or the caller's
         // one lever against a runaway loop stops working
         let spec = try loader.loadProcedure([
             "body": [
@@ -119,7 +119,7 @@ struct LoopTests {
 
     @Test("a loop body may rebind an outer id by shadowing")
     func loopRebindsOuterIDByShadowing() throws {
-        // Given — the retry-loop idiom rebinds an outer id inside loop steps
+        // Given. The retry-loop idiom rebinds an outer id inside loop steps
         let fixture: Value = [
             "body": [
                 ["let": "format", "value": "first"],

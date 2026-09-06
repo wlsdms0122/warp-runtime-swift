@@ -14,8 +14,8 @@ import Testing
 // What these hold a place to is that it leads somewhere for the reader it is
 // shown to. These programs are assembled in Swift and were never written down,
 // so the reader is the caller that built them and the words are the language's
-// own — a document's would name keys that exist in no file. Reading a place in
-// a document's words is asked of `WarpSyntax`, which has the document.
+// own. A document's would name keys that exist in no file. Reading a place in a
+// document's words is asked of `WarpSyntax`, which has the document.
 //
 // The steps are what makes both readings possible: a slot and a construct
 // travel as themselves, and only what an author named travels as a word.
@@ -26,7 +26,7 @@ struct PlaceTests {
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
     func aPlaceIsSpelledFromTheLanguagesNames() {
-        // Given — the two slots a document calls something else. A loop's
+        // Given. The two slots a document calls something else. A loop's
         // condition is `where` in a document and a walk's collection is `in`,
         // and neither word appears in what a caller assembling this wrote.
         let spin = place(
@@ -50,7 +50,7 @@ struct PlaceTests {
 
     @Test("what a call is written with is named under the key holding it")
     func anArgumentIsNamedUnderItsKey() {
-        // Given — an argument reported from the statement's own place says a
+        // Given. An argument reported from the statement's own place says a
         // thing is wrong and does not say which of the several written there.
         let sut = place(
             refusing: Statement(binding: .constant("sent"), expression: .dispatch(
@@ -65,7 +65,7 @@ struct PlaceTests {
 
     @Test("a statement is found by its name, and by its position when it has none")
     func aStatementIsFoundByWhicheverItHas() {
-        // Given — a statement run for its effect alone fixes no name, and its
+        // Given. A statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
         let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         let bare = place(refusing: Statement(expression: reference("missing")))
@@ -82,9 +82,8 @@ struct PlaceTests {
 
     @Test("a signature's slots are named under the key a procedure declares them with")
     func parametersAreNamedAsTheDocumentNamesThem() throws {
-        // Given — a default no document can hold, so the refusal is the
-        // declaration's own rather than anything a body did with it
-        // When
+        // Given. A default no document can hold, so the refusal is the
+        // declaration's own rather than anything a body did with it When
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["amount": .literal(.int(1))],
@@ -103,10 +102,9 @@ struct PlaceTests {
 
     @Test("the place is carried as data, and the sentence is only the reason")
     func aPlaceIsNotProse() throws {
-        // Given — a place written into the message is a place nothing can
-        // read back. A front end holding the file this was authored in has to
-        // walk the steps to point at the line, and a sentence has no steps.
-        // When
+        // Given. A place written into the message is a place nothing can read
+        // back. A front end holding the file this was authored in has to walk
+        // the steps to point at the line, and a sentence has no steps. When
         let error = #expect(throws: ValidationError.self) {
             try module(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
         }
@@ -119,7 +117,7 @@ struct PlaceTests {
 
     @Test("what the link refuses is placed the way what the load refuses is")
     func bothStagesSpellOnePlace() throws {
-        // Given — one document, refused at the link: the two stages walk the
+        // Given. One document, refused at the link: the two stages walk the
         // same text and an author reading both should not have to learn two
         // spellings of where they are.
         let sut = try Module(
@@ -141,9 +139,9 @@ struct PlaceTests {
 
     @Test("the link narrows to the argument it refused, not to the call holding it")
     func aLinkRefusalNarrowsToTheArgument() throws {
-        // Given — a call written with several arguments, one of which holds
-        // what the declaration does not take. Reported from the call, an
-        // author is told a thing is wrong and not which of the three it is.
+        // Given. A call written with several arguments, one of which holds what
+        // the declaration does not take. Reported from the call, an author is
+        // told a thing is wrong and not which of the three it is.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [
@@ -180,8 +178,8 @@ struct PlaceTests {
 
     @Test("one place, whichever stage walked the text")
     func theTwoStagesSpellOneSlotOneWay() throws {
-        // Given — the same slot of the same statement, reached once by the
-        // walk that checks a document against itself and once by the walk that
+        // Given. The same slot of the same statement, reached once by the walk
+        // that checks a document against itself and once by the walk that
         // resolves its names. Two spellings of one place is two documents as
         // far as an author following the words is concerned.
         let linked = try Module(
@@ -227,7 +225,7 @@ struct PlaceTests {
 
     @Test("every walk that reports a place steps through the same slots to reach one")
     func theWalksAgreeOnHowDeepASlotIs() throws {
-        // Given — one call, buried under an attempt's rescue: a slot no walk
+        // Given. One call, buried under an attempt's rescue: a slot no walk
         // reaches without stepping through the keys between. Four walks report
         // places and each destructures the language for itself, so what one of
         // them forgets to step into is a place that reads like another one.
@@ -287,7 +285,7 @@ struct PlaceTests {
             )
         }
 
-        // Then — each says something different about the call, from one place
+        // Then. Each says something different about the call, from one place
         #expect(load?.place?.rendered?.hasPrefix(reached) == true)
         #expect(bound?.place?.rendered?.hasPrefix(reached) == true)
         #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
@@ -309,7 +307,7 @@ struct PlaceTests {
 
     @Test("a declared spelling with a dot in it is one key in the place")
     func aDottedSpellingIsOneKey() throws {
-        // Given — the same refusal from a declaration spelled `wallet.entry`.
+        // Given. The same refusal from a declaration spelled `wallet.entry`.
         // The dot is part of the key the document wrote, so the place holds
         // that key whole rather than two steps.
         let sut = try Module(
@@ -334,11 +332,11 @@ struct PlaceTests {
 
     @Test("a program nobody wrote down says so, rather than saying no name")
     func anAssembledProgramNamesNoDocument() {
-        // Given — the same program twice: once handed in as a caller assembling
+        // Given. The same program twice: once handed in as a caller assembling
         // one in memory holds it, and once read out of a document. There is no
         // text under the first, which is a different fact from a text that
-        // wrote no name — reading them as one would match a program nobody
-        // wrote against a file somebody did, and answer with that file's line.
+        // wrote no name. Reading them as one would match a program nobody wrote
+        // against a file somebody did, and answer with that file's line.
         let statement = Statement(expression: reference("missing"))
 
         // When
@@ -357,9 +355,9 @@ struct PlaceTests {
 
     @Test("two documents are told apart by identity in the line too")
     func twoDocumentsAreToldApartInTheLine() {
-        // Given — two documents. A reader with them in hand tells them apart
-        // by identity, and the person reading the line has only the line, so
-        // the line says it too.
+        // Given. Two documents. A reader with them in hand tells them apart by
+        // identity, and the person reading the line has only the line, so the
+        // line says it too.
         func module(declaring name: Name, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [
@@ -387,7 +385,7 @@ struct PlaceTests {
 
     @Test("a shape is placed by the key it was declared under, dot and all")
     func aTypeIsPlacedByItsDeclaredKey() throws {
-        // Given — a type declared as `wallet.Coin`. The place is spelled from
+        // Given. A type declared as `wallet.Coin`. The place is spelled from
         // that key, which is what the document writes.
         let sut = try Module(
             types: ["wallet.Coin": .record(["amount": .named("Missing")])],
@@ -406,7 +404,7 @@ struct PlaceTests {
 
     @Test("a membership is placed the same way")
     func aConstraintIsPlacedByItsDeclaredKey() throws {
-        // Given — the other space. A membership admitting nothing is refused
+        // Given. The other space. A membership admitting nothing is refused
         // from the table alone, which is the walk that has only the declared
         // keys to go on.
         let sut = try Module(
@@ -426,10 +424,10 @@ struct PlaceTests {
 
     @Test("a statement's construct is the language's word, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
-        // Given — one shape, two texts: `{ call: … }` and `{ value: { call:
-        // … } }` are both a dispatch by the time anything here sees one, so
-        // the word for the construct is this implementation's rather than
-        // something a reader may go looking for in a file.
+        // Given. One shape, two texts: `{ call: … }` and `{ value: { call: … }
+        // }` are both a dispatch by the time anything here sees one, so the
+        // word for the construct is this implementation's rather than something
+        // a reader may go looking for in a file.
         let sut = try #require(
             place(
                 refusing: Statement(binding: .constant("sent"), expression: .dispatch(
@@ -439,7 +437,7 @@ struct PlaceTests {
             )
         )
 
-        // Then — the word is spelled for the person reading the line
+        // Then. The word is spelled for the person reading the line
         #expect(sut.rendered?.contains(".sent[0].dispatch.") == true)
 
         // And carried as the shape rather than as any word, so the side that
@@ -454,10 +452,9 @@ struct PlaceTests {
 
     @Test("what a return carries is checked, and placed where the return is")
     func aReturnsValueIsWalked() throws {
-        // Given — the door a caller assembling a program itself passes. What
-        // `return` carries is an operand like any other: a name it reads has
-        // to be visible where it was written.
-        // When
+        // Given. The door a caller assembling a program itself passes. What
+        // `return` carries is an operand like any other: a name it reads has to
+        // be visible where it was written. When
         let error = #expect(throws: ValidationError.self) {
             try module(
                 refusing: Statement(
@@ -472,10 +469,10 @@ struct PlaceTests {
 
     @Test("both stages point at the statement that leaves, not at what follows it")
     func theLeaveRuleIsPlacedOnTheLeavingStatement() throws {
-        // Given — the one rule both stages hold: the load catches the leaves
-        // the text shows, the link catches the word that declares `never`.
-        // What an author has to change is the statement that ends the body, so
-        // that is where each of them says it is.
+        // Given. The one rule both stages hold: the load catches the leaves the
+        // text shows, the link catches the word that declares `never`. What an
+        // author has to change is the statement that ends the body, so that is
+        // where each of them says it is.
         let declared = try Module(
             procedures: [
                 entryName: Procedure(body: [
@@ -519,10 +516,10 @@ struct PlaceTests {
 
     @Test("a name two documents declare is refused at the one that could not be added")
     func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() throws {
-        // Given — a caller receiving a module from somewhere else appends it to
+        // Given. A caller receiving a module from somewhere else appends it to
         // what it already holds and links again. What that link refuses is a
         // collision between two documents, and only the caller knows which file
-        // either arrived in — a refusal naming neither sends it opening all of
+        // either arrived in. A refusal naming neither sends it opening all of
         // them.
         func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
             try Module(
@@ -540,7 +537,7 @@ struct PlaceTests {
             try Linker().link([held, sent, caller] + Module.standard, entry: entryName)
         }
 
-        // Then — the place is the declaration that cannot be added
+        // Then. The place is the declaration that cannot be added
         #expect(error?.place?.rendered == "02/procedures.taxed")
 
         // And the one it collides with is named, since a place says one thing
@@ -549,8 +546,8 @@ struct PlaceTests {
 
     @Test("the same document handed to one link twice is refused as that")
     func theSameDocumentHandedTwiceIsRefusedAsOneDocument() throws {
-        // Given — a caller that appends what arrives without checking whether
-        // it already holds it. An identity is derived from the text, so the two
+        // Given. A caller that appends what arrives without checking whether it
+        // already holds it. An identity is derived from the text, so the two
         // are one document and every name in it collides with itself. Read as a
         // collision between two declarations, the sentence names the same
         // document on both sides and tells the caller nothing it can act on.
@@ -566,14 +563,14 @@ struct PlaceTests {
             try Linker().link([module, module, caller] + Module.standard, entry: entryName)
         }
 
-        // Then — what is wrong is the second copy, not anything inside it
+        // Then. What is wrong is the second copy, not anything inside it
         #expect(error?.place?.rendered == "01")
         #expect(error?.message.contains("twice") == true)
     }
 
     @Test("a shape two documents declare is placed the same way a procedure is")
     func aTypeDeclaredTwiceIsPlacedAtTheSecond() throws {
-        // Given — the same rule in the space a type is resolved in. The two
+        // Given. The same rule in the space a type is resolved in. The two
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
         func declaring(_ shape: TypeExpression, as identity: Identity) throws -> Module {
@@ -596,7 +593,7 @@ struct PlaceTests {
 
     @Test("a name written as a shape in one document and a membership in another")
     func aNameThatIsBothIsPlacedAtTheMembership() throws {
-        // Given — the two spaces held against each other, which is the one
+        // Given. The two spaces held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
         let shape = try Module(types: ["pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
@@ -617,7 +614,7 @@ struct PlaceTests {
 
     @Test("constants that name each other are placed at one of the ring, and the same one")
     func aConstantCycleIsPlacedInSortedOrder() throws {
-        // Given — a cycle has no first member, so which of them an author is
+        // Given. A cycle has no first member, so which of them an author is
         // sent to is chosen rather than found. Read off a dictionary it would
         // be a different constant per run, and the two below are written in the
         // order that makes an unsorted answer the likely one.
@@ -639,11 +636,10 @@ struct PlaceTests {
 
     @Test("a constant merely blocked by a ring is neither placed nor accused")
     func aConstantWaitingOnARingIsNotOnIt() throws {
-        // Given — `aardvark` names one of a ring, so it never settles either
-        // and is still waiting when the ring is refused. It is sorted first,
-        // which is how it becomes the place if what is waiting is mistaken for
-        // what is wrong — and changing it would leave the ring exactly as it
-        // is.
+        // Given. `aardvark` names one of a ring, so it never settles either and
+        // is still waiting when the ring is refused. It is sorted first, which
+        // is how it becomes the place if what is waiting is mistaken for what
+        // is wrong, and changing it would leave the ring exactly as it is.
         let sut = try Module(
             constants: [
                 "aardvark": reference("zebra"),
@@ -667,9 +663,9 @@ struct PlaceTests {
 
     @Test("a constant on a circle's edge is not counted as part of it")
     func aConstantReadByACircleIsNotOnIt() throws {
-        // Given — `delta` is read by one of a circle and settles perfectly
-        // well, so the circle is the only thing wrong here. Narrowing by what
-        // nothing reads keeps it anyway, because something does read it.
+        // Given. `delta` is read by one of a circle and settles perfectly well,
+        // so the circle is the only thing wrong here. Narrowing by what nothing
+        // reads keeps it anyway, because something does read it.
         let sut = try Module(
             constants: [
                 "beta": .dispatch(Dispatch(
@@ -697,7 +693,7 @@ struct PlaceTests {
 
     @Test("two modules nobody wrote down are told apart by where the caller put them")
     func modulesWithNoDocumentAreToldApartByPosition() throws {
-        // Given — a caller assembling modules itself. Neither was read from
+        // Given. A caller assembling modules itself. Neither was read from
         // anything, so neither has an identity and both spell the same: the
         // sentence names two documents that read as one, and the place renders
         // without a document at all. Where the caller put them is what is left.
@@ -719,9 +715,9 @@ struct PlaceTests {
 
     @Test("two words one path spelling could reach are refused at a declaration")
     func aContestedPathWordIsPlacedAtADeclaration() throws {
-        // Given — a path segment names no module, so no spelling an author
-        // could write would say which of these is meant. The fix is on a
-        // declaration, which makes a declaration the place to be sent to.
+        // Given. A path segment names no module, so no spelling an author could
+        // write would say which of these is meant. The fix is on a declaration,
+        // which makes a declaration the place to be sent to.
         func declaring(_ prefix: String, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [
@@ -744,7 +740,7 @@ struct PlaceTests {
         let shipping = try declaring("shipping", as: Identity([0x03]))
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
-        // When — three of them, because a slot holding the latest collision
+        // When. Three of them, because a slot holding the latest collision
         // keeps the newest two and drops whoever took the name first. With two
         // there is nothing for a third to push out.
         //
@@ -758,7 +754,7 @@ struct PlaceTests {
             )
         }
 
-        // Then — `catalog` is the second the caller handed over, whatever the
+        // Then. `catalog` is the second the caller handed over, whatever the
         // three names sort as
         #expect(error?.place?.rendered == "01/procedures.catalog.discounted")
 
@@ -771,7 +767,7 @@ struct PlaceTests {
     // MARK: - Public
     // MARK: - Private
     // A document to stand in for one that was read. What derives an identity is
-    // the wire's, which is a target these tests do not import — and what a place
+    // the wire's, which is a target these tests do not import, and what a place
     // does with one is the same whatever wrote it.
     private let reading = Identity([0xd0, 0xcf, 0x00])
 

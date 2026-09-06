@@ -15,7 +15,7 @@ import WarpStandard
 // These are the cases that decide whether two implementations are the same
 // language. Everyone agrees what one plus one is; the disagreements live in
 // overflow, in division, and in what happens where a whole number meets a
-// fraction — and an implementation that wraps where this one refuses is running
+// fraction, and an implementation that wraps where this one refuses is running
 // programs this one would not.
 //
 // So they are written down in `spec/README.md`, and written here because prose
@@ -31,7 +31,7 @@ struct BoundaryTests {
     // MARK: - Test
     @Test("what arithmetic takes is decided before it runs")
     func arithmeticIsCheckedBeforeRunning() throws {
-        // Given — while arithmetic declared `any`, a sum of a number and a piece
+        // Given, while arithmetic declared `any`, a sum of a number and a piece
         // of text was found by running it. In a language whose whole claim is
         // that what can be decided before running is, that was the claim not
         // holding in the most ordinary place a program has.
@@ -60,7 +60,7 @@ struct BoundaryTests {
 
     @Test("what a word answers is what it was given, not merely a number")
     func arithmeticAnswersTheKindItWasGiven() throws {
-        // Given — a whole number added to a whole number is a whole number, and
+        // Given. A whole number added to a whole number is a whole number, and
         // a declaration that only said "a number" would not fit anywhere asking
         // for one. Both sides and the answer are one reading, which is what a
         // language with overloading would need several declarations to say.
@@ -102,7 +102,7 @@ struct BoundaryTests {
 
     @Test("ordering compares two of a kind, and text is a kind")
     func orderingIsNotOnlyForNumbers() async throws {
-        // Given — the words that order values order text too, so declaring them
+        // Given. The words that order values order text too, so declaring them
         // as taking numbers said something the word does not mean
         #expect(try await answering("std.math.lessThan", .string("a"), .string("b")) == .bool(true))
         #expect(try await answering("std.math.lessThan", .int(1), .int(2)) == .bool(true))
@@ -110,7 +110,7 @@ struct BoundaryTests {
 
     @Test("a slot that means either number takes either, and nothing else")
     func numberMeansBothAndOnlyBoth() {
-        // Given — it is the numeric `any`, not a third kind of number. Nothing
+        // Given. It is the numeric `any`, not a third kind of number. Nothing
         // is ever *of* it: a value is whole or it is a fraction.
         let sut = TypeExpression.number
 
@@ -123,14 +123,14 @@ struct BoundaryTests {
         // difference: one said nothing and this one said two things.
         #expect(TypeExpression.any.accepts(.string))
 
-        // A value nothing said anything about still fits, here as everywhere —
-        // refusing it would refuse every value no declaration had reached.
+        // A value nothing said anything about still fits, here as everywhere.
+        // Refusing it would refuse every value no declaration had reached.
         #expect(sut.accepts(.any))
     }
 
     @Test("a type parameter read two ways that do not fit is a refusal, not a shrug")
     func aDisagreeingHoleIsRefused() throws {
-        // Given — appending a whole number to a list of text. The hole is read
+        // Given. Appending a whole number to a list of text. The hole is read
         // as text by the list and as a number by what is being appended, and
         // widening to `any` was the checker announcing it had stopped checking
         // and announcing it silently: the call then went through.
@@ -162,12 +162,12 @@ struct BoundaryTests {
 
     @Test("a type parameter read as anything is anything")
     func anyIsTheLoosestReading() throws {
-        // Given — a list of anything, added to twice with two kinds of value.
+        // Given. A list of anything, added to twice with two kinds of value.
         // `accepts` cannot order `any` against a shape, since everything takes
         // `any` and `any` takes everything, so asking which is looser answers
-        // yes both ways and whichever was read first would win. Reading it first
-        // is what a receiver does, and that made a list of anything into a list
-        // of whatever went in first.
+        // yes both ways and whichever was read first would win. Reading it
+        // first is what a receiver does, and that made a list of anything into
+        // a list of whatever went in first.
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -201,10 +201,10 @@ struct BoundaryTests {
 
     @Test("a name a module declared and the shape it stands for are one reading")
     func aDeclaredNameIsNotADisagreement() throws {
-        // Given — the parameter is read as `Tree` by the list and as the record the
-        // call wrote. They are the same type, and calling them a disagreement
-        // was asking the question without the table that answers it — the same
-        // table the rest of the link uses.
+        // Given. The parameter is read as `Tree` by the list and as the record
+        // the call wrote. They are the same type, and calling them a
+        // disagreement was asking the question without the table that answers
+        // it. The same table the rest of the link uses.
         let module = try Module(
             types: ["Tree": .record(["a": .int])],
             procedures: [
@@ -232,9 +232,10 @@ struct BoundaryTests {
 
     @Test("a type parameter read loosely and tightly holds the loose reading")
     func aWiderReadingHolds() throws {
-        // Given — a list of numbers and a whole number are not a disagreement.
-        // One reading takes the other, so the one that holds both is the answer,
-        // and refusing here would refuse a program with nothing wrong with it.
+        // Given. A list of numbers and a whole number are not a disagreement.
+        // One reading takes the other, so the one that holds both is the
+        // answer, and refusing here would refuse a program with nothing wrong
+        // with it.
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -259,7 +260,7 @@ struct BoundaryTests {
 
     @Test("whole-number arithmetic faults at the word's edge")
     func wholeArithmeticFaultsPastTheWord() async throws {
-        // Given — `int` is the machine word: a sum past its edge has no int to
+        // Given. `int` is the machine word: a sum past its edge has no int to
         // answer, and the language stops rather than wrapping or answering a
         // silent fraction.
         for (word, left, right) in [(Name, Int, Int)]([
@@ -278,7 +279,7 @@ struct BoundaryTests {
 
     @Test("fraction arithmetic with no finite answer refuses")
     func fractionArithmeticRefusesRatherThanEscapes() async throws {
-        // Given — the whole path already refuses what an int cannot hold, and
+        // Given. The whole path already refuses what an int cannot hold, and
         // the fraction path could answer infinity: a value a program can carry
         // to exactly the first place that tries to write it down. Found by
         // running `1e308 plus 1e308` and being answered inf.
@@ -298,7 +299,7 @@ struct BoundaryTests {
 
     @Test("division answers a fraction, whole or not")
     func divisionAnswersAFraction() async throws {
-        // Given — the alternative is two words, or one word whose answer type
+        // Given. The alternative is two words, or one word whose answer type
         // depends on whether the division came out even. The second is not a
         // type a signature can hold.
         #expect(try await answering("std.math.dividedBy", .int(7), .int(2)) == .double(3.5))
@@ -307,7 +308,7 @@ struct BoundaryTests {
 
     @Test("division by zero refuses")
     func divisionByZeroRefuses() async throws {
-        // Given — a fraction has an answer for this and it is not a number, so
+        // Given. A fraction has an answer for this and it is not a number, so
         // answering with it would put something in a program that no later
         // check could talk about
         for (left, right) in [(Value.int(1), Value.int(0)), (.double(1), .double(0))] {
@@ -321,7 +322,7 @@ struct BoundaryTests {
 
     @Test("a whole number widens to a fraction, and not the other way")
     func wholeNumbersWiden() async throws {
-        // Given — every whole number is a fraction and the reverse is false, so
+        // Given. Every whole number is a fraction and the reverse is false, so
         // the conversion that cannot lose anything is the one that happens
         #expect(try await answering("std.math.plus", .int(1), .double(0.5)) == .double(1.5))
         #expect(try await answering("std.math.plus", .double(0.5), .int(1)) == .double(1.5))
@@ -329,7 +330,7 @@ struct BoundaryTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One word, sent to one value with one operand — the shape every arithmetic
+    // One word, sent to one value with one operand. The shape every arithmetic
     // word takes, so the cases above say what they are about and nothing else.
     private func answering(
         _ selector: Name,

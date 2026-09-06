@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// How a document spells a binding — `id:`, `var:`, `set:`. What a binding
+// How a document spells a binding. `id:`, `var:`, `set:`. What a binding
 // *means* is the language's, and `WarpTests` asks it there.
 @Suite
 struct VariableNotationTests {
@@ -21,7 +21,7 @@ struct VariableNotationTests {
     // MARK: - Test
     @Test("a write inside a block outlives the block")
     func assignmentOutlivesItsBlock() async throws {
-        // Given — the one thing a binding cannot do: a branch that ran changes
+        // Given. The one thing a binding cannot do: a branch that ran changes
         // what an enclosing name means afterwards
         let sut = try loader.loadProcedure([
             "parameters": ["kind": "string"],
@@ -70,7 +70,7 @@ struct VariableNotationTests {
 
     @Test("a variable declared inside a block does not escape it")
     func innerVariableDoesNotEscape() throws {
-        // Given — the box is shared, but which names exist is not: `var` inside
+        // Given. The box is shared, but which names exist is not: `var` inside
         // a branch introduces a name that dies with the branch
         let fixture: Value = [
             "body": [
@@ -93,8 +93,8 @@ struct VariableNotationTests {
 
     @Test("a var inside a block shadows the outer one instead of writing it")
     func innerVariableShadowsOuter() async throws {
-        // Given — `var` always introduces, so the inner name is a different
-        // name with a box of its own. Writing the outer one is `set`.
+        // Given. `var` always introduces, so the inner name is a different name
+        // with a box of its own. Writing the outer one is `set`.
         let sut = try loader.loadProcedure([
             "body": [
                 ["var": "verdict", "value": "outer"],
@@ -117,7 +117,7 @@ struct VariableNotationTests {
 
     @Test("writing a fixed name is rejected at load")
     func assigningConstantRejected() throws {
-        // Given — `id` means the name is fixed, and the refusal says which of
+        // Given. `id` means the name is fixed, and the refusal says which of
         // the two mistakes this is
         let fixture: Value = [
             "body": [["let": "verdict", "value": "first"], ["set": "verdict", "value": "second"]],
@@ -146,7 +146,7 @@ struct VariableNotationTests {
 
     @Test("a closure may write a variable it captured")
     func closureWritesWhatItCaptured() throws {
-        // Given — a variable's box is one thing under one name everywhere the
+        // Given. A variable's box is one thing under one name everywhere the
         // name is visible, and the closure's body is one of those places
         let fixture: Value = [
             "body": [
@@ -172,7 +172,7 @@ struct VariableNotationTests {
 
     @Test("a closure may declare and write its own variable")
     func closureOwnsItsVariables() async throws {
-        // Given — what is forbidden is reaching outward, not variables
+        // Given. What is forbidden is reaching outward, not variables
         let sut = try loader.loadProcedure([
             "body": [
                 [
@@ -210,7 +210,7 @@ struct VariableNotationTests {
 
     @Test("a step naming itself twice is rejected at load")
     func doubleNameKeyRejected() throws {
-        // Given — `id`/`var`/`set` are one slot spelled three ways, not three
+        // Given. `id`/`var`/`set` are one slot spelled three ways, not three
         // keys that may combine
         let fixture: Value = ["body": [["let": "verdict", "var": "verdict", "value": "x"]]]
 

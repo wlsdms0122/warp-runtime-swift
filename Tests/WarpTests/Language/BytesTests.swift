@@ -10,10 +10,10 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// `bytes = array<byte>` — bytes are not a special material, they are a compact
+// `bytes = array<byte>`. Bytes are not a special material, they are a compact
 // spelling of an array of small whole numbers. The worth is the elements', the
-// collection vocabulary applies, and only the spelling differs — `1` and
-// `1.0`, one collection up.
+// collection vocabulary applies, and only the spelling differs. `1` and `1.0`,
+// one collection up.
 @Suite
 struct BytesTests {
     // MARK: - Property
@@ -41,7 +41,7 @@ struct BytesTests {
     @Test("an array slot that asks nothing of a byte takes the compact spelling whole")
     func anArraySlotSettlesBytes() throws {
         // The slot asked for an array and bytes are one, so there is nothing to
-        // do — unpacking would spend an element per byte to answer nothing.
+        // do. Unpacking would spend an element per byte to answer nothing.
         #expect(
             try TypeExpression.array(.int).settling(.bytes([104, 105]), at: "value")
                 == .bytes([104, 105])
@@ -84,9 +84,9 @@ struct BytesTests {
     // so a shape added to one and forgotten by the other fails here.
     @Test("a byte settles as itself exactly where the type says it does")
     func aByteSettlesAsItselfExactlyWhereTheTypeSaysIt() throws {
-        // `Named` is bound twice on purpose — once as a type and once as a
-        // constraint, which a table may do because they are two declarations.
-        // A walk that guarded both with one set would end the constraint's
+        // `Named` is bound twice on purpose. Once as a type and once as a
+        // constraint, which a table may do because they are two declarations. A
+        // walk that guarded both with one set would end the constraint's
         // question by assuming the type's name and answer yes for `Textual`.
         let types = TypeTable(
             types: [
@@ -99,7 +99,7 @@ struct BytesTests {
                 "Textual": [.string],
                 "Named": [.string],
                 // Members that divide the range between them take every byte
-                // even though no one of them takes it alone — a membership is
+                // even though no one of them takes it alone. A membership is
                 // met when some member takes the value, and asking each member
                 // to cover the whole range on its own would miss that.
                 "Split": [.ranged(.whole(from: 0, to: .through(127))), .ranged(.whole(from: 128, to: .through(255)))],
@@ -164,7 +164,7 @@ struct BytesTests {
             "\(error)".contains("value[1]") && "\(error)".contains("outside int(0...255)")
         }
 
-        // A fraction is not a byte, whatever it is worth — the int edge again.
+        // A fraction is not a byte, whatever it is worth. The int edge again.
         #expect(throws: (any Error).self) {
             try TypeExpression.bytes.settling(.array([.double(1)]), at: "value")
         }
@@ -184,7 +184,7 @@ struct BytesTests {
 
     @Test("an index reads one byte out as the int it is")
     func anIndexReadsAByte() async throws {
-        // Given — the path is judged at the link, drilled at the run
+        // Given. The path is judged at the link, drilled at the run
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -209,7 +209,7 @@ struct BytesTests {
 
     @Test("the collection vocabulary applies to bytes directly")
     func collectionWordsReadBytes() async throws {
-        // Given — each word declares an array receiver, and bytes are one
+        // Given. Each word declares an array receiver, and bytes are one
         let asks: [(Warp.Expression, Value)] = [
             (
                 .dispatch(Dispatch(
@@ -230,7 +230,7 @@ struct BytesTests {
                     receiver: reference("data"),
                     selector: "std.collection.reversed"
                 )),
-                // The receiver's own elements, in the other order — so the
+                // The receiver's own elements, in the other order, so the
                 // spelling they arrived in is the spelling they leave in.
                 .bytes([105, 104])
             ),
@@ -264,8 +264,8 @@ struct BytesTests {
 
     @Test("a word wanting elements no byte can be refuses at the boundary, by the element")
     func aWordWantingOtherElementsRefusesAtTheBoundary() async throws {
-        // Given — `joined` declares `array<string>`, which leaves no byte as
-        // it is, so the compact spelling does not cross: it is read out and
+        // Given. `joined` declares `array<string>`, which leaves no byte as it
+        // is, so the compact spelling does not cross: it is read out and
         // settled element by element. The receiver is read `any` here so the
         // link lets it through and the run is the one that answers.
         //
@@ -286,8 +286,8 @@ struct BytesTests {
             ]
         )
 
-        // When / Then — the refusal names the element that disagreed, never
-        // that bytes are not an array.
+        // When / Then. The refusal names the element that disagreed, never that
+        // bytes are not an array.
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
@@ -298,7 +298,7 @@ struct BytesTests {
 
     @Test("a walk iterates bytes the way an index reads them")
     func aWalkIteratesBytes() async throws {
-        // Given — the material is bytes, and each round's element is the
+        // Given. The material is bytes, and each round's element is the
         // ordinary int one byte is
         let sut = try Module(
             procedures: [
@@ -365,8 +365,8 @@ struct BytesTests {
 
     @Test("an encoding the words do not name refuses at the link")
     func anUnknownEncodingRefuses() throws {
-        // Given — the oneOf names the encodings, and a constant is judged at
-        // the link
+        // Given. The oneOf names the encodings, and a constant is judged at the
+        // link
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -388,7 +388,7 @@ struct BytesTests {
 
     @Test("a mixed literal joins by the equation, not to any")
     func aMixedLiteralJoinsByTheEquation() async throws {
-        // Given — the elements spell one type two ways, so the list's element
+        // Given. The elements spell one type two ways, so the list's element
         // type is that type and the call is judged, not waved through as any
         let sut = try Module(
             procedures: [
@@ -415,7 +415,7 @@ struct BytesTests {
             ]
         )
 
-        // When / Then — the element declaration `array<int>` asks nothing of a
+        // When / Then. The element declaration `array<int>` asks nothing of a
         // byte, so the compact member crosses as itself and the long one as
         // itself: each value keeps the spelling it was written in.
         #expect(
@@ -435,26 +435,26 @@ struct BytesTests {
         #expect(Rendering(.bytes([104, 105])).text() == "x\"6869\"")
 
         // The document writer is one recursive function and writes the same
-        // spelling however deep it sits, so this does too — the quotes are
-        // the position's, exactly as they are for a string.
+        // spelling however deep it sits, so this does too. The quotes are the
+        // position's, exactly as they are for a string.
         #expect(Rendering(.array([.bytes([104, 105])])).text() == "[\"x\\\"6869\\\"\"]")
         #expect(Rendering(.array([.string("hi")])).text() == "[\"hi\"]")
 
         // What the Codable projection writes is the array the equation says
-        // bytes are — a different answer for a different question, held by
+        // bytes are. A different answer for a different question, held by
         // `bytesAreWrittenAsTheArrayTheyAre` over in the document tests. That
         // one is read back; this one is read by a person.
     }
 
     @Test("what JSON cannot say shows as unencodable, never as almost-JSON")
     func renderingHoldsTheFiniteLine() {
-        // Given — infinity arrives only from a host's own word, and the
+        // Given. Infinity arrives only from a host's own word, and the
         // rendering must not leak it as invalid JSON
         #expect(Rendering(.array([.double(.infinity)])).text() == "<unencodable>")
         #expect(Rendering(.dictionary(["a": .double(.nan)])).text() == "<unencodable>")
         #expect(Rendering(.array([.double(1.5), .int(1)])).text() == "[1.5,1]")
 
-        // The rendering writes the document's spelling, not the host's — the
+        // The rendering writes the document's spelling, not the host's. The
         // same fraction must come back readable as the document it names.
         #expect(
             Rendering(.array([.double(9_109_348_289_431_844.0)])).text()
@@ -464,8 +464,8 @@ struct BytesTests {
 
     @Test("a bytes literal fills an array slot at the link, and crosses it whole")
     func aBytesConstantFillsAnArraySlot() async throws {
-        // Given — the equation is read at the link, and the boundary has
-        // nothing to settle: the slot asked for an array and bytes are one
+        // Given. The equation is read at the link, and the boundary has nothing
+        // to settle: the slot asked for an array and bytes are one
         let sut = try Module(
             procedures: [
                 "keep": Procedure(

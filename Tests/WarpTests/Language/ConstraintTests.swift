@@ -12,8 +12,8 @@ import WarpStandard
 
 // A constraint is a declared membership, and a bounded `some T` takes only what
 // the membership admits. These are the places the bound turns a reading into a
-// refusal before anything runs — and the one place it waits for the run,
-// because the text said nothing.
+// refusal before anything runs, and the one place it waits for the run, because
+// the text said nothing.
 @Suite("What a bounded type parameter admits")
 struct ConstraintTests {
     // MARK: - Property
@@ -23,7 +23,7 @@ struct ConstraintTests {
     // MARK: - Test
     @Test("a reading outside the constraint refuses at the link")
     func aReadingOutsideTheConstraintRefusesAtTheLink() throws {
-        // Given — both sides of `lessThan` are booleans, and `Comparable` admits
+        // Given. Both sides of `lessThan` are booleans, and `Comparable` admits
         // none of them. The reading is a literal, so the link can see it.
         let sut = try Module(
             procedures: [
@@ -49,7 +49,7 @@ struct ConstraintTests {
 
     @Test("arithmetic on two strings refuses at the link")
     func arithmeticOnTwoStringsRefusesAtTheLink() throws {
-        // Given — the two sides agree, so the one type parameter reads one
+        // Given. The two sides agree, so the one type parameter reads one
         // thing. Agreement is not admission: `Numeric` does not admit text.
         let sut = try Module(
             procedures: [
@@ -75,8 +75,8 @@ struct ConstraintTests {
 
     @Test("a value arriving through any is judged at the boundary")
     func aValueArrivingThroughAnyIsJudgedAtTheBoundary() async throws {
-        // Given — the parameter is declared `any`, so the link reads nothing
-        // and the membership is judged where the value arrives
+        // Given. The parameter is declared `any`, so the link reads nothing and
+        // the membership is judged where the value arrives
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -104,8 +104,8 @@ struct ConstraintTests {
 
     @Test("a module declares a constraint of its own and the bound holds")
     func aModuleDeclaresAConstraintOfItsOwn() async throws {
-        // Given — the membership lives in the declaration, so a signature
-        // writes the name and the same judgment std's words get is this one's
+        // Given. The membership lives in the declaration, so a signature writes
+        // the name and the same judgment std's words get is this one's
         let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
             procedures: [
@@ -170,7 +170,7 @@ struct ConstraintTests {
 
     @Test("a signature naming a constraint nobody declares refuses at the link")
     func anUndeclaredConstraintRefusesAtTheLink() throws {
-        // Given — unreached code still has to compile, and a bound naming
+        // Given. Unreached code still has to compile, and a bound naming
         // nothing is a defect whether or not a call ever fills it
         let sut = try Module(
             procedures: [
@@ -200,7 +200,7 @@ struct ConstraintTests {
 
     @Test("one parameter written with two constraints refuses at the link")
     func twoBoundsOnOneParameterRefuseAtTheLink() throws {
-        // Given — the bound is written inline, so two slots writing different
+        // Given. The bound is written inline, so two slots writing different
         // bounds for one name are two claims about one thing
         let sut = try Module(
             constraints: ["A": [.int], "B": [.string]],
@@ -233,8 +233,8 @@ struct ConstraintTests {
 
     @Test("a bare mention and a bounded mention are one bounded parameter")
     func aBareMentionRidesTheBoundedOne() throws {
-        // Given — a bounded `some T` in one slot and a bare one in another are one
-        // parameter bounded once, so the bound judges both readings
+        // Given. A bounded `some T` in one slot and a bare one in another are
+        // one parameter bounded once, so the bound judges both readings
         let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
             procedures: [
@@ -296,8 +296,8 @@ struct ConstraintTests {
 
     @Test("a constraint admitting nothing refuses at the link")
     func anEmptyConstraintRefusesAtTheLink() throws {
-        // Given — no parameter it bounds could ever be filled, which is the
-        // same fact an empty oneOf states
+        // Given. No parameter it bounds could ever be filled, which is the same
+        // fact an empty oneOf states
         let sut = try Module(
             constraints: ["Nothing": []],
             procedures: [
@@ -319,7 +319,7 @@ struct ConstraintTests {
 
     @Test("a type parameter hidden in a declared type refuses at the link")
     func aParameterInADeclaredTypeRefusesAtTheLink() throws {
-        // Given — a declared type has no call to fill a parameter, and a bound
+        // Given. A declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
         let sut = try Module(
             types: ["Weird": .parameter(name: "T", constraint: "Sortable")],
@@ -349,7 +349,7 @@ struct ConstraintTests {
 
     @Test("a parameter behind a procedure type in a declared type refuses too")
     func aParameterInADeclaredProcedureTypeRefusesAtTheLink() throws {
-        // Given — a declared type is not a filling site however deep the
+        // Given. A declared type is not a filling site however deep the
         // parameter hides: nothing ever binds it, so the claim would go
         // unjudged everywhere
         let sut = try Module(
@@ -380,8 +380,8 @@ struct ConstraintTests {
 
     @Test("a name that reaches only names refuses at the link")
     func aNameOnlyCycleRefusesAtTheLink() throws {
-        // Given — a shape may name itself through a shape, and a name that
-        // only names names never becomes one
+        // Given. A shape may name itself through a shape, and a name that only
+        // names names never becomes one
         let cycles: [[Name: TypeExpression]] = [
             ["Loop": .named("Loop")],
             ["A": .named("B"), "B": .named("A")]
@@ -426,7 +426,7 @@ struct ConstraintTests {
 
     @Test("a constraint member is a concrete shape")
     func aConstraintMemberMustBeConcrete() throws {
-        // Given — `some` in member position stands for a type and names none;
+        // Given. `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
         for member in [TypeExpression.parameter(name: "S", constraint: "Loop"), .any, .never] {
             let sut = try Module(
@@ -451,8 +451,8 @@ struct ConstraintTests {
 
     @Test("a oneOf no member of the bound can spell refuses at the link")
     func aOneOfOutsideTheBoundRefusesAtTheLink() throws {
-        // Given — words on a Numeric slot: no member of the constraint can
-        // spell them, so no call could ever fit this parameter
+        // Given. Words on a Numeric slot: no member of the constraint can spell
+        // them, so no call could ever fit this parameter
         let sut = try Module(
             procedures: [
                 "pick": Procedure(
@@ -485,9 +485,9 @@ struct ConstraintTests {
 
     @Test("a fraction candidate is judged by the fraction's one spelling")
     func aFractionCandidateIsJudgedByItsSpelling() throws {
-        // Given — a fraction spells with its point, so `1` on a double slot
-        // is the int's spelling and a member no fraction could ever match,
-        // and `1e0`/`1.00` are second spellings of a fraction that has one
+        // Given. A fraction spells with its point, so `1` on a double slot is
+        // the int's spelling and a member no fraction could ever match, and
+        // `1e0`/`1.00` are second spellings of a fraction that has one
         func module(oneOf candidates: [String]) throws -> Module {
             try Module(
                 procedures: [
@@ -512,8 +512,8 @@ struct ConstraintTests {
             }
         }
 
-        // The spellings a document itself writes are alive — the exponent
-        // form included, sign and padding and all.
+        // The spellings a document itself writes are alive. The exponent form
+        // included, sign and padding and all.
         #expect(throws: Never.self) {
             try linker.link([module(oneOf: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
         }
@@ -521,8 +521,8 @@ struct ConstraintTests {
 
     @Test("oneOf membership is the number's worth, not its bit pattern")
     func aOneOfMeetsANumberByWorth() async throws {
-        // Given — the two zeros are one worth in the language's own order,
-        // so a list that writes one admits the other
+        // Given. The two zeros are one worth in the language's own order, so a
+        // list that writes one admits the other
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -547,10 +547,10 @@ struct ConstraintTests {
 
     @Test("a slot that names no one kind reads a candidate as either")
     func aBoundedSlotMeetsEitherKindByWorth() async throws {
-        // Given — a constraint-bounded parameter admits wholes and fractions
-        // alike, so `"1"` is a live member and worth carries across kinds:
-        // the same rule `number` takes, pinned so the link's candidate judge
-        // and this boundary cannot drift apart
+        // Given. A constraint-bounded parameter admits wholes and fractions
+        // alike, so `"1"` is a live member and worth carries across kinds: the
+        // same rule `number` takes, pinned so the link's candidate judge and
+        // this boundary cannot drift apart
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -580,7 +580,7 @@ struct ConstraintTests {
 
     @Test("a member hiding a refused shape behind a name still refuses")
     func aMemberBehindANameIsJudgedResolved() throws {
-        // Given — an alias is a name for a shape, so what the shape may not be
+        // Given. An alias is a name for a shape, so what the shape may not be
         // the alias may not be either
         let sut = try Module(
             types: ["Anything": .any],
@@ -604,8 +604,8 @@ struct ConstraintTests {
 
     @Test("a recursive shape compared with itself agrees instead of recursing")
     func aRecursiveShapeAcceptsItself() throws {
-        // Given — a shape that names itself walks back into the comparison it
-        // is inside; meeting the pair again is agreement, not a regress
+        // Given. A shape that names itself walks back into the comparison it is
+        // inside; meeting the pair again is agreement, not a regress
         let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
 
         // When / Then
@@ -643,8 +643,8 @@ struct ConstraintTests {
 
     @Test("a path fills a word's receiver and is judged like a call")
     func aPathReceiverIsJudgedAtTheLink() throws {
-        // Given — `"abc".absolute` and `absolute(of: "abc")` mean the same
-        // send, so they refuse on the same surface
+        // Given. `"abc".absolute` and `absolute(of: "abc")` mean the same send,
+        // so they refuse on the same surface
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -667,9 +667,9 @@ struct ConstraintTests {
 
     @Test("a path send refuses a parameter read two ways")
     func aPathSendRefusesADisagreeingReading() throws {
-        // Given — the receiver's procedure shape fills one parameter twice,
-        // and a parameter read as a whole number and as text has no answer on
-        // the path surface any more than on the written one
+        // Given. The receiver's procedure shape fills one parameter twice, and
+        // a parameter read as a whole number and as text has no answer on the
+        // path surface any more than on the written one
         let sut = try Module(
             procedures: [
                 "summed": Procedure(
@@ -716,8 +716,8 @@ struct ConstraintTests {
 
     @Test("a path cannot reach a word that declares no receiver")
     func aPathDoesNotReachAReceiverlessWord() throws {
-        // Given — a pure word without a receiver leaves a path nothing to
-        // fill, so the link refuses where the run would have found nothing
+        // Given. A pure word without a receiver leaves a path nothing to fill,
+        // so the link refuses where the run would have found nothing
         let sut = try Module(
             procedures: [
                 "helper": Procedure(
@@ -745,9 +745,9 @@ struct ConstraintTests {
 
     @Test("a word sent through a path is judged like a call")
     func aWordOnAPathIsJudged() throws {
-        // Given — text has no fields, so the name is a word, and the word's
-        // bounded receiver refuses the text's reading the way the written
-        // call would
+        // Given. Text has no fields, so the name is a word, and the word's
+        // bounded receiver refuses the text's reading the way the written call
+        // would
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -771,9 +771,9 @@ struct ConstraintTests {
 
     @Test("a dot on a record is a read, and a word there is written as a call")
     func aDotOnARecordDoesNotReachAWord() throws {
-        // Given — the record does not declare the name, and a shape with
-        // fields reads fields alone: the word by that name is not consulted,
-        // and the refusal says to write the call
+        // Given. The record does not declare the name, and a shape with fields
+        // reads fields alone: the word by that name is not consulted, and the
+        // refusal says to write the call
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -799,9 +799,9 @@ struct ConstraintTests {
 
     @Test("a receiver written in front and by name is refused")
     func aReceiverAndASameNamedArgumentAreOneSlot() throws {
-        // Given — the dot writes the receiver and the arguments write `of`
-        // again. One parameter takes one argument, and the one by name would
-        // be neither read nor run, so the link refuses the call
+        // Given. The dot writes the receiver and the arguments write `of`
+        // again. One parameter takes one argument, and the one by name would be
+        // neither read nor run, so the link refuses the call
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -826,7 +826,7 @@ struct ConstraintTests {
 
     @Test("a closure's signature is held to the same judgment as a declaration")
     func aClosureSignatureIsJudgedAtTheLink() throws {
-        // Given — unreached code still has to compile, and a signature written
+        // Given. Unreached code still has to compile, and a signature written
         // inline is a declaration however deep a body buries it
         let sut = try Module(
             procedures: [
@@ -859,8 +859,8 @@ struct ConstraintTests {
 
     @Test("a receiver naming no parameter refuses where it is declared")
     func aReceiverNamingNoParameterRefuses() throws {
-        // Given — the declaration states a fact about its own parameters, and
-        // a name pointing at none of them is judged where it is written
+        // Given. The declaration states a fact about its own parameters, and a
+        // name pointing at none of them is judged where it is written
         let sut = try Module(
             procedures: [
                 "shout": Procedure(
@@ -889,9 +889,8 @@ struct ConstraintTests {
 
     @Test("a declaration sharing a word's bare spelling does not shadow the path")
     func aDeclarationDoesNotShadowAPathWord() async throws {
-        // Given — a module's bare `first` lives among the selectors and
-        // std's `first` among the path words; one spelling, two questions,
-        // two tables
+        // Given. A module's bare `first` lives among the selectors and std's
+        // `first` among the path words; one spelling, two questions, two tables
         let sut = try Module(
             procedures: [
                 "first": Procedure(
@@ -925,7 +924,7 @@ struct ConstraintTests {
 
     @Test("an effect's own resolver still derives a path's word")
     func anEffectResolverDerivesWords() async throws {
-        // Given — a native word resolves its receiver through its invocation,
+        // Given. A native word resolves its receiver through its invocation,
         // which is the one door outside the executor's own resolvers. The
         // receiver's path ends in a word, so a resolver assembled without the
         // word table would read absence where the link approved a send.
@@ -964,8 +963,8 @@ struct ConstraintTests {
 
     @Test("a hand-built table ends its own membership recursion")
     func aHandBuiltTableTerminates() throws {
-        // Given — a table nothing linked, holding the declaration the link
-        // would have refused; the table answers rather than chasing it
+        // Given. A table nothing linked, holding the declaration the link would
+        // have refused; the table answers rather than chasing it
         let sut = TypeTable(
             constraints: ["Loop": [.parameter(name: "S", constraint: "Loop")]]
         )
@@ -985,7 +984,7 @@ struct ConstraintTests {
 
     @Test("a constrained reading fed to a looser bound passes")
     func aConstrainedReadingFitsALooserBound() throws {
-        // Given — inside a generic body the argument reads as the enclosing
+        // Given. Inside a generic body the argument reads as the enclosing
         // parameter, and its membership is a subset of what the callee asks
         let sut = try Module(
             constraints: ["Exact": [.int]],

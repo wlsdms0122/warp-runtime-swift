@@ -22,7 +22,7 @@ struct IntSpellingTests {
         #expect({ if case .word(Int.min) = Int.reading(-0x1p63) { true } else { false } }())
         #expect({ if case .word(0) = Int.reading(-0.0) { true } else { false } }())
 
-        // The word's upper edge: 2^63 itself is already past Int.max — and
+        // The word's upper edge: 2^63 itself is already past Int.max, and
         // infinity is past every word, the same fact at its limit.
         #expect({ if case .pastTheWord = Int.reading(0x1p63) { true } else { false } }())
         #expect({ if case .pastTheWord = Int.reading(1e30) { true } else { false } }())
@@ -52,9 +52,9 @@ struct IntSpellingTests {
         #expect(Double.infinity.spelling == nil)
         #expect(Double.nan.spelling == nil)
 
-        // The digits are the host's shortest round-trip rendering, so where
-        // the host already writes the document's form the two agree — a
-        // drift here would be this file re-deciding the digits.
+        // The digits are the host's shortest round-trip rendering, so where the
+        // host already writes the document's form the two agree. A drift here
+        // would be this file re-deciding the digits.
         for value in [
             0.1, 1.5, -2.25, 1.0 / 3.0, 6.02214076e23, -1.7976931348623157e308,
             9007199254740993.0, 0.30000000000000004, 2.2250738585072014e-308

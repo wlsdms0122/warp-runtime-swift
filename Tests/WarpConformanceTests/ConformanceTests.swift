@@ -13,15 +13,15 @@ import WarpSyntax
 
 // The specification's cases, run against this implementation.
 //
-// Every other test here reaches inside — `@testable`, private types, internal
-// helpers — which is right for a test about how something is built. These are
+// Every other test here reaches inside (`@testable`, private types, internal
+// helpers) which is right for a test about how something is built. These are
 // about something else: whether this is the language `spec/` describes. So this
-// file imports what any caller imports and nothing more. A runner that could see
-// inside could pass by agreeing with the implementation rather than with the
-// specification, which is the one thing it must not be able to do.
+// file imports what any caller imports and nothing more. A runner that could
+// see inside could pass by agreeing with the implementation rather than with
+// the specification, which is the one thing it must not be able to do.
 //
 // The cases are data, and the point of that is that this file is replaceable.
-// An implementation in another language writes its own runner — this much code —
+// An implementation in another language writes its own runner (this much code)
 // and asks the same questions.
 @Suite("The specification's cases")
 struct ConformanceTests {
@@ -45,7 +45,7 @@ struct ConformanceTests {
 
     @Test("the cases are the specification's, and it has some")
     func thereAreCases() throws {
-        // Given — a suite that silently found nothing would pass, and passing by
+        // Given. A suite that silently found nothing would pass, and passing by
         // asking nothing is the failure mode a conformance suite has
         let sut = try Case.all()
 
@@ -97,8 +97,8 @@ struct ConformanceTests {
 // One question, read from the specification rather than written here.
 //
 // A case is not a program and is not written in the shape of one. It is spelled
-// in the same text — the encoding carries a tree and never learns what a tree
-// means, so there is one of those and not two — but what it holds under `test`
+// in the same text (the encoding carries a tree and never learns what a tree
+// means, so there is one of those and not two) but what it holds under `test`
 // is a test, and the document it asks about is nested whole under `program`.
 //
 // Which is what lets the two be told apart by saying so rather than by noticing:
@@ -106,7 +106,7 @@ struct ConformanceTests {
 // other's reader for what it is instead of for the keys it happens to carry.
 struct Case: Sendable, CustomStringConvertible {
     // Which shapes a runner has to understand to ask these questions. It moves
-    // for the same reason `warp` does and on its own schedule — the day a case
+    // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
     static let version = 1
     static let earliest = 1
@@ -141,7 +141,7 @@ struct Case: Sendable, CustomStringConvertible {
         // "this is not a case".
         guard let declared = written[Self.versionKey] else {
             throw ConformanceError(
-                "this is not a case — it does not say which test it is written for"
+                "this is not a case. It does not say which test it is written for"
                     + " (`\(Self.versionKey)`)"
             )
         }
@@ -183,12 +183,12 @@ struct Case: Sendable, CustomStringConvertible {
             self.arguments = [:]
         }
 
-        // One of `answers` or `refuses`, and exactly one. The slot groups them so
-        // that this is a question about one record instead of a rule about two
-        // sibling keys — but a record is not a choice, so the count is still
-        // counted here. A case edited from one to the other and left holding both
-        // would otherwise start asking a different question than it reads as, and
-        // nobody would be told.
+        // One of `answers` or `refuses`, and exactly one. The slot groups them
+        // so that this is a question about one record instead of a rule about
+        // two sibling keys, but a record is not a choice, so the count is still
+        // counted here. A case edited from one to the other and left holding
+        // both would otherwise start asking a different question than it reads
+        // as, and nobody would be told.
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
@@ -217,7 +217,7 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Public
     // The cases live beside the specification they belong to rather than inside
-    // this package, because they are not this implementation's — the day there
+    // this package, because they are not this implementation's. The day there
     // is a second implementation they move with `spec/` and this file stays.
     static func all() throws -> [Case] {
         let directory = URL(fileURLWithPath: #filePath)
@@ -230,16 +230,16 @@ struct Case: Sendable, CustomStringConvertible {
             .appendingPathComponent("conformance")
 
         // The cases are the ones named like cases, and everything else in the
-        // folder is somebody else's business — a `.DS_Store`, a `.orig` left by
+        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
         // a merge, a copy someone kept while editing. A runner that refused to
-        // start over any of those would be putting "is this folder tidy" and "is
-        // this implementation the language" behind one red light, and the second
-        // question is the only one it was built to ask.
+        // start over any of those would be putting "is this folder tidy" and
+        // "is this implementation the language" behind one red light, and the
+        // second question is the only one it was built to ask.
         //
-        // The cost is real and is accepted: a case saved under a name this misses
-        // is not asked, and nothing here says so. What catches that is the same
-        // thing that catches a case deleted outright — it is a file in a diff,
-        // and the dumper that writes these names them.
+        // The cost is real and is accepted: a case saved under a name this
+        // misses is not asked, and nothing here says so. What catches that is
+        // the same thing that catches a case deleted outright. It is a file in
+        // a diff, and the dumper that writes these names them.
         let files = try FileManager.default
             .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }

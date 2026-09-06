@@ -11,10 +11,10 @@ import Testing
 @testable import WarpSyntax
 import WarpStandard
 
-// A statement with no naming key: the construct runs and the answer is
-// dropped, which is how an effect is asked for on its own. The other half of
-// the same decision is that a leaving statement takes no name at all — it
-// never finishes, so its name could never bind.
+// A statement with no naming key: the construct runs and the answer is dropped,
+// which is how an effect is asked for on its own. The other half of the same
+// decision is that a leaving statement takes no name at all. It never finishes,
+// so its name could never bind.
 @Suite("A statement without a name")
 struct NamelessTests {
     // MARK: - Property
@@ -24,7 +24,7 @@ struct NamelessTests {
     // MARK: - Test
     @Test("a nameless statement runs and its answer is dropped")
     func aNamelessStatementRunsForItsEffect() async throws {
-        // Given — a call whose answer nothing keeps, then an answer of its own
+        // Given. A call whose answer nothing keeps, then an answer of its own
         let sut = try loader.loadDocument([
             "imports": ["std.math.plus"],
             "procedures": [
@@ -45,9 +45,9 @@ struct NamelessTests {
 
     @Test("a nameless statement binds nothing a later statement could read")
     func aNamelessStatementBindsNothing() {
-        // Given — the dropped answer is dropped, not bound under some
-        // invented name a reference could reach; the reference resolves
-        // nowhere and the reading says so
+        // Given. The dropped answer is dropped, not bound under some invented
+        // name a reference could reach; the reference resolves nowhere and the
+        // reading says so
         #expect {
             try loader.loadDocument([
                 "procedures": [
@@ -79,7 +79,7 @@ struct NamelessTests {
         ["set": "past", "value": ["continue": Value.null]]
     ])
     func aNamedLeavingStatementIsRefused(_ statement: Value) {
-        // Given — a leaving statement never finishes, so a naming key on one
+        // Given. A leaving statement never finishes, so a naming key on one
         // promises a binding that cannot happen
         #expect {
             try loader.loadProcedure(["body": [statement]])
@@ -90,8 +90,8 @@ struct NamelessTests {
 
     @Test("a name on a branch both of whose arms leave is refused at reading")
     func aNamedStructuralLeaveIsRefusedAtReading() {
-        // Given — the leave rules reach through structure, and the reading
-        // sees the structure: fragments read on their own pass through no
+        // Given. The leave rules reach through structure, and the reading sees
+        // the structure: fragments read on their own pass through no
         // validation, so this is where the fact is caught for them
         #expect {
             try loader.statements(from: [
@@ -111,7 +111,7 @@ struct NamelessTests {
 
     @Test("a statement after one that leaves is refused at reading")
     func aTrailingStatementAfterALeaveIsRefusedAtReading() {
-        // Given — order is a fact only the sequence shows, so the sequence's
+        // Given. Order is a fact only the sequence shows, so the sequence's
         // reading holds it: fragments pass through no validation, and the rule
         // must not wait for a link they may never reach
         #expect {
@@ -126,9 +126,9 @@ struct NamelessTests {
 
     @Test("a name on a leaving statement is refused for the leave, not for the name")
     func aLeavingStatementIsRefusedBeforeItsNameIsJudged() {
-        // Given — a caller assembling statements directly, with a `set` naming
-        // a leave: that the statement takes no name at all comes before any
-        // question about which name it is — visibility included
+        // Given (a caller assembling statements directly, with a `set` naming a
+        // leave: that the statement takes no name at all comes before any
+        // question about which name it is) visibility included
         let statement = Statement(binding: .assignment([.key("past")]), expression: .leave(Leave(reach: .procedure, value: .literal(.int(1))))
         )
 
@@ -145,7 +145,7 @@ struct NamelessTests {
         ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
     ])
     func aBindingConstructRequiresAName(_ statement: Value) {
-        // Given — with no name there is nothing the body could read the
+        // Given, with no name there is nothing the body could read the
         // round/element/failure under, and an invented name would be a real
         // name somewhere
         #expect {
@@ -157,7 +157,7 @@ struct NamelessTests {
 
     @Test("a naming key holding null is a broken name, not a nameless statement")
     func aNullNameIsRefused() {
-        // Given — a key written with no name in it: reading it as "no naming
+        // Given. A key written with no name in it: reading it as "no naming
         // key" would make a failed name and an omitted one the same document
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": [["let": Value.null, "value": 1]]])
@@ -166,7 +166,7 @@ struct NamelessTests {
 
     @Test("a nameless statement written and read back is the same statement")
     func aNamelessStatementRoundTrips() throws {
-        // Given — the reader's set of legal documents and the writer's must be
+        // Given. The reader's set of legal documents and the writer's must be
         // one set; a document that reads but does not write back broke that
         let document: Value = [
             "imports": ["std.math.plus"],

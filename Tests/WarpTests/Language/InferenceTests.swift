@@ -23,8 +23,9 @@ struct InferenceTests {
     // MARK: - Test
     @Test("a type parameter carries the element type through the call that filled it")
     func aHoleCarriesWhatFilledIt() throws {
-        // Given — `first` takes `array<some Element>` and answers `some Element`,
-        // so what it answers here is a string and the declaration never said so
+        // Given. `first` takes `array<some Element>` and answers `some
+        // Element`, so what it answers here is a string and the declaration
+        // never said so
         let wants = Procedure(
             signature: Signature(parameters: ["word": Parameter(type: .string)]),
             body: []
@@ -60,7 +61,7 @@ struct InferenceTests {
 
     @Test("a type parameter filled with one shape refuses a call wanting another")
     func aFilledHoleRefusesWhatDisagrees() throws {
-        // Given — the same walk, over an array of ints
+        // Given. The same walk, over an array of ints
         let wants = Procedure(
             signature: Signature(parameters: ["word": Parameter(type: .string)]),
             body: []
@@ -96,9 +97,9 @@ struct InferenceTests {
 
     @Test("a type parameter a procedure answers becomes what the walk answers")
     func aWalkAnswersWhatItsProcedureDoes() throws {
-        // Given — `map` over strings with a procedure answering int. What the
-        // walk answers follows the procedure rather than the receiver, so asking
-        // for the receiver's shape back is the disagreement
+        // Given. `map` over strings with a procedure answering int. What the
+        // walk answers follows the procedure rather than the receiver, so
+        // asking for the receiver's shape back is the disagreement
         let counting = Procedure(
             signature: Signature(
                 parameters: ["item": Parameter(type: .string)],
@@ -144,11 +145,11 @@ struct InferenceTests {
     // MARK: - Test
     @Test("a loop's result carries the body name it reads, nullable")
     func aLoopResultCarriesTheBodyNameItReads() async throws {
-        // Given — a finished round's exit hands the result the body's own
-        // declarations; the 0-round exit never bound them, and a name a
-        // scope does not hold reads as null. So `kept` holds int? — not an
-        // `any` for a name the entry never saw, and not a plain int the
-        // 0-round run would break
+        // Given. A finished round's exit hands the result the body's own
+        // declarations; the 0-round exit never bound them, and a name a scope
+        // does not hold reads as null. So `kept` holds int?, not an `any` for
+        // a name the entry never saw, and not a plain int the 0-round run would
+        // break
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
@@ -176,7 +177,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — refused as the nullable it is
+        // When / Then. Refused as the nullable it is
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
@@ -210,9 +211,9 @@ struct InferenceTests {
 
     @Test("a loop result's writes stay out of the rounds' own reading")
     func aLoopResultsWritesStayOutOfTheRounds() async throws {
-        // Given — the result runs once, at an exit, never between rounds;
-        // a body that reads `y` as the int it is must not be refused on
-        // account of a write only the exit makes
+        // Given. The result runs once, at an exit, never between rounds; a body
+        // that reads `y` as the int it is must not be refused on account of a
+        // write only the exit makes
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
@@ -251,7 +252,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — links, and the run answers what the exit wrote
+        // When / Then. Links, and the run answers what the exit wrote
         #expect(try await run([sut]) == .string("s"))
     }
 
@@ -337,7 +338,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — `task.done` is a bool, and the walk read that from the
+        // When / Then. `task.done` is a bool, and the walk read that from the
         // shape rather than from the value
         #expect(throws: LinkError.self) {
             try linker.link([sut] + Module.standard, entry: entryName)
@@ -346,7 +347,7 @@ struct InferenceTests {
 
     @Test("a path that ends in a word carries what the word answers")
     func pathWordCarriesItsAnswer() throws {
-        // Given — `${names.count}` is `count` sent to `names`, and `count`
+        // Given. `${names.count}` is `count` sent to `names`, and `count`
         // declares that it answers an int
         let sut = try Module(
             procedures: [
@@ -426,7 +427,7 @@ struct InferenceTests {
 
     @Test("a name a branch may have rewritten holds neither reading")
     func disagreeingWritesAreUnknown() throws {
-        // Given — a join that guessed would be a refusal an author cannot act
+        // Given. A join that guessed would be a refusal an author cannot act
         // on, so where two readings disagree nothing is claimed
         let sut = try Module(
             procedures: [
@@ -474,7 +475,7 @@ struct InferenceTests {
 
     @Test("a declared answer is checked against what the body actually names")
     func rightTypesLink() throws {
-        // Given — the same shapes, agreeing
+        // Given. The same shapes, agreeing
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
@@ -521,9 +522,10 @@ struct InferenceTests {
 
     @Test("what a map answers is typed by the closure it was given")
     func aMapAnswerCarriesItsElementType() throws {
-        // Given — `map` declares its answer through type parameters: the closure's
-        // declared answer fills `Answer`, so handing the fan-out's answer to a
-        // word that wants another kind is refused before anything runs
+        // Given. `map` declares its answer through type parameters: the
+        // closure's declared answer fills `Answer`, so handing the fan-out's
+        // answer to a word that wants another kind is refused before anything
+        // runs
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -575,9 +577,9 @@ struct InferenceTests {
 
     @Test("a write only one arm makes reads back nullable")
     func aWriteOnlyOneArmMakesReadsBackNullable() throws {
-        // Given — the run either took the arm or did not, so the name holds
-        // the write or the null it started with: `T?`, and a slot that wants
-        // the value plain refuses
+        // Given. The run either took the arm or did not, so the name holds the
+        // write or the null it started with: `T?`, and a slot that wants the
+        // value plain refuses
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -727,10 +729,10 @@ struct InferenceTests {
 
     @Test("a cast naming a type nothing declares refuses at the link")
     func aCastNamingNothingIsRefused() throws {
-        // Given — `as?` says the author expected the value might not be that
+        // Given. `as?` says the author expected the value might not be that
         // shape. A name nothing declares is not that, and letting it reach the
-        // run would have `as?` read a typo as null forever. A type spelled in
-        // a body is held to the rule a type spelled in a signature is
+        // run would have `as?` read a typo as null forever. A type spelled in a
+        // body is held to the rule a type spelled in a signature is
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -759,8 +761,8 @@ struct InferenceTests {
 
     @Test("a cast onto a shape that proves nothing is refused, whatever it reads")
     func aCastOntoNothingIsRefused() throws {
-        // Given — the claim is judged on itself: `as: any` opens no door over
-        // an `any` receiver any more than it does over an `int` one
+        // Given. The claim is judged on itself: `as: any` opens no door over an
+        // `any` receiver any more than it does over an `int` one
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -791,10 +793,10 @@ struct InferenceTests {
 
     @Test("a cast may name a shape sharing no field with the reading")
     func aCastOntoADisjointRecordStands() throws {
-        // Given — two records naming no field in common accept each other in
-        // neither direction and are still both satisfied by one value: a
-        // record says what must be there, not all there is. This is the
-        // spelling the specification gives for reading what a failure carries
+        // Given. Two records naming no field in common accept each other in
+        // neither direction and are still both satisfied by one value: a record
+        // says what must be there, not all there is. This is the spelling the
+        // specification gives for reading what a failure carries
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -822,10 +824,9 @@ struct InferenceTests {
 
     @Test("a cast between two shapes that name themselves does not chase them forever")
     func aCastBetweenRecursiveTypesTerminates() throws {
-        // Given — the reading is a declared type rather than `any`, so the
-        // walk actually asks whether both could hold. Both sides name
-        // themselves, which is the case a guard living inside one expansion
-        // could not bound
+        // Given. The reading is a declared type rather than `any`, so the walk
+        // actually asks whether both could hold. Both sides name themselves,
+        // which is the case a guard living inside one expansion could not bound
         let sut = try Module(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
@@ -848,14 +849,14 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — it terminates; whether it refuses as needless is the
+        // When / Then. It terminates; whether it refuses as needless is the
         // sameness rule's business, not this one's
         _ = try? linker.link([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
     func aCastOntoAMismatchedKindIsRefusedThroughUnprovenInsides() throws {
-        // Given — `array<any>` proves an array is there. Nothing it holds is
+        // Given. `array<any>` proves an array is there. Nothing it holds is
         // proven, but that says nothing about whether the whole could be a
         // string, and it cannot: this would answer null on every run
         let sut = try Module(
@@ -882,7 +883,7 @@ struct InferenceTests {
 
     @Test("repeating a cast is refused whichever way the shape was spelled")
     func aRepeatedCastIsRefusedInlineToo() throws {
-        // Given — `payload as? int` hands on `int?`, and asking the sameness
+        // Given. `payload as? int` hands on `int?`, and asking the sameness
         // question of the spelling rather than of what was handed on let this
         // repeat through while the same repeat written with a name was caught
         let sut = try Module(
@@ -922,9 +923,9 @@ struct InferenceTests {
 
     @Test("a cast onto any in code nothing reaches is still refused")
     func anUnreadableClaimIsRefusedWhereNoWalkGoes() throws {
-        // Given — impure and unreachable, so no typing walk sees it. What the
-        // claim names is a fact about the spelling, so it is held anyway;
-        // `as?: never` slipping through here would answer null forever
+        // Given. Impure and unreachable, so no typing walk sees it. What the
+        // claim names is a fact about the spelling, so it is held anyway; `as?:
+        // never` slipping through here would answer null forever
         let sut = try Module(
             procedures: [
                 "entry": Procedure(body: [], result: .literal(.int(0))),
@@ -954,7 +955,7 @@ struct InferenceTests {
 
     @Test("a name standing for a nullable is not wrapped again")
     func anAskingCastOntoANullableNameDoesNotDouble() throws {
-        // Given — `Maybe` already holds null, so `as?: Maybe` reads `Maybe`.
+        // Given. `Maybe` already holds null, so `as?: Maybe` reads `Maybe`.
         // Wrapping the name again made the same shape read two ways depending
         // on whether the author wrote the name or what it stands for, and the
         // second cast then escaped the sameness rule
@@ -986,7 +987,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — the second says nothing the first did not
+        // When / Then. The second says nothing the first did not
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
@@ -996,9 +997,9 @@ struct InferenceTests {
 
     @Test("a cast in a procedure nothing reaches still names a declared shape")
     func aCastInUnreachedImpureCodeIsStillHeldToItsName() throws {
-        // Given — impure and unreachable from the entry, so neither the
-        // frontier nor the pure set walks it. A signature written here would
-        // still be held to its names; so is a cast
+        // Given. Impure and unreachable from the entry, so neither the frontier
+        // nor the pure set walks it. A signature written here would still be
+        // held to its names; so is a cast
         let sut = try Module(
             procedures: [
                 "entry": Procedure(body: [], result: .literal(.int(0))),
@@ -1028,7 +1029,7 @@ struct InferenceTests {
 
     @Test("an int may become a double, so a cast onto double stands")
     func aCastOntoDoubleStands() throws {
-        // Given — the one widening the language has. Refusing it at the link
+        // Given. The one widening the language has. Refusing it at the link
         // would refuse a cast that settles on every run
         let sut = try Module(
             procedures: [
@@ -1050,7 +1051,7 @@ struct InferenceTests {
 
     @Test("a nullable and null share null, so a cast between them stands")
     func aCastBetweenANullableAndNullStands() throws {
-        // Given — asked of the fact that both hold null, not of which one is
+        // Given. Asked of the fact that both hold null, not of which one is
         // written with `?`
         let sut = try Module(
             procedures: [
@@ -1072,7 +1073,7 @@ struct InferenceTests {
 
     @Test("two nullables share null, so a cast between them stands")
     func aCastBetweenNullablesStands() throws {
-        // Given — null satisfies both, so a value both shapes hold exists
+        // Given. Null satisfies both, so a value both shapes hold exists
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1097,7 +1098,7 @@ struct InferenceTests {
 
     @Test("a dictionary and a record are one shape read two ways, so a cast between them stands")
     func aCastBetweenADictionaryAndARecordStands() throws {
-        // Given — the boundary settles both from the same runtime value, so
+        // Given. The boundary settles both from the same runtime value, so
         // refusing this would refuse a cast that succeeds
         let sut = try Module(
             procedures: [
@@ -1126,12 +1127,12 @@ struct InferenceTests {
 
     @Test("the reading a cast hands on is the name the author wrote")
     func aCastHandsOnItsName() throws {
-        // Given — casting the result to the same declared name again is the
-        // sameness rule's case, and it can only see that if the reading it
-        // was handed is still `Person` rather than the shape Person stands
-        // for. (What a refusal *quotes* is the path walk's own business: it
-        // resolves names at every step, for a cast's reading and a declared
-        // parameter's alike.)
+        // Given. Casting the result to the same declared name again is the
+        // sameness rule's case, and it can only see that if the reading it was
+        // handed is still `Person` rather than the shape Person stands for.
+        // (What a refusal *quotes* is the path walk's own business: it resolves
+        // names at every step, for a cast's reading and a declared parameter's
+        // alike.)
         let sut = try Module(
             types: ["Person": .record(["name": .string])],
             procedures: [
@@ -1170,9 +1171,9 @@ struct InferenceTests {
 
     @Test("a cast onto a type that names itself does not chase the name forever")
     func aCastOntoARecursiveTypeTerminates() throws {
-        // Given — a type may name itself, and the link's own guarantee that
-        // name chains are finite covers walks that follow names alone. This
-        // walk goes into fields too, so it carries its own guard
+        // Given. A type may name itself, and the link's own guarantee that name
+        // chains are finite covers walks that follow names alone. This walk
+        // goes into fields too, so it carries its own guard
         let sut = try Module(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
@@ -1201,9 +1202,9 @@ struct InferenceTests {
 
     @Test("a cast between shapes no value is both is refused")
     func aCastThatCanNeverHoldIsRefused() throws {
-        // Given — the reading proves a string is there, and no string is a
-        // whole number. `as?` here would answer null on every run, which is
-        // the permanent silent null `as?` exists not to be
+        // Given. The reading proves a string is there, and no string is a whole
+        // number. `as?` here would answer null on every run, which is the
+        // permanent silent null `as?` exists not to be
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1228,7 +1229,7 @@ struct InferenceTests {
 
     @Test("naming a step of a path through a parameter does not change what it means")
     func aParameterPathSurvivesBeingNamed() async throws {
-        // Given — `of.a.b` in one statement stands, so `x = of.a` then `x.b`
+        // Given. `of.a.b` in one statement stands, so `x = of.a` then `x.b`
         // must stand too. Folding the parameter walk's reading to `any` made
         // the second refuse on a shape the author never wrote
         let sut = try Module(
@@ -1262,7 +1263,7 @@ struct InferenceTests {
 
     @Test("a constant folded before any run may hold a cast")
     func aConstantMayHoldACast() async throws {
-        // Given — the link calls a cast pure, so the pure evaluator has to be
+        // Given. The link calls a cast pure, so the pure evaluator has to be
         // able to read one. A module constant is folded through that evaluator
         // before anything runs, so a cast in one is where the two would
         // disagree if only the link believed it
@@ -1289,9 +1290,9 @@ struct InferenceTests {
 
     @Test("a cast onto a shape holding any opens the door it names, and no further")
     func aCastOntoAShapeHoldingAnyOpensItsOwnDoor() throws {
-        // Given — `as: array<any>` is not `as: any`: the types then prove an
+        // Given. `as: array<any>` is not `as: any`: the types then prove an
         // array is there and an index reads one. What each element holds is
-        // still nothing, so a dot on one is still refused — the door it named
+        // still nothing, so a dot on one is still refused. The door it named
         // opened, and only that one
         let sut = try Module(
             procedures: [
@@ -1320,10 +1321,10 @@ struct InferenceTests {
 
     @Test("a cast is not called needless where what it reads holds any inside")
     func aCastIntoAnUnprovenFieldStands() throws {
-        // Given — the reading proves a record is there and proves nothing
-        // about `data`. Calling this cast needless would refuse the author
-        // both ways: the cast as saying nothing, and the dot it would have
-        // allowed as unjudgeable
+        // Given. The reading proves a record is there and proves nothing about
+        // `data`. Calling this cast needless would refuse the author both ways:
+        // the cast as saying nothing, and the dot it would have allowed as
+        // unjudgeable
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1351,7 +1352,7 @@ struct InferenceTests {
 
     @Test("a cast keeps the name the author wrote, not the shape it stands for")
     func aCastKeepsItsName() throws {
-        // Given — the link walks a declared name through to judge it, and what
+        // Given. The link walks a declared name through to judge it, and what
         // it writes back is what was written: a refusal and a document both
         // read the author's spelling
         let sut = try Module(
@@ -1395,8 +1396,8 @@ struct InferenceTests {
 
     @Test("a cast opens what any declares nothing about")
     func aCastOpensAny() throws {
-        // Given — the same read, with the shape the author expects named:
-        // the dot is judged against that shape, and the run is left only the
+        // Given. The same read, with the shape the author expects named: the
+        // dot is judged against that shape, and the run is left only the
         // question of what arrived
         let sut = try Module(
             procedures: [
@@ -1426,7 +1427,7 @@ struct InferenceTests {
 
     @Test("a field the record does not declare is refused, ?. or not")
     func anUndeclaredFieldIsRefused() throws {
-        // Given — the type proved the absence, so no spelling reads past it:
+        // Given. The type proved the absence, so no spelling reads past it:
         // `?.` speaks about what may be absent at run, not about what the
         // declaration already settled
         let sut = try Module(
@@ -1478,12 +1479,11 @@ struct InferenceTests {
 
     @Test("a write a break carries out of the loop is still counted")
     func aWriteABreakCarriesOutIsCounted() throws {
-        // Given — the arm writes and then breaks: no run comes back to the
-        // arm, but the loop absorbs the break and the flow after the loop
-        // goes on with the write in the box. The write may be a null, so the
-        // name reads back nullable and the plain slot refuses — a reading
-        // that dropped what left with the break would have said `string` and
-        // linked a lie.
+        // Given. The arm writes and then breaks: no run comes back to the arm,
+        // but the loop absorbs the break and the flow after the loop goes on
+        // with the write in the box. The write may be a null, so the name reads
+        // back nullable and the plain slot refuses. A reading that dropped what
+        // left with the break would have said `string` and linked a lie.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1544,10 +1544,10 @@ struct InferenceTests {
 
     @Test("a later field reads what an earlier field wrote")
     func aLaterFieldReadsAnEarlierFieldsWrite() throws {
-        // Given — fields evaluate in name order, and that order is the same
-        // fact for the run and for the reading: field `a` writes the
-        // variable, so field `b` reads it as the int `a` left, not as the
-        // null the record was entered with.
+        // Given. Fields evaluate in name order, and that order is the same fact
+        // for the run and for the reading: field `a` writes the variable, so
+        // field `b` reads it as the int `a` left, not as the null the record
+        // was entered with.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1586,16 +1586,16 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — links, because `b` is an int by the time it is read
+        // When / Then. Links, because `b` is an int by the time it is read
         _ = try linker.link([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a rescue reads what the body may have written before it failed")
     func aRescueReadsTheBodysPartialWrites() throws {
-        // Given — the body writes a null and then risks a failing call: the
-        // rescue runs with that write in the box, so inside the rescue the
-        // name reads `string?` and the plain string slot refuses. A rescue
-        // judged in the entry environment would have linked a lie.
+        // Given. The body writes a null and then risks a failing call: the
+        // rescue runs with that write in the box, so inside the rescue the name
+        // reads `string?` and the plain string slot refuses. A rescue judged in
+        // the entry environment would have linked a lie.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1644,11 +1644,11 @@ struct InferenceTests {
 
     @Test("a round reads what its own earlier rounds may have written")
     func aRoundReadsItsEarlierRoundsWrites() throws {
-        // Given — the first round reads the seed, but the body also writes a
+        // Given. The first round reads the seed, but the body also writes a
         // null, and every later round reads that: inside the loop the name
-        // reads `string?`, so the plain string slot refuses. A body judged
-        // once against the entry environment would have linked the first
-        // round and lied about the rest.
+        // reads `string?`, so the plain string slot refuses. A body judged once
+        // against the entry environment would have linked the first round and
+        // lied about the rest.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1696,10 +1696,10 @@ struct InferenceTests {
 
     @Test("a chain of writes settles link by link, however long")
     func aChainOfWritesSettles() throws {
-        // Given — each round moves the null one link up the chain, so the
-        // head only reads nullable after as many settles as the chain is
-        // long. A walk that stopped counting early would return the head
-        // still plain and link a lie.
+        // Given. Each round moves the null one link up the chain, so the head
+        // only reads nullable after as many settles as the chain is long. A
+        // walk that stopped counting early would return the head still plain
+        // and link a lie.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
         let chain: [Statement] = zip(names, names.dropFirst()).map { name, next in
             Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
@@ -1741,7 +1741,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — `a` reads `string?` after enough rounds
+        // When / Then. `a` reads `string?` after enough rounds
         #expect(throws: LinkError.self) {
             try linker.link([sut] + Module.standard, entry: entryName)
         }
@@ -1749,11 +1749,11 @@ struct InferenceTests {
 
     @Test("a rescue's write is counted even when the body always leaves")
     func aRescueWriteSurvivesALeavingBody() throws {
-        // Given — the rescue runs on the world failing, which no reading of
-        // the body's leaves rules out: a body that always returns can still
-        // fail before its return, and what the rescue wrote is then in the
-        // box. The write may be a null, so the name reads back nullable and
-        // the plain slot refuses.
+        // Given. The rescue runs on the world failing, which no reading of the
+        // body's leaves rules out: a body that always returns can still fail
+        // before its return, and what the rescue wrote is then in the box. The
+        // write may be a null, so the name reads back nullable and the plain
+        // slot refuses.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1803,7 +1803,8 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then — `held` reads `string?`, and the plain string slot says so
+        // When / Then. `held` reads `string?`, and the plain string slot says
+        // so
         #expect(throws: LinkError.self) {
             try linker.link([sut] + Module.standard, entry: entryName)
         }
@@ -1811,11 +1812,11 @@ struct InferenceTests {
 
     @Test("what the body may have written is not overwritten by the rescue's write")
     func aBodyWriteJoinsTheRescueWrite() throws {
-        // Given — the body wrote a string or got nowhere, the rescue wrote an
-        // int or never ran: the name holds any of null, the string and the
-        // int. That is `any` — where readings disagree the slot holds neither
-        // — and `any` passes the string slot below, where a join that kept
-        // only the rescue's int would have refused it wrongly.
+        // Given. The body wrote a string or got nowhere, the rescue wrote an
+        // int or never ran: the name holds any of null, the string and the int.
+        // That is `any` (where readings disagree the slot holds neither) and
+        // `any` passes the string slot below, where a join that kept only the
+        // rescue's int would have refused it wrongly.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1860,7 +1861,7 @@ struct InferenceTests {
 
     @Test("an arm that refuses does not cost the arm that writes its say")
     func refusingArmKeepsTheOtherArmsType() throws {
-        // Given — no run comes back from the refusing arm, so the ways that
+        // Given. No run comes back from the refusing arm, so the ways that
         // finish all made the other arm's write: the name reads as that write
         // alone, not as a maybe
         let sut = try Module(
@@ -1951,7 +1952,7 @@ struct InferenceTests {
 
     @Test("a name on a call that never finishes is refused at link")
     func refusingBodySaysNothingAboutItsAnswer() throws {
-        // Given — `gives_up` declares never, so a name on its call promises a
+        // Given. `gives_up` declares never, so a name on its call promises a
         // binding that cannot happen. The link refuses the name where the
         // signature is known, rather than inventing a type for the binding
         let sut = try Module(

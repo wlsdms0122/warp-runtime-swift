@@ -349,9 +349,9 @@ struct ShapeTests {
     @Test("a procedure from a link that declared no types is refused too")
     func aProcedureFromATypelessLinkIsRefused() async throws {
         // Given: neither link declares a type, so neither has a row a type
-        // number could mean something in — and the rows a body does carry,
-        // the procedures it sends to and the document its variables come
-        // from, still mean something in one link alone.
+        // number could mean something in, and the rows a body does carry, the
+        // procedures it sends to and the document its variables come from,
+        // still mean something in one link alone.
         let maker = try Module(
             procedures: [
                 "entry": Procedure(

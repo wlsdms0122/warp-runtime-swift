@@ -11,15 +11,15 @@ import Testing
 
 // One walk over everything an expression holds.
 //
-// Three stages want all of it and differ only in what they keep — the closure
-// literals a body buries, the shapes its casts name, the selectors it sends —
+// Three stages want all of it and differ only in what they keep (the closure
+// literals a body buries, the shapes its casts name, the selectors it sends)
 // and each used to walk the language itself. A case added to `Expression`
 // reached whichever copies somebody remembered, and a case *handled* but not
 // descended into reached none of them while still compiling.
 //
 // The switch has no default, so a new case cannot be forgotten. What it cannot
 // say is that the case goes *through*: an arm answering `[]` compiles. That is
-// what this asks — a marker in every position a child can sit in, and the walk
+// what this asks. A marker in every position a child can sit in, and the walk
 // has to come back with all of them.
 @Suite("One walk finds everything an expression holds")
 struct BuriedTests {
@@ -28,7 +28,7 @@ struct BuriedTests {
     // MARK: - Test
     @Test("every position a child sits in is walked through")
     func everyChildPositionIsReached() {
-        // Given — one marker per position, so a missing one names itself
+        // Given. One marker per position, so a missing one names itself
         func marker(_ name: String) -> Warp.Expression { .literal(.string(name)) }
 
         let sut = Warp.Expression.array([
@@ -78,7 +78,7 @@ struct BuriedTests {
             return name
         })
 
-        // Then — every marker, by name
+        // Then. Every marker, by name
         #expect(found == [
             "cast operand", "leave value", "record field",
             "closure body", "closure result",
@@ -94,7 +94,7 @@ struct BuriedTests {
 
     @Test("a place names where a thing was found, and a closure names its own")
     func aPlaceNamesWhereAThingWasFound() {
-        // Given — the location a report quotes. A closure literal and the body
+        // Given. The location a report quotes. A closure literal and the body
         // it carries answer under one name, so a refusal says which closure
         // without having to say it twice.
         let sut = Block(
@@ -134,10 +134,10 @@ struct BuriedTests {
 
     @Test("named children are walked in name order, each under its own place")
     func siblingsAreToldApart() {
-        // Given — three casts sitting side by side under names. The stages
-        // that read this walk report the first thing they refuse, so which
-        // sibling an author is shown has to be a fact of the text; and the
-        // place they report has to say which one it was.
+        // Given. Three casts sitting side by side under names. The stages that
+        // read this walk report the first thing they refuse, so which sibling
+        // an author is shown has to be a fact of the text; and the place they
+        // report has to say which one it was.
         //
         // Walked in whatever order a `Dictionary` handed them and reported
         // from one shared place, both were lost: the first refusal moved from

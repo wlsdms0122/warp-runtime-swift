@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Warp
 
-// One name, one spelling. Unicode writes `é` two ways — one scalar, or `e` plus
-// a combining mark — and the two look identical while comparing as different
+// One name, one spelling. Unicode writes `é` two ways (one scalar, or `e` plus
+// a combining mark) and the two look identical while comparing as different
 // bytes. A name is normal form C or it is refused, so a declaration and a
 // reference can only meet by being the same bytes.
 //
@@ -19,7 +19,7 @@ import Testing
 @Suite("A name is written in normal form C")
 struct NormalFormTests {
     // MARK: - Property
-    // `é` as `e` plus a combining acute — canonically equivalent to the one-
+    // `é` as `e` plus a combining acute. Canonically equivalent to the one-
     // scalar spelling, and different bytes.
     private let denormal = "cafe\u{301}"
     private let normal = "caf\u{E9}"

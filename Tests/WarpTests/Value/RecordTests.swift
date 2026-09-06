@@ -66,7 +66,7 @@ struct RecordTests {
         // Given
         let sut = Value.record(Record(name: "app.Point", ["a": .int(1)]))
 
-        // When / Then — a declared field is written where it stands
+        // When / Then. A declared field is written where it stands
         #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "app.Point", ["a": .int(9)])))
 
         // A name the declaration never had would make this something other
@@ -86,8 +86,8 @@ struct RecordTests {
 
     @Test("a nameless record and the dictionary it equals are written the same way")
     func equalValuesAreWrittenAlike() throws {
-        // Given — the contract says these are one value, so a door on top of
-        // it cannot tell them apart
+        // Given. The contract says these are one value, so a door on top of it
+        // cannot tell them apart
         let laid = Value.record(Record(name: nil, ["a": .int(1)]))
         let held = Value.dictionary(["a": .int(1)])
 
@@ -115,7 +115,7 @@ struct RecordTests {
         let composed = Record(name: "app.Caf\u{E9}", ["a": .int(1)])
         let decomposed = "app.Cafe\u{301}"
 
-        // When / Then — the decomposed spelling is no name, so there is no
+        // When / Then. The decomposed spelling is no name, so there is no
         // second record to compare with
         #expect(throws: NameRefused.self) { try Name(decomposed) }
         #expect(composed.name?.spelling == "app.Caf\u{E9}")

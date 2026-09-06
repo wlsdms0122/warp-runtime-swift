@@ -13,8 +13,8 @@ import WarpStandard
 
 // Leaving early: `return`, `break`, `continue`.
 //
-// They are grammar because checking one needs what a signature has no slot for
-// — whether `return 5` fits depends on what the procedure it is written in
+// They are grammar because checking one needs what a signature has no slot for.
+// Whether `return 5` fits depends on what the procedure it is written in
 // declared it answers, and whether `break` is allowed depends on there being a
 // loop around it. A word could be handed the value and could not be told either
 // thing.
@@ -58,7 +58,7 @@ struct LeaveTests {
 
     @Test("breaking ends the loop, which answers what it was going to answer")
     func breakingEndsTheLoop() async throws {
-        // Given — the loop counts to ten and stops at three. What it answers is
+        // Given. The loop counts to ten and stops at three. What it answers is
         // its own `result:`, read in the round that stopped: ending early asks
         // nothing new of the type a loop already has.
         let sut = try loader.loadProcedure([
@@ -97,8 +97,8 @@ struct LeaveTests {
 
     @Test("continuing ends the round and the walk goes on")
     func continuingSkipsARound() async throws {
-        // Given — a round cut short wrote nothing further outward, which is
-        // what skipping it means. So only the rounds that finished are seen.
+        // Given. A round cut short wrote nothing further outward, which is what
+        // skipping it means. So only the rounds that finished are seen.
         let sut = try loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
@@ -143,7 +143,7 @@ struct LeaveTests {
 
     @Test("a name reaches past the nearest loop to one further out")
     func aNameReachesAnOuterLoop() async throws {
-        // Given — the loops already have names, because a statement names what
+        // Given. The loops already have names, because a statement names what
         // it binds and a loop binds its round state under that name. Reaching
         // past the nearest one is spelling the name that already exists.
         let sut = try loader.loadProcedure([
@@ -179,16 +179,16 @@ struct LeaveTests {
             "result": ["ref": "outer"]
         ], importing: ["std.logic.notEqual", "std.math.plus"])
 
-        // When / Then — one round of each, because the break left both
+        // When / Then. One round of each, because the break left both
         #expect(try await answer(sut) == .int(1))
     }
 
     @Test("a rescue does not catch a body that left on purpose")
     func leavingIsNotFailing() async throws {
-        // Given — this is the whole reason the language needed these. The old
+        // Given. This is the whole reason the language needed these. The old
         // way out was to fail deliberately, which a rescue then caught, so a
-        // successful early exit had to travel as a failure and could not be told
-        // apart from one.
+        // successful early exit had to travel as a failure and could not be
+        // told apart from one.
         let sut = try loader.loadProcedure([
             "returns": "string",
             "body": [
@@ -209,7 +209,7 @@ struct LeaveTests {
 
     @Test("leaving is refused where there is nothing to leave")
     func leavingNeedsSomethingToLeave() {
-        // Given — a loop's name is not visible to a closure, because a closure
+        // Given. A loop's name is not visible to a closure, because a closure
         // is a procedure and runs wherever it is called from
         #expect {
             try loader.loadProcedure([
@@ -238,7 +238,7 @@ struct LeaveTests {
 
     @Test("a closure cannot leave the loop it was written in")
     func aClosureCannotLeaveAnEnclosingLoop() {
-        // Given — a closure may be called anywhere, including long after the
+        // Given. A closure may be called anywhere, including long after the
         // loop it was written in has ended. So the loops around where it is
         // *written* are not around where it runs.
         #expect {
@@ -277,10 +277,10 @@ struct LeaveTests {
 
     @Test("answering leaves the procedure it was written in, and no other")
     func answeringStaysInItsOwnFrame() async throws {
-        // Given — three ways to reach a body: a run starting at one, a word
+        // Given. Three ways to reach a body: a run starting at one, a word
         // whose implementation is written, and a closure being invoked. When
         // only the first caught an answer, a `return` inside a called body left
-        // through its own frame and became the *caller's* answer — settled
+        // through its own frame and became the *caller's* answer. Settled
         // against the caller's declaration rather than its own.
         let sut = try loader.loadDocument([
             "procedures": [
@@ -315,9 +315,9 @@ struct LeaveTests {
 
     @Test("a body naming no result is worth nothing to the checker too")
     func theCheckerAgreesAboutWhatABodyAnswers() throws {
-        // Given — the run answers nothing here, so the checker has to say the
+        // Given. The run answers nothing here, so the checker has to say the
         // same. While it still read the last statement, this passed the group's
-        // answer as an int and then handed null over at the run — a program that
+        // answer as an int and then handed null over at the run. A program that
         // linked and could never work, which is the one thing linking promises
         // does not happen.
         let sut: Value = [
@@ -352,7 +352,7 @@ struct LeaveTests {
 
     @Test("a body watched by a rescue is still inside the loop around it")
     func anAttemptDoesNotHideTheLoop() async throws {
-        // Given — an `attempt` runs in step with the body around it, so a loop
+        // Given. An `attempt` runs in step with the body around it, so a loop
         // around the attempt is a loop around its body. The run always allowed
         // this: a leaving is not a failure, so a rescue lets it past.
         let sut = try loader.loadProcedure([
@@ -394,7 +394,7 @@ struct LeaveTests {
 
     @Test("a loop's result reads what its rounds bound")
     func aLoopResultReadsWhatTheBodyBound() async throws {
-        // Given — the checker shows the result what the body declared, so a
+        // Given. The checker shows the result what the body declared, so a
         // result naming one has to work. Reading the scope the round started in
         // would show it nothing the round bound.
         let sut = try loader.loadProcedure([
@@ -422,14 +422,14 @@ struct LeaveTests {
             "result": ["ref": "walked"]
         ], importing: ["std.logic.notEqual", "std.math.plus"])
 
-        // When / Then — what the last round bound, not nothing
+        // When / Then. What the last round bound, not nothing
         #expect(try await answer(sut) == .int(2))
     }
 
     @Test("a result under a body that always leaves is refused at reading")
     func aResultUnderALeavingBodyIsRefusedAtReading() {
-        // Given — the result runs after the body, so it is "after" the same
-        // way a trailing statement is; the pair is refused where a document
+        // Given. The result runs after the body, so it is "after" the same way
+        // a trailing statement is; the pair is refused where a document
         // assembles it, validation or no validation to follow
         #expect {
             try loader.statement(from: [
@@ -445,7 +445,7 @@ struct LeaveTests {
 
     @Test("nothing may be written after leaving")
     func nothingRunsAfterLeaving() {
-        // Given — a statement after one that leaves never runs, so the name it
+        // Given. A statement after one that leaves never runs, so the name it
         // was going to bind never binds. Reading it later would read nothing,
         // and there is no shape of program where that is what the author meant.
         #expect {
@@ -463,7 +463,7 @@ struct LeaveTests {
 
     @Test("a loop answers what it carries, and leaving does not change its type")
     func leavingDoesNotWidenALoop() throws {
-        // Given — `break` carries nothing on purpose. Were it to carry a value,
+        // Given. `break` carries nothing on purpose. Were it to carry a value,
         // a loop's type would be the join of its result and every break in it,
         // and a loop over strings broken with an int would answer `any`.
         let sut: Value = [

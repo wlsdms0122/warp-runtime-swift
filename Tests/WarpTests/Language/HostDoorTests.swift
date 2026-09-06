@@ -71,8 +71,8 @@ struct HostDoorTests {
 
     @Test("a dictionary slot takes a record and answers one whose names are data")
     func aRecordSettlesIntoADictionaryAsData() throws {
-        // Given — a name is proved where a slot declares one, and a
-        // `dictionary` slot declares none
+        // Given. A name is proved where a slot declares one, and a `dictionary`
+        // slot declares none
         let image = try Linker().link([sut], entry: "entry")
         let named = try image.settling(.dictionary(["balance": .int(1)]), as: "bank.Account")
 
@@ -86,7 +86,7 @@ struct HostDoorTests {
 
     @Test("a layout a host builds carries no name of its own")
     func aHostBuiltLayoutHasNoName() throws {
-        // Given — a name says a declaration, and a declaration is the link's
+        // Given. A name says a declaration, and a declaration is the link's
         let layout = try Layout(fields: ["balance"])
 
         // When

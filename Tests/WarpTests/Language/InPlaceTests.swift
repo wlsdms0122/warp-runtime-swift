@@ -51,7 +51,7 @@ struct InPlaceTests {
 
     @Test("a module variable is not visible to another document")
     func moduleVariableIsPrivateToItsDocument() throws {
-        // Given — the other document writes a name only the first declares
+        // Given. The other document writes a name only the first declares
         #expect {
             try Module(
                 imports: [],
@@ -84,8 +84,8 @@ struct InPlaceTests {
 
     @Test("a path handed in place is written as it is made, so a failing call has written")
     func handedPathIsWrittenBeforeFailure() async throws {
-        // Given — the callee writes through the path and then aborts; the
-        // write is in the caller's array all the same
+        // Given. The callee writes through the path and then aborts; the write
+        // is in the caller's array all the same
         let sut = try Module(
             imports: ["std.control.abort"],
             procedures: [
@@ -138,7 +138,7 @@ struct InPlaceTests {
 
     @Test("a var field holding an inline record is written through")
     func varFieldHoldingAnInlineRecordIsWrittenThrough() async throws {
-        // Given — a declared type whose `var` field holds a record nobody
+        // Given. A declared type whose `var` field holds a record nobody
         // declared, so the inner field is nobody's `var` and the path passes
         let sut = try Module(
             imports: [],
@@ -164,7 +164,7 @@ struct InPlaceTests {
 
     @Test("a module variable handed in place is one box, by the parameter and by its name")
     func moduleVariableHandedInPlaceIsOneBox() async throws {
-        // Given — a body handed a part of the module variable writes the part,
+        // Given. A body handed a part of the module variable writes the part,
         // then reads the whole by name
         let sut = try Module(
             imports: [],
@@ -189,8 +189,8 @@ struct InPlaceTests {
 
     @Test("a hold whose box no longer has the part refuses the read")
     func handedPathReadsWhatTheBoxHoldsNow() async throws {
-        // Given — the callee is handed the second element, then writes the
-        // whole array shorter by name, then reads the parameter
+        // Given. The callee is handed the second element, then writes the whole
+        // array shorter by name, then reads the parameter
         let sut = try Module(
             imports: [],
             variables: ["items": .array([.literal(.int(1)), .literal(.int(2))])],
@@ -218,8 +218,8 @@ struct InPlaceTests {
 
     @Test("an entry not written yet is handed in place and made by the write")
     func unwrittenEntryIsHandedInPlace() async throws {
-        // Given — the callee only writes its parameter, so the entry is
-        // never read before it is there
+        // Given. The callee only writes its parameter, so the entry is never
+        // read before it is there
         let sut = try Module(
             imports: [],
             procedures: [
@@ -250,7 +250,7 @@ struct InPlaceTests {
 
     @Test("a write into an inout parameter has to fit the declared type")
     func writeIntoInoutParameterIsHeldToItsType() throws {
-        // Given — the body writes a string into a parameter declared inout int
+        // Given. The body writes a string into a parameter declared inout int
         let sut = try Module(
             imports: [],
             procedures: [
@@ -281,7 +281,7 @@ struct InPlaceTests {
 
     @Test("a path handed in place has to read as the declared type")
     func handedPathIsHeldToTheDeclaredType() throws {
-        // Given — an int element is handed to a parameter declared inout string
+        // Given. An int element is handed to a parameter declared inout string
         let sut = try Module(
             imports: [],
             procedures: [
@@ -312,7 +312,7 @@ struct InPlaceTests {
 
     @Test("a part of a box handed in place is handed on like any local's")
     func aHandedBoxIsSplitOnwards() throws {
-        // Given — a body handed `all` whole hands `all.items` on to another
+        // Given. A body handed `all` whole hands `all.items` on to another
         // written body
         let sut = try Module(
             imports: ["other.grow"],
@@ -347,7 +347,7 @@ struct InPlaceTests {
 
     @Test("inout is written on a parameter and nowhere else")
     func inoutOutsideAParameterRefuses() throws {
-        // Given — a declared type with an inout field
+        // Given. A declared type with an inout field
         let sut = try Module(
             imports: [],
             types: ["Box": .record(["held": .inout(.int)])],
@@ -364,7 +364,7 @@ struct InPlaceTests {
 
     @Test("var is written on a declared type's field and nowhere else")
     func varOutsideADeclaredFieldRefuses() throws {
-        // Given — a parameter typed var
+        // Given. A parameter typed var
         let sut = try Module(
             imports: [],
             procedures: [
@@ -386,8 +386,8 @@ struct InPlaceTests {
 
     @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
     func anAssembledClosureClaimsNothing() throws {
-        // Given — assembled against the table it is judged against, so what
-        // is being asked is the claim and not which link made the row
+        // Given. Assembled against the table it is judged against, so what is
+        // being asked is the claim and not which link made the row
         let types = TypeTable()
         let closure = Closure.assembled(answering: .int(1), in: types.shapes)
 
@@ -404,7 +404,7 @@ struct InPlaceTests {
 
     @Test("a path write reaches a nameless record and the dictionary it equals the same way")
     func aPathWriteReadsEitherSpelling() throws {
-        // Given — the contract says these are one value
+        // Given. The contract says these are one value
         let laid = Value.record(Record(name: nil, ["a": .int(1)]))
         let held = Value.dictionary(["a": .int(1)])
         let path: [PathSegment] = [.key("b", optional: false)]

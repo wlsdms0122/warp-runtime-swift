@@ -12,12 +12,12 @@ import Testing
 
 // The hole a notation is plugged into, and what a document is without one.
 //
-// The rule these are about is one sentence: **a document has no spellings, and a
-// notation's are its own.** Read two ways — a document written plainly needs
+// The rule these are about is one sentence: **a document has no spellings, and
+// a notation's are its own.** Read two ways. A document written plainly needs
 // none of them, and a reader given none has no opinion about the keys it meets.
 //
-// What a particular notation does with the hole — which keys it names, which
-// words they reach, what it refuses — is tested where that notation lives.
+// What a particular notation does with the hole (which keys it names, which
+// words they reach, what it refuses) is tested where that notation lives.
 @Suite("A notation is what a document is read with")
 struct NotationTests {
     // MARK: - Property
@@ -27,7 +27,7 @@ struct NotationTests {
     // MARK: - Test
     @Test("a notation with no spellings owes nothing")
     func spellingNothingLeavesNothingOwed() throws {
-        // Given — a canonical notation offers no spellings and registers no
+        // Given. A canonical notation offers no spellings and registers no
         // construct that lowers to a word, so every shape it can still write is
         // one the language already has, and it owes no vocabulary at all.
         #expect(sut.vocabulary(of: .canonical).isEmpty)
@@ -36,7 +36,7 @@ struct NotationTests {
 
     @Test("a spelling nobody reaches is not owed")
     func aSpellingNobodyReachesIsNotOwed() throws {
-        // Given — a condition's words are read through `when` and `where`, so a
+        // Given. A condition's words are read through `when` and `where`, so a
         // notation whose spellings reach words and which registers neither form
         // spends nothing on them. Offering is not spending.
         let notation = Notation(
@@ -45,7 +45,7 @@ struct NotationTests {
         )
         let sut = Loader(registry: try ConstructRegistry(forms: []))
 
-        // Then — what is left is what a template spends, which every slot can
+        // Then. What is left is what a template spends, which every slot can
         // hold and no registry decides
         #expect(sut.vocabulary(of: notation).isDisjoint(with: WordedConditions().vocabulary))
         #expect(sut.vocabulary(of: notation) == notation.vocabulary)
@@ -53,7 +53,7 @@ struct NotationTests {
 
     @Test("what a condition spelling reaches is owed where a condition is read")
     func aConditionsWordsAreOwedByTheFormsThatReadOne() throws {
-        // Given — the other half: register a form with a condition slot and the
+        // Given. The other half: register a form with a condition slot and the
         // words are owed again. Nothing in this package knows what they are.
         let sut = Loader(registry: try ConstructRegistry(forms: [BranchForm.self]))
 
@@ -66,7 +66,7 @@ struct NotationTests {
 
     @Test("a canonical notation still writes every condition the language has")
     func canonicalConditionsAreWholeConditions() async throws {
-        // Given — this is what makes the spellings a layer rather than a part of
+        // Given. This is what makes the spellings a layer rather than a part of
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
         let module = try sut.loadDocument([
@@ -104,7 +104,7 @@ struct NotationTests {
 
     @Test("a record a notation does not claim is the expression it is")
     func anUnclaimedRecordIsAnExpression() throws {
-        // Given — a condition slot asks for an expression, and a spelling is one
+        // Given. A condition slot asks for an expression, and a spelling is one
         // way of arriving at one. A record carrying none of the notation's keys
         // never was a condition shape, which is what keeps the spellings
         // optional wherever a condition is asked for.
@@ -135,10 +135,10 @@ struct NotationTests {
 
     @Test("a record a document may hold plainly is refused where a notation would claim it")
     func aRecordAcquiredByANotationIsRefusedWhereItWouldBeRead() throws {
-        // Given — writing and reading are inverses, and a reading side with
+        // Given. Writing and reading are inverses, and a reading side with
         // spellings is a different far side from one without. Written for a
         // notation that recognises a condition by its subject key, this record
-        // would come back a message, so it has no document *there* — even though
+        // would come back a message, so it has no document *there*. Even though
         // it has one in a document, below.
         let module = try Self.branch(on: .record([
             "of": .reference(path("word")),
@@ -155,7 +155,7 @@ struct NotationTests {
 
     @Test("a record that some notation would read as a condition is still a record")
     func aRecordInAConditionSlotStaysARecord() throws {
-        // Given — the same record, written for a document. A document's
+        // Given. The same record, written for a document. A document's
         // condition slot is an expression like any other and no notation is
         // reading it back, so the record is data and is written as data.
         let module = try Module(
@@ -176,11 +176,11 @@ struct NotationTests {
             ]
         )
 
-        // When — written, and read back by a reader with no notation at all
+        // When. Written, and read back by a reader with no notation at all
         let written = try Writer().value(of: module)
         let read = try sut.load(written)
 
-        // Then — the same record arrived, rather than a message
+        // Then. The same record arrived, rather than a message
         guard
             case let .body(block) = read.procedures[entryName]?.implementation,
             case let .conditional(condition, _, _) = block.body.first?.expression,
@@ -196,7 +196,7 @@ struct NotationTests {
 
     @Test("a template nobody offers is refused, not read as a record")
     func anUnofferedTemplateIsRefused() {
-        // Given — the two template keys stay reserved whether or not a notation
+        // Given. The two template keys stay reserved whether or not a notation
         // offers one. Reading them as an ordinary record would make the same
         // document mean one thing here and another in the notation next door,
         // and nothing would say so.
@@ -222,7 +222,7 @@ struct NotationTests {
 
     @Test("a template is spelled with the words the notation names")
     func aTemplateSpendsTheNotationsWords() throws {
-        // Given — which words a template lowers to is the notation's answer, and
+        // Given, which words a template lowers to is the notation's answer, and
         // the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
             "parameters": ["word": "string"],
@@ -246,11 +246,11 @@ struct NotationTests {
 
     @Test("a form key wins over a notation's condition, in every notation")
     func aFormKeyIsReadAsAFormWhereverItIsWritten() throws {
-        // Given — `{ as: <type>, of: <value> }` is a cast, and the form keys are
+        // Given. `{ as: <type>, of: <value> }` is a cast, and the form keys are
         // fixed. A notation that recognises its conditions by the subject key
         // sees the `of` and would claim the record; what it made of the `as`
-        // beside it would be a message nobody wrote, and the same document would
-        // be a cast in one notation and a send in the next.
+        // beside it would be a message nobody wrote, and the same document
+        // would be a cast in one notation and a send in the next.
         let written: Value = [
             "parameters": ["flag": "any"],
             "body": [
@@ -263,7 +263,7 @@ struct NotationTests {
             ]
         ]
 
-        // Then — both readers arrive at the cast
+        // Then. Both readers arrive at the cast
         for notation in [Notation.canonical, .testing] {
             guard
                 case let .body(block) = try sut.loadProcedure(written, from: notation)
@@ -280,7 +280,7 @@ struct NotationTests {
 
     @Test("reading a document is not a place a notation can reach")
     func readingCarriesNoNotation() throws {
-        // Given — the spelling these tests read with, left unlowered in a
+        // Given. The spelling these tests read with, left unlowered in a
         // document. `load` takes a document, and a document has no spellings,
         // so the record is the expression it is rather than the message some
         // table would have made of it.

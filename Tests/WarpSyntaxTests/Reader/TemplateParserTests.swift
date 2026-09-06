@@ -61,7 +61,7 @@ struct TemplateParserTests {
         // Given
         let sut = TemplateParser()
 
-        // When / Then — `?.` marks the segment after it
+        // When / Then. `?.` marks the segment after it
         #expect(
             try sut.parseRefPath("task?.name") == [.key("task"), .key("name", optional: true)]
         )
@@ -72,8 +72,8 @@ struct TemplateParserTests {
 
         #expect([PathSegment.key("task"), .key("name", optional: true)].rendered == "task?.name")
 
-        // A space before the `?` belongs to nobody — the name comes out
-        // trimmed, the way every other segment does.
+        // A space before the `?` belongs to nobody. The name comes out trimmed,
+        // the way every other segment does.
         #expect(
             try sut.parseRefPath("a.b ?.c") == [.key("a"), .key("b"), .key("c", optional: true)]
         )
@@ -84,8 +84,8 @@ struct TemplateParserTests {
         // Given
         let sut = TemplateParser()
 
-        // When / Then — `?[` is the same mark `?.` puts on a name, on an
-        // index instead: a literal, an index reference, one after an index
+        // When / Then. `?[` is the same mark `?.` puts on a name, on an index
+        // instead: a literal, an index reference, one after an index
         #expect(
             try sut.parseRefPath("items?[0]") == [.key("items"), .index(0, optional: true)]
         )
@@ -99,7 +99,7 @@ struct TemplateParserTests {
         )
 
         // The head is a name a scope holds, and `?[` at the head expects an
-        // absence nothing stands before — refused the way `?.` is there.
+        // absence nothing stands before. Refused the way `?.` is there.
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("?[0]") }
 
         #expect([PathSegment.key("items"), .index(0, optional: true)].rendered == "items?[0]")
@@ -113,21 +113,21 @@ struct TemplateParserTests {
         // Given
         let sut = TemplateParser()
 
-        // Then — a trailing `?`, a `?` before the head, and a doubled `?`
-        // each claim an absence no segment reads
+        // Then. A trailing `?`, a `?` before the head, and a doubled `?` each
+        // claim an absence no segment reads
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("a.b?") }
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("?.a") }
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("a??.b") }
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("a?b.c") }
 
-        // An empty segment after `?.` is nothing to mark — dropping it would
+        // An empty segment after `?.` is nothing to mark. Dropping it would
         // parse a path the author never wrote.
         #expect(throws: TemplateSyntaxError.self) { try sut.parseRefPath("a?..b") }
     }
 
     @Test("an empty segment is refused wherever it stands")
     func emptySegmentsAreRefused() throws {
-        // Given — a silently dropped segment is a path the author never wrote,
+        // Given. A silently dropped segment is a path the author never wrote,
         // `?.` or not
         let sut = TemplateParser()
 

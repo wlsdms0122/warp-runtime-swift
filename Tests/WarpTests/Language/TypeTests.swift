@@ -45,13 +45,13 @@ struct TypeTests {
             try sut.settling(.array([.string("a"), .int(1)]), at: "names")
         }
 
-        // Then — the index is in the message, so the author knows which one
+        // Then. The index is in the message, so the author knows which one
         #expect(error?.message.contains("names[1]") == true)
     }
 
     @Test("a record settles to the fields declared, and a value carrying more loses them")
     func recordDeclaresFields() throws {
-        // Given — what arrives is data from outside, and a payload gains fields
+        // Given. What arrives is data from outside, and a payload gains fields
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
@@ -88,7 +88,7 @@ struct TypeTests {
         let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
         let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
-        // Then — every one settles under the record's own name
+        // Then. Every one settles under the record's own name
         #expect(bare == .record(Record(name: "Person", ["name": .string("a")])))
         #expect(aliased == bare)
         #expect(named == bare)
@@ -117,7 +117,7 @@ struct TypeTests {
 
     @Test("a type may name itself")
     func namedTypeMayRecur() throws {
-        // Given — kept rather than expanded at link, which is what makes a
+        // Given. Kept rather than expanded at link, which is what makes a
         // self-naming shape a shape instead of a regress
         let types = TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
@@ -168,8 +168,9 @@ struct TypeTests {
 
     @Test("a call handed to a parameter it cannot fit is refused at link")
     func mismatchedCallIsALinkError() {
-        // Given — nothing runs here. Both sides are declarations, and a
-        // declaration is text, so this is the half of checking the linker can do
+        // Given. Nothing runs here. Both sides are declarations, and a
+        // declaration is text, so this is the half of checking the linker can
+        // do
         let counts = Procedure(
             signature: Signature(returns: .int),
             body: [],
@@ -204,10 +205,10 @@ struct TypeTests {
 
     @Test("an undeclared answer is read off the body, and held to the same rule")
     func undeclaredAnswerIsReadOffTheBody() throws {
-        // Given — `counts` declares nothing, and its body answers a whole
+        // Given. `counts` declares nothing, and its body answers a whole
         // number. The declaration stays as the author left it; what the link
-        // reads a call as is what the body hands back, so the same
-        // disagreement a declared answer earns is earned here.
+        // reads a call as is what the body hands back, so the same disagreement
+        // a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
         let wants = Procedure(
             signature: Signature(parameters: ["word": Parameter(type: .string)]),
@@ -237,8 +238,8 @@ struct TypeTests {
             error is LinkError && "\(error)".contains("holds int where string is declared")
         }
 
-        // And a body whose answer nothing can be read from says nothing —
-        // an answer worked out from its own is not one the text states.
+        // And a body whose answer nothing can be read from says nothing. An
+        // answer worked out from its own is not one the text states.
         let circling = Procedure(
             body: [],
             result: .dispatch(Dispatch(selector: "counts"))
@@ -252,7 +253,7 @@ struct TypeTests {
 
     @Test("a dictionary slot takes a record whose fields all fit it")
     func aDictionaryTakesAKnownRecord() {
-        // Given — a record is a dictionary whose fields happen to be known, and
+        // Given. A record is a dictionary whose fields happen to be known, and
         // knowing them is not a reason to refuse it
         let sut = TypeExpression.dictionary(.any)
 
@@ -264,7 +265,7 @@ struct TypeTests {
 
     @Test("a record slot does not take a bare dictionary")
     func aRecordDoesNotTakeADictionary() {
-        // Given — a record names fields it requires; a dictionary promises none
+        // Given. A record names fields it requires; a dictionary promises none
         #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
     }
 

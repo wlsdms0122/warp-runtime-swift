@@ -20,7 +20,7 @@ struct ReadingErrorTests {
     // MARK: - Test
     @Test("a document refused while being read says which document it was")
     func aReadingSaysWhichDocument() throws {
-        // Given — a caller reading four documents into one link holds the only
+        // Given. A caller reading four documents into one link holds the only
         // answer to which file to open, and a refusal that names none sends it
         // opening all four
         let fixture: Value = [
@@ -40,7 +40,7 @@ struct ReadingErrorTests {
 
     @Test("a document refused for what it says about itself says which document it was")
     func aCheckSaysWhichDocument() throws {
-        // Given — the same answer is owed by the refusals that come from making
+        // Given. The same answer is owed by the refusals that come from making
         // the module rather than from reading it, since a caller holding four
         // files cannot tell which stage refused and still has to open one
         let fixture: Value = [
@@ -60,7 +60,7 @@ struct ReadingErrorTests {
 
     @Test("the steps of a reading's refusal are the document's own keys")
     func aReadingWalksTheDocumentsKeys() throws {
-        // Given — the address decoding reached, spelled the way every other
+        // Given. The address decoding reached, spelled the way every other
         // stage spells one, so an author follows the same words either way: a
         // statement wears the name it wrote, which is what validation and the
         // link call it
@@ -81,7 +81,7 @@ struct ReadingErrorTests {
 
     @Test("a declared name that reads as a number is a key and not a position")
     func aNumericNameIsAKey() throws {
-        // Given — a coding key made for a dictionary carries the number its
+        // Given. A coding key made for a dictionary carries the number its
         // spelling parses to, and `procedures[12]` is an address no document
         // has: what the document holds where the walk is settles which it is
         let fixture: Value = [
@@ -101,7 +101,7 @@ struct ReadingErrorTests {
 
     @Test("a statement that writes an empty name is a statement with no name")
     func anEmptyStatementNameIsNoName() throws {
-        // Given — the two ways of writing nothing spell the same, and a step
+        // Given. The two ways of writing nothing spell the same, and a step
         // rendering an empty name puts a dot in front of nothing
         let fixture: Value = [
             "warp": 1,
@@ -120,7 +120,7 @@ struct ReadingErrorTests {
 
     @Test("a form that refuses in its own words still says which document")
     func aFormsOwnRefusalIsPlaced() throws {
-        // Given — a form reading an expression refuses with the expression
+        // Given. A form reading an expression refuses with the expression
         // reader's own error, which carries no place of its own. It leaves
         // through the door that says every reading is placed, so it is.
         let fixture: Value = [
@@ -141,7 +141,7 @@ struct ReadingErrorTests {
 
     @Test("a document refused for the list it does not write is refused about itself")
     func aMissingManifestIsAboutTheDocument() throws {
-        // Given — nothing inside the document is wrong, so there is no step to
+        // Given. Nothing inside the document is wrong, so there is no step to
         // walk and the document alone is the whole address
         let fixture: Value = [
             "warp": 1,
@@ -160,7 +160,7 @@ struct ReadingErrorTests {
 
     @Test("a refusal about a key the document writes is addressed to that key")
     func aRefusalAboutAKeyIsAtThatKey() throws {
-        // Given — a place is what a front end turns into a line, so a refusal
+        // Given. A place is what a front end turns into a line, so a refusal
         // that stopped at the document while knowing the key would be pointing
         // an author at the first character of their file
         let fixture: Value = [
@@ -180,7 +180,7 @@ struct ReadingErrorTests {
 
     @Test("a document written for another warp is refused at the word that says so")
     func aVersionRefusalIsAtTheVersionKey() throws {
-        // Given — the key is written, so there is something to point at. What
+        // Given. The key is written, so there is something to point at. What
         // says no version at all is refused about the document, since nothing
         // is written there to look at.
         let fixture: Value = [
@@ -199,7 +199,7 @@ struct ReadingErrorTests {
 
     @Test("a statement that names itself twice is called by neither name")
     func anAmbiguouslyNamedStatementWearsNoName() throws {
-        // Given — the name on the place and the name in the sentence are read
+        // Given. The name on the place and the name in the sentence are read
         // once, in one place. Two readings would let a statement be labelled
         // 'held' by the address of the very refusal saying it is named twice.
         let fixture: Value = [
@@ -220,9 +220,9 @@ struct ReadingErrorTests {
 
     @Test("a statement whose name is not text is called by no name")
     func aNameThatIsNotTextIsNoName() throws {
-        // Given — what a name has to be is the reading's question and it is
-        // answered by refusing. What the statement is called while that
-        // happens is this one, and a number is nothing to call it by.
+        // Given. What a name has to be is the reading's question and it is
+        // answered by refusing. What the statement is called while that happens
+        // is this one, and a number is nothing to call it by.
         let fixture: Value = [
             "warp": 1,
             "imports": [],
@@ -240,11 +240,11 @@ struct ReadingErrorTests {
 
     @Test("a reading inside a closure keeps the address it reached")
     func aReadingInsideAClosureKeepsItsAddress() throws {
-        // Given — an expression is a walk like any other and it records where
-        // it is like any other. A refusal that arrived here with an address
-        // and left with the expression's own would be a shallower answer
-        // written over a truer one, and the front end says "exact" about
-        // whatever it is handed.
+        // Given. An expression is a walk like any other and it records where it
+        // is like any other. A refusal that arrived here with an address and
+        // left with the expression's own would be a shallower answer written
+        // over a truer one, and the front end says "exact" about whatever it is
+        // handed.
         let fixture: Value = [
             "warp": 1,
             "imports": [],
@@ -268,7 +268,7 @@ struct ReadingErrorTests {
 
     @Test("a reading inside a record says which field it was in")
     func aReadingInsideARecordSaysWhichField() throws {
-        // Given — the walk descends by key here and by position in a list, the
+        // Given. The walk descends by key here and by position in a list, the
         // same two ways every other walk descends, so a record ten fields deep
         // is not answered with the address of the record
         let fixture: Value = [
@@ -291,10 +291,10 @@ struct ReadingErrorTests {
 
     @Test("a record with two things wrong refuses the same one every time")
     func aRecordRefusesInNameOrder() throws {
-        // Given — one line, and the same line twice. A record read in the
-        // order a dictionary hands its keys back is read in an order seeded
-        // afresh per process, so which of two bad fields an author is sent to
-        // would change between runs of the same reader on the same document.
+        // Given. One line, and the same line twice. A record read in the order
+        // a dictionary hands its keys back is read in an order seeded afresh
+        // per process, so which of two bad fields an author is sent to would
+        // change between runs of the same reader on the same document.
         let fixture: Value = [
             "warp": 1,
             "imports": [],
@@ -315,10 +315,10 @@ struct ReadingErrorTests {
 
     @Test("a document that writes its imports as nothing has not written them")
     func importsWrittenAsNothingIsNotADeclaration() throws {
-        // Given — the door and the reader ask the same question of the same
-        // key. Answering differently is how a list walks past the door as a
-        // claim and past the reader as no claim, arriving trusted and never
-        // checked, which is the one thing the list exists to prevent.
+        // Given. The door and the reader ask the same question of the same key.
+        // Answering differently is how a list walks past the door as a claim
+        // and past the reader as no claim, arriving trusted and never checked,
+        // which is the one thing the list exists to prevent.
         let fixture: Value = [
             "warp": 1,
             "imports": .null,
@@ -336,7 +336,7 @@ struct ReadingErrorTests {
 
     @Test("a fragment is refused about no document, and says so by naming none")
     func aFragmentNamesNoDocument() throws {
-        // Given — what a fragment will be part of is the caller's, and a reader
+        // Given. What a fragment will be part of is the caller's, and a reader
         // that named a document here would be naming one it was never shown
         let error = #expect(throws: ReadingError.self) {
             try loader.statement(from: ["id": "broken", "value": "x", "fallbck": "y"])

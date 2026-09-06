@@ -19,7 +19,7 @@ struct ValidationTests {
     // MARK: - Test
     @Test("a name the module bound is not introduced again at any depth")
     func aBoundNameIsNotIntroducedAgainAtAnyDepth() {
-        // Given — linking folds a constant wherever its name is read, so a name
+        // Given. Linking folds a constant wherever its name is read, so a name
         // introduced under that spelling would never be the one that answers.
         // The rule is the whole body's: a sub scope is where a reader is least
         // able to see that the name was already taken.
@@ -51,10 +51,9 @@ struct ValidationTests {
 
     @Test("but writing one is refused for what it is, not for introducing a name")
     func writingABoundNameIsRefusedAsAWrite() throws {
-        // Given — an assignment names a name rather than introducing one, and
+        // Given. An assignment names a name rather than introducing one, and
         // the two mistakes have different fixes: one is to pick another
-        // spelling, the other is to declare a variable.
-        // When / Then
+        // spelling, the other is to declare a variable. When / Then
         let error = #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["limit": .literal(.int(3))],
@@ -73,7 +72,7 @@ struct ValidationTests {
 
     @Test("nor by the name a construct hands its body")
     func aBoundNameIsNotWhatAConstructHandsItsBody() {
-        // Given — the same rule where the name is the language's to introduce
+        // Given. The same rule where the name is the language's to introduce
         // rather than a statement's: a walk's element, a loop's round, and the
         // failure an attempt rescues.
         func module(running expression: Warp.Expression) throws -> Module {
@@ -104,7 +103,7 @@ struct ValidationTests {
 
     @Test("nor inside a closure a constant holds")
     func aBoundNameIsNotIntroducedInsideAConstantsClosure() {
-        // Given — a constant's own expression is a body like any other. Read
+        // Given. A constant's own expression is a body like any other. Read
         // without this rule, a closure among the constants may introduce a name
         // one of its siblings has, and what that name means then depends on
         // which of the two the reader is standing in.
@@ -118,7 +117,7 @@ struct ValidationTests {
             )
         }
 
-        // When / Then — the two ways a closure introduces a name of its own
+        // When / Then. The two ways a closure introduces a name of its own
         #expect(throws: ValidationError.self) {
             try Validator().validate(module(Procedure(
                 signature: Signature(parameters: ["limit": Parameter(type: .int)], returns: .int),
@@ -137,7 +136,7 @@ struct ValidationTests {
 
     @Test("a constant sees the constants declared beside it and nothing else")
     func aConstantReadsOnlyItsSiblings() throws {
-        // Given — a chain and not a circle. `aaa` reads `bbb`, declared right
+        // Given. A chain and not a circle. `aaa` reads `bbb`, declared right
         // beside it, so nothing about `aaa` is wrong: `bbb` is the one reading
         // a name nothing here settles, and the refusal stands on it.
         let error = #expect(throws: ValidationError.self) {
@@ -159,7 +158,7 @@ struct ValidationTests {
 
     @Test("a construct in a call's operand is refused at the check")
     func aConstructInACallOperandIsRefused() {
-        // Given — a document cannot even write one there, and the run would
+        // Given. A document cannot even write one there, and the run would
         // refuse it; a program assembled directly meets the same rule before
         // anything runs. The body a word is to run travels as a closure.
         let arm = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
@@ -172,7 +171,7 @@ struct ValidationTests {
             )
         ]
 
-        // When / Then — bare, and buried inside a value shape alike
+        // When / Then. Bare, and buried inside a value shape alike
         #expect(!validates(body: sut))
         #expect(
             !validates(body: [
@@ -191,11 +190,11 @@ struct ValidationTests {
 
     @Test("a construct in a condition is refused at the check")
     func aConstructInAConditionIsRefused() {
-        // Given — the run asks a condition purely, the same fact an operand
-        // has, so the same rule refuses a construct there
+        // Given. The run asks a condition purely, the same fact an operand has,
+        // so the same rule refuses a construct there
         let construct = Warp.Expression.block(Block(body: [], result: .literal(.bool(true))))
 
-        // When / Then — a branch's condition, and a loop's
+        // When / Then. A branch's condition, and a loop's
         #expect(
             !validates(body: [
                 Statement(expression: .conditional(construct, then: [], else: nil))
@@ -216,16 +215,16 @@ struct ValidationTests {
 
     @Test("a branch where a value is wanted is refused at the check")
     func aBranchWhereAValueIsWantedIsRefused() {
-        // Given — a branch answers nothing, so a slot that exists to hold an
-        // answer has nothing to take from one; refused for that reason
-        // rather than as a null that fails to fit downstream
+        // Given. A branch answers nothing, so a slot that exists to hold an
+        // answer has nothing to take from one; refused for that reason rather
+        // than as a null that fails to fit downstream
         let branch = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
             else: nil
         )
 
-        // When / Then — a result slot, an array element, a record field
+        // When / Then. A result slot, an array element, a record field
         #expect(
             !validates(
                 body: [Statement(binding: .constant("grouped"), expression: .block(Block(body: [], result: branch)))]
@@ -237,7 +236,7 @@ struct ValidationTests {
 
     @Test("a walk where a value is wanted is refused at the check")
     func aWalkWhereAValueIsWantedIsRefused() {
-        // Given — a walk answers nothing, the same fact a branch has, so the
+        // Given. A walk answers nothing, the same fact a branch has, so the
         // same slots refuse it
         let walk = Warp.Expression.iteration(
             over: .array([.literal(.int(1))]),
@@ -282,7 +281,7 @@ struct ValidationTests {
 
     @Test("a parameter is a name the body may read and may not introduce again")
     func parametersAreVisibleAndDeclared() throws {
-        // Given — the signature and the body are one scope, so a name is
+        // Given. The signature and the body are one scope, so a name is
         // introduced once
         let readsIt = Procedure(
             signature: Signature(parameters: ["name": Parameter(type: .string)]),
@@ -312,8 +311,8 @@ struct ValidationTests {
 
     @Test("an index reference is checked like any other name")
     func indexReferenceHeadIsChecked() {
-        // Given — `items[${cursor}]` reads `cursor`, so a typo in it is the
-        // same mistake as a typo anywhere else
+        // Given. `items[${cursor}]` reads `cursor`, so a typo in it is the same
+        // mistake as a typo anywhere else
         let sut = Warp.Expression.reference(
             [.key("items"), .indexRef([.key("cursor")])]
         )
@@ -325,7 +324,7 @@ struct ValidationTests {
 
     @Test("a template's placeholders resolve against its bindings, not the scope")
     func templatePlaceholdersAreClosed() {
-        // Given — only the binding expressions reach outward
+        // Given. Only the binding expressions reach outward
         let sut = interpolated(spelling(reference("name")))
 
         // When / Then
@@ -335,8 +334,8 @@ struct ValidationTests {
 
     @Test("a name nothing declared is visible nowhere")
     func undeclaredNamesAreNotVisible() throws {
-        // Given — there is one way a name gets here, and it is being declared.
-        // A run's own values arrive as arguments like everything else.
+        // Given. There is one way a name gets here, and it is being declared. A
+        // run's own values arrive as arguments like everything else.
         let read = Procedure(body: [Statement(binding: .constant("read"), expression: reference("run", "id"))])
         let taken = Procedure(
             signature: Signature(parameters: ["run": Parameter(type: .dictionary(.any))]),
@@ -356,7 +355,7 @@ struct ValidationTests {
         ["std.collection.count", "std.math.plus"]
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<Name>) {
-        // Given — a caller decides what to grant from this list and then links
+        // Given. A caller decides what to grant from this list and then links
         // what it granted, so a list that says less than the program sends
         // links a word nobody allowed, and one that says more takes a grant the
         // program never uses
@@ -380,7 +379,7 @@ struct ValidationTests {
 
     @Test("a list wrong in both directions says which words moved, not which lists")
     func bothDifferencesAreSaidApart() {
-        // Given — a module sending thirty words would leave an author diffing
+        // Given. A module sending thirty words would leave an author diffing
         // two lists by eye, and the two differences are two mistakes with two
         // fixes: one word is a grant nobody disclosed, the other is a grant
         // nothing uses.
@@ -411,7 +410,7 @@ struct ValidationTests {
 
     @Test("a module that claims nothing states what it sends")
     func anUnclaimedModuleStatesWhatItSends() throws {
-        // Given — a caller assembling shapes in Swift holds the module and has
+        // Given. A caller assembling shapes in Swift holds the module and has
         // nobody to disclose it to, so there is no claim to be held to. What
         // travels is written from this, and what is written has to be true.
         let sut = try Module(
@@ -434,7 +433,7 @@ struct ValidationTests {
 
     @Test("a word the module declares itself is not one it imports")
     func ownWordsAreNotImports() throws {
-        // Given — what a module brings with it is not what it asks for
+        // Given. What a module brings with it is not what it asks for
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -453,7 +452,7 @@ struct ValidationTests {
 
     @Test("a module calling its own by the name the link knows it by imports nothing")
     func aSiblingCallIsNotAnImport() throws {
-        // Given — a module calls a sibling by its declared spelling, and a
+        // Given. A module calls a sibling by its declared spelling, and a
         // spelling this document declares is not an import. The honest empty
         // list is accepted.
         let sut = try Module(
@@ -480,10 +479,11 @@ struct ValidationTests {
 
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
-        // Given — the one value shape a program cannot carry. A closure is made
+        // Given. The one value shape a program cannot carry. A closure is made
         // by running the expression that writes one, so a literal holding one
         // is a program no text spells and nothing reads back. Only a caller
-        // assembling shapes in Swift can build it, and this is where that stops.
+        // assembling shapes in Swift can build it, and this is where that
+        // stops.
         let carried = Value.procedure(
             Closure.assembled()
         )

@@ -33,7 +33,7 @@ struct ReferenceLookupTests {
 
     @Test("a missing entry refuses, and ?. reads it as null")
     func missingEntryRefusesUnlessOptional() {
-        // Then — absence past the head is a defect unless the author spelled
+        // Then. Absence past the head is a defect unless the author spelled
         // that they expect it
         guard case .unfit = sut.lookup([.key("step"), .key("gone")]) else {
             Issue.record("expected unfit for an absent entry")
@@ -46,8 +46,8 @@ struct ReferenceLookupTests {
 
     @Test("an index past the end is unfit, not absent")
     func indexPastTheEndIsUnfit() {
-        // Then — the array is there and says how long it is, so a reading
-        // that misses it read the length wrong
+        // Then. The array is there and says how long it is, so a reading that
+        // misses it read the length wrong
         guard case .unfit = sut.lookup([.key("items"), .index(9)]) else {
             Issue.record("expected unfit for an index past the end")
 
@@ -57,7 +57,8 @@ struct ReferenceLookupTests {
 
     @Test("shape misuse is unfit, not absent")
     func shapeMisuseReturnsUnfit() {
-        // Then — drilling a field into a string is an author error, not missing data
+        // Then. Drilling a field into a string is an author error, not missing
+        // data
         guard case .unfit = sut.lookup([.key("name"), .key("foo")]) else {
             Issue.record("expected unfit")
 
@@ -80,7 +81,7 @@ struct ReferenceLookupTests {
 
     @Test("a key segment reads data alone, and never derives")
     func keySegmentDoesNotDerive() {
-        // Then — the value has no say: a `key` the link left as a read is a
+        // Then. The value has no say: a `key` the link left as a read is a
         // read, even where a word by that name would have answered
         guard case .unfit = sut.lookup([.key("items"), .key("count")]) else {
             Issue.record("expected unfit for a key on an array")
@@ -102,7 +103,7 @@ struct ReferenceLookupTests {
 
     @Test("a fraction index reference misses by the fact it is")
     func indexReferenceFractionNamesItsMiss() throws {
-        // Given — a fraction with digits after the point, and a whole one no
+        // Given. A fraction with digits after the point, and a whole one no
         // machine word holds: two different facts, each named as itself
         let resolver = Folding(bindings: [
                     "items": .array([.int(1), .int(2)]),
@@ -133,8 +134,8 @@ struct ReferenceLookupTests {
 
     @Test("an index reference that names nothing is unfit, not null")
     func indexReferenceNamingNothingIsUnfit() {
-        // Then — the heads the text shows were checked at load, so a name
-        // that answers nothing here is a defect said out loud
+        // Then. The heads the text shows were checked at load, so a name that
+        // answers nothing here is a defect said out loud
         guard case .unfit = sut.lookup([.key("items"), .indexRef([.key("typo")])]) else {
             Issue.record("expected unfit for an index reference naming nothing")
 

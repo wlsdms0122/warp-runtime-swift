@@ -25,7 +25,7 @@ struct PlaceWrittenTests {
     // MARK: - Test
     @Test("a refusal from the checking is addressed in the document's keys")
     func aCheckingRefusalIsSpelledForTheAuthor() {
-        // Given — a loop whose condition reads a name nothing declares. The
+        // Given. A loop whose condition reads a name nothing declares. The
         // language calls that slot a condition and this document writes it
         // `where`.
         let error = #expect(throws: ValidationError.self) {
@@ -48,8 +48,8 @@ struct PlaceWrittenTests {
 
     @Test("a branch and a loop hold one slot and write two words")
     func oneSlotIsWrittenTwoWays() {
-        // Given — the language calls both a condition, so the word a place
-        // reads with is decided by the construct the walk is inside.
+        // Given. The language calls both a condition, so the word a place reads
+        // with is decided by the construct the walk is inside.
         let branch = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
@@ -71,9 +71,9 @@ struct PlaceWrittenTests {
 
     @Test("a respelled construct reads as the word its author wrote")
     func aRespelledConstructIsSpelledAsRegistered() throws {
-        // Given — a notation that registers the branch form under another
-        // word. What an author may look for in their file is that word, and
-        // nothing here holds a second copy of it to disagree with.
+        // Given. A notation that registers the branch form under another word.
+        // What an author may look for in their file is that word, and nothing
+        // here holds a second copy of it to disagree with.
         let registry = try ConstructRegistry(forms: ["if": BranchForm.self])
         let sut = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
@@ -86,9 +86,9 @@ struct PlaceWrittenTests {
 
     @Test("a link refusal reads in the document's keys where a reader is asked for it")
     func aLinkRefusalIsSpelledForTheAuthor() throws {
-        // Given — the stage that has no document of its own. What to link is
-        // the caller's statement, so a link cannot know which text a module
-        // came out of; the side that read the text can say.
+        // Given. The stage that has no document of its own. What to link is the
+        // caller's statement, so a link cannot know which text a module came
+        // out of; the side that read the text can say.
         let module = try loader.loadProcedure([
             "body": [
                 [
@@ -103,8 +103,8 @@ struct PlaceWrittenTests {
             try loader.reading { try Linker().link([module], entry: entryName) }
         }
 
-        // Then — `call` is the word the author wrote, and `dispatch` is what
-        // the language calls the shape
+        // Then. `call` is the word the author wrote, and `dispatch` is what the
+        // language calls the shape
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
         // And unasked, the language answers in its own words
@@ -117,7 +117,7 @@ struct PlaceWrittenTests {
 
     @Test("a call and an invocation are written with the same two words")
     func oneWordAnswersForBothForms() {
-        // Given — the place reading takes both from `CallForm`, which is right
+        // Given. The place reading takes both from `CallForm`, which is right
         // only while the two agree. If they ever part, this is what says so
         // rather than a line number quietly going missing.
         #expect(
@@ -132,7 +132,7 @@ struct PlaceWrittenTests {
 
     @Test("a construct in a slot no statement holds is still spelled for its own construct")
     func aSlotOutsideAStatementKnowsItsOwner() throws {
-        // Given — a loop standing in a block's result. Nothing puts a construct
+        // Given. A loop standing in a block's result. Nothing puts a construct
         // step in front of it, so a reading that asked the steps around it
         // would call a loop's condition `when`.
         let error = #expect(throws: ValidationError.self) {

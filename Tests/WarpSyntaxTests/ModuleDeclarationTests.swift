@@ -22,8 +22,8 @@ struct ModuleDeclarationTests {
     // MARK: - Test
     @Test("a spelling names the declaration written under it, in its own document too")
     func ownDeclarationIsSpelledQualified() async throws {
-        // Given — `first` calls its own `helper` as `first.helper`, and
-        // `second` declares a `helper` of its own, which is `second.helper`
+        // Given. `first` calls its own `helper` as `first.helper`, and `second`
+        // declares a `helper` of its own, which is `second.helper`
         let first = try loader.loadDocument([
             "procedures": [
                 "first.entry": [
@@ -83,7 +83,7 @@ struct ModuleDeclarationTests {
 
     @Test("a spelling reaches the declaration under it, whichever document wrote it")
     func qualifiedNameReachesAcross() async throws {
-        // Given — `first` has a `helper` of its own and asks for the other one
+        // Given. `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
             "imports": ["second.helper"],
             "procedures": [
@@ -167,7 +167,7 @@ struct ModuleDeclarationTests {
 
     @Test("a statement may not reintroduce a name the module bound")
     func constantsCannotBeShadowed() {
-        // Given — linking folds a reference to a constant into its value, so a
+        // Given. Linking folds a reference to a constant into its value, so a
         // second reading of the same spelling could never be true
         let fixture: Value = [
             "const": ["limit": 3],

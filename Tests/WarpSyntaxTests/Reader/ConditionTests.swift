@@ -53,7 +53,7 @@ struct ConditionTests {
             "candidates": .array([.string("same"), .string("other")])
         ], natives: Module.standard)
 
-        // Then — a reference compares against another reference
+        // Then. A reference compares against another reference
         #expect(try sut.evaluate(
             equals(.reference(path("left")), .reference(path("right")))
         ))
@@ -138,7 +138,7 @@ struct ConditionTests {
             ]
         ]
 
-        // When / Then — the pattern compiles before any run. Checking it while
+        // When / Then. The pattern compiles before any run. Checking it while
         // decoding would make the notation hold the vocabulary; it is checked
         // where names resolve.
         #expect(throws: LinkError.self) {
@@ -154,7 +154,7 @@ struct ConditionTests {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)
 
-        // When / Then — a typo'd drill must not silently read as false
+        // When / Then. A typo'd drill must not silently read as false
         #expect(throws: ReferenceUnfit.self) {
             try sut.evaluate(
                 differs(.reference(path("n.field")), .literal(.null))
@@ -177,7 +177,7 @@ struct ConditionTests {
             ]
         ]
 
-        // When / Then — first-wins would silently drop the second predicate
+        // When / Then. First-wins would silently drop the second predicate
         #expect(throws: ReadingError.self) {
             try Loader.testing.loadProcedure(fixture)
         }
@@ -191,7 +191,7 @@ struct ConditionTests {
             .reference(path("outer.right"))
             )
 
-        // Then — neither side is skipped
+        // Then. Neither side is skipped
         #expect(validates(condition, visible: ["left", "outer"]))
         #expect(!validates(condition, visible: ["left"]))
         #expect(!validates(condition, visible: ["outer"]))

@@ -18,9 +18,9 @@ import WarpStandard
 // asked to write down a shape the body already states.
 //
 // So the body is read, in the call graph's order. What the author wrote stays
-// what the image carries — this is the link's own reading, not a promise
-// anybody made — and where the reading would have to come from itself, it says
-// `any` rather than guessing.
+// what the image carries (this is the link's own reading, not a promise anybody
+// made) and where the reading would have to come from itself, it says `any`
+// rather than guessing.
 @Suite("An answer nobody wrote is read off the body")
 struct AnsweringTests {
     // MARK: - Property
@@ -30,10 +30,10 @@ struct AnsweringTests {
     // MARK: - Test
     @Test("a dot stands on what an undeclared call answers")
     func aDotStandsOnAnUnwrittenAnswer() async throws {
-        // Given — `counts` declares no answer and its body answers a record.
-        // The dot after the call is judged against that record, which is the
-        // whole of what this buys: the shape the body states does not have to
-        // be stated twice.
+        // Given. `counts` declares no answer and its body answers a record. The
+        // dot after the call is judged against that record, which is the whole
+        // of what this buys: the shape the body states does not have to be
+        // stated twice.
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
@@ -56,7 +56,7 @@ struct AnsweringTests {
 
     @Test("an answer read off one body reaches the next")
     func ananswerTravelsTheCallGraph() async throws {
-        // Given — three declarations, none of which says what it answers. The
+        // Given. Three declarations, none of which says what it answers. The
         // order is the call graph's, so each is read after the one its answer
         // comes from.
         let sut = try Module(
@@ -82,9 +82,9 @@ struct AnsweringTests {
 
     @Test("every way out of a body is one of its answers")
     func aReturnIsAnAnswerToo() throws {
-        // Given — a body whose result answers a record, with and without an
-        // early `return` carrying a string. A body hands its caller either
-        // way out, so the second answers what holds both, and a dot on that is
+        // Given. A body whose result answers a record, with and without an
+        // early `return` carrying a string. A body hands its caller either way
+        // out, so the second answers what holds both, and a dot on that is
         // refused the way a dot on `any` is. Reading the result alone would
         // have called both a record and let both dots stand.
         func module(leaving early: Bool) throws -> Module {
@@ -129,7 +129,7 @@ struct AnsweringTests {
             )
         }
 
-        // When / Then — one way out, and the dot is judged against it
+        // When / Then. One way out, and the dot is judged against it
         _ = try linker.link([module(leaving: false)] + Module.standard, entry: entryName)
 
         // Two, and what holds both says nothing about a field
@@ -142,10 +142,10 @@ struct AnsweringTests {
 
     @Test("an answer that would come from itself says nothing")
     func acircleAnswersAny() throws {
-        // Given — two declarations whose answers are each other's. Reading
-        // either needs the other, so neither is read: an answer worked out
-        // from itself is not one the text states, and a guess there would be
-        // a refusal an author cannot act on.
+        // Given. Two declarations whose answers are each other's. Reading
+        // either needs the other, so neither is read: an answer worked out from
+        // itself is not one the text states, and a guess there would be a
+        // refusal an author cannot act on.
         let sut = try Module(
             procedures: [
                 "ping": Procedure(body: [], result: .dispatch(Dispatch(selector: "pong"))),
@@ -160,11 +160,11 @@ struct AnsweringTests {
             ]
         )
 
-        // When / Then — nothing is claimed, so nothing is refused
+        // When / Then. Nothing is claimed, so nothing is refused
         _ = try linker.link([sut] + Module.standard, entry: entryName)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
-        // like at a call site — where the same shape with the circle broken
+        // like at a call site. Where the same shape with the circle broken
         // reads the record `pong` answers.
         func reading(circling: Bool) throws -> Module {
             try Module(
@@ -196,12 +196,12 @@ struct AnsweringTests {
 
     @Test("an answer naming a type parameter is filled at the call, or fills with nothing")
     func aParameterAnswerIsFilledWhereTheCallCanFillIt() throws {
-        // Given — `peek` declares no answer, and what its body hands back
-        // names a type parameter. That goes through the same filling a
-        // declared `returns: some T` does, so which of the two shapes it is
-        // decides itself: the parameter is a slot the signature declares and
-        // the call fills it, and what a walk *through* a parameter reached is
-        // named for a path only that body can read, which nothing fills.
+        // Given. `peek` declares no answer, and what its body hands back names
+        // a type parameter. That goes through the same filling a declared
+        // `returns: some T` does, so which of the two shapes it is decides
+        // itself: the parameter is a slot the signature declares and the call
+        // fills it, and what a walk *through* a parameter reached is named for
+        // a path only that body can read, which nothing fills.
         func module(reading path: [PathSegment], answering answer: [PathSegment]) throws -> Module {
             try Module(
                 procedures: [
@@ -228,7 +228,7 @@ struct AnsweringTests {
             )
         }
 
-        // When / Then — the parameter itself: filled with what the call put
+        // When / Then. The parameter itself: filled with what the call put
         // there, so the caller reads that record and is held to it
         _ = try linker.link(
             [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
@@ -247,7 +247,7 @@ struct AnsweringTests {
         }
 
         // And a field of it: a name only `peek` could read, which no call
-        // fills — so the caller reads `any` and the dot is refused
+        // fills, so the caller reads `any` and the dot is refused
         #expect {
             try linker.link(
                 [module(
@@ -263,8 +263,8 @@ struct AnsweringTests {
 
     @Test("what the author wrote is what the image carries")
     func theDeclarationIsNotRewritten() throws {
-        // Given — the reading is the link's own note to itself. A declaration
-        // is a promise, and one read off a body is not a promise anybody made:
+        // Given. The reading is the link's own note to itself. A declaration is
+        // a promise, and one read off a body is not a promise anybody made:
         // writing it back would make the boundary check a shape nobody wrote,
         // and would put it in a document the writer hands back.
         let sut = try Module(

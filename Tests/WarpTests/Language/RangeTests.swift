@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Warp
 
-// `int(0...255)` — a range is a slot's condition on a number, not a new kind.
-// It is judged where `oneOf` is: at the link for what the text shows, at the
+// `int(0...255)`. A range is a slot's condition on a number, not a new kind. It
+// is judged where `oneOf` is: at the link for what the text shows, at the
 // boundary for what only the run can see. What the condition may say is
 // `RefinementTests`'; this suite is where a whole range is judged.
 @Suite
@@ -28,7 +28,7 @@ struct RangeTests {
         #expect(try declared.settling(.int(255), at: "value") == .int(255))
         #expect(throws: (any Error).self) { try declared.settling(.int(-1), at: "value") }
         #expect(throws: (any Error).self) { try declared.settling(.int(256), at: "value") }
-        // The value is an int — a fraction worth a member is still a fraction.
+        // The value is an int. A fraction worth a member is still a fraction.
         #expect(throws: (any Error).self) { try declared.settling(.double(3), at: "value") }
     }
 
@@ -47,7 +47,7 @@ struct RangeTests {
     func aRangeAcceptsAsInt() throws {
         let byte = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
-        // A reading declared int may hold a member — only what is provably
+        // A reading declared int may hold a member. Only what is provably
         // outside is refused before the run.
         #expect(byte.accepts(.int))
         #expect(byte.accepts(.ranged(.whole(from: 0, to: .through(1024)))))
@@ -56,7 +56,7 @@ struct RangeTests {
         #expect(!byte.accepts(.string))
 
         // Two ranges are both the text's fact, so bounds that cannot overlap
-        // are provably outside — the one meeting acceptance refuses early.
+        // are provably outside. The one meeting acceptance refuses early.
         #expect(!byte.accepts(.ranged(.whole(from: 300, to: .through(400)))))
         #expect(!byte.accepts(.ranged(.whole(from: 256))))
         #expect(!TypeExpression.ranged(.whole(from: 300, to: .through(400))).accepts(byte))
@@ -97,7 +97,7 @@ struct RangeTests {
 
     @Test("a constant argument is judged at the link")
     func aConstantArgumentIsJudgedAtTheLink() throws {
-        // Given — the argument is text, so the miss is the link's to see
+        // Given. The argument is text, so the miss is the link's to see
         let sut = try Module(
             procedures: [
                 "paint": Procedure(
@@ -155,7 +155,7 @@ struct RangeTests {
 
     @Test("a range that admits nothing refuses where it was written")
     func anEmptyRangeRefusesAtTheLink() throws {
-        // Given — no whole number is at once at least 9 and at most 1
+        // Given. No whole number is at once at least 9 and at most 1
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -178,8 +178,8 @@ struct RangeTests {
 
     @Test("a oneOf entirely past the bounds admits nothing")
     func aOneOfOutsideTheRangeRefuses() throws {
-        // Given — no candidate is a value the range could hold, so the
-        // parameter fits no call: the same judgment an empty oneOf gets
+        // Given. No candidate is a value the range could hold, so the parameter
+        // fits no call: the same judgment an empty oneOf gets
         func module(oneOf candidates: [String]) throws -> Module {
             try Module(
                 procedures: [
@@ -215,8 +215,8 @@ struct RangeTests {
         }
 
         // One value, one spelling: `+1` and `007` are second spellings of
-        // numbers that already have one, so neither is a candidate an int
-        // slot can spell — the oneOf admits nothing and refuses.
+        // numbers that already have one, so neither is a candidate an int slot
+        // can spell. The oneOf admits nothing and refuses.
         #expect {
             try linker.link([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
         } throws: { error in
@@ -226,7 +226,7 @@ struct RangeTests {
 
     @Test("std declares byte, and a name resolves to its range")
     func byteIsANamedRange() async throws {
-        // Given — `byte = int(0...255)`, declared where every bundle can name it
+        // Given. `byte = int(0...255)`, declared where every bundle can name it
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -251,7 +251,7 @@ struct RangeTests {
 
     @Test("a dot on a range is a word send, the way it is on an int")
     func aDotOnARangeSendsAWord() async throws {
-        // Given — a range's value has no fields; the dot reaches vocabulary
+        // Given. A range's value has no fields; the dot reaches vocabulary
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -270,7 +270,7 @@ struct RangeTests {
 
     @Test("what a range answers stays inside the wider slot it fills")
     func aRangeReadingFillsAnIntSlot() async throws {
-        // Given — a byte-typed value handed to an int slot: provably inside
+        // Given. A byte-typed value handed to an int slot: provably inside
         let sut = try Module(
             procedures: [
                 "keep": Procedure(

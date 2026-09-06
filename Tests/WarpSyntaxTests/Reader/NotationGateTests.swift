@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 
 // The gates a document meets while it is being read, rather than while it runs.
-// Each of these is a message an author will meet — which is the reason they are
+// Each of these is a message an author will meet, which is the reason they are
 // worth pinning: a gate nobody checks can stop refusing, and a message nobody
 // checks can stop saying what to do about it.
 @Suite("What the reader refuses")
@@ -55,13 +55,13 @@ struct NotationGateTests {
 
     @Test("a statement decoded without a registry cannot be read at all")
     func statementNeedsARegistry() {
-        // Given — the registry travels in the decoder rather than in the data, so
-        // a reader reached without one has no way to know what a word means
+        // Given. The registry travels in the decoder rather than in the data,
+        // so a reader reached without one has no way to know what a word means
         let decoder = ValueDecoder(value: ["id": "done", "value": "end"], codingPath: [], steps: [], userInfo: [:])
 
-        // When / Then — a reading refuses as a reading wherever it is asked
-        // for, and which document it was reading is the door's to say: nothing
-        // here went through one, so the refusal names none
+        // When / Then. A reading refuses as a reading wherever it is asked for,
+        // and which document it was reading is the door's to say: nothing here
+        // went through one, so the refusal names none
         #expect(throws: ReadingError.self) {
             try StatementReader(from: decoder)
         }

@@ -51,7 +51,8 @@ struct CallTests {
         // When
         let outputs = try await run(sut, entry: "caller")
 
-        // Then — the omitted `bump` settled to its default at the callee boundary
+        // Then. The omitted `bump` settled to its default at the callee
+        // boundary
         #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .int(1)]))
     }
 
@@ -75,7 +76,7 @@ struct CallTests {
             ]
         ])
 
-        // When / Then — nothing runs: the argument is a constant, so its type is
+        // When / Then. Nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
         #expect(throws: LinkError.self) {
             try Linker().link([sut], entry: "caller")
@@ -84,7 +85,7 @@ struct CallTests {
 
     @Test("a call names a word and not the document that declares it")
     func callNamesASymbol() async throws {
-        // Given — the callee lives in a module the caller never mentions
+        // Given. The callee lives in a module the caller never mentions
         let caller = try loader.loadDocument([
             "imports": ["some-other-file.greet"],
             "procedures": [
@@ -113,7 +114,7 @@ struct CallTests {
 
     @Test("a call writes what it is sent to")
     func callWritesItsReceiver() async throws {
-        // Given — `call` reaches a receiver the same way a spelling does, so a
+        // Given. `call` reaches a receiver the same way a spelling does, so a
         // document is not forced through `x.shout` to send to one
         let sut = try loader.loadDocument([
             "imports": ["std.text.joined", "std.text.text"],
@@ -145,9 +146,9 @@ struct CallTests {
         #expect(outputs["result"] == .string("hey!"))
     }
 
-    @Test("a call carries values only — a blocks key has no meaning to refuse quietly")
+    @Test("a call carries values only, and a blocks key has no meaning to refuse quietly")
     func aBlocksKeyIsRefusedAtDecode() {
-        // Given — a body a word is to run travels as a closure argument, so
+        // Given. A body a word is to run travels as a closure argument, so
         // `blocks:` names nothing. An unknown key is refused where it is
         // written rather than dropped.
         let sut: Value = [
@@ -176,9 +177,9 @@ struct CallTests {
 
     @Test("runaway recursive calls end by caller cancellation")
     func recursiveCallStopsOnCancellation() async throws {
-        // Given — the kernel carries no recursion guard (a reappearing name is not
-        // a cycle oracle); runaway calls end by caller cancellation, which must
-        // propagate through the call chain
+        // Given. The kernel carries no recursion guard (a reappearing name is
+        // not a cycle oracle); runaway calls end by caller cancellation, which
+        // must propagate through the call chain
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])

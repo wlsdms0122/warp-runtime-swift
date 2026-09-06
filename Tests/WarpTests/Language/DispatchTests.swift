@@ -66,7 +66,7 @@ struct DispatchTests {
 
     @Test("a word that declines the shape it was sent to reads as absence")
     func decliningWordReadsAsAbsence() async throws {
-        // Given — `count` has nothing to say about an int, and a word saying
+        // Given. `count` has nothing to say about an int, and a word saying
         // nothing is the same answer as a field nobody set
         let sut = Warp.Expression.dispatch(
             Dispatch(receiver: .literal(.int(7)), selector: "std.collection.count")
@@ -84,7 +84,7 @@ struct DispatchTests {
 
     @Test("a trailing path segment that names no field is a send")
     func trailingSegmentIsASend() async throws {
-        // Given — `${items.count}` is `obj.count`: the front end cannot know
+        // Given. `${items.count}` is `obj.count`: the front end cannot know
         // whether the last segment is a field or a word, so it does not decide
         let sut = Warp.Expression.reference([.key("items"), .key("count")])
 
@@ -102,7 +102,7 @@ struct DispatchTests {
 
     @Test("two declarations of one spelling are refused at link")
     func oneNameIsDeclaredOnce() throws {
-        // Given / When / Then — which one runs must never be a link-order
+        // Given / When / Then, which one runs must never be a link-order
         // accident, and an implementation is not a spelling: a body and a
         // native answering one name collide the same way two bodies would
         let rival = try Module(
@@ -124,7 +124,7 @@ struct DispatchTests {
 
     @Test("a native word is linked against its signature like a procedure is")
     func hostWordIsCheckedAgainstItsSignature() async throws {
-        // Given — an argument the word does not declare. This was unreachable
+        // Given. An argument the word does not declare. This was unreachable
         // while an effect was an opaque Swift value.
         let sut = Procedure(
             body: [
@@ -165,7 +165,7 @@ struct DispatchTests {
 
     @Test("a constant argument of the wrong type is refused before the run")
     func constantArgumentTypeRefused() async throws {
-        // Given — only arguments that already are what they will be can be
+        // Given. Only arguments that already are what they will be can be
         // judged here, and a constant is one
         let sut = Procedure(
             body: [
@@ -184,7 +184,7 @@ struct DispatchTests {
 
     @Test("a selector nothing answers is refused before the run")
     func unresolvedSelectorRefused() async throws {
-        // Given — a self-contained procedure that calls something should be told
+        // Given. A self-contained procedure that calls something should be told
         // it had nowhere to look, rather than handed an empty answer
         let sut = Procedure(
             body: [Statement(binding: .constant("gone"), expression: .dispatch(Dispatch(selector: "nowhere")))]
@@ -198,7 +198,7 @@ struct DispatchTests {
 
     @Test("a typo in an arm today's arguments never take is still refused")
     func unreachedArmIsStillLinked() async throws {
-        // Given — the warrant is compilation, not loading: a run with expensive
+        // Given. The warrant is compilation, not loading: a run with expensive
         // effects should not discover a typo halfway through
         let sut = Procedure(
             body: [

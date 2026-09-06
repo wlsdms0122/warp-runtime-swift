@@ -19,7 +19,7 @@ struct BranchTests {
     // MARK: - Test
     @Test("branch selects the then/else arm by its condition")
     func branchSelectsArm() async throws {
-        // Given — an arm is statements alone: what it keeps it writes to an
+        // Given. An arm is statements alone: what it keeps it writes to an
         // outer variable, and the branch itself answers nothing
         let spec = try loader.loadProcedure([
             "parameters": ["kind": "string"],
@@ -47,7 +47,7 @@ struct BranchTests {
 
     @Test("a name on a branch is refused at reading")
     func aNameOnABranchIsRefused() {
-        // Given — a branch answers nothing, so its name could never bind
+        // Given. A branch answers nothing, so its name could never bind
         #expect {
             try loader.loadProcedure([
                 "body": [
@@ -67,8 +67,8 @@ struct BranchTests {
 
     @Test("a bare var declares a name holding null")
     func aBareVarDeclaresNull() async throws {
-        // Given — `var` may stand alone: it introduces a name with nothing in
-        // it yet, for the writes a branch's arms make
+        // Given. `var` may stand alone: it introduces a name with nothing in it
+        // yet, for the writes a branch's arms make
         let spec = try loader.loadProcedure([
             "body": [
                 ["var": "kept"]

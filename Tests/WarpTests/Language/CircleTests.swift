@@ -14,13 +14,13 @@ import Testing
 // The walk is a plain strongly-connected-components walk and knows nothing
 // about linking, so this is what it is tested on. It also carries its own
 // stack, because written as recursion a chain of calls descends once per link
-// and a chain is as long as a program — a fact only a graph this size states.
+// and a chain is as long as a program. A fact only a graph this size states.
 @Suite("The call graph is walked callee first, and a circle is one component")
 struct CircleTests {
     // MARK: - Test
     @Test("everything a name reaches is closed before the name is")
     func calleesComeFirst() {
-        // Given — a line of three, and a fourth nobody calls.
+        // Given. A line of three, and a fourth nobody calls.
         let found = Circles.among([
             "a": ["b"],
             "b": ["c"],
@@ -44,9 +44,9 @@ struct CircleTests {
         #expect(mutual.count == 1)
         #expect(Set(mutual[0]) == ["ping", "pong"])
 
-        // A name that reaches itself is its own circle — one member, and the
-        // caller tells it from a plain singleton by asking whether it sends
-        // to itself.
+        // A name that reaches itself is its own circle. One member, and the
+        // caller tells it from a plain singleton by asking whether it sends to
+        // itself.
         let alone = Circles.among(["self": ["self"]])
 
         #expect(alone == [["self"]])
@@ -63,7 +63,7 @@ struct CircleTests {
 
     @Test("a chain as long as a program is walked without the host's stack")
     func aLongChainIsWalked() throws {
-        // Given — three hundred declarations calling one another in a line,
+        // Given. Three hundred declarations calling one another in a line,
         // which is an ordinary program and was enough to end the process when
         // this walk was written as recursion.
         let names = try (0..<300).map { position in try Name("p\(position)") }

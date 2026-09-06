@@ -55,7 +55,7 @@ struct FailEffect: Effect {
     // MARK: - Private
 }
 
-// A reference from segment names, written directly — a path is what the language
+// A reference from segment names, written directly. A path is what the language
 // has, and the spelling belongs to whatever produced it.
 func reference(_ names: Name...) -> Warp.Expression {
     .reference(names.map { name in .key(name) })
@@ -63,7 +63,7 @@ func reference(_ names: Name...) -> Warp.Expression {
 
 // MARK: - Running
 
-// The entry name these tests link against. Any name would do — which procedure a
+// The entry name these tests link against. Any name would do, which procedure a
 // run starts from is an argument, so there is nothing special about this one.
 let entryName: Name = "entry"
 

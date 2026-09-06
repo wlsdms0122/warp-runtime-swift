@@ -49,8 +49,8 @@ struct DictionaryWordTests {
 
     @Test("a word that counts fields counts either spelling")
     func countingReadsEitherSpelling() throws {
-        // Given — the declaration answers `int`, so neither spelling may
-        // answer absence
+        // Given. The declaration answers `int`, so neither spelling may answer
+        // absence
         let held = Question(receiver: .dictionary(["a": .int(1), "b": .int(2)]), arguments: [:])
         let laid = Question(receiver: .record(Record(name: "app.Point", ["a": .int(1)])), arguments: [:])
 

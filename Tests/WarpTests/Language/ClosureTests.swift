@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// A procedure is a value. What that buys is not the case list — it is that an
+// A procedure is a value. What that buys is not the case list. It is that an
 // author can write the two things only Swift could write before: a construct
 // that takes a body, and a procedure that makes one.
 @Suite("A procedure is a value")
@@ -19,7 +19,7 @@ struct ClosureTests {
     // MARK: - Test
     @Test("a closure captures the scope it was written in, not the one it runs in")
     func closureCapturesLexically() async throws {
-        // Given — `made` is written where `outer` says "written"; the call site
+        // Given. `made` is written where `outer` says "written"; the call site
         // has an `outer` of its own saying something else
         let sut = [
             Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
@@ -47,9 +47,9 @@ struct ClosureTests {
         (["item": Parameter(type: .int), "index": Parameter(type: .int)], false)
     ])
     func aBodyDeclaresNoMoreThanTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) throws {
-        // Given — the slot hands one name. A body reading none of it or one
-        // of it stands; a body writing a name nothing hands it could only
-        // ever read null there, so no call could fill it.
+        // Given. The slot hands one name. A body reading none of it or one of
+        // it stands; a body writing a name nothing hands it could only ever
+        // read null there, so no call could fill it.
         let walking = Procedure(
             signature: Signature(
                 parameters: [
@@ -106,9 +106,9 @@ struct ClosureTests {
 
     @Test("an extra name a call need not fill is a name the body may declare")
     func anExtraParameterThatStandsUnfilledFits() throws {
-        // Given — the slot hands one name and the body writes two, the
-        // second with a default. Nothing has to fill it, so the body reads
-        // what it declared rather than the null the width rule refuses.
+        // Given. The slot hands one name and the body writes two, the second
+        // with a default. Nothing has to fill it, so the body reads what it
+        // declared rather than the null the width rule refuses.
         let walking = Procedure(
             signature: Signature(
                 parameters: [
@@ -162,7 +162,7 @@ struct ClosureTests {
 
     @Test("a slot asking for a pure procedure refuses one that reaches outside")
     func anImpureClosureIsRefusedWherePurityIsAsked() throws {
-        // Given — `twice` declares that whatever it is handed answers without
+        // Given. `twice` declares that whatever it is handed answers without
         // running. The closure handed to it shouts, and shouting is an effect
         let twice = Procedure(
             signature: Signature(
@@ -209,7 +209,7 @@ struct ClosureTests {
 
     @Test("a slot asking for a pure procedure takes one that answers")
     func aPureClosureFitsWherePurityIsAsked() async throws {
-        // Given — the same declaration, handed a body that only reads
+        // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
             signature: Signature(
                 parameters: ["body": Parameter(type: .procedure(nil, .pure))],
@@ -248,7 +248,7 @@ struct ClosureTests {
 
     @Test("an author can write a construct that takes a body")
     func authorWrittenControlStructure() async throws {
-        // Given — `twice` is not a native word and not a language case. It is a
+        // Given. `twice` is not a native word and not a language case. It is a
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(
@@ -287,7 +287,7 @@ struct ClosureTests {
 
     @Test("a procedure can answer with a procedure")
     func procedureAnswersProcedure() async throws {
-        // Given — the returned closure holds the argument its maker was given,
+        // Given. The returned closure holds the argument its maker was given,
         // which is what makes returning one worth anything
         let makeGreeter = Procedure(
             signature: Signature(parameters: ["greeting": Parameter(type: .string)]),
@@ -362,7 +362,7 @@ struct ClosureTests {
 
     @Test("a closure body is validated where it is written")
     func closureBodyIsValidatedAtItsSite() {
-        // Given — the body may read what surrounds the literal and what the
+        // Given. The body may read what surrounds the literal and what the
         // literal declares, and nothing else
         let readsEnclosing = Warp.Expression.closure(
             Procedure(body: [], result: reference("outer"))
@@ -387,7 +387,7 @@ struct ClosureTests {
 
     @Test("a procedure is never equal to a procedure")
     func proceduresHaveNoEquality() throws {
-        // Given — there is no honest answer, so the language does not offer one
+        // Given. There is no honest answer, so the language does not offer one
         let sut = Value.procedure(
             Closure.assembled()
         )

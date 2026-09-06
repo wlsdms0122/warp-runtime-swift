@@ -11,8 +11,8 @@ import Testing
 @testable import WarpSyntax
 
 // Running at once, as a document spells it: closures handed to the
-// `std.concurrent` words. There is no construct here — a fan-out is a call,
-// and what makes it safe is what a closure already is.
+// `std.concurrent` words. There is no construct here. A fan-out is a call, and
+// what makes it safe is what a closure already is.
 @Suite
 struct ConcurrentTests {
     // MARK: - Property
@@ -43,7 +43,7 @@ struct ConcurrentTests {
         // When
         let outputs = try await run(spec, environment: boundary)
 
-        // Then — every piece walked through the environment's isolation boundary
+        // Then. Every piece walked through the environment's isolation boundary
         #expect(boundary.isolatedCount == 2)
         #expect(outputs["result"] == .dictionary(["left": .int(1), "right": .int(2)]))
     }
@@ -92,7 +92,7 @@ struct ConcurrentTests {
 
     @Test("one piece's author mistake propagates the composite")
     func anyFatalPiecePropagates() async throws {
-        // Given — one author mistake makes the composite an author mistake
+        // Given. One author mistake makes the composite an author mistake
         let spec = try loader.loadProcedure([
             "body": [
                 [
@@ -134,7 +134,7 @@ struct ConcurrentTests {
 
     @Test("map walks a collection and answers in its order")
     func mapWalksACollection() async throws {
-        // Given — the closure asks for the element under `item`, the same name
+        // Given. The closure asks for the element under `item`, the same name
         // the sequential walk reads it by
         let sut = try loader.loadProcedure([
             "parameters": ["names": "array<string>"],

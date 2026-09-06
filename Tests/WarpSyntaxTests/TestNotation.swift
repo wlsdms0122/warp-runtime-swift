@@ -53,7 +53,7 @@ struct TestConditions: ConditionSpelling {
             throw DecodingError.dataCorrupted(
                 .init(
                     codingPath: container.codingPath,
-                    debugDescription: "a condition is one word and its subject —"
+                    debugDescription: "a condition is one word and its subject."
                         + " { of: <expression>, <word>: <expression> }; found: \(found.sorted())"
                 )
             )

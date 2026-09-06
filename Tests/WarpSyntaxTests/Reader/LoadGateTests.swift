@@ -30,9 +30,9 @@ struct LoadGateTests {
 
     @Test("a guard written on the envelope is rejected, because branch is where a guard goes")
     func envelopeGuardRejected() {
-        // Given — no language spells a guard as a modifier on a statement.
-        // `if x { some() }` is the form, and that is `branch`, so the envelope
-        // reads `when:` as the unknown key it is.
+        // Given. No language spells a guard as a modifier on a statement. `if x
+        // { some() }` is the form, and that is `branch`, so the envelope reads
+        // `when:` as the unknown key it is.
         let fixture: Value = [
             "parameters": ["kind": "string"],
             "body": [
@@ -63,7 +63,7 @@ struct LoadGateTests {
 
     @Test("an unknown reference head is caught at load, not at run")
     func unknownReferenceHeadRejected() {
-        // Given — forward references and typos surface at load, not at run
+        // Given. Forward references and typos surface at load, not at run
         let fixture: Value = [
             "body": [["let": "early", "value": ["ref": "later"]], ["let": "later", "value": "x"]]
         ]
@@ -87,7 +87,7 @@ struct LoadGateTests {
 
     @Test("a step id colliding with a declared input is rejected")
     func parameterCollisionRejected() {
-        // Given — the signature and the body are one scope, so the name the
+        // Given. The signature and the body are one scope, so the name the
         // signature introduced cannot be introduced again
         let fixture: Value = [
             "parameters": ["name": ["type": "string"]],
@@ -102,7 +102,7 @@ struct LoadGateTests {
 
     @Test("an empty rescue is rejected")
     func emptyRescueRejected() {
-        // Given — an attempt whose rescue produces nothing swallows the failure
+        // Given. An attempt whose rescue produces nothing swallows the failure
         // into null without a trace; the honest form is no attempt at all
         let fixture: Value = [
             "body": [
@@ -127,7 +127,8 @@ struct LoadGateTests {
             "body": [["let": "pick", "value": ["ref": "items[${typoooo}]"]]]
         ]
 
-        // When / Then — nested index refs are part of the reference, not a blind spot
+        // When / Then. Nested index refs are part of the reference, not a blind
+        // spot
         #expect(throws: ValidationError.self) {
             try loader.loadProcedure(fixture)
         }
@@ -135,7 +136,7 @@ struct LoadGateTests {
 
     @Test("an empty index segment is rejected at parse")
     func emptyIndexSegmentRejected() {
-        // Given — `[]` is an author mistake, rejected at parse instead of being
+        // Given. `[]` is an author mistake, rejected at parse instead of being
         // carried into the model
         let fixture: Value = [
             "parameters": ["items": "array"],
@@ -150,7 +151,7 @@ struct LoadGateTests {
 
     @Test("a name a run supplies is declared like every other name")
     func runValuesAreDeclared() throws {
-        // Given — there is one way a name gets into a body. A value a run
+        // Given. There is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
             "parameters": ["run": "dictionary"],
@@ -169,8 +170,9 @@ struct LoadGateTests {
 
     @Test("runtime data becomes IR through the loader's Value door")
     func valueLowersThroughFrontendDoor() throws {
-        // Given — a step array that arrived as data (through a signature) becomes
-        // IR via the loader's Value door; the string stays a literal even there
+        // Given. A step array that arrived as data (through a signature)
+        // becomes IR via the loader's Value door; the string stays a literal
+        // even there
         let carried = Value.array([
             .dictionary(["let": .string("greet"), "value": .string("hello there")])
         ])

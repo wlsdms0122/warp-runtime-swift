@@ -75,7 +75,7 @@ func path(_ text: String) -> [PathSegment] {
     try! TemplateParser().parseRefPath(text)
 }
 
-// What an expression reads is not a property it carries — the validator walks
+// What an expression reads is not a property it carries. The validator walks
 // structure and knows which names a body introduces. Asking it is how a test
 // asks the same question.
 func validates(
@@ -95,7 +95,7 @@ func validates(
 }
 
 // A caller registers on both sides: the word in the notation's registry, the
-// declaration in a module. The split is the point — one says how a document
+// declaration in a module. The split is the point. One says how a document
 // spells it, the other says what answers.
 extension Module {
     static let testing = try! Module(
@@ -119,7 +119,7 @@ extension Loader {
 
 // MARK: - Loading and running
 
-// The entry name these tests link against. Nothing is special about it — which
+// The entry name these tests link against. Nothing is special about it, which
 // procedure a run starts from is an argument to linking.
 let entryName: Name = "entry"
 
@@ -133,7 +133,7 @@ extension Loader {
 
     // A document as a front end hands one over: written in this notation's
     // spellings, lowered, and only then read. The two calls are the two
-    // questions — what a text spells, and whether its program holds — and the
+    // questions (what a text spells, and whether its program holds) and the
     // reading is handed a document with no spellings left in it.
     //
     // The version is filled in, which nobody writes by hand. A fixture that
@@ -163,9 +163,10 @@ extension Loader {
     // envelope a module is written in, so they write a procedure's body and this
     // names it. What the envelope itself accepts is `ModuleNotationTests`.
     //
-    // The fixture is a `Value` because that is what a loader takes. Writing YAML
-    // here would import a front end, and then a parser bug could fail a reader's
-    // test — the imports are supposed to say which layer a test is about.
+    // The fixture is a `Value` because that is what a loader takes. Writing
+    // YAML here would import a front end, and then a parser bug could fail a
+    // reader's test. The imports are supposed to say which layer a test is
+    // about.
     func loadProcedure(
         _ value: Value,
         named name: Name = entryName,
@@ -194,9 +195,9 @@ func run(
     let answer = try await Executor(environment: environment)
         .run(image, arguments: arguments)
 
-    // This notation spells several named outputs, which the reader lowers to one
-    // record — so a test that asks about `outputs["x"]` is asking about a field
-    // of the answer, and unwrapping here keeps that phrasing.
+    // This notation spells several named outputs, which the reader lowers to
+    // one record, so a test that asks about `outputs["x"]` is asking about a
+    // field of the answer, and unwrapping here keeps that phrasing.
     guard let outputs = answer.asDictionary else { return [:] }
 
     return Dictionary(uniqueKeysWithValues: outputs.entries.map { entry in (entry.name, entry.value) })

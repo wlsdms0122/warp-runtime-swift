@@ -46,8 +46,8 @@ struct TypeNotationTests {
                 == .ranged(.whole(from: Int.max))
         )
 
-        // A bound past the word is a whole number's one spelling of a number
-        // no int holds — refused as that fact, not as a spelling defect.
+        // A bound past the word is a whole number's one spelling of a number no
+        // int holds. Refused as that fact, not as a spelling defect.
         #expect {
             try TypeReader.parse("int(18446744073709551615...)")
         } throws: { error in
@@ -57,7 +57,7 @@ struct TypeNotationTests {
 
     @Test("the far bound may be left outside, and the kind under it is written")
     func openRangesAndFractionsParse() throws {
-        // `..<` says the far bound is outside — the half-open interval a
+        // `..<` says the far bound is outside. The half-open interval a
         // position below a length is written against.
         #expect(try TypeReader.parse("int(0..<256)") == .ranged(.whole(from: 0, to: .upTo(256))))
         #expect(try TypeReader.parse("int(..<0)") == .ranged(.whole(to: .upTo(0))))
@@ -89,7 +89,7 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0 ... 255)") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(a...b)") }
 
-        // `..<` says the far bound is outside, so there has to be one — and
+        // `..<` says the far bound is outside, so there has to be one, and
         // `..<` with nothing on either side says nothing twice.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0..<)") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("int(..<)") }
@@ -98,9 +98,9 @@ struct TypeNotationTests {
 
     @Test("every range writes back out as the one spelling it was read from")
     func rangesRoundTrip() throws {
-        // Given — `rendered` is the type's identity and what a document is
-        // written with, so a range that read one way and wrote another would
-        // be a shape a round trip changes.
+        // Given. `rendered` is the type's identity and what a document is
+        // written with, so a range that read one way and wrote another would be
+        // a shape a round trip changes.
         for written in [
             "int(0...255)", "int(0...)", "int(...255)", "int(-10...-1)",
             "int(0..<256)", "int(..<0)",
@@ -161,8 +161,8 @@ struct TypeNotationTests {
 
     @Test("a signature bounds its type parameters once, in bounds")
     func aBoundIsDeclaredInTheSignature() throws {
-        // Given — the slots name the parameter, and the signature says what
-        // the name admits
+        // Given. The slots name the parameter, and the signature says what the
+        // name admits
         let sut = try loader.loadProcedure([
             "receiver": "of",
             "bounds": ["T": "Comparable"],
@@ -171,7 +171,7 @@ struct TypeNotationTests {
             "result": ["ref": "of"]
         ])
 
-        // Then — every occurrence carries the bound the signature declared
+        // Then. Every occurrence carries the bound the signature declared
         let signature = sut.procedures[entryName]?.signature
 
         #expect(
@@ -187,7 +187,7 @@ struct TypeNotationTests {
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
     func aBoundBelongsToTheSignature() throws {
-        // The slot names the parameter and nothing else — the constraint is
+        // The slot names the parameter and nothing else. The constraint is
         // declared once, in the signature's `bounds`.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
@@ -210,10 +210,10 @@ struct TypeNotationTests {
             ])
         }
 
-        // A nested procedure type carries no bounds of its own — its
-        // parameters are the declaring signature's slots, and the declaring
-        // signature owns their bounds. Two records binding one namespace
-        // would be two claims about one thing.
+        // A nested procedure type carries no bounds of its own. Its parameters
+        // are the declaring signature's slots, and the declaring signature owns
+        // their bounds. Two records binding one namespace would be two claims
+        // about one thing.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
@@ -234,7 +234,7 @@ struct TypeNotationTests {
 
     @Test("a bound reaches the parameters a nested signature mentions")
     func aBoundReachesNestedMentions() throws {
-        // Given — `some Element` sits under array<…> and inside a procedure
+        // Given. `some Element` sits under array<…> and inside a procedure
         // type's own slot; both are this signature's mentions of one name
         let sut = try loader.loadProcedure([
             "bounds": ["Element": "Comparable"],

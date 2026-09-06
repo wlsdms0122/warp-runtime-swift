@@ -19,7 +19,7 @@ struct EachTests {
     // MARK: - Test
     @Test("a walk answers nothing, and its rounds write the flow they are in")
     func eachWritesOutwardAndAnswersNothing() async throws {
-        // Given — a round's contribution is the write; rounds that answered
+        // Given. A round's contribution is the write; rounds that answered
         // values would be a map, and the map words already say that
         let spec = try loader.loadProcedure([
             "parameters": ["items": "array"],
@@ -60,7 +60,7 @@ struct EachTests {
 
     @Test("a result key on each is refused at decode")
     func aResultKeyIsRefusedAtDecode() throws {
-        // Given — collecting rounds into an answer was `result`'s one job, and
+        // Given. Collecting rounds into an answer was `result`'s one job, and
         // that job is a map's; the key is gone rather than ignored
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
@@ -100,7 +100,7 @@ struct EachTests {
 
     @Test("with literal material the step id names the locus")
     func literalMaterialBlamesStepID() async throws {
-        // Given — a literal `in` has no path to blame, so the step id carries it
+        // Given. A literal `in` has no path to blame, so the step id carries it
         let spec = try loader.loadProcedure([
             "body": [
                 [

@@ -11,8 +11,8 @@ import Testing
 @testable import WarpSyntax
 
 // A construct's word belongs to the table, not to the type that reads it. The
-// language's constructs are anonymous, so nothing downstream of the registry can
-// tell which word arrived — and these are the facts that follow.
+// language's constructs are anonymous, so nothing downstream of the registry
+// can tell which word arrived, and these are the facts that follow.
 @Suite("A word belongs to the registry")
 struct SpellingTests {
     // MARK: - Property
@@ -20,7 +20,7 @@ struct SpellingTests {
     // MARK: - Test
     @Test("a form can be registered under another word")
     func formTakesTheRegistrysWord() async throws {
-        // Given — `unless` is `branch` spelled differently, and the IR it builds
+        // Given. `unless` is `branch` spelled differently, and the IR it builds
         // cannot say which of the two was written
         let loader = Loader(
             registry: try ConstructRegistry.standard.registering(
@@ -62,9 +62,9 @@ struct SpellingTests {
 
     @Test("a word can be given up, and a built-in respelled by giving it up first")
     func removingFreesTheWord() throws {
-        // Given — a notation that wants `invoke` for something of its own takes
-        // it by dropping ours, which is why a rename here is not a rename of the
-        // language
+        // Given. A notation that wants `invoke` for something of its own takes
+        // it by dropping ours, which is why a rename here is not a rename of
+        // the language
         let sut = try ConstructRegistry.standard
             .removing("invoke")
             .registering(InvokeForm.self, as: "apply")
@@ -79,7 +79,7 @@ struct SpellingTests {
         // Given
         let sut = try ConstructRegistry.standard.registering(BranchForm.self, as: "unless")
 
-        // When / Then — the guard is on the word, not on the form
+        // When / Then. The guard is on the word, not on the form
         #expect(throws: ValidationError.self) {
             try sut.registering(LoopForm.self, as: "unless")
         }
@@ -87,7 +87,7 @@ struct SpellingTests {
 
     @Test("a word the registry does not hold is not a construct")
     func unregisteredWordRefused() {
-        // Given — `branch` given up is `branch` unspellable
+        // Given. `branch` given up is `branch` unspellable
         let loader = Loader(registry: ConstructRegistry.standard.removing("branch"))
 
         // When / Then

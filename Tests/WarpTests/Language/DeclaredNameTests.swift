@@ -19,7 +19,7 @@ struct DeclaredNameTests {
     // MARK: - Test
     @Test("a declaration stands where the link would have worked out something narrower")
     func aDeclarationStandsOverWhatWasWorkedOut() async throws {
-        // Given — the value is an int, and the name says it holds a number
+        // Given. The value is an int, and the name says it holds a number
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -86,9 +86,9 @@ struct DeclaredNameTests {
 
     @Test("a declaration is held where a body is read rather than where one is reached")
     func aDeclarationIsHeldInABodyNothingReaches() throws {
-        // Given — a procedure that runs an effect, so it is not in the pure
-        // set, and that nothing calls, so it is not on the frontier. Its text
-        // still has to compile
+        // Given. A procedure that runs an effect, so it is not in the pure set,
+        // and that nothing calls, so it is not on the frontier. Its text still
+        // has to compile
         let sut = try Module(
             imports: ["std.control.abort"],
             procedures: [
@@ -143,7 +143,7 @@ struct DeclaredNameTests {
 
     @Test("what a name says it holds is what the run puts in it")
     func aDeclarationSettlesTheValue() async throws {
-        // Given — the value is a whole number and the name says it holds a
+        // Given. The value is a whole number and the name says it holds a
         // fraction. A declaration is a boundary like a parameter's, so what
         // crosses it is settled
         let sut = try Module(
@@ -193,7 +193,7 @@ struct DeclaredNameTests {
 
     @Test("a construct that binds the name says what it holds, and the author does not")
     func aConstructBoundNameTakesNoDeclaration() throws {
-        // Given — a walk binds the element under the statement's name
+        // Given. A walk binds the element under the statement's name
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -266,8 +266,8 @@ struct DeclaredNameTests {
 
     @Test("a closure under a name that says what it holds is handed in place, and the word writes it back")
     func aDeclaredClosureIsHandedInPlace() async throws {
-        // Given — the link derives `pure isolated` for a closure literal, and
-        // an `inout` slot takes the same shape. The name says what it holds, so
+        // Given. The link derives `pure isolated` for a closure literal, and an
+        // `inout` slot takes the same shape. The name says what it holds, so
         // what the slot asks and what the name is are one shape
         let sut = try Module(
             procedures: [
@@ -301,15 +301,15 @@ struct DeclaredNameTests {
         // When
         let answer = try await Executor().run(try Linker().link([sut] + Module.standard, entry: entryName))
 
-        // Then — the word wrote a closure of its own into the caller's name
+        // Then. The word wrote a closure of its own into the caller's name
         #expect(answer == .int(9))
     }
 
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
     func anUndeclaredClosureDoesNotFitTheSlot() throws {
-        // Given — the same program with the declaration left off. The link
-        // works out `pure isolated procedure` for the literal, and the slot
-        // asks for `procedure`
+        // Given. The same program with the declaration left off. The link works
+        // out `pure isolated procedure` for the literal, and the slot asks for
+        // `procedure`
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

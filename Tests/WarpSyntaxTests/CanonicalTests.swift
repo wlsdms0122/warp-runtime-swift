@@ -27,7 +27,7 @@ struct CanonicalTests {
     // MARK: - Test
     @Test("a branch reads a condition written as a plain call")
     func branchReadsAPlainCondition() async throws {
-        // Given — `{ of: x, is: 1 }` is one way to arrive at a condition. The
+        // Given. `{ of: x, is: 1 }` is one way to arrive at a condition. The
         // slot asks for an expression, and this is another.
         let sut = try loader.loadProcedure([
             "parameters": ["count": "int"],
@@ -100,7 +100,7 @@ struct CanonicalTests {
 
     @Test("a spelling and the call it stands for are the same program")
     func aSpellingMeansTheCallItStandsFor() async throws {
-        // Given — the same question asked both ways. This is what makes the
+        // Given. The same question asked both ways. This is what makes the
         // spellings a layer rather than a part of the language: what they lower
         // to is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) throws -> Module {
@@ -148,9 +148,9 @@ struct CanonicalTests {
 
     @Test("a condition that is simply a name is read as one")
     func aBareReferenceIsACondition() async throws {
-        // Given — nothing about a condition says it must be a comparison. A
-        // boolean already is one, and demanding it be spelled as `{ of: x,
-        // is: true }` would be the notation making up a requirement.
+        // Given. Nothing about a condition says it must be a comparison. A
+        // boolean already is one, and demanding it be spelled as `{ of: x, is:
+        // true }` would be the notation making up a requirement.
         let sut = try loader.loadProcedure([
             "parameters": ["ready": "bool"],
             "body": [
@@ -175,7 +175,7 @@ struct CanonicalTests {
 
     @Test("a program that does not hold together is still one document")
     func anUnsoundDocumentIsStillADocument() throws {
-        // Given — a name nothing declares. What a text *is* and whether its
+        // Given. A name nothing declares. What a text *is* and whether its
         // program is any good are two questions, and the first is the one a
         // caller asks when it wants the file a refusal came from. Answering it
         // only for the texts that had nothing wrong with them would take the
@@ -188,7 +188,7 @@ struct CanonicalTests {
         // When
         let written = try loader.canonical(unsound, from: .testing)
 
-        // Then — which document this is comes off the canonical writing, so the
+        // Then, which document this is comes off the canonical writing, so the
         // same text twice is the same document
         #expect(written == (try loader.canonical(unsound, from: .testing)))
 

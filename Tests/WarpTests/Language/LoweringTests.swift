@@ -20,8 +20,8 @@ struct LoweringTests {
     // MARK: - Test
     @Test("a name declared again inside a block gets its own slot")
     func aShadowingDeclarationHasItsOwnSlot() async throws {
-        // Given — the inner `x` is a different name, so the outer one reads
-        // as it was after the block
+        // Given. The inner `x` is a different name, so the outer one reads as
+        // it was after the block
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -55,7 +55,7 @@ struct LoweringTests {
 
     @Test("a closure's own declaration shadows what it captured")
     func aClosureReadsTheNearestName() async throws {
-        // Given — the closure declares `x` over the body's `x`; the nearest
+        // Given. The closure declares `x` over the body's `x`; the nearest
         // declaration is the one read, and the body's stays what it was. A
         // module's name may not be declared over, so the order between a
         // captured name and a module variable is never observed.
@@ -86,7 +86,7 @@ struct LoweringTests {
 
     @Test("a closure takes only the cells it reads")
     func aClosureCapturesWhatItReads() throws {
-        // Given — three names in scope, one read
+        // Given. Three names in scope, one read
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -124,8 +124,8 @@ struct LoweringTests {
 
     @Test("a loop keeps its round's slots only where its result reads them")
     func aLoopKeepsOnlyWhereTheResultCouldTell() throws {
-        // Given — one loop whose result reads a body name; another whose
-        // result reads nothing the body bound
+        // Given. One loop whose result reads a body name; another whose result
+        // reads nothing the body bound
         func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .dispatch(Dispatch(
@@ -181,7 +181,7 @@ struct LoweringTests {
 
     @Test("arguments stand at their parameter's position, and the receiver stands apart")
     func argumentsStandByPosition() async throws {
-        // Given — a call writing its arguments in the other order
+        // Given. A call writing its arguments in the other order
         let module = try Module(
             procedures: [
                 "entry": Procedure(
@@ -233,8 +233,8 @@ struct LoweringTests {
 
     @Test("a body reading a module variable does not answer without running")
     func aBodyReadingAVariableIsNotPure() throws {
-        // Given — the variable's value is the run's, so folding the word at
-        // the link would fix a value nothing at the run could change
+        // Given. The variable's value is the run's, so folding the word at the
+        // link would fix a value nothing at the run could change
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
@@ -256,9 +256,9 @@ struct LoweringTests {
 
     @Test("a name is what it names, wherever a variable is handed in place")
     func aHandedVariableReadsThroughNames() async throws {
-        // Given — `Count` is a name for `int`, and a name for a scalar is
-        // what it names: there is no representation to disagree about, so a
-        // variable holding an int is what an `inout Count` slot declares.
+        // Given. `Count` is a name for `int`, and a name for a scalar is what
+        // it names: there is no representation to disagree about, so a variable
+        // holding an int is what an `inout Count` slot declares.
         let sut = try Module(
             types: ["Count": .int],
             procedures: [
@@ -285,9 +285,9 @@ struct LoweringTests {
 
     @Test("a name is what it names at whatever depth a shape holds one")
     func aHandedVariableReadsNamesAtDepth() throws {
-        // Given — the alias sits inside a procedure's parameter rather than
-        // at the top of the slot. A name is what it names wherever it is
-        // written, so the walk reaches it there too.
+        // Given. The alias sits inside a procedure's parameter rather than at
+        // the top of the slot. A name is what it names wherever it is written,
+        // so the walk reaches it there too.
         let sut = try Module(
             types: ["Count": .int],
             procedures: [
@@ -330,11 +330,11 @@ struct LoweringTests {
 
     @Test("what is handed in place is the shape the slot declares, and not one that fits it")
     func aHandedVariableIsTheSlotsOwnShape() async throws {
-        // Given — a variable holding an unnamed record, handed to a slot
+        // Given. A variable holding an unnamed record, handed to a slot
         // declaring `Tag`. By value the boundary would settle it and the word
-        // would answer it named; in place there is nothing to settle into —
-        // the word writes through the caller's box, so what the caller reads
-        // back is whatever the word left there.
+        // would answer it named; in place there is nothing to settle into. The
+        // word writes through the caller's box, so what the caller reads back
+        // is whatever the word left there.
         func module(holding held: Warp.Expression) throws -> Module {
             try Module(
                 types: ["Tag": .record(["a": .int])],
@@ -362,8 +362,8 @@ struct LoweringTests {
             )
         }
 
-        // When / Then — the unnamed record is refused, and the same record
-        // held as a `Tag` stands
+        // When / Then. The unnamed record is refused, and the same record held
+        // as a `Tag` stands
         #expect(throws: LinkError.self) {
             try linker.link([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
         }
@@ -378,7 +378,7 @@ struct LoweringTests {
 
     @Test("a word folding through a written word is refused whichever is declared first")
     func aWordFoldingThroughAWordIsRefusedInAnyOrder() throws {
-        // Given — `app.zeta` reads a constant through `alpha`, a written word
+        // Given. `app.zeta` reads a constant through `alpha`, a written word
         // declared before it in name order; while the words settle every
         // written body stands as its refusal, so the order is not the text's
         let module = try Module(
@@ -408,8 +408,8 @@ struct LoweringTests {
 
     @Test("an effect sent to a variable in place reads it as its receiver")
     func anEffectReadsItsHandedReceiver() async throws {
-        // Given — the receiver is handed in place, so the effect holds it,
-        // and it reads as the receiver too, the way any receiver does
+        // Given. The receiver is handed in place, so the effect holds it, and
+        // it reads as the receiver too, the way any receiver does
         let module = try Module(
             procedures: [
                 "entry": Procedure(

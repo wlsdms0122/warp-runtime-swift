@@ -10,8 +10,8 @@ import Testing
 import WarpStandard
 
 // The kernel's own acceptance test: a procedure written in Swift, run without a
-// front end. Nothing here spells a keyword — no `"loop"`, no `"steps"`, no path
-// string — because a caller that reaches for `import Warp` is writing the IR,
+// front end. Nothing here spells a keyword (no `"loop"`, no `"steps"`, no path
+// string) because a caller that reaches for `import Warp` is writing the IR,
 // not a document about it. If a construct cannot be reached from here, it is
 // only reachable through a notation, and the notation has become the language.
 @Suite("Authoring a procedure in Swift")
@@ -79,9 +79,8 @@ struct SwiftAuthoringTests {
             result: .record(["verdict": .reference([.key("verdict")])])
         )
 
-        // When
-        // Comparing is a word, so this links the bundle that declares one — the
-        // control flow beside it needs nothing.
+        // When Comparing is a word, so this links the bundle that declares one.
+        // The control flow beside it needs nothing.
         let image = try linker.link(
             [try Module(procedures: ["entry": procedure]), .logic],
             entry: "entry"
@@ -125,7 +124,7 @@ struct SwiftAuthoringTests {
 
     @Test("a library word, a native word and a procedure are all one expression")
     func oneCallingShape() async throws {
-        // Given — three selectors that are answered in three different places,
+        // Given. Three selectors that are answered in three different places,
         // written identically. Where each is found is the runtime's business.
         let linker = Linker()
         let procedure = Procedure(
@@ -150,7 +149,7 @@ struct SwiftAuthoringTests {
                 "called": .reference([.key("called"), .key("said")])
             ])
         )
-        // A second declaration, in the same module — a call names a symbol, and
+        // A second declaration, in the same module. A call names a symbol, and
         // which module declared it is the linker's business.
         let echo = Procedure(
             signature: Signature(
@@ -176,4 +175,4 @@ struct SwiftAuthoringTests {
 }
 
 // A word written in Swift and never taught to a document to spell. It conforms
-// to `Effect` and to nothing else — the proof that the run path asks for no
+// to `Effect` and to nothing else. The proof that the run path asks for no

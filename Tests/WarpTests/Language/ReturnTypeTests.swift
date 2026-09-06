@@ -41,7 +41,7 @@ struct ReturnTypeTests {
         let image = try linker.link([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
-        // Then — settled to the declared representation, not merely waved past
+        // Then. Settled to the declared representation, not merely waved past
         #expect(answer == .int(3))
 
         // And a fraction is not that representation, whatever it is worth: a

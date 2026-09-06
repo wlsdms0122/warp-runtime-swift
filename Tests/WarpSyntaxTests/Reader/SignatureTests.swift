@@ -18,7 +18,7 @@ struct SignatureTests {
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
     func untypedParameterDeclaresNothing() throws {
-        // Given — `any` would say every shape is welcome; this says nothing at
+        // Given. `any` would say every shape is welcome; this says nothing at
         // all, and the two are not the same declaration even though neither is
         // checked
         let sut = try Loader.testing.loadDocument([
@@ -96,7 +96,7 @@ struct SignatureTests {
 
     @Test("a fraction is not a whole number, whatever it is worth")
     func aFractionDoesNotNarrow() throws {
-        // Given — a slot asking for a whole number. Taking a fraction that
+        // Given. A slot asking for a whole number. Taking a fraction that
         // happened to be whole would make the answer to "does this fit" depend
         // on the value rather than the type: `3.0` accepted where `3.5` is
         // refused, by a declaration that names neither.
@@ -118,7 +118,8 @@ struct SignatureTests {
         // Given
         let sut = Signature(parameters: ["a": Parameter(type: .string)])
 
-        // When / Then — an extra name is a typo surfaced, not a value smuggled in
+        // When / Then. An extra name is a typo surfaced, not a value smuggled
+        // in
         #expect(throws: ArgumentError.self) {
             try sut.settle(["a": .string("x"), "sneaky": .int(9)])
         }
@@ -139,7 +140,7 @@ struct SignatureTests {
 
     @Test("a default failing its own gate is judged at the link")
     func defaultFailingOwnGateIsALinkRefusal() throws {
-        // Given — the declaration is judged where declared type names resolve,
+        // Given. The declaration is judged where declared type names resolve,
         // so the document reads fine and the link refuses it
         let spec = try Loader.testing.loadProcedure([
             "parameters": [
@@ -156,7 +157,7 @@ struct SignatureTests {
 
     @Test("a default is stored as written, and arrives settled")
     func suppliedDefaultArrivesSettled() async throws {
-        // Given — the document holds what was written; taking the default walks
+        // Given. The document holds what was written; taking the default walks
         // the same gate an argument does, so the body still reads the declared
         // representation
         let spec = try Loader.testing.loadProcedure([
@@ -173,9 +174,9 @@ struct SignatureTests {
         #expect(outputs["result"] == .double(3))
     }
 
-    @Test("no inputs declaration is still a closed contract — strays are rejected")
+    @Test("no inputs declaration is still a closed contract, and strays are rejected")
     func strayInputRejectedOnEmptySignature() async throws {
-        // Given — absent `inputs:` is an empty signature, not an absent contract
+        // Given. Absent `inputs:` is an empty signature, not an absent contract
         let spec = try Loader.testing.loadProcedure(["body": [["let": "noop", "value": "ok"]]])
 
         // When / Then
@@ -186,7 +187,7 @@ struct SignatureTests {
 
     @Test("a null default is a declared default, not an absent one")
     func nullDefaultIsDeclared() throws {
-        // Given — declaring `null` is what makes an input optional while still
+        // Given. Declaring `null` is what makes an input optional while still
         // saying what it is
         let sut = try Loader.testing.loadProcedure([
             "parameters": ["dir": ["type": "string", "default": .null]],

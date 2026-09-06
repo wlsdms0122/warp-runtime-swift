@@ -11,8 +11,8 @@ import Testing
 import WarpStandard
 
 // Running at once is vocabulary, not grammar. A closure is the one body that is
-// safe to run beside another — it captured values and writes no name it did not
-// declare — so `std.concurrent` takes closures, and a caller that leaves the
+// safe to run beside another (it captured values and writes no name it did not
+// declare) so `std.concurrent` takes closures, and a caller that leaves the
 // bundle out of the link has granted no concurrency at all.
 @Suite("Running at once")
 struct ConcurrencyTests {
@@ -58,13 +58,13 @@ struct ConcurrencyTests {
         // When
         let answer = try await answer(of: [sut], result: reference("all"))
 
-        // Then — arrival order decided nothing
+        // Then. Arrival order decided nothing
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
     }
 
     @Test("map walks a collection and answers in the collection's order")
     func mapAnswersInOrder() async throws {
-        // Given — the concurrent reading of what `each` walks
+        // Given. The concurrent reading of what `each` walks
         let sut = Statement(binding: .constant("kept"), expression: .dispatch(
                 Dispatch(
                     receiver: .literal(.array([.int(1), .int(2), .int(3)])),
@@ -93,7 +93,7 @@ struct ConcurrencyTests {
 
     @Test("a map call is offered where its element sat")
     func mapOffersTheIndex() async throws {
-        // Given — the closure asks for `index` and not `item`, and the offer
+        // Given. The closure asks for `index` and not `item`, and the offer
         // covers it: which of the two the author reads is the author's business
         let sut = Statement(binding: .constant("placed"), expression: .dispatch(
                 Dispatch(
@@ -123,9 +123,9 @@ struct ConcurrencyTests {
 
     @Test("a null element is an element, not a missing argument")
     func mapCarriesNullElements() async throws {
-        // Given — the sequential walk hands a null element straight to its
-        // body, and running the same walk at once must not turn that into
-        // "nothing was given": what a word offers is what arrived
+        // Given. The sequential walk hands a null element straight to its body,
+        // and running the same walk at once must not turn that into "nothing
+        // was given": what a word offers is what arrived
         let sut = Statement(binding: .constant("kept"), expression: .dispatch(
                 Dispatch(
                     receiver: .literal(.array([.int(1), .null, .int(3)])),
@@ -183,7 +183,8 @@ struct ConcurrencyTests {
 
     @Test("first answers one piece, and the failures beside it do not count")
     func firstAnswersTheSuccess() async throws {
-        // Given — one closure cannot succeed, and a first only needs one that can
+        // Given. One closure cannot succeed, and a first only needs one that
+        // can
         let sut = Statement(binding: .constant("either"), expression: .dispatch(
                 Dispatch(
                     receiver: .array([
@@ -221,7 +222,7 @@ struct ConcurrencyTests {
 
     @Test("first asks the pieces still running to stop")
     func firstCancelsTheRest() async throws {
-        // Given — one piece answers at once, the other waits far longer than the
+        // Given. One piece answers at once, the other waits far longer than the
         // test does. Returning from the word awaits every sibling, so without
         // the ask this would take the sibling's time, not the winner's.
         let waiting = CancellationWatch()
@@ -300,7 +301,7 @@ struct ConcurrencyTests {
 
     @Test("all reports every failure, keyed by the piece that failed")
     func allReportsEveryFailure() async throws {
-        // Given — two pieces fail. Which failures a rescue reads must be every
+        // Given. Two pieces fail. Which failures a rescue reads must be every
         // one of them, whichever finished first.
         let doomed = Warp.Expression.closure(
             Procedure(
@@ -362,8 +363,8 @@ struct ConcurrencyTests {
 
     @Test("map refuses material that is not a collection")
     func mapRefusesUnfitMaterial() async throws {
-        // Given — the material arrives as `any`, so only the run can judge
-        // it, and the boundary every word shares is what judges it
+        // Given. The material arrives as `any`, so only the run can judge it,
+        // and the boundary every word shares is what judges it
         let sut = Statement(binding: .constant("walked"), expression: .dispatch(
                 Dispatch(
                     receiver: reference("subject"),
