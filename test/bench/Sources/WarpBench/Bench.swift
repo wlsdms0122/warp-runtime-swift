@@ -12,9 +12,13 @@ import Foundation
 // the same program and the cost of a document that arrives, links, runs one
 // round and is dropped.
 //
-// Usage: `WarpBench [rounds] [repeats]`. Rounds default to a million, repeats
-// to three; the reported figure is the fastest repeat. Every program is warmed
-// up once before it is timed.
+// Usage: `WarpBench [rounds] [repeats] [--against <table>]`. Rounds default to
+// a million, repeats to three; the reported figure is the fastest repeat. Every
+// program is warmed up once before it is timed.
+//
+// `--against` reads a table this printed earlier and reports how far each
+// figure moved instead of the figures alone, so comparing two builds is one
+// reading rather than two and the arithmetic is not the reader's.
 //
 // The fastest rather than the middle one: nothing else on the machine can make
 // a run faster, so the fastest sample is the one least mixed with whatever else
@@ -34,9 +38,12 @@ struct Bench {
     // MARK: - Initializer
     // MARK: - Public
     static func main() async throws {
-        let arguments = CommandLine.arguments.dropFirst()
-        let rounds = arguments.first.flatMap(Int.init) ?? defaultRounds
-        let repeats = arguments.dropFirst().first.flatMap(Int.init) ?? defaultRepeats
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        let numbers = arguments.prefix { argument in Int(argument) != nil }
+        let rounds = numbers.first.flatMap(Int.init) ?? defaultRounds
+        let repeats = numbers.dropFirst().first.flatMap(Int.init) ?? defaultRepeats
+        let against = arguments.firstIndex(of: "--against").map { at in arguments[at + 1] }
+        let baseline = try against.map(Self.reading)
         let workloads = try Self.workloads()
 
         var measured: [String: Measurement] = [:]
@@ -65,7 +72,7 @@ struct Bench {
             )
         }
 
-        print(Self.table(measured, rounds: rounds, repeats: repeats))
+        print(Self.table(measured, against: baseline, from: against, rounds: rounds, repeats: repeats))
     }
 
     // MARK: - Private
@@ -98,23 +105,68 @@ struct Bench {
             + Double(duration.components.attoseconds) / 1e9
     }
 
-    private static func table(_ measured: [String: Measurement], rounds: Int, repeats: Int) -> String {
+    // A table this printed earlier, read back by workload. Only the two
+    // figures a comparison moves are taken; the rest are worked out again.
+    private static func reading(_ path: String) throws -> [String: Measurement] {
+        var read: [String: Measurement] = [:]
+
+        for line in try String(contentsOfFile: path, encoding: .utf8).split(separator: "\n") {
+            let cells = line.split(separator: "|", omittingEmptySubsequences: false)
+                .map { cell in cell.trimmingCharacters(in: .whitespaces) }
+
+            guard cells.count >= 7, let perRound = Double(cells[2]), let link = Double(cells[5]) else { continue }
+
+            read[cells[1]] = Measurement(perRound: perRound, link: link * 1000, once: 0)
+        }
+
+        return read
+    }
+
+    private static func moved(_ now: Double, from before: Double?) -> String {
+        guard let before, before > 0 else { return "" }
+
+        return String(format: "%+.1f%%", (now - before) / before * 100)
+    }
+
+    private static func table(
+        _ measured: [String: Measurement],
+        against: [String: Measurement]?,
+        from path: String?,
+        rounds: Int,
+        repeats: Int
+    ) -> String {
         let loop = measured[baseline]?.perRound ?? 0
-        var lines = [
-            "rounds \(rounds), fastest of \(repeats); link and once are the fastest of \(linkSamples)",
-            "",
-            "| workload | ns/round | minus loop | x loop | link us | once us |",
-            "|---|---|---|---|---|---|"
-        ]
+        let heading = "rounds \(rounds), fastest of \(repeats);"
+            + " link and once are the fastest of \(linkSamples)"
+        var lines = [against == nil ? heading : heading + "; against \(path ?? "")", ""]
+
+        lines += against == nil
+            ? [
+                "| workload | ns/round | minus loop | x loop | link us | once us |",
+                "|---|---|---|---|---|---|"
+            ]
+            : [
+                "| workload | ns/round | moved | x loop | link us | moved |",
+                "|---|---|---|---|---|---|"
+            ]
 
         for (name, measurement) in measured.sorted(by: { $0.key < $1.key }) {
-            let over = measurement.perRound - loop
             let ratio = loop > 0 ? measurement.perRound / loop : 0
 
+            guard let before = against?[name] else {
+                lines.append(String(
+                    format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f |",
+                    name, measurement.perRound, measurement.perRound - loop, ratio,
+                    measurement.link / 1000, measurement.once / 1000
+                ))
+
+                continue
+            }
+
             lines.append(String(
-                format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f |",
-                name, measurement.perRound, over, ratio,
-                measurement.link / 1000, measurement.once / 1000
+                format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ |",
+                name, measurement.perRound, Self.moved(measurement.perRound, from: before.perRound),
+                ratio, measurement.link / 1000, Self.moved(measurement.link, from: before.link)
             ))
         }
 
