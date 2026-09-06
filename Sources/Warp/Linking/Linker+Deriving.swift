@@ -231,7 +231,7 @@ extension Linker {
         among symbols: [Symbol],
         pure: Set<Name>,
         answering contracts: Set<Name>,
-        in shapes: ShapeTable
+        reaching derivable: Set<Name>
     ) throws -> (selectors: [Name: Symbol], words: [Name: Symbol]) {
         var selectors: [Name: Symbol] = [:]
         var words: [Name: Symbol] = [:]
@@ -255,7 +255,7 @@ extension Linker {
 
             selectors[symbol.declared] = symbol
 
-            guard symbol.procedure.signature.isDerivable(in: shapes) else { continue }
+            guard derivable.contains(symbol.declared) else { continue }
 
             // A declaration that answers a contract's word is reached through
             // the contract and not by a bare spelling. Two types answering one

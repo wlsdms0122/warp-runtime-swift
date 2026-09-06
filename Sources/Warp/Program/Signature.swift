@@ -103,10 +103,7 @@ public struct Signature: Sendable, Equatable {
     // put the word that must not be missable where a walk decides on its own
     // whether to call it.
     public func isDerivable(in types: TypeTable) -> Bool {
-        isDerivable(in: types.shapes)
-    }
-
-    func isDerivable(in table: ShapeTable) -> Bool {
+        let table = types.shapes
         let slots = lowered(in: table)
 
         return slots.derivable(

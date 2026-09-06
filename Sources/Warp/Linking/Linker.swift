@@ -141,35 +141,6 @@ public struct Linker: Sendable {
             table[entry.offset] = Set(entry.element.variables.keys)
         }
         let settled = pure(among: symbols, reading: moduleVariables)
-        let (selectorSymbols, wordSymbols) = try derivable(
-            among: symbols,
-            pure: settled,
-            answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
-            in: shapes
-        )
-
-        // The tables as the author spelled them, and the form the link's own
-        // settling reads: a written body is swapped for the refusal it would
-        // earn, because it is itself still being resolved beside the constants
-        // it may read. The table carries the fact, so no resolver needs a flag
-        // saying when it runs. Selectors and path words are two tables, because
-        // they are two questions: what a selector reaches, and what a bare
-        // spelling a walk writes may call. One table masked by a set let one
-        // spelling answer with the other question's declaration.
-        //
-        // Both are filled with the answers read off bodies whose declaration
-        // wrote none, and both by the same reading. A spelling that answers one
-        // way through a call and another through a path would be one
-        // declaration saying two things.
-        var answeringSignatures = signatures
-        var answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
-
-        // Which spellings a path reaches one declaration by. A word may be
-        // reachable under more than one, and an answer worked out for it is
-        // that declaration's however a walk spelled it.
-        let wordSpellings = wordSymbols.reduce(into: [Name: [Name]]()) { spellings, entry in
-            spellings[entry.value.declared, default: []].append(entry.key)
-        }
 
         let isolatedDeclarations = isolated(among: symbols, signatures: signatures)
         let failingDeclarations = failing(among: symbols)
@@ -194,6 +165,39 @@ public struct Linker: Sendable {
                     in: shapes
                 )
             )
+        }
+
+        // Which declarations a path segment may reach, read off the rows the
+        // link just made. A row is the declaration lowered, and whether a path
+        // may reach one is a question about the slots it lowered to.
+        let (selectorSymbols, wordSymbols) = try derivable(
+            among: symbols,
+            pure: settled,
+            answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
+            reaching: Set(table.filter(\.isDerivable).map(\.label))
+        )
+
+        // The tables as the author spelled them, and the form the link's own
+        // settling reads: a written body is swapped for the refusal it would
+        // earn, because it is itself still being resolved beside the constants
+        // it may read. The table carries the fact, so no resolver needs a flag
+        // saying when it runs. Selectors and path words are two tables, because
+        // they are two questions: what a selector reaches, and what a bare
+        // spelling a walk writes may call. One table masked by a set let one
+        // spelling answer with the other question's declaration.
+        //
+        // Both are filled with the answers read off bodies whose declaration
+        // wrote none, and both by the same reading. A spelling that answers one
+        // way through a call and another through a path would be one
+        // declaration saying two things.
+        var answeringSignatures = signatures
+        var answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
+
+        // Which spellings a path reaches one declaration by. A word may be
+        // reachable under more than one, and an answer worked out for it is
+        // that declaration's however a walk spelled it.
+        let wordSpellings = wordSymbols.reduce(into: [Name: [Name]]()) { spellings, entry in
+            spellings[entry.value.declared, default: []].append(entry.key)
         }
 
         // Each document's variables in the order a run makes their boxes,
