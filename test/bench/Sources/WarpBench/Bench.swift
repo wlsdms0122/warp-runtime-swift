@@ -7,8 +7,10 @@
 
 import Foundation
 
-// Runs every program under `program/` for a number of rounds and prints one
-// table: nanoseconds per round, and how that compares to the loop alone.
+// Runs every program under `program/` and prints one table: nanoseconds per
+// round and how that compares to the loop alone, beside the cost of linking
+// the same program and the cost of a document that arrives, links, runs one
+// round and is dropped.
 //
 // Usage: `WarpBench [rounds] [repeats]`. Rounds default to a million, repeats
 // to three; the reported figure is the median repeat. Every program is warmed
@@ -19,6 +21,10 @@ struct Bench {
     private static let defaultRounds = 1_000_000
     private static let defaultRepeats = 3
     private static let warmupRounds = 1_000
+
+    // A link and a single round are one measurement each rather than a rate,
+    // so they are sampled many times and the middle one reported.
+    private static let linkSamples = 201
     private static let baseline = "loop"
 
     // MARK: - Initializer
@@ -29,7 +35,7 @@ struct Bench {
         let repeats = arguments.dropFirst().first.flatMap(Int.init) ?? defaultRepeats
         let workloads = try Self.workloads()
 
-        var perRound: [String: Double] = [:]
+        var measured: [String: Measurement] = [:]
 
         for workload in workloads {
             _ = try await workload.time(rounds: warmupRounds)
@@ -40,17 +46,31 @@ struct Bench {
                 samples.append(try await workload.time(rounds: rounds))
             }
 
-            let median = samples.sorted()[samples.count / 2]
-            let seconds = Double(median.components.seconds)
-                + Double(median.components.attoseconds) / 1e18
+            var links: [Duration] = []
+            var onces: [Duration] = []
 
-            perRound[workload.name] = seconds * 1e9 / Double(rounds)
+            for _ in 0 ..< linkSamples {
+                links.append(try workload.link())
+                onces.append(try await workload.once())
+            }
+
+            measured[workload.name] = Measurement(
+                perRound: Self.nanoseconds(Self.median(samples)) / Double(rounds),
+                link: Self.nanoseconds(Self.median(links)),
+                once: Self.nanoseconds(Self.median(onces))
+            )
         }
 
-        print(Self.table(perRound, rounds: rounds, repeats: repeats))
+        print(Self.table(measured, rounds: rounds, repeats: repeats))
     }
 
     // MARK: - Private
+    private struct Measurement {
+        let perRound: Double
+        let link: Double
+        let once: Double
+    }
+
     private static func workloads() throws -> [Workload] {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -65,22 +85,32 @@ struct Bench {
         return try files.map(Workload.init(reading:))
     }
 
-    private static func table(_ perRound: [String: Double], rounds: Int, repeats: Int) -> String {
-        let loop = perRound[baseline] ?? 0
+    private static func median(_ samples: [Duration]) -> Duration {
+        samples.sorted()[samples.count / 2]
+    }
+
+    private static func nanoseconds(_ duration: Duration) -> Double {
+        Double(duration.components.seconds) * 1e9
+            + Double(duration.components.attoseconds) / 1e9
+    }
+
+    private static func table(_ measured: [String: Measurement], rounds: Int, repeats: Int) -> String {
+        let loop = measured[baseline]?.perRound ?? 0
         var lines = [
-            "rounds \(rounds), median of \(repeats)",
+            "rounds \(rounds), median of \(repeats); link and once are the median of \(linkSamples)",
             "",
-            "| workload | ns/round | minus loop | x loop |",
-            "|---|---|---|---|"
+            "| workload | ns/round | minus loop | x loop | link us | once us |",
+            "|---|---|---|---|---|---|"
         ]
 
-        for (name, nanoseconds) in perRound.sorted(by: { $0.key < $1.key }) {
-            let over = nanoseconds - loop
-            let ratio = loop > 0 ? nanoseconds / loop : 0
+        for (name, measurement) in measured.sorted(by: { $0.key < $1.key }) {
+            let over = measurement.perRound - loop
+            let ratio = loop > 0 ? measurement.perRound / loop : 0
 
             lines.append(String(
-                format: "| %@ | %.0f | %.0f | %.2f |",
-                name, nanoseconds, over, ratio
+                format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f |",
+                name, measurement.perRound, over, ratio,
+                measurement.link / 1000, measurement.once / 1000
             ))
         }
 
