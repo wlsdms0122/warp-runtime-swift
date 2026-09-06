@@ -101,8 +101,8 @@ public struct Loader: Sendable {
 
         guard Envelope.declaresImports(written[Envelope.importsKey]) else {
             throw ReadingError(
-                "a document says what it imports, and this one does not —"
-                    + " write `\(Envelope.importsKey)`, empty where the program sends nothing"
+                "a document says what it imports, and this one does not."
+                    + " Write `\(Envelope.importsKey)`, empty where the program sends nothing"
             )
             .read(in: document)
         }

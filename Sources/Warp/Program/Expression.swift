@@ -195,14 +195,14 @@ public indirect enum Expression: Sendable {
     // and the link as link refusals, so the two stages cannot say different
     // things.
     public static let constructInOperand =
-        "a construct runs a body, and a call's operand is data"
-            + " — a body a word is to run travels as a closure"
+        "a construct runs a body, and a call's operand is data."
+            + " A body a word is to run travels as a closure"
     public static let declarationOnABoundName =
-        "this construct binds the name — a loop's round, a walk's element,"
-            + " an attempt's failure — so what it holds is not declared here"
+        "this construct binds the name. A loop's round, a walk's element,"
+            + " an attempt's failure, so what it holds is not declared here"
     public static let constructInCondition =
-        "a construct runs a body, and a condition is data"
-            + " — what a body decides reaches a condition through a word"
+        "a construct runs a body, and a condition is data."
+            + " What a body decides reaches a condition through a word"
 
     // Whether a construct (a shape that runs a body, or leaves) sits anywhere
     // in this expression read as data. A call's operand is data the pure half

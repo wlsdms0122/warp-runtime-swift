@@ -137,26 +137,26 @@ extension PathSegment {
 
         case .element:
             return "\(walked.rendered) writes `\(mark)` into \(receiver),"
-                + " which is never null"
-                + " — an array the type proves is there is indexed with `[`"
+                + " which is never null."
+                + " An array the type proves is there is indexed with `[`"
 
         case let .field(name):
             return "\(walked.rendered) writes `\(mark)` for '\(name)',"
-                + " which \(receiver) declares"
-                + " — a field the type proves is read with `.`"
+                + " which \(receiver) declares."
+                + " A field the type proves is read with `.`"
 
         case let .word(name):
             return "\(walked.rendered) writes `\(mark)` for '\(name)',"
-                + " and \(receiver) is never null"
-                + " — a word that always answers is sent with `.`"
+                + " and \(receiver) is never null."
+                + " A word that always answers is sent with `.`"
         }
     }
 
     func meetingNull(at walked: [PathSegment]) -> NullMeeting {
         guard optional else {
             return .refused(
-                "\(walked.rendered) reads through null"
-                    + " — only `\(mark)` reads absence"
+                "\(walked.rendered) reads through null."
+                    + " Only `\(mark)` reads absence"
             )
         }
 
@@ -195,7 +195,7 @@ public extension Array where Element == PathSegment {
         guard let first, first.optional else { return nil }
 
         return "\(rendered) marks the head optional, and the head of a path"
-            + " is a name a scope holds — `\(first.mark)` expects an absence,"
+            + " is a name a scope holds. `\(first.mark)` expects an absence,"
             + " and a name that answers nothing is a reading gone wrong"
     }
 

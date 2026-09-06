@@ -21,8 +21,8 @@ public extension Writer {
         // something else.
         if statement.binding != nil, statement.expression.takesNoName {
             throw WritingError(
-                "a branch answers nothing, so its name could never bind"
-                    + " — it takes no name"
+                "a branch answers nothing, so its name could never bind."
+                    + " It takes no name"
             )
         }
 
@@ -135,8 +135,8 @@ public extension Writer {
         // a fixed set and they are not in it.
         default:
             throw WritingError(
-                "\(Self.shape(of: expression)) has no spelling where a value is wanted"
-                    + " — this notation writes it as a statement"
+                "\(Self.shape(of: expression)) has no spelling where a value is wanted."
+                    + " This notation writes it as a statement"
             )
         }
     }
@@ -290,7 +290,7 @@ public extension Writer {
     private func spelling(_ form: any ConstructForm.Type) throws -> Name {
         guard let key = registry.key(for: form) else {
             throw WritingError(
-                "this notation registers no word for \(form) — a shape it gave up"
+                "this notation registers no word for \(form). A shape it gave up"
                     + " the word for is one it can no longer write"
             )
         }

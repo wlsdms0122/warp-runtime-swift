@@ -43,8 +43,8 @@ extension Value {
 
         case (.null, _):
             throw ExecutionError(
-                "'\(rendered)' writes through \([segment].rendered), which holds nothing yet"
-                    + " — write the whole entry first"
+                "'\(rendered)' writes through \([segment].rendered), which holds nothing yet."
+                    + " Write the whole entry first"
             )
 
         default:

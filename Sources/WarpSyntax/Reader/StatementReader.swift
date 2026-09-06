@@ -49,7 +49,7 @@ public struct StatementReader: Decodable {
                 do {
                     return .assignment(try TemplateParser().parseRefPath(written))
                 } catch {
-                    throw ReadingError("set \(written) — \(error)", at: [])
+                    throw ReadingError("set \(written): \(error)", at: [])
                 }
             }
         }
@@ -111,7 +111,7 @@ public struct StatementReader: Decodable {
 
         guard let name, name != .assignment else {
             throw ReadingError(
-                "writes '\(Self.typeKey)', which says what a name holds —"
+                "writes '\(Self.typeKey)', which says what a name holds."
                     + " '\(EnvelopeKeys.constant.stringValue)' and"
                     + " '\(EnvelopeKeys.variable.stringValue)' introduce a name,"
                     + " and this statement introduces none",
@@ -146,8 +146,8 @@ public struct StatementReader: Decodable {
     ) throws -> Statement {
         guard let registry = decoder.userInfo[.constructRegistry] as? ConstructRegistry else {
             throw ReadingError(
-                "statement decoding requires a ConstructRegistry"
-                    + " — decode through Loader",
+                "statement decoding requires a ConstructRegistry."
+                    + " Decode through Loader",
                 at: decoder.steps
             )
         }
@@ -203,7 +203,7 @@ public struct StatementReader: Decodable {
         if binding != nil, expression.alwaysLeaves {
             throw ReadingError(
                 "every way through this statement leaves,"
-                    + " so its name could never bind — it takes no name",
+                    + " so its name could never bind. It takes no name",
                 at: decoder.steps
             )
         }
@@ -215,7 +215,7 @@ public struct StatementReader: Decodable {
         if binding != nil, expression.takesNoName {
             throw ReadingError(
                 "a branch answers nothing, so its name"
-                    + " could never bind — it takes no name; what an arm"
+                    + " could never bind. It takes no name; what an arm"
                     + " keeps is written to an outer variable with 'set'",
                 at: decoder.steps
             )

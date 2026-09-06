@@ -57,7 +57,7 @@ extension Linker {
                 // this collides with is the one this call overwrote.
                 if let first = typePlaces[name] {
                     throw LinkError(
-                        "type '\(name)' is declared more than once in this link — by"
+                        "type '\(name)' is declared more than once in this link, by"
                             + " \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
                     )
@@ -78,8 +78,8 @@ extension Linker {
                 if let declared = typePlaces[name] {
                     throw LinkError(
                         "'\(name)' is declared as both a type and a constraint in"
-                            + " this link — as a type by \(declared.spelled) and as a"
-                            + " constraint by \(declaration.spelled) — one name cannot"
+                            + " this link, as a type by \(declared.spelled) and as a"
+                            + " constraint by \(declaration.spelled). One name cannot"
                             + " stand for a shape and a membership at once",
                         at: declaration.place
                     )
@@ -88,7 +88,7 @@ extension Linker {
                 if let first = constraintPlaces[name] {
                     throw LinkError(
                         "constraint '\(name)' is declared more than once in this"
-                            + " link — by \(first.spelled) and \(declaration.spelled)",
+                            + " link, by \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
                     )
                 }

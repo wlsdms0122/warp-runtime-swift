@@ -97,18 +97,18 @@ public struct TypeReader: Decodable {
             let inner = try parse(String(bare))
 
             if inner.isInout {
-                throw TypeFormError("type '\(text)' writes `inout` twice — once says it")
+                throw TypeFormError("type '\(text)' writes `inout` twice. Once says it")
             }
 
             if case .variable = inner {
-                throw TypeFormError("type '\(text)' writes `var` twice — once says it")
+                throw TypeFormError("type '\(text)' writes `var` twice. Once says it")
             }
 
             return wrap(inner)
         }
 
         guard let (purity, isolation, rest) = Self.modifiers(of: text) else {
-            throw TypeFormError("type '\(text)' writes a word twice — once says it")
+            throw TypeFormError("type '\(text)' writes a word twice. Once says it")
         }
 
         if purity == .pure || isolation == .isolated {
@@ -126,7 +126,7 @@ public struct TypeReader: Decodable {
             // What already admits null gains nothing from saying so again,
             // and a spelling that says one thing twice reads as two things.
             case .nullable:
-                throw TypeFormError("type '\(text)' writes `?` twice — once says it")
+                throw TypeFormError("type '\(text)' writes `?` twice. Once says it")
 
             case .null, .any:
                 throw TypeFormError(
@@ -143,7 +143,7 @@ public struct TypeReader: Decodable {
             // the filling, not on the mention.
             case .parameter:
                 throw TypeFormError(
-                    "type '\(text)' writes `?` on a type parameter — a"
+                    "type '\(text)' writes `?` on a type parameter. A"
                         + " parameter stands for the whole type the call fills in"
                 )
 
@@ -170,7 +170,7 @@ public struct TypeReader: Decodable {
             // through one, which is named for the dotted path that reached it.
             guard isName(bare), !bare.contains(".") else {
                 throw TypeFormError(
-                    "type '\(text)' names no type parameter — write `some` and one"
+                    "type '\(text)' names no type parameter. Write `some` and one"
                         + " bare name; a constraint is declared in the signature's `bounds`"
                 )
             }
@@ -195,7 +195,7 @@ public struct TypeReader: Decodable {
 
             guard let dots else {
                 throw TypeFormError(
-                    "type '\(text)' writes a range without `...` or `..<` — a"
+                    "type '\(text)' writes a range without `...` or `..<`. A"
                         + " range is spelled `\(kind)(0...255)`, either bound"
                         + " optional"
                 )
@@ -205,7 +205,7 @@ public struct TypeReader: Decodable {
 
             guard !written.upper.isEmpty || open == nil else {
                 throw TypeFormError(
-                    "type '\(text)' writes `..<` with nothing after it — `..<`"
+                    "type '\(text)' writes `..<` with nothing after it. `..<`"
                         + " says the far bound is outside the range, and there"
                         + " is no far bound"
                 )
@@ -213,7 +213,7 @@ public struct TypeReader: Decodable {
 
             guard !written.lower.isEmpty || !written.upper.isEmpty else {
                 throw TypeFormError(
-                    "type '\(text)' writes a range with neither bound — a range"
+                    "type '\(text)' writes a range with neither bound. A range"
                         + " that says nothing is spelled `\(kind)`"
                 )
             }
@@ -256,7 +256,7 @@ public struct TypeReader: Decodable {
 
         default:
             throw TypeFormError(
-                "type '\(head)' takes no argument — only `array<…>` and `dictionary<…>` do"
+                "type '\(head)' takes no argument. Only `array<…>` and `dictionary<…>` do"
             )
         }
     }

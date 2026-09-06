@@ -378,7 +378,7 @@ public struct Linker: Sendable {
                 } catch {
                     throw LinkError(
                         "answers \(answer.type), and its"
-                            + " declaration promises \(returns) — \(error)",
+                            + " declaration promises \(returns): \(error)",
                         at: symbol.place.slot(.result)
                     )
                 }
@@ -427,7 +427,7 @@ public struct Linker: Sendable {
             guard let identity = module.identity else { continue }
             guard held.insert(identity).inserted else {
                 throw LinkError(
-                    "this document was handed to the link twice — a link states"
+                    "this document was handed to the link twice. A link states"
                         + " its whole world once, so a document already in it is"
                         + " not something to add",
                     at: Place(in: .of(module))
@@ -609,9 +609,9 @@ public struct Linker: Sendable {
 
             throw LinkError(
                 "\(contested.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
-                    + " than one module as something a path may reach — '\(word)' by"
-                    + " \(ranked.map(\.declared.spelling).joined(separator: ", "))"
-                    + " — a path segment names no module, so there is no spelling that"
+                    + " than one module as something a path may reach. '\(word)' by"
+                    + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."
+                    + " A path segment names no module, so there is no spelling that"
                     + " would tell them apart",
                 at: ranked[1].place
             )
@@ -646,8 +646,8 @@ public struct Linker: Sendable {
 
                 if let first = claimed[name] {
                     throw LinkError(
-                        "'\(name)' is declared more than once in this link — by"
-                            + " \(first.spelled) and \(symbol.spelled) — two declarations"
+                        "'\(name)' is declared more than once in this link, by"
+                            + " \(first.spelled) and \(symbol.spelled). Two declarations"
                             + " of a name have no way to be told apart",
                         at: symbol.place
                     )
@@ -727,8 +727,8 @@ public struct Linker: Sendable {
                 switch resolved {
                 case .parameter, .any, .never:
                     throw LinkError(
-                        "a member is a concrete shape"
-                            + " — `\(member.rendered)` says nothing a"
+                        "a member is a concrete shape."
+                            + " `\(member.rendered)` says nothing a"
                             + " membership could hold",
                         at: declaration.place
                     )
@@ -915,8 +915,8 @@ public struct Linker: Sendable {
             guard names.count <= 1 else {
                 throw LinkError(
                     "`some \(parameter)` is bounded by"
-                        + " \(names.sorted().map(\.spelling).joined(separator: " and "))"
-                        + " — one parameter takes one constraint",
+                        + " \(names.sorted().map(\.spelling).joined(separator: " and "))."
+                        + " One parameter takes one constraint",
                     at: place
                 )
             }
@@ -961,7 +961,7 @@ public struct Linker: Sendable {
         case let .reading(of, path):
             throw LinkError(
                 "writes `\(type.rendered)`, which is a shape the link"
-                    + " read out of a body — a declaration says what a call fills,"
+                    + " read out of a body. A declaration says what a call fills,"
                     + " and `\(([PathSegment.key(of)] + path).rendered)` is a path"
                     + " only that body can read",
                 at: place
@@ -973,8 +973,8 @@ public struct Linker: Sendable {
         case let .ranged(refinement):
             if refinement.saysNothing {
                 throw LinkError(
-                    "writes `\(type.rendered)` with neither bound"
-                        + " — a range that says nothing is spelled"
+                    "writes `\(type.rendered)` with neither bound."
+                        + " A range that says nothing is spelled"
                         + " `\(refinement.kind.rendered)`",
                     at: place
                 )
@@ -982,8 +982,8 @@ public struct Linker: Sendable {
 
             if refinement.admitsNothing {
                 throw LinkError(
-                    "writes `\(type.rendered)`, which admits nothing"
-                        + " — no \(refinement.kind.rendered) is inside it",
+                    "writes `\(type.rendered)`, which admits nothing."
+                        + " No \(refinement.kind.rendered) is inside it",
                     at: place
                 )
             }
@@ -994,7 +994,7 @@ public struct Linker: Sendable {
             guard parameterized else {
                 throw LinkError(
                     "writes `\(type.rendered)`, and nothing here is"
-                        + " filled by a call — a type parameter lives in a signature",
+                        + " filled by a call. A type parameter lives in a signature",
                     at: place
                 )
             }
@@ -1053,7 +1053,7 @@ public struct Linker: Sendable {
             case .any, .null, .never, .parameter, .nullable:
                 throw LinkError(
                     "writes `?` on \(inner.rendered), which"
-                        + " stands for `\(resolved.rendered)` — a `?` says"
+                        + " stands for `\(resolved.rendered)`. A `?` says"
                         + " nothing there, the same rule the spelling"
                         + " `\(resolved.rendered)?` is refused by",
                     at: place
@@ -1087,14 +1087,14 @@ public struct Linker: Sendable {
         case .inout:
             throw LinkError(
                 "writes `\(type.rendered)`, and only a parameter is handed a"
-                    + " variable in place — `inout` is written on a parameter's type",
+                    + " variable in place. `inout` is written on a parameter's type",
                 at: place
             )
 
         case .variable:
             throw LinkError(
                 "writes `\(type.rendered)`, and only a field of a declared type"
-                    + " is written through — `var` is written on a field in `types`",
+                    + " is written through. `var` is written on a field in `types`",
                 at: place
             )
         }
@@ -1136,8 +1136,8 @@ public struct Linker: Sendable {
             if let first = dead.first {
                 throw LinkError(
                     "oneOf lists '\(first)', which"
-                        + " \(parameter.declared.rendered) does not admit —"
-                        + " no call could ever match it",
+                        + " \(parameter.declared.rendered) does not admit."
+                        + " No call could ever match it",
                     at: place
                 )
             }
@@ -1153,7 +1153,7 @@ public struct Linker: Sendable {
         if fallback == .null {
             guard parameter.oneOf == nil, shape.settles(.null, in: table.shapes) else {
                 throw LinkError(
-                    "its default is not a value it takes — null",
+                    "its default is not a value it takes: null",
                     at: place
                 )
             }
@@ -1165,7 +1165,7 @@ public struct Linker: Sendable {
             _ = try parameter.checking(fallback, called: name, in: table)
         } catch {
             throw LinkError(
-                "its default is not a value it takes — \(error)",
+                "its default is not a value it takes: \(error)",
                 at: place
             )
         }
@@ -1309,7 +1309,7 @@ public struct Linker: Sendable {
 
                 throw LinkError(
                     "constants \(circle.map(\.spelling).joined(separator: ", ")) name each other in a"
-                        + " circle — a constant may name another declared beside it, but"
+                        + " circle. A constant may name another declared beside it, but"
                         + " not one that names it back",
                     // Any of them is where the fix can be made, so the one
                     // walked to is the first in sorted order: a circle has no
@@ -1403,7 +1403,7 @@ public struct Linker: Sendable {
         ) {
         case let .refusal(reason):
             throw LinkError(
-                "sending '\(dispatch.selector)' — \(reason)",
+                "sending '\(dispatch.selector)': \(reason)",
                 at: site.place
             )
 
@@ -1457,7 +1457,7 @@ public struct Linker: Sendable {
                 _ = try parameter.lowered(named: name, in: shapes).taking(constant, in: shapes)
             } catch {
                 throw LinkError(
-                    "sending '\(dispatch.selector)' — \(error)",
+                    "sending '\(dispatch.selector)': \(error)",
                     at: site.place.argument(name.spelling)
                 )
             }
@@ -1475,7 +1475,7 @@ public struct Linker: Sendable {
                 try query.validate(constants)
             } catch {
                 throw LinkError(
-                    "sending '\(dispatch.selector)' — \(error)",
+                    "sending '\(dispatch.selector)': \(error)",
                     at: site.place.slot(.arguments)
                 )
             }

@@ -179,8 +179,8 @@ public final class Linked: Sendable {
         table.linkage === other.linkage
     }
 
-    static let unreadable = "got a procedure a row of this link cannot read"
-        + " — one is read where the link that made it is being read, which"
+    static let unreadable = "got a procedure a row of this link cannot read."
+        + " One is read where the link that made it is being read, which"
         + " for a judgment is the image's own types"
 
     // Whether this row is a written body.

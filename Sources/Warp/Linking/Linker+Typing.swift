@@ -349,8 +349,8 @@ extension Linker {
 
                     return .refused(
                         "\(walked.rendered) \(reach) \(current.rendered),"
-                            + " which declares nothing"
-                            + " — a shape is read by naming it, with `as`"
+                            + " which declares nothing."
+                            + " A shape is read by naming it, with `as`"
                     )
                 }
 
@@ -435,7 +435,7 @@ extension Linker {
                 guard segment.optional else {
                     return .refused(
                         "\(walked.rendered) reads into \(current.rendered),"
-                            + " which may be null — absence is read with"
+                            + " which may be null. Absence is read with"
                             + " `\(segment.mark)`"
                     )
                 }
@@ -527,8 +527,8 @@ extension Linker {
                 guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
-                            + " which \(current.rendered) does not declare"
-                            + " — a word is sent with a written call, and data"
+                            + " which \(current.rendered) does not declare."
+                            + " A word is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
                             + " or through `dictionary<any>`"
                     )
@@ -670,7 +670,7 @@ extension Linker {
             do {
                 settled = try folding.read(inner, at: place)
             } catch {
-                throw LinkError("reading constant '\(head)' — \(error)", at: place)
+                throw LinkError("reading constant '\(head)': \(error)", at: place)
             }
 
             // The mark rides the fold: which element is read settles now,
@@ -780,7 +780,7 @@ extension Linker {
             in: frame.shapes
         ) {
         case let .refusal(reason):
-            return .refused("\(walked.rendered) sends '\(key)' — \(reason)")
+            return .refused("\(walked.rendered) sends '\(key)': \(reason)")
 
         case let .fits(filled):
             return .answers(filled.returns ?? .any)
@@ -1010,7 +1010,7 @@ extension Linker {
 
                     return Inspection(rewritten: .literal(value), reading: type(of: value))
                 } catch {
-                    throw LinkError("reading constant '\(head)' — \(error)", at: place)
+                    throw LinkError("reading constant '\(head)': \(error)", at: place)
                 }
             }
 
@@ -1110,8 +1110,8 @@ extension Linker {
                 // being. What is decidable before a run is decided before it.
                 try refuse(
                     "reads \(inner.reading.rendered) as \(settled.rendered),"
-                        + " and no value is both"
-                        + " — a cast names a shape the value may turn out to"
+                        + " and no value is both."
+                        + " A cast names a shape the value may turn out to"
                         + " have, and this one it never can",
                     at: place,
                     when: ask
@@ -1125,8 +1125,8 @@ extension Linker {
                 // repeat that the first waved through.
                 try refuse(
                     "reads \(inner.reading.rendered) as \(settled.rendered),"
-                        + " which it already is"
-                        + " — a cast opens a shape the types do not prove,"
+                        + " which it already is."
+                        + " A cast opens a shape the types do not prove,"
                         + " and here they do",
                     at: place,
                     when: ask
@@ -1224,7 +1224,7 @@ extension Linker {
                     guard held.accepts(write.type, in: frame.shapes) else {
                         throw LinkError(
                             "writes '\(name)', which it captured, as"
-                                + " \(write.type.rendered) — the body it captured"
+                                + " \(write.type.rendered). The body it captured"
                                 + " from holds it as \(held.rendered)",
                             at: place.slot(.closure)
                         )
@@ -2323,7 +2323,7 @@ extension Linker {
             if segment.optional {
                 return .refused(
                     "\(walked.rendered) writes through `\(segment.mark)`, and a write"
-                        + " reads no absence — write the whole, or write what is there"
+                        + " reads no absence. Write the whole, or write what is there"
                 )
             }
 
@@ -2356,7 +2356,7 @@ extension Linker {
                 if declared, !field.isVariable {
                     return .refused(
                         "\(walked.rendered) writes through '\(key)', which the type"
-                            + " declares without `var` — a field a path may write"
+                            + " declares without `var`. A field a path may write"
                             + " through is declared `var`"
                     )
                 }
@@ -2372,13 +2372,13 @@ extension Linker {
             case (.key, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
                     "\(walked.rendered) writes into \(current.rendered), which"
-                        + " declares nothing — a shape is written by naming it"
+                        + " declares nothing. A shape is written by naming it"
                 )
 
             case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):
                 return .refused(
                     "\(walked.rendered) writes into \(current.rendered), which may"
-                        + " be null — write the whole first"
+                        + " be null. Write the whole first"
                 )
 
             case (.key, _):
@@ -2426,7 +2426,7 @@ extension Linker {
             guard case let .reference(path) = argument, let head = path.head else {
                 try refuse(
                     "hands '\(name)' in place, and what is handed in place is a"
-                        + " variable's path — this argument is not one",
+                        + " variable's path. This argument is not one",
                     at: at,
                     when: ask
                 )
@@ -2439,7 +2439,7 @@ extension Linker {
 
             default:
                 try refuse(
-                    "hands '\(head)' in place, which is a fixed name here — a"
+                    "hands '\(head)' in place, which is a fixed name here. A"
                         + " variable is handed in place",
                     at: at,
                     when: ask

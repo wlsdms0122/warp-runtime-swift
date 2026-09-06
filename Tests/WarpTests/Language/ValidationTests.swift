@@ -68,7 +68,7 @@ struct ValidationTests {
             )
         }
 
-        #expect(error?.message.contains("declare it as a variable to write it") == true)
+        #expect(error?.message.contains("Declare it as a variable to write it") == true)
     }
 
     @Test("nor by the name a construct hands its body")

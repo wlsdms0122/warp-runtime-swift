@@ -227,7 +227,7 @@ struct ConstraintTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("one parameter takes one constraint")
+            error is LinkError && "\(error)".contains("One parameter takes one constraint")
         }
     }
 
@@ -343,7 +343,7 @@ struct ConstraintTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("a type parameter lives in a signature")
+            error is LinkError && "\(error)".contains("A type parameter lives in a signature")
         }
     }
 
@@ -374,7 +374,7 @@ struct ConstraintTests {
         #expect {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("a type parameter lives in a signature")
+            error is LinkError && "\(error)".contains("A type parameter lives in a signature")
         }
     }
 
@@ -793,7 +793,7 @@ struct ConstraintTests {
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("does not declare")
-                && "\(error)".contains("a word is sent with a written call")
+                && "\(error)".contains("A word is sent with a written call")
         }
     }
 

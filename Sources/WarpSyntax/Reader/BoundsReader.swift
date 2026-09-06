@@ -36,8 +36,8 @@ enum BoundsReader {
             guard TypeReader.isName(constraint) else {
                 throw ReadingError(
                     "bounds bind '\(parameter)' to"
-                        + " '\(constraint)', which is not a constraint's name"
-                        + " — a membership is declared, never written in a"
+                        + " '\(constraint)', which is not a constraint's name."
+                        + " A membership is declared, never written in a"
                         + " signature",
                     at: steps
                 )
@@ -58,7 +58,7 @@ enum BoundsReader {
             throw ReadingError(
                 "bounds name"
                     + " \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
-                    + " `some \(unwritten.first?.spelling ?? "")` — a bound rides on a"
+                    + " `some \(unwritten.first?.spelling ?? "")`. A bound rides on a"
                     + " parameter some slot mentions",
                 at: steps
             )

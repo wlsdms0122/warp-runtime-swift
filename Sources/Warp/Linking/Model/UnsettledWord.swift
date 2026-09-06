@@ -19,8 +19,8 @@ struct UnsettledWord: Query {
     // MARK: - Public
     func evaluate(_ question: Question) throws -> Value? {
         throw ExecutionError(
-            "this word has a written body, which runs after the link"
-                + " — a constant settles from native words alone"
+            "this word has a written body, which runs after the link."
+                + " A constant settles from native words alone"
         )
     }
 

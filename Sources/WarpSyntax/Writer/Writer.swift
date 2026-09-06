@@ -118,8 +118,8 @@ public struct Writer: Sendable {
         // a document that loads into something else.
         guard case let .body(block) = procedure.implementation else {
             throw WritingError(
-                "a procedure implemented in native code has no document —"
-                    + " what a caller brings is declared where the run is assembled"
+                "a procedure implemented in native code has no document."
+                    + " What a caller brings is declared where the run is assembled"
             )
         }
 
@@ -197,7 +197,7 @@ public struct Writer: Sendable {
             throw WritingError(
                 "`some \(([PathSegment.key(of)] + path).rendered)` is a shape"
                     + " the link read out of a body,"
-                    + " and no document writes one — a declaration says what a call"
+                    + " and no document writes one. A declaration says what a call"
                     + " fills"
             )
 
@@ -205,7 +205,7 @@ public struct Writer: Sendable {
             guard constraint == nil else {
                 throw WritingError(
                     "'some \(name)' is bounded by '\(constraint ?? "")', and nothing"
-                        + " here declares it — a bound is written in the `bounds` of"
+                        + " here declares it. A bound is written in the `bounds` of"
                         + " a procedure's signature, which this type is not part of"
                 )
             }
@@ -223,7 +223,7 @@ public struct Writer: Sendable {
         // for a `?` to trail.
         case let .nullable(inner):
             return .string(
-                "\(try spelt(inner, at: "before `?` — a record is declared and written by its name, like `Task?`"))?"
+                "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
 
         // A record and a procedure are both written as a mapping, and the one
@@ -258,7 +258,7 @@ public struct Writer: Sendable {
             default:
                 throw WritingError(
                     "`\(word)` is written in front of a type name, and"
-                        + " \(inner.rendered) is written as a record — declare the"
+                        + " \(inner.rendered) is written as a record. Declare the"
                         + " record under a name and write `\(word)` on the name"
                 )
             }
@@ -394,8 +394,8 @@ public struct Writer: Sendable {
             guard constraints.count <= 1 else {
                 throw WritingError(
                     "'some \(name)' is bounded by"
-                        + " \(constraints.sorted().map(\.spelling).joined(separator: " and "))"
-                        + " — one parameter takes one constraint, so there is no"
+                        + " \(constraints.sorted().map(\.spelling).joined(separator: " and "))."
+                        + " One parameter takes one constraint, so there is no"
                         + " `bounds` to write"
                 )
             }

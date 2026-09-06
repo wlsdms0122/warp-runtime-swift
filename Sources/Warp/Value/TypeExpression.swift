@@ -398,20 +398,20 @@ extension TypeExpression {
     // shape is false. A call names it, elsewhere.
     var unreadableClaim: String? {
         if self == .any {
-            return "reads as \(rendered), which declares nothing"
-                + " — a cast names the shape a value is read as, and `any` is"
+            return "reads as \(rendered), which declares nothing."
+                + " A cast names the shape a value is read as, and `any` is"
                 + " the absence of one"
         }
 
         if self == .never {
-            return "reads as \(rendered), which no value is"
-                + " — a cast names the shape a value turns out to have, and"
+            return "reads as \(rendered), which no value is."
+                + " A cast names the shape a value turns out to have, and"
                 + " nothing arrives to have this one"
         }
 
         if decidedAtCall {
             return "reads as \(rendered), whose shape the call"
-                + " decides — a cast names a shape here, and this one is named"
+                + " decides. A cast names a shape here, and this one is named"
                 + " somewhere else"
         }
 

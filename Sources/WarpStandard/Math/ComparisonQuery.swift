@@ -52,8 +52,8 @@ public struct ComparisonQuery: Query {
         guard let order = Value.order(receiver, operand) else {
             throw ExecutionError(
                 "\(ordering) asks \(receiver.type) and"
-                    + " \(operand.type), which have no order —"
-                    + " it takes two numbers or two strings"
+                    + " \(operand.type), which have no order."
+                    + " It takes two numbers or two strings"
             )
         }
 

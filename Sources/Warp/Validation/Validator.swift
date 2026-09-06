@@ -78,7 +78,7 @@ public struct Validator: Sendable {
         // is held to the one grammar those encodings write bare.
         for name in module.types.keys.sorted() where !name.isDeclarable {
             throw ValidationError(
-                "'\(name)' is not a type's name — a type is named by identifiers joined by dots",
+                "'\(name)' is not a type's name. A type is named by identifiers joined by dots",
                 at: .type(name.spelling, in: .of(module))
             )
         }
@@ -226,7 +226,7 @@ public struct Validator: Sendable {
                 if statement.expression.alwaysLeaves {
                     throw ValidationError(
                         "every way through this statement"
-                            + " leaves, so its name could never bind — it takes"
+                            + " leaves, so its name could never bind. It takes"
                             + " no name",
                         at: here
                     )
@@ -235,7 +235,7 @@ public struct Validator: Sendable {
                 if !binding.isConstant, isIteration(statement.expression) {
                     throw ValidationError(
                         "a walk answers nothing, so its name"
-                            + " binds the element and no value — it is not"
+                            + " binds the element and no value. It is not"
                             + " writable",
                         at: here
                     )
@@ -244,7 +244,7 @@ public struct Validator: Sendable {
                 if statement.expression.takesNoName {
                     throw ValidationError(
                         "a branch answers nothing, so its name"
-                            + " could never bind — it takes no name",
+                            + " could never bind. It takes no name",
                         at: here
                     )
                 }
@@ -269,16 +269,16 @@ public struct Validator: Sendable {
 
                     guard let head = path.head else {
                         throw ValidationError(
-                            "writes a path headed by no name — a write starts at a variable",
+                            "writes a path headed by no name. A write starts at a variable",
                             at: here
                         )
                     }
 
                     guard variables.contains(head) else {
                         let reason = if visible.contains(head) {
-                            "which is a fixed name here — declare it as a variable to write it"
+                            "which is a fixed name here. Declare it as a variable to write it"
                         } else {
-                            "which is not visible here — declare it earlier or check the spelling"
+                            "which is not visible here. Declare it earlier or check the spelling"
                         }
 
                         throw ValidationError("assigns '\(head)', \(reason)", at: here)
@@ -704,8 +704,8 @@ public struct Validator: Sendable {
 
         guard surroundings.rounds.contains(target) else {
             throw ValidationError(
-                "names '\(target)', which is not a loop around it"
-                    + " — the ones here are \(surroundings.rounds.reversed().map(\.spelling).joined(separator: ", "));"
+                "names '\(target)', which is not a loop around it."
+                    + " The ones here are \(surroundings.rounds.reversed().map(\.spelling).joined(separator: ", "));"
                     + " the nearest is '\(nearest)'",
                 at: place
             )
@@ -733,7 +733,7 @@ public struct Validator: Sendable {
             guard visible.contains(head) else {
                 throw ValidationError(
                     "reference { ref: \(path.rendered) } names"
-                        + " '\(head)', which is not visible here — declare it earlier"
+                        + " '\(head)', which is not visible here. Declare it earlier"
                         + " or check the spelling",
                     at: place
                 )

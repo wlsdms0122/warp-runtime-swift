@@ -435,7 +435,7 @@ struct NullableTests {
             try linker.link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
-                && "\(error)".contains("absence is read with `?[`")
+                && "\(error)".contains("Absence is read with `?[`")
         }
     }
 

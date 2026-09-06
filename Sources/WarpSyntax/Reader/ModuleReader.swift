@@ -56,7 +56,7 @@ public struct ModuleReader: Decodable {
         guard !procedures.isEmpty else {
             throw ReadingError(
                 "a module that declares nothing can never be"
-                    + " linked into anything — write at least one procedure",
+                    + " linked into anything. Write at least one procedure",
                 at: written.steps
             )
         }
@@ -135,7 +135,7 @@ public struct ModuleReader: Decodable {
         // nothing written here to stand on.
         guard envelope.contains(key), try !envelope.decodeNil(forKey: key) else {
             throw ReadingError(
-                "this is not a warp document — it does not say"
+                "this is not a warp document. It does not say"
                     + " which warp it is written for (`\(Envelope.versionKey)`)",
                 at: decoder.steps
             )

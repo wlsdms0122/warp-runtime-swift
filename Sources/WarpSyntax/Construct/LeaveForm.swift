@@ -100,7 +100,7 @@ extension BreakForm {
         case let other:
             throw ReadingError(
                 "\(word) takes the name of a loop, or nothing for the"
-                    + " nearest one — got \(other.type)",
+                    + " nearest one. Got \(other.type)",
                 at: decoder.steps
             )
         }

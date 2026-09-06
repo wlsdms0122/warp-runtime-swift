@@ -961,8 +961,8 @@ public struct Executor: Sendable {
                 guard let next = current[key] else {
                     guard segment.optional else {
                         return .unfit(
-                            "\(walked().rendered): '\(key)' is not there"
-                                + " — only `\(segment.mark)` reads absence"
+                            "\(walked().rendered): '\(key)' is not there."
+                                + " Only `\(segment.mark)` reads absence"
                         )
                     }
 
@@ -981,7 +981,7 @@ public struct Executor: Sendable {
 
                     read = .found(derived)
                 } catch {
-                    return .unfit("\(walked().rendered) — \(error)")
+                    return .unfit("\(walked().rendered): \(error)")
                 }
             }
 

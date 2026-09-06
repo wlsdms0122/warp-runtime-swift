@@ -108,7 +108,7 @@ public struct TemplateParser: Sendable {
 
             guard !key.contains("?") else {
                 throw TemplateSyntaxError(
-                    "'\(written)' — `?` is written once, at the end of a"
+                    "'\(written)'. `?` is written once, at the end of a"
                         + " segment, as `?.`"
                 )
             }
@@ -134,7 +134,7 @@ public struct TemplateParser: Sendable {
             if next {
                 guard !optional else {
                     throw TemplateSyntaxError(
-                        "`?` twice in a row marks nothing — write one `?.`"
+                        "`?` twice in a row marks nothing. Write one `?.`"
                     )
                 }
 
@@ -208,7 +208,7 @@ public struct TemplateParser: Sendable {
 
         guard !optional else {
             throw TemplateSyntaxError(
-                "the path ends on `?` — `?.` marks the segment after it,"
+                "the path ends on `?`. `?.` marks the segment after it,"
                     + " and nothing follows"
             )
         }

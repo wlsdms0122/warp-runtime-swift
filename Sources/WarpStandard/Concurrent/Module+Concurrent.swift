@@ -23,8 +23,8 @@ public extension Module {
             // not a thing a type here can say. The precision is not lost so
             // much as unsayable; `map`, whose shapes are single, says it all.
             "std.concurrent.all": Procedure(
-                description: "Runs every closure, and answers every answer —"
-                    + " a record's under its keys, an array's in its order."
+                description: "Runs every closure, and answers every answer."
+                    + " A record's under its keys, an array's in its order."
                     + " A failure fails the whole word, with every piece's"
                     + " failure reported.",
                 signature: Signature(
@@ -36,7 +36,7 @@ public extension Module {
             ),
             "std.concurrent.first": Procedure(
                 description: "Runs every closure, answers the first success and"
-                    + " asks the rest to stop. Which one wins is timing's — the"
+                    + " asks the rest to stop. Which one wins is timing's. The"
                     + " one fact here that is.",
                 signature: Signature(
                     receiver: "of",

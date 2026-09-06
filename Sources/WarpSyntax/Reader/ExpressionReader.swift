@@ -159,8 +159,8 @@ public struct ExpressionReader: Decodable {
         if record.names.contains("ref") {
             guard record.count == 1 else {
                 throw ExpressionFormError(
-                    "a record with `ref` must be exactly { ref: <path> } —"
-                        + " wrap it in { value: ... } if the keys are plain data"
+                    "a record with `ref` must be exactly { ref: <path> }."
+                        + " Wrap it in { value: ... } if the keys are plain data"
                         + " (found keys: \(record.names))"
                 )
             }
@@ -174,14 +174,14 @@ public struct ExpressionReader: Decodable {
             do {
                 return .reference(try TemplateParser().parseRefPath(rendered))
             } catch {
-                throw ExpressionFormError("{ ref: \(rendered) } — \(error)")
+                throw ExpressionFormError("{ ref: \(rendered) }: \(error)")
             }
         }
 
         if record.names.contains("as") || record.names.contains("as?") {
             guard !(record.names.contains("as") && record.names.contains("as?")) else {
                 throw ExpressionFormError(
-                    "a cast names one shape — `as` and `as?` are the two ways to"
+                    "a cast names one shape. `as` and `as?` are the two ways to"
                         + " read a mismatch, not two shapes to read"
                 )
             }
@@ -191,8 +191,8 @@ public struct ExpressionReader: Decodable {
 
             guard record.count == 2, let written = record[key], let read = record[Self.subjectKey] else {
                 throw ExpressionFormError(
-                    "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }"
-                        + " — wrap it in { value: ... } if the keys are plain data"
+                    "a record with `\(key)` must be exactly { \(key): <type>, of: <value> }."
+                        + " Wrap it in { value: ... } if the keys are plain data"
                         + " (found keys: \(record.names))"
                 )
             }
@@ -210,8 +210,8 @@ public struct ExpressionReader: Decodable {
                 } else {
                     guard let decoder else {
                         throw ExpressionFormError(
-                            "{ \(key): } written as a mapping cannot be read here"
-                                + " — this surface reads a type by its name alone"
+                            "{ \(key): } written as a mapping cannot be read here."
+                                + " This surface reads a type by its name alone"
                         )
                     }
 
@@ -224,7 +224,7 @@ public struct ExpressionReader: Decodable {
                     .type
                 }
             } catch let error as TypeFormError {
-                throw ExpressionFormError("{ \(key): } — \(error.message)")
+                throw ExpressionFormError("{ \(key): }: \(error.message)")
             }
 
             return .cast(
@@ -244,7 +244,7 @@ public struct ExpressionReader: Decodable {
 
             guard let decoder else {
                 throw ExpressionFormError(
-                    "{ closure: } cannot be read here — a closure carries statements,"
+                    "{ closure: } cannot be read here. A closure carries statements,"
                         + " and this surface reads expressions alone"
                 )
             }
@@ -265,7 +265,7 @@ public struct ExpressionReader: Decodable {
                 // to say the words again.
                 throw refusal
             } catch {
-                throw ExpressionFormError("{ closure: } — \(error)")
+                throw ExpressionFormError("{ closure: }: \(error)")
             }
         }
 
@@ -279,7 +279,7 @@ public struct ExpressionReader: Decodable {
 
             guard let decoder else {
                 throw ExpressionFormError(
-                    "{ call: } cannot be read here — a message may carry bodies,"
+                    "{ call: } cannot be read here. A message may carry bodies,"
                         + " and this surface reads expressions alone"
                 )
             }
@@ -297,15 +297,15 @@ public struct ExpressionReader: Decodable {
             } catch let refusal as ReadingError {
                 throw refusal
             } catch {
-                throw ExpressionFormError("{ call: } — \(error)")
+                throw ExpressionFormError("{ call: }: \(error)")
             }
         }
 
         if record.names.contains("value") {
             guard record.count == 1, let payload = record["value"] else {
                 throw ExpressionFormError(
-                    "a record with `value` must be exactly { value: <data> } —"
-                        + " wrap the whole record in { value: ... } if the keys are"
+                    "a record with `value` must be exactly { value: <data> }."
+                        + " Wrap the whole record in { value: ... } if the keys are"
                         + " plain data (found keys: \(record.names))"
                 )
             }
@@ -322,7 +322,7 @@ public struct ExpressionReader: Decodable {
 
         guard let interpolation = notation.interpolation else {
             throw ExpressionFormError(
-                "this notation does not spell a template — put the text together"
+                "this notation does not spell a template. Put the text together"
                     + " by sending the words that put text together"
             )
         }
@@ -331,7 +331,7 @@ public struct ExpressionReader: Decodable {
             // Only `with` remains, with is format's companion, meaningless
             // alone.
             throw ExpressionFormError(
-                "`with` only accompanies `format` — wrap the record in"
+                "`with` only accompanies `format`. Wrap the record in"
                     + " { value: ... } if the keys are plain data"
                     + " (found keys: \(record.names))"
             )
@@ -340,7 +340,7 @@ public struct ExpressionReader: Decodable {
         guard Set(record.names).subtracting(["format", "with"]).isEmpty else {
             throw ExpressionFormError(
                 "a record with `format` must be exactly { format: <template>,"
-                    + " with: <bindings> } — wrap it in { value: ... } if the keys"
+                    + " with: <bindings> }. Wrap it in { value: ... } if the keys"
                     + " are plain data (found keys: \(record.names))"
             )
         }
@@ -376,7 +376,7 @@ public struct ExpressionReader: Decodable {
         do {
             segments = try TemplateParser().parse(template)
         } catch {
-            throw ExpressionFormError("{ format: } template — \(error)")
+            throw ExpressionFormError("{ format: } template: \(error)")
         }
 
         // The format surface is closed: every placeholder must name a declared
@@ -493,7 +493,7 @@ public struct ExpressionReader: Decodable {
                     throw ExpressionFormError(
                         "{ format: } placeholder ${\(referenced.rendered)} names"
                             + " '\(referenced.head?.spelling ?? referenced.rendered)', which is"
-                            + " not declared in `with` — a format template sees only"
+                            + " not declared in `with`. A format template sees only"
                             + " its own bindings"
                     )
                 }
