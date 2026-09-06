@@ -92,7 +92,7 @@ public struct Name: Sendable, Hashable, Comparable {
     // segment of a name, or ASCII written in this source. The door above is the
     // one every spelling from outside comes through, and this one is not
     // reachable from outside the package.
-    package init(normal spelling: String) {
+    public init(normal spelling: String) {
         self.spelling = spelling
     }
 

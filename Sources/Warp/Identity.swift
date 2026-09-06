@@ -50,7 +50,7 @@ public struct Identity: Sendable, Equatable, Hashable {
     // declare one. A caller could assemble a place addressing a document it
     // never held. `Identity.of` is the only way in from outside, and it takes a
     // document.
-    package init(_ bytes: [UInt8]) {
+    public init(_ bytes: [UInt8]) {
         self.bytes = bytes
     }
 

@@ -14,14 +14,14 @@ extension Int {
     // word has an answer no int holds. Every judge that meets a fraction
     // names the one that happened, so the reading lives in one place rather
     // than being re-derived beside each message.
-    package enum WordReading {
+    public enum WordReading {
         case word(Int)
         case notANumber
         case fractional
         case pastTheWord
     }
 
-    package static func reading(_ fraction: Double) -> WordReading {
+    public static func reading(_ fraction: Double) -> WordReading {
         guard !fraction.isNaN else { return .notANumber }
 
         // Infinity has a whole part, and it is past every word. The overflow
