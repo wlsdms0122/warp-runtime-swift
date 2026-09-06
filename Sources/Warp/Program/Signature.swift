@@ -45,22 +45,6 @@ public struct Signature: Sendable, Equatable {
         self.parameters = parameters
         self.returns = returns
     }
-
-    // MARK: - Public
-    // The same declaration with an answer where nobody wrote one. What the
-    // author wrote is never replaced: a declaration is a promise, and one read
-    // off a body is what the link worked out rather than what anybody promised,
-    // so this is what the link reads a call as, and never what the image
-    // carries or the boundary checks.
-    func answering(_ answer: TypeExpression?) -> Signature {
-        guard returns == nil, let answer else { return self }
-
-        var answered = self
-        answered.returns = answer
-
-        return answered
-    }
-
     // The returned value, checked against what was declared. Run time rather
     // than link time because what a body computes is not a thing the linker can
     // read off the text, but a declaration that only ever describes is a
@@ -82,6 +66,14 @@ public struct Signature: Sendable, Equatable {
     // position order.
     func lowered(in table: ShapeTable) -> [Slot] {
         ordered.map { name, parameter in parameter.lowered(named: name, in: table) }
+    }
+
+    // The same, with what a call put in the type parameters written in. The
+    // filling happens on the lowered shape rather than on the declaration,
+    // because what a call read is a shape and a declaration is a document's
+    // spelling.
+    func lowered(in table: ShapeTable, filling bound: [Name: Shape]) -> [Slot] {
+        ordered.map { name, parameter in parameter.lowered(named: name, in: table, filling: bound) }
     }
 
     // Whether something declared this way may stand where this is required.

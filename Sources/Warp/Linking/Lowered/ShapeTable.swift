@@ -115,7 +115,7 @@ final class ShapeTable: Sendable {
     // judged again where the value arrives.
     func satisfies(contract name: Name, reading: Shape) -> Bool {
         switch reading {
-        case .any, .undeclared, .never:
+        case .any, .reading, .undeclared, .never:
             return true
 
         case let .named(row):
@@ -159,7 +159,7 @@ final class ShapeTable: Sendable {
     // where every one of those members would.
     func admits(constraint row: Int, reading: Shape, assuming: [Int]) -> Bool {
         switch reading {
-        case .any:
+        case .any, .reading:
             return true
 
         // A parameter bounded by a membership stands for some member of it, so

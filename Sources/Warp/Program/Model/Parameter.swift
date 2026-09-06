@@ -21,11 +21,7 @@ public struct Parameter: Sendable, Equatable {
     // Whether a call must write this argument: the shape's one answer, for
     // the call check, the boundary and path reachability alike.
     public func mustBeGiven(in types: TypeTable) -> Bool {
-        mustBeGiven(in: types.shapes)
-    }
-
-    func mustBeGiven(in table: ShapeTable) -> Bool {
-        declared.lowered(in: table).mustBeGiven(default: `default`, in: table)
+        declared.lowered(in: types.shapes).mustBeGiven(default: `default`, in: types.shapes)
     }
 
     // What this reads as where a type is needed regardless. An undeclared

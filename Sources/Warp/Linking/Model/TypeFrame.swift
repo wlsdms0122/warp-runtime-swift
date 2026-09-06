@@ -30,14 +30,20 @@ struct TypeFrame: Sendable {
     // fills it, and what fills it is read from the arguments.
     let signatures: [Name: Signature]
 
-    // The declared types as the documents wrote them. The walk expands a
-    // name through this when it reads into a shape (`resolve`), since a
-    // reading is a document's type.
+    // The declared types as the documents wrote them, for the surfaces a
+    // document's own spelling is owed to.
     let types: TypeTable
 
-    // The same declarations as the run reads them. Every judgment the walk
-    // asks goes here, lowering its reading and nothing else, so the walk and
-    // the run judge by one table.
+    // What each declaration answers, as the link reads it: the `returns` it
+    // wrote, lowered, or what the link read off a body nobody wrote one for.
+    // Beside the signatures rather than written into them, because a signature
+    // is the author's spelling and this is the link's reading, and no document
+    // spells a row.
+    let answers: [Name: Shape]
+
+    // The same declarations as the run reads them, lowered once. Every
+    // judgment the walk asks goes here, so the walk and the run judge by one
+    // table and by one language.
     var shapes: ShapeTable { types.shapes }
 
     // What a bare spelling a path writes may call: the pure declarations whose
@@ -45,6 +51,10 @@ struct TypeFrame: Sendable {
     // under. Its own table rather than a mask over `signatures`, so the gate
     // and the declaration it answers with cannot disagree.
     let words: [Name: Signature]
+
+    // What each of those answers, read the same way, under the spelling a path
+    // reaches it by.
+    let wordAnswers: [Name: Shape]
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
@@ -81,13 +91,12 @@ struct TypeFrame: Sendable {
     }
 
     // A named type stands for what it was declared as. Inference walks into
-    // shapes, so it has to look through a name to find one.
-    func resolve(_ type: TypeExpression) -> TypeExpression {
-        guard case let .named(name) = type, let declared = types.resolve(name) else {
-            return type
-        }
+    // shapes, so it has to look through a name to find one. The table lowered
+    // every declaration once, so following a name is reading a row.
+    func resolve(_ shape: Shape) -> Shape {
+        guard case let .named(row) = shape else { return shape }
 
-        return resolve(declared)
+        return resolve(shapes.shapes[row])
     }
 
     // MARK: - Private

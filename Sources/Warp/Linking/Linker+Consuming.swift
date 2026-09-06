@@ -41,15 +41,18 @@ extension Linker {
         }
     }
 
-    // Every value a body must hand on, handed on once. The opening names are
-    // the body's parameters and what its module declared beside them.
+    // Every value a body must hand on, handed on once. The declaration's own
+    // slots are where such a value enters a body: `once` is a document's
+    // spelling and a value the link folded is a value, never a promise.
     func consumed(
         _ block: Block,
         at place: Place,
-        holding opening: [Name: TypeExpression],
+        holding signature: Signature,
         in frame: TypeFrame
     ) throws {
-        let held = opening.filter { _, type in handedOnce(type, in: frame.types) }
+        let held = signature.parameters.filter { _, parameter in
+            handedOnce(parameter.declared, in: frame.types)
+        }
 
         guard !held.isEmpty || frame.types.types.values.contains(where: { type in
             handedOnce(type, in: frame.types)

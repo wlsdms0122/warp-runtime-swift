@@ -12,10 +12,6 @@ extension TypeExpression {
     // name nothing declares lowers to the shape every judgment refuses, so
     // lowering is total and a table a host built by hand still answers for
     // every other name in it.
-    //
-    // A walk's reading lowers to `any`. A reading proves nothing about the
-    // value it stands for, and every judgment answers it the way it answers
-    // `any`; the reading exists apart from `any` for the walk's own naming.
     func lowered(in table: ShapeTable) -> Shape {
         switch self {
         case .any:
@@ -126,8 +122,8 @@ extension TypeExpression {
                 refusal: "'\(bound)', which nothing declares as a membership or a contract"
             )
 
-        case .reading:
-            return .any
+        case let .reading(of, path):
+            return .reading(of: of, path: path)
         }
     }
 }

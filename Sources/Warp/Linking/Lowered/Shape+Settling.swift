@@ -24,7 +24,7 @@ extension Shape {
         assuming: [Int] = []
     ) throws -> Value {
         switch self {
-        case .any:
+        case .any, .reading:
             return value
 
         // Both ask the membership and neither settles: a value stands as what
@@ -122,7 +122,7 @@ extension Shape {
         boundAssuming: [Int] = []
     ) -> Bool {
         switch self {
-        case .any, .int, .number:
+        case .any, .reading, .int, .number:
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
@@ -239,6 +239,12 @@ extension Shape {
         case .any:
             return "any"
 
+        // Spelled as what it is: the shape reached by that path. No document
+        // writes this, so the spelling answers to the message alone, and an
+        // author reading a refusal about `item.a` sees where it came from.
+        case let .reading(of, path):
+            return "some \(([PathSegment.key(of)] + path).rendered)"
+
         case .never:
             return "never"
 
@@ -337,7 +343,7 @@ extension Shape {
         assuming: [Int]
     ) throws -> Value {
         switch self {
-        case .any, .parameter, .member:
+        case .any, .reading, .parameter, .member:
             return try settling(value, at: path(), in: table, assuming: assuming)
 
         // A value arrived where nothing was supposed to, so the arrival is the

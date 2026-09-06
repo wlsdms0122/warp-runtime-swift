@@ -190,8 +190,23 @@ public struct Linker: Sendable {
         // wrote none, and both by the same reading. A spelling that answers one
         // way through a call and another through a path would be one
         // declaration saying two things.
-        var answeringSignatures = signatures
-        var answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
+        let answeringSignatures = signatures
+        let answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
+
+        // What each of those answers, as the link reads it. Every declaration
+        // that wrote a `returns` answers it lowered, and the ones that wrote
+        // none are filled in by the reading pass below. A contract's word
+        // answers what the contract wrote.
+        var answered = answeringSignatures.compactMapValues { signature in
+            signature.returns?.lowered(in: shapes)
+        }
+        var wordAnswered = answeringWords.compactMapValues { signature in
+            signature.returns?.lowered(in: shapes)
+        }
+
+        for (spelling, word) in contractWords {
+            answered[spelling] = word.signature.returns?.lowered(in: shapes)
+        }
 
         // Which spellings a path reaches one declaration by. A word may be
         // reachable under more than one, and an answer worked out for it is
@@ -238,7 +253,9 @@ public struct Linker: Sendable {
                 symbols: space,
                 signatures: answeringSignatures,
                 types: types,
+                answers: answered,
                 words: answeringWords,
+                wordAnswers: wordAnswered,
                 pure: settled,
                 isolated: isolatedDeclarations,
                 failing: failingDeclarations,
@@ -272,13 +289,13 @@ public struct Linker: Sendable {
         // variable stands in the environment as a box whose type is fixed:
         // what a write puts in it has to fit what it started as, because every
         // body of the document reads it as that.
-        func opening(_ symbol: Symbol, of signature: Signature) -> [Name: TypeExpression] {
-            environment(of: signature)
+        func opening(_ symbol: Symbol, of signature: Signature) -> [Name: Shape] {
+            environment(of: signature, in: shapes)
                 .merging(
-                    (constants[symbol.origin] ?? [:]).mapValues { value in type(of: value) }
+                    (constants[symbol.origin] ?? [:]).mapValues { value in type(of: value, in: shapes) }
                 ) { _, constant in constant }
                 .merging(
-                    (variables[symbol.origin] ?? [:]).mapValues { value in .inout(type(of: value)) }
+                    (variables[symbol.origin] ?? [:]).mapValues { value in .inout(type(of: value, in: shapes)) }
                 ) { _, variable in variable }
         }
 
@@ -300,11 +317,10 @@ public struct Linker: Sendable {
             },
             reading: frame,
             recording: { qualified, answer in
-                answeringSignatures[qualified] = answeringSignatures[qualified]?
-                    .answering(answer)
+                answered[qualified] = answer
 
                 for spelling in wordSpellings[qualified] ?? [] {
-                    answeringWords[spelling] = answeringWords[spelling]?.answering(answer)
+                    wordAnswered[spelling] = answer
                 }
             }
         )
@@ -379,7 +395,7 @@ public struct Linker: Sendable {
                 try consumed(
                     rewritten,
                     at: symbol.place,
-                    holding: opening(symbol, of: declared.signature),
+                    holding: declared.signature,
                     in: frame
                 )
             }
@@ -435,7 +451,7 @@ public struct Linker: Sendable {
             if let returns = resolved.signature.returns,
                let answer = resolved.block?.result?.constantValue {
                 do {
-                    _ = try returns.settling(answer, at: "answer", in: shapes)
+                    _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
                 } catch {
                     throw LinkError(
                         "answers \(answer.type), and its"

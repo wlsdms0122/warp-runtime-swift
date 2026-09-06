@@ -34,8 +34,8 @@ extension Linker {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
     // are the only names declared before the first statement.
-    func environment(of signature: Signature) -> [Name: TypeExpression] {
-        signature.parameters.mapValues(\.declared)
+    func environment(of signature: Signature, in table: ShapeTable) -> [Name: Shape] {
+        signature.parameters.mapValues { parameter in parameter.declared.lowered(in: table) }
     }
 
     // What a body hands its caller: the result it reads, and every `return`
@@ -51,9 +51,9 @@ extension Linker {
     func reading(
         from block: Block,
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame
-    ) throws -> TypeExpression {
+    ) throws -> Shape {
         let walked = try inspected(
             block: block,
             at: place,
@@ -72,7 +72,7 @@ extension Linker {
     func resolvedSites(
         in block: Block,
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         folding: Folding?,
         origin: Int? = nil
@@ -92,7 +92,7 @@ extension Linker {
     func resolvedSites(
         in expression: Expression,
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         folding: Folding?
     ) throws -> (Expression, [CallSite]) {
@@ -118,7 +118,7 @@ extension Linker {
     // costs nothing when the set holds its one.
     func constraintRefusal(
         mentions: [Name: Set<Name>],
-        readings: [Name: TypeExpression],
+        readings: [Name: Shape],
         in shapes: ShapeTable
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
@@ -130,22 +130,23 @@ extension Linker {
                 // admits is a set of shapes, what a contract asks is a set of
                 // words the reading's own type answers.
                 if shapes.satisfying[bound] != nil {
-                    guard shapes.satisfies(contract: bound, reading: reading.lowered(in: shapes)) else {
-                        return "'\(parameter)' is read as \(reading.rendered),"
+                    guard shapes.satisfies(contract: bound, reading: reading) else {
+                        return "'\(parameter)' is read as \(reading.rendered(in: shapes)),"
                             + " which does not answer every word '\(bound)' asks"
                     }
 
                     continue
                 }
 
-                guard let admitted = shapes.admits(constraint: bound, reading: reading) else {
+                guard
+                    let row = shapes.constraintRow(named: bound),
+                    !shapes.admits(constraint: row, reading: reading, assuming: [])
+                else {
                     continue
                 }
 
-                guard admitted else {
-                    return "'\(parameter)' is read as \(reading.rendered),"
-                        + " which '\(bound)' does not admit"
-                }
+                return "'\(parameter)' is read as \(reading.rendered(in: shapes)),"
+                    + " which '\(bound)' does not admit"
             }
         }
 
@@ -159,19 +160,20 @@ extension Linker {
     // its membership, and the declaration comes back with the readings filled.
     // One machine, so a surface added later cannot lose a step in the copying.
     enum Judgment {
-        case fits(Signature)
+        case fits(slots: [Slot], returns: Shape?)
         case refusal(String)
     }
 
     func judged(
         _ declared: Signature,
+        answering: Shape?,
         filledWith bound: Bound,
         in shapes: ShapeTable
     ) -> Judgment {
         guard bound.disagreeing.isEmpty else {
             let named = bound.disagreeing.keys.sorted().map { parameter in
-                "'\(parameter)' is read as \(bound.readings[parameter]?.rendered ?? "?")"
-                    + " and as \(bound.disagreeing[parameter]?.rendered ?? "?")"
+                "'\(parameter)' is read as \(bound.readings[parameter]?.rendered(in: shapes) ?? "?")"
+                    + " and as \(bound.disagreeing[parameter]?.rendered(in: shapes) ?? "?")"
             }
 
             return .refusal(named.joined(separator: ", "))
@@ -188,7 +190,10 @@ extension Linker {
             return .refusal(refusal)
         }
 
-        return .fits(declared.filling(bound.readings))
+        return .fits(
+            slots: declared.lowered(in: shapes, filling: bound.readings),
+            returns: answering?.filling(bound.readings)
+        )
     }
 
     // What a call put in its callee's type parameters, read by holding each
@@ -199,19 +204,19 @@ extension Linker {
     func bound(
         of signature: Signature,
         at call: Call,
-        readings sent: [Name: TypeExpression],
-        receiver received: TypeExpression?,
+        readings sent: [Name: Shape],
+        receiver received: Shape?,
         in shapes: ShapeTable
     ) -> Bound {
-        var bound: [Name: TypeExpression] = [:]
-        var disagreeing: [Name: TypeExpression] = [:]
+        var bound: [Name: Shape] = [:]
+        var disagreeing: [Name: Shape] = [:]
 
         for name in call.arguments.keys.sorted() {
             guard let parameter = signature.parameters[name], let reading = sent[name] else {
                 continue
             }
 
-            parameter.declared.binding(
+            parameter.declared.lowered(in: shapes).binding(
                 against: reading,
                 into: &bound,
                 disagreeing: &disagreeing,
@@ -227,7 +232,7 @@ extension Linker {
             return Bound(readings: bound, disagreeing: disagreeing)
         }
 
-        parameter.declared.binding(
+        parameter.declared.lowered(in: shapes).binding(
             against: received,
             into: &bound,
             disagreeing: &disagreeing,
@@ -243,12 +248,13 @@ extension Linker {
     // non-generic call never pays for taking them.
     private func answered(
         by signature: Signature?,
+        answering: Shape?,
         at call: Call,
-        readings sent: @autoclosure () throws -> [Name: TypeExpression],
-        receiver received: @autoclosure () throws -> TypeExpression?,
+        readings sent: @autoclosure () throws -> [Name: Shape],
+        receiver received: @autoclosure () throws -> Shape?,
         in shapes: ShapeTable
-    ) rethrows -> TypeExpression {
-        guard let signature, let returns = signature.returns else { return .any }
+    ) rethrows -> Shape {
+        guard let signature, let returns = answering else { return .any }
         guard signature.isGeneric else { return returns }
 
         return returns.filling(
@@ -267,7 +273,7 @@ extension Linker {
     // answers, because they are read off one walk. A second walk for the
     // rewrite would be a second copy of the rules.
     enum PathReading {
-        case reads([PathSegment], TypeExpression)
+        case reads([PathSegment], Shape)
         case refused(String)
     }
 
@@ -294,7 +300,7 @@ extension Linker {
     // all, so there is nothing to judge and nothing to refuse.
     func reading(
         of path: [PathSegment],
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
@@ -361,7 +367,7 @@ extension Linker {
                     }
 
                     return .refused(
-                        "\(walked.rendered) \(reach) \(current.rendered),"
+                        "\(walked.rendered) \(reach) \(current.rendered(in: frame.shapes)),"
                             + " which declares nothing."
                             + " A shape is read by naming it, with `as`"
                     )
@@ -447,7 +453,7 @@ extension Linker {
 
                 guard segment.optional else {
                     return .refused(
-                        "\(walked.rendered) reads into \(current.rendered),"
+                        "\(walked.rendered) reads into \(current.rendered(in: frame.shapes)),"
                             + " which may be null. Absence is read with"
                             + " `\(segment.mark)`"
                     )
@@ -466,7 +472,7 @@ extension Linker {
             func needless(_ landing: PathSegment.Landing) -> PathReading? {
                 segment.needlessMark(
                     at: walked,
-                    on: current.rendered,
+                    on: current.rendered(in: frame.shapes),
                     landing: landing,
                     unwrapped: unwrapped
                 )
@@ -477,7 +483,7 @@ extension Linker {
             // bytes, an array in a compact spelling). An element past the end
             // is a defect at the run, not an absence, so `?[` says nothing
             // here unless it just unwrapped the array's own null.
-            func indexed(_ element: TypeExpression) -> PathReading? {
+            func indexed(_ element: Shape) -> PathReading? {
                 if let refusal = needless(.element) { return refusal }
 
                 current = element
@@ -526,7 +532,7 @@ extension Linker {
 
             case (.index, _), (.indexRef, _):
                 return .refused(
-                    "\(walked.rendered) indexes into \(current.rendered),"
+                    "\(walked.rendered) indexes into \(current.rendered(in: frame.shapes)),"
                         + " and only an array is indexed"
                 )
 
@@ -540,7 +546,7 @@ extension Linker {
                 guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
-                            + " which \(current.rendered) does not declare."
+                            + " which \(current.rendered(in: frame.shapes)) does not declare."
                             + " A word is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
                             + " or through `dictionary<any>`"
@@ -590,14 +596,14 @@ extension Linker {
     }
 
     // MARK: - Private
-    private static let roundType = TypeExpression.record(["index": .int])
+    private static let roundType = Shape.record(["index": .int])
 
     // The segments a stopped walk hands back: as written, except that an index
     // reference is a path of its own and is judged wherever the outer walk
     // stops. A word inside one would otherwise stay a key forever.
     private func asWritten(
         _ segments: [PathSegment],
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame
     ) -> PathReading {
         var judged: [PathSegment] = []
@@ -635,7 +641,7 @@ extension Linker {
 
     private func indexReference(
         _ inner: [PathSegment],
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame
     ) -> IndexReading {
         switch reading(of: inner, in: environment, with: frame) {
@@ -650,7 +656,7 @@ extension Linker {
             default:
                 return .refused(
                     "index reference \(inner.rendered) reads"
-                        + " \(innerType.rendered), expected int"
+                        + " \(innerType.rendered(in: frame.shapes)), expected int"
                 )
             }
         }
@@ -724,7 +730,7 @@ extension Linker {
 
     // What a path that read past a possible absence holds. Wrapping what
     // already admits null would say the one fact twice.
-    private func nullableReading(of type: TypeExpression) -> TypeExpression {
+    private func nullableReading(of type: Shape) -> Shape {
         switch type {
         case .any, .null, .nullable:
             return type
@@ -739,19 +745,19 @@ extension Linker {
     // acceptance, then the judgment every call shares) and the walk goes on
     // with what the word answers, the receiver's reading filled in.
     private enum WordReach {
-        case answers(TypeExpression)
+        case answers(Shape)
         case refused(String)
     }
 
     private func reached(
         _ key: Name,
-        on current: TypeExpression,
+        on current: Shape,
         walked: [PathSegment],
         with frame: TypeFrame
     ) -> WordReach {
         guard let signature = frame.signature(reachedBy: key) else {
             return .refused(
-                "\(walked.rendered) sends '\(key)' to \(current.rendered),"
+                "\(walked.rendered) sends '\(key)' to \(current.rendered(in: frame.shapes)),"
                     + " which has no such field and which no word by that"
                     + " name is declared for"
             )
@@ -770,17 +776,19 @@ extension Linker {
             )
         }
 
-        guard parameter.declared.accepts(current, in: frame.shapes) else {
+        let declared = parameter.declared.lowered(in: frame.shapes)
+
+        guard declared.accepts(current, in: frame.shapes) else {
             return .refused(
-                "\(walked.rendered) sends '\(key)' to \(current.rendered),"
+                "\(walked.rendered) sends '\(key)' to \(current.rendered(in: frame.shapes)),"
                     + " where \(parameter.declared) is declared"
             )
         }
 
-        var readings: [Name: TypeExpression] = [:]
-        var disagreeing: [Name: TypeExpression] = [:]
+        var readings: [Name: Shape] = [:]
+        var disagreeing: [Name: Shape] = [:]
 
-        parameter.declared.binding(
+        declared.binding(
             against: current,
             into: &readings,
             disagreeing: &disagreeing,
@@ -789,14 +797,15 @@ extension Linker {
 
         switch judged(
             signature,
+            answering: frame.wordAnswers[key],
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
             in: frame.shapes
         ) {
         case let .refusal(reason):
             return .refused("\(walked.rendered) sends '\(key)': \(reason)")
 
-        case let .fits(filled):
-            return .answers(filled.returns ?? .any)
+        case let .fits(_, returns):
+            return .answers(returns ?? .any)
         }
     }
 
@@ -807,7 +816,7 @@ extension Linker {
     // finishing way through made the write. A definite write retypes the name;
     // an indefinite one joins with what the name held.
     private struct Flow {
-        var written: [Name: (type: TypeExpression, definite: Bool)] = [:]
+        var written: [Name: (type: Shape, definite: Bool)] = [:]
 
         // What was written on ways that left. It flows past nothing here (no
         // run comes back from a leave) but a `break` ends only its loop and an
@@ -816,7 +825,7 @@ extension Linker {
         // certain, and the type says so by having no room for the claim. A flow
         // that leaves holds everything it wrote here and nothing under
         // `written`.
-        var escaped: [Name: TypeExpression] = [:]
+        var escaped: [Name: Shape] = [:]
 
         // Whether every way through leaves.
         var leaves = false
@@ -831,12 +840,12 @@ extension Linker {
         // Beside `escaped` rather than folded into it: an escaped write is
         // about a name the body around this one holds, and this is about the
         // value the procedure hands its caller.
-        var answered: TypeExpression?
+        var answered: Shape?
     }
 
     // Two answers, either of which may not be there. The join, said once, for
     // the places that gather what a body hands back.
-    private func joined(_ left: TypeExpression?, _ right: TypeExpression?) -> TypeExpression? {
+    private func joined(_ left: Shape?, _ right: Shape?) -> Shape? {
         guard let right else { return left }
 
         return join(left, right)
@@ -849,15 +858,15 @@ extension Linker {
     // environment or another Flow reads these two, so the rule cannot drift one
     // copy at a time.
     private func merged(
-        _ held: (type: TypeExpression, definite: Bool)?,
-        with later: (type: TypeExpression, definite: Bool)
-    ) -> (type: TypeExpression, definite: Bool) {
+        _ held: (type: Shape, definite: Bool)?,
+        with later: (type: Shape, definite: Bool)
+    ) -> (type: Shape, definite: Bool) {
         guard let held, !later.definite else { return later }
 
         return (join(held.type, later.type), held.definite)
     }
 
-    private func apply(_ flowed: Flow, to environment: inout [Name: TypeExpression]) {
+    private func apply(_ flowed: Flow, to environment: inout [Name: Shape]) {
         for (name, write) in flowed.written {
             // A box whose type is fixed was checked where it was written, and
             // a write into it changes nothing about what it holds.
@@ -930,7 +939,7 @@ extension Linker {
     private struct Inspection {
         var rewritten: Expression
         var calls: [CallSite] = []
-        var reading: TypeExpression
+        var reading: Shape
         var flow = Flow()
     }
 
@@ -939,13 +948,13 @@ extension Linker {
     private func inspected(
         _ expression: Expression,
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> Inspection {
         switch expression {
         case let .literal(value):
-            return Inspection(rewritten: expression, reading: type(of: value))
+            return Inspection(rewritten: expression, reading: type(of: value, in: frame.shapes))
 
         // Nothing comes back from here, so there is no value to have a type.
         // `never` fits wherever it is written, and what evaluating the carried
@@ -955,7 +964,7 @@ extension Linker {
             // caller (a `break` ends its loop and a `continue` its round) and
             // one carrying nothing hands back the null a body with no result
             // hands back, which is the run's own answer for it.
-            func answering(_ flowed: Flow, carrying carried: TypeExpression?) -> Flow {
+            func answering(_ flowed: Flow, carrying carried: Shape?) -> Flow {
                 guard leave.reach == .procedure else { return flowed }
 
                 var answering = flowed
@@ -1021,7 +1030,7 @@ extension Linker {
                 do {
                     let value = try folding.read(settled, at: place)
 
-                    return Inspection(rewritten: .literal(value), reading: type(of: value))
+                    return Inspection(rewritten: .literal(value), reading: type(of: value, in: frame.shapes))
                 } catch {
                     throw LinkError("reading constant '\(head)': \(error)", at: place)
                 }
@@ -1032,7 +1041,7 @@ extension Linker {
             var rewritten: [Expression] = []
             var calls: [CallSite] = []
             var flowed = Flow()
-            var element: TypeExpression?
+            var element: Shape?
 
             for (position, member) in array.enumerated() {
                 let inner = try inspected(
@@ -1074,9 +1083,10 @@ extension Linker {
                 with: frame,
                 ask: ask
             )
-            let settled = type.resolved(in: frame.types)
+            let claim = type.lowered(in: frame.shapes)
+            let settled = claim.resolved(in: frame.shapes)
 
-            let read = inner.reading.resolved(in: frame.types)
+            let read = inner.reading.resolved(in: frame.shapes)
 
             // Both refusals ask the shapes themselves, with nothing gating them
             // on whether the reading is fully proven. A gate like that turned
@@ -1105,39 +1115,39 @@ extension Linker {
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
             // rather than about the spelling that produced it.
-            let handed = optional && !type.declaresNull(in: frame.shapes)
-                ? TypeExpression.nullable(type)
-                : type
+            let handed = optional && !claim.declaresNull(in: frame.shapes)
+                ? Shape.nullable(claim)
+                : claim
 
             // A declared record is a name as well as a shape: reading a
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = frame.shapes.record(of: type.lowered(in: frame.shapes)) != nil
+            let nominal = frame.shapes.record(of: claim) != nil
 
-            if !type.couldBothHold(inner.reading, in: frame.shapes) {
+            if !claim.couldBothHold(inner.reading, in: frame.shapes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
                 try refuse(
-                    "reads \(inner.reading.rendered) as \(settled.rendered),"
+                    "reads \(inner.reading.rendered(in: frame.shapes)) as \(settled.rendered(in: frame.shapes)),"
                         + " and no value is both."
                         + " A cast names a shape the value may turn out to"
                         + " have, and this one it never can",
                     at: place,
                     when: ask
                 )
-            } else if inner.reading == type
-                || (!nominal && (settled == read || handed.resolved(in: frame.types) == read)) {
+            } else if inner.reading == claim
+                || (!nominal && (settled == read || handed.resolved(in: frame.shapes) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same shape by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
                 try refuse(
-                    "reads \(inner.reading.rendered) as \(settled.rendered),"
+                    "reads \(inner.reading.rendered(in: frame.shapes)) as \(settled.rendered(in: frame.shapes)),"
                         + " which it already is."
                         + " A cast opens a shape the types do not prove,"
                         + " and here they do",
@@ -1178,7 +1188,7 @@ extension Linker {
             var rewritten: [Name: Expression] = [:]
             var calls: [CallSite] = []
             var flowed = Flow()
-            var fields: [Name: TypeExpression] = [:]
+            var fields: [Name: Shape] = [:]
 
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try inspected(
@@ -1220,7 +1230,7 @@ extension Linker {
                 let inner = try inspected(
                     block: written,
                     at: place.slot(.closure),
-                    in: environment.merging(self.environment(of: procedure.signature)) {
+                    in: environment.merging(self.environment(of: procedure.signature, in: frame.shapes)) {
                         _, new in new
                     },
                     with: frame,
@@ -1237,8 +1247,8 @@ extension Linker {
                     guard held.accepts(write.type, in: frame.shapes) else {
                         throw LinkError(
                             "writes '\(name)', which it captured, as"
-                                + " \(write.type.rendered). The body it captured"
-                                + " from holds it as \(held.rendered)",
+                                + " \(write.type.rendered(in: frame.shapes)). The body it captured"
+                                + " from holds it as \(held.rendered(in: frame.shapes))",
                             at: place.slot(.closure)
                         )
                     }
@@ -1280,11 +1290,12 @@ extension Linker {
             return Inspection(
                 rewritten: rewritten,
                 calls: calls,
-                reading: .procedure(
+                reading: TypeExpression.procedure(
                     procedure.signature,
                     pure ? .pure : .unstated,
                     isolated ? .isolated : .unstated
                 )
+                .lowered(in: frame.shapes)
             )
 
         // Which value is called is settled at run time, so nothing here can say
@@ -1356,6 +1367,7 @@ extension Linker {
                     rewritten: expression,
                     reading: try answered(
                         by: signature,
+                        answering: frame.answers[call.selector],
                         at: call,
                         readings: try call.arguments.reduce(into: [:]) { read, argument in
                             read[argument.key] = try inspected(
@@ -1430,7 +1442,7 @@ extension Linker {
             }
 
             var arguments: [Name: Expression] = [:]
-            var sent: [Name: TypeExpression] = [:]
+            var sent: [Name: Shape] = [:]
             var calls = receiver?.calls ?? []
 
             for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
@@ -1475,6 +1487,7 @@ extension Linker {
                 ] + calls,
                 reading: answered(
                     by: signature,
+                    answering: frame.answers[call.selector],
                     at: call,
                     readings: sent,
                     receiver: receiver?.reading,
@@ -1680,7 +1693,7 @@ extension Linker {
             let rescued = try inspected(
                 block: rescue,
                 at: place.slot(.rescue),
-                in: caught(soaking: attempted.flow, failure: failure, in: environment),
+                in: caught(soaking: attempted.flow, failure: failure, in: environment, with: frame),
                 with: frame,
                 ask: ask
             )
@@ -1706,7 +1719,7 @@ extension Linker {
         contract asked: ContractWord,
         call: Call,
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> Inspection {
@@ -1733,10 +1746,10 @@ extension Linker {
 
         guard frame.shapes.satisfies(
             contract: asked.contract,
-            reading: receiver.reading.lowered(in: frame.shapes)
+            reading: receiver.reading
         ) else {
             throw LinkError(
-                "sends '\(call.selector)' to \(receiver.reading.rendered),"
+                "sends '\(call.selector)' to \(receiver.reading.rendered(in: frame.shapes)),"
                     + " which does not answer every word '\(asked.contract)' asks",
                 at: place.slot(.receiver)
             )
@@ -1766,9 +1779,9 @@ extension Linker {
                 ask: ask
             )
 
-            guard parameter.declared.accepts(inner.reading, in: frame.shapes) else {
+            guard parameter.declared.lowered(in: frame.shapes).accepts(inner.reading, in: frame.shapes) else {
                 throw LinkError(
-                    "hands \(inner.reading.rendered) where '\(asked.contract)'"
+                    "hands \(inner.reading.rendered(in: frame.shapes)) where '\(asked.contract)'"
                         + " writes \(parameter.declared.rendered)",
                     at: place.argument(name.spelling)
                 )
@@ -1780,7 +1793,10 @@ extension Linker {
 
         for (name, parameter) in asked.signature.parameters.sorted(by: { $0.key < $1.key })
         where call.arguments[name] == nil {
-            guard parameter.default != nil || parameter.declared.declaresNull(in: frame.shapes) else {
+            guard
+                parameter.default != nil
+                    || parameter.declared.lowered(in: frame.shapes).declaresNull(in: frame.shapes)
+            else {
                 throw LinkError(
                     "sends '\(call.selector)' without '\(name)', which"
                         + " '\(asked.contract)' asks for",
@@ -1794,7 +1810,7 @@ extension Linker {
                 ? .call(Call(receiver: receiver.rewritten, selector: call.selector, arguments: arguments))
                 : .call(call),
             calls: calls,
-            reading: asked.signature.returns ?? .any
+            reading: asked.signature.returns?.lowered(in: frame.shapes) ?? .any
         )
     }
 
@@ -1804,10 +1820,10 @@ extension Linker {
     private func inspected(
         block: Block,
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         ask: Ask
-    ) throws -> (block: Block, calls: [CallSite], reading: TypeExpression, flow: Flow) {
+    ) throws -> (block: Block, calls: [CallSite], reading: Shape, flow: Flow) {
         let body = try inspected(
             block.body,
             at: place.slot(.body),
@@ -1822,7 +1838,7 @@ extension Linker {
         // one rule the shape has: a loop's exit-answered result is the loop's
         // own to read, not this walk's.
         let tail: Inspection?
-        let reading: TypeExpression
+        let reading: Shape
         let flow: Flow
 
         if body.reading == .never {
@@ -1873,8 +1889,8 @@ extension Linker {
     private typealias BodyWalk = (
         body: [Statement],
         calls: [CallSite],
-        environment: [Name: TypeExpression],
-        reading: TypeExpression,
+        environment: [Name: Shape],
+        reading: Shape,
         flow: Flow
     )
 
@@ -1886,7 +1902,7 @@ extension Linker {
     private func inspected(
         _ body: [Statement],
         at place: Place,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         ask: Ask
     ) throws -> BodyWalk {
@@ -2183,9 +2199,9 @@ extension Linker {
     // The environment a loop's insides read: the enclosing names plus the
     // round. One maker, because the fixpoint and its asker both read it.
     private func rounded(
-        _ environment: [Name: TypeExpression],
+        _ environment: [Name: Shape],
         as round: Name
-    ) -> [Name: TypeExpression] {
+    ) -> [Name: Shape] {
         environment.merging([round: Self.roundType]) { _, new in new }
     }
 
@@ -2196,10 +2212,10 @@ extension Linker {
     // material a second time for it.
     private func walking(
         _ element: Name,
-        holding reading: TypeExpression,
-        in environment: [Name: TypeExpression]
-    ) -> [Name: TypeExpression] {
-        let item: TypeExpression
+        holding reading: Shape,
+        in environment: [Name: Shape]
+    ) -> [Name: Shape] {
+        let item: Shape
 
         if case let .array(held) = reading.unrefined {
             item = held
@@ -2218,12 +2234,13 @@ extension Linker {
     private func caught(
         soaking flow: Flow,
         failure: Name,
-        in environment: [Name: TypeExpression]
-    ) -> [Name: TypeExpression] {
+        in environment: [Name: Shape],
+        with frame: TypeFrame
+    ) -> [Name: Shape] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
-        caught[failure] = FailurePayload.declared
+        caught[failure] = FailurePayload.declared.lowered(in: frame.shapes)
 
         return caught
     }
@@ -2240,9 +2257,9 @@ extension Linker {
     // the body writes falls to `any`, over-wide and never wrong; the judging
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
-        from entry: [Name: TypeExpression],
-        read: ([Name: TypeExpression]) throws -> (round: Round, flow: Flow)
-    ) rethrows -> (environment: [Name: TypeExpression], last: Round, converged: Bool) {
+        from entry: [Name: Shape],
+        read: ([Name: Shape]) throws -> (round: Round, flow: Flow)
+    ) rethrows -> (environment: [Name: Shape], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try read(seeded)
         var steps = 0
@@ -2275,7 +2292,7 @@ extension Linker {
 
     // What a settled value reads as. Internal, because a constant is a value
     // whose type seeds the environment its readers are judged in.
-    func type(of value: Value) -> TypeExpression {
+    func type(of value: Value, in table: ShapeTable) -> Shape {
         switch value {
         case .null:
             return .null
@@ -2298,12 +2315,12 @@ extension Linker {
         // A procedure that already exists as a value says nothing about itself
         // that this walk can read.
         case .procedure:
-            return .procedure(nil, .unstated)
+            return .procedure(parameters: nil, returns: nil, purity: .unstated, isolation: .unstated)
 
         case let .array(elements):
             return .array(
                 elements
-                    .map(type(of:))
+                    .map { element in type(of: element, in: table) }
                     .reduce(nil) { joined, next in join(joined, next) } ?? .any
             )
 
@@ -2312,17 +2329,17 @@ extension Linker {
         // type names its fields by Swift's equality, so two spellings the
         // value keeps apart are one field here, the first by bytes.
         case let .record(record):
-            return record.name.map { name in .named(name) }
+            return record.name.flatMap { name in table.row(named: name).map(Shape.named) }
                 ?? .record(
                     Dictionary(
-                        zip(record.names, record.values).map { name, value in (name, type(of: value)) }
+                        zip(record.names, record.values).map { name, value in (name, type(of: value, in: table)) }
                     ) { first, _ in first }
                 )
 
         case let .dictionary(dictionary):
             return .record(
                 Dictionary(
-                    dictionary.entries.map { entry in (entry.name, type(of: entry.value)) }
+                    dictionary.entries.map { entry in (entry.name, type(of: entry.value, in: table)) }
                 ) { first, _ in first }
             )
         }
@@ -2335,7 +2352,7 @@ extension Linker {
     // A reading that leaves is not one of the two. It contributes no value, so
     // it cannot disagree with the reading that stays, and the slot holds what
     // the other one said.
-    private func join(_ left: TypeExpression?, _ right: TypeExpression) -> TypeExpression {
+    private func join(_ left: Shape?, _ right: Shape) -> Shape {
         guard let left else { return right }
         guard left != .never else { return right }
         guard right != .never else { return left }
@@ -2359,13 +2376,16 @@ extension Linker {
         // a list of them pass a slot that asked for none, because `any` is
         // accepted everywhere.
         if
-            case let .procedure(mine, wanted, wantedIsolation) = left,
-            case let .procedure(theirs, offered, offeredIsolation) = right
+            case let .procedure(mine, myAnswer, wanted, wantedIsolation) = left,
+            case let .procedure(theirs, theirAnswer, offered, offeredIsolation) = right
         {
+            let agreed = left.sameProcedure(as: right)
+
             return .procedure(
-                mine == theirs ? mine : nil,
-                wanted == .pure && offered == .pure ? .pure : .unstated,
-                wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
+                parameters: agreed ? mine : nil,
+                returns: agreed ? myAnswer : nil,
+                purity: wanted == .pure && offered == .pure ? .pure : .unstated,
+                isolation: wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
             )
         }
 
@@ -2389,7 +2409,7 @@ extension Linker {
 extension Linker {
     // Where a write lands, or why it lands nowhere.
     enum Writable {
-        case reaches(TypeExpression)
+        case reaches(Shape)
         case refused(String)
     }
 
@@ -2400,7 +2420,7 @@ extension Linker {
     // shape that may be null is not written into, and neither is `any`.
     func writable(
         _ path: [PathSegment],
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame
     ) -> Writable {
         guard case let .key(head, _)? = path.first, let box = environment[head] else {
@@ -2441,7 +2461,7 @@ extension Linker {
             case let (.key(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
-                        "\(walked.rendered) names '\(key)', which \(current.rendered)"
+                        "\(walked.rendered) names '\(key)', which \(current.rendered(in: frame.shapes))"
                             + " does not declare"
                     )
                 }
@@ -2464,25 +2484,25 @@ extension Linker {
 
             case (.key, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
-                    "\(walked.rendered) writes into \(current.rendered), which"
+                    "\(walked.rendered) writes into \(current.rendered(in: frame.shapes)), which"
                         + " declares nothing. A shape is written by naming it"
                 )
 
             case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):
                 return .refused(
-                    "\(walked.rendered) writes into \(current.rendered), which may"
+                    "\(walked.rendered) writes into \(current.rendered(in: frame.shapes)), which may"
                         + " be null. Write the whole first"
                 )
 
             case (.key, _):
                 return .refused(
-                    "\(walked.rendered) writes a field into \(current.rendered),"
+                    "\(walked.rendered) writes a field into \(current.rendered(in: frame.shapes)),"
                         + " which has none"
                 )
 
             case (.index, _), (.indexRef, _), (.word, _):
                 return .refused(
-                    "\(walked.rendered) writes an element into \(current.rendered),"
+                    "\(walked.rendered) writes an element into \(current.rendered(in: frame.shapes)),"
                         + " and only an array is written by position"
                 )
             }
@@ -2499,7 +2519,7 @@ extension Linker {
     private func handedInPlace(
         by call: Call,
         to callee: Symbol,
-        in environment: [Name: TypeExpression],
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
         when ask: Ask
@@ -2549,18 +2569,18 @@ extension Linker {
     // What a name holds: what it declared, held against what it was given, or
     // what the link worked out where it declared nothing.
     private func held(
-        _ given: TypeExpression,
-        declaredAs declared: TypeExpression?,
+        _ given: Shape,
+        declaredAs written: TypeExpression?,
         at place: Place,
         with frame: TypeFrame,
         when ask: Ask
-    ) throws -> TypeExpression {
-        guard let declared else { return given }
+    ) throws -> Shape {
+        guard let declared = written?.lowered(in: frame.shapes) else { return given }
 
         guard declared.accepts(given, in: frame.shapes) else {
             try refuse(
-                "holds \(declared.rendered), and what it was given is"
-                    + " \(given.rendered)",
+                "holds \(declared.rendered(in: frame.shapes)), and what it was given is"
+                    + " \(given.rendered(in: frame.shapes))",
                 at: place,
                 when: ask
             )
@@ -2575,15 +2595,15 @@ extension Linker {
     }
 
     private func refuseUnfit(
-        _ written: TypeExpression,
+        _ written: Shape,
         writtenTo path: [PathSegment],
-        holding fixed: TypeExpression?,
-        in environment: [Name: TypeExpression],
+        holding fixed: Shape?,
+        in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
         when ask: Ask
     ) throws {
-        let slot: TypeExpression
+        let slot: Shape
 
         if path.count == 1, let fixed {
             slot = fixed
@@ -2600,8 +2620,8 @@ extension Linker {
 
         guard slot.accepts(written, in: frame.shapes) else {
             try refuse(
-                "writes '\(path.rendered)' as \(written.rendered), and it holds"
-                    + " \(slot.rendered)",
+                "writes '\(path.rendered)' as \(written.rendered(in: frame.shapes)), and it holds"
+                    + " \(slot.rendered(in: frame.shapes))",
                 at: place,
                 when: ask
             )

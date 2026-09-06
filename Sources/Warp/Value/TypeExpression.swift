@@ -176,18 +176,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         at path: @autoclosure () -> String,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try settling(value, at: path(), in: types.shapes)
-    }
-
-    // The link's door: the table is already lowered, so only this is.
-    func settling(_ value: Value, at path: @autoclosure () -> String, in table: ShapeTable) throws -> Value {
-        try lowered(in: table).settling(value, at: path(), in: table)
-    }
-
-    // What a cast does: the judgment is `settling`'s, and a mismatch is
-    // what the cast spelling decides it is.
-    func reading(_ value: Value, optional: Bool, in types: TypeTable) throws -> Value {
-        try lowered(in: types.shapes).reading(value, optional: optional, in: types.shapes)
+        try lowered(in: types.shapes).settling(value, at: path(), in: types.shapes)
     }
 
     // How the type reads in a message. A declaration an author wrote should come
@@ -362,31 +351,6 @@ extension TypeExpression {
         }
     }
 
-    // What a walk through this shape reaches by taking those segments. Nil
-    // where this is not a shape a call decides, which is where a walk has a
-    // type to read the segments against and no need for one of these.
-    //
-    // Asked of the shape rather than assembled at the walk, because the root
-    // is the shape's own fact: a parameter roots a reading at itself, and a
-    // reading already rooted extends the path it carries. Assembling it from
-    // the segments a body happened to write is how a named step became a
-    // second unknown.
-    //
-    // The marks come off on the way in: what a mark says is expected of the
-    // value, and where the walk landed is the same field either way.
-    func reaching(_ path: [PathSegment]) -> TypeExpression? {
-        switch self {
-        case let .parameter(name, _):
-            return .reading(of: name, path: path.map(\.unmarked))
-
-        case let .reading(of, walked):
-            return .reading(of: of, path: walked + path.map(\.unmarked))
-
-        default:
-            return nil
-        }
-    }
-
     // Whether this shape proves nothing about the value it holds. The three
     // that stop a walk, named once because they are one question asked twice. A
     // dot needs a shape the types prove, and a cast is the door onto one: what
@@ -429,24 +393,6 @@ extension TypeExpression {
         }
 
         return nil
-    }
-
-    // Whether some value could satisfy both shapes at once.
-    //
-    // Not `accepts`, which asks whether one shape may stand where the other is
-    // declared. Two records that name no field in common accept each other in
-    // neither direction and are still both satisfied by a value carrying every
-    // field: a record says what must be there, not all there is.
-    //
-    // The bias is deliberate: a refusal is earned only where the shapes
-    // provably disagree, and everything else is left to the run. Refusing what
-    // this cannot decide would close doors an author has no other way through.
-    func couldBothHold(_ other: TypeExpression, in types: TypeTable) -> Bool {
-        couldBothHold(other, in: types.shapes)
-    }
-
-    func couldBothHold(_ other: TypeExpression, in table: ShapeTable) -> Bool {
-        lowered(in: table).couldBothHold(other.lowered(in: table), in: table)
     }
 
     // The same shape with every name it holds walked through to what that name
@@ -504,11 +450,7 @@ extension TypeExpression {
     // means "give me something". The looser question, "could a default of null
     // ever be taken", is the link's and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
-        declaresNull(in: types.shapes)
-    }
-
-    func declaresNull(in table: ShapeTable) -> Bool {
-        lowered(in: table).declaresNull(in: table)
+        lowered(in: types.shapes).declaresNull(in: types.shapes)
     }
 }
 
@@ -522,10 +464,6 @@ extension TypeExpression {
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
     public func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
-        accepts(other, in: types.shapes)
-    }
-
-    func accepts(_ other: TypeExpression, in table: ShapeTable) -> Bool {
-        lowered(in: table).accepts(other.lowered(in: table), in: table)
+        lowered(in: types.shapes).accepts(other.lowered(in: types.shapes), in: types.shapes)
     }
 }

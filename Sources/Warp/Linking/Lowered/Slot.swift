@@ -161,9 +161,18 @@ extension Parameter {
     // `any`: the boundary tells "nothing written" from "`any` written" in no
     // way, so the slot does not either.
     func lowered(named name: Name, in table: ShapeTable) -> Slot {
-        let shape = declared.lowered(in: table)
+        slot(named: name, holding: declared.lowered(in: table), in: table)
+    }
 
-        return Slot(
+    // The same, with what a call put in the type parameters written in. A
+    // parameter nothing filled reads `any`, which is what the call said about
+    // it by saying nothing.
+    func lowered(named name: Name, in table: ShapeTable, filling bound: [Name: Shape]) -> Slot {
+        slot(named: name, holding: declared.lowered(in: table).filling(bound), in: table)
+    }
+
+    private func slot(named name: Name, holding shape: Shape, in table: ShapeTable) -> Slot {
+        Slot(
             name: name,
             shape: shape,
             default: `default`,

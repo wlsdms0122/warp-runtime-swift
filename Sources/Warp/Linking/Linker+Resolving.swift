@@ -236,7 +236,7 @@ extension Linker {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: .constant(name.spelling, in: .of(module)),
-                    in: known.mapValues { value in type(of: value) },
+                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
                     with: frame,
                     folding: nil
                 )
@@ -289,7 +289,7 @@ extension Linker {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: .variable(name.spelling, in: .of(module)),
-                    in: known.mapValues { value in type(of: value) },
+                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
                     with: frame,
                     folding: nil
                 )

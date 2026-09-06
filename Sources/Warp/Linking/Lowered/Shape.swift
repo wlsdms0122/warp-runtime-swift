@@ -57,6 +57,13 @@ indirect enum Shape: Sendable {
         case contract(Name)
     }
 
+    // The shape a walk reached by taking a path through one a call decides.
+    // The root is the type parameter's spelling and the path is what was
+    // walked from it, so two walks landing on one field land on one shape.
+    // Nothing is proven about what it holds, so every judgment answers it the
+    // way it answers `any`; it stands apart for the walk's own naming.
+    case reading(of: Name, path: [PathSegment])
+
     // A declared membership standing as a type, by its row: a value of one of
     // the types it admits. What a slot holds here is decided, and which of the
     // members it is only a cast tells apart.
@@ -71,10 +78,25 @@ indirect enum Shape: Sendable {
     case undeclared(label: String, refusal: String)
 
     // MARK: - Property
+    // What a box holds. A variable is a fact about the slot, and what is read
+    // out of one is the shape inside it.
+    var fieldUnwrapped: Shape {
+        if case let .variable(inner) = self { return inner }
+
+        return self
+    }
+
     var inoutUnwrapped: Shape {
         if case let .inout(inner) = self { return inner }
 
         return self
+    }
+
+    // Whether a slot holding this may be written through.
+    var isVariable: Bool {
+        if case .variable = self { return true }
+
+        return false
     }
 
     // What a slot holds, through the two marks that say how it is held
@@ -123,9 +145,75 @@ indirect enum Shape: Sendable {
 
     // Whether what this stands for is settled at the call.
     var decidedAtCall: Bool {
-        if case .parameter = self { return true }
+        switch self {
+        case .parameter, .reading:
+            return true
 
-        return false
+        default:
+            return false
+        }
+    }
+
+    // What a walk through this shape reaches by taking those segments. Nil
+    // where this is not a shape a call decides, which is where a walk has a
+    // shape to read the segments against and no need for one of these.
+    //
+    // Asked of the shape rather than assembled at the walk, because the root
+    // is the shape's own fact: a parameter roots a reading at itself, and a
+    // reading already rooted extends the path it carries.
+    //
+    // The marks come off on the way in: what a mark says is expected of the
+    // value, and where the walk landed is the same field either way.
+    func reaching(_ path: [PathSegment]) -> Shape? {
+        switch self {
+        case let .parameter(name, _):
+            return .reading(of: name, path: path.map(\.unmarked))
+
+        case let .reading(of, walked):
+            return .reading(of: of, path: walked + path.map(\.unmarked))
+
+        default:
+            return nil
+        }
+    }
+
+    // Whether two procedure shapes declare the same slots and the same answer.
+    // What each requires of the value is beside that, so a join may keep the
+    // slots while reading the two requirements together.
+    func sameProcedure(as other: Shape) -> Bool {
+        guard
+            case let .procedure(mine, myAnswer, _, _) = self,
+            case let .procedure(theirs, theirAnswer, _, _) = other
+        else {
+            return false
+        }
+
+        guard myAnswer == theirAnswer else { return false }
+
+        switch (mine, theirs) {
+        case (nil, nil):
+            return true
+
+        case let (mine?, theirs?):
+            return mine.count == theirs.count
+                && zip(mine, theirs).allSatisfy { one, other in
+                    one.name == other.name
+                        && one.shape == other.shape
+                        && one.mustBeGiven == other.mustBeGiven
+                }
+
+        default:
+            return false
+        }
+    }
+
+    // What a judgment sees. A reading says a path was taken through a shape
+    // the call decides, which proves nothing about what it holds, and that is
+    // what `any` says.
+    var judged: Shape {
+        if case .reading = self { return .any }
+
+        return self
     }
 
     // Whether this shape proves nothing about the value it holds.
@@ -146,6 +234,19 @@ indirect enum Shape: Sendable {
 
     // What one element of bytes is: the range `std` names `byte`.
     static let byteElement = Shape.ranged(.whole(from: 0, to: .through(255)))
+
+    // A record of these fields, laid out the way the link lays every record
+    // out: by the order of the field spellings.
+    static func record(_ fields: [Name: Shape]) -> Shape {
+        let ordered = fields.sorted { left, right in left.key < right.key }
+
+        return .record(
+            RecordShape(
+                layout: Layout(name: nil, ordered: ordered.map(\.key)),
+                fields: ordered.map(\.value)
+            )
+        )
+    }
 
     // MARK: - Initializer
     // MARK: - Public
@@ -170,27 +271,11 @@ extension Shape: Equatable {
         case let (.record(mine), .record(theirs)):
             return mine == theirs
 
-        case let (.procedure(mine, myAnswer, myPurity, myIsolation),
-                  .procedure(theirs, theirAnswer, theirPurity, theirIsolation)):
-            guard myPurity == theirPurity, myIsolation == theirIsolation, myAnswer == theirAnswer else {
-                return false
-            }
-
-            switch (mine, theirs) {
-            case (nil, nil):
-                return true
-
-            case let (mine?, theirs?):
-                return mine.count == theirs.count
-                    && zip(mine, theirs).allSatisfy { one, other in
-                        one.name == other.name
-                            && one.shape == other.shape
-                            && one.mustBeGiven == other.mustBeGiven
-                    }
-
-            default:
-                return false
-            }
+        case let (.procedure(_, _, myPurity, myIsolation),
+                  .procedure(_, _, theirPurity, theirIsolation)):
+            return myPurity == theirPurity
+                && myIsolation == theirIsolation
+                && lhs.sameProcedure(as: rhs)
 
         case let (.named(mine), .named(theirs)):
             return mine == theirs
@@ -200,6 +285,9 @@ extension Shape: Equatable {
 
         case let (.member(mine), .member(theirs)):
             return mine == theirs
+
+        case let (.reading(myRoot, myPath), .reading(theirRoot, theirPath)):
+            return myRoot == theirRoot && myPath == theirPath
 
         case let (.undeclared(mine, _), .undeclared(theirs, _)):
             return mine == theirs

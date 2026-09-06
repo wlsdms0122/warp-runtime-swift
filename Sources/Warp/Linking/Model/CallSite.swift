@@ -23,16 +23,16 @@ struct CallSite: Sendable {
     // carried so the check never walks a body a second time for them. A call's
     // arguments are mostly references, so without these the types a declaration
     // carries would only ever be checked against literals.
-    let readings: [Name: TypeExpression]
-    let received: TypeExpression?
+    let readings: [Name: Shape]
+    let received: Shape?
 
     // MARK: - Initializer
     init(
         call: Call,
         place: Place,
         callee: Symbol,
-        readings: [Name: TypeExpression],
-        received: TypeExpression?
+        readings: [Name: Shape],
+        received: Shape?
     ) {
         self.call = call
         self.place = place

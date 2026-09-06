@@ -66,14 +66,19 @@ struct ShapeTests {
         #expect(table.recordRows[byte] == nil)
     }
 
-    @Test("a walk's reading lowers to what proves nothing")
-    func aReadingLowersToAny() throws {
+    @Test("a walk's reading lowers to itself, and every judgment answers it as any")
+    func aReadingLowersToItself() throws {
         // Given
         let table = types.shapes
+        let reading = try TypeExpression.reading(of: "T", path: [.key("inner")]).lowered(in: table)
 
         // When / Then
-        #expect(try TypeExpression.reading(of: "T", path: [.key("inner")]).lowered(in: table) == .any)
-        #expect(try TypeExpression.array(.reading(of: "T", path: [])).lowered(in: table) == .array(.any))
+        #expect(reading == .reading(of: "T", path: [.key("inner")]))
+        #expect(try TypeExpression.array(.reading(of: "T", path: [])).lowered(in: table)
+            == .array(.reading(of: "T", path: [])))
+        #expect(Shape.int.accepts(reading, in: table))
+        #expect(reading.accepts(.int, in: table))
+        #expect(try reading.settling(.int(1), at: "", in: table) == .int(1))
     }
 
     @Test("a record settling into an alias slot takes the canonical name, and passes it again by comparison")
@@ -246,7 +251,8 @@ struct ShapeTests {
         #expect(TypeExpression.named("app.Good").accepts(.int, in: table))
         #expect(TypeExpression.named("app.Bad").accepts(.int, in: table))
         #expect(TypeExpression.int.accepts(.named("app.Bad"), in: table))
-        #expect(TypeExpression.named("app.Bad").couldBothHold(.int, in: table))
+        #expect(TypeExpression.named("app.Bad").lowered(in: table.shapes)
+            .couldBothHold(.int, in: table.shapes))
         #expect(!TypeExpression.named("app.Bad").declaresNull(in: table))
         #expect {
             try TypeExpression.named("app.Bad").settling(.int(1), at: "input", in: table)

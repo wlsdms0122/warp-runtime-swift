@@ -103,7 +103,7 @@ struct CastAgreementTests {
                 }) else { continue }
 
                 #expect(
-                    mine.couldBothHold(theirs, in: types),
+                    couldBothHold(mine, theirs),
                     "\(mine.rendered) and \(theirs.rendered) both settle \(witness)"
                 )
             }
@@ -119,8 +119,8 @@ struct CastAgreementTests {
         for mine in shapes {
             for theirs in shapes {
                 #expect(
-                    mine.couldBothHold(theirs, in: types)
-                        == theirs.couldBothHold(mine, in: types),
+                    couldBothHold(mine, theirs)
+                        == couldBothHold(theirs, mine),
                     "\(mine.rendered) beside \(theirs.rendered)"
                 )
             }
@@ -145,11 +145,11 @@ struct CastAgreementTests {
         // When / Then
         for (mine, theirs) in pairs {
             #expect(
-                !mine.couldBothHold(theirs, in: types),
+                !couldBothHold(mine, theirs),
                 "\(mine.rendered) and \(theirs.rendered) share no value"
             )
             #expect(
-                !theirs.couldBothHold(mine, in: types),
+                !couldBothHold(theirs, mine),
                 "\(theirs.rendered) and \(mine.rendered) share no value"
             )
         }
@@ -157,6 +157,13 @@ struct CastAgreementTests {
 
     // MARK: - Public
     // MARK: - Private
+    // Asked of the lowered shapes, which is where the judgment lives. What a
+    // document writes reaches it by lowering.
+    private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
+        mine.lowered(in: types.shapes)
+            .couldBothHold(theirs.lowered(in: types.shapes), in: types.shapes)
+    }
+
     private func settles(_ shape: TypeExpression, _ value: Value) -> Bool {
         (try? shape.settling(value, at: "witness", in: types)) != nil
     }

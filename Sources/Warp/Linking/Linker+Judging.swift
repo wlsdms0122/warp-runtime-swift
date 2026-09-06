@@ -482,10 +482,11 @@ extension Linker {
         // without a way to declare a name twice.
         let declared = callee.signature
 
-        let signature: Signature
+        let slots: [Slot]
 
         switch judged(
             declared,
+            answering: frame.answers[call.selector],
             filledWith: bound(
                 of: declared,
                 at: call,
@@ -501,11 +502,18 @@ extension Linker {
                 at: site.place
             )
 
-        case let .fits(filled):
-            signature = filled
+        case let .fits(filled, _):
+            slots = filled
         }
+
+        // Found by name along the list, the way the boundary finds one: a
+        // declaration's slots are few and in name order.
+        func slot(_ name: Name) -> Slot? {
+            slots.first { slot in slot.name == name }
+        }
+
         let undeclared = call.arguments.keys
-            .filter { name in signature.parameters[name] == nil }
+            .filter { name in slot(name) == nil }
             .sorted()
 
         guard undeclared.isEmpty else {
@@ -519,13 +527,11 @@ extension Linker {
         // A receiver is written on the other side of the dot rather than by
         // name, so a site that sends one has supplied that parameter.
         let supplied = Set(call.arguments.keys)
-            .union(call.receiver == nil ? [] : [signature.receiver].compactMap { $0 })
+            .union(call.receiver == nil ? [] : [declared.receiver].compactMap { $0 })
 
-        let missing = signature.parameters
-            .filter { name, parameter in
-                parameter.mustBeGiven(in: shapes) && !supplied.contains(name)
-            }
-            .keys
+        let missing = slots
+            .filter { slot in slot.mustBeGiven(in: shapes) && !supplied.contains(slot.name) }
+            .map(\.name)
             .sorted()
 
         guard missing.isEmpty else {
@@ -540,15 +546,10 @@ extension Linker {
         // that already are what they will be. `taking` rather than `checking`,
         // so a constant passes exactly the gate the run would apply to it.
         for (name, argument) in call.arguments.sorted(by: { left, right in left.key < right.key }) {
-            guard
-                let parameter = signature.parameters[name],
-                let constant = argument.constantValue
-            else {
-                continue
-            }
+            guard let slot = slot(name), let constant = argument.constantValue else { continue }
 
             do {
-                _ = try parameter.lowered(named: name, in: shapes).taking(constant, in: shapes)
+                _ = try slot.taking(constant, in: shapes)
             } catch {
                 throw LinkError(
                     "sending '\(call.selector)': \(error)",
@@ -581,15 +582,16 @@ extension Linker {
         // declarations, and a declaration is text. The site carries the walk's
         // readings, so nothing is walked again for the asking.
         for name in call.arguments.keys.sorted() {
-            guard let parameter = signature.parameters[name] else { continue }
+            guard let slot = slot(name) else { continue }
 
             let written = site.readings[name] ?? .any
 
-            guard !parameter.declared.accepts(written, in: shapes) else { continue }
+            guard !slot.shape.accepts(written, in: shapes) else { continue }
 
             throw LinkError(
                 "sending '\(call.selector)' with \(name),"
-                    + " which holds \(written) where \(parameter.declared) is declared",
+                    + " which holds \(written.rendered(in: shapes))"
+                    + " where \(slot.shape.rendered(in: shapes)) is declared",
                 at: site.place.argument(name.spelling)
             )
         }
@@ -598,13 +600,13 @@ extension Linker {
         // same way.
         if
             let written = site.received,
-            let name = signature.receiver,
-            let parameter = signature.parameters[name]
+            let name = declared.receiver,
+            let slot = slot(name)
         {
-            guard parameter.declared.accepts(written, in: shapes) else {
+            guard slot.shape.accepts(written, in: shapes) else {
                 throw LinkError(
-                    "sending '\(call.selector)' to \(written),"
-                        + " where \(parameter.declared) is declared",
+                    "sending '\(call.selector)' to \(written.rendered(in: shapes)),"
+                        + " where \(slot.shape.rendered(in: shapes)) is declared",
                     at: site.place.slot(.receiver)
                 )
             }

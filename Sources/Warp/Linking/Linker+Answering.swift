@@ -40,7 +40,7 @@ extension Linker {
         let symbol: Symbol
 
         let block: Block
-        let environment: [Name: TypeExpression]
+        let environment: [Name: Shape]
         let sends: Set<Name>
     }
 
@@ -54,7 +54,7 @@ extension Linker {
     func answers(
         of unsaid: [Unsaid],
         reading frame: () -> TypeFrame,
-        recording: (Name, TypeExpression) -> Void
+        recording: (Name, Shape) -> Void
     ) {
         let declared = Dictionary(
             unsaid.map { one in (one.symbol.declared, one) },

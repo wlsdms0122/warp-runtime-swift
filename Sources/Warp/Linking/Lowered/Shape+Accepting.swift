@@ -71,7 +71,7 @@ extension Shape {
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table, assuming: assuming)
 
-        case (.any, _), (_, .any):
+        case (.any, _), (_, .any), (.reading, _), (_, .reading):
             return true
 
         case (.never, _):
@@ -206,6 +206,50 @@ extension Shape {
         }
     }
 
+    // The same shape with every row it holds walked through to what that row
+    // stands for. At every depth, not only the outermost.
+    //
+    // A row is a spelling, and two spellings of one shape are one shape: a
+    // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
+    // are the same thing said twice. Resolving only the outermost made that
+    // depend on where the author happened to write the name, so the same
+    // question got two answers depending on nesting.
+    func resolved(in table: ShapeTable) -> Shape {
+        resolved(in: table, assuming: [])
+    }
+
+    // A row already being walked through stands as itself. A type may name
+    // itself (`Tree` holding `array<Tree>` is a declared shape) so a walk that
+    // expanded every row at every depth would chase one forever.
+    private func resolved(in table: ShapeTable, assuming: [Int]) -> Shape {
+        switch self {
+        case let .named(row):
+            guard !assuming.contains(row) else { return self }
+
+            return table.shapes[row].resolved(in: table, assuming: assuming + [row])
+
+        case let .array(element):
+            return .array(element.resolved(in: table, assuming: assuming))
+
+        case let .dictionary(element):
+            return .dictionary(element.resolved(in: table, assuming: assuming))
+
+        case let .nullable(element):
+            return .nullable(element.resolved(in: table, assuming: assuming))
+
+        case let .record(fields):
+            return .record(
+                RecordShape(
+                    layout: fields.layout,
+                    fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming) }
+                )
+            )
+
+        default:
+            return self
+        }
+    }
+
     // Whether some value could satisfy both shapes at once. Not `accepts`:
     // two records that name no field in common accept each other in neither
     // direction and are still both satisfied by a value carrying every
@@ -309,7 +353,7 @@ extension Shape {
     // is a fraction no fraction spells, so no call could ever match it.
     func spells(_ candidate: String, in table: ShapeTable) -> Bool {
         switch self {
-        case .any, .string, .undeclared:
+        case .any, .reading, .string, .undeclared:
             return true
 
         case .int, .double, .number:

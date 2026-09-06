@@ -131,7 +131,10 @@ extension Linker {
         // call written against the contract could write.
         for (name, parameter) in given.parameters.sorted(by: { $0.key < $1.key })
         where name != receiver && asked.parameters[name] == nil {
-            guard parameter.default != nil || parameter.declared.declaresNull(in: table.shapes) else {
+            guard
+                parameter.default != nil
+                    || parameter.declared.lowered(in: table.shapes).declaresNull(in: table.shapes)
+            else {
                 throw LinkError(
                     "is named for '\(type)' and the word '\(word)' that"
                         + " '\(contract)' asks, and requires '\(name)', which"
@@ -144,7 +147,9 @@ extension Linker {
 
         guard let answer = asked.returns else { return true }
 
-        guard answer.accepts(given.returns ?? .any, in: table.shapes) else {
+        guard answer.lowered(in: table.shapes)
+            .accepts((given.returns ?? .any).lowered(in: table.shapes), in: table.shapes)
+        else {
             throw LinkError(
                 "is named for '\(type)' and the word '\(word)' that '\(contract)'"
                     + " asks, and answers \((given.returns ?? .any).rendered)"
