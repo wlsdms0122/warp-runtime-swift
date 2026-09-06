@@ -41,6 +41,11 @@ struct TypeFrame: Sendable {
     // spells a row.
     let answers: [Name: Shape]
 
+    // Each declaration's parameters as the run reads them, lowered once with
+    // the rows and read here. Every call site is judged against these, so a
+    // declaration is lowered per link rather than per call.
+    let slots: [Name: [Slot]]
+
     // The same declarations as the run reads them, lowered once. Every
     // judgment the walk asks goes here, so the walk and the run judge by one
     // table and by one language.
@@ -55,6 +60,9 @@ struct TypeFrame: Sendable {
     // What each of those answers, read the same way, under the spelling a path
     // reaches it by.
     let wordAnswers: [Name: Shape]
+
+    // Their parameters, lowered once, under the same spelling.
+    let wordSlots: [Name: [Slot]]
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call

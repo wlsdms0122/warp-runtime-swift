@@ -482,13 +482,17 @@ extension Linker {
         // without a way to declare a name twice.
         let declared = callee.signature
 
+        let declaredSlots = frame.slots[call.selector] ?? declared.lowered(in: shapes)
+
         let slots: [Slot]
 
         switch judged(
             declared,
+            over: declaredSlots,
             answering: frame.answers[call.selector],
             filledWith: bound(
                 of: declared,
+                over: declaredSlots,
                 at: call,
                 readings: site.readings,
                 receiver: site.received,

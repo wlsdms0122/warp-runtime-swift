@@ -167,6 +167,15 @@ public struct Linker: Sendable {
             )
         }
 
+        // Each declaration's parameters as the run reads them, read off the
+        // rows rather than lowered a second time for the walk. A contract's
+        // word declares no row, so its own are lowered here.
+        var declaredSlots = Dictionary(uniqueKeysWithValues: table.map { row in (row.label, row.slots) })
+
+        for (spelling, word) in contractWords {
+            declaredSlots[spelling] = word.signature.lowered(in: shapes)
+        }
+
         // Which declarations a path segment may reach, read off the rows the
         // link just made. A row is the declaration lowered, and whether a path
         // may reach one is a question about the slots it lowered to.
@@ -254,8 +263,10 @@ public struct Linker: Sendable {
                 signatures: answeringSignatures,
                 types: types,
                 answers: answered,
+                slots: declaredSlots,
                 words: answeringWords,
                 wordAnswers: wordAnswered,
+                wordSlots: wordSymbols.compactMapValues { symbol in declaredSlots[symbol.declared] },
                 pure: settled,
                 isolated: isolatedDeclarations,
                 failing: failingDeclarations,

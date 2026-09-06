@@ -166,10 +166,18 @@ extension Linker {
 
     func judged(
         _ declared: Signature,
+        over slots: [Slot],
         answering: Shape?,
         filledWith bound: Bound,
         in shapes: ShapeTable
     ) -> Judgment {
+        // A declaration with nothing to fill is read as the link lowered it.
+        // Lowering it again per call site is the same answer paid for again,
+        // and this is the site every call goes through.
+        guard declared.isGeneric else {
+            return .fits(slots: slots, returns: answering)
+        }
+
         guard bound.disagreeing.isEmpty else {
             let named = bound.disagreeing.keys.sorted().map { parameter in
                 "'\(parameter)' is read as \(bound.readings[parameter]?.rendered(in: shapes) ?? "?")"
@@ -203,6 +211,7 @@ extension Linker {
     // way.
     func bound(
         of signature: Signature,
+        over slots: [Slot],
         at call: Call,
         readings sent: [Name: Shape],
         receiver received: Shape?,
@@ -212,11 +221,11 @@ extension Linker {
         var disagreeing: [Name: Shape] = [:]
 
         for name in call.arguments.keys.sorted() {
-            guard let parameter = signature.parameters[name], let reading = sent[name] else {
+            guard let slot = slots.first(where: { slot in slot.name == name }), let reading = sent[name] else {
                 continue
             }
 
-            parameter.declared.lowered(in: shapes).binding(
+            slot.shape.binding(
                 against: reading,
                 into: &bound,
                 disagreeing: &disagreeing,
@@ -227,12 +236,12 @@ extension Linker {
         guard
             let received,
             let name = signature.receiver,
-            let parameter = signature.parameters[name]
+            let slot = slots.first(where: { slot in slot.name == name })
         else {
             return Bound(readings: bound, disagreeing: disagreeing)
         }
 
-        parameter.declared.lowered(in: shapes).binding(
+        slot.shape.binding(
             against: received,
             into: &bound,
             disagreeing: &disagreeing,
@@ -248,6 +257,7 @@ extension Linker {
     // non-generic call never pays for taking them.
     private func answered(
         by signature: Signature?,
+        over slots: [Slot],
         answering: Shape?,
         at call: Call,
         readings sent: @autoclosure () throws -> [Name: Shape],
@@ -260,6 +270,7 @@ extension Linker {
         return returns.filling(
             bound(
                 of: signature,
+                over: slots,
                 at: call,
                 readings: try sent(),
                 receiver: try received(),
@@ -766,9 +777,11 @@ extension Linker {
         // A name a walk may reach declares its receiver. That is what made it
         // reachable. A signature here without one is the frame disagreeing with
         // itself, said rather than passed over.
+        let slots = frame.wordSlots[key] ?? []
+
         guard
             let name = signature.receiver,
-            let parameter = signature.parameters[name]
+            let receiver = slots.first(where: { slot in slot.name == name })
         else {
             return .refused(
                 "\(walked.rendered) sends '\(key)', which names no parameter"
@@ -776,19 +789,17 @@ extension Linker {
             )
         }
 
-        let declared = parameter.declared.lowered(in: frame.shapes)
-
-        guard declared.accepts(current, in: frame.shapes) else {
+        guard receiver.shape.accepts(current, in: frame.shapes) else {
             return .refused(
                 "\(walked.rendered) sends '\(key)' to \(current.rendered(in: frame.shapes)),"
-                    + " where \(parameter.declared) is declared"
+                    + " where \(receiver.shape.rendered(in: frame.shapes)) is declared"
             )
         }
 
         var readings: [Name: Shape] = [:]
         var disagreeing: [Name: Shape] = [:]
 
-        declared.binding(
+        receiver.shape.binding(
             against: current,
             into: &readings,
             disagreeing: &disagreeing,
@@ -797,6 +808,7 @@ extension Linker {
 
         switch judged(
             signature,
+            over: slots,
             answering: frame.wordAnswers[key],
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
             in: frame.shapes
@@ -1367,6 +1379,7 @@ extension Linker {
                     rewritten: expression,
                     reading: try answered(
                         by: signature,
+                        over: frame.slots[call.selector] ?? [],
                         answering: frame.answers[call.selector],
                         at: call,
                         readings: try call.arguments.reduce(into: [:]) { read, argument in
@@ -1487,6 +1500,7 @@ extension Linker {
                 ] + calls,
                 reading: answered(
                     by: signature,
+                    over: frame.slots[call.selector] ?? [],
                     answering: frame.answers[call.selector],
                     at: call,
                     readings: sent,
