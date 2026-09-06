@@ -62,8 +62,7 @@ public extension Place {
         case .receiver: ExpressionReader.subjectKey.spelling
 
         // A call and an invocation are written with the same two words, which
-        // `PlaceWrittenTests` holds them to. So one of them answers for both,
-        // and the day they part is the day that test says so.
+        // `PlaceWrittenTests` holds them to, so one of them answers for both.
         case .callee: CallForm.CodingKeys.procedure.stringValue
         case .arguments: CallForm.CodingKeys.arguments.stringValue
 

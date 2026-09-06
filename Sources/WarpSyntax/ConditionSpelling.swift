@@ -44,8 +44,8 @@ public protocol ConditionSpelling: Sendable {
     var vocabulary: Set<Name> { get }
 
     // The condition a record spells. Reached only for a record carrying one of
-    // `keys`, and free to refuse. A key this notation named but no longer
-    // offers is refused here, and so is one written in a shape it does not
+    // `keys`, and free to refuse. A key this notation names but does not
+    // offer is refused here, and so is one written in a shape it does not
     // have.
     func condition(from decoder: Decoder) throws -> Expression
 }
