@@ -14,8 +14,8 @@ import Warp
 //
 // `setting` answers a new record, so an author writes a changed mapping without
 // the language growing a way to write into one.
-public struct MappingQuery: Query {
-    public enum Reading: Sendable {
+struct MappingQuery: Query {
+    enum Reading: Sendable {
         case keys
         case values
         case setting
@@ -30,7 +30,7 @@ public struct MappingQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         guard let held = question.receiver?.asDictionary else { return nil }
 
         switch reading {

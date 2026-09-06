@@ -18,8 +18,8 @@ import Warp
 // Decoding can refuse: bytes carry no promise of being text, and completing a
 // broken sequence with replacement characters would answer a text nobody sent.
 // Encoding cannot. A string is Unicode text, and UTF-8 spells all of it.
-public struct CodecQuery: Query {
-    public enum Direction: Sendable {
+struct CodecQuery: Query {
+    enum Direction: Sendable {
         case decoded
         case encoded
     }
@@ -33,7 +33,7 @@ public struct CodecQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         let named = question["encoding"]
 
         guard case let .string(name) = named else {
@@ -89,7 +89,7 @@ public struct CodecQuery: Query {
 }
 
 extension CodecQuery.Direction: CustomStringConvertible {
-    public var description: String {
+    var description: String {
         switch self {
         case .decoded:
             return "decoded"

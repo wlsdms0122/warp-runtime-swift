@@ -67,9 +67,15 @@ let package = Package(
                 "WarpStandard"
             ]
         ),
+        // The vocabulary's own tests reach the language too: a record under a
+        // nominal name is made where the link makes one, and no public door
+        // spells one, so the fixtures come from inside. Declared rather than
+        // taken through the target below it, so the imports stay the fact
+        // this package reads them as.
         .testTarget(
             name: "WarpStandardTests",
             dependencies: [
+                "Warp",
                 "WarpStandard"
             ]
         ),

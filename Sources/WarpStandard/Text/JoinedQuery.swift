@@ -11,14 +11,14 @@ import Warp
 // Strings written one after another, with a separator between. The separator
 // has a default because joining with nothing between is a thing to want, and
 // declaring the default is what makes `parts.joined` reachable from a path.
-public struct JoinedQuery: Query {
+struct JoinedQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     public init() {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         // The `.array` case and not the elements projection, because this word
         // declares `array<string>` and bytes cross an `array<…>` slot whole
         // only where the element declaration leaves every byte alone. `string`

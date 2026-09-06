@@ -17,8 +17,8 @@ import Warp
 // names what it binds: the element is `item`, and a reduction's answer so far is
 // `carried`. Fixed rather than taken from the order the procedure declared them
 // in, because a declaration is a mapping and a mapping has no order.
-public struct WalkingQuery: Query {
-    public enum Walk: Sendable {
+struct WalkingQuery: Query {
+    enum Walk: Sendable {
         case map
         case filter
         case reduce
@@ -33,7 +33,7 @@ public struct WalkingQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so a walk reads bytes the way `each` does.
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }

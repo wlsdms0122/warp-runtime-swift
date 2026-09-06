@@ -27,7 +27,7 @@ struct Bench {
     private static let warmupRounds = 1_000
 
     // A link and a single round are one measurement each rather than a rate,
-    // so they are sampled many times and the middle one reported.
+    // so they are sampled many times and the fastest reported.
     private static let linkSamples = 201
     private static let baseline = "loop"
 

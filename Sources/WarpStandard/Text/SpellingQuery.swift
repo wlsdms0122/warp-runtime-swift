@@ -16,14 +16,14 @@ import Warp
 // string. Interpolating a number is the ordinary case. Nothing renders null,
 // because completing a sentence with "" would be the language writing what the
 // author did not.
-public struct SpellingQuery: Query {
+struct SpellingQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     public init() {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         let value = question.receiver ?? .null
 
         guard value != .null else {

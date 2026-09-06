@@ -14,14 +14,14 @@ import Warp
 //
 // The refusal it raises carries the recoverable marker, so `attempt` around it
 // catches it and nothing else does.
-public struct AbortQuery: Query {
+struct AbortQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     public init() {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         guard let message = question.receiver else {
             throw ExecutionError("abort refuses with a message, and none arrived")
         }

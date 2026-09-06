@@ -16,8 +16,8 @@ import Warp
 // and this is the other half of writing a whole division. `int` is the machine
 // word, so a fraction whose whole part is past it has no int to answer. That
 // stops the run the way arithmetic off the word's edge does.
-public struct NumberQuery: Query {
-    public enum Reading: Sendable {
+struct NumberQuery: Query {
+    enum Reading: Sendable {
         case absolute
         case floored
         case rounded
@@ -32,7 +32,7 @@ public struct NumberQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         switch (reading, question.receiver) {
         case let (.absolute, .int(number)):
             // The one magnitude the word does not hold is its own minimum.

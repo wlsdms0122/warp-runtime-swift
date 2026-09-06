@@ -19,8 +19,8 @@ import Warp
 // fault of the program, not a condition of its data: an overflow and a divisor
 // of zero stop the run the way an index past the end does, without the
 // recoverable marker an `attempt` reads.
-public struct ArithmeticQuery: Query {
-    public enum Operation: Sendable {
+struct ArithmeticQuery: Query {
+    enum Operation: Sendable {
         case plus
         case minus
         case times
@@ -37,7 +37,7 @@ public struct ArithmeticQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         let operand = question["value"]
 
         guard let receiver = question.receiver, isNumber(receiver), isNumber(operand) else {

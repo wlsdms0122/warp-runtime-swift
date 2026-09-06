@@ -287,7 +287,7 @@ extension TypeExpression {
     // What one element of bytes is. The range `std` names `byte`. Owned here
     // because the `bytes = array<byte>` equation reads it without a link, so it
     // cannot live behind the name.
-    public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
+    package static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
     // The spelling with its conditions dropped: a range is an int the bounds
     // refine, and bytes are `array<byte>` compacted. This answers the kind

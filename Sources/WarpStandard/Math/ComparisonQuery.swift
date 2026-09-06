@@ -13,8 +13,8 @@ import Warp
 // here and nowhere else, so `min` cannot drift from what `lessThan` reads. Two
 // comparison declarations rather than four: `not` is a language operator, so
 // "at least" is `not lessThan`.
-public struct ComparisonQuery: Query {
-    public enum Ordering: Sendable {
+struct ComparisonQuery: Query {
+    enum Ordering: Sendable {
         case lessThan
         case greaterThan
         // The picking half: the same order, answering with one of the pair
@@ -33,7 +33,7 @@ public struct ComparisonQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         let operand = question["value"]
 
         // Its own refusal for an absent left side. These words order, so

@@ -15,8 +15,8 @@ import Warp
 // Without these an array's length is whatever the text wrote down, because the
 // only other way to build one is `each`, which answers one element for every
 // element it was given.
-public struct BuildingQuery: Query {
-    public enum Building: Sendable {
+struct BuildingQuery: Query {
+    enum Building: Sendable {
         case appending
         case prepending
         case dropFirst
@@ -33,7 +33,7 @@ public struct BuildingQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, and answered in the spelling the receiver arrived in: each
         // of these is the receiver's own elements, so a compact one stays

@@ -10,8 +10,8 @@ import Warp
 
 // Reading an array without saying where. Each takes nothing, so each is
 // reachable from a path. `items.first` is the shape these exist for.
-public struct SequenceQuery: Query {
-    public enum Reading: Sendable {
+struct SequenceQuery: Query {
+    enum Reading: Sendable {
         case first
         case last
         case reversed
@@ -26,7 +26,7 @@ public struct SequenceQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so bytes are read where an array is, and `first` reads one
         // element of a compact spelling without unpacking the rest.

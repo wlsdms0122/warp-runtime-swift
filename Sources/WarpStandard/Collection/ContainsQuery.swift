@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-public struct ContainsQuery: Query {
+struct ContainsQuery: Query {
     // MARK: - Property
 
     // MARK: - Initializer
@@ -16,7 +16,7 @@ public struct ContainsQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         // Absence answers false rather than failing: asking whether nothing
         // contains something has an obvious answer.
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }

@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-public struct RegexQuery: Query {
+struct RegexQuery: Query {
     // MARK: - Property
 
     // MARK: - Initializer
@@ -19,7 +19,7 @@ public struct RegexQuery: Query {
     // A pattern that does not compile is an author mistake, and a constant one
     // is knowable before the run, which is the whole reason a word gets to
     // check its own arguments at load.
-    public func validate(_ arguments: [String: Value]) throws {
+    func validate(_ arguments: [String: Value]) throws {
         guard
             case let .string(pattern) = arguments["value"] ?? .null,
             (try? NSRegularExpression(pattern: pattern)) != nil
@@ -30,7 +30,7 @@ public struct RegexQuery: Query {
         }
     }
 
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }
 
         guard case let .string(pattern) = question["value"] else {

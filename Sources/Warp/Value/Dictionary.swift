@@ -52,10 +52,13 @@ public extension Value {
                 .sorted { one, other in one.name < other.name }
         }
 
-        // The inner door: entries taken from a record, which stands on a
-        // layout and so carries the order already.
-        init(of record: Record) {
-            self.entries = zip(record.layout.fields, record.values).map { name, value in (name: name, value: value) }
+        // The inner door: entries in the order a name puts them, under names
+        // none of which repeats. A layout carries both facts, so what stands
+        // on one comes through here rather than being sorted again. A value
+        // born outside a link has no layout behind it and comes through the
+        // door above.
+        init(ordered entries: [(name: Name, value: Value)]) {
+            self.entries = entries
         }
 
         private init(keeping entries: [(name: Name, value: Value)]) {

@@ -27,10 +27,10 @@ import Warp
 //
 // The rest a sibling ignores: asking is what cancellation is. A piece that
 // carries on still finishes, and its answer is discarded.
-public struct ConcurrentEffect: Effect {
+struct ConcurrentEffect: Effect {
     // Which completion this word sells. One implementation, because the pieces
     // and the machinery are the same and only what "done" means differs.
-    public enum Word: Sendable {
+    enum Word: Sendable {
         case all
         case first
         case map
@@ -65,7 +65,7 @@ public struct ConcurrentEffect: Effect {
     }
 
     // MARK: - Public
-    public func run(_ invocation: Invocation) async throws -> Value {
+    func run(_ invocation: Invocation) async throws -> Value {
         switch word {
         case .all:
             let (pieces, keyed) = try closures(of: invocation)

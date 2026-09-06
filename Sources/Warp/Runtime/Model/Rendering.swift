@@ -18,15 +18,15 @@ import Foundation
 // round-trips. This does not: a procedure has no data form, and what goes out
 // for one is a marker saying so, which is right for something a person reads
 // and wrong for anything that means to read it back.
-public struct Rendering {
+package struct Rendering {
     private struct Unwritable: Error {
     }
 
     // MARK: - Property
-    public let value: Value
+    package let value: Value
 
     // MARK: - Initializer
-    public init(_ value: Value) {
+    package init(_ value: Value) {
         self.value = value
     }
 
@@ -37,7 +37,7 @@ public struct Rendering {
     // file's own vocabulary; only the container shapes go through `written`,
     // where JSON's own rules apply, and what JSON cannot write stays a visible
     // marker) an answer, not a failure.
-    public func text() -> String {
+    package func text() -> String {
         switch value {
         case .null:
             return ""

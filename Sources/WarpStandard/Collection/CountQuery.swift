@@ -10,7 +10,7 @@ import Warp
 
 // How many. Answers nil for shapes that have no count, which is what makes
 // `x.count` read as absent rather than fail when `x` is a number.
-public struct CountQuery: Query {
+struct CountQuery: Query {
     // MARK: - Property
 
     // MARK: - Initializer
@@ -18,7 +18,7 @@ public struct CountQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         switch question.receiver {
         case let .string(text):
             return .int(text.count)

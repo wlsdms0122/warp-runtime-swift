@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-public struct StartsWithQuery: Query {
+struct StartsWithQuery: Query {
     // MARK: - Property
 
     // MARK: - Initializer
@@ -16,7 +16,7 @@ public struct StartsWithQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }
 
         guard case let .string(prefix) = question["value"] else {

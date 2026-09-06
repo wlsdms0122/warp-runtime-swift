@@ -16,8 +16,8 @@ import Warp
 // Taking procedures is what lets these be declarations. A word receives its
 // arguments already computed, so a connective over values would have run every
 // side before it could decline to.
-public struct ChainQuery: Query {
-    public enum Chain: Sendable {
+struct ChainQuery: Query {
+    enum Chain: Sendable {
         case and
         case or
     }
@@ -31,7 +31,7 @@ public struct ChainQuery: Query {
     }
 
     // MARK: - Public
-    public func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question) throws -> Value? {
         // The `.array` case and not the elements projection, for the reason
         // `joined` gives: this declares `array<procedure>`, which leaves no
         // byte as it is, so a bytes receiver is read out and refused at the
