@@ -12,14 +12,14 @@ import Warp
 // document and answers with a module; this takes a module and answers with the
 // document that would load into it.
 //
-// It exists because a program has to be able to leave the machine that built it.
-// Building the language's shapes directly is what a front end with a syntax of
-// its own does, and a caller assembling procedures in native code does the same
-// — but neither can hand what it built to anything running elsewhere unless the
-// result can be written down. Reading was half a door.
+// It exists because a program has to be able to leave the machine that built
+// it. Building the language's shapes directly is what a front end with a syntax
+// of its own does, and a caller assembling procedures in native code does the
+// same, but neither can hand what it built to anything running elsewhere unless
+// the result can be written down. Reading was half a door.
 //
 // Only the shapes that stand one to one with the language are written. Nothing
-// here reaches for a spelling — no `is`, no template, no `abort` — because a
+// here reaches for a spelling (no `is`, no template, no `abort`) because a
 // spelling is a claim about what the reading side implements, and the point of
 // writing plainly is to make that claim as small as it can be. A program that
 // arrived spelled is written back unspelled, and it means the same thing.
@@ -27,10 +27,10 @@ public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
 
-    // Which notation the result has to survive being read by — the far side,
-    // not this side. Nothing here writes a spelling, so this never spells
-    // anything; it is used to *avoid* writing data that the reader over there
-    // would take for one.
+    // Which notation the result has to survive being read by. The far side, not
+    // this side. Nothing here writes a spelling, so this never spells anything;
+    // it is used to *avoid* writing data that the reader over there would take
+    // for one.
     //
     // The contract is that writing and reading are inverses, and a reading side
     // with spellings is a different far side from one without. A record with a
@@ -41,7 +41,7 @@ public struct Writer: Sendable {
     // It is deliberately not paired with a `Loader`'s notation, because they
     // answer different questions: a loader's says what the input is written in,
     // and this says who the output is for. A front end is exactly where the two
-    // differ — it reads its own notation and writes for the wire.
+    // differ. It reads its own notation and writes for the wire.
     public let readBy: Notation
 
     // MARK: - Initializer
@@ -130,10 +130,10 @@ public struct Writer: Sendable {
         }
 
         // Stripped here, at the declaration, because this is the one place a
-        // bound has a `bounds` to move to. Everything below the declaration —
-        // slots, nested procedure types — writes types as they arrive and
-        // refuses a bound it meets, so a bound can neither be written twice
-        // nor quietly dropped.
+        // bound has a `bounds` to move to. Everything below the declaration
+        // (slots, nested procedure types) writes types as they arrive and
+        // refuses a bound it meets, so a bound can neither be written twice nor
+        // quietly dropped.
         written.merge(try fields(of: stripped(procedure.signature))) { one, _ in one }
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
 
@@ -156,12 +156,12 @@ public struct Writer: Sendable {
         case .bytes: return .string("bytes")
         case .number: return .string("number")
 
-        // The range rides in the name's spelling — `int(0...255)` — the way
-        // the reader takes it in. A bound with no spelling has nothing to ride
-        // in: the language admits an infinity, because it orders like any
-        // other bound, and a document that carried the words a message shows
-        // it in would read back as an error. Said rather than written as
-        // something else, the way an unwritable shape is.
+        // The range rides in the name's spelling (`int(0...255)`) the way the
+        // reader takes it in. A bound with no spelling has nothing to ride in:
+        // the language admits an infinity, because it orders like any other
+        // bound, and a document that carried the words a message shows it in
+        // would read back as an error. Said rather than written as something
+        // else, the way an unwritable shape is.
         case let .ranged(refinement):
             guard refinement.spellable else {
                 throw WritingError(
@@ -183,15 +183,15 @@ public struct Writer: Sendable {
                     + " and a document has no way to tell them apart"
             )
 
-        // Bare, because an occurrence names the parameter and its constraint
-        // is written once, in the `bounds` of the signature that declares the
-        // name. A signature entry strips the bound before writing and emits
-        // it there — so a bound still on the type here means no signature owns
-        // it, and no surface of the document could carry it: writing the name
-        // alone would be a document that reads back meaning something else.
-        // No document spells this — it is a shape the link worked out from a
-        // body, and the link refuses one written into a declaration. Reaching
-        // here means a type got past that, so it is said rather than silently
+        // Bare, because an occurrence names the parameter and its constraint is
+        // written once, in the `bounds` of the signature that declares the
+        // name. A signature entry strips the bound before writing and emits it
+        // there, so a bound still on the type here means no signature owns it,
+        // and no surface of the document could carry it: writing the name alone
+        // would be a document that reads back meaning something else. No
+        // document spells this. It is a shape the link worked out from a body,
+        // and the link refuses one written into a declaration. Reaching here
+        // means a type got past that, so it is said rather than silently
         // written as something else.
         case let .reading(of, path):
             throw WritingError(
@@ -219,8 +219,8 @@ public struct Writer: Sendable {
             return .string("dictionary<\(try spelt(element, at: "inside dictionary<…>"))>")
 
         // Spelt with the trailing `?` the reader takes, which is why the
-        // declared half has to have a name of its own — a record has no
-        // spelling for a `?` to trail.
+        // declared half has to have a name of its own. A record has no spelling
+        // for a `?` to trail.
         case let .nullable(inner):
             return .string(
                 "\(try spelt(inner, at: "before `?` — a record is declared and written by its name, like `Task?`"))?"
@@ -268,10 +268,9 @@ public struct Writer: Sendable {
 
             guard let signature else { return .string(word) }
 
-            // No bound check of its own: a procedure type written as a type
-            // has no `bounds` surface, and the `.parameter` case refuses any
-            // bound the walk below meets — one guard, wherever the walk
-            // started.
+            // No bound check of its own: a procedure type written as a type has
+            // no `bounds` surface, and the `.parameter` case refuses any bound
+            // the walk below meets. One guard, wherever the walk started.
             return .dictionary([try Name(word): .dictionary(try fields(of: signature))])
         }
     }
@@ -305,7 +304,7 @@ public struct Writer: Sendable {
     }
 
     // MARK: - Private
-    // A signature is written flat into whatever declares it — a procedure and a
+    // A signature is written flat into whatever declares it. A procedure and a
     // procedure type both spell it as their own keys rather than nesting it.
     func fields(of signature: Signature) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
@@ -325,11 +324,11 @@ public struct Writer: Sendable {
         return written
     }
 
-    // The type with every occurrence's bound removed — what a signature's
-    // slots spell, the bound having moved to the signature's own `bounds`.
-    // Nested signatures are walked too: their parameters are the declaring
-    // signature's slots, and the one `bounds` at the declaration speaks for
-    // every occurrence in them.
+    // The type with every occurrence's bound removed. What a signature's slots
+    // spell, the bound having moved to the signature's own `bounds`. Nested
+    // signatures are walked too: their parameters are the declaring signature's
+    // slots, and the one `bounds` at the declaration speaks for every
+    // occurrence in them.
     private func stripped(_ type: TypeExpression) -> TypeExpression {
         switch type {
         case let .parameter(name, _):
@@ -380,8 +379,8 @@ public struct Writer: Sendable {
         )
     }
 
-    // The bounds, gathered from every occurrence — the nested ones included,
-    // because a nested signature's parameters are this signature's own slots —
+    // The bounds, gathered from every occurrence (the nested ones included,
+    // because a nested signature's parameters are this signature's own slots)
     // and written once, at the declaring signature. A name two occurrences
     // bound differently is two claims about one thing: a signature the link
     // refuses has no document.
@@ -409,8 +408,8 @@ public struct Writer: Sendable {
         return bounds.isEmpty ? nil : .dictionary(bounds)
     }
 
-    // One fact — only a type with a spelling of its own composes — said with
-    // the place the author wrote, so the refusal points at their text.
+    // One fact (only a type with a spelling of its own composes) said with the
+    // place the author wrote, so the refusal points at their text.
     private func spelt(_ type: TypeExpression, at context: String) throws -> String {
         guard case let .string(name) = try value(of: type) else {
             throw WritingError("only a type with a name is written \(context)")

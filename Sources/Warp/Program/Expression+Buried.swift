@@ -13,22 +13,22 @@ import Foundation
 // Three of them ask for exactly this and differ only in what they keep: the
 // declaration scan wants the closure literals a body buries, the same scan
 // wants the shapes its casts name, and the check wants the selectors a module
-// sends. Written out per collector, one shape of the language is
-// written three times — and a case added to `Expression` reaches whichever
-// copies somebody remembered.
+// sends. Written out per collector, one shape of the language is written three
+// times, and a case added to `Expression` reaches whichever copies somebody
+// remembered.
 //
 // Where a thing was found is the caller's to name. A stage that reports has a
-// place to extend, and a stage that only gathers has nothing to carry — so
-// where a thing is travels as a value the caller hands in, along with how to
-// step into one, and the caller wanting nowhere hands in nothing.
+// place to extend, and a stage that only gathers has nothing to carry, so where
+// a thing is travels as a value the caller hands in, along with how to step
+// into one, and the caller wanting nowhere hands in nothing.
 //
 // A step is a `Place.Step` rather than a word, because a statement is found by
 // its name and by its position and only one of those is always there. Handing
 // the step over whole is what lets a caller keep both; a word would have made
 // this walk choose between them on every stage's behalf.
 
-// What a walk finds: a statement, or an expression. A stage keeps the one it
-// is after and the walk keeps neither — what is buried where is a fact of the
+// What a walk finds: a statement, or an expression. A stage keeps the one it is
+// after and the walk keeps neither. What is buried where is a fact of the
 // language, and which of it matters is the stage's own question.
 public enum Buried: Sendable {
     case statement(Statement)
@@ -36,9 +36,9 @@ public enum Buried: Sendable {
 }
 
 // What can be walked for everything it holds. Three types answer it, and the
-// convenient ways to ask are written once here rather than three times
-// over — the same duplication this file exists to remove, at the smaller
-// scale where it is easy not to notice.
+// convenient ways to ask are written once here rather than three times over.
+// The same duplication this file exists to remove, at the smaller scale where
+// it is easy not to notice.
 public protocol Burying {
     // Everything held in here, each with where it was found.
     func walked<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail) -> [(Trail, Buried)]
@@ -105,10 +105,10 @@ public extension Expression {
 
         // What a call is written with, walked in name order and each given its
         // own place. Order because a `Dictionary` walks in whatever order its
-        // seed decided, and the stages downstream stop at the first refusal —
+        // seed decided, and the stages downstream stop at the first refusal,
         // which one an author is shown would be a fact of the run rather than
-        // of the text. Its own place because two of them reported from the
-        // same one would say a thing is wrong and not say which.
+        // of the text. Its own place because two of them reported from the same
+        // one would say a thing is wrong and not say which.
         func arguments(_ children: [Name: Expression]) -> [(Trail, Buried)] {
             named(children, under: stepping(here, .slot(.arguments)))
         }
@@ -188,8 +188,8 @@ public extension Block {
 }
 
 public extension [Statement] {
-    // A statement is found under its own name — or, one run for its effect
-    // alone, under its position, which is the only thing there is to call it —
+    // A statement is found under its own name (or, one run for its effect
+    // alone, under its position, which is the only thing there is to call it)
     // and then under the construct it writes, the way a document nests it.
     func walked<Trail>(
         at trail: Trail,

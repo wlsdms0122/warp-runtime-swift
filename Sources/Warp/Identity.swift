@@ -24,7 +24,7 @@ import Foundation
 // impossible to write down wrongly. Two callers holding the same document work
 // out the same answer without having agreed on anything but the language.
 //
-// Deriving it is `WarpSyntax`'s — the canonical bytes are the one form a
+// Deriving it is `WarpSyntax`'s. The canonical bytes are the one form a
 // document already has exactly one of, and reusing them is how a second
 // implementation gets this right by getting the wire right. This type is here
 // so that a place can carry one without the language learning how bytes are
@@ -47,7 +47,7 @@ public struct Identity: Sendable, Equatable, Hashable {
     // MARK: - Initializer
     // Not public. What makes an identity worth having is that it is derived and
     // never declared, and a public door taking any bytes at all is a way to
-    // declare one — a caller could assemble a place addressing a document it
+    // declare one. A caller could assemble a place addressing a document it
     // never held. `Identity.of` is the only way in from outside, and it takes a
     // document.
     package init(_ bytes: [UInt8]) {

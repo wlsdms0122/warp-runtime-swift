@@ -10,8 +10,8 @@ import Warp
 
 // Walking an array with a procedure the caller wrote. Each declares its
 // procedure parameter `pure procedure`, so what arrives is something the link
-// proved answers without running — which is what lets these be words rather
-// than constructs the grammar had to grow.
+// proved answers without running, which is what lets these be words rather than
+// constructs the grammar had to grow.
 //
 // What a walk hands the procedure it was given is named the way `iteration`
 // names what it binds: the element is `item`, and a reduction's answer so far is
@@ -42,7 +42,7 @@ public struct WalkingQuery: Query {
 
         switch walk {
         // What the procedure answered is its own value, whatever it was reached
-        // from — which is why the declaration names a second parameter for it
+        // from, which is why the declaration names a second parameter for it
         // and why the receiver's spelling has nothing to say here.
         case .map:
             return .array(
@@ -51,7 +51,7 @@ public struct WalkingQuery: Query {
                 }
             )
 
-        // The receiver's own elements, fewer of them — so the spelling stands.
+        // The receiver's own elements, fewer of them, so the spelling stands.
         case .filter:
             return receiver.respelled(
                 try elements.filter { element in

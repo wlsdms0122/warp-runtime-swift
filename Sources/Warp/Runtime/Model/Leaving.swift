@@ -9,12 +9,12 @@ import Foundation
 
 // A run on its way somewhere further out.
 //
-// It travels the way a failure does because the shape is the same — everything
-// between here and where it lands is abandoned — but it is not a failure, and
-// the difference is load-bearing: `attempt` catches what the world did, and this
-// is what the program said. Leaving a body an `attempt` was watching runs no
-// rescue, which is the whole reason the language needed this and could not go on
-// borrowing the failure channel to say it.
+// It travels the way a failure does because the shape is the same (everything
+// between here and where it lands is abandoned) but it is not a failure, and
+// the difference is load-bearing: `attempt` catches what the world did, and
+// this is what the program said. Leaving a body an `attempt` was watching runs
+// no rescue, which is the whole reason the language needed this and could not
+// go on borrowing the failure channel to say it.
 //
 // Nothing catches it but the construct it names. Reaching a boundary that does
 // not answer to it is impossible rather than unhandled: a body may only write

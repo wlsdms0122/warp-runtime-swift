@@ -12,7 +12,7 @@ import Warp
 //
 // It is worth having as its own kind of refusal. A notation is a table of
 // spellings and a set of forms, so what it cannot say is a fact about that
-// table — and the only way to find out what a table leaves unsaid is to try to
+// table, and the only way to find out what a table leaves unsaid is to try to
 // write every shape through it.
 public struct WritingError: WarpError {
     // MARK: - Property

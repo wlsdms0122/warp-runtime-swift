@@ -9,14 +9,15 @@ import Foundation
 
 // A declaration: what it is sent, what it answers with, and how it does that.
 //
-// It has no name of its own — a procedure's name is the key it is declared under
-// in its `Module`, the same way a symbol's name is not stored inside the function
-// it names. Which of them a run starts from is decided at link time, so every
-// declaration is equally a procedure and none of them is the procedure.
+// It has no name of its own. A procedure's name is the key it is declared under
+// in its `Module`, the same way a symbol's name is not stored inside the
+// function it names. Which of them a run starts from is decided at link time,
+// so every declaration is equally a procedure and none of them is the
+// procedure.
 //
 // A signature and an implementation, and nothing else. The implementation is a
 // body of statements or native code, and that axis is the only thing that used
-// to separate this from a "library word" — which is why there is no library any
+// to separate this from a "library word", which is why there is no library any
 // more, and no second name table, and no second lookup order.
 public struct Procedure: Sendable {
     // MARK: - Property

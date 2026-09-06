@@ -9,8 +9,8 @@ import Foundation
 
 // Where a record's fields are: the name it settled to, where it has one, and
 // the field names in the order the values stand. The order is the language's,
-// not a maker's — ascending by the names' bytes — so a layout built by a link,
-// a reader or a host is the same layout for the same fields.
+// not a maker's (ascending by the names' bytes) so a layout built by a link, a
+// reader or a host is the same layout for the same fields.
 //
 // A name is part of the layout, so `Account` and `Vault` are two layouts over
 // one set of fields. What a field holds is not: `{title: string}` and

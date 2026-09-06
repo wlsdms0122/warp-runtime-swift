@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The signature-level `bounds:` key — which constraint each type parameter is
+// The signature-level `bounds:` key, which constraint each type parameter is
 // bounded by, declared once where the parameter's name lives:
 //
 //   bounds: { N: Numeric }
@@ -18,7 +18,7 @@ import Warp
 // one bound is one claim however many slots mention the name.
 enum BoundsReader {
     // The signature with its bounds applied, and the check that every bound
-    // names a parameter some slot mentions — a bound on a name nobody wrote
+    // names a parameter some slot mentions. A bound on a name nobody wrote
     // binds nothing, which is a claim the author should hear about where they
     // wrote it.
     static func apply(
@@ -28,8 +28,8 @@ enum BoundsReader {
     ) throws -> Signature {
         guard let bounds, !bounds.isEmpty else { return signature }
 
-        // A bound is only ever a name — the membership lives in a declaration,
-        // not in a signature — so a shape here is refused where it was written
+        // A bound is only ever a name (the membership lives in a declaration,
+        // not in a signature) so a shape here is refused where it was written
         // rather than surfacing later as a name nothing declares. The same
         // predicate the slot's `some T` spelling is held to.
         for (parameter, constraint) in bounds.sorted(by: { $0.key < $1.key }) {

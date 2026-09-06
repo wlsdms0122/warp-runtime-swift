@@ -10,13 +10,13 @@ import Warp
 
 // How a document spells a type. Two shapes, because a type has two:
 //
-//   string / any / procedure   — a built-in, by its own name
-//   array<string>              — a built-in applied to another type
-//   dictionary<Task>               — the same, for a map of string keys
-//   Task                       — a name some module declares
-//   { id: string, done: bool } — a record, written as the record it describes
+//   string / any / procedure  . A built-in, by its own name
+//   array<string>             . A built-in applied to another type
+//   dictionary<Task>              . The same, for a map of string keys
+//   Task                      . A name some module declares
+//   { id: string, done: bool }. A record, written as the record it describes
 //   { procedure: { parameters:, returns: } }
-//                              — a procedure, written as the signature it takes.
+//                             . A procedure, written as the signature it takes.
 //                                Bare `procedure` says only that it is one
 //
 // A record is a mapping and a parameter is also written as a mapping, which
@@ -44,7 +44,7 @@ public struct TypeReader: Decodable {
 
         // A record and a procedure are both mappings, so one of them has to be
         // told apart by its key. A single `procedure` key is the procedure
-        // form; anything else is a record — and a record cannot have a lone
+        // form; anything else is a record, and a record cannot have a lone
         // field by that name, which the writer refuses to produce for the same
         // reason. The form is committed by its key *before* the signature is
         // read, so a malformed signature refuses as the procedure type it
@@ -87,10 +87,10 @@ public struct TypeReader: Decodable {
 
         // A trailing `?` reads first because it wraps the whole spelling:
         // `array<int>?` is a nullable array, and what may be inside the
-        // brackets never carries one — `?` speaks about a slot, and only the
-        // whole spelling is one.
-        // `inout` and `var` stand in front of the whole type, including a
-        // trailing `?`, so they are read before anything else is.
+        // brackets never carries one. `?` speaks about a slot, and only the
+        // whole spelling is one. `inout` and `var` stand in front of the whole
+        // type, including a trailing `?`, so they are read before anything else
+        // is.
         for (word, wrap) in Self.slotWords {
             guard let bare = text.dropPrefixed("\(word) ") else { continue }
 
@@ -139,7 +139,7 @@ public struct TypeReader: Decodable {
                 )
 
             // A type parameter stands for what the call puts there, and what
-            // the call puts there is a type of its own — nullability rides on
+            // the call puts there is a type of its own. Nullability rides on
             // the filling, not on the mention.
             case .parameter:
                 throw TypeFormError(
@@ -154,13 +154,12 @@ public struct TypeReader: Decodable {
 
         // Purity is a word in front rather than an argument, because it says
         // what a slot requires of the whole procedure rather than of a part of
-        // it — the same place a reader expects an adjective.
-        // A type parameter rather than a name: `some T` is worked out from the
-        // call, where `T` alone would be looked up in the table of declared
-        // types. A slot only names the parameter — its constraint is declared
-        // once, in the signature's `bounds`, because the signature owns what
-        // its names mean and a bound repeated per slot is one claim written
-        // several times.
+        // it. The same place a reader expects an adjective. A type parameter
+        // rather than a name: `some T` is worked out from the call, where `T`
+        // alone would be looked up in the table of declared types. A slot only
+        // names the parameter. Its constraint is declared once, in the
+        // signature's `bounds`, because the signature owns what its names mean
+        // and a bound repeated per slot is one claim written several times.
         if text == "some" || text.hasPrefix("some ") {
             let bare = text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)
 
@@ -180,12 +179,12 @@ public struct TypeReader: Decodable {
         }
 
 
-        // A range is spelled into the name: `int(0...255)`, `double(0.0..<1.0)`
-        // — either bound optional but not both, and `..<` leaving the far
-        // bound outside. Only a number takes one: a range is a condition on a
-        // number, and no other kind is one. Which kind is written out, because
-        // a bound is a value of the kind it bounds and the two read their
-        // spellings differently.
+        // A range is spelled into the name: `int(0...255)`,
+        // `double(0.0..<1.0)`. Either bound optional but not both, and `..<`
+        // leaving the far bound outside. Only a number takes one: a range is a
+        // condition on a number, and no other kind is one. Which kind is
+        // written out, because a bound is a value of the kind it bounds and the
+        // two read their spellings differently.
         for kind in ["int", "double"] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
             let inner = String(text.dropFirst("\(kind)(".count).dropLast())
 
@@ -347,18 +346,18 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // One word with nothing structural in it — what a type parameter's
-    // spelling has to be, and what a `bounds` value has to be: the two halves
-    // of one notation, held to one predicate.
+    // One word with nothing structural in it. What a type parameter's spelling
+    // has to be, and what a `bounds` value has to be: the two halves of one
+    // notation, held to one predicate.
     static func isName(_ text: String) -> Bool {
         !text.isEmpty && !text.contains("<") && !text.contains(">")
             && !text.contains(" ") && !text.contains(":")
     }
 
     // MARK: - Private
-    // One value, one spelling — a padded or signed-zero bound would be a
-    // second spelling of the same range — and the two whole-number refusals
-    // are different facts, told apart by the one reading the grammar lives in.
+    // One value, one spelling (a padded or signed-zero bound would be a second
+    // spelling of the same range) and the two whole-number refusals are
+    // different facts, told apart by the one reading the grammar lives in.
     private static func whole(_ written: Substring, of text: String) throws -> Int? {
         guard !written.isEmpty else { return nil }
 
@@ -380,8 +379,8 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // A fraction bound reads a fraction's one spelling — the same door the
-    // boundary and the writer read — so `1` bounds a whole range and `1.0` a
+    // A fraction bound reads a fraction's one spelling (the same door the
+    // boundary and the writer read) so `1` bounds a whole range and `1.0` a
     // fraction one, and neither spells the other's.
     private static func fraction(_ written: Substring, of text: String) throws -> Double? {
         guard !written.isEmpty else { return nil }
@@ -420,7 +419,7 @@ public struct TypeReader: Decodable {
         "bytes": .bytes,
         // Whole or fraction, for a slot that means both.
         "number": .number,
-        // Bare, these mean "a list of anything" and "a map of anything" — the
+        // Bare, these mean "a list of anything" and "a map of anything". The
         // most a declaration could say before it could say more.
         "array": .array(.any),
         "dictionary": .dictionary(.any),
@@ -442,8 +441,8 @@ private extension String {
 private struct SignatureFormReader: Decodable {
     // No `bounds` here on purpose: a nested signature's parameters are the
     // declaring procedure's own slots, so the declaring signature owns every
-    // bound — two `bounds` records binding one name would be two claims
-    // about one thing, written a document apart.
+    // bound. Two `bounds` records binding one name would be two claims about
+    // one thing, written a document apart.
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case receiver

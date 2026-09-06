@@ -12,21 +12,21 @@ import Foundation
 // `returns` is optional because a declaration nobody wrote stays
 // distinguishable from one somebody wrote, and for a long time the difference
 // cost a call site nothing: an unwritten answer read as `any`, and `any` was
-// accepted everywhere. It stopped being free when `any` became opaque — a dot
-// on what such a call answers is refused, and the author is asked to write
-// down a shape the body already states.
+// accepted everywhere. It stopped being free when `any` became opaque. A dot on
+// what such a call answers is refused, and the author is asked to write down a
+// shape the body already states.
 //
 // So the body is read. Not into the declaration: what the author wrote is
 // what the image carries and what the boundary checks, and an answer worked
 // out here is the link's own reading rather than anybody's promise. It reaches
 // exactly as far as the readings do.
 //
-// A body's answer may be another body's, so the order is the call graph's —
-// each declaration read after everything its answer could come from. Bodies
-// that reach one another's answers in a circle, a recursive one included, are
-// read as `any`: an answer worked out from itself is not one the text states,
-// and a guess there would be a refusal an author cannot act on. Writing
-// `returns` is what says more, and it removes the circle by saying it.
+// A body's answer may be another body's, so the order is the call graph's. Each
+// declaration read after everything its answer could come from. Bodies that
+// reach one another's answers in a circle, a recursive one included, are read
+// as `any`: an answer worked out from itself is not one the text states, and a
+// guess there would be a refusal an author cannot act on. Writing `returns` is
+// what says more, and it removes the circle by saying it.
 extension Linker {
     // MARK: - Internal
     // A declaration whose answer nobody wrote, with what it takes to read one
@@ -44,9 +44,9 @@ extension Linker {
         let sends: Set<Name>
     }
 
-    // Every unwritten answer, read off its body, one at a time in the order
-    // the call graph allows — each handed back as it is worked out, and the
-    // frame asked for again, so the next body is read against it.
+    // Every unwritten answer, read off its body, one at a time in the order the
+    // call graph allows. Each handed back as it is worked out, and the frame
+    // asked for again, so the next body is read against it.
     //
     // Handed back rather than returned in a heap: the tables a frame is made
     // of are the link's, one answer changes one entry in each, and rebuilding
@@ -93,20 +93,19 @@ extension Linker {
 
             // A reading naming a type parameter is handed on as it is. What a
             // parameter means is settled at the call, by the same filling a
-            // declared `returns: some T` goes through — so a body answering
-            // its own parameter answers what the caller put there, and a body
+            // declared `returns: some T` goes through, so a body answering its
+            // own parameter answers what the caller put there, and a body
             // answering a shape only it could name (what a walk *through* a
-            // parameter reaches, named for the path that reached it) fills
-            // with nothing, which is `any`. One rule, and the useful half
-            // comes for free.
+            // parameter reaches, named for the path that reached it) fills with
+            // nothing, which is `any`. One rule, and the useful half comes for
+            // free.
             recording(only.symbol.declared, read ?? .any)
         }
     }
 
     // Which declarations a body may read an answer from. Every selector it
-    // sends, and every name a path writes that a walk could reach a word by —
-    // a path sends words too, and a word's answer is an answer like any
-    // other.
+    // sends, and every name a path writes that a walk could reach a word by. A
+    // path sends words too, and a word's answer is an answer like any other.
     //
     // Read off the one walk `Expression` owns, and read wide: a name gathered
     // that turns out not to be a send only ever adds an edge, and an edge

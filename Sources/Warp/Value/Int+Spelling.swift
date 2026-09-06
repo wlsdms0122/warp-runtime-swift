@@ -24,7 +24,7 @@ extension Int {
     public static func reading(_ fraction: Double) -> WordReading {
         guard !fraction.isNaN else { return .notANumber }
 
-        // Infinity has a whole part, and it is past every word — the overflow
+        // Infinity has a whole part, and it is past every word. The overflow
         // fact, not the no-number one.
         guard fraction.isFinite else { return .pastTheWord }
 
@@ -36,10 +36,10 @@ extension Int {
     }
 
     // How a piece of text reads as a whole number's one spelling. The two
-    // failures are different facts — text that is not the one spelling of
-    // any whole number, and the one spelling of a whole number no int
-    // holds — and every reader of a spelled whole names the one that
-    // happened, so the grammar lives here alone.
+    // failures are different facts (text that is not the one spelling of any
+    // whole number, and the one spelling of a whole number no int holds) and
+    // every reader of a spelled whole names the one that happened, so the
+    // grammar lives here alone.
     public enum Spelled {
         case word(Int)
         case notOneSpelling
@@ -60,7 +60,7 @@ extension Int {
 
     // One value, one spelling: a candidate written `+1` or `007` is a second
     // spelling of a number that already has one, so reading it back must
-    // reproduce the text exactly — `Int.init(_:)` alone accepts the aliases.
+    // reproduce the text exactly. `Int.init(_:)` alone accepts the aliases.
     // Public because the document readers hold the same line.
     public init?(spelling: String) {
         guard case let .word(number) = Int.reading(spelling: spelling) else { return nil }

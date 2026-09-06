@@ -7,8 +7,8 @@
 
 import Foundation
 
-// What being a name costs: one spelling. Unicode writes `é` two ways — one
-// scalar, or `e` plus a combining mark — and the two look identical while
+// What being a name costs: one spelling. Unicode writes `é` two ways (one
+// scalar, or `e` plus a combining mark) and the two look identical while
 // comparing as different bytes. A name is normal form C or it is refused, so a
 // declaration and a reference can only meet by being the same bytes.
 //
@@ -88,9 +88,9 @@ public struct Name: Sendable, Hashable, Comparable {
         self.spelling = spelling
     }
 
-    // A spelling this package built out of parts that are already normal —
-    // a segment of a name, or ASCII written in this source. The door above is
-    // the one every spelling from outside comes through, and this one is not
+    // A spelling this package built out of parts that are already normal. A
+    // segment of a name, or ASCII written in this source. The door above is the
+    // one every spelling from outside comes through, and this one is not
     // reachable from outside the package.
     package init(normal spelling: String) {
         self.spelling = spelling
@@ -156,10 +156,10 @@ public struct Name: Sendable, Hashable, Comparable {
 }
 
 // A name written in Swift. The spelling is source an author typed, so a
-// spelling that is not a name is a mistake being made where it can be read,
-// and there is nothing to answer with — the same reaction a duplicate key in a
-// value literal gets. A spelling that arrived from anywhere else goes through
-// the throwing door.
+// spelling that is not a name is a mistake being made where it can be read, and
+// there is nothing to answer with. The same reaction a duplicate key in a value
+// literal gets. A spelling that arrived from anywhere else goes through the
+// throwing door.
 extension Name: ExpressibleByStringLiteral {
     public init(stringLiteral spelling: String) {
         do {

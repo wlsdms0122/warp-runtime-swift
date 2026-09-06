@@ -9,10 +9,10 @@ import Foundation
 
 // One member of a `oneOf`, read against the slot's shape once at the link.
 //
-// Two readings, because an argument arrives as either. A settled value with
-// a scalar spelling is compared by that spelling, and a number is compared by
-// worth — so a slot that names no numeric kind still matches `1` against an
-// int, and `-0.0` is in a list that writes `0.0`.
+// Two readings, because an argument arrives as either. A settled value with a
+// scalar spelling is compared by that spelling, and a number is compared by
+// worth, so a slot that names no numeric kind still matches `1` against an int,
+// and `-0.0` is in a list that writes `0.0`.
 struct Candidate: Sendable {
     // MARK: - Property
     // What a document wrote, and what a scalar argument's own spelling is

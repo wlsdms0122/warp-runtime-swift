@@ -11,11 +11,11 @@ import Warp
 // What a document is refused with while it is being read.
 //
 // It carries the two halves of a place separately, because they are known at
-// different moments. The steps are known where the refusal happens — the walk
-// is there, and only there — and which document is being read is known at the
-// door the value came through. So the reading says where it got to, the door
-// says what it was reading, and neither has to hold the other's answer to say
-// its own.
+// different moments. The steps are known where the refusal happens (the walk is
+// there, and only there) and which document is being read is known at the door
+// the value came through. So the reading says where it got to, the door says
+// what it was reading, and neither has to hold the other's answer to say its
+// own.
 //
 // Until a door says, there is no document and the place is nothing rather than
 // an empty one: a refusal that has not reached a door has not been told, and a
@@ -89,10 +89,10 @@ public struct ReadingError: WarpError {
         return ReadingError(message, at: steps, in: document)
     }
 
-    // The same refusal, addressed from where it was asked for — for what
-    // refuses somewhere with no address to give. A refusal that has one keeps
-    // it: where it happened is deeper than where it was asked for, and the
-    // deeper answer is the true one.
+    // The same refusal, addressed from where it was asked for. For what refuses
+    // somewhere with no address to give. A refusal that has one keeps it: where
+    // it happened is deeper than where it was asked for, and the deeper answer
+    // is the true one.
     func asked(at steps: [Place.Step]) -> ReadingError {
         self.steps.isEmpty ? ReadingError(message, at: steps, in: document) : self
     }

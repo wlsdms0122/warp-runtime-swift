@@ -9,8 +9,8 @@ import Foundation
 
 // Writing a value in Swift.
 //
-// Swift's own literals already spell seven of the eight shapes, and each maps to
-// exactly one case, so this is a spelling and not a conversion — `"a"` is
+// Swift's own literals already spell seven of the eight shapes, and each maps
+// to exactly one case, so this is a spelling and not a conversion. `"a"` is
 // `.string("a")` for the same reason `"a"` is a `String`. Nothing here reads
 // structure out of a string: a path is still `[PathSegment]` and a reference is
 // still an `Expression`, because the language does not re-parse text into
@@ -19,8 +19,8 @@ import Foundation
 // Two shapes have no literal. A procedure is made by capturing a scope, which
 // happens during a run, so nothing written down can name one.
 //
-// `null` is spelled `.null` and never `nil`. They are not the same fact — `nil`
-// is a slot with nothing in it and `.null` is a value a program computed — and a
+// `null` is spelled `.null` and never `nil`. They are not the same fact (`nil`
+// is a slot with nothing in it and `.null` is a value a program computed) and a
 // language where a parameter may or may not have a default has to keep them
 // apart.
 extension Value: ExpressibleByBooleanLiteral {

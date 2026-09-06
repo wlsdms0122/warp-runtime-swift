@@ -9,36 +9,36 @@ import Foundation
 import Warp
 
 // The expression grammar. `Expression` has shapes and no spelling; this is the
-// spelling — no front end may hide an expression inside a string, so any
+// spelling. No front end may hide an expression inside a string, so any
 // notation that can write a record can write every expression:
 //
-//   scalar             — a literal, and strings are always literal text
-//   { ref: a.b[0] }    — a name to resolve in the consuming scope
-//   { value: <data> }  — the escape for data that looks like a form. It builds
+//   scalar            . A literal, and strings are always literal text
+//   { ref: a.b[0] }   . A name to resolve in the consuming scope
+//   { value: <data> } . The escape for data that looks like a form. It builds
 //                        a plain literal: quotation is a fact about this
 //                        notation, not about the expression it writes
-//   { format:, with: } — closed interpolation: the template sees only its
+//   { format:, with: }. Closed interpolation: the template sees only its
 //                        declared bindings, nothing from the ambient scope
 //   { closure: <procedure> }
-//                      — a procedure written where a value is wanted. An
+//                     . A procedure written where a value is wanted. An
 //                        expression rather than a construct because that is
 //                        where one is needed: a closure is written as an
 //                        argument far more often than as a statement
-//   { call: <message> } — a message where a value is wanted. The same form a
+//   { call: <message> }. A message where a value is wanted. The same form a
 //                        statement writes, and here because the language puts
 //                        no such limit on it: every spelling that stands in for
 //                        a word builds one of these somewhere inside an
 //                        expression, so a document that could only write one as
 //                        a statement could not say plainly what its own
 //                        spellings mean
-//   record / array     — elements are expressions
+//   record / array    . Elements are expressions
 //
-// A string is never re-parsed into anything live — the injection surface the
-// old `${}` grammar carried does not exist here.
+// A string is never re-parsed into anything live. The injection surface the old
+// `${}` grammar carried does not exist here.
 public struct ExpressionReader: Decodable {
     // MARK: - Property
-    // The keys that make a record an expression form. A record that
-    // carries one of these as plain data must be quoted — `{ value: ... }`.
+    // The keys that make a record an expression form. A record that carries one
+    // of these as plain data must be quoted. `{ value: ... }`.
     //
     // Fixed, where construct words are a `ConstructRegistry` a caller composes. The
     // asymmetry is deliberate, and this set is why: it is the quoting boundary.
@@ -57,7 +57,7 @@ public struct ExpressionReader: Decodable {
     static let closureKey: Name = "closure"
 
     // What a cast reads and what a message is sent to are written under one
-    // key, and the two readers meet only in the text — so the word is here
+    // key, and the two readers meet only in the text, so the word is here
     // rather than in each of them.
     static let subjectKey: Name = "of"
 
@@ -87,7 +87,7 @@ public struct ExpressionReader: Decodable {
     // like any other and it records where it is like any other. The decoder
     // stops at the key the expression is written under and everything below
     // that is this walk's own descent, which is why the steps travel here as
-    // well as in the decoder — a walk that carried only the decoder's would
+    // well as in the decoder. A walk that carried only the decoder's would
     // answer for a record ten fields deep with the address of the record.
     //
     // This is also where the grammar's refusal is given an address. It is
@@ -124,7 +124,7 @@ public struct ExpressionReader: Decodable {
                 return try read(record: record.asDictionary, at: steps, in: decoder)
 
             // A document is text. Nothing it parses to is ever a procedure, so
-            // this arm is unreachable rather than unwritten — a closure reaches
+            // this arm is unreachable rather than unwritten. A closure reaches
             // the language by being spelled, and spelling it is a form.
             case .procedure:
                 throw ExpressionFormError("a document cannot contain a procedure value")
@@ -315,7 +315,7 @@ public struct ExpressionReader: Decodable {
 
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
-        // says a document may not write it — it does not hand the words back to
+        // says a document may not write it. It does not hand the words back to
         // mean something else, which is why the set of form keys is the same in
         // every notation whether or not each one is offered.
         let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
@@ -328,7 +328,8 @@ public struct ExpressionReader: Decodable {
         }
 
         guard record.names.contains("format") else {
-            // Only `with` remains — with is format's companion, meaningless alone.
+            // Only `with` remains, with is format's companion, meaningless
+            // alone.
             throw ExpressionFormError(
                 "`with` only accompanies `format` — wrap the record in"
                     + " { value: ... } if the keys are plain data"
@@ -429,7 +430,7 @@ public struct ExpressionReader: Decodable {
     //
     // Every name in the path is substituted, not only the head. An index
     // reference is a path of its own inside this one, and leaving it as written
-    // would have it read from whatever scope the statement runs in — which is
+    // would have it read from whatever scope the statement runs in, which is
     // the one thing a closed template must never do, and which `validateClosed`
     // has already made the author declare a binding for.
     private static func substituted(

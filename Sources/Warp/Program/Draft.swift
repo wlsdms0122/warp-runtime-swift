@@ -13,8 +13,8 @@ import Foundation
 // checking is.
 //
 // It exists because two questions are asked of one text and only one of them is
-// about the program. What a document *is* — which is what telling one document
-// from another is done on — is answered by writing it back out, and a document
+// about the program. What a document *is* (which is what telling one document
+// from another is done on) is answered by writing it back out, and a document
 // with a name nothing declares is still a document. So the writing takes a
 // draft, and a text nobody can run still has a canonical form and an identity.
 public struct Draft: Sendable {
@@ -57,7 +57,7 @@ public struct Draft: Sendable {
 
     // The words this declares and does not itself declare a procedure for.
     //
-    // Sent, not reached. A path reaches words too — `x.count` is one — but only
+    // Sent, not reached. A path reaches words too (`x.count` is one) but only
     // ones that answer without running, since that is the whole of what makes a
     // path safe to walk. So this is everything the program can do that touches
     // anything, and a caller reading it is reading the bounds of what it is

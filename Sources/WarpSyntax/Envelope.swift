@@ -10,24 +10,25 @@ import Warp
 
 // What a document says about itself before anything reads what it says.
 //
-// A program that stays where it was built needs none of this — the thing that
-// built it is the thing that runs it. A program that travels does: it arrives at
-// something that may be older than the program is, may not have the words the
-// program calls, and cannot ask the sender anything. Both questions have to be
-// answerable from the bytes alone, and both have to be answerable *before* the
-// program runs, because half-running one is worse than refusing it.
+// A program that stays where it was built needs none of this. The thing that
+// built it is the thing that runs it. A program that travels does: it arrives
+// at something that may be older than the program is, may not have the words
+// the program calls, and cannot ask the sender anything. Both questions have to
+// be answerable from the bytes alone, and both have to be answerable *before*
+// the program runs, because half-running one is worse than refusing it.
 public enum Envelope {
     // MARK: - Property
     // Which shapes a reader has to understand. It goes up when a shape is added
-    // or an existing one changes what it means, and does not move for a new word
-    // — a word is vocabulary, and vocabulary is what `imports` is for.
+    // or an existing one changes what it means, and does not move for a new
+    // word. A word is vocabulary, and vocabulary is what `imports` is for.
     //
-    // Every document says it. A reader that filled in a default would be reading
-    // a document that never said which language it was written for, and a file
-    // that is not a document at all would get as far as having its keys judged —
-    // turned away for being a malformed module rather than for not being one.
+    // Every document says it. A reader that filled in a default would be
+    // reading a document that never said which language it was written for, and
+    // a file that is not a document at all would get as far as having its keys
+    // judged. Turned away for being a malformed module rather than for not
+    // being one.
     //
-    // Nothing has shipped, so there is nothing old to hold a number for — every
+    // Nothing has shipped, so there is nothing old to hold a number for. Every
     // change before the first release folds into this one. The counter starts
     // moving when a document exists somewhere this code does not control.
     public static let version = 1

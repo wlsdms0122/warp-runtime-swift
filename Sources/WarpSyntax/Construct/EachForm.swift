@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The material ends this repetition — one round per element, so termination is
+// The material ends this repetition. One round per element, so termination is
 // structural and no budget exists. A walk answers nothing: a pure mapping is
 // `std.collection.map`'s to say, and an effectful round with something to keep
 // writes it to an outer variable.

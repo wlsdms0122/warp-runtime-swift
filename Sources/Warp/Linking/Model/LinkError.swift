@@ -8,7 +8,7 @@
 import Foundation
 
 // Deliberately not a `RecoverableFailure`. A call that names nothing, or calls
-// with arguments the callee never declared, is an author mistake — absorbing it
+// with arguments the callee never declared, is an author mistake. Absorbing it
 // into a rescue path would hide the one class of defect linking exists to find.
 public struct LinkError: WarpError {
     // MARK: - Property
@@ -20,7 +20,7 @@ public struct LinkError: WarpError {
     // fix goes.
     //
     // Two modules declaring one name is two places, and the refusal is
-    // addressed to the second — the declaration that cannot be added — with the
+    // addressed to the second (the declaration that cannot be added) with the
     // first named in the sentence. A link holds several documents and only the
     // caller knows which file each arrived in, so a refusal that named neither
     // would send it opening all of them.
@@ -29,7 +29,7 @@ public struct LinkError: WarpError {
     // anything in it: the same text handed over twice.
     //
     // Nil is for what no address is known for, said out loud rather than left
-    // to a default — the entry, which is an argument to linking and written in
+    // to a default. The entry, which is an argument to linking and written in
     // no text.
     public init(_ message: String, at place: Place?) {
         self.message = message

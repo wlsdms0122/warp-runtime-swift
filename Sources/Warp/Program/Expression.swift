@@ -13,21 +13,21 @@ import Foundation
 //
 // The data shapes:
 //
-//   literal    — a `Value`, verbatim. The type system already says what data
+//   literal   . A `Value`, verbatim. The type system already says what data
 //                is, so an expression does not restate it
-//   reference  — a name to resolve in the consuming scope. A name the scope
+//   reference . A name to resolve in the consuming scope. A name the scope
 //                does not hold reads as null
-//   array      — elements are expressions
-//   record     — fields are expressions
-//   dispatch   — a message: a selector, a receiver, arguments. The one calling
+//   array     . Elements are expressions
+//   record    . Fields are expressions
+//   dispatch  . A message: a selector, a receiver, arguments. The one calling
 //                shape, and the only open one
 //
 // The control shapes carry a `Block` and, where a name has to exist inside that
-// block, the name itself — so an expression means the same thing wherever it
+// block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the id of whatever bound it.
 //
 // `dispatch` is the one open case. A procedure, a bundled word and a caller's
-// own all lower to it, because they differ only in where the selector is found —
+// own all lower to it, because they differ only in where the selector is found,
 // and finding it is the link's job, not the grammar's.
 //
 // There is no operator here. Equality, negation and the connectives are words
@@ -54,31 +54,31 @@ public indirect enum Expression: Sendable {
     case invoke(Expression, arguments: [Name: Expression])
 
     // Reading a value as a shape the text names. `any` declares nothing, so a
-    // dot on one is refused at the link — this is the door: the author says
-    // what they expect, the link judges every dot after it against that, and
-    // the run asks the arriving value the one question the link could not.
+    // dot on one is refused at the link. This is the door: the author says what
+    // they expect, the link judges every dot after it against that, and the run
+    // asks the arriving value the one question the link could not.
     //
     // The `?` axis is `?.`'s, on a cast: a plain one refuses at the run what
     // did not arrive as the named shape, and an optional one reads that
-    // mismatch as null the way `?.` reads an absence — so the reading is `T?`
+    // mismatch as null the way `?.` reads an absence, so the reading is `T?`
     // and the author says which of the two they meant.
     case cast(Expression, as: TypeExpression, optional: Bool)
 
     case block(Block)
     // A branch is a statement: it answers nothing, so its arms are statements
     // alone, the way a walk's body is. What an arm keeps it writes to an outer
-    // variable, and a value leaves through `return` — a condition chooses a
-    // way through the body, not a value.
+    // variable, and a value leaves through `return`. A condition chooses a way
+    // through the body, not a value.
     case conditional(Expression, then: [Statement], else: [Statement]?)
     // Repetition carries no budget of its own. Bounding a loop is the author's
-    // to write — a counter and `std.control.abort` say it exactly — and
-    // stopping one is the receiver's cancellation; a kernel budget would
-    // promise neither side anything it can rely on.
+    // to write (a counter and `std.control.abort` say it exactly) and stopping
+    // one is the receiver's cancellation; a kernel budget would promise neither
+    // side anything it can rely on.
     case loop(while: Expression, body: Block, round: Name)
-    // The one repetition whose body is statements alone — a walk answers
+    // The one repetition whose body is statements alone. A walk answers
     // nothing. A pure mapping is `std.collection.map`'s to say; an effectful
-    // round with something to keep writes it to an outer variable. Either
-    // way, nothing is the walk's own answer.
+    // round with something to keep writes it to an outer variable. Either way,
+    // nothing is the walk's own answer.
     case iteration(over: Expression, body: [Statement], element: Name)
     case attempt(Block, rescue: Block, failure: Name)
     case dispatch(Dispatch)
@@ -119,7 +119,7 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // The path of a plain reference — an effect that requires one names it
+    // The path of a plain reference. An effect that requires one names it
     // through this.
     public var referencePath: [PathSegment]? {
         guard case let .reference(path) = self else { return nil }
@@ -128,8 +128,8 @@ public indirect enum Expression: Sendable {
     }
 
     // The value of an expression that needs no scope. Nil the moment any part
-    // must resolve at run time. Load-time gates — an atom validating its literal
-    // operand, the linker judging a constant argument — use this to judge what
+    // must resolve at run time. Load-time gates (an atom validating its literal
+    // operand, the linker judging a constant argument) use this to judge what
     // can be judged before any run.
     public var constantValue: Value? {
         switch self {
@@ -151,22 +151,22 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // Whether this is a branch, which takes no name at all — it answers
-    // nothing and binds nothing inside, so its name could never bind. The
-    // reader, the validator and the writer each refuse a named branch by
-    // asking this; the other nameless family — what never finishes — is
-    // `alwaysLeaves`'s to say, and stays its own question because the two
-    // facts are refused with two different sentences.
+    // Whether this is a branch, which takes no name at all. It answers nothing
+    // and binds nothing inside, so its name could never bind. The reader, the
+    // validator and the writer each refuse a named branch by asking this; the
+    // other nameless family (what never finishes) is `alwaysLeaves`'s to say,
+    // and stays its own question because the two facts are refused with two
+    // different sentences.
     public var takesNoName: Bool {
         if case .conditional = self { return true }
 
         return false
     }
 
-    // Whether this construct answers nothing by its own grammar — a branch,
-    // or a walk. Wider than `takesNoName`, because a walk does take a name:
-    // the element's. What asks this is the slot that exists to hold an
-    // answer, which has nothing to take from either.
+    // Whether this construct answers nothing by its own grammar. A branch, or a
+    // walk. Wider than `takesNoName`, because a walk does take a name: the
+    // element's. What asks this is the slot that exists to hold an answer,
+    // which has nothing to take from either.
     public var answersNothing: Bool {
         switch self {
         case .conditional, .iteration:
@@ -191,9 +191,9 @@ public indirect enum Expression: Sendable {
     }
 
     // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them — the check wraps them as validation
-    // refusals and the link as link refusals, so the two stages cannot say
-    // different things.
+    // predicate that decides them. The check wraps them as validation refusals
+    // and the link as link refusals, so the two stages cannot say different
+    // things.
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data"
             + " — a body a word is to run travels as a closure"
@@ -204,11 +204,11 @@ public indirect enum Expression: Sendable {
         "a construct runs a body, and a condition is data"
             + " — what a body decides reaches a condition through a word"
 
-    // Whether a construct — a shape that runs a body, or leaves — sits
-    // anywhere in this expression read as data. A call's operand is data the
-    // pure half reads, so the check and the link both refuse one by asking
-    // this; a closure is data (the body it carries is its own), so the walk
-    // does not enter it.
+    // Whether a construct (a shape that runs a body, or leaves) sits anywhere
+    // in this expression read as data. A call's operand is data the pure half
+    // reads, so the check and the link both refuse one by asking this; a
+    // closure is data (the body it carries is its own), so the walk does not
+    // enter it.
     public var holdsConstruct: Bool {
         switch self {
         case .literal, .reference, .closure:
@@ -228,9 +228,8 @@ public indirect enum Expression: Sendable {
             return dispatch.receiver?.holdsConstruct ?? false
                 || dispatch.arguments.values.contains { argument in argument.holdsConstruct }
 
-        // A cast runs no body — it names a shape and judges what arrives
-        // against it — so it holds a construct only where the value it reads
-        // does.
+        // A cast runs no body (it names a shape and judges what arrives against
+        // it) so it holds a construct only where the value it reads does.
         case let .cast(value, _, _):
             return value.holdsConstruct
 
@@ -243,7 +242,7 @@ public indirect enum Expression: Sendable {
     // conservative: a loop may run no round and an attempt's rescue may finish
     // normally, so neither counts; a call is judged at the link, where its
     // signature is known. The link's type walk reads the same fact over the
-    // full program, symbols included — this is the symbol-free half of that
+    // full program, symbols included. This is the symbol-free half of that
     // judgment, and what it buys is the stage: a document is refused before
     // anything is linked.
     public var alwaysLeaves: Bool {

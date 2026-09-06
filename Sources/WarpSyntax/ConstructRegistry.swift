@@ -13,15 +13,15 @@ import Warp
 // admits they have names.
 //
 // A form's `key` is the spelling it proposes, not the one it gets. The table is
-// what a notation *is*, so the composer of the table has the last word: the same
-// form can be registered under another spelling, and a built-in spelling can be
-// dropped. Otherwise a form type would be its own name forever, and two
-// notations that wanted the same word could never both exist — which is a fact
+// what a notation *is*, so the composer of the table has the last word: the
+// same form can be registered under another spelling, and a built-in spelling
+// can be dropped. Otherwise a form type would be its own name forever, and two
+// notations that wanted the same word could never both exist, which is a fact
 // about a `static let`, not about the language.
 public struct ConstructRegistry: Sendable {
     // MARK: - Property
-    // The built-in set is a compile-time constant with unique keys — a throw here
-    // would be a kernel bug, so the forced try is the honest reaction.
+    // The built-in set is a compile-time constant with unique keys. A throw
+    // here would be a kernel bug, so the forced try is the honest reaction.
     public static let standard = try! ConstructRegistry(forms: [
         BranchForm.self,
         LoopForm.self,
@@ -43,7 +43,7 @@ public struct ConstructRegistry: Sendable {
     // table being a value.
     //
     // The second half is added here rather than by each form. A form that reads
-    // a condition says so and nothing else — what a condition costs is between
+    // a condition says so and nothing else. What a condition costs is between
     // the notation and this table.
     public func vocabulary(with notation: Notation) -> Set<Name> {
         forms.values.reduce(into: Set<Name>()) { words, form in
@@ -84,7 +84,7 @@ public struct ConstructRegistry: Sendable {
 
     // MARK: - Public
     // Passing a key spells this form differently in this notation. Registering
-    // one form twice is an alias rather than a mistake — the table maps words to
+    // one form twice is an alias rather than a mistake. The table maps words to
     // forms, and nothing says two words cannot mean the same thing.
     public func registering(
         _ form: any ConstructForm.Type,
@@ -98,9 +98,9 @@ public struct ConstructRegistry: Sendable {
     }
 
     // Giving up a word. A notation that wants `branch` to mean something of its
-    // own has to be able to stop meaning ours by it, and respelling a built-in is
-    // this followed by `registering(_:as:)` — the reason a rename is a change to
-    // a table here rather than a change to the language.
+    // own has to be able to stop meaning ours by it, and respelling a built-in
+    // is this followed by `registering(_:as:)`. The reason a rename is a change
+    // to a table here rather than a change to the language.
     public func removing(_ key: Name) -> ConstructRegistry {
         var registry = self
 
@@ -116,11 +116,11 @@ public struct ConstructRegistry: Sendable {
     // The table read backwards, for writing a document rather than reading one.
     //
     // A form registered under two words is spelled with whichever sorts first.
-    // An alias says the words mean the same thing and not which one is meant, so
-    // there is nothing here to prefer — and a table is unordered anyway, which
-    // makes "the one registered first" a thing this cannot know. What matters is
-    // that the answer is the same every time, since a document written twice has
-    // to come out the same both times.
+    // An alias says the words mean the same thing and not which one is meant,
+    // so there is nothing here to prefer, and a table is unordered anyway,
+    // which makes "the one registered first" a thing this cannot know. What
+    // matters is that the answer is the same every time, since a document
+    // written twice has to come out the same both times.
     //
     // Nothing where the form is not registered: a notation that gave up a word
     // cannot write what that word said, and answering with the built-in spelling
@@ -134,9 +134,10 @@ public struct ConstructRegistry: Sendable {
     }
 
     // MARK: - Private
-    // A key is claimed once — silently replacing a form would let a caller swap
+    // A key is claimed once. Silently replacing a form would let a caller swap
     // out the language's own control structures without a trace. Deliberately
-    // replacing one is `removing(_:)` first, which leaves the intent written down.
+    // replacing one is `removing(_:)` first, which leaves the intent written
+    // down.
     private mutating func insert(_ form: any ConstructForm.Type, as key: Name) throws {
         guard forms[key] == nil else {
             // A registry is assembled by a caller and not read out of a

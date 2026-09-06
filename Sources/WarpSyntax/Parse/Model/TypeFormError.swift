@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A type spelled in a way this notation cannot read. About the writing, not
-// about the language — whether the shape it names exists is a link question.
+// about the language. Whether the shape it names exists is a link question.
 public struct TypeFormError: WarpError {
     // MARK: - Property
     public let message: String

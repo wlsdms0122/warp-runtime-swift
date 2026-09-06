@@ -31,20 +31,20 @@ public struct Module: Sendable {
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
-    // place of a type — a module declares, and what it declares differs only in
+    // place of a type. A module declares, and what it declares differs only in
     // what kind of thing the name stands for.
     public let types: [Name: TypeExpression]
 
     // Constraints this module declares: a name bound to the types a bounded
     // parameter under that name admits. Declared the same way a type is and
-    // kept apart from the types, because nothing is ever *of* a constraint —
-    // it bounds `some T`, and a slot cannot declare it directly.
+    // kept apart from the types, because nothing is ever *of* a constraint. It
+    // bounds `some T`, and a slot cannot declare it directly.
     public let constraints: [Name: [TypeExpression]]
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second name table in path
-    // position — where a declared spelling cannot be told from drilling into a
+    // position. Where a declared spelling cannot be told from drilling into a
     // record.
     public let constants: [Name: Expression]
 
@@ -60,7 +60,7 @@ public struct Module: Sendable {
     //
     // Nil where nobody said which document this came out of: a module a caller
     // built has no text under it at all, and a reader is told which text it is
-    // reading rather than working it out — deriving one means writing the
+    // reading rather than working it out. Deriving one means writing the
     // document back to its canonical bytes, which is not what reading a
     // document is for.
     public let identity: Identity?
@@ -78,9 +78,9 @@ public struct Module: Sendable {
     // one on the footing that a body introduces no name the module bound. That
     // footing is this call.
     //
-    // The imports are a claim, and nil is no claim. A document makes one — it
-    // travelled, and what it said about itself is the thing worth holding it to
-    // — so a reader hands over what the text wrote and a drifting list is
+    // The imports are a claim, and nil is no claim. A document makes one (it
+    // travelled, and what it said about itself is the thing worth holding it
+    // to) so a reader hands over what the text wrote and a drifting list is
     // refused. A caller assembling shapes in Swift has the module in hand and
     // nobody to disclose it to, so it says nothing and the module states the
     // fact instead. Either way `imports` afterwards is what the module sends.
@@ -127,7 +127,7 @@ public struct Module: Sendable {
     // MARK: - Public
     // What this declares, on its own and without the checking. It is what a
     // writing takes, so a module and a document that was never a module are
-    // written by one call — and `imports` here is the resolved list rather than
+    // written by one call, and `imports` here is the resolved list rather than
     // the claim, since by now the two are the same.
     public var draft: Draft {
         Draft(

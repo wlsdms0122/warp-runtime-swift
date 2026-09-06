@@ -11,9 +11,9 @@ import Foundation
 //
 // Not borrowed from a package, because the one thing this target promises is
 // that another implementation can speak the wire without taking on anything of
-// ours — and a dependency in the way of that would be an odd thing to add to
-// the target that says so. Not taken from the platform either: the one that
-// ships it is one platform, and what this computes has to be the same number
+// ours, and a dependency in the way of that would be an odd thing to add to the
+// target that says so. Not taken from the platform either: the one that ships
+// it is one platform, and what this computes has to be the same number
 // everywhere or it is not an identity.
 //
 // Everything below is the published algorithm. The only judgment in it is the
@@ -74,7 +74,7 @@ enum SHA256 {
             // The eight working variables the standard names, kept as eight
             // variables. Written as an array rebuilt each round it is an
             // allocation per round of a loop that runs sixty-four times per
-            // block, for a shape the algorithm never asked for — and this runs
+            // block, for a shape the algorithm never asked for, and this runs
             // once per document read and once per document written.
             var (a, b, c, d) = (state[0], state[1], state[2], state[3])
             var (e, f, g, h) = (state[4], state[5], state[6], state[7])

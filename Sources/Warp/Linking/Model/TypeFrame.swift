@@ -11,7 +11,7 @@ import Foundation
 // the link answers with, and what every name in it stands for.
 //
 // One value rather than two arguments threaded through every walk, because they
-// are one fact — the link's answer to "what does this name mean" — read from two
+// are one fact (the link's answer to "what does this name mean") read from two
 // sides.
 struct TypeFrame: Sendable {
     // MARK: - Property
@@ -21,13 +21,13 @@ struct TypeFrame: Sendable {
     // has filled in what each declaration answers.
     let symbols: [Name: Symbol]
 
-    // Keyed by the resolved selector for a call — and by that alone: the
-    // bare spelling a path writes lives in `words`, because the two spellings
-    // ask two different questions.
+    // Keyed by the resolved selector for a call, and by that alone: the bare
+    // spelling a path writes lives in `words`, because the two spellings ask
+    // two different questions.
     //
     // Whole signatures rather than what each answers, because a declaration
     // with a type parameter in it does not answer anything until a call site
-    // fills it — and what fills it is read from the arguments.
+    // fills it, and what fills it is read from the arguments.
     let signatures: [Name: Signature]
 
     // The declared types as the documents wrote them. The walk expands a
@@ -61,9 +61,9 @@ struct TypeFrame: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // The whole declaration, for the one send a path makes — and only where a
+    // The whole declaration, for the one send a path makes, and only where a
     // path may make it. There is no way to ask what a name answers without
-    // asking whether a path may send it — a softer question was how a word
+    // asking whether a path may send it. A softer question was how a word
     // nobody may reach got a type.
     func signature(reachedBy name: Name) -> Signature? {
         words[name]

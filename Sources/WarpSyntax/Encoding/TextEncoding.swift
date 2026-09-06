@@ -8,26 +8,26 @@
 import Foundation
 import Warp
 
-// The encoding a document is read in — by a person. The binary is what a
-// document travels as; this is the same document laid out for eyes. A dump,
-// not a syntax: machines write it, people read it, and composing by hand is a
-// front end's job in a front end's notation — which is why there are no
-// comments to lose on the way back.
+// The encoding a document is read in. By a person. The binary is what a
+// document travels as; this is the same document laid out for eyes. A dump, not
+// a syntax: machines write it, people read it, and composing by hand is a front
+// end's job in a front end's notation, which is why there are no comments to
+// lose on the way back.
 //
-// A whole number and a fraction are different tokens here by grammar — `1` is
+// A whole number and a fraction are different tokens here by grammar. `1` is
 // whole and `1.0` is a fraction. And there is nothing else: no commas to
-// forget, no colons; a record is `{ key value … }` and an array is
-// `[ value … ]`.
+// forget, no colons; a record is `{ key value … }` and an array is `[ value …
+// ]`.
 //
-// One document, one text. The writer is canonical — sorted keys, one layout,
-// one spelling per value — and the reader accepts exactly the canonical
-// writing: a text that is not what the writer would write for the value it
-// spells is not a document, byte for byte the same promise the binary keeps.
+// One document, one text. The writer is canonical (sorted keys, one layout, one
+// spelling per value) and the reader accepts exactly the canonical writing: a
+// text that is not what the writer would write for the value it spells is not a
+// document, byte for byte the same promise the binary keeps.
 public enum TextEncoding {
     // MARK: - Property
     // The first tokens of every document: which encoding, laid out how. The
-    // version moves when this file's grammar does, and for no other reason —
-    // what the *program* needs of its reader is said inside the document.
+    // version moves when this file's grammar does, and for no other reason.
+    // What the *program* needs of its reader is said inside the document.
     public static let name = "warpt"
     public static let format = 1
 
@@ -97,11 +97,11 @@ public enum TextEncoding {
         case bare(String)
     }
 
-    // A container being put back together, exactly as in the binary reader —
-    // one shape of reader per encoding would be two chances to differ. A sum
-    // rather than two optionals, so "neither" and "both" are not states the
-    // code has to promise never to reach; a record with no key is one waiting
-    // for its next field name.
+    // A container being put back together, exactly as in the binary reader. One
+    // shape of reader per encoding would be two chances to differ. A sum rather
+    // than two optionals, so "neither" and "both" are not states the code has
+    // to promise never to reach; a record with no key is one waiting for its
+    // next field name.
     private enum Opened {
         case array([Value])
         case record(held: [Name: Value], key: Name?, name: Name?)
@@ -145,7 +145,7 @@ public enum TextEncoding {
                     reading.removeFirst()
                 }
 
-                // `x` straight into a quote is the bytes spelling — one token,
+                // `x` straight into a quote is the bytes spelling. One token,
                 // because the quote is a delimiter and not text
                 if bare == "x", reading.first == "\"" {
                     reading.removeFirst()
@@ -221,8 +221,8 @@ public enum TextEncoding {
         }
     }
 
-    // The body of `x"…"`: lowercase hex, two digits a byte, nothing else —
-    // uppercase or odd length would be a second spelling for the same bytes.
+    // The body of `x"…"`: lowercase hex, two digits a byte, nothing else.
+    // Uppercase or odd length would be a second spelling for the same bytes.
     private static func hexed(from reading: inout ArraySlice<Unicode.Scalar>) throws -> [UInt8] {
         var digits: [UInt8] = []
 
@@ -395,7 +395,7 @@ public enum TextEncoding {
     }
 
     // What a bare token names. Everything unquoted is one of five things, and a
-    // number is whole or a fraction by grammar — a point or an exponent, not a
+    // number is whole or a fraction by grammar. A point or an exponent, not a
     // reader's guess.
     private static func scalar(from bare: String) throws -> Value {
         if let word = Name.scalarWords[bare] { return word }
@@ -405,10 +405,10 @@ public enum TextEncoding {
                 throw refused("nothing is written \(bare)")
             }
 
-            // One value, one writing — the reader takes exactly the spelling
-            // the writer produces, for the values as for the containers, so
-            // `007` and `1e0` are not documents even though a looser parse
-            // would read a number out of them.
+            // One value, one writing. The reader takes exactly the spelling the
+            // writer produces, for the values as for the containers, so `007`
+            // and `1e0` are not documents even though a looser parse would read
+            // a number out of them.
             guard bare.contains(where: { character in ".eE".contains(character) }) else {
                 switch Int.reading(spelling: bare) {
                 case let .word(int):
@@ -524,7 +524,7 @@ public enum TextEncoding {
             text += "\(int)"
 
         // "Has a spelling" and "a document carries it" are one fact, asked
-        // once — the spelling itself is the judge.
+        // once. The spelling itself is the judge.
         case let .double(double):
             guard let spelling = double.spelling else {
                 throw EncodingError.invalidValue(

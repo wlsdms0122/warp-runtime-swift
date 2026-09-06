@@ -10,8 +10,8 @@ import Foundation
 // A spelling that cannot be a name.
 //
 // Raised by the one door names come through, so the sentence says what the
-// spelling was rather than where it was met — the side that met it says that,
-// by placing this or by refusing in its own words.
+// spelling was rather than where it was met. The side that met it says that, by
+// placing this or by refusing in its own words.
 public struct NameRefused: WarpError {
     // MARK: - Property
     public let message: String

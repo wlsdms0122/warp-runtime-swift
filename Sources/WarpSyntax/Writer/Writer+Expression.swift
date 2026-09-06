@@ -95,10 +95,11 @@ public extension Writer {
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
 
-        // A record of expressions is not data, so `{ value: }` cannot rescue it
-        // — quoting one would say the fields are literals rather than things to
-        // evaluate. A record whose own field names are read as a form here has
-        // no document, and saying so beats writing one that means something else.
+        // A record of expressions is not data, so `{ value: }` cannot rescue
+        // it. Quoting one would say the fields are literals rather than things
+        // to evaluate. A record whose own field names are read as a form here
+        // has no document, and saying so beats writing one that means something
+        // else.
         case let .record(fields):
             let taken = Self.taken(Set(fields.keys), reserving: reserved, constructs: constructs)
 
@@ -126,12 +127,12 @@ public extension Writer {
         case let .dispatch(dispatch):
             return .dictionary(["call": try message(of: dispatch)])
 
-        // Everything left is a construct, and this notation spells constructs in
-        // statement position only. Some of them need to be there — a loop, an
-        // iteration, a fan-out over a collection and an attempt each bind a name
-        // inside themselves and take it from the statement they are written as —
-        // and the rest are there because the expression grammar is a fixed set
-        // and they are not in it.
+        // Everything left is a construct, and this notation spells constructs
+        // in statement position only. Some of them need to be there (a loop, an
+        // iteration, a fan-out over a collection and an attempt each bind a
+        // name inside themselves and take it from the statement they are
+        // written as) and the rest are there because the expression grammar is
+        // a fixed set and they are not in it.
         default:
             throw WritingError(
                 "\(Self.shape(of: expression)) has no spelling where a value is wanted"
@@ -172,9 +173,8 @@ public extension Writer {
         case let .block(block):
             return (try spelling(GroupForm.self), .dictionary(try fields(of: block, in: GroupForm.self)))
 
-        // A name on a branch was already refused where the statement's
-        // envelope is written — `takesNoName`, the one predicate every door
-        // asks.
+        // A name on a branch was already refused where the statement's envelope
+        // is written. `takesNoName`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
                 "when": try value(of: condition, reserving: conditionKeys),
@@ -266,7 +266,7 @@ public extension Writer {
     // its own reader refuses.
     //
     // Every caller names its reader, and `nil` is a reader rather than a
-    // default — a rescue and a procedure are read by their own readers, which
+    // default. A rescue and a procedure are read by their own readers, which
     // take `body` as a key that may be absent. Said out loud because a way of
     // writing a block without saying who reads it is a way of skipping the
     // question, and skipping it is the failure this asks about.
@@ -328,10 +328,11 @@ public extension Writer {
     // How data has to be written to come back as itself: as it stands, or
     // quoted because something in it would otherwise be read as a form.
     //
-    // The third answer is a refusal rather than a case. A procedure is code that
-    // has already closed over a scope, and a document holds neither — quoting
-    // one would put something in the text that reading it back could not answer
-    // with, which is the same reason a natively implemented word has no document.
+    // The third answer is a refusal rather than a case. A procedure is code
+    // that has already closed over a scope, and a document holds neither.
+    // Quoting one would put something in the text that reading it back could
+    // not answer with, which is the same reason a natively implemented word has
+    // no document.
     private enum Spelling {
         case plainly
         case quoted
@@ -340,7 +341,7 @@ public extension Writer {
     // The keys under which a record with these fields would be read as
     // something other than a record: a reserved key wherever it stands, and a
     // construct's key where the record is the one field under a statement's
-    // `value` — the reader's own two conditions, asked here as the writer.
+    // `value`. The reader's own two conditions, asked here as the writer.
     private static func taken(
         _ keys: Set<Name>,
         reserving reserved: Set<Name>,

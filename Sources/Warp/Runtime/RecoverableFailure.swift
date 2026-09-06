@@ -7,23 +7,23 @@
 
 import Foundation
 
-// A failure of the work itself — the data wasn't there, the world didn't
+// A failure of the work itself. The data wasn't there, the world didn't
 // cooperate. `attempt` absorbs these; author mistakes (shape misuse, contract
 // violations) deliberately do not carry the marker, so they surface instead.
 //
 // It lives beside the runtime because it is `attempt`'s half of a contract, not
 // a taxonomy of errors: the executor is the only thing that reads it, and what
-// declares it is whatever can fail while a body runs — three constructs here,
+// declares it is whatever can fail while a body runs. Three constructs here,
 // and a caller's own words out beyond the package.
 //
 // While a rescue runs, the failure exists as a value: the executor binds
-// `payload` under the failed statement's id, so a rescue body can read what went
-// wrong through `<id>.message` and, under `<id>.details`, whatever else that
-// failure carries. The envelope is the same for every failure and what rides
-// inside it is the failing word's own — the runtime owns the mechanism, the
-// error owns the vocabulary.
+// `payload` under the failed statement's id, so a rescue body can read what
+// went wrong through `<id>.message` and, under `<id>.details`, whatever else
+// that failure carries. The envelope is the same for every failure and what
+// rides inside it is the failing word's own. The runtime owns the mechanism,
+// the error owns the vocabulary.
 public protocol RecoverableFailure: WarpError {
-    // One word naming what happened — `aborted`, `concurrent_failed`.
+    // One word naming what happened. `aborted`, `concurrent_failed`.
     var type: String { get }
 
     // Whatever this failure carries beyond the envelope. Empty for most; a

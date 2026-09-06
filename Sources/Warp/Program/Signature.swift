@@ -7,30 +7,30 @@
 
 import Foundation
 
-// What a call is checked against, in both directions — what it takes and what
+// What a call is checked against, in both directions. What it takes and what
 // comes back. Declaring only the inward half would stop the judgement this
 // language makes before running at the boundary it is easiest to make it at.
 public struct Signature: Sendable, Equatable {
     // MARK: - Property
-    // Which declared parameter is the receiver — the thing this is sent *to* —
-    // or nil for a plain call, which most procedures are.
+    // Which declared parameter is the receiver (the thing this is sent *to*) or
+    // nil for a plain call, which most procedures are.
     //
     // A name rather than a type, so the body reads its receiver by the name it
-    // declared, the same as every other parameter — a reserved spelling would be
+    // declared, the same as every other parameter. A reserved spelling would be
     // the alternative. Declaring a receiver is the whole of what makes a word
     // reachable through a path: it is what lets `x.name` find it.
     public let receiver: Name?
 
     public let parameters: [Name: Parameter]
 
-    // What a call returns, or nil where nothing was declared. Absence is spelled
-    // by being absent rather than by a type meaning "no claim" — `any` is a
-    // claim, so a declaration nobody wrote stays distinguishable from one
+    // What a call returns, or nil where nothing was declared. Absence is
+    // spelled by being absent rather than by a type meaning "no claim". `any`
+    // is a claim, so a declaration nobody wrote stays distinguishable from one
     // somebody wrote. Nothing is checked either way; they differ in what they
     // say.
     //
     // Settable only from here, so `answering(_:)` changes this one field of a
-    // copy instead of naming every field to keep it — a listing that keeps
+    // copy instead of naming every field to keep it. A listing that keeps
     // fields by naming them loses a new one silently, and the initializer's
     // defaults mean nothing would say so.
     public private(set) var returns: TypeExpression?
@@ -49,9 +49,9 @@ public struct Signature: Sendable, Equatable {
     // MARK: - Public
     // The same declaration with an answer where nobody wrote one. What the
     // author wrote is never replaced: a declaration is a promise, and one read
-    // off a body is what the link worked out rather than what anybody
-    // promised — so this is what the link reads a call as, and never what the
-    // image carries or the boundary checks.
+    // off a body is what the link worked out rather than what anybody promised,
+    // so this is what the link reads a call as, and never what the image
+    // carries or the boundary checks.
     func answering(_ answer: TypeExpression?) -> Signature {
         guard returns == nil, let answer else { return self }
 
@@ -63,8 +63,8 @@ public struct Signature: Sendable, Equatable {
 
     // The returned value, checked against what was declared. Run time rather
     // than link time because what a body computes is not a thing the linker can
-    // read off the text — but a declaration that only ever describes is a declaration
-    // nothing keeps, so it is checked where the fact exists.
+    // read off the text, but a declaration that only ever describes is a
+    // declaration nothing keeps, so it is checked where the fact exists.
     public func settling(returned value: Value, in types: TypeTable = .empty) throws -> Value {
         guard let returns else { return value }
 
@@ -94,7 +94,7 @@ public struct Signature: Sendable, Equatable {
         TypeExpression.procedure(self).accepts(.procedure(given), in: types)
     }
 
-    // Whether a path segment may reach this — it takes a receiver, so there is
+    // Whether a path segment may reach this. It takes a receiver, so there is
     // something for the walk to send it to, and it needs nothing else, so
     // `x.count` supplies everything it asks for.
     //

@@ -26,10 +26,10 @@ import Foundation
 //
 // The walk is also the rewrite that fixes what a dot means. A document writes
 // `key` segments, and whether one reads a field or sends a word is decided here
-// by the type the walk reached — a shape with fields reads, a shape without
-// them sends — and the decision is written into the path as a `word` segment.
-// A run reads the spelling and never asks the value, which is the point: the
-// same path means the same thing on every run.
+// by the type the walk reached (a shape with fields reads, a shape without them
+// sends) and the decision is written into the path as a `word` segment. A run
+// reads the spelling and never asks the value, which is the point: the same
+// path means the same thing on every run.
 extension Linker {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
@@ -39,15 +39,15 @@ extension Linker {
     }
 
     // What a body hands its caller: the result it reads, and every `return`
-    // that carried something out — the two ways a procedure answers, joined.
+    // that carried something out. The two ways a procedure answers, joined.
     // Read rather than judged, because this is asked of a body the walk may
-    // read again, and a refusal here would be one the judging pass is about
-    // to state in its own place.
+    // read again, and a refusal here would be one the judging pass is about to
+    // state in its own place.
     //
     // Named for the reading and not for the answer, because the sibling below
-    // — what a *signature* answers — is the other question, and the two are
-    // kept apart on purpose: one is what the author wrote and one is what the
-    // link worked out.
+    // (what a *signature* answers) is the other question, and the two are kept
+    // apart on purpose: one is what the author wrote and one is what the link
+    // worked out.
     func reading(
         from block: Block,
         at place: Place,
@@ -67,8 +67,8 @@ extension Linker {
 
     // A block with every dot judged and every send gathered, each site carrying
     // what was in scope where it was written. Statements are read in order
-    // because that is what a body means — a name holds what the statement
-    // before it bound.
+    // because that is what a body means. A name holds what the statement before
+    // it bound.
     func resolvedSites(
         in block: Block,
         at place: Place,
@@ -88,7 +88,7 @@ extension Linker {
         return (inner.block, inner.calls)
     }
 
-    // The expression form — a constant's body is one rather than a block.
+    // The expression form. A constant's body is one rather than a block.
     func resolvedSites(
         in expression: Expression,
         at place: Place,
@@ -112,10 +112,10 @@ extension Linker {
     // refusal, or nil where every constrained parameter admits its reading.
     //
     // Membership only. That one parameter takes one constraint, and that a
-    // named constraint is declared, are the declaration's own facts — held by
-    // the judgment every signature passes where it is declared, before
-    // anything gathers readings for this. Judging against every name in a
-    // mention set costs nothing when the set holds its one.
+    // named constraint is declared, are the declaration's own facts. Held by
+    // the judgment every signature passes where it is declared, before anything
+    // gathers readings for this. Judging against every name in a mention set
+    // costs nothing when the set holds its one.
     func constraintRefusal(
         mentions: [Name: Set<Name>],
         readings: [Name: TypeExpression],
@@ -139,7 +139,7 @@ extension Linker {
         return nil
     }
 
-    // The judgment every send shares, whichever surface writes it — a dispatch
+    // The judgment every send shares, whichever surface writes it. A dispatch
     // writes the arguments, a path writes only the receiver. What the readings
     // put in the declaration's type parameters is read once: a parameter read
     // two ways is refused rather than folded, a bounded one is judged against
@@ -179,10 +179,10 @@ extension Linker {
     }
 
     // What a call put in its callee's type parameters, read by holding each
-    // declared parameter beside what was actually sent — the readings already
-    // in hand, so nothing is walked a second time for the asking. A receiver
-    // is a parameter written on the other side of the dot, so it is read the
-    // same way.
+    // declared parameter beside what was actually sent. The readings already in
+    // hand, so nothing is walked a second time for the asking. A receiver is a
+    // parameter written on the other side of the dot, so it is read the same
+    // way.
     func bound(
         of signature: Signature,
         at dispatch: Dispatch,
@@ -224,10 +224,10 @@ extension Linker {
         return Bound(readings: bound, disagreeing: disagreeing)
     }
 
-    // What a send answers: the declaration's returns, filled from the
-    // operands where the declaration is generic. One statement of the rule,
-    // whichever ask gathered the readings — and the operands are asked for
-    // lazily, so a non-generic call never pays for taking them.
+    // What a send answers: the declaration's returns, filled from the operands
+    // where the declaration is generic. One statement of the rule, whichever
+    // ask gathered the readings, and the operands are asked for lazily, so a
+    // non-generic call never pays for taking them.
     private func answered(
         by signature: Signature?,
         at dispatch: Dispatch,
@@ -251,7 +251,7 @@ extension Linker {
 
     // Where a path walk ended: the path with every dot's meaning written into
     // it and what the whole of it holds, or the refusal. One value for the two
-    // answers, because they are read off one walk — a second walk for the
+    // answers, because they are read off one walk. A second walk for the
     // rewrite would be a second copy of the rules.
     enum PathReading {
         case reads([PathSegment], TypeExpression)
@@ -261,24 +261,24 @@ extension Linker {
     // Walking a path through types the way the resolver walks it through
     // values. Each dot is judged by the shape the walk has reached: a shape
     // with fields reads one, a shape without them sends a word, and the
-    // judgment is spelled into the answered path — `key` for a read, `word`
-    // for a send — so a run never asks the value.
+    // judgment is spelled into the answered path (`key` for a read, `word` for
+    // a send) so a run never asks the value.
     //
-    // A field the shape does not declare is refused, `?.` or not — the type
+    // A field the shape does not declare is refused, `?.` or not. The type
     // proved the absence, and a spelling that reads expected absence does not
-    // overrule a proof. What may genuinely be absent at run — a `dictionary`
-    // entry, a nullable's null — is where `?.` speaks: the plain spelling is
+    // overrule a proof. What may genuinely be absent at run (a `dictionary`
+    // entry, a nullable's null) is where `?.` speaks: the plain spelling is
     // refused there, and the optional one answers null and makes the whole
     // path's reading nullable.
     //
     // Three shapes stop the walk, and each stops it for its own reason. On
     // `any` the walk **refuses**: nothing was declared, so there is nothing a
     // dot could be judged against, and a dot no declaration proves is what a
-    // run would otherwise have to decide for itself — the shape is named
+    // run would otherwise have to decide for itself. The shape is named
     // instead, with `as`. On a type parameter the segments stand **as
-    // written**: the shape is declared, at the call rather than here, and
-    // what the call filled in answers them. On `never` nothing arrives to be
-    // read at all, so there is nothing to judge and nothing to refuse.
+    // written**: the shape is declared, at the call rather than here, and what
+    // the call filled in answers them. On `never` nothing arrives to be read at
+    // all, so there is nothing to judge and nothing to refuse.
     func reading(
         of path: [PathSegment],
         in environment: [Name: TypeExpression],
@@ -297,7 +297,7 @@ extension Linker {
         var resolved: [PathSegment] = [.key(head)]
         var walked: [PathSegment] = [.key(head)]
 
-        // Whether an optional segment read past a possible absence — the one
+        // Whether an optional segment read past a possible absence. The one
         // thing that makes the whole path's answer nullable.
         var optional = false
 
@@ -305,8 +305,8 @@ extension Linker {
             current = frame.resolve(current)
             walked.append(segment)
 
-            // The segments after this one, as written — for the walks that
-            // stop judging early.
+            // The segments after this one, as written. For the walks that stop
+            // judging early.
             func rest() -> [PathSegment] {
                 Array(path.dropFirst(offset + 2))
             }
@@ -319,29 +319,28 @@ extension Linker {
 
             // What the dot lands on, settled: the walk-stopping shapes are
             // asked again after every unwrap, because what a `T?` holds is a
-            // type like any other — `any`, null, another name, another
-            // nullable — and an unwrap that skipped the questions would judge
-            // on a shape nobody checked.
+            // type like any other (`any`, null, another name, another nullable)
+            // and an unwrap that skipped the questions would judge on a shape
+            // nobody checked.
             settling: while true {
                 // Three shapes stop a walk, and they stop it for three
-                // different reasons — so they are asked separately, and each
+                // different reasons, so they are asked separately, and each
                 // says its own. A dot is judged against what a declaration
-                // proves at this site: `any` declares nothing and never will,
-                // a type parameter's shape is declared at the call, and
-                // `never` declares a value that does not arrive at all.
+                // proves at this site: `any` declares nothing and never will, a
+                // type parameter's shape is declared at the call, and `never`
+                // declares a value that does not arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
-                // ever be proven — and a dot the link cannot judge is the one
-                // thing a run would have to decide for itself. The author
-                // says what they expect and the reading goes on from there;
-                // the shape is theirs to name, not the value's to supply.
-                // An index says as much as a dot does — that a shape is
-                // there to be read into — so it refuses here too, and says so
-                // in its own words. Before the three were told apart this arm
-                // let indexes through to the run; that exception was a fact
-                // about the branch being shared, not a decision about
-                // indexes, and keeping it would leave the one rule saying
-                // `[` may read what `.` may not.
+                // ever be proven, and a dot the link cannot judge is the one
+                // thing a run would have to decide for itself. The author says
+                // what they expect and the reading goes on from there; the
+                // shape is theirs to name, not the value's to supply. An index
+                // says as much as a dot does (that a shape is there to be read
+                // into) so it refuses here too, and says so in its own words.
+                // Before the three were told apart this arm let indexes through
+                // to the run; that exception was a fact about the branch being
+                // shared, not a decision about indexes, and keeping it would
+                // leave the one rule saying `[` may read what `.` may not.
                 if current == .any {
                     let reach = switch segment {
                     case .key, .word: "reads a dot on"
@@ -356,29 +355,29 @@ extension Linker {
                 }
 
                 // A parameter is filled by the call, so the shape *is*
-                // declared — elsewhere. That is why this is not `any`'s case
-                // and does not refuse: the segments stand as written and the
-                // call's shape answers them, which is the decision
+                // declared. Elsewhere. That is why this is not `any`'s case and
+                // does not refuse: the segments stand as written and the call's
+                // shape answers them, which is the decision
                 // `ParameterReceiverTests` holds.
                 //
                 // What would make this judgeable here is the bound: a
-                // constraint is a declared membership of concrete shapes, so
-                // a dot every member admits is a dot this site could prove.
+                // constraint is a declared membership of concrete shapes, so a
+                // dot every member admits is a dot this site could prove.
                 // Reading it that way needs the walked signature's `bounds`,
-                // which this walk is not given — so the fact is named here
-                // rather than guessed at.
-                // The reading stays a shape the call decides, not `any`.
-                // Saying `any` would hand the next statement a shape the
-                // author never wrote — `x = item.a` then `x.b` would refuse on
-                // `any` where `item.a.b` in one statement stands, and naming a
-                // step is not supposed to change what a path means.
+                // which this walk is not given, so the fact is named here
+                // rather than guessed at. The reading stays a shape the call
+                // decides, not `any`. Saying `any` would hand the next
+                // statement a shape the author never wrote. `x = item.a` then
+                // `x.b` would refuse on `any` where `item.a.b` in one statement
+                // stands, and naming a step is not supposed to change what a
+                // path means.
                 //
                 // And not the parameter itself. `item` is the shape the call
                 // filled in; `item.a` is a field of that shape, which is a
                 // different unknown. Handing the parameter back made a walk
                 // through one impersonate it: the field stood where `some T`
                 // was asked for, and carried T's bound onto a value that never
-                // earned it — `some N: Comparable` proving `item.a` comparable
+                // earned it. `some N: Comparable` proving `item.a` comparable
                 // on nothing but where it was read from.
                 //
                 // Where the walk reached is asked of the shape it walked
@@ -397,9 +396,9 @@ extension Linker {
                 }
 
                 // Nothing arrives to be read, so there is nothing to judge and
-                // nothing to refuse — the segments stand as written and the
-                // walk stops. That the reading is unreachable is the leaving
-                // rules' fact, said where they are said.
+                // nothing to refuse. The segments stand as written and the walk
+                // stops. That the reading is unreachable is the leaving rules'
+                // fact, said where they are said.
                 if current == .never {
                     switch asWritten([segment] + rest(), in: environment, with: frame) {
                     case let .refused(reason):
@@ -410,9 +409,9 @@ extension Linker {
                     }
                 }
 
-                // Null stops the reading here exactly as it stops the run's
-                // — one judge, owned by the segment, so the two layers say
-                // the same sentence.
+                // Null stops the reading here exactly as it stops the run's.
+                // One judge, owned by the segment, so the two layers say the
+                // same sentence.
                 if current == .null {
                     switch segment.meetingNull(at: walked) {
                     case let .refused(reason):
@@ -446,11 +445,11 @@ extension Linker {
                 current = frame.resolve(inner)
             }
 
-            // Whether the mark the author wrote here had anything to read
-            // past — asked of the segment, which owns the rule and the
-            // sentence, so the walk's landings cannot drift. Every landing
-            // asks, including the one whose answer is always yes: a landing
-            // that skipped the question would keep its own copy of the rule.
+            // Whether the mark the author wrote here had anything to read past.
+            // Asked of the segment, which owns the rule and the sentence, so
+            // the walk's landings cannot drift. Every landing asks, including
+            // the one whose answer is always yes: a landing that skipped the
+            // question would keep its own copy of the rule.
             func needless(_ landing: PathSegment.Landing) -> PathReading? {
                 segment.needlessMark(
                     at: walked,
@@ -474,10 +473,10 @@ extension Linker {
             }
 
             switch (segment, current) {
-            // An index written as a reference is a name the run settles —
-            // which element is read, not what the elements are. The name is a
-            // path of its own, judged like one, and the walk goes on with the
-            // element type the way a literal index does.
+            // An index written as a reference is a name the run settles, which
+            // element is read, not what the elements are. The name is a path of
+            // its own, judged like one, and the walk goes on with the element
+            // type the way a literal index does.
             case let (.indexRef(inner, optionally), .array(element)):
                 switch indexReference(inner, in: environment, with: frame) {
                 case let .refused(reason):
@@ -495,7 +494,7 @@ extension Linker {
                 resolved.append(segment)
 
             // Bytes are an array of bytes in a compact spelling, so an index
-            // reads one — a `byte`, the range `std` names.
+            // reads one. A `byte`, the range `std` names.
             case let (.indexRef(inner, optionally), .bytes):
                 switch indexReference(inner, in: environment, with: frame) {
                 case let .refused(reason):
@@ -518,12 +517,12 @@ extension Linker {
                         + " and only an array is indexed"
                 )
 
-            // A dot on a shape with fields is a read, always — a word on one
-            // is written as a call. A field the shape does not declare is a
-            // defect the text shows, refused here rather than found at run —
-            // and so is a `?.` on one it does declare: the type proves the
-            // field is there, so the spelling that expects absence says
-            // nothing, unless it just read past the receiver's own null.
+            // A dot on a shape with fields is a read, always. A word on one is
+            // written as a call. A field the shape does not declare is a defect
+            // the text shows, refused here rather than found at run, and so is
+            // a `?.` on one it does declare: the type proves the field is
+            // there, so the spelling that expects absence says nothing, unless
+            // it just read past the receiver's own null.
             case let (.key(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
@@ -540,11 +539,11 @@ extension Linker {
                 current = field.fieldUnwrapped
                 resolved.append(segment)
 
-            // A dictionary holds entries of one shape under names that are data,
-            // so which names are there is a run's fact — `?.` reads an absent
-            // one as null, and the plain spelling refuses it at run. The rule
-            // is asked here like everywhere else and always answers yes: the
-            // mark has an absence to expect on an entry, unwrapped or not,
+            // A dictionary holds entries of one shape under names that are
+            // data, so which names are there is a run's fact. `?.` reads an
+            // absent one as null, and the plain spelling refuses it at run. The
+            // rule is asked here like everywhere else and always answers yes:
+            // the mark has an absence to expect on an entry, unwrapped or not,
             // and that fact lives in the rule rather than in this landing.
             case (.key, .dictionary(let entry)):
                 if let refusal = needless(.entry) { return refusal }
@@ -554,12 +553,12 @@ extension Linker {
                 current = entry
                 resolved.append(segment)
 
-            // A dot on a shape without fields is a word send, judged by the
-            // one machine every word send goes through — and the judgment is
-            // spelled into the path, so the run sends without asking. The
-            // same `?.` rule as a record's field: the receiver here is proven
-            // non-null, so an optional spelling that unwrapped nothing claims
-            // an absence the types rule out.
+            // A dot on a shape without fields is a word send, judged by the one
+            // machine every word send goes through, and the judgment is spelled
+            // into the path, so the run sends without asking. The same `?.`
+            // rule as a record's field: the receiver here is proven non-null,
+            // so an optional spelling that unwrapped nothing claims an absence
+            // the types rule out.
             case let (.key(key, _), _), let (.word(key, _), _):
                 if let refusal = needless(.word(key)) { return refusal }
 
@@ -580,9 +579,9 @@ extension Linker {
     // MARK: - Private
     private static let roundType = TypeExpression.record(["index": .int])
 
-    // The segments a stopped walk hands back: as written, except that an
-    // index reference is a path of its own and is judged wherever the outer
-    // walk stops — a word inside one would otherwise stay a key forever.
+    // The segments a stopped walk hands back: as written, except that an index
+    // reference is a path of its own and is judged wherever the outer walk
+    // stops. A word inside one would otherwise stay a key forever.
     private func asWritten(
         _ segments: [PathSegment],
         in environment: [Name: TypeExpression],
@@ -610,12 +609,12 @@ extension Linker {
     }
 
     // The one machine that judges an index reference, wherever a walk meets
-    // one — the outer reading, a stopped walk's leftovers. The inner path is
-    // a path of its own; what it reads has to be able to be an index. `int`
-    // is one; `double` and `number` may hold a whole value the run accepts,
-    // so only the actual reading — the fold's, or the run's — refuses the
-    // fraction; what the walk could not read might be anything. Everything
-    // else provably is not, and a text-proven defect is refused here.
+    // one. The outer reading, a stopped walk's leftovers. The inner path is a
+    // path of its own; what it reads has to be able to be an index. `int` is
+    // one; `double` and `number` may hold a whole value the run accepts, so
+    // only the actual reading (the fold's, or the run's) refuses the fraction;
+    // what the walk could not read might be anything. Everything else provably
+    // is not, and a text-proven defect is refused here.
     private enum IndexReading {
         case judged([PathSegment])
         case refused(String)
@@ -644,11 +643,10 @@ extension Linker {
         }
     }
 
-    // The inner index paths a fold can settle — `items[C]` reads its index
-    // from a constant, so the index is knowable now and no constant name
-    // survives into the image. Recursive, because an index path holds index
-    // paths of its own (`items[names[C]]`) and the promise is about all of
-    // them.
+    // The inner index paths a fold can settle. `items[C]` reads its index from
+    // a constant, so the index is knowable now and no constant name survives
+    // into the image. Recursive, because an index path holds index paths of its
+    // own (`items[names[C]]`) and the promise is about all of them.
     func foldedIndexReferences(
         _ segments: [PathSegment],
         at place: Place,
@@ -723,9 +721,9 @@ extension Linker {
         }
     }
 
-    // A word send written as a path. The receiver fills the word's one slot,
-    // so the send is judged exactly as a written call is — reachability,
-    // acceptance, then the judgment every send shares — and the walk goes on
+    // A word send written as a path. The receiver fills the word's one slot, so
+    // the send is judged exactly as a written call is (reachability,
+    // acceptance, then the judgment every send shares) and the walk goes on
     // with what the word answers, the receiver's reading filled in.
     private enum WordReach {
         case answers(TypeExpression)
@@ -746,9 +744,9 @@ extension Linker {
             )
         }
 
-        // A name a walk may reach declares its receiver — that is what made it
-        // reachable. A signature here without one is the frame disagreeing
-        // with itself, said rather than passed over.
+        // A name a walk may reach declares its receiver. That is what made it
+        // reachable. A signature here without one is the frame disagreeing with
+        // itself, said rather than passed over.
         guard
             let name = signature.receiver,
             let parameter = signature.parameters[name]
@@ -789,33 +787,33 @@ extension Linker {
         }
     }
 
-    // What ran inside an expression may have written the enclosing names —
-    // the one thing a nested body does that the body around it has to know
-    // about, because a write is to a box the enclosing body holds. Flow
-    // gathers those writes with the one distinction the reading after needs:
-    // whether every finishing way through made the write. A definite write
-    // retypes the name; an indefinite one joins with what the name held.
+    // What ran inside an expression may have written the enclosing names. The
+    // one thing a nested body does that the body around it has to know about,
+    // because a write is to a box the enclosing body holds. Flow gathers those
+    // writes with the one distinction the reading after needs: whether every
+    // finishing way through made the write. A definite write retypes the name;
+    // an indefinite one joins with what the name held.
     private struct Flow {
         var written: [Name: (type: TypeExpression, definite: Bool)] = [:]
 
-        // What was written on ways that left. It flows past nothing here —
-        // no run comes back from a leave — but a `break` ends only its loop
-        // and an attempt's body only its attempt, so the construct that
-        // absorbs the leave puts these back in play. Nothing about an
-        // escaped write is ever certain, and the type says so by having no
-        // room for the claim. A flow that leaves holds everything it wrote
-        // here and nothing under `written`.
+        // What was written on ways that left. It flows past nothing here (no
+        // run comes back from a leave) but a `break` ends only its loop and an
+        // attempt's body only its attempt, so the construct that absorbs the
+        // leave puts these back in play. Nothing about an escaped write is ever
+        // certain, and the type says so by having no room for the claim. A flow
+        // that leaves holds everything it wrote here and nothing under
+        // `written`.
         var escaped: [Name: TypeExpression] = [:]
 
         // Whether every way through leaves.
         var leaves = false
 
         // What a `return` inside here carried out of the procedure. Nothing
-        // absorbs one — a loop ends its rounds and an attempt its body, and
-        // neither is what a `return` reaches — so this only ever gathers on
-        // the way up, and what it gathers is the other half of what the
-        // procedure answers: the result the block reads is one way out, and
-        // every `return` is another.
+        // absorbs one (a loop ends its rounds and an attempt its body, and
+        // neither is what a `return` reaches) so this only ever gathers on the
+        // way up, and what it gathers is the other half of what the procedure
+        // answers: the result the block reads is one way out, and every
+        // `return` is another.
         //
         // Beside `escaped` rather than folded into it: an escaped write is
         // about a name the body around this one holds, and this is about the
@@ -823,20 +821,20 @@ extension Linker {
         var answered: TypeExpression?
     }
 
-    // Two answers, either of which may not be there — the join, said once,
-    // for the places that gather what a body hands back.
+    // Two answers, either of which may not be there. The join, said once, for
+    // the places that gather what a body hands back.
     private func joined(_ left: TypeExpression?, _ right: TypeExpression?) -> TypeExpression? {
         guard let right else { return left }
 
         return join(left, right)
     }
 
-    // The one statement of how a write lands — on what an earlier write left,
-    // and on what a name held. A definite write replaces; an indefinite one
-    // may not have happened, so it joins with what was there, and whether the
-    // name was written at all stays the earlier fact. Every place a Flow
-    // meets an environment or another Flow reads these two, so the rule
-    // cannot drift one copy at a time.
+    // The one statement of how a write lands. On what an earlier write left,
+    // and on what a name held. A definite write replaces; an indefinite one may
+    // not have happened, so it joins with what was there, and whether the name
+    // was written at all stays the earlier fact. Every place a Flow meets an
+    // environment or another Flow reads these two, so the rule cannot drift one
+    // copy at a time.
     private func merged(
         _ held: (type: TypeExpression, definite: Bool)?,
         with later: (type: TypeExpression, definite: Bool)
@@ -866,16 +864,15 @@ extension Linker {
         }
     }
 
-    // The two asks the one walk answers. Judging is the link's own pass —
-    // every dot rewritten, every send gathered, every refusal thrown — and
-    // it happens once per site. Reading answers the type and flow questions
-    // alone and refuses nothing — what cannot be read is `any` — because its
-    // askers read a body out of place or more than once: an operand typed
-    // where it stands, a round re-read until its writes settle, where a
-    // refusal would be transient or repeated. One walk under two asks, so
-    // the rules cannot drift a copy at a time — and so a body is read once,
-    // where a walk per question would compound arm by arm into an
-    // exponential reading of nothing new.
+    // The two asks the one walk answers. Judging is the link's own pass (every
+    // dot rewritten, every send gathered, every refusal thrown) and it happens
+    // once per site. Reading answers the type and flow questions alone and
+    // refuses nothing (what cannot be read is `any`) because its askers read a
+    // body out of place or more than once: an operand typed where it stands, a
+    // round re-read until its writes settle, where a refusal would be transient
+    // or repeated. One walk under two asks, so the rules cannot drift a copy at
+    // a time, and so a body is read once, where a walk per question would
+    // compound arm by arm into an exponential reading of nothing new.
     private enum Ask {
         // Judging carries which module the body being judged was declared
         // in, where it was declared in one; a constant's expression has no
@@ -883,14 +880,13 @@ extension Linker {
         case judging(folding: Folding?, origin: Int? = nil)
         case reading
 
-        // Whether this ask keeps what the walk rebuilds. Reading reads a
-        // body out of place or more than once, so it hands the expression
-        // back as written instead of paying for a copy nobody takes. In an
-        // expression case the pieces are gathered either way, so a gate
-        // there only spares the final assembly — but a loop or a walk also
-        // asks this to choose between the settled probe and a judging
-        // re-walk, and that choice carries refusals and gathered sites, so
-        // it is not one to drop.
+        // Whether this ask keeps what the walk rebuilds. Reading reads a body
+        // out of place or more than once, so it hands the expression back as
+        // written instead of paying for a copy nobody takes. In an expression
+        // case the pieces are gathered either way, so a gate there only spares
+        // the final assembly, but a loop or a walk also asks this to choose
+        // between the settled probe and a judging re-walk, and that choice
+        // carries refusals and gathered sites, so it is not one to drop.
         var rewrites: Bool {
             if case .judging = self { return true }
 
@@ -899,11 +895,11 @@ extension Linker {
     }
 
     // The gate a refusal passes: judging throws it, and the reading ask has
-    // none to throw — a refusal the walk states passes here, so it cannot
-    // forget which ask refuses, and what remains after it under reading is
-    // the degraded answer beside each call. The constant-folding throws
-    // stand apart on purpose: a folding scope rides only the judging ask,
-    // so those are judging's by construction.
+    // none to throw. A refusal the walk states passes here, so it cannot forget
+    // which ask refuses, and what remains after it under reading is the
+    // degraded answer beside each call. The constant-folding throws stand apart
+    // on purpose: a folding scope rides only the judging ask, so those are
+    // judging's by construction.
     private func refuse(
         _ reason: @autoclosure () -> String,
         at place: Place,
@@ -939,13 +935,13 @@ extension Linker {
             return Inspection(rewritten: expression, reading: type(of: value))
 
         // Nothing comes back from here, so there is no value to have a type.
-        // `never` fits wherever it is written — and what evaluating the
-        // carried value wrote left with the leave.
+        // `never` fits wherever it is written, and what evaluating the carried
+        // value wrote left with the leave.
         case let .leave(leave):
-            // What the procedure answers this way. Only a `return` reaches
-            // the caller — a `break` ends its loop and a `continue` its round
-            // — and one carrying nothing hands back the null a body with no
-            // result hands back, which is the run's own answer for it.
+            // What the procedure answers this way. Only a `return` reaches the
+            // caller (a `break` ends its loop and a `continue` its round) and
+            // one carrying nothing hands back the null a body with no result
+            // hands back, which is the run's own answer for it.
             func answering(_ flowed: Flow, carrying carried: TypeExpression?) -> Flow {
                 guard leave.reach == .procedure else { return flowed }
 
@@ -976,11 +972,11 @@ extension Linker {
                 flow: leaving(answering(carried.flow, carrying: carried.reading))
             )
 
-        // A path names something that has to exist just as a selector does,
-        // so judging refuses what does not resolve — and the judgment is the
+        // A path names something that has to exist just as a selector does, so
+        // judging refuses what does not resolve, and the judgment is the
         // rewrite that fixes what each dot means. A constant-headed path is
         // data the moment it is read, so under a folding scope it is judged
-        // first — the same rules as any path — and then becomes that data.
+        // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
             switch reading(of: path, in: environment, with: frame) {
             case let .refused(reason):
@@ -997,9 +993,9 @@ extension Linker {
                     return Inspection(rewritten: .reference(resolved), reading: read)
                 }
 
-                // An inner index path may read a constant too — `items[C]`
-                // folds its index the way a whole constant path folds, so no
-                // constant name survives into the image.
+                // An inner index path may read a constant too. `items[C]` folds
+                // its index the way a whole constant path folds, so no constant
+                // name survives into the image.
                 let settled = try foldedIndexReferences(resolved, at: place, folding: folding)
 
                 guard
@@ -1049,14 +1045,14 @@ extension Linker {
             )
 
         // A cast is where a reading the walk could not judge becomes one it
-        // can. The shape is the author's claim, so it is the reading from
-        // here on — and the run is left the one question the link cannot
-        // answer, which is what actually arrived.
+        // can. The shape is the author's claim, so it is the reading from here
+        // on, and the run is left the one question the link cannot answer,
+        // which is what actually arrived.
         //
-        // A claim the types already prove is refused, for the reason a
-        // needless `?.` is: the mark of a doubt where no doubt is left says
-        // nothing, and a spelling that says nothing is a reading gone wrong.
-        // `as: any` lands here too, and rightly — every reading fits it.
+        // A claim the types already prove is refused, for the reason a needless
+        // `?.` is: the mark of a doubt where no doubt is left says nothing, and
+        // a spelling that says nothing is a reading gone wrong. `as: any` lands
+        // here too, and rightly. Every reading fits it.
         case let .cast(value, type, optional):
             let inner = try inspected(
                 value,
@@ -1069,29 +1065,29 @@ extension Linker {
 
             let read = inner.reading.resolved(in: frame.types)
 
-            // Both refusals ask the shapes themselves, with nothing gating
-            // them on whether the reading is fully proven. A gate like that
-            // turned the judgment off wherever `any` sat anywhere inside the
-            // reading — `array<any>` read as `string` passed the link and
-            // answered null on every run, the permanent silent null this
-            // spelling exists against — while the case it was meant to protect
-            // (`{ data: any }` read as `{ data: { name: string } }`) is one
-            // `couldBothHold` already answers on its own, at the field.
+            // Both refusals ask the shapes themselves, with nothing gating them
+            // on whether the reading is fully proven. A gate like that turned
+            // the judgment off wherever `any` sat anywhere inside the reading
+            // (`array<any>` read as `string` passed the link and answered null
+            // on every run, the permanent silent null this spelling exists
+            // against) while the case it was meant to protect (`{ data: any }`
+            // read as `{ data: { name: string } }`) is one `couldBothHold`
+            // already answers on its own, at the field.
             //
-            // Needless means the claim and the reading are the same shape —
-            // not that one would accept the other. `accepts` is assignability,
-            // and assignability is where a boundary still has work to do: it
-            // holds between `int` and `int(0...10)`, and between anything and
-            // `any`, precisely because the value is checked when it arrives.
-            // Reading it as proof called every narrowing cast needless and
-            // left the author no way to say what they knew.
+            // Needless means the claim and the reading are the same shape, not
+            // that one would accept the other. `accepts` is assignability, and
+            // assignability is where a boundary still has work to do: it holds
+            // between `int` and `int(0...10)`, and between anything and `any`,
+            // precisely because the value is checked when it arrives. Reading
+            // it as proof called every narrowing cast needless and left the
+            // author no way to say what they knew.
             //
             // The claim is judged first, and on itself: a cast onto a shape
             // that proves nothing opens no door, whatever it was written over.
             // What the claim names is judged where every cast is seen, in the
-            // declaration scan — a spelling says that much on its own, and
-            // asking it here would ask only of what this walk reaches. What
-            // is left is the pair of questions that need the reading.
+            // declaration scan. A spelling says that much on its own, and
+            // asking it here would ask only of what this walk reaches. What is
+            // left is the pair of questions that need the reading.
             //
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
@@ -1108,7 +1104,7 @@ extension Linker {
 
             if !type.couldBothHold(inner.reading, in: frame.shapes) {
                 // Neither could ever be the other, and the reading proves what
-                // it is — so this cast cannot succeed on any run. `as` would
+                // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
@@ -1124,9 +1120,9 @@ extension Linker {
                 || (!nominal && (settled == read || handed.resolved(in: frame.types) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
-                // Maybe` hands on `Maybe` — the same shape by two spellings,
-                // and reading the question off the spelling let the second
-                // catch a repeat that the first waved through.
+                // Maybe` hands on `Maybe`. The same shape by two spellings, and
+                // reading the question off the spelling let the second catch a
+                // repeat that the first waved through.
                 try refuse(
                     "reads \(inner.reading.rendered) as \(settled.rendered),"
                         + " which it already is"
@@ -1139,12 +1135,12 @@ extension Linker {
 
             return Inspection(
                 // The author's spelling stands. `settled` is what the judgment
-                // needed — a name walked through to the shape it declares —
-                // and writing that back into the program would spend the name:
-                // a refusal would read `as { age: int }` where the author
-                // wrote `as Person`, and a document written back out would
-                // have lost the declaration it leaned on. The run resolves
-                // names itself, so nothing needs it resolved early.
+                // needed (a name walked through to the shape it declares) and
+                // writing that back into the program would spend the name: a
+                // refusal would read `as { age: int }` where the author wrote
+                // `as Person`, and a document written back out would have lost
+                // the declaration it leaned on. The run resolves names itself,
+                // so nothing needs it resolved early.
                 rewritten: ask.rewrites
                     ? .cast(inner.rewritten, as: type, optional: optional)
                     : expression,
@@ -1152,18 +1148,17 @@ extension Linker {
                 // The author's spelling here too, and for the same reason it
                 // stands in what is written back: a refusal on the next
                 // statement quotes this reading, and quoting a shape nobody
-                // wrote — `{ name: string }` where the author wrote `Person` —
-                // is the same name spent, one step later. Every consumer
-                // resolves names itself.
-                // `?` is asked of the fact: a name standing for a nullable
-                // already holds null, and wrapping it again would make the
-                // same shape read as two different ones depending on whether
-                // the author wrote the name or what it stands for.
+                // wrote (`{ name: string }` where the author wrote `Person`) is
+                // the same name spent, one step later. Every consumer resolves
+                // names itself. `?` is asked of the fact: a name standing for a
+                // nullable already holds null, and wrapping it again would make
+                // the same shape read as two different ones depending on
+                // whether the author wrote the name or what it stands for.
                 reading: handed,
                 flow: inner.flow
             )
 
-        // In name order — the order the run evaluates fields in, so what one
+        // In name order. The order the run evaluates fields in, so what one
         // field's write means to the next is the same fact at the run.
         case let .record(record):
             var environment = environment
@@ -1195,14 +1190,14 @@ extension Linker {
                 flow: flowed
             )
 
-        // A closure literal carries the signature it declared, and running
-        // one is not this flow's business — what it writes it writes when it
-        // is called, and the flow here is the flow of the making.
-        // Judging still follows the body even though nothing can say whether
-        // it is ever called: the warrant is compilation, and a body that
-        // never runs still has to compile. It sees what surrounds it plus
-        // what it declares. Purity is read the same way a declaration's is —
-        // from what the body calls.
+        // A closure literal carries the signature it declared, and running one
+        // is not this flow's business. What it writes it writes when it is
+        // called, and the flow here is the flow of the making. Judging still
+        // follows the body even though nothing can say whether it is ever
+        // called: the warrant is compilation, and a body that never runs still
+        // has to compile. It sees what surrounds it plus what it declares.
+        // Purity is read the same way a declaration's is. From what the body
+        // calls.
         case let .closure(procedure):
             var rewritten = expression
             var calls: [CallSite] = []
@@ -1278,11 +1273,11 @@ extension Linker {
                 )
             )
 
-        // Which value is called is settled at run time, so nothing here can
-        // say what it answers. Its operands are data the pure resolver reads
-        // — the check refuses a construct in one, and a program that came
-        // straight to the link meets the same predicate here — so nothing
-        // writes and there is no flow to carry.
+        // Which value is called is settled at run time, so nothing here can say
+        // what it answers. Its operands are data the pure resolver reads (the
+        // check refuses a construct in one, and a program that came straight to
+        // the link meets the same predicate here) so nothing writes and there
+        // is no flow to carry.
         case let .invoke(callee, arguments):
             guard case .judging = ask else {
                 return Inspection(rewritten: expression, reading: .any)
@@ -1329,16 +1324,16 @@ extension Linker {
                 reading: .any
             )
 
-        // A call answers what its callee declared, which is the fact this
-        // whole walk exists to carry. A declaration with a type parameter in
-        // it answers nothing until this call fills it, so the parameters are
-        // read from what was actually sent and the answer comes back with
-        // them filled — and only a generic answer reads the operands at all,
-        // so under the reading ask only a generic call pays for taking their
-        // readings. The operands are data the pure half reads — the check
-        // holds a construct out of them, and the link asks the same
-        // predicate itself — so nothing here writes: every operand stands in
-        // the one environment the dispatch stands in.
+        // A call answers what its callee declared, which is the fact this whole
+        // walk exists to carry. A declaration with a type parameter in it
+        // answers nothing until this call fills it, so the parameters are read
+        // from what was actually sent and the answer comes back with them
+        // filled, and only a generic answer reads the operands at all, so under
+        // the reading ask only a generic call pays for taking their readings.
+        // The operands are data the pure half reads (the check holds a
+        // construct out of them, and the link asks the same predicate itself)
+        // so nothing here writes: every operand stands in the one environment
+        // the dispatch stands in.
         case let .dispatch(dispatch):
             let signature = frame.signatures[dispatch.selector]
 
@@ -1469,23 +1464,22 @@ extension Linker {
                 flow: inner.flow
             )
 
-        // A branch answers nothing — a condition chooses a way through the
-        // body, not a value; the one thing its type still says is `never`,
-        // when both arms have it. The condition runs every way and the arms
-        // are the fork, judged in the environment the condition left: an arm
-        // every run takes does not exist unless both are written — a branch
-        // with no other arm makes every write indefinite — and an arm that
-        // leaves hands on nothing, so the write the staying arm makes is
-        // definite again: the ways that finish all made it. Unreached arms
-        // are followed on purpose.
+        // A branch answers nothing. A condition chooses a way through the body,
+        // not a value; the one thing its type still says is `never`, when both
+        // arms have it. The condition runs every way and the arms are the fork,
+        // judged in the environment the condition left: an arm every run takes
+        // does not exist unless both are written (a branch with no other arm
+        // makes every write indefinite) and an arm that leaves hands on
+        // nothing, so the write the staying arm makes is definite again: the
+        // ways that finish all made it. Unreached arms are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
                 try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .branch)), when: ask)
             }
 
-            // A condition is data and writes nothing — the construct rule
-            // above is what makes that a fact — so the arms stand in the
-            // environment the branch stands in.
+            // A condition is data and writes nothing (the construct rule above
+            // is what makes that a fact) so the arms stand in the environment
+            // the branch stands in.
             let head = try inspected(
                 condition,
                 at: place.slot(.condition(of: .branch)),
@@ -1525,29 +1519,28 @@ extension Linker {
                 flow: sequenced(head.flow, then: either(taken.flow, or: declined.flow))
             )
 
-        // A loop answers its body's declared result, and null when it has
-        // none. A round may run no time at all, so nothing a round writes is
-        // definite — and the leaves a round takes stop here, `break` and
+        // A loop answers its body's declared result, and null when it has none.
+        // A round may run no time at all, so nothing a round writes is
+        // definite, and the leaves a round takes stop here, `break` and
         // `continue` being the loop's own, so they are absorbed rather than
         // handed on. A round also follows other rounds, so the condition and
-        // the body read the settled environment — the one the rounds' own
-        // writes have already joined into. Readings that circle instead of
-        // settling would be widened to `any` behind the author's back —
-        // judging says so out loud, where a refusal can carry the reason;
-        // the reading ask stays total and takes the widened answer.
+        // the body read the settled environment. The one the rounds' own writes
+        // have already joined into. Readings that circle instead of settling
+        // would be widened to `any` behind the author's back. Judging says so
+        // out loud, where a refusal can carry the reason; the reading ask stays
+        // total and takes the widened answer.
         case let .loop(condition, body, round):
-            // A condition is data the run asks purely, the fact every
-            // operand has — so a construct is refused there by the same
-            // predicate, at the check and here alike.
+            // A condition is data the run asks purely, the fact every operand
+            // has, so a construct is refused there by the same predicate, at
+            // the check and here alike.
             if condition.holdsConstruct {
                 try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .loop)), when: ask)
             }
 
-            // The fixpoint probes the statements alone — the rounds are what
-            // leave things for one another, and the result never runs
-            // between rounds. The probe reads, so a reading asker takes the
-            // settled probe as its own walk; judging walks once more for the
-            // rewrite.
+            // The fixpoint probes the statements alone. The rounds are what
+            // leave things for one another, and the result never runs between
+            // rounds. The probe reads, so a reading asker takes the settled
+            // probe as its own walk; judging walks once more for the rewrite.
             let (seeded, probed, converged) = try settled(
                 from: rounded(environment, as: round)
             ) { entry -> (round: BodyWalk, flow: Flow) in
@@ -1583,13 +1576,13 @@ extension Linker {
                 ? try inspected(body.body, at: place.slot(.body), in: seeded, with: frame, ask: ask)
                 : probed
 
-            // The result runs once, at whichever exit the run takes — a
+            // The result runs once, at whichever exit the run takes (a
             // condition that declines at the start, a round that finishes or
-            // breaks — and it reads in the join of those exits: the entry
-            // the rounds seeded, joined with the environment the statements
-            // leave. A name only the body declared is null at the 0-round
-            // exit — a name a scope does not hold reads as null — so it
-            // reads back nullable, the same join every some-ways write gets.
+            // breaks) and it reads in the join of those exits: the entry the
+            // rounds seeded, joined with the environment the statements leave.
+            // A name only the body declared is null at the 0-round exit (a name
+            // a scope does not hold reads as null) so it reads back nullable,
+            // the same join every some-ways write gets.
             var tail: Inspection?
 
             if let result = body.result {
@@ -1621,10 +1614,10 @@ extension Linker {
                 )
             )
 
-        // A walk answers nothing — a walk that answered would be a map. Its
-        // rounds follow one another the way a loop's do, so the body reads
-        // the settled environment too, seeded with the element the
-        // material's reading feeds.
+        // A walk answers nothing. A walk that answered would be a map. Its
+        // rounds follow one another the way a loop's do, so the body reads the
+        // settled environment too, seeded with the element the material's
+        // reading feeds.
         case let .iteration(material, body, element):
             let fed = try inspected(
                 material,
@@ -1674,15 +1667,14 @@ extension Linker {
                 flow: sequenced(fed.flow, then: absorbed(inner.flow))
             )
 
-        // The body and the rescue are two ways through, not a sequence — a
-        // body that fails midway made some of its writes and the rescue runs
-        // then, so what either side wrote may be there, whichever way ran and
-        // however far it got. That is the environment the rescue reads as
-        // well as the one it writes. No write on either side is definite, and
-        // the leaving of either way says nothing about the whole: a body that
-        // always leaves can still fail before its leave, and the rescue may
-        // finish normally — so both sides' leaves are absorbed here, partial
-        // writes and all.
+        // The body and the rescue are two ways through, not a sequence. A body
+        // that fails midway made some of its writes and the rescue runs then,
+        // so what either side wrote may be there, whichever way ran and however
+        // far it got. That is the environment the rescue reads as well as the
+        // one it writes. No write on either side is definite, and the leaving
+        // of either way says nothing about the whole: a body that always leaves
+        // can still fail before its leave, and the rescue may finish normally,
+        // so both sides' leaves are absorbed here, partial writes and all.
         case let .attempt(block, rescue, failure):
             let attempted = try inspected(
                 block: block,
@@ -1714,8 +1706,8 @@ extension Linker {
     }
 
     // A block: its body, then the result in the environment the body left
-    // visible. A result after a statement no run comes back from is
-    // judging's to refuse — the reading ask answers `never` and moves on.
+    // visible. A result after a statement no run comes back from is judging's
+    // to refuse. The reading ask answers `never` and moves on.
     private func inspected(
         block: Block,
         at place: Place,
@@ -1732,10 +1724,10 @@ extension Linker {
         )
 
         // Where the result reads, or why it does not. A block's result sits
-        // after its statements — it reads in the environment the body left,
-        // and a body no run comes back from leaves it nothing to run,
-        // refused. The one rule the shape has: a loop's exit-answered
-        // result is the loop's own to read, not this walk's.
+        // after its statements. It reads in the environment the body left, and
+        // a body no run comes back from leaves it nothing to run, refused. The
+        // one rule the shape has: a loop's exit-answered result is the loop's
+        // own to read, not this walk's.
         let tail: Inspection?
         let reading: TypeExpression
         let flow: Flow
@@ -1783,8 +1775,8 @@ extension Linker {
         )
     }
 
-    // The statement walk's answers, named once — the fixpoint hands one
-    // back, so its asker and the walk cannot disagree about the shape.
+    // The statement walk's answers, named once. The fixpoint hands one back, so
+    // its asker and the walk cannot disagree about the shape.
     private typealias BodyWalk = (
         body: [Statement],
         calls: [CallSite],
@@ -1794,11 +1786,10 @@ extension Linker {
     )
 
     // A body read in order: the environment its statements leave behind,
-    // `never` where one of them ends every way through, and its outward
-    // writes — each statement's own binding included, except the names the
-    // body declared itself, which die with it. Only the box a `set` writes
-    // outlives the block. The one statement of the sequence rule, whichever
-    // ask is walking.
+    // `never` where one of them ends every way through, and its outward writes.
+    // Each statement's own binding included, except the names the body declared
+    // itself, which die with it. Only the box a `set` writes outlives the
+    // block. The one statement of the sequence rule, whichever ask is walking.
     private func inspected(
         _ body: [Statement],
         at place: Place,
@@ -1828,10 +1819,10 @@ extension Linker {
             )
             calls += inner.calls
 
-            // A write outlives the block it was written in, so a name
-            // written anywhere inside this statement may hold something else
-            // by the time the next one reads it — and bubbles outward,
-            // except through the names this body declared itself.
+            // A write outlives the block it was written in, so a name written
+            // anywhere inside this statement may hold something else by the
+            // time the next one reads it, and bubbles outward, except through
+            // the names this body declared itself.
             apply(inner.flow, to: &environment)
 
             for (name, write) in inner.flow.written where !locals.contains(name) {
@@ -1845,12 +1836,12 @@ extension Linker {
             flowed.answered = joined(flowed.answered, inner.flow.answered)
 
             // A statement no run comes back from ends the ways through this
-            // body — what was written on the way to it leaves with it. One
-            // predicate says so, and everything the fact decides reads it
-            // here: judging refuses a name on the statement — a binding that
-            // cannot happen — and anything written after it, which would
-            // never run. What the syntactic leaves get at reading, a call
-            // gets here, where the signature is known.
+            // body. What was written on the way to it leaves with it. One
+            // predicate says so, and everything the fact decides reads it here:
+            // judging refuses a name on the statement (a binding that cannot
+            // happen) and anything written after it, which would never run.
+            // What the syntactic leaves get at reading, a call gets here, where
+            // the signature is known.
             if inner.flow.leaves || inner.reading == .never {
                 if statement.binding != nil {
                     try refuseNeverBinding(at: here, when: ask)
@@ -1900,10 +1891,10 @@ extension Linker {
                 environment[id] = declared == nil ? .variable(holds) : .inout(holds)
 
             // A write to a whole variable retypes it, the way a declaration
-            // did — unless the box's type is fixed elsewhere, in which case
-            // what is written has to fit. A write through a path is judged
-            // against the shape the path reaches, and leaves the variable's
-            // type as it was.
+            // did, unless the box's type is fixed elsewhere, in which case what
+            // is written has to fit. A write through a path is judged against
+            // the shape the path reaches, and leaves the variable's type as it
+            // was.
             case let .assignment(path)?:
                 guard let id = path.head else { break }
 
@@ -1963,8 +1954,8 @@ extension Linker {
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
     // statement that ends the body, so the two facts cannot part. The reader
-    // catches the shapes it can see, and the link catches the words only it
-    // can see — one rule, two stages.
+    // catches the shapes it can see, and the link catches the words only it can
+    // see. One rule, two stages.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
             "never finishes,"
@@ -1974,11 +1965,11 @@ extension Linker {
         )
     }
 
-    // A way out took this flow with it: what it wrote is not the body's to
-    // hand on — no run comes back — but it is not gone either, because the
-    // writes are in the boxes and a loop or an attempt may absorb the leave.
-    // They move aside as escaped, indefinite because how far the way got is
-    // the run's fact, and a flow that leaves hands nothing on plainly.
+    // A way out took this flow with it: what it wrote is not the body's to hand
+    // on (no run comes back) but it is not gone either, because the writes are
+    // in the boxes and a loop or an attempt may absorb the leave. They move
+    // aside as escaped, indefinite because how far the way got is the run's
+    // fact, and a flow that leaves hands nothing on plainly.
     private func leaving(_ flowed: Flow) -> Flow {
         var left = flowed
 
@@ -1993,14 +1984,13 @@ extension Linker {
         return left
     }
 
-    // The construct the ways out stop at. A `break` ends only its loop and
-    // the flow after it goes on, so what escaped on the way is back in play —
-    // and nothing a construct absorbed is certain: the round may not have
-    // run, the body may have stopped anywhere, so absorbing is unconfirming,
-    // in this one sentence rather than at every caller. A leave that reaches
-    // further — a `return` — is over-counted here, which only widens a join;
-    // reading the reach would narrow it, and nothing unsound rides on not
-    // doing so.
+    // The construct the ways out stop at. A `break` ends only its loop and the
+    // flow after it goes on, so what escaped on the way is back in play, and
+    // nothing a construct absorbed is certain: the round may not have run, the
+    // body may have stopped anywhere, so absorbing is unconfirming, in this one
+    // sentence rather than at every caller. A leave that reaches further (a
+    // `return`) is over-counted here, which only widens a join; reading the
+    // reach would narrow it, and nothing unsound rides on not doing so.
     private func absorbed(_ flowed: Flow) -> Flow {
         var stopped = indefinite(flowed)
 
@@ -2016,9 +2006,9 @@ extension Linker {
     }
 
     // One thing ran after another: each later write lands by the one landing
-    // rule — a definite one wins the name, an indefinite one joins — what
-    // escaped keeps riding for the construct that absorbs it, and a sequence
-    // whose tail leaves leaves, everything written on the way going with it.
+    // rule (a definite one wins the name, an indefinite one joins) what escaped
+    // keeps riding for the construct that absorbs it, and a sequence whose tail
+    // leaves leaves, everything written on the way going with it.
     private func sequenced(_ first: Flow, then second: Flow) -> Flow {
         guard !first.leaves else { return first }
 
@@ -2037,11 +2027,11 @@ extension Linker {
         return second.leaves ? leaving(flowed) : flowed
     }
 
-    // One of two ways ran. A name both wrote holds either; a name one wrote
-    // may not have been written at all, so nothing about it is definite. A
-    // way that leaves hands on nothing — the ways that finish are the only
-    // ways a reading after can stand on — but what it wrote rides along as
-    // escaped, for the construct that absorbs the leave.
+    // One of two ways ran. A name both wrote holds either; a name one wrote may
+    // not have been written at all, so nothing about it is definite. A way that
+    // leaves hands on nothing (the ways that finish are the only ways a reading
+    // after can stand on) but what it wrote rides along as escaped, for the
+    // construct that absorbs the leave.
     private func either(_ taken: Flow, or declined: Flow) -> Flow {
         var flowed = Flow()
 
@@ -2107,10 +2097,10 @@ extension Linker {
     }
 
     // The environment a walk's body reads: the enclosing names plus the
-    // element — through the kind form of the material's reading, so bytes
-    // iterate as the array of bytes they are and the element reads as a
-    // byte. It takes the reading rather than the expression, so no asker
-    // walks the material a second time for it.
+    // element. Through the kind form of the material's reading, so bytes
+    // iterate as the array of bytes they are and the element reads as a byte.
+    // It takes the reading rather than the expression, so no asker walks the
+    // material a second time for it.
     private func walking(
         _ element: Name,
         holding reading: TypeExpression,
@@ -2129,9 +2119,9 @@ extension Linker {
         ) { _, new in new }
     }
 
-    // The environment a rescue stands in: the entry, soaked with what the
-    // body may have written before it failed — no write certain, none ruled
-    // out — plus the failure under its name.
+    // The environment a rescue stands in: the entry, soaked with what the body
+    // may have written before it failed (no write certain, none ruled out) plus
+    // the failure under its name.
     private func caught(
         soaking flow: Flow,
         failure: Name,
@@ -2145,17 +2135,16 @@ extension Linker {
         return caught
     }
 
-    // A round's body, read in the environment its own earlier rounds may
-    // have written — the caller hands the one reader its rounds have, the
-    // body's flow joins into the entry environment, and the body is re-read
-    // until the reading stops moving. The reader reads with the reading ask,
-    // because a refusal mid-climb would be a refusal of an environment no
-    // run ever stands in. A body that writes
-    // nothing outward settles on the first look; a chain of writes settles
-    // one link per look, so the bound is the chain's own size: the names the
-    // body writes, times the few steps the join ladder has. Past it the
-    // readings are not climbing — they are circling — and everything the
-    // body writes falls to `any`, over-wide and never wrong; the judging
+    // A round's body, read in the environment its own earlier rounds may have
+    // written. The caller hands the one reader its rounds have, the body's flow
+    // joins into the entry environment, and the body is re-read until the
+    // reading stops moving. The reader reads with the reading ask, because a
+    // refusal mid-climb would be a refusal of an environment no run ever stands
+    // in. A body that writes nothing outward settles on the first look; a chain
+    // of writes settles one link per look, so the bound is the chain's own
+    // size: the names the body writes, times the few steps the join ladder has.
+    // Past it the readings are not climbing (they are circling) and everything
+    // the body writes falls to `any`, over-wide and never wrong; the judging
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: TypeExpression],
@@ -2191,7 +2180,7 @@ extension Linker {
         return (widened, settled, false)
     }
 
-    // What a settled value reads as — internal, because a constant is a value
+    // What a settled value reads as. Internal, because a constant is a value
     // whose type seeds the environment its readers are judged in.
     func type(of value: Value) -> TypeExpression {
         switch value {
@@ -2247,7 +2236,7 @@ extension Linker {
     }
 
     // Two readings of one slot. Where they disagree the slot holds neither,
-    // which is what `any` says — a join that guessed would be a refusal an
+    // which is what `any` says. A join that guessed would be a refusal an
     // author cannot act on.
     //
     // A reading that leaves is not one of the two. It contributes no value, so
@@ -2260,7 +2249,7 @@ extension Linker {
 
         // Null beside a value is absence beside presence, and a slot that may
         // hold either is what `T?` says. A nullable side joins by what it
-        // holds, so the one fact — null may be here — is said once.
+        // holds, so the one fact (null may be here) is said once.
         if left == .null { return nullableReading(of: right) }
         if right == .null { return nullableReading(of: left) }
 
@@ -2289,10 +2278,10 @@ extension Linker {
 
         guard left != right else { return left }
 
-        // Unequal spellings may still be one type: the equations — a range is
-        // an int with a condition, bytes are `array<byte>` — are read through
-        // their normal forms before the join gives up, and two arrays join by
-        // their elements so the equation holds inside one.
+        // Unequal spellings may still be one type: the equations (a range is an
+        // int with a condition, bytes are `array<byte>`) are read through their
+        // normal forms before the join gives up, and two arrays join by their
+        // elements so the equation holds inside one.
         let mine = left.unrefined
         let theirs = right.unrefined
 
@@ -2484,7 +2473,7 @@ extension Linker {
             )
 
             // The reading ask has no refusal to throw, and what the name holds
-            // is what it declared either way — handing back what it was given
+            // is what it declared either way. Handing back what it was given
             // would leave the two walks reading one name as two types.
             return declared
         }

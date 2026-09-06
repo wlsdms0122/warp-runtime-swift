@@ -9,8 +9,8 @@ import Foundation
 import Warp
 
 // Repetition governed by a condition: the body runs while `while` holds.
-// Nothing here bounds a body that never settles — an author bounds a loop with
-// a counter and a word, and a receiver stops one with cancellation.
+// Nothing here bounds a body that never settles. An author bounds a loop with a
+// counter and a word, and a receiver stops one with cancellation.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`

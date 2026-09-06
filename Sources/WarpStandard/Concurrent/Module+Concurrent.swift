@@ -11,7 +11,7 @@ import Warp
 public extension Module {
     // Words that run closures at once. Vocabulary rather than grammar, so
     // running things concurrently is something a caller grants by linking this
-    // bundle — a program whose caller left it out cannot fan out at all.
+    // bundle. A program whose caller left it out cannot fan out at all.
     static let concurrent = try! Module(
         description: "Running closures at once.",
         procedures: [
@@ -19,8 +19,8 @@ public extension Module {
             // in one link, so concurrency shows at the call site.
             //
             // `of` and what comes back are declared `any` because both take two
-            // shapes — a record of closures or an array of them — and a union
-            // is not a thing a type here can say. The precision is not lost so
+            // shapes (a record of closures or an array of them) and a union is
+            // not a thing a type here can say. The precision is not lost so
             // much as unsayable; `map`, whose shapes are single, says it all.
             "std.concurrent.all": Procedure(
                 description: "Runs every closure, and answers every answer —"

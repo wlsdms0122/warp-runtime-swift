@@ -10,14 +10,14 @@ import Warp
 
 // Reading bytes as text in a named encoding, and writing text back out as
 // bytes. Two directions of one mapping, so one implementation with the
-// direction as its data — and the encoding read here too: the declaration's
-// `oneOf` says the same names early, but this keeps its own contract, so a
-// name added there without a mapping here refuses instead of quietly
-// answering in the wrong encoding.
+// direction as its data, and the encoding read here too: the declaration's
+// `oneOf` says the same names early, but this keeps its own contract, so a name
+// added there without a mapping here refuses instead of quietly answering in
+// the wrong encoding.
 //
 // Decoding can refuse: bytes carry no promise of being text, and completing a
 // broken sequence with replacement characters would answer a text nobody sent.
-// Encoding cannot — a string is Unicode text, and UTF-8 spells all of it.
+// Encoding cannot. A string is Unicode text, and UTF-8 spells all of it.
 public struct CodecQuery: Query {
     public enum Direction: Sendable {
         case decoded
@@ -45,9 +45,9 @@ public struct CodecQuery: Query {
         }
 
         switch (direction, question.receiver) {
-        // Validated by the standard library's own UTF-8, not a platform
-        // string bridge — which bytes are text is this language's judgment,
-        // and it must land the same on every host.
+        // Validated by the standard library's own UTF-8, not a platform string
+        // bridge, which bytes are text is this language's judgment, and it must
+        // land the same on every host.
         case let (.decoded, .bytes(bytes)):
             guard let text = Self.utf8(bytes) else {
                 throw ExecutionError("the bytes are not \(name) text")
@@ -64,8 +64,8 @@ public struct CodecQuery: Query {
     }
 
     // MARK: - Private
-    // The one decode loop, over the standard library's UTF-8 state machine —
-    // a broken sequence answers nil, never a completed guess.
+    // The one decode loop, over the standard library's UTF-8 state machine. A
+    // broken sequence answers nil, never a completed guess.
     private static func utf8(_ bytes: [UInt8]) -> String? {
         var text = ""
         var iterator = bytes.makeIterator()

@@ -11,10 +11,10 @@ import Warp
 // `return:`, `break:` and `continue:`.
 //
 // Three forms rather than one under three words, because the table maps a word
-// to a form and reads back the same way. One form answering to three words could
-// be written down but not written out — asked which word means it, the table
-// would have three answers and no way to say which. Three forms also make each
-// word droppable on its own, which one would not.
+// to a form and reads back the same way. One form answering to three words
+// could be written down but not written out. Asked which word means it, the
+// table would have three answers and no way to say which. Three forms also make
+// each word droppable on its own, which one would not.
 //
 //     { id: done,   return: { ref: answer } }
 //     { id: enough, break: }

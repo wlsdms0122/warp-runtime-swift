@@ -51,15 +51,14 @@ public struct ValueReader: Decodable {
             return
         }
 
-        // A foreign carrier's number is a binary64 by the carrier's own
-        // nature: past the machine word its digits cannot be told from a
-        // fraction spelled without a point — `1e19` and its digits arrive
-        // identically — so what a word cannot hold reads as the double the
-        // carrier holds. This is the one reader that does not keep a whole
-        // numeral's kind past the word, on purpose: the warp encodings and
-        // the YAML front end own their grammars and refuse there, and this
-        // path reads what a Codable carrier holds, which lost the
-        // distinction before this reader saw it.
+        // A foreign carrier's number is a binary64 by the carrier's own nature:
+        // past the machine word its digits cannot be told from a fraction
+        // spelled without a point (`1e19` and its digits arrive identically) so
+        // what a word cannot hold reads as the double the carrier holds. This
+        // is the one reader that does not keep a whole numeral's kind past the
+        // word, on purpose: the warp encodings and the YAML front end own their
+        // grammars and refuse there, and this path reads what a Codable carrier
+        // holds, which lost the distinction before this reader saw it.
         if let double = try? container.decode(Double.self) {
             self.value = .double(double)
 
@@ -72,13 +71,13 @@ public struct ValueReader: Decodable {
             return
         }
 
-        // Bytes come over whole, as `Data` — and only across the Value
-        // bridge, which answers `Data` for the bytes kind alone. A foreign
-        // decoder is never asked, because its own `Data` reading walks an
-        // unkeyed list of small numbers and would quietly turn an array of
-        // them into bytes. What the writer puts out is no part of that: it
-        // writes bytes as the array they are, and a carrier that has no
-        // compact spelling gives that array back as an array.
+        // Bytes come over whole, as `Data`, and only across the Value bridge,
+        // which answers `Data` for the bytes kind alone. A foreign decoder is
+        // never asked, because its own `Data` reading walks an unkeyed list of
+        // small numbers and would quietly turn an array of them into bytes.
+        // What the writer puts out is no part of that: it writes bytes as the
+        // array they are, and a carrier that has no compact spelling gives that
+        // array back as an array.
         if decoder is ValueDecoder, let data = try? container.decode(Data.self) {
             self.value = .bytes([UInt8](data))
 

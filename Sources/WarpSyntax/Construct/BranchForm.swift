@@ -9,9 +9,9 @@ import Foundation
 import Warp
 
 // A branch is a statement: the condition chooses a way through the body, and
-// nothing is answered. Its arms are statement sequences — what an arm keeps it
-// writes to an outer variable, and a value leaves through `return` — so there
-// is no name to bind and the form takes none.
+// nothing is answered. Its arms are statement sequences (what an arm keeps it
+// writes to an outer variable, and a value leaves through `return`) so there is
+// no name to bind and the form takes none.
 public struct BranchForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case when
@@ -43,7 +43,7 @@ public struct BranchForm: ConstructForm {
     }
 
     // MARK: - Public
-    // The namelessness is not this form's to enforce — `StatementReader` asks
+    // The namelessness is not this form's to enforce. `StatementReader` asks
     // the expression itself (`takesNoName`), so a notation's own spelling of a
     // branch is held to the same rule without remembering it.
     public func expression(boundTo id: String?) -> Expression {

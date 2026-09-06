@@ -12,7 +12,7 @@ import Foundation
 // It is grammar rather than a word, and the reason is what checking one costs.
 // Whether `return 5` is allowed depends on what the procedure it is written in
 // declared it answers; whether `break` is allowed depends on there being a loop
-// around it. Neither is a fact a signature has a slot for — a word receiving the
+// around it. Neither is a fact a signature has a slot for. A word receiving the
 // value could only be trusted with it, and a word cannot be told what it is
 // written inside.
 //
@@ -31,7 +31,7 @@ public struct Leave: Sendable {
     public let reach: Reach
 
     // Which loop, where more than one encloses this. Nothing means the nearest,
-    // the way it does everywhere else — a name is for reaching past it.
+    // the way it does everywhere else. A name is for reaching past it.
     public let target: Name?
 
     // What a procedure answers by leaving. Only `procedure` carries one: a loop

@@ -10,7 +10,7 @@ import Warp
 
 // A document's keys as the names they stand for. Where a text becomes a
 // program, a key that cannot be a name is refused here rather than carried in
-// as a spelling nothing can compare — and the refusal says which key it was,
+// as a spelling nothing can compare, and the refusal says which key it was,
 // which the reading knows and the name's own door does not.
 extension Dictionary where Key == String {
     func named(at steps: [Place.Step]) throws -> [Name: Value] {

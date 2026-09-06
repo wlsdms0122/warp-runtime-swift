@@ -20,16 +20,16 @@ extension TypeExpression {
     // sits opposite it is what the parameter stands for; where both have a
     // shape, the walk goes inside.
     //
-    // A parameter reached twice has to be read the same both times. Two readings are
-    // a disagreement rather than a reason to give up: widening to `any` was the
-    // checker announcing it had stopped checking, and it announced it silently —
-    // a list of strings handed an int to append read `Element` as `any` and the
-    // call went through.
+    // A parameter reached twice has to be read the same both times. Two
+    // readings are a disagreement rather than a reason to give up: widening to
+    // `any` was the checker announcing it had stopped checking, and it
+    // announced it silently. A list of strings handed an int to append read
+    // `Element` as `any` and the call went through.
     //
     // Refusing instead is what one signature needs to say what several would
     // have said. `plus` declaring `some N` on both sides and answering `some N`
     // is a whole number added to a whole number answering a whole number, and a
-    // whole number added to a fraction refused — without the language growing a
+    // whole number added to a fraction refused, without the language growing a
     // way to declare a name twice.
     func binding(
         against given: TypeExpression,
@@ -47,16 +47,15 @@ extension TypeExpression {
 
             guard already != given else { return }
 
-            // Two readings agree when one takes the other — a list of numbers
+            // Two readings agree when one takes the other. A list of numbers
             // and a whole number are not a disagreement, they are a parameter
             // read once loosely and once tightly, and the loose reading is the
-            // one that holds both.
-            // `any` first, because it is the loosest reading there is and
-            // `accepts` cannot order it: everything takes `any` and `any` takes
-            // everything, so asking which is looser answers yes both ways and
-            // whichever was read first would win. A parameter read as `any`
-            // anywhere is `any`, which is what a list of anything says about
-            // what may be put in it.
+            // one that holds both. `any` first, because it is the loosest
+            // reading there is and `accepts` cannot order it: everything takes
+            // `any` and `any` takes everything, so asking which is looser
+            // answers yes both ways and whichever was read first would win. A
+            // parameter read as `any` anywhere is `any`, which is what a list
+            // of anything says about what may be put in it.
             guard already != .any else { return }
 
             guard given != .any else {
@@ -82,8 +81,8 @@ extension TypeExpression {
             // parameter that is two things.
             disagreeing[name] = given
 
-        // A parameter inside a nullable slot is read from the declared half —
-        // null carries no reading, and a nullable arrival reads by its own
+        // A parameter inside a nullable slot is read from the declared half.
+        // Null carries no reading, and a nullable arrival reads by its own
         // declared half for the same reason.
         case let (.nullable(mine), .nullable(theirs)):
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
@@ -95,7 +94,7 @@ extension TypeExpression {
             mine.binding(against: theirs, into: &bound, disagreeing: &disagreeing, in: table)
 
         // `bytes` is `array<byte>` in a compact spelling, so an element
-        // parameter reads a byte from it — `first` on bytes answers one.
+        // parameter reads a byte from it. `first` on bytes answers one.
         case (.array(let mine), .bytes):
             mine.binding(against: .byteElement, into: &bound, disagreeing: &disagreeing, in: table)
 
@@ -137,10 +136,9 @@ extension TypeExpression {
         case let .parameter(name, _):
             return bound[name] ?? .any
 
-        // Nothing fills a walk through a parameter — it is named for a path
-        // only the body that wrote it can read, and no call site says
-        // anything about that. So the caller reads what a declaration saying
-        // nothing says.
+        // Nothing fills a walk through a parameter. It is named for a path only
+        // the body that wrote it can read, and no call site says anything about
+        // that. So the caller reads what a declaration saying nothing says.
         case .reading:
             return .any
 
@@ -174,15 +172,15 @@ extension TypeExpression {
     // carried on it. A set per name, because occurrences carry the bound
     // separately: `some T` bounded in one slot and bare in another are one
     // parameter bounded once, and two occurrences carrying different
-    // constraints are two claims about one name — a disagreement the link
+    // constraints are two claims about one name. A disagreement the link
     // refuses rather than picks from.
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
         switch self {
         case let .parameter(name, constraint):
             table[name, default: []].formUnion(constraint.map { bound in [bound] } ?? [])
 
-        // Not a slot a signature declares, and it carries no bound to claim
-        // — there is nothing here for a `bounds` to speak for.
+        // Not a slot a signature declares, and it carries no bound to claim.
+        // There is nothing here for a `bounds` to speak for.
         case .reading:
             return
 
@@ -258,12 +256,12 @@ public extension Signature {
     // constraint name written on each. One name may be mentioned bare and
     // bounded; the bound mention speaks for both.
     //
-    // A nested signature's parameters merge into the same table on purpose —
-    // they are this signature's own slots: `map` takes `array<some Element>`
-    // beside a procedure whose `item` is the same `some Element`, and it is
-    // one parameter filled by one call. Only a parameter behind a `named`
-    // type is not collected, because the link refuses one anywhere but a
-    // procedure signature and never fills one through the name.
+    // A nested signature's parameters merge into the same table on purpose.
+    // They are this signature's own slots: `map` takes `array<some Element>`
+    // beside a procedure whose `item` is the same `some Element`, and it is one
+    // parameter filled by one call. Only a parameter behind a `named` type is
+    // not collected, because the link refuses one anywhere but a procedure
+    // signature and never fills one through the name.
     func parameterConstraints(into table: inout [Name: Set<Name>]) {
         for parameter in parameters.values {
             parameter.declared.parameterConstraints(into: &table)
@@ -274,7 +272,7 @@ public extension Signature {
 
     // This signature with each type parameter's occurrences carrying the
     // constraint declared for its name. The signature owns the bound and the
-    // occurrences read it — a notation writes `bounds: { N: Numeric }` once and
+    // occurrences read it. A notation writes `bounds: { N: Numeric }` once and
     // `some N` in the slots, and this is where the one meets the many.
     //
     // An occurrence already carrying a bound keeps it: a nested signature may
@@ -300,8 +298,8 @@ public extension Signature {
 
 extension TypeExpression {
     // The occurrence side of `Signature.bounded(by:)`, walked through every
-    // place a type parameter may sit — a nested signature's parameters
-    // included, because they are the outer signature's own slots.
+    // place a type parameter may sit. A nested signature's parameters included,
+    // because they are the outer signature's own slots.
     func bounded(by bounds: [Name: Name]) -> TypeExpression {
         switch self {
         case let .parameter(name, constraint):

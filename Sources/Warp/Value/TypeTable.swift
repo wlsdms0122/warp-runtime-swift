@@ -7,19 +7,19 @@
 
 import Foundation
 
-// The type table: every shape the modules in a link declared, and what each name
-// stands for. The counterpart of `Library` on the other axis — that one holds
-// the words a caller installed, this one the shapes a document declared.
+// The type table: every shape the modules in a link declared, and what each
+// name stands for. The counterpart of `Library` on the other axis. That one
+// holds the words a caller installed, this one the shapes a document declared.
 //
 // It exists because a named type is kept rather than expanded. Expanding at link
 // would make a self-naming shape a regress, so the name survives into the run and
 // something has to be able to answer it.
 //
 // Constraints live beside the types rather than among them. A constraint is a
-// name for a membership — which types a bounded parameter admits — and nothing
-// is ever *of* one, so a slot cannot declare it and a value cannot arrive as
-// it. Two tables keep the two questions apart: "what shape is this name" and
-// "what does this name admit".
+// name for a membership (which types a bounded parameter admits) and nothing is
+// ever *of* one, so a slot cannot declare it and a value cannot arrive as it.
+// Two tables keep the two questions apart: "what shape is this name" and "what
+// does this name admit".
 public struct TypeTable: Sendable {
     // MARK: - Property
     public let types: [Name: TypeExpression]
@@ -65,19 +65,19 @@ public struct TypeTable: Sendable {
     }
 
     // Whether a reading could be a member of a constraint, or nil when nothing
-    // declares the name — the caller says what an undeclared constraint means
-    // on its surface, rather than this deciding for both. Membership is
-    // one-sided the way every judgment before the run is: only what is
-    // provably outside is refused, and a reading nothing can be said about —
-    // `any`, or another type parameter with no constraint of its own — passes
-    // here and is judged again where the value actually arrives.
+    // declares the name. The caller says what an undeclared constraint means on
+    // its surface, rather than this deciding for both. Membership is one-sided
+    // the way every judgment before the run is: only what is provably outside
+    // is refused, and a reading nothing can be said about (`any`, or another
+    // type parameter with no constraint of its own) passes here and is judged
+    // again where the value actually arrives.
     //
     // A constrained reading is judged by its own membership rather than by its
-    // name: it stands for some member of its constraint, so it fits where
-    // every one of those members would. The table ends its own recursion — a
-    // membership already being asked answers yes rather than being asked
-    // again — so a table built by hand refuses or answers where a linked one
-    // would, and never chases a declaration the link would have refused.
+    // name: it stands for some member of its constraint, so it fits where every
+    // one of those members would. The table ends its own recursion (a
+    // membership already being asked answers yes rather than being asked again)
+    // so a table built by hand refuses or answers where a linked one would, and
+    // never chases a declaration the link would have refused.
     public func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
         shapes.admits(constraint: name, reading: reading)
     }

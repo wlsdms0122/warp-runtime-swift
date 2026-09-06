@@ -13,8 +13,8 @@ import Warp
 // `Place` carries a slot and a construct as themselves, because the language
 // has no opinion about what a text calls them. This is the side that does: the
 // keys are the readers' own, taken from where they are declared rather than
-// spelled again here, and the word for a construct is asked of the registry —
-// a notation may have respelled one, and then that is the word its author is
+// spelled again here, and the word for a construct is asked of the registry. A
+// notation may have respelled one, and then that is the word its author is
 // looking at.
 //
 // Every step answers on its own. A slot whose word depends on the construct
@@ -56,9 +56,9 @@ public extension Place {
         case .body: BlockReader.CodingKeys.body.stringValue
         case .result: BlockReader.CodingKeys.result.stringValue
 
-        // A receiver is written the same word wherever one is — a message in
-        // statement position, a message in a value, a cast — so the word is
-        // the expression grammar's rather than any one form's.
+        // A receiver is written the same word wherever one is (a message in
+        // statement position, a message in a value, a cast) so the word is the
+        // expression grammar's rather than any one form's.
         case .receiver: ExpressionReader.subjectKey.spelling
 
         // A call and an invocation are written with the same two words, which
@@ -90,7 +90,7 @@ public extension Place {
 
     // The word this notation writes a shape under. Asked of the registry
     // because a caller registers the forms it likes under the spellings it
-    // likes, and a shape whose word was given up has none to offer — the
+    // likes, and a shape whose word was given up has none to offer. The
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {

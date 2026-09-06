@@ -10,7 +10,7 @@ import Foundation
 // Which shape an expression is, without any of it.
 //
 // A place says which construct a statement writes, and the shape is the whole
-// of what it has to say — carrying the expression would put a program inside an
+// of what it has to say. Carrying the expression would put a program inside an
 // address. The cases are the language's own and no document's: what a text
 // spells a shape with is the notation's, and two texts spelling one shape two
 // ways arrive here as one case.
@@ -36,8 +36,8 @@ public enum Construct: Sendable, Equatable {
     // something else, and the reading that knows which is not this one.
     //
     // Leaving reads as one word for all three reaches. Which loop a `leave`
-    // ends is carried in the case and spelled by whoever spells for a document
-    // — an address exists to reach the statement, and the statement is already
+    // ends is carried in the case and spelled by whoever spells for a document.
+    // An address exists to reach the statement, and the statement is already
     // named a step above.
     public var rendered: String {
         switch self {

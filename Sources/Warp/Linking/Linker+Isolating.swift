@@ -10,7 +10,7 @@ import Foundation
 // Which bodies touch no name another body could touch at the same time. Worked
 // out the way purity is: every declaration starts isolated, and one is struck
 // when its body writes a name it did not declare, hands one in place, calls a
-// value, or calls a declaration that was struck — until nothing more is struck.
+// value, or calls a declaration that was struck, until nothing more is struck.
 extension Linker {
     // MARK: - Internal
     func isolated(

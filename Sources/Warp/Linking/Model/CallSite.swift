@@ -19,10 +19,10 @@ struct CallSite: Sendable {
     // this call, so nothing has to find it again.
     let callee: Symbol
 
-    // What each operand held where this was written — the walk's own answers,
-    // carried so the check never walks a body a second time for them. A
-    // call's arguments are mostly references, so without these the types a
-    // declaration carries would only ever be checked against literals.
+    // What each operand held where this was written. The walk's own answers,
+    // carried so the check never walks a body a second time for them. A call's
+    // arguments are mostly references, so without these the types a declaration
+    // carries would only ever be checked against literals.
     let readings: [Name: TypeExpression]
     let received: TypeExpression?
 

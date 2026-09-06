@@ -8,21 +8,21 @@
 import Foundation
 
 // What a declaration says it takes. Distinct from `ValueType`, which is what a
-// value *is*: `any` is only ever something a declaration says, and `array` alone
-// was the most a declaration could say about a list — no element, no fields, no
-// name for a shape two procedures share.
+// value *is*: `any` is only ever something a declaration says, and `array`
+// alone was the most a declaration could say about a list. No element, no
+// fields, no name for a shape two procedures share.
 //
 // A type is an expression for the same reason an expression is: it composes.
 // `array<string>` is `array` applied to `string`, and a name is a name for one
-// of these rather than a separate kind of thing — which is why a module declares
+// of these rather than a separate kind of thing, which is why a module declares
 // a type the same way it declares anything, by binding a name to something.
 //
-// Checking is structural, and it is width-tolerant on records: a value with more
-// fields than the declaration names passes. What arrives here is data from
-// outside — a payload gains fields, and a declaration saying which ones it needs
+// Checking is structural, and it is width-tolerant on records: a value with
+// more fields than the declaration names passes. What arrives here is data from
+// outside. A payload gains fields, and a declaration saying which ones it needs
 // should not be a declaration that it needs nothing else to exist.
 public indirect enum TypeExpression: Sendable, Equatable {
-    // Nothing ever *is* `any` — it is what a declaration says when it accepts
+    // Nothing ever *is* `any`. It is what a declaration says when it accepts
     // whatever it is handed. `contains` compares elements of any shape, and
     // declaring `string` there would be a lie the linker would then enforce.
     case any
@@ -31,7 +31,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // place control does not come back from is written down: a refusal answers
     // `never` because it does not answer at all. Saying so is what keeps the
     // arm that leaves from having an opinion about what the arm that stays
-    // holds — without it, one branch failing would cost the other its type.
+    // holds, without it, one branch failing would cost the other its type.
     case never
 
     case null
@@ -44,8 +44,8 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // Whole or fraction, without saying which.
     //
     // It exists because arithmetic is the one place a declaration genuinely
-    // means both. Writing `any` there instead said nothing at all, so a sum of a
-    // number and a piece of text was found by running it — in a language whose
+    // means both. Writing `any` there instead said nothing at all, so a sum of
+    // a number and a piece of text was found by running it. In a language whose
     // whole claim is that what can be decided before running is.
     //
     // It is not a fourth number. Nothing is ever *of* this type: a value is
@@ -54,20 +54,20 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // arithmetic can actually work with.
     case number
 
-    // A number the slot admits only inside the range — `int(0...255)`,
+    // A number the slot admits only inside the range. `int(0...255)`,
     // `double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
     // the value is a whole number or a fraction, and the bounds are judged
-    // where a value is settled, the way `oneOf` is — at the link for a
-    // constant, at the boundary for what only the run can see. A module gives
-    // one a name the way it names any type: `byte = int(0...255)`.
+    // where a value is settled, the way `oneOf` is. At the link for a constant,
+    // at the boundary for what only the run can see. A module gives one a name
+    // the way it names any type: `byte = int(0...255)`.
     case ranged(Refinement)
 
     // A list of one shape. The element is always written, so `array<any>` says
-    // out loud that anything is accepted — a declaration that accepts anything
+    // out loud that anything is accepted. A declaration that accepts anything
     // reads differently from one that has not been written yet.
     case array(TypeExpression)
 
-    // A map of string keys to one shape — a record whose field names are data
+    // A map of string keys to one shape. A record whose field names are data
     // rather than declaration. Keys are always strings because that is what
     // `Value.record` holds.
     case dictionary(TypeExpression)
@@ -76,13 +76,13 @@ public indirect enum TypeExpression: Sendable, Equatable {
     case record([Name: TypeExpression])
 
     // A value that can be called: what it may be called with, and what it must
-    // be. Nil is a declaration that has not been written — "some procedure" —
-    // the way `any` is for a value, and it is accepted by anything for the same
+    // be. Nil is a declaration that has not been written ("some procedure") the
+    // way `any` is for a value, and it is accepted by anything for the same
     // reason.
     //
     // Purity and isolation are requirements rather than claims. A declaration
-    // never states its own — the linker derives both from what a body does —
-    // so what is written here is what a slot asks of whatever fills it.
+    // never states its own (the linker derives both from what a body does) so
+    // what is written here is what a slot asks of whatever fills it.
     case procedure(Signature?, Purity = .unstated, Isolation = .unstated)
 
     // A field that a path may write through. Only a declared type's field is
@@ -98,15 +98,15 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // a variable, and what arrives is the inner type.
     case `inout`(TypeExpression)
 
-    // The declared type, or null — the one union the language has, and it is
+    // The declared type, or null. The one union the language has, and it is
     // null-only on purpose. `?.` answers this, and a parameter declaring it may
     // default to null; a general union would put back the "is it this or that"
     // question the whole type system exists to answer once.
     case nullable(TypeExpression)
 
     // A type a module declared. Kept rather than expanded so that a type may
-    // name itself — `Tree` with children of `array<Tree>` is a shape, not a
-    // regress — which means resolving one needs the table it was declared in.
+    // name itself (`Tree` with children of `array<Tree>` is a shape, not a
+    // regress) which means resolving one needs the table it was declared in.
     case named(Name)
 
     // A type parameter, filled by whatever the call site puts there. The name
@@ -115,19 +115,19 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // string and the declaration never had to say which.
     //
     // It stands for a type rather than naming one, which is why it is not
-    // `named` — a name is looked up in a table and this is worked out from the
+    // `named`. A name is looked up in a table and this is worked out from the
     // call.
     //
-    // The second name bounds it: a parameter bounded by `Comparable` takes only what the
-    // constraint by that name admits. The constraint is a declaration like a
-    // type — a module binds a name to the types it admits — so a signature
+    // The second name bounds it: a parameter bounded by `Comparable` takes only
+    // what the constraint by that name admits. The constraint is a declaration
+    // like a type (a module binds a name to the types it admits) so a signature
     // writes the name and never the membership, and there is no inline union
     // for the membership to leak out through.
     case parameter(name: Name, constraint: Name? = nil)
 
     // What a walk *through* a type parameter reached. Still a shape the call
-    // decides — a dot on it stands as written, the way a dot on the parameter
-    // does — and not the parameter, because a field of an unknown shape is a
+    // decides (a dot on it stands as written, the way a dot on the parameter
+    // does) and not the parameter, because a field of an unknown shape is a
     // different unknown. It carries no bound for the same reason: what a
     // constraint admits was proven of the parameter, and nothing was proven of
     // what was read out of it.
@@ -139,15 +139,15 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // alone enforces is a rule the host walks around. Two cases is that rule
     // stated where nothing can walk around it.
     //
-    // The parameter it was read out of, and the path from there, together —
+    // The parameter it was read out of, and the path from there, together,
     // because that pair is the whole of what this is. Two walks that land on
     // the same field of the same unknown are one shape, and two fields of it
     // are two.
     //
     // Rooted at the parameter and not at the name a body happened to read
     // through: `of: some T` and `also: some T` are one unknown, so their
-    // `.inner` is one field, and a step given a name along the way — `held =
-    // of.inner` and then `held.count` — has to arrive where the unbroken walk
+    // `.inner` is one field, and a step given a name along the way (`held =
+    // of.inner` and then `held.count`) has to arrive where the unbroken walk
     // arrives. A root that was the local name made every naming a new unknown.
     //
     // The path is segments and not their spelling for the same reason: `.a`
@@ -216,16 +216,15 @@ public indirect enum TypeExpression: Sendable, Equatable {
             // documents and compared as the type's identity, not a message.
             return refinement.rendered
 
-        // The diagnostic voice, not the notation — `rendered` tells an author
-        // what a type *is*, and the procedure case below already writes a
-        // shape no document spells. So the bound rides along: `some N` alone
-        // would hide the one fact a bound refusal is about. What a document
-        // spells is the writer's question, and the writer answers it with
-        // `bounds`.
+        // The diagnostic voice, not the notation. `rendered` tells an author
+        // what a type *is*, and the procedure case below already writes a shape
+        // no document spells. So the bound rides along: `some N` alone would
+        // hide the one fact a bound refusal is about. What a document spells is
+        // the writer's question, and the writer answers it with `bounds`.
         case let .parameter(name, constraint):
             return constraint.map { bound in "some \(name): \(bound)" } ?? "some \(name)"
 
-        // Spelled as what it is — the shape reached by that path. No document
+        // Spelled as what it is. The shape reached by that path. No document
         // writes this, so the spelling answers to the message alone: an author
         // reading a refusal about `item.a` should see where it came from.
         case let .reading(of, path):
@@ -285,20 +284,19 @@ extension TypeExpression: CustomStringConvertible {
 }
 
 extension TypeExpression {
-    // What one element of bytes is — the range `std` names `byte`. Owned here
-    // because the `bytes = array<byte>` equation reads it without a link, so
-    // it cannot live behind the name.
+    // What one element of bytes is. The range `std` names `byte`. Owned here
+    // because the `bytes = array<byte>` equation reads it without a link, so it
+    // cannot live behind the name.
     public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
     // The spelling with its conditions dropped: a range is an int the bounds
     // refine, and bytes are `array<byte>` compacted. This answers the kind
-    // question alone — a join asks it, because a join's answer is a kind. It
-    // is deliberately not a gate for `accepts` and `settling`: those exist to
-    // read exactly what dropping erases — the bounds, and which spelling a
-    // slot settles to.
-    // The type a parameter hands in place, where it does; otherwise the type
-    // itself. What arrives through `inout` is the inner type, and every
-    // question about what fits asks that.
+    // question alone. A join asks it, because a join's answer is a kind. It is
+    // deliberately not a gate for `accepts` and `settling`: those exist to read
+    // exactly what dropping erases. The bounds, and which spelling a slot
+    // settles to. The type a parameter hands in place, where it does; otherwise
+    // the type itself. What arrives through `inout` is the inner type, and
+    // every question about what fits asks that.
     public var inoutUnwrapped: TypeExpression {
         if case let .inout(inner) = self { return inner }
         return self
@@ -335,7 +333,7 @@ extension TypeExpression {
 }
 
 extension TypeExpression {
-    // Whether what this stands for is settled at the call — the shallow
+    // Whether what this stands for is settled at the call. The shallow
     // question, beside `isGeneric`'s deep one. A parameter and a walk through
     // one answer alike, and that is the whole of what is asked: neither is
     // knowable at the link, so a reading that would judge by shape has nothing
@@ -351,7 +349,7 @@ extension TypeExpression {
         }
     }
 
-    // What a walk through this shape reaches by taking those segments — nil
+    // What a walk through this shape reaches by taking those segments. Nil
     // where this is not a shape a call decides, which is where a walk has a
     // type to read the segments against and no need for one of these.
     //
@@ -376,28 +374,28 @@ extension TypeExpression {
         }
     }
 
-    // Whether this shape proves nothing about the value it holds — the three
-    // that stop a walk, named once because they are one question asked twice.
-    // A dot needs a shape the types prove, and a cast is the door onto one:
-    // what the walk may not read past is exactly what a cast may open, and a
-    // cast onto anything else is a claim the types already settled.
+    // Whether this shape proves nothing about the value it holds. The three
+    // that stop a walk, named once because they are one question asked twice. A
+    // dot needs a shape the types prove, and a cast is the door onto one: what
+    // the walk may not read past is exactly what a cast may open, and a cast
+    // onto anything else is a claim the types already settled.
     //
     // The three say nothing for three different reasons, and where the reason
-    // matters — the sentence a refusal carries — they are asked apart. This is
+    // matters (the sentence a refusal carries) they are asked apart. This is
     // for the places that only need the shared fact.
     var provesNothing: Bool {
         self == .any || self == .never || decidedAtCall
     }
 
-    // The refusal a cast earns for naming a shape there is nothing to read —
-    // nil where the shape names one. Said here, once, because a cast's claim
-    // is judged in two places: the declaration scan that sees every cast in
-    // every module, and the walk that knows what the value reads as.
+    // The refusal a cast earns for naming a shape there is nothing to read. Nil
+    // where the shape names one. Said here, once, because a cast's claim is
+    // judged in two places: the declaration scan that sees every cast in every
+    // module, and the walk that knows what the value reads as.
     //
     // Each of the three says its own. They are one predicate where only the
     // shared fact is wanted (`provesNothing`), and three sentences here,
-    // because a refusal carries its reason: telling an author that `T` names
-    // no shape is false — a call names it, elsewhere.
+    // because a refusal carries its reason: telling an author that `T` names no
+    // shape is false. A call names it, elsewhere.
     var unreadableClaim: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing"
@@ -438,8 +436,8 @@ extension TypeExpression {
         lowered(in: table).couldBothHold(other.lowered(in: table), in: table)
     }
 
-    // The same shape with every name it holds walked through to what that
-    // name declares — at every depth, not only the outermost.
+    // The same shape with every name it holds walked through to what that name
+    // declares. At every depth, not only the outermost.
     //
     // A name is a spelling, and two spellings of one shape are one shape: a
     // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
@@ -451,10 +449,10 @@ extension TypeExpression {
     }
 
     // A name already being walked through stands as itself. A type may name
-    // itself — `Tree` holding `array<Tree>` is a declared shape — so a walk
-    // that expanded every name at every depth would chase one forever. The
-    // link refuses *cyclic name chains*, which makes a walk that only follows
-    // names finite; this one goes into fields as well, so it is outside that
+    // itself (`Tree` holding `array<Tree>` is a declared shape) so a walk that
+    // expanded every name at every depth would chase one forever. The link
+    // refuses *cyclic name chains*, which makes a walk that only follows names
+    // finite; this one goes into fields as well, so it is outside that
     // guarantee and carries its own, the way `accepts` does.
     private func resolved(in types: TypeTable, assuming: Set<Name>) -> TypeExpression {
         switch self {
@@ -484,14 +482,14 @@ extension TypeExpression {
         }
     }
 
-    // Whether null is one of this type's values rather than an absence — the
+    // Whether null is one of this type's values rather than an absence. The
     // fact `T?` exists to declare, and the boundary reads it: a null arriving
     // at a `T?` slot is a value the body takes, not a missing argument.
     //
     // `any` is not this. An undeclared shape accepts a null that arrives, but
-    // it does not *spell* null as a value — a required `any` parameter still
-    // means "give me something". The looser question, "could a default of
-    // null ever be taken", is the link's and includes `any`.
+    // it does not *spell* null as a value. A required `any` parameter still
+    // means "give me something". The looser question, "could a default of null
+    // ever be taken", is the link's and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
         declaresNull(in: types.shapes)
     }
@@ -505,7 +503,7 @@ extension TypeExpression {
     // Whether a value of `other` may stand where this is declared. Structural,
     // and one-directional: `any` on the left accepts anything because nothing
     // was declared, and `any` on the right is accepted by anything because
-    // nothing is known — an undeclared answer cannot be proven wrong.
+    // nothing is known. An undeclared answer cannot be proven wrong.
     //
     // This is the half of checking the linker can do. What a body computes is
     // not readable from the text, but what a *call* answers is: it is the

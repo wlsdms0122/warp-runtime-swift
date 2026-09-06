@@ -10,7 +10,7 @@ import Warp
 
 public extension Module {
     // A list rather than one module: these are separate bundles, and a caller
-    // takes the ones its programs have use for — together with `foundation`,
+    // takes the ones its programs have use for. Together with `foundation`,
     // which holds the constraints the other bundles' signatures mention.
     //
     // Each is written here and checked where it is made, so a refusal from one

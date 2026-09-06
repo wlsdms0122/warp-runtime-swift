@@ -112,20 +112,20 @@ public struct ModuleReader: Decodable {
         return try written.read([String: T].self).named(at: written.steps)
     }
 
-    // A document says which language it is written for, and one that does not is
-    // not a document. Reading silence as the earliest would mean guessing at the
-    // one question that has to be answerable from the bytes alone — and it is
-    // what lets a file of some other shape entirely walk in and be turned away
-    // for its keys rather than for what it is.
+    // A document says which language it is written for, and one that does not
+    // is not a document. Reading silence as the earliest would mean guessing at
+    // the one question that has to be answerable from the bytes alone, and it
+    // is what lets a file of some other shape entirely walk in and be turned
+    // away for its keys rather than for what it is.
     //
-    // Anything outside the range this reader knows is refused rather than guessed
-    // at — below it, the document is claiming a language that never existed.
-    // Read through its own container, before anything else and before the keys
-    // are judged, because everything after it is read by rules a newer document
-    // may not be written to — including which keys exist. A later version adding
-    // a key would otherwise be turned away as malformed, and a reader has to
-    // tell "I am too old for this" (upgrade me) from "this is wrong" (fix the
-    // sender).
+    // Anything outside the range this reader knows is refused rather than
+    // guessed at. Below it, the document is claiming a language that never
+    // existed. Read through its own container, before anything else and before
+    // the keys are judged, because everything after it is read by rules a newer
+    // document may not be written to. Including which keys exist. A later
+    // version adding a key would otherwise be turned away as malformed, and a
+    // reader has to tell "I am too old for this" (upgrade me) from "this is
+    // wrong" (fix the sender).
     private static func checkVersion(in decoder: Decoder) throws {
         let envelope = try decoder.container(keyedBy: AnyCodingKey.self)
         let key = AnyCodingKey(stringValue: Envelope.versionKey.spelling)

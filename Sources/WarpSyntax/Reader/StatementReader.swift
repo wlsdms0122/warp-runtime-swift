@@ -10,20 +10,20 @@ import Warp
 
 // A statement, written as at most one name plus exactly one construct key.
 //
-// The envelope carries no modifiers — not `when:` to say whether the statement
+// The envelope carries no modifiers, not `when:` to say whether the statement
 // runs, not `rescue:` to say what happens if it fails, because no language
-// spells them that way. `some() when x > 0` is not a form anyone writes;
-// `if x > 0 { some() }` is, and that is `branch`. Recovery is `attempt` for the
-// same reason, plus one of its own: what do-catch guards is a body, and an
-// envelope key could only ever guard one statement.
+// spells them that way. `some() when x > 0` is not a form anyone writes; `if x
+// > 0 { some() }` is, and that is `branch`. Recovery is `attempt` for the same
+// reason, plus one of its own: what do-catch guards is a body, and an envelope
+// key could only ever guard one statement.
 //
 // So the envelope is a name, and what a statement binds is one expression.
 //
 // The name is written three ways, and the spelling is what the statement does
 // to it rather than a modifier hung beside it: `id:` fixes a name, `var:`
 // introduces one that may be written again, and `set:` writes one declared
-// earlier. At most one of the three — none is a statement run for its effect,
-// with the answer dropped — and exactly one construct key; the envelope never
+// earlier. At most one of the three (none is a statement run for its effect,
+// with the answer dropped) and exactly one construct key; the envelope never
 // grew back. A leaving construct takes no name at all: it never finishes, so
 // the name could never bind.
 //
@@ -72,7 +72,7 @@ public struct StatementReader: Decodable {
         // is the reader that knows the position holds a statement, so the name
         // an author knows it by is this one's to put on. It is read here off
         // the envelope, the one way a name is read at all, rather than worked
-        // out from the data again once something has failed — a second reading
+        // out from the data again once something has failed. A second reading
         // is a second rule, and two rules for one name is a document called one
         // thing while being refused as another.
         let envelope = try decoder.container(keyedBy: EnvelopeKeys.self)

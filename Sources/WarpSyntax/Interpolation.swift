@@ -10,7 +10,7 @@ import Warp
 
 // What a template lowers to, for a notation that offers one.
 //
-// The keys `format` and `with` are reserved in every notation — that much is the
+// The keys `format` and `with` are reserved in every notation. That much is the
 // document's, and the specification names those two and no others. Which words
 // they spend is not: a template asks each piece how it reads and writes the
 // pieces one after another, and what those two words are called is the

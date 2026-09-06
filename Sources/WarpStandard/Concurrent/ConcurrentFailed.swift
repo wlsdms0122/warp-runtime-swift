@@ -9,8 +9,8 @@ import Foundation
 import Warp
 
 // Every piece's failure, keyed by the piece's label. One aggregate rather than
-// whichever failure finished first, because which one that is would be timing —
-// a rescue reads the same set of failures on every run.
+// whichever failure finished first, because which one that is would be timing.
+// A rescue reads the same set of failures on every run.
 public struct ConcurrentFailed: RecoverableFailure {
     // MARK: - Property
     public let failures: [Name: String]

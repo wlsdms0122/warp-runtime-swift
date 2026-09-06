@@ -8,7 +8,7 @@
 import Foundation
 
 // Takes every module this run was given and one name to start from, and answers
-// with an image — or refuses.
+// with an image, or refuses.
 //
 // A link is handed its whole world at once. The words a program can send are
 // the words the caller put in front of it, so what to link is the caller's
@@ -22,9 +22,9 @@ import Foundation
 // resolve rather than on the first one a run happens to reach.
 //
 // Every send goes through the same gate: a library word and a procedure are
-// checked against a signature by the same code, and the only difference is where
-// the signature came from — the installed table, or another module in the same
-// link.
+// checked against a signature by the same code, and the only difference is
+// where the signature came from. The installed table, or another module in the
+// same link.
 //
 // A name is its declared spelling and nothing else. A call site says
 // `std.math.plus`, and that is the one declaration it can mean, wherever it was
@@ -48,9 +48,10 @@ public struct Linker: Sendable {
     // module is checked against itself, an image is checked across every module
     // given.
     //
-    // What to link is the caller's statement — the whole world at once — and
-    // `entry` names which declaration this run starts from. There is no default:
-    // guessing which procedure was meant would be an opinion nobody gave.
+    // What to link is the caller's statement (the whole world at once) and
+    // `entry` names which declaration this run starts from. There is no
+    // default: guessing which procedure was meant would be an opinion nobody
+    // gave.
     //
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
@@ -108,22 +109,21 @@ public struct Linker: Sendable {
 
         // The tables as the author spelled them, and the form the link's own
         // settling reads: a written body is swapped for the refusal it would
-        // earn, because it is itself still being resolved beside the
-        // constants it may read — the table carries the fact, so no resolver
-        // needs a flag saying when it runs.
-        // Selectors and path words are two tables, because they are two
-        // questions: what a selector reaches, and what a bare spelling a
-        // walk writes may send. One table masked by a set let one spelling
-        // answer with the other question's declaration.
+        // earn, because it is itself still being resolved beside the constants
+        // it may read. The table carries the fact, so no resolver needs a flag
+        // saying when it runs. Selectors and path words are two tables, because
+        // they are two questions: what a selector reaches, and what a bare
+        // spelling a walk writes may send. One table masked by a set let one
+        // spelling answer with the other question's declaration.
         //
         // Both are filled with the answers read off bodies whose declaration
-        // wrote none, and both by the same reading — a spelling that answers
-        // one way through a call and another through a path would be one
+        // wrote none, and both by the same reading. A spelling that answers one
+        // way through a call and another through a path would be one
         // declaration saying two things.
         var answeringSignatures = signatures
         var answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
 
-        // Which spellings a path reaches one declaration by — a word may be
+        // Which spellings a path reaches one declaration by. A word may be
         // reachable under more than one, and an answer worked out for it is
         // that declaration's however a walk spelled it.
         let wordSpellings = wordSymbols.reduce(into: [Name: [Name]]()) { spellings, entry in
@@ -261,19 +261,19 @@ public struct Linker: Sendable {
 
         let frame = frame()
 
-        // One declaration resolves once, whichever table asks — the frontier
-        // for a reached body, the derivable tables for a body a path may run.
+        // One declaration resolves once, whichever table asks. The frontier for
+        // a reached body, the derivable tables for a body a path may run.
         var resolvedBodies: [Name: (procedure: Procedure, calls: [CallSite])] = [:]
 
         // A declaration, bound and dot-judged: selectors resolve to declared
-        // spellings, every dot in the body is spelled as what the types say
-        // it means, and a constant-headed path — judged first, like any path
-        // — folds to the value it is. The image holds only this form, so a
-        // run never asks a value what a name does.
+        // spellings, every dot in the body is spelled as what the types say it
+        // means, and a constant-headed path (judged first, like any path) folds
+        // to the value it is. The image holds only this form, so a run never
+        // asks a value what a name does.
         //
         // Every send the body writes is checked here too: whatever table put
-        // this body in the image, the body runs, so the frontier's promise —
-        // callee declared, arguments taken — is kept per body rather than per
+        // this body in the image, the body runs, so the frontier's promise
+        // (callee declared, arguments taken) is kept per body rather than per
         // reachability.
         func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite]) {
             if let done = resolvedBodies[symbol.declared] { return done }
@@ -332,16 +332,16 @@ public struct Linker: Sendable {
             return answer
         }
 
-        // The words first, and only the words: they are what every other
-        // body's folding executes, so they settle before anything folds
-        // through them. Their own constant paths meet the stand-ins — a word
-        // folding through a word is the circle the stand-ins refuse — and
-        // that is a fact of each word's own text, the same every link.
-        // Nothing else resolves here: checking a word's calls does not
-        // resolve the callees, so no other declaration is ever folded
-        // against the stand-ins, and whether a declaration links stays a
-        // fact of its text rather than of who happens to call it. In name
-        // order, so which mistake is reported first is the text's fact too.
+        // The words first, and only the words: they are what every other body's
+        // folding executes, so they settle before anything folds through them.
+        // Their own constant paths meet the stand-ins (a word folding through a
+        // word is the circle the stand-ins refuse) and that is a fact of each
+        // word's own text, the same every link. Nothing else resolves here:
+        // checking a word's calls does not resolve the callees, so no other
+        // declaration is ever folded against the stand-ins, and whether a
+        // declaration links stays a fact of its text rather than of who happens
+        // to call it. In name order, so which mistake is reported first is the
+        // text's fact too.
         for (_, symbol) in wordSymbols.sorted { $0.key < $1.key } {
             _ = try resolved(symbol)
         }
@@ -389,12 +389,12 @@ public struct Linker: Sendable {
             }
         }
 
-        // Every pure body compiles and has its sends checked, reached or not
-        // — the same promise the frontier makes for the call graph. After the
+        // Every pure body compiles and has its sends checked, reached or not.
+        // The same promise the frontier makes for the call graph. After the
         // frontier on purpose, so a mistake on a path from the entry is
-        // reported before one in a declaration nothing reaches; in name
-        // order, so which unreached mistake comes first is a fact of the
-        // text rather than of a hash seed.
+        // reported before one in a declaration nothing reaches; in name order,
+        // so which unreached mistake comes first is a fact of the text rather
+        // than of a hash seed.
         for (_, symbol) in selectorSymbols.sorted { $0.key < $1.key } {
             _ = try resolved(symbol)
         }
@@ -436,9 +436,9 @@ public struct Linker: Sendable {
         }
     }
 
-    // The one gate every gathered send passes, wherever its body sits — a
-    // procedure, a word, a constant's closure. The call carries the
-    // declaration the walk found for it, and is judged against that.
+    // The one gate every gathered send passes, wherever its body sits. A
+    // procedure, a word, a constant's closure. The call carries the declaration
+    // the walk found for it, and is judged against that.
     private func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
         for call in calls {
             try check(call, against: call.callee.procedure, with: frame)
@@ -480,12 +480,11 @@ public struct Linker: Sendable {
 
     // A block answers without running when every part of it is something the
     // pure evaluator can answer, and every name it sends to is pure. Control
-    // flow is not in that set — not because running a branch is impure, but
+    // flow is not in that set, not because running a branch is impure, but
     // because the surface that answers purely does not run bodies at all. A
     // selector is the declared spelling it names, so the table is asked by the
-    // selector as written.
-    // `reading` is the module's variables: a body reading one answers by the
-    // run's state, so it does not answer without running.
+    // selector as written. `reading` is the module's variables: a body reading
+    // one answers by the run's state, so it does not answer without running.
     func isPure(_ block: Block, given pure: Set<Name>, reading variables: Set<Name>) -> Bool {
         block.body.allSatisfy { statement in
             statement.binding?.isConstant != false
@@ -544,11 +543,11 @@ public struct Linker: Sendable {
     // What can be answered without running, under every name something may look
     // it up by. Two names, because there are two ways to reach one:
     //
-    //   `std.count`  — a selector, resolved at link like any other
-    //   `count`      — a path segment. `x.count` names no module, because the
+    //   `std.count` . A selector, resolved at link like any other
+    //   `count`     . A path segment. `x.count` names no module, because the
     //                  front end cannot know whether a trailing segment is a
     //                  field or a word, so this is the one name still answered
-    //                  at run time — and the one place an ambiguity has to be
+    //                  at run time, and the one place an ambiguity has to be
     //                  refused before the run rather than during it.
     //
     // Built from every declaration rather than the reached ones: a path names a
@@ -562,19 +561,19 @@ public struct Linker: Sendable {
         var words: [Name: Symbol] = [:]
         // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
-        // on a declaration — which makes all of them something a reader has to
+        // on a declaration, which makes all of them something a reader has to
         // be able to reach. A slot holding the latest collision would keep the
         // newest two and drop whoever took the name first, so a third arrival
         // hides the declaration the other two are colliding with.
         var contested: [Name: [Symbol]] = [:]
 
-        // Two tables, because a name answers two different questions — what a
+        // Two tables, because a name answers two different questions. What a
         // selector reaches, and what a bare spelling a path writes may send.
         // One table held both and let a declaration whose declared spelling
-        // matched another's bare last segment quietly answer the wrong question.
-        // Symbols rather than procedures, because the bodies are still to be
-        // read: the caller reads them through the same judgment every reached
-        // body takes.
+        // matched another's bare last segment quietly answer the wrong
+        // question. Symbols rather than procedures, because the bodies are
+        // still to be read: the caller reads them through the same judgment
+        // every reached body takes.
         for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
             guard pure.contains(symbol.declared) else { continue }
 
@@ -593,7 +592,7 @@ public struct Linker: Sendable {
         }
 
         // The place is one declaration and the sentence names every contested
-        // word, so the name that is walked to is picked in sorted order — the
+        // word, so the name that is walked to is picked in sorted order. The
         // order a dictionary hands its keys back is seeded per process, and
         // which declaration an author is sent to would change between runs.
         //
@@ -629,7 +628,7 @@ public struct Linker: Sendable {
 
         // The declaration that took each name, rather than only that the name
         // is taken. A refusal about a name declared twice is addressed to the
-        // declaration that cannot be added and names both in the sentence — a
+        // declaration that cannot be added and names both in the sentence. A
         // set answers neither half, and the place alone answers neither when
         // the two documents were never written down.
         var claimed: [Name: Symbol] = [:]
@@ -666,12 +665,11 @@ public struct Linker: Sendable {
     // Every shape the modules declared, and the check that each name a
     // declaration mentions is one of them. A type name is resolved here for the
     // same reason a procedure name is: unreached code still has to compile, and
-    // a signature naming a shape nobody declared is a defect whether or not this
-    // run walks that way.
-    // The spaces arrive gathered from the qualifying pass — the one place
-    // their uniqueness is refused, so what this judges is what that fact was
-    // proved on. This judges content: what a declaration holds, not what it
-    // is called.
+    // a signature naming a shape nobody declared is a defect whether or not
+    // this run walks that way. The spaces arrive gathered from the qualifying
+    // pass. The one place their uniqueness is refused, so what this judges is
+    // what that fact was proved on. This judges content: what a declaration
+    // holds, not what it is called.
     private func types(
         of modules: [Module],
         declared: [Name: Declared<TypeExpression>],
@@ -711,15 +709,14 @@ public struct Linker: Sendable {
                 )
             }
 
-            // A member is a concrete shape. `some` stands for a type and
-            // names none, `any` would admit everything a membership exists
-            // to narrow, and `never` admits nothing — each is a
-            // declaration that says nothing a membership could hold, and
-            // a member that names another constraint is what keeps the
-            // membership judgment from ever chasing itself. Judged through
-            // every name a member hides behind, or one alias would carry
-            // the refused shape in. The chain is finite because a
-            // name-only cycle was refused above.
+            // A member is a concrete shape. `some` stands for a type and names
+            // none, `any` would admit everything a membership exists to narrow,
+            // and `never` admits nothing. Each is a declaration that says
+            // nothing a membership could hold, and a member that names another
+            // constraint is what keeps the membership judgment from ever
+            // chasing itself. Judged through every name a member hides behind,
+            // or one alias would carry the refused shape in. The chain is
+            // finite because a name-only cycle was refused above.
             for member in admitted {
                 var resolved = member
 
@@ -770,7 +767,7 @@ public struct Linker: Sendable {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
                 // A closure literal carries a signature the way a declaration
-                // does, and unreached code still has to compile — so what the
+                // does, and unreached code still has to compile, so what the
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
@@ -792,8 +789,8 @@ public struct Linker: Sendable {
 
     // Every type a body mentions, held where it is written: the signatures its
     // closures carry, the shapes its casts name, and what its names say they
-    // hold. Three name spaces bury a body — a procedure's, a constant's and a
-    // variable's — and one of them was once missing a judgment the other two
+    // hold. Three name spaces bury a body (a procedure's, a constant's and a
+    // variable's) and one of them was once missing a judgment the other two
     // made, so the three ask this rather than each holding a copy.
     //
     // Asking it where types are inferred instead would ask only of what that
@@ -821,9 +818,9 @@ public struct Linker: Sendable {
 
     // Everything a signature is held to where it is declared: every type it
     // mentions resolves, every parameter could be filled, every constraint it
-    // names is declared and single, and the receiver it names is a parameter
-    // it declares — the facts every consumer of the signature reads instead
-    // of re-deriving.
+    // names is declared and single, and the receiver it names is a parameter it
+    // declares. The facts every consumer of the signature reads instead of
+    // re-deriving.
     private func judge(
         _ signature: Signature,
         at place: Place,
@@ -857,12 +854,12 @@ public struct Linker: Sendable {
         }
     }
 
-    // Everything a cast's shape is held to on its spelling alone: the names
-    // it mentions resolve, and it names a shape there is something to read.
-    // Both are answered without knowing what the value reads as, so both
-    // belong to the pass that sees every cast rather than to the walk that
-    // sees the reached ones — a procedure both impure and unreachable is
-    // walked by neither the frontier nor the pure set.
+    // Everything a cast's shape is held to on its spelling alone: the names it
+    // mentions resolve, and it names a shape there is something to read. Both
+    // are answered without knowing what the value reads as, so both belong to
+    // the pass that sees every cast rather than to the walk that sees the
+    // reached ones. A procedure both impure and unreachable is walked by
+    // neither the frontier nor the pure set.
     private func judge(
         cast named: TypeExpression,
         at place: Place,
@@ -876,7 +873,7 @@ public struct Linker: Sendable {
     }
 
     // Every shape a cast names in here, however deep, each with where it was
-    // found. What the walk buries is `buried`'s to know — this says only which
+    // found. What the walk buries is `buried`'s to know. This says only which
     // of it a cast scan keeps.
     private func castTypes(
         in buried: [(Place, Expression)]
@@ -903,7 +900,7 @@ public struct Linker: Sendable {
 
     // Whether a signature's bounded parameters could ever be judged: every
     // constraint it names has to be one somebody declared, and one parameter
-    // takes one constraint — each occurrence carries its bound separately, so
+    // takes one constraint. Each occurrence carries its bound separately, so
     // occurrences carrying different bounds for one name are two claims about
     // one thing.
     private func judgeConstraints(
@@ -938,14 +935,14 @@ public struct Linker: Sendable {
     // than walking into what it resolves to.
     //
     // `parameterized` says whether a type parameter written here has a call to
-    // fill it. A signature's slots do — the walk into a procedure type turns
-    // it on — and a declared type or a constraint member does not: a
-    // parameter there would stand for nothing any call ever decides, so it is
-    // refused where it is declared, and everything a `named` type can hide is
-    // judged here rather than at the sites that name it.
-    // Internal, because a cast asks it too: a type spelling in a body is a
-    // mention like any other, and a second copy of "this name is declared"
-    // living in the typing walk is exactly the drift the rule exists against.
+    // fill it. A signature's slots do (the walk into a procedure type turns it
+    // on) and a declared type or a constraint member does not: a parameter
+    // there would stand for nothing any call ever decides, so it is refused
+    // where it is declared, and everything a `named` type can hide is judged
+    // here rather than at the sites that name it. Internal, because a cast asks
+    // it too: a type spelling in a body is a mention like any other, and a
+    // second copy of "this name is declared" living in the typing walk is
+    // exactly the drift the rule exists against.
     func mentioned(
         in type: TypeExpression,
         at place: Place,
@@ -957,8 +954,8 @@ public struct Linker: Sendable {
             return
 
         // The link's own note to itself, written where a declaration goes. A
-        // declaration is a promise, and this is a shape worked out from a body
-        // — nobody promised it, and no document could have spelled it. It is
+        // declaration is a promise, and this is a shape worked out from a body.
+        // Nobody promised it, and no document could have spelled it. It is
         // refused here rather than left to the reader, because a reader is one
         // way a declaration is built and a host assembling one is another.
         case let .reading(of, path):
@@ -971,7 +968,7 @@ public struct Linker: Sendable {
             )
 
         // The bounds are the declaration's own claim, so an order the numbers
-        // refuse is refused where it was written — a range below its own floor
+        // refuse is refused where it was written. A range below its own floor
         // is a slot no call could ever fit, the way an empty `oneOf` is.
         case let .ranged(refinement):
             if refinement.saysNothing {
@@ -1004,9 +1001,8 @@ public struct Linker: Sendable {
 
         // The flag rides through rather than turning on: a procedure type in a
         // signature's slot is part of that signature, and one in a declared
-        // type is not a filling site — a parameter written there is never
-        // bound at any call, so the bound it claims would be a claim nothing
-        // judges.
+        // type is not a filling site. A parameter written there is never bound
+        // at any call, so the bound it claims would be a claim nothing judges.
         case let .procedure(signature, _, _):
             guard let signature else { return }
 
@@ -1041,11 +1037,11 @@ public struct Linker: Sendable {
         case let .array(element), let .dictionary(element):
             try mentioned(in: element, at: place, parameterized: parameterized, resolve: table)
 
-        // The reader refuses a `?` that says nothing new — but the reader
-        // sees spellings, and a name may hide one of the refused shapes
-        // behind it. The rule is the model's, so it is held here too, where
-        // names resolve: whatever surface wrote the type, `?` wraps only what
-        // does not already answer the null question.
+        // The reader refuses a `?` that says nothing new, but the reader sees
+        // spellings, and a name may hide one of the refused shapes behind it.
+        // The rule is the model's, so it is held here too, where names resolve:
+        // whatever surface wrote the type, `?` wraps only what does not already
+        // answer the null question.
         case let .nullable(inner):
             var resolved = inner
 
@@ -1104,7 +1100,7 @@ public struct Linker: Sendable {
         }
     }
 
-    // Whether a parameter's own declaration can be satisfied at all — facts it
+    // Whether a parameter's own declaration can be satisfied at all. Facts it
     // states about itself, judged wherever a parameter is written: a `oneOf`
     // none of whose candidates the declared type admits is a parameter no call
     // could ever fit, and a default the parameter itself would refuse is a
@@ -1120,12 +1116,12 @@ public struct Linker: Sendable {
         let shape = parameter.declared.lowered(in: table.shapes)
 
         if let allowed = parameter.oneOf {
-            // Candidate by candidate: a spelling the declared type cannot
-            // spell is a member no call could ever match, and a dead member
-            // is the declaration's own defect whether live ones stand beside
-            // it or not. One pass reads both facts — a list that is empty or
-            // entirely dead refuses by the plainer name, a dead member among
-            // live ones is named.
+            // Candidate by candidate: a spelling the declared type cannot spell
+            // is a member no call could ever match, and a dead member is the
+            // declaration's own defect whether live ones stand beside it or
+            // not. One pass reads both facts. A list that is empty or entirely
+            // dead refuses by the plainer name, a dead member among live ones
+            // is named.
             let dead = allowed.filter { candidate in
                 !shape.spells(candidate, in: table.shapes)
             }
@@ -1151,7 +1147,7 @@ public struct Linker: Sendable {
 
         // An explicitly-null default is the value the body receives when the
         // argument is left out, so the declaration must admit null like any
-        // other value — and a `oneOf` never lists it, since null has no scalar
+        // other value, and a `oneOf` never lists it, since null has no scalar
         // spelling. Asked of the value judge itself, since the slot reads an
         // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
@@ -1195,9 +1191,9 @@ public struct Linker: Sendable {
             var known: [Name: Value] = [:]
 
             // Handed over with what each one reads, so nothing looks a name
-            // back up in the table the order was read from — everything this
-            // one needs comes before it, and asking again is a second chance
-            // to ask a different table.
+            // back up in the table the order was read from. Everything this one
+            // needs comes before it, and asking again is a second chance to ask
+            // a different table.
             for (name, expression) in try order(module.constants, in: module) {
                 // A constant's dots are judged before it settles, the way a
                 // body's are: the settled neighbours' types are the
@@ -1211,9 +1207,9 @@ public struct Linker: Sendable {
                     folding: nil
                 )
 
-                // A closure a constant holds runs later, so evaluating
-                // the constant proves nothing about the sends inside it —
-                // they pass the same gate every gathered send does.
+                // A closure a constant holds runs later, so evaluating the
+                // constant proves nothing about the sends inside it. They pass
+                // the same gate every gathered send does.
                 try checked(calls, in: frame)
 
                 do {
@@ -1300,7 +1296,7 @@ public struct Linker: Sendable {
         var settled: Set<Name> = []
 
         // What the walk is standing on, root first. Where it meets a name
-        // already on it, everything from that name down is the circle — and
+        // already on it, everything from that name down is the circle, and
         // nothing above it is, which is the difference between what names
         // itself back and what merely waits on something that does.
         var walking: [Name] = []
@@ -1326,7 +1322,7 @@ public struct Linker: Sendable {
             walking.append(name)
 
             // Sorted, so a module with two mistakes in it refuses the same one
-            // every run — what a set hands back is seeded per process.
+            // every run. What a set hands back is seeded per process.
             for read in mentions(of: expression).sorted() {
                 // The walk goes only to names this module declared as constants.
                 guard let reading = constants[read] else { continue }
@@ -1351,9 +1347,9 @@ public struct Linker: Sendable {
     // Flat, because nothing in here can mean anything but a constant: a body
     // may not introduce a name the module bound, which is settled where a
     // module is made, so no scope between a mention and this one can have taken
-    // the spelling. A closure's body is walked with
-    // the rest — making one captures the scope it was written in, so a sibling
-    // it reads has to be settled by then.
+    // the spelling. A closure's body is walked with the rest. Making one
+    // captures the scope it was written in, so a sibling it reads has to be
+    // settled by then.
     private func mentions(of expression: Expression) -> Set<Name> {
         expression.buried.reduce(into: Set<Name>()) { names, held in
             guard case let .reference(path) = held else { return }
@@ -1382,12 +1378,12 @@ public struct Linker: Sendable {
 
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
-        // refuse whatever arrived. The judgment — a parameter read two ways
-        // has no answer, a bounded one takes only what its constraint admits —
-        // is the one every send surface shares, so this only gathers what the
-        // call wrote into each slot. This is what one signature says in place
-        // of the several a language with overloading would need: `some N` on
-        // both sides and on the way out is a whole number and a whole number
+        // refuse whatever arrived. The judgment (a parameter read two ways has
+        // no answer, a bounded one takes only what its constraint admits) is
+        // the one every send surface shares, so this only gathers what the call
+        // wrote into each slot. This is what one signature says in place of the
+        // several a language with overloading would need: `some N` on both
+        // sides and on the way out is a whole number and a whole number
         // answering a whole number, and a whole number and a fraction refused,
         // without a way to declare a name twice.
         let declared = callee.signature
@@ -1446,7 +1442,7 @@ public struct Linker: Sendable {
             )
         }
 
-        // An argument that needs a scope cannot be judged here — only the ones
+        // An argument that needs a scope cannot be judged here. Only the ones
         // that already are what they will be. `taking` rather than `checking`,
         // so a constant passes exactly the gate the run would apply to it.
         for (name, argument) in dispatch.arguments.sorted(by: { left, right in left.key < right.key }) {
@@ -1467,10 +1463,11 @@ public struct Linker: Sendable {
             }
         }
 
-        // A word may judge its own constant arguments before any run — a type
-        // cannot say that a regex pattern compiles, and the word can. It happens
-        // here rather than while decoding, because a notation judging arguments
-        // would have to know the vocabulary; judging belongs where names resolve.
+        // A word may judge its own constant arguments before any run. A type
+        // cannot say that a regex pattern compiles, and the word can. It
+        // happens here rather than while decoding, because a notation judging
+        // arguments would have to know the vocabulary; judging belongs where
+        // names resolve.
         if case let .query(query) = callee.implementation {
             let constants = dispatch.arguments.compactMapValues(\.constantValue)
 

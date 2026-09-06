@@ -45,7 +45,7 @@ public struct AttemptForm: ConstructForm {
         )
         self.rescue = try container.decode(BlockReader.self, forKey: .rescue).block
 
-        // An empty rescue would swallow a failure into null without a trace — if
+        // An empty rescue would swallow a failure into null without a trace. If
         // the alternate path produces nothing, the honest form is no attempt.
         guard !rescue.body.isEmpty || rescue.result != nil else {
             throw ReadingError(

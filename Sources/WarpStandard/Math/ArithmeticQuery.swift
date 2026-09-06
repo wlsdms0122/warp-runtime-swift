@@ -12,7 +12,7 @@ import Warp
 // A name belongs to the declaration, so several declarations share one of these.
 //
 // Ints stay ints, so `2 plus 2` answers 4 rather than 4.0. Division is the
-// exception, because a quotient is not generally whole — `remainder` is where a
+// exception, because a quotient is not generally whole. `remainder` is where a
 // whole division's other half is read.
 //
 // `int` is the machine word, so a whole answer can fall off its edge. That is a
@@ -47,9 +47,9 @@ public struct ArithmeticQuery: Query {
             )
         }
 
-        // Zero by worth, whichever spelling carries it — the divisor is
-        // judged before any conversion, so the check does not lean on what a
-        // fraction can hold.
+        // Zero by worth, whichever spelling carries it. The divisor is judged
+        // before any conversion, so the check does not lean on what a fraction
+        // can hold.
         guard !divides || !operand.matches(.int(0)) else {
             throw ExecutionError("\(operation) asks zero")
         }
@@ -100,16 +100,16 @@ public struct ArithmeticQuery: Query {
         case .times:
             answered = left.multipliedReportingOverflow(by: right)
 
-        // A quotient is a fraction, so `dividedBy` never takes the whole
-        // path — the caller's guard holds that line, and a call that slips
-        // it stops here loudly rather than answering the other operation.
+        // A quotient is a fraction, so `dividedBy` never takes the whole path.
+        // The caller's guard holds that line, and a call that slips it stops
+        // here loudly rather than answering the other operation.
         case .dividedBy:
             preconditionFailure("a quotient is a fraction")
 
-        // A remainder is smaller than its divisor, so it always fits the
-        // word — the overflow guard below is not its judge. The one divisor
-        // that trips the hardware's division (`Int.min % -1`) still has the
-        // answer 0, so it is answered directly.
+        // A remainder is smaller than its divisor, so it always fits the word.
+        // The overflow guard below is not its judge. The one divisor that trips
+        // the hardware's division (`Int.min % -1`) still has the answer 0, so
+        // it is answered directly.
         case .remainder:
             return right == -1 ? 0 : left % right
         }
@@ -137,7 +137,7 @@ public struct ArithmeticQuery: Query {
         case .dividedBy:
             return left / right
 
-        // Truncating toward zero, the same as the whole answer — a wrap written
+        // Truncating toward zero, the same as the whole answer. A wrap written
         // over doubles reads the way the same wrap written over ints does.
         case .remainder:
             return left.truncatingRemainder(dividingBy: right)
@@ -154,7 +154,7 @@ public struct ArithmeticQuery: Query {
         }
     }
 
-    // The fraction path's reading of one side — binary64's own rounding, which
+    // The fraction path's reading of one side. Binary64's own rounding, which
     // every machine word is within reach of.
     private func fraction(_ value: Value?) -> Double {
         switch value {
@@ -165,8 +165,8 @@ public struct ArithmeticQuery: Query {
             return real
 
         // The numeric guard in `evaluate` already refused everything else, so
-        // reaching here is this file's own defect — the same line `whole`
-        // holds for a quotient, not a failure a program could see.
+        // reaching here is this file's own defect. The same line `whole` holds
+        // for a quotient, not a failure a program could see.
         default:
             preconditionFailure("arithmetic reads a number it never admitted")
         }

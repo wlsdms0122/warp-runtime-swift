@@ -59,12 +59,12 @@ extension Shape {
         case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming)
 
-        // A slot handed a variable in place is the two sides being one
-        // shape, not one that fits the other. The body writes through the
-        // caller's box and the caller reads back what the body wrote, so a
-        // shape that merely fits would let the two disagree about what is
-        // there — the body writing what its own declaration allows and the
-        // caller reading what its own declaration promised.
+        // A slot handed a variable in place is the two sides being one shape,
+        // not one that fits the other. The body writes through the caller's box
+        // and the caller reads back what the body wrote, so a shape that merely
+        // fits would let the two disagree about what is there. The body writing
+        // what its own declaration allows and the caller reading what its own
+        // declaration promised.
         case let (.inout(inner), _):
             return inner.same(other.slotUnwrapped, in: table, assuming: assuming)
 

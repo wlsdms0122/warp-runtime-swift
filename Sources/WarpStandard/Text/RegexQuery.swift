@@ -17,7 +17,7 @@ public struct RegexQuery: Query {
 
     // MARK: - Public
     // A pattern that does not compile is an author mistake, and a constant one
-    // is knowable before the run — which is the whole reason a word gets to
+    // is knowable before the run, which is the whole reason a word gets to
     // check its own arguments at load.
     public func validate(_ arguments: [String: Value]) throws {
         guard

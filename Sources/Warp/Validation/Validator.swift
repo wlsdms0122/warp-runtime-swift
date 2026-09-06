@@ -11,8 +11,8 @@ import Foundation
 //
 // The walk is structural, and it stays structural through dispatch: a message
 // carries expressions whose insides this can read, so what exists inside a
-// caller's body is read here rather than asked of whatever answers the selector.
-// Which means validation never consults the word table — a document is
+// caller's body is read here rather than asked of whatever answers the
+// selector. Which means validation never consults the word table. A document is
 // checked against itself, before anything is resolved.
 public struct Validator: Sendable {
     // MARK: - Property
@@ -35,8 +35,8 @@ public struct Validator: Sendable {
     }
 
     // Every declaration a module makes, in name order so the first refusal is
-    // stable across runs. Nothing about the module as a whole is checked here —
-    // whether its names collide with another module's is a link question, and
+    // stable across runs. Nothing about the module as a whole is checked here.
+    // Whether its names collide with another module's is a link question, and
     // there is no other module in sight from inside one.
     public func validate(_ module: Module) throws {
         let constants = Set(module.constants.keys)
@@ -55,8 +55,8 @@ public struct Validator: Sendable {
         }
 
         // A variable's start is written like a constant and sees what a
-        // constant sees: the constants beside it, and no variable — a
-        // variable holds nothing until the run starts.
+        // constant sees: the constants beside it, and no variable. A variable
+        // holds nothing until the run starts.
         for (name, expression) in module.variables.sorted(by: { $0.key < $1.key }) {
             guard !constants.contains(name) else {
                 throw ValidationError(
@@ -101,7 +101,7 @@ public struct Validator: Sendable {
     }
 
     // A parameter is a name the body can read, so it is visible from the first
-    // statement — and declared, so a statement cannot introduce it again. The
+    // statement, and declared, so a statement cannot introduce it again. The
     // body and the signature are one scope, and a name is introduced once in a
     // scope.
     public func validate(
@@ -123,11 +123,11 @@ public struct Validator: Sendable {
         guard sends != module.imports else { return }
 
         // The two differences and not the two lists. They are different
-        // mistakes with different fixes — a word sent and not listed is the
+        // mistakes with different fixes (a word sent and not listed is the
         // grant the list existed to disclose, and a word listed and not sent
-        // asks for one the program has no use for — and a module sending
-        // thirty words would otherwise leave an author diffing two of them by
-        // eye to find the one that moved.
+        // asks for one the program has no use for) and a module sending thirty
+        // words would otherwise leave an author diffing two of them by eye to
+        // find the one that moved.
         let undisclosed = sends.subtracting(module.imports).sorted().map(\.spelling)
         let unspent = module.imports.subtracting(sends).sorted().map(\.spelling)
 
@@ -143,7 +143,7 @@ public struct Validator: Sendable {
     }
 
     // One parameter, and everything a parameter is held to. Two walks meet a
-    // signature — a procedure's and a closure's — and a rule written at one of
+    // signature (a procedure's and a closure's) and a rule written at one of
     // them is a rule the other does not have.
     private func validate(
         _ parameter: Name,
@@ -201,8 +201,8 @@ public struct Validator: Sendable {
     }
 
     // What the body leaves behind for what follows it: the names it made
-    // visible, and which of them are variables — a result written after the
-    // body sees both.
+    // visible, and which of them are variables. A result written after the body
+    // sees both.
     @discardableResult
     private func validate(
         _ body: [Statement],
@@ -217,9 +217,9 @@ public struct Validator: Sendable {
         var declared = startDeclared
 
         for (position, statement) in body.enumerated() {
-            // A statement is its name and the construct it writes under —
-            // both, because a document writes both and following one word at a
-            // time is what a place is for.
+            // A statement is its name and the construct it writes under. Both,
+            // because a document writes both and following one word at a time
+            // is what a place is for.
             let here = place.statement(statement, at: position)
 
             if let binding = statement.binding {
@@ -304,7 +304,7 @@ public struct Validator: Sendable {
             )
 
             switch statement.binding {
-            // A walk answers nothing, so its name is the element's — alive
+            // A walk answers nothing, so its name is the element's. Alive
             // inside the body as `item` and `index`, and nothing afterwards.
             // Leaving it visible would let what follows read a name whose only
             // value could ever be null, silently.
@@ -341,11 +341,11 @@ public struct Validator: Sendable {
         at place: Place
     ) throws {
         switch expression {
-        // A literal is data. One shape a value has is not data — a closure is
-        // made by running the expression that writes one — so a program
-        // carrying one as a literal is carrying something no text spells and
-        // nothing reads back. A caller assembling shapes in Swift is the only
-        // one that can build it, and this is the door it comes through.
+        // A literal is data. One shape a value has is not data (a closure is
+        // made by running the expression that writes one) so a program carrying
+        // one as a literal is carrying something no text spells and nothing
+        // reads back. A caller assembling shapes in Swift is the only one that
+        // can build it, and this is the door it comes through.
         case let .literal(value):
             guard !value.holdsProcedure else {
                 throw ValidationError(Value.procedureIsNotData, at: place)
@@ -374,9 +374,9 @@ public struct Validator: Sendable {
                 )
             }
 
-        // A cast names a shape and reads a value as it — the shape is the
-        // link's to resolve, so the check has only the value to walk, exactly
-        // as it walks any other operand.
+        // A cast names a shape and reads a value as it. The shape is the link's
+        // to resolve, so the check has only the value to walk, exactly as it
+        // walks any other operand.
         case let .cast(value, _, _):
             try refuseAnswerless(value, at: place.slot(.receiver))
             try validate(
@@ -393,20 +393,20 @@ public struct Validator: Sendable {
         // scope.
         //
         // Variables are not carried in. A closure may outlive the block that
-        // made it, so writing an enclosing box through one would be a write with
-        // no bounded lifetime — a name it captured is a value it captured.
+        // made it, so writing an enclosing box through one would be a write
+        // with no bounded lifetime. A name it captured is a value it captured.
         // Where a leave may go. A closure is a procedure of its own, so the
-        // loops around where it was *written* are not around where it runs —
+        // loops around where it was *written* are not around where it runs.
         // `rounds` starts empty inside one, and reaching for an outer loop from
         // there is refused here rather than discovered at a run.
         case let .leave(leave):
             try validate(leave, in: surroundings, at: place)
 
-            // What a `return` carries is an operand like any other — a name it
+            // What a `return` carries is an operand like any other. A name it
             // reads has to be visible where it was written, and a construct
             // that answers nothing has nothing to hand back. Only `return`
-            // reaches here with one: the check above refuses a value on the
-            // two that end a loop.
+            // reaches here with one: the check above refuses a value on the two
+            // that end a loop.
             guard let value = leave.value else { return }
 
             try refuseAnswerless(value, at: place)
@@ -422,8 +422,8 @@ public struct Validator: Sendable {
             let inside = place.slot(.closure)
             let parameters = Set(procedure.signature.parameters.keys)
 
-            // The same rule the top-level signature gets — a closure's
-            // parameter is a name a body reads, wherever the signature sits.
+            // The same rule the top-level signature gets. A closure's parameter
+            // is a name a body reads, wherever the signature sits.
             for parameter in parameters.sorted() {
                 try validate(
                     parameter,
@@ -552,7 +552,7 @@ public struct Validator: Sendable {
 
             guard !rescue.body.isEmpty || rescue.result != nil else {
                 // An empty rescue would swallow a failure into null without a
-                // trace — if the alternate path produces nothing, the author's
+                // trace. If the alternate path produces nothing, the author's
                 // honest form is no rescue at all.
                 throw ValidationError("must not be empty", at: place.slot(.rescue))
             }
@@ -593,9 +593,9 @@ public struct Validator: Sendable {
         }
     }
 
-    // A construct that answers nothing — a branch, a walk — has nothing to
-    // give a slot that exists to hold an answer. Refused for that reason
-    // wherever one asks, rather than as a null that fails to fit downstream.
+    // A construct that answers nothing (a branch, a walk) has nothing to give a
+    // slot that exists to hold an answer. Refused for that reason wherever one
+    // asks, rather than as a null that fails to fit downstream.
     private func refuseAnswerless(_ expression: Expression, at place: Place) throws {
         guard expression.answersNothing else { return }
 
@@ -606,13 +606,12 @@ public struct Validator: Sendable {
         )
     }
 
-    // A call's operand is data the pure half reads — a document cannot even
+    // A call's operand is data the pure half reads. A document cannot even
     // write a construct there, and the run refuses one that arrives anyway.
-    // Held here too, so a program assembled directly meets the same rule
-    // before it runs — and at the link, which asks the same predicate, so a
-    // program that skipped this door still cannot slip one through: the body
-    // a word is to run travels as a closure, and there is no second channel
-    // for bodies.
+    // Held here too, so a program assembled directly meets the same rule before
+    // it runs, and at the link, which asks the same predicate, so a program
+    // that skipped this door still cannot slip one through: the body a word is
+    // to run travels as a closure, and there is no second channel for bodies.
     private func refuseConstruct(_ expression: Expression, at place: Place) throws {
         guard expression.holdsConstruct else { return }
 
@@ -620,8 +619,8 @@ public struct Validator: Sendable {
     }
 
     // A condition is data by the same fact an operand is: the run asks it
-    // purely. Refused with its own sentence, because the fix is different —
-    // what a body decides reaches a condition through a word.
+    // purely. Refused with its own sentence, because the fix is different. What
+    // a body decides reaches a condition through a word.
     private func refuseConstructCondition(_ expression: Expression, at place: Place) throws {
         guard expression.holdsConstruct else { return }
 
@@ -647,7 +646,7 @@ public struct Validator: Sendable {
 
         if let result = block.result {
             // The result runs after the body, so it is "after" the same way a
-            // trailing statement is — a body that left never reaches it.
+            // trailing statement is. A body that left never reaches it.
             if block.body.alwaysLeaves {
                 throw ValidationError(
                     "nothing runs after leaving,"
@@ -656,10 +655,9 @@ public struct Validator: Sendable {
                 )
             }
 
-            // A branch answers nothing, so a result slot — a place that
-            // exists to hold an answer — has nothing to take from one.
-            // Refused for that reason, rather than as a type that fails to
-            // fit downstream.
+            // A branch answers nothing, so a result slot (a place that exists
+            // to hold an answer) has nothing to take from one. Refused for that
+            // reason, rather than as a type that fails to fit downstream.
             try refuseAnswerless(result, at: place.slot(.result))
 
             try validate(
@@ -745,7 +743,7 @@ public struct Validator: Sendable {
 
     // A name a body introduces: a parameter, a statement's id, or the one a
     // construct hands its body. Every such name passes here, so the module's
-    // bound names are checked at whatever depth the name appears — a sub scope
+    // bound names are checked at whatever depth the name appears. A sub scope
     // is where a reader is least able to see that the spelling was taken.
     //
     // Linking folds a constant wherever its name is read, so a name introduced
@@ -776,10 +774,10 @@ private struct Surroundings: Sendable {
     // and nothing here means there is no loop to end.
     let rounds: [Name]
 
-    // The module's bound names, carried so every signature met on the way —
-    // a closure's included — refuses a parameter that would take one's
-    // place: linking folds a constant wherever its name is read, so a
-    // parameter under that name would never be the one that answers.
+    // The module's bound names, carried so every signature met on the way (a
+    // closure's included) refuses a parameter that would take one's place:
+    // linking folds a constant wherever its name is read, so a parameter under
+    // that name would never be the one that answers.
     let constants: Set<Name>
 
     // A procedure's own body: no loop yet.
@@ -796,7 +794,7 @@ private struct Surroundings: Sendable {
 
     // A procedure written inside another. It may be called anywhere and long
     // after, so the loops around where it was *written* are not around where it
-    // runs — and its own answer is its own. What it captured it may write: a
+    // runs, and its own answer is its own. What it captured it may write: a
     // variable's box is one thing under one name everywhere the name is
     // visible, and this body is one of those places.
     var enclosed: Surroundings {

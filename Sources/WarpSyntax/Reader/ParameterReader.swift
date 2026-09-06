@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A parameter, written either as a bare type name or as a record. The shorthand
-// is the notation's convenience — the IR has one shape.
+// is the notation's convenience. The IR has one shape.
 public struct ParameterReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case type
@@ -51,10 +51,10 @@ public struct ParameterReader: Decodable {
         let type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type
 
         // The default is stored as written. Whether the parameter itself admits
-        // it is a declaration fact judged at the link — the one place a default
-        // written against a declared type name could be judged at all — and a
-        // default-supplied slot reads the declared representation because taking
-        // one settles it, the same gate a caller's value walks.
+        // it is a declaration fact judged at the link (the one place a default
+        // written against a declared type name could be judged at all) and a
+        // default-supplied slot reads the declared representation because
+        // taking one settles it, the same gate a caller's value walks.
         self.parameter = Parameter(
             type: type,
             oneOf: try container.decodeIfPresent([String].self, forKey: .oneOf),

@@ -16,10 +16,10 @@ import Warp
 //   number the way a borrowed text format would.
 // - **The same document is the same bytes, both ways.** The writer sorts record
 //   keys and writes every number minimally, and the reader refuses bytes the
-//   writer would not have written — so byte equality and document equality are
+//   writer would not have written, so byte equality and document equality are
 //   the same question, which is what makes a document signable and cacheable.
 // - **What cannot arrive is refused before it arrives.** Truncation, trailing
-//   bytes, an unknown tag, a key out of order — each is a refusal with a name,
+//   bytes, an unknown tag, a key out of order. Each is a refusal with a name,
 //   not a value somebody guessed.
 //
 // The header carries the *encoding's* version, not the language's. What the
@@ -150,7 +150,7 @@ public enum BinaryEncoding {
 
         case let .double(double):
             // The bytes could carry these; the document's value model cannot,
-            // in any encoding — so they are refused rather than becoming a
+            // in any encoding, so they are refused rather than becoming a
             // document only this encoding reads.
             guard double.isFinite else {
                 throw EncodingError.invalidValue(
@@ -229,17 +229,17 @@ public enum BinaryEncoding {
     }
 
     // A container being put back together: what it still expects, what it holds
-    // so far, and — for a record — the key the next value belongs to and the
-    // last key seen, so order can be held without keeping the keys. A sum
-    // rather than two optionals, so "neither" and "both" are not states the
-    // code has to promise never to reach.
+    // so far, and (for a record) the key the next value belongs to and the last
+    // key seen, so order can be held without keeping the keys. A sum rather
+    // than two optionals, so "neither" and "both" are not states the code has
+    // to promise never to reach.
     private enum Opened {
         case array(expecting: Int, held: [Value])
         case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
     }
 
     // One pass over the bytes with an explicit stack, because the depth of a
-    // document must never be the depth of the host's call stack — the bytes are
+    // document must never be the depth of the host's call stack. The bytes are
     // the arriving side's, and the stack is ours. The limit that remains is the
     // format's own, and it bounds memory rather than saving the process.
     private static func read(from reading: inout Cursor) throws -> Value {
@@ -372,8 +372,8 @@ public enum BinaryEncoding {
 
     // The next field a record waits for. Strictly ascending, which refuses a
     // duplicate and a shuffle with the same sentence: these are bytes the
-    // writer would not write. NFC, so that byte order is an order on names —
-    // a name with a second byte spelling would sort to a second place.
+    // writer would not write. NFC, so that byte order is an order on names. A
+    // name with a second byte spelling would sort to a second place.
     private static func field(
         from reading: inout Cursor,
         after previous: [UInt8]?
@@ -431,7 +431,7 @@ public enum BinaryEncoding {
     // A claimed length, charged against the one budget all claims share: the
     // bytes of the document itself. Each claimed thing costs at least `cost`
     // bytes to actually write, so however deeply the claimants nest, their
-    // claims cannot sum past the document — a check against only the bytes
+    // claims cannot sum past the document. A check against only the bytes
     // *remaining* was local to each claim, and five hundred nested containers
     // could each claim the whole document and have memory set aside for it.
     private static func length(
@@ -486,7 +486,7 @@ public enum BinaryEncoding {
     }
 
     // `unsigned(from:)` already held the 64-bit line, so the exact conversion
-    // to the word cannot miss — a truncating one here would say otherwise.
+    // to the word cannot miss. A truncating one here would say otherwise.
     private static func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
     }

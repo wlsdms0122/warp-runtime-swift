@@ -29,8 +29,8 @@ public enum Implementation: Sendable {
 
     // MARK: - Property
     // Whether this answers without running. For a body it is not knowable from
-    // the case alone — what it calls decides — so the linker computes it and
-    // this says only what a native declares about itself.
+    // the case alone (what it calls decides) so the linker computes it and this
+    // says only what a native declares about itself.
     public var isNativelyPure: Bool? {
         switch self {
         case .query:

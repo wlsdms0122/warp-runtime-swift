@@ -9,21 +9,21 @@ import Foundation
 import Warp
 
 // Running closures at once. An isolated closure is a body that is safe to run
-// beside another — it writes no name it captured, touches no module variable
-// and cannot leave past its own edge — so "run these concurrently" is a thing
-// a word can be handed, and the grammar does not need a construct to say it.
-// Which closures are isolated the link derived, and each piece is asked as it
-// is started.
+// beside another (it writes no name it captured, touches no module variable and
+// cannot leave past its own edge) so "run these concurrently" is a thing a word
+// can be handed, and the grammar does not need a construct to say it. Which
+// closures are isolated the link derived, and each piece is asked as it is
+// started.
 //
 // Three words over one machine:
 //
 // - `all` waits for every closure. A failure fails the whole word, and every
-//   piece's failure is reported, keyed by the piece's label — which failures
+//   piece's failure is reported, keyed by the piece's label, which failures
 //   there are is not allowed to depend on timing.
 // - `first` answers the first success and asks the rest to stop. Which piece
 //   wins is the one fact here that timing decides, and the word's name says so.
 // - `map` runs one closure once per element of a collection, and answers in
-//   the collection's order — the concurrent reading of what `each` walks.
+//   the collection's order. The concurrent reading of what `each` walks.
 //
 // The rest a sibling ignores: asking is what cancellation is. A piece that
 // carries on still finishes, and its answer is discarded.
@@ -36,7 +36,7 @@ public struct ConcurrentEffect: Effect {
         case map
     }
 
-    // What one piece answered — a struct rather than a tuple, which the task
+    // What one piece answered. A struct rather than a tuple, which the task
     // group needs for its child results.
     private struct Outcome: Sendable {
         let key: Name?
@@ -78,15 +78,15 @@ public struct ConcurrentEffect: Effect {
             return try answered(outcomes, keyed: keyed)
 
         case .first:
-            // The keys of a record are not wasted on a `first` — the winner's is
+            // The keys of a record are not wasted on a `first`. The winner's is
             // not reported, but a failure's is: when nothing wins, every
             // piece's failure comes back keyed by the name its author gave it.
             let (pieces, _) = try closures(of: invocation)
 
-            // A `first` with nothing in it has nothing to win it, and waiting for
-            // no one answers nothing — refused as the author mistake it is.
-            // `all` and `map` answer collections, and a collection may
-            // be empty; a `first` answers exactly one thing, so it cannot be.
+            // A `first` with nothing in it has nothing to win it, and waiting
+            // for no one answers nothing. Refused as the author mistake it is.
+            // `all` and `map` answer collections, and a collection may be
+            // empty; a `first` answers exactly one thing, so it cannot be.
             guard !pieces.isEmpty else {
                 throw ExecutionError("\(name) asks at least one closure, and none arrived")
             }
@@ -124,7 +124,7 @@ public struct ConcurrentEffect: Effect {
         }
     }
 
-    // The receiver — closures to run, under names for named pieces or an array
+    // The receiver. Closures to run, under names for named pieces or an array
     // for positional ones. Which one arrived decides the shape of the answer.
     private func closures(of invocation: Invocation) throws -> ([Piece], keyed: Bool) {
         switch try material(of: invocation) {
@@ -160,11 +160,11 @@ public struct ConcurrentEffect: Effect {
     private func mapped(of invocation: Invocation) throws -> [Piece] {
         let material = try material(of: invocation)
 
-        // Through the one projection that owns the bytes equation, so a
-        // fan-out walks bytes the way `each` does. Read straight from the
-        // projection rather than out of a copy of it — a fan-out makes a piece
-        // for every element by definition, so what this saves is the one
-        // intermediate array and not the making of the elements.
+        // Through the one projection that owns the bytes equation, so a fan-out
+        // walks bytes the way `each` does. Read straight from the projection
+        // rather than out of a copy of it. A fan-out makes a piece for every
+        // element by definition, so what this saves is the one intermediate
+        // array and not the making of the elements.
         guard let elements = material.elements else {
             throw ExecutionError("\(name) walks an array, and was sent \(material.type)")
         }
@@ -215,7 +215,7 @@ public struct ConcurrentEffect: Effect {
     }
 
     // The declared spelling, because `first` and `map` are also collection
-    // words — a refusal that says which module's word refused is the one a
+    // words. A refusal that says which module's word refused is the one a
     // caller can act on.
     private var name: String {
         switch word {
@@ -240,8 +240,8 @@ public struct ConcurrentEffect: Effect {
             for await outcome in group {
                 collected.append(outcome)
 
-                // A `first` stops at the first success. The rest are asked to stop
-                // rather than made to — a piece that ignores the ask still
+                // A `first` stops at the first success. The rest are asked to
+                // stop rather than made to. A piece that ignores the ask still
                 // finishes, and its answer is discarded. Returning without the
                 // ask would still await every sibling.
                 if racing, outcome.value != nil {
@@ -268,11 +268,11 @@ public struct ConcurrentEffect: Effect {
         }
     }
 
-    // What a piece answers, through the environment's isolation boundary —
-    // ambient state a caller carries on the task must not reach every piece at
+    // What a piece answers, through the environment's isolation boundary.
+    // Ambient state a caller carries on the task must not reach every piece at
     // once.
     private func answer(_ piece: Piece, via invocation: Invocation) async throws -> Value {
-        // The frame carries the bare name — rendering is what brackets it.
+        // The frame carries the bare name. Rendering is what brackets it.
         let frame = piece.key?.spelling ?? "\(piece.position)"
 
         guard let environment = invocation.environment else {
@@ -300,7 +300,7 @@ public struct ConcurrentEffect: Effect {
         }
     }
 
-    // Deterministic by piece label — a dictionary walk must not decide which
+    // Deterministic by piece label. A dictionary walk must not decide which
     // author mistake gets reported.
     private func failure(among failures: [Name: any Error]) -> any Error {
         let ordered = failures.sorted { left, right in left.key < right.key }

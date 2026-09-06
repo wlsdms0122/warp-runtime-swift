@@ -11,10 +11,10 @@ public extension TypeExpression {
     // The condition a refinement writes on a number.
     //
     // Not a kind of its own. The value is a whole number or a fraction, and
-    // this is the slot saying which part of that kind it takes — judged where
+    // this is the slot saying which part of that kind it takes. Judged where
     // any other admission is, at the link for a constant and at the boundary
-    // for what only a run can see. A module names one the way it names any
-    // type (`byte = int(0...255)`), so the kinds never grow.
+    // for what only a run can see. A module names one the way it names any type
+    // (`byte = int(0...255)`), so the kinds never grow.
     //
     // The two halves are apart because a bound is a value of the kind it
     // bounds. A whole range compares whole numbers exactly and a fraction
@@ -27,7 +27,7 @@ public extension TypeExpression {
         // The far edge of a range, and whether the bound itself is inside it.
         //
         // Only the far edge carries this. `a...b` and `a..<b` are the two
-        // intervals programs are actually written against — a position below a
+        // intervals programs are actually written against. A position below a
         // length is the second, and for a fraction it is the one nothing can
         // spell by moving a bound. The near edge is always inside, which is the
         // convention every half-open interval is already read by.
@@ -62,9 +62,9 @@ public extension TypeExpression.Refinement {
         }
     }
 
-    // What this admits, or why not. The two refusals are different facts — a
+    // What this admits, or why not. The two refusals are different facts (a
     // text where a number was wanted missed the kind, and a number outside the
-    // bounds missed the condition — so the boundary can say which.
+    // bounds missed the condition) so the boundary can say which.
     enum Settlement: Sendable, Equatable {
         case settled(Value)
         case outside(String)
@@ -81,8 +81,8 @@ public extension TypeExpression.Refinement {
                 : .outside(String(number))
 
         // A whole number arrives at a fraction slot as the fraction it widens
-        // to, which is the one conversion the language has — so the bounds
-        // judge what the slot would hold rather than what was written.
+        // to, which is the one conversion the language has, so the bounds judge
+        // what the slot would hold rather than what was written.
         case let .fraction(from, to):
             guard let number = Self.fraction(of: value) else { return .otherKind }
 
@@ -108,9 +108,9 @@ public extension TypeExpression.Refinement {
 
     // Whether a document can carry the bounds. Only a fraction's can fail: a
     // whole number's spelling is its digits, and an infinity or a nan is a
-    // bound a host's hand put here — the language admits an infinity on
-    // purpose, because it orders like any other bound, and no document writes
-    // one. Asked by the writer, which may only write what reads back.
+    // bound a host's hand put here. The language admits an infinity on purpose,
+    // because it orders like any other bound, and no document writes one. Asked
+    // by the writer, which may only write what reads back.
     var spellable: Bool {
         guard case let .fraction(from, to) = self else { return true }
 
@@ -118,19 +118,19 @@ public extension TypeExpression.Refinement {
             && (to.map { edge in Self.bound(edge).spelling != nil } ?? true)
     }
 
-    // Whether no value is inside — a slot no call could ever fill, which is
-    // the declaration refusing itself.
+    // Whether no value is inside. A slot no call could ever fill, which is the
+    // declaration refusing itself.
     //
     // A bound that is not a number is one of these and is not caught by
     // comparing: nothing compares to a nan, so a range bounded by one admits
     // nothing while every ordering question about it answers no. A document
-    // cannot spell one — a fraction's one spelling is a number — and a
+    // cannot spell one (a fraction's one spelling is a number) and a
     // declaration assembled in the host can, so it is named here rather than
     // left to the two orderings to imply.
     //
     // An infinity is not one of them. It compares like any other bound, and
     // `double(0.0...)` written out the long way is a range half the fractions
-    // are inside — asking for finiteness here would refuse it.
+    // are inside. Asking for finiteness here would refuse it.
     var admitsNothing: Bool {
         switch self {
         case let .whole(from, to):
@@ -143,7 +143,7 @@ public extension TypeExpression.Refinement {
         }
     }
 
-    // Whether every byte is inside and arrives as itself — the question the
+    // Whether every byte is inside and arrives as itself. The question the
     // compact spelling asks of an element declaration. A fraction range never
     // is: it widens every byte it takes, and a widened byte is not the byte.
     var holdsEveryByte: Bool {
@@ -153,8 +153,8 @@ public extension TypeExpression.Refinement {
     }
 
     // Whether ordering this range's bounds answers anything. Said once because
-    // two questions lean on it — whether anything is inside, and whether two
-    // ranges share a value — and a nan answers no to every comparison, so a
+    // two questions lean on it (whether anything is inside, and whether two
+    // ranges share a value) and a nan answers no to every comparison, so a
     // question that forgot to ask this would quietly say the opposite of what
     // the other one says.
     var ordersAtAll: Bool {
@@ -180,7 +180,7 @@ public extension TypeExpression.Refinement {
         // Two whole ranges are compared as whole numbers. Widening is what the
         // question across kinds needs, and it is not free: past 2^53 a whole
         // number arrives as a neighbour, and which neighbour depends on the
-        // tie — so two ranges that share a value up there can come out apart.
+        // tie, so two ranges that share a value up there can come out apart.
         // Nothing has to be widened to compare two of the same kind.
         if case let .whole(myFloor, myCeiling) = self,
             case let .whole(theirFloor, theirCeiling) = other {
@@ -194,9 +194,9 @@ public extension TypeExpression.Refinement {
         return Self.meeting(span, other.span, floor: -.infinity)
     }
 
-    // Whether two intervals of one kind have anything between them — said
-    // once, for the pair compared as whole numbers and the pair compared as
-    // fractions alike.
+    // Whether two intervals of one kind have anything between them. Said once,
+    // for the pair compared as whole numbers and the pair compared as fractions
+    // alike.
     private static func meeting<Bound>(
         _ mine: (lower: Bound?, upper: Edge<Bound>?),
         _ theirs: (lower: Bound?, upper: Edge<Bound>?),
@@ -306,10 +306,10 @@ public extension TypeExpression.Refinement {
     }
 
     // A fraction as a range writes it. A bound no document spells is shown in
-    // this vocabulary's words rather than elided — two ranges are one type
-    // when they hold the same numbers, and dropping an unspellable bound would
-    // read a bounded range and an unbounded one alike. What comes out then is
-    // for a message; `spellable` is what the writer asks.
+    // this vocabulary's words rather than elided. Two ranges are one type when
+    // they hold the same numbers, and dropping an unspellable bound would read
+    // a bounded range and an unbounded one alike. What comes out then is for a
+    // message; `spellable` is what the writer asks.
     private static func fraction(_ bound: Double?) -> String {
         guard let bound else { return "" }
 

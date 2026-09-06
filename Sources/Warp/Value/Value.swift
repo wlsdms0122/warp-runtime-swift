@@ -317,10 +317,10 @@ public indirect enum Value: Sendable, Equatable {
 
     // How two values stand to each other, for the kinds that order: numbers
     // among themselves and strings among themselves. Nil is a pair with no
-    // order: mixed kinds, the kinds that do not order, and a fraction that
-    // is not a number, which orders with nothing. Every consumer of order —
-    // equality across numeric width, `lessThan`/`greaterThan`, `sorted`,
-    // `min`/`max` — reads this one answer, so a whole beside a fraction is
+    // order: mixed kinds, the kinds that do not order, and a fraction that is
+    // not a number, which orders with nothing. Every consumer of order
+    // (equality across numeric width, `lessThan`/`greaterThan`, `sorted`,
+    // `min`/`max`) reads this one answer, so a whole beside a fraction is
     // judged in exactly one place.
     public static func order(_ left: Value, _ right: Value) -> ComparisonResult? {
         switch (left, right) {
@@ -360,15 +360,15 @@ public indirect enum Value: Sendable, Equatable {
 
     // How a whole number stands against a fraction, exactly at every size.
     // Converting the whole to binary64 rounds above 2^53, and worth must not
-    // depend on the rounding — so the fraction is taken apart instead: its
-    // whole part meets the int exactly, and only a tie reads what is left.
+    // depend on the rounding, so the fraction is taken apart instead: its whole
+    // part meets the int exactly, and only a tie reads what is left.
     private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
         guard !fraction.isNaN else { return nil }
 
-        // Past either end of what an int can be — 0x1p63 is the word's own
-        // edge, written exactly where `Double(Int.max)` would round past it —
-        // the answer needs no digits, and infinity, which only a host can
-        // hand in, is answered by the same two lines.
+        // Past either end of what an int can be (0x1p63 is the word's own edge,
+        // written exactly where `Double(Int.max)` would round past it) the
+        // answer needs no digits, and infinity, which only a host can hand in,
+        // is answered by the same two lines.
         guard fraction < 0x1p63 else { return .orderedAscending }
         guard fraction >= -0x1p63 else { return .orderedDescending }
 
@@ -384,7 +384,7 @@ public indirect enum Value: Sendable, Equatable {
         return fraction == floored ? .orderedSame : .orderedAscending
     }
 
-    // The equality conditions test with — strict except that worth unifies
+    // The equality conditions test with. Strict except that worth unifies
     // across spellings: int and double across numeric width, and bytes beside
     // an array of what its elements are worth, applied recursively through
     // arrays and records.
@@ -393,7 +393,7 @@ public indirect enum Value: Sendable, Equatable {
         case (.int, .double), (.double, .int):
             return Value.order(self, other) == .orderedSame
 
-        // Bytes are an array of bytes in a compact spelling — `1` and `1.0`
+        // Bytes are an array of bytes in a compact spelling. `1` and `1.0`
         // again, one collection up: the worth is the elements', read through
         // the one projection that owns the equation.
         case (.bytes, .array), (.array, .bytes):
@@ -470,7 +470,7 @@ public indirect enum Value: Sendable, Equatable {
 
 private extension Array {
     // These positions taken in order, and nil where one of them is not a
-    // position this holds — so a caller that counted wrong is answered rather
+    // position this holds, so a caller that counted wrong is answered rather
     // than trapped. Written once for both spellings' storage.
     func taken(at positions: some Sequence<Int>) -> [Element]? {
         var taken = [Element]()

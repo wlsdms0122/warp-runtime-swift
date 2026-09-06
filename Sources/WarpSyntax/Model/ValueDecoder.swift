@@ -8,9 +8,9 @@
 import Foundation
 import Warp
 
-// Decodes Codable types directly from a Value tree. Serializing through JSON text
-// would collapse the scalar typing the loader fixed — `3.0` re-reads as int — so
-// the loader's Value is the decoding source itself, with no round trip.
+// Decodes Codable types directly from a Value tree. Serializing through JSON
+// text would collapse the scalar typing the loader fixed (`3.0` re-reads as
+// int) so the loader's Value is the decoding source itself, with no round trip.
 struct ValueDecoder: Decoder {
     private struct AnyKey: CodingKey {
         // MARK: - Property
@@ -104,9 +104,9 @@ struct ValueDecoder: Decoder {
 
     private struct UnkeyedContainer: UnkeyedDecodingContainer {
         // MARK: - Property
-        // The projection, not a copy of it — the same shape every other
-        // walker of elements in this library holds, so a compact spelling is
-        // not made into a boxed element apiece before the first is read.
+        // The projection, not a copy of it. The same shape every other walker
+        // of elements in this library holds, so a compact spelling is not made
+        // into a boxed element apiece before the first is read.
         let elements: AnyRandomAccessCollection<Value>
         let codingPath: [CodingKey]
         let steps: [Place.Step]
@@ -320,10 +320,10 @@ struct ValueDecoder: Decoder {
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
         // Through the one projection that owns the `bytes = array<byte>`
-        // equation, so a compact spelling is walked where a long one is —
-        // the same equation the writer puts them out through. Asking for
-        // `Data` is still answered by `decode` below, which holds bytes to
-        // their own spelling so an int array cannot quietly become them.
+        // equation, so a compact spelling is walked where a long one is. The
+        // same equation the writer puts them out through. Asking for `Data` is
+        // still answered by `decode` below, which holds bytes to their own
+        // spelling so an int array cannot quietly become them.
         guard let elements = value.elements else {
             throw ReadingError("expected array, found \(value.type)", at: steps)
         }
@@ -343,7 +343,7 @@ struct ValueDecoder: Decoder {
     // The one place a Codable type is made from a value, shared by all three
     // containers so a special case cannot hold in one and not another.
     //
-    // Bytes have no container to walk — the one binary kind is handed over
+    // Bytes have no container to walk. The one binary kind is handed over
     // whole, and `Data` is the shape it is asked for as. Anything else asking
     // for `Data` is refused here rather than allowed to fall through to Data's
     // own decoding, which reads an unkeyed list of small numbers and would
@@ -371,7 +371,7 @@ struct ValueDecoder: Decoder {
 }
 
 extension Decoder {
-    // Where this reading has reached, in the document's own words — nothing
+    // Where this reading has reached, in the document's own words. Nothing
     // where the reading is not this package's, which is the honest answer for a
     // decoder whose descent nobody here watched.
     var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }
@@ -387,7 +387,7 @@ extension Decoder {
     //
     // The boundary is not a second one. This is the same door
     // `ValueDecoder.decode` is, reached from a decoder handed over as the
-    // protocol — and where the decoder is somebody else's there is no door of
+    // protocol, and where the decoder is somebody else's there is no door of
     // ours to go through.
     func read<T: Decodable>(_ type: T.Type) throws -> T {
         guard let decoder = self as? ValueDecoder else { return try T(from: self) }
@@ -400,7 +400,7 @@ extension Decoder {
     // `Dictionary` reads its keys in hash order, and the seed for that changes
     // from one process to the next. Two entries that are both wrong would then
     // be refused in either order, and the one line an author is given would not
-    // be the same line twice — which is the whole of what an address is for.
+    // be the same line twice, which is the whole of what an address is for.
     // Sorted rather than as-written because a document is a value by then and a
     // value's record has no order to have kept.
     func read<T: Decodable>(_ type: [String: T].Type) throws -> [String: T] {

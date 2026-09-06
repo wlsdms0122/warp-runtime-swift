@@ -7,17 +7,17 @@
 
 import Foundation
 
-// A graph's strongly connected components, each after everything it reaches —
+// A graph's strongly connected components, each after everything it reaches.
 // Tarjan's, which finds them in exactly that order.
 //
 // A vocabulary of its own because nothing in here is about what the graph was
 // built from. The link builds one out of which declaration could read its
 // answer from which, and reads them back in this order; that is the caller's
-// sentence, and this is the walk. A walk this delicate — see below — is one
-// that should stand on a graph alone.
+// sentence, and this is the walk. A walk this delicate (see below) is one that
+// should stand on a graph alone.
 //
-// It carries its own stack. Written as recursion it descends once per edge in
-// a chain, and a chain is as long as the graph is — three hundred declarations
+// It carries its own stack. Written as recursion it descends once per edge in a
+// chain, and a chain is as long as the graph is. Three hundred declarations
 // calling one another in a line is an ordinary program and was enough to end
 // the process on the host's stack. Nesting depth is a document's own fact and
 // the walks over expressions may lean on it; call depth is not.
@@ -25,7 +25,7 @@ enum Circles {
     // MARK: - Internal
     static func among(_ edges: [Name: [Name]]) -> [[Name]] {
         // Where each was met, and the earliest any way on from it can reach
-        // back to — a component closes where the two agree.
+        // back to. A component closes where the two agree.
         var met: [Name: Int] = [:]
         var reaches: [Name: Int] = [:]
         var standing: Set<Name> = []

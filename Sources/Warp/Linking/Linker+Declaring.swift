@@ -31,9 +31,9 @@ extension Linker {
         constraints: [Name: Declared<[TypeExpression]>]
     ) {
         // Where each name was written, gathered here and carried with what it
-        // holds. This is where both halves of the joining are in hand —
-        // anywhere later has only the joined name, and taking it apart again is
-        // a second copy of a rule that has to be right once.
+        // holds. This is where both halves of the joining are in hand. Anywhere
+        // later has only the joined name, and taking it apart again is a second
+        // copy of a rule that has to be right once.
         //
         // One table per space, and the table is what says a name is taken. A
         // set beside it saying the same thing is a second answer to one

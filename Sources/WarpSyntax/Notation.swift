@@ -13,7 +13,7 @@ import Warp
 //
 // A spelling stands in for something the language already has: a condition
 // written as an operator is a message, and so is a template. So a document has
-// two layers, and this is the switch between them — a notation brings its own
+// two layers, and this is the switch between them. A notation brings its own
 // spellings, and the canonical one brings none, which leaves a document writing
 // the shapes themselves.
 //
@@ -34,7 +34,7 @@ public struct Notation: Sendable {
     // and text is put together by sending the words that put text together.
     //
     // This is what a document is read with, and it is the only one this package
-    // ships — the others are notations, and a notation lives where it does.
+    // ships. The others are notations, and a notation lives where it does.
     public static let canonical = Notation()
 
     // How a condition slot may be written here, and nothing where a condition is
@@ -44,7 +44,7 @@ public struct Notation: Sendable {
     // What `{ format:, with: }` lowers to, and nothing where this notation does
     // not offer a template.
     //
-    // The two keys stay reserved either way — that much is the document's, and
+    // The two keys stay reserved either way. That much is the document's, and
     // the specification says so. What varies is only whether a template is
     // understood, and which words it spends.
     public let interpolation: Interpolation?

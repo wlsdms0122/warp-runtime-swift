@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// `body:` and `result:` — the pair every construct that runs a body writes.
+// `body:` and `result:`. The pair every construct that runs a body writes.
 public struct BlockReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case body

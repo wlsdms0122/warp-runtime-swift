@@ -22,7 +22,7 @@ import Foundation
 // recovered from it.
 //
 // What is spelled here is the language's own reading, which is the one a caller
-// holding a program it assembled in Swift is owed — it wrote no document, so no
+// holding a program it assembled in Swift is owed. It wrote no document, so no
 // document's words would lead it anywhere. A reading in a document's words is
 // the reading side's, and a reading in lines and columns is the front end's.
 public struct Place: Sendable, Equatable {
@@ -38,14 +38,14 @@ public struct Place: Sendable, Equatable {
 
     // How the place reads in a message: named steps joined with dots, positions
     // bracketed. `Trace` reads by the same two rules, since an author holding
-    // one has just read the other — what differs is what gets a bracket. A
-    // trace brackets an occurrence, because the text it names ran more than
-    // once; a place brackets every statement, because one name in the text may
-    // be two statements.
-    // Nothing where there is nothing to say. A place in no document at no step
-    // is what a caller holding a body it assembled has, and spelling it as ""
-    // would fold an absence into a string every reader then has to unfold
-    // again — the same absence `Document` keeps as an absence one field over.
+    // one has just read the other. What differs is what gets a bracket. A trace
+    // brackets an occurrence, because the text it names ran more than once; a
+    // place brackets every statement, because one name in the text may be two
+    // statements. Nothing where there is nothing to say. A place in no document
+    // at no step is what a caller holding a body it assembled has, and spelling
+    // it as "" would fold an absence into a string every reader then has to
+    // unfold again. The same absence `Document` keeps as an absence one field
+    // over.
     //
     // The only way to read a place as text, for the same reason. A
     // `description` would have to answer something for a place that says
@@ -55,7 +55,7 @@ public struct Place: Sendable, Equatable {
             let (offset, step) = entry
             // The first step takes no dot: there is nothing to its left but the
             // document's name, which the slash already separates. Read off the
-            // position rather than the text written so far — a step's name is
+            // position rather than the text written so far. A step's name is
             // whatever a document wrote, slashes included, and asking the text
             // what it is would be reading a string this type keeps steps to
             // avoid having to read.
@@ -74,10 +74,10 @@ public struct Place: Sendable, Equatable {
             case let .index(position):
                 written += "[\(position)]"
 
-            // A statement wears both: the name an author knows it by, and
-            // the position that tells two statements of one name apart — a
-            // `var` and the `set` that writes it are two statements and one
-            // name, and a place that dropped the position would call them one.
+            // A statement wears both: the name an author knows it by, and the
+            // position that tells two statements of one name apart. A `var` and
+            // the `set` that writes it are two statements and one name, and a
+            // place that dropped the position would call them one.
             case let .statement(name?, position):
                 written += (joined ? name : ".\(name)") + "[\(position)]"
 
@@ -134,9 +134,9 @@ public struct Place: Sendable, Equatable {
     }
 
     // A caller holding a program it assembled itself, with no document under
-    // it. There is no key to name, so the place says what was handed in — and
-    // no document either, which is a third thing and not a module that wrote
-    // no name.
+    // it. There is no key to name, so the place says what was handed in, and no
+    // document either, which is a third thing and not a module that wrote no
+    // name.
     public static func given(_ name: String) -> Place {
         Place([.landmark(name)], in: .assembled)
     }
@@ -150,16 +150,16 @@ public struct Place: Sendable, Equatable {
     // the four of them for the same place and compares.
     public func slot(_ slot: Slot) -> Place { appending(.slot(slot)) }
 
-    // What a call is written with. Two steps and not one — a document nests
-    // them under a key of their own, and an argument named beside a statement
-    // would be a name meaning two things.
+    // What a call is written with. Two steps and not one. A document nests them
+    // under a key of their own, and an argument named beside a statement would
+    // be a name meaning two things.
     public func argument(_ name: String) -> Place { slot(.arguments).key(name) }
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
-    // A name with nothing in it is no name — the position is what is left to
-    // call the statement by, and a step that rendered an empty name would put
-    // a dot in front of nothing.
+    // A name with nothing in it is no name. The position is what is left to
+    // call the statement by, and a step that rendered an empty name would put a
+    // dot in front of nothing.
     public func statement(_ name: String?, at position: Int) -> Place {
         appending(.statement(name, at: position))
     }
@@ -181,8 +181,8 @@ public struct Place: Sendable, Equatable {
 public extension Place {
     // Which document a place is an address in.
     struct Document: Sendable, Equatable {
-        // Which text this is. Nil where the program was never written down —
-        // a caller that built it in memory — and that is the whole of what nil
+        // Which text this is. Nil where the program was never written down (a
+        // caller that built it in memory) and that is the whole of what nil
         // means here: there is no file for a reader to be pointed back into.
         public let identity: Identity?
 
@@ -241,8 +241,8 @@ public extension Place {
         case closure
 
         // A condition, and which construct holds it. The construct is carried
-        // because a document does not write the two under one word — a branch
-        // asks `when` and a loop asks `while` — and a slot that had to be told
+        // because a document does not write the two under one word (a branch
+        // asks `when` and a loop asks `while`) and a slot that had to be told
         // by whatever step came before it is a slot that can be reached from
         // somewhere nobody remembered to tell.
         //
@@ -282,8 +282,8 @@ public extension Place {
     }
 
     // A construct that holds a condition. Two of them, and a third would be a
-    // third here — which is the point: whoever spells a condition for a
-    // document is asked about every one of these by name.
+    // third here, which is the point: whoever spells a condition for a document
+    // is asked about every one of these by name.
     enum Conditional: Sendable, Equatable {
         case branch
         case loop
@@ -311,13 +311,13 @@ public extension Place {
 
         // A statement, which a document writes as an array element and an
         // author knows by the name it fixes. Both are carried: the name is what
-        // a person looks for, and the position is what finds it — the name
-        // alone finds nothing when a `var` and the `set` writing it share one.
+        // a person looks for, and the position is what finds it. The name alone
+        // finds nothing when a `var` and the `set` writing it share one.
         case statement(name: String?, at: Int)
 
         // A body a caller assembled and handed over, which has no document
         // under it to have a key in. It renders like a key on purpose, since a
-        // person reading a line wants a line — what tells the two apart is this
+        // person reading a line wants a line. What tells the two apart is this
         // case, for the reader that has to know which of the words it may look
         // for in a file.
         case landmark(String)
@@ -326,8 +326,8 @@ public extension Place {
         //
         // The rule is on the case rather than beside each caller: a step
         // rendering an empty name puts a dot in front of nothing, and every
-        // stage that spells a statement — reading a document, validating a
-        // module, linking one — makes this step from a name it did not write.
+        // stage that spells a statement (reading a document, validating a
+        // module, linking one) makes this step from a name it did not write.
         public static func statement(_ name: String?, at position: Int) -> Step {
             .statement(name: name?.isEmpty == true ? nil : name, at: position)
         }

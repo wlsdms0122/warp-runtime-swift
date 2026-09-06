@@ -12,9 +12,9 @@ import Warp
 // each is reachable from a path.
 //
 // `floored` and `rounded` answer an int whatever they were sent, which is how a
-// quotient becomes a whole number again — `dividedBy` always answers a double,
+// quotient becomes a whole number again. `dividedBy` always answers a double,
 // and this is the other half of writing a whole division. `int` is the machine
-// word, so a fraction whose whole part is past it has no int to answer — that
+// word, so a fraction whose whole part is past it has no int to answer. That
 // stops the run the way arithmetic off the word's edge does.
 public struct NumberQuery: Query {
     public enum Reading: Sendable {
@@ -60,9 +60,9 @@ public struct NumberQuery: Query {
     }
 
     // MARK: - Private
-    // The reasons rounding can fail are different facts, and the refusal
-    // names the one that happened — through the one reading every judge of a
-    // fraction shares.
+    // The reasons rounding can fail are different facts, and the refusal names
+    // the one that happened. Through the one reading every judge of a fraction
+    // shares.
     private func whole(_ rounded: Double, from asked: Double) throws -> Int {
         switch Int.reading(rounded) {
         case let .word(answered):

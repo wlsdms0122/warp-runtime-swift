@@ -44,13 +44,13 @@ public struct ProcedureReader: Decodable {
             at: decoder.steps
         )
 
-        // A procedure has no name of its own — it is named by the key its module
+        // A procedure has no name of its own. It is named by the key its module
         // declares it under.
         self.procedure = Procedure(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             // Absent `parameters:` means an empty signature, not an absent
             // contract. `parameters:`, `receiver:`, `returns:` and `bounds:`
-            // are one signature — what a call may pass, which of those it is
+            // are one signature. What a call may pass, which of those it is
             // sent to, what comes back, and what each type parameter admits.
             signature: try BoundsReader.apply(
                 try container.decodeIfPresent([String: String].self, forKey: .bounds),
