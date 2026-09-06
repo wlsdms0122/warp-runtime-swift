@@ -13,8 +13,12 @@ import Foundation
 // round and is dropped.
 //
 // Usage: `WarpBench [rounds] [repeats]`. Rounds default to a million, repeats
-// to three; the reported figure is the median repeat. Every program is warmed
+// to three; the reported figure is the fastest repeat. Every program is warmed
 // up once before it is timed.
+//
+// The fastest rather than the middle one: nothing else on the machine can make
+// a run faster, so the fastest sample is the one least mixed with whatever else
+// was running, and two builds compare on the same footing.
 @main
 struct Bench {
     // MARK: - Property
@@ -55,9 +59,9 @@ struct Bench {
             }
 
             measured[workload.name] = Measurement(
-                perRound: Self.nanoseconds(Self.median(samples)) / Double(rounds),
-                link: Self.nanoseconds(Self.median(links)),
-                once: Self.nanoseconds(Self.median(onces))
+                perRound: Self.nanoseconds(Self.fastest(samples)) / Double(rounds),
+                link: Self.nanoseconds(Self.fastest(links)),
+                once: Self.nanoseconds(Self.fastest(onces))
             )
         }
 
@@ -85,8 +89,8 @@ struct Bench {
         return try files.map(Workload.init(reading:))
     }
 
-    private static func median(_ samples: [Duration]) -> Duration {
-        samples.sorted()[samples.count / 2]
+    private static func fastest(_ samples: [Duration]) -> Duration {
+        samples.min() ?? .zero
     }
 
     private static func nanoseconds(_ duration: Duration) -> Double {
@@ -97,7 +101,7 @@ struct Bench {
     private static func table(_ measured: [String: Measurement], rounds: Int, repeats: Int) -> String {
         let loop = measured[baseline]?.perRound ?? 0
         var lines = [
-            "rounds \(rounds), median of \(repeats); link and once are the median of \(linkSamples)",
+            "rounds \(rounds), fastest of \(repeats); link and once are the fastest of \(linkSamples)",
             "",
             "| workload | ns/round | minus loop | x loop | link us | once us |",
             "|---|---|---|---|---|---|"
