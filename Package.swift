@@ -13,13 +13,13 @@ let package = Package(
     ],
     targets: [
         // The language as Swift holds it: the shapes a program is made of, and
-        // everything done to them — checking, linking, running, and the standard
+        // everything done to them. Checking, linking, running, and the standard
         // vocabulary. No dependencies and no `Decodable`, because a language
         // that can decode itself has confused itself with one of its notations.
         //
         // A caller that builds these shapes directly needs this and nothing
-        // else. That is not a trick — it is how a front end with a syntax of its
-        // own works, and how a program that never travels is run.
+        // else. That is what a front end with a syntax of its own does, and
+        // what running a program that never travels takes.
         .target(
             name: "Warp"
         ),
@@ -28,17 +28,14 @@ let package = Package(
         // and the way back out. Data in, the language's own shapes out.
         //
         // Optional, and the dependency graph is where that is said rather than
-        // claimed. A program only travels as a document, so this is what a
-        // program has to come through to leave one machine and arrive at another
-        // — and a program that stays where it was built never comes through here
-        // at all.
+        // claimed. A program travels as a document, so this is what a program
+        // comes through to leave one machine and arrive at another.
         //
         // The wire is written and read without learning what the tree means, so
         // an implementation in another language can speak it without also
-        // implementing what a procedure is. That is a fact about the format and
-        // it holds whatever this package is cut into: the one line worth cutting
-        // on is what a caller can leave out, and a caller that reads bytes needs
-        // all of this while a caller assembling shapes in Swift needs none of it.
+        // implementing what a procedure is. The line this package is cut on is
+        // what a caller can leave out: a caller that reads bytes needs all of
+        // this, and a caller assembling shapes in Swift needs none of it.
         .target(
             name: "WarpSyntax",
             dependencies: [
@@ -47,15 +44,9 @@ let package = Package(
         ),
         // One test target per target, and the dependencies are the point: a test
         // that cannot import the syntax can only be saying something about the
-        // language. Where a behaviour is tested is then a fact anyone can read
-        // off the imports, rather than a claim.
-        //
-        // It was a claim for a while. Writing a `Value` in Swift was awkward
-        // enough that the syntax tests reached for the YAML front end to build
-        // fixtures, and the language tests reached for the syntax — so a parser
-        // change could fail a reader's test, and the linker had no test in its own
-        // target at all. Each layer writes its own fixtures now, in the shape that
-        // layer actually takes.
+        // language. Where a behaviour is tested is then a fact anyone reads off
+        // the imports rather than a claim. Each layer writes its own fixtures,
+        // in the shape that layer takes.
         .testTarget(
             name: "WarpTests",
             dependencies: [
@@ -69,9 +60,9 @@ let package = Package(
             ]
         ),
         // The specification's cases, run against this implementation. It imports
-        // what any caller imports and nothing more — a runner that could see
-        // inside could pass by agreeing with the implementation rather than with
-        // the specification, which is the one thing it must not do.
+        // what any caller imports and nothing more: a runner that could see
+        // inside would pass by agreeing with the implementation rather than
+        // with the specification.
         .testTarget(
             name: "WarpConformanceTests",
             dependencies: [
