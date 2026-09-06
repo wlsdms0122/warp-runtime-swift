@@ -69,6 +69,7 @@ struct Folding {
                         procedure: procedure,
                         pure: procedure.implementation.isNativelyPure == true,
                         isolated: false,
+                        failing: procedure.implementation.nativelyFailing ?? .unstated,
                         in: shapes
                     )
                 )

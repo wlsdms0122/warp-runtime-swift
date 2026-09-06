@@ -278,6 +278,7 @@ extension Closure {
                 signature: Signature(),
                 purity: .unstated,
                 isolation: .unstated,
+                failing: .unstated,
                 implementation: .body(
                     Body(instructions: [], result: nil),
                     Frame(size: 0, parameters: [], variables: [], names: [])

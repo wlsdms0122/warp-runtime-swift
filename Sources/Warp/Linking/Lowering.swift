@@ -68,6 +68,7 @@ struct Lowering {
             signature: declared.signature,
             purity: declared.purity,
             isolation: declared.isolation,
+            failing: declared.failing,
             implementation: .body(body, slots.frame),
             in: shapes
         )
@@ -290,6 +291,7 @@ struct Lowering {
                     signature: procedure.signature,
                     purity: procedure.purity,
                     isolation: procedure.isolation,
+                    failing: procedure.failing,
                     implementation: .body(body, inner.frame),
                     in: shapes
                 ),

@@ -35,6 +35,11 @@ public final class Linked: Sendable {
     public let purity: Purity
     public let isolation: Isolation
 
+    // What may come out of this when the work goes wrong: the words its
+    // failures name themselves by. Read off the body's casts, calls and
+    // rescues, or declared by the native word.
+    public let failing: Failing
+
     // The parameters as the run settles them, in the same order, and what
     // the answer settles against. The declaration's lowering, born here
     // from the signature beside it.
@@ -61,6 +66,7 @@ public final class Linked: Sendable {
         signature: Signature,
         purity: Purity,
         isolation: Isolation,
+        failing: Failing,
         implementation: Implementation,
         in table: ShapeTable
     ) {
@@ -78,6 +84,7 @@ public final class Linked: Sendable {
         self.isolation = isolation
         self.slots = slots
         self.returns = returns
+        self.failing = failing
         self.table = table
         self.isDerivable = slots.derivable(receiver: receiverPosition, returns: returns, in: table)
         self.implementation = implementation
@@ -94,6 +101,7 @@ public final class Linked: Sendable {
         procedure: Procedure,
         pure: Bool,
         isolated: Bool,
+        failing: Failing,
         in table: ShapeTable
     ) -> Linked {
         let implementation: Implementation
@@ -115,6 +123,7 @@ public final class Linked: Sendable {
             signature: procedure.signature,
             purity: pure ? .pure : .unstated,
             isolation: isolated ? .isolated : .unstated,
+            failing: failing,
             implementation: implementation,
             in: table
         )

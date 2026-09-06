@@ -12,7 +12,11 @@ public struct Aborted: RecoverableFailure {
     // MARK: - Property
     public let message: String
 
-    public let type = "aborted"
+    public var type: String { Self.word }
+
+    // The word this failure names itself by, said once so a declaration can
+    // read it where it says what it may fail with.
+    public static let word = "aborted"
 
     public let trace: Trace?
 

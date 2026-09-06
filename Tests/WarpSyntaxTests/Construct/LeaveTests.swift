@@ -205,7 +205,10 @@ struct LeaveTests {
                 [
                     "let": "tried",
                     "value": ["attempt": [
-                        "body": [["value": ["return": "left from inside"]]],
+                        "body": [
+                            ["let": "checked", "value": ["as": "number", "of": 0]],
+                            ["value": ["return": "left from inside"]]
+                        ],
                         "rescue": ["result": "the rescue ran"]
                     ]
                 ]]
@@ -377,6 +380,7 @@ struct LeaveTests {
                                 "let": "tried",
                                 "value": ["attempt": [
                                     "body": [
+                                        ["let": "checked", "value": ["as": "number", "of": 0]],
                                         [
                                             "set": "seen",
                                             "value": ["call": [

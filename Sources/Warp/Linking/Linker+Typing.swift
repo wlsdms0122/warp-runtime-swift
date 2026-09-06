@@ -1258,7 +1258,8 @@ extension Linker {
                         signature: procedure.signature,
                         implementation: .body(body),
                         purity: pure ? .pure : .unstated,
-                        isolation: isolated ? .isolated : .unstated
+                        isolation: isolated ? .isolated : .unstated,
+                        failing: failing(body, given: frame.failing)
                     )
                 )
             }
@@ -1627,6 +1628,21 @@ extension Linker {
         // can still fail before its leave, and the rescue may finish normally,
         // so both sides' leaves are absorbed here, partial writes and all.
         case let .attempt(block, rescue, failure):
+            // What the rescue is there for. A body nothing can fail out of
+            // leaves it a body no run reaches, and the author wrote it
+            // expecting otherwise: what they are told is which failures the
+            // link found, which is none.
+            if failing(block, given: frame.failing).failsNothing {
+                try refuse(
+                    "attempts a body that cannot fail, so its rescue is a body"
+                        + " no run reaches. What a rescue catches is what the"
+                        + " body casts and calls, and this one casts and calls"
+                        + " nothing that fails",
+                    at: place,
+                    when: ask
+                )
+            }
+
             let attempted = try inspected(
                 block: block,
                 at: place,

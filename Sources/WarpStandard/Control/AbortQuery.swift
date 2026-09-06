@@ -20,6 +20,8 @@ struct AbortQuery: Query {
     public init() {
     }
 
+    let failing = Failing.these([Aborted.word])
+
     // MARK: - Public
     func evaluate(_ question: Question) throws -> Value? {
         guard let message = question.receiver else {

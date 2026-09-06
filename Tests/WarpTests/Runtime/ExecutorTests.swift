@@ -224,6 +224,7 @@ struct ExecutorTests {
                     ),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                                        mayFail(),
                                         Statement(binding: .constant("fragile"), expression: interpolated(
                                                 literal("x="),
                                                 spelling(reference("n", "field"))
@@ -260,6 +261,7 @@ struct ExecutorTests {
                     ),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                                        mayFail(),
                                         Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)])
                                         )
                                     ]), rescue: Block(body: [
@@ -332,6 +334,7 @@ struct ExecutorTests {
                                     ], else: nil)
                         ),
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                                        mayFail(),
                                         Statement(binding: .constant("fragile"), expression: interpolated(
                                                 literal("name="),
                                                 spelling(reference("maybe"))

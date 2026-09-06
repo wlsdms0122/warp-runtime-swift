@@ -55,6 +55,12 @@ struct TypeFrame: Sendable {
     // time, worked out from the bodies the way purity is.
     let isolated: Set<Name>
 
+    // What may come out of each declaration when the work goes wrong, worked
+    // out from the bodies the way purity is. A closure literal is judged
+    // against this, and so is every `attempt`: what a rescue is there for is
+    // what its body may fail with.
+    let failing: [Name: Failing]
+
     // Each document's variables by name. A body reading one answers by the
     // run's state, so purity is read against these.
     let variables: [Int: Set<Name>]

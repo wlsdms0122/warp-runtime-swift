@@ -1,0 +1,43 @@
+//
+//  Failing.swift
+//  Warp
+//
+//  Created by JSilver
+//
+
+import Foundation
+
+// What may come out of a body or a word when the work itself goes wrong: the
+// words a `RecoverableFailure` names itself by, which is what a rescue reads
+// as `type`.
+//
+// Derived for a body from what it casts, calls and rescues; declared by a
+// native word, which is the only one that can say. A word that says nothing
+// leaves the question open, and every judgment reading this treats that as
+// "anything may come out".
+public enum Failing: Sendable, Equatable {
+    // No claim. What comes out of this is not knowable before the run.
+    case unstated
+
+    // These and no others. The empty set is a body nothing can fail out of.
+    case these(Set<String>)
+
+    // MARK: - Property
+    // Whether this says nothing can fail out of it. A claim, so an unstated
+    // one answers false.
+    public var failsNothing: Bool {
+        self == .these([])
+    }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // What may come out of one and then the other. Unstated on either side
+    // carries: an unknown joined with anything is still unknown.
+    public func joined(_ other: Failing) -> Failing {
+        guard case let .these(mine) = self, case let .these(theirs) = other else { return .unstated }
+
+        return .these(mine.union(theirs))
+    }
+
+    // MARK: - Private
+}

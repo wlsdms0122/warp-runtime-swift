@@ -57,6 +57,10 @@ struct ConcurrentEffect: Effect {
     }
 
     // MARK: - Property
+    // Every recoverable failure a piece raises is gathered into one, so this
+    // is the only word that comes out however the pieces failed.
+    let failing = Failing.these([ConcurrentFailed.word])
+
     private let word: Word
 
     // MARK: - Initializer

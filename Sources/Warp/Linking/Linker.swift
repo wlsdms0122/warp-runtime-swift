@@ -136,6 +136,7 @@ public struct Linker: Sendable {
         }
 
         let isolatedDeclarations = isolated(among: symbols, signatures: signatures)
+        let failingDeclarations = failing(among: symbols)
 
         // The table a run reads, one row per declaration in name order. A
         // native answers as it is from the start; a written body stands as
@@ -153,6 +154,7 @@ public struct Linker: Sendable {
                     procedure: symbol.procedure,
                     pure: settled.contains(symbol.declared),
                     isolated: isolatedDeclarations.contains(symbol.declared),
+                    failing: failingDeclarations[symbol.declared] ?? .unstated,
                     in: shapes
                 )
             )
@@ -198,6 +200,7 @@ public struct Linker: Sendable {
                 words: answeringWords,
                 pure: settled,
                 isolated: isolatedDeclarations,
+                failing: failingDeclarations,
                 variables: moduleVariables
             )
         }

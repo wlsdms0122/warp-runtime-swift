@@ -29,7 +29,11 @@ public struct CastRefused: RecoverableFailure {
 
     public let trace: Trace?
 
-    public let type = "cast_refused"
+    public var type: String { Self.word }
+
+    // The word this failure names itself by, said once so the link can read
+    // it where it derives what a cast may fail with.
+    public static let word = "cast_refused"
 
     // The shape that was named rides in the payload's box, for a rescue that
     // wants to say which cast it was.

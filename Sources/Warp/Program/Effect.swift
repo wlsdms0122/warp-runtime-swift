@@ -21,9 +21,17 @@ public protocol Effect: Sendable {
     // deriving isolation through it and through whatever calls it.
     var isolated: Bool { get }
 
+    // What may come out of this when the work goes wrong, by the words its
+    // failures name themselves. A word that only ever throws at an author
+    // mistake fails nothing, which is the default, so a word that can fail
+    // says so and one that could fail anything says `unstated`.
+    var failing: Failing { get }
+
     func run(_ invocation: Invocation) async throws -> Value
 }
 
 public extension Effect {
     var isolated: Bool { true }
+
+    var failing: Failing { .these([]) }
 }

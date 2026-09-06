@@ -1830,6 +1830,7 @@ struct InferenceTests {
                         Statement(
                             expression: .attempt(
                                 Block(body: [
+                                    mayFail(),
                                     Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text"))
                                     )
                                 ]),

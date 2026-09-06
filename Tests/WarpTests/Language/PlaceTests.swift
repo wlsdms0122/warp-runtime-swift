@@ -235,7 +235,7 @@ struct PlaceTests {
                 procedures: [
                     entryName: Procedure(body: [
                         Statement(binding: .constant("guarded"), expression: .attempt(
-                                Block(body: []),
+                                Block(body: [mayFail()]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("sent"), expression: .call(
                                             Call(

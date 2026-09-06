@@ -61,6 +61,22 @@ public enum Implementation: Sendable {
         }
     }
 
+    // What may come out of this when the work goes wrong. A native says so
+    // about itself; for a body what it casts, calls and rescues decides, so
+    // the linker works it out and this answers only for the two that declare.
+    public var nativelyFailing: Failing? {
+        switch self {
+        case let .query(query):
+            return query.failing
+
+        case let .effect(effect):
+            return effect.failing
+
+        case .body:
+            return nil
+        }
+    }
+
     public var block: Block? {
         guard case let .body(block) = self else { return nil }
 

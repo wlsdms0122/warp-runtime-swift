@@ -22,7 +22,9 @@ struct TestRecoverableFailure: RecoverableFailure {
     // MARK: - Property
     let message = "the world did not cooperate"
 
-    let type = "test"
+    let type = TestRecoverableFailure.word
+
+    static let word = "test"
 
     // MARK: - Initializer
     // MARK: - Public
@@ -42,6 +44,8 @@ struct TestFatalError: WarpError {
 // without needing a world to fail in.
 struct FailEffect: Effect {
     // MARK: - Property
+    let failing = Failing.these([TestRecoverableFailure.word])
+
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation) async throws -> Value {
@@ -53,6 +57,16 @@ struct FailEffect: Effect {
     }
 
     // MARK: - Private
+}
+
+// A statement that may fail and does not: a plain cast onto a shape the value
+// already fits. An `attempt` stands only over a body that can fail, so a test
+// showing what a rescue does *not* catch puts one of these in the body.
+func mayFail(_ name: Name = "checked") -> Statement {
+    Statement(
+        binding: .constant(name),
+        expression: .cast(.literal(.int(0)), as: .number, optional: false)
+    )
 }
 
 // A reference from segment names, written directly. A path is what the language
@@ -339,6 +353,7 @@ extension Closure {
                 signature: Signature(),
                 purity: .unstated,
                 isolation: .unstated,
+                failing: .unstated,
                 implementation: .body(
                     Body(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], names: [])

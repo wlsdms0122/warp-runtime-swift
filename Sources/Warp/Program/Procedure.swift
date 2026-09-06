@@ -31,6 +31,7 @@ public struct Procedure: Sendable {
     // caller assembles claims nothing.
     public let purity: Purity
     public let isolation: Isolation
+    public let failing: Failing
 
     public var block: Block? { implementation.block }
     public var body: [Statement] { block?.body ?? [] }
@@ -42,13 +43,15 @@ public struct Procedure: Sendable {
         signature: Signature = Signature(),
         implementation: Implementation,
         purity: Purity = .unstated,
-        isolation: Isolation = .unstated
+        isolation: Isolation = .unstated,
+        failing: Failing = .unstated
     ) {
         self.description = description
         self.signature = signature
         self.implementation = implementation
         self.purity = purity
         self.isolation = isolation
+        self.failing = failing
     }
 
     // A procedure written in the language. The common case, and the one a
