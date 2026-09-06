@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // An author binds a call to a name and passes the name, so a declared answer
 // only reaches the next call site if the link knows what that name holds. These

@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // A type or constraint name is the spelling it was declared under, dot and
 // all, and a mention is that spelling written out. These are the places that

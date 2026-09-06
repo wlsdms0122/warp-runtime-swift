@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 @Suite("A name that says what it holds")
 struct DeclaredNameTests {

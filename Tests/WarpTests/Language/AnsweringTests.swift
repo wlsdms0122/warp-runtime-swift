@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // What a declaration answers when nobody wrote it down.
 //

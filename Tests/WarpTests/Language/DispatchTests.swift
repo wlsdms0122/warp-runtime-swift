@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // A procedure, a library word and a caller reaching outside are one expression, and
 // the only difference is where the selector was found. These ask the language

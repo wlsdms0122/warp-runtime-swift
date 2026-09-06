@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // `bytes = array<byte>` — bytes are not a special material, they are a compact
 // spelling of an array of small whole numbers. The worth is the elements', the

@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // A procedure is a value. What that buys is not the case list — it is that an
 // author can write the two things only Swift could write before: a construct

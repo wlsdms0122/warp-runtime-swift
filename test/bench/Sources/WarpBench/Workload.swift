@@ -8,6 +8,7 @@
 import Foundation
 import Warp
 import WarpSyntax
+import WarpStandard
 
 // One program from `program/`, linked once and run as many times as asked.
 //

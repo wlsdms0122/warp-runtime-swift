@@ -8,12 +8,15 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
-// This target imports `Warp` and nothing else, on purpose. Every other test
-// in the package reaches the language through a notation, which means it proves
-// two things at once and cannot say which one broke. What is written here is
-// the language on its own — procedures authored as Swift values, paths written as
-// segments rather than parsed from text.
+// This target imports no notation, on purpose. Every other test in the
+// package reaches the language through one, which means it proves two things
+// at once and cannot say which one broke. What is written here is the language
+// on its own: procedures authored as Swift values, paths written as segments
+// rather than parsed from text. The standard vocabulary comes in because a
+// program has to send somewhere, and what those words answer is tested where
+// they live.
 
 struct TestRecoverableFailure: RecoverableFailure {
     // MARK: - Property

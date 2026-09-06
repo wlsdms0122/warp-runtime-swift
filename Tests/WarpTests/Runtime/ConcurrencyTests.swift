@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // Running at once is vocabulary, not grammar. A closure is the one body that is
 // safe to run beside another — it captured values and writes no name it did not

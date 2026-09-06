@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpStandard
 
 // A constraint is a declared membership, and a bounded `some T` takes only what
 // the membership admits. These are the places the bound turns a reading into a

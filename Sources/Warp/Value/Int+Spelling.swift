@@ -9,19 +9,19 @@ import Foundation
 
 extension Int {
     // How a fraction reads as a machine word. The failures are different
-    // facts — a fraction that is not a number holds no whole at all, digits
+    // facts. A fraction that is not a number holds no whole at all, digits
     // after the point are not a whole number, and a whole number past the
-    // word has an answer no int holds — and every judge that meets a
-    // fraction names the one that happened, so the reading lives in one
-    // place rather than being re-derived beside each message.
-    enum WordReading {
+    // word has an answer no int holds. Every judge that meets a fraction
+    // names the one that happened, so the reading lives in one place rather
+    // than being re-derived beside each message.
+    public enum WordReading {
         case word(Int)
         case notANumber
         case fractional
         case pastTheWord
     }
 
-    static func reading(_ fraction: Double) -> WordReading {
+    public static func reading(_ fraction: Double) -> WordReading {
         guard !fraction.isNaN else { return .notANumber }
 
         // Infinity has a whole part, and it is past every word — the overflow

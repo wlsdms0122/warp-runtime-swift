@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpStandard
 
 // A capability the language has and the notation cannot spell is a capability
 // only Swift has. These are the two words that close that gap.

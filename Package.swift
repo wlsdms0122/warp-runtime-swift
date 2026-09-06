@@ -10,11 +10,12 @@ let package = Package(
     products: [
         .library(name: "Warp", targets: ["Warp"]),
         .library(name: "WarpSyntax", targets: ["WarpSyntax"]),
+        .library(name: "WarpStandard", targets: ["WarpStandard"]),
     ],
     targets: [
         // The language as Swift holds it: the shapes a program is made of, and
-        // everything done to them. Checking, linking, running, and the standard
-        // vocabulary. No dependencies and no `Decodable`, because a language
+        // everything done to them. Checking, linking and running. No
+        // dependencies and no `Decodable`, because a language
         // that can decode itself has confused itself with one of its notations.
         //
         // A caller that builds these shapes directly needs this and nothing
@@ -22,6 +23,18 @@ let package = Package(
         // what running a program that never travels takes.
         .target(
             name: "Warp"
+        ),
+        // The vocabulary a program sends to: arithmetic, text, collections,
+        // logic, control and running at once. Words on top of the language
+        // rather than part of it, and the dependency graph is where that is
+        // said rather than claimed. `Value` belongs to the language, so a word
+        // here cannot ask for a representation of its own, and the language
+        // learns a word only through the contract a caller hands it.
+        .target(
+            name: "WarpStandard",
+            dependencies: [
+                "Warp"
+            ]
         ),
         // What a document is: the bytes and the text one is carried in, which
         // key names which shape, the spellings a notation may write instead,
@@ -50,13 +63,21 @@ let package = Package(
         .testTarget(
             name: "WarpTests",
             dependencies: [
-                "Warp"
+                "Warp",
+                "WarpStandard"
+            ]
+        ),
+        .testTarget(
+            name: "WarpStandardTests",
+            dependencies: [
+                "WarpStandard"
             ]
         ),
         .testTarget(
             name: "WarpSyntaxTests",
             dependencies: [
-                "WarpSyntax"
+                "WarpSyntax",
+                "WarpStandard"
             ]
         ),
         // The specification's cases, run against this implementation. It imports
@@ -67,7 +88,8 @@ let package = Package(
             name: "WarpConformanceTests",
             dependencies: [
                 "Warp",
-                "WarpSyntax"
+                "WarpSyntax",
+                "WarpStandard"
             ]
         ),
     ],

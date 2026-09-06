@@ -7,6 +7,7 @@
 
 import Testing
 @testable import Warp
+import WarpStandard
 
 // The kernel's own acceptance test: a procedure written in Swift, run without a
 // front end. Nothing here spells a keyword — no `"loop"`, no `"steps"`, no path

@@ -17,7 +17,8 @@ let package = Package(
             name: "WarpBench",
             dependencies: [
                 .product(name: "Warp", package: "warp-runtime-swift"),
-                .product(name: "WarpSyntax", package: "warp-runtime-swift")
+                .product(name: "WarpSyntax", package: "warp-runtime-swift"),
+                .product(name: "WarpStandard", package: "warp-runtime-swift")
             ]
         )
     ],

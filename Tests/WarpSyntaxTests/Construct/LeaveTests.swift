@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpStandard
 
 // Leaving early: `return`, `break`, `continue`.
 //
