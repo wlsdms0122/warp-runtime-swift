@@ -408,14 +408,18 @@ extension Shape {
     }
 
 
+    // The judge asked as a question. Settling is the one rule for what a
+    // shape holds, so whether it holds something is that rule run with its
+    // refusal dropped rather than a second rule written beside it. The path
+    // is empty because nothing reads the refusal.
+    func settles(_ value: Value, in table: ShapeTable, assuming: [Int] = []) -> Bool {
+        (try? settling(value, at: "", in: table, assuming: assuming)) != nil
+    }
+
     // One value of every kind a decided shape can hold, for asking the judge
     // rather than restating it.
     private static let witnesses: [Value] = [
         .null, .bool(false), .int(0), .double(0), .string(""),
         .array([]), .dictionary([:]), .bytes([])
     ]
-
-    private func settles(_ value: Value, in table: ShapeTable) -> Bool {
-        (try? settling(value, at: "", in: table)) != nil
-    }
 }

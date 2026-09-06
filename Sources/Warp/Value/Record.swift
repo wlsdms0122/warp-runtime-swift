@@ -69,7 +69,7 @@ public struct Record: Sendable {
     // This record's fields as names beside values, for a reader that walks
     // names rather than a layout.
     public var asDictionary: Value.Dictionary {
-        Value.Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
+        Value.Dictionary(of: self)
     }
 
     // MARK: - Public

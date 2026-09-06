@@ -1025,20 +1025,9 @@ public struct Executor: Sendable {
     // as a field never set. A word that took the shape and then refused did not
     // decline it, so that refusal is answered rather than swallowed.
     private func derive(_ callee: Linked, from value: Value) throws -> Value? {
-        guard callee.isDerivable else { return nil }
+        guard callee.isDerivable, let reached = callee.reaching(value) else { return nil }
 
-        guard
-            let receiver = try? callee.settling(receiver: value),
-            let arguments = try? settled(
-                callee,
-                given: Array(repeating: nil, count: callee.slots.count),
-                skipping: Skipped(handed: [], receiver: callee.receiverPosition)
-            )
-        else {
-            return nil
-        }
-
-        return try answer(callee, for: receiver, with: arguments)
+        return try answer(callee, for: reached.receiver, with: Settled(by: callee, values: reached.arguments))
     }
 
     // Every index reference read to a position: a write lands on one

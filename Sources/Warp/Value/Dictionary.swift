@@ -52,14 +52,10 @@ public extension Value {
                 .sorted { one, other in one.name < other.name }
         }
 
-        // The inner door: entries already in order under distinct names.
-        init(ordered entries: [(name: Name, value: Value)]) {
-            precondition(
-                zip(entries, entries.dropFirst()).allSatisfy { one, other in one.name < other.name },
-                "a dictionary's entries are ordered by name"
-            )
-
-            self.entries = entries
+        // The inner door: entries taken from a record, which stands on a
+        // layout and so carries the order already.
+        init(of record: Record) {
+            self.entries = zip(record.layout.fields, record.values).map { name, value in (name: name, value: value) }
         }
 
         private init(keeping entries: [(name: Name, value: Value)]) {

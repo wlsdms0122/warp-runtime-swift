@@ -1155,7 +1155,7 @@ public struct Linker: Sendable {
         // spelling. Asked of the value judge itself, since the slot reads an
         // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
-            guard parameter.oneOf == nil, (try? shape.settling(.null, at: name.spelling, in: table.shapes)) != nil else {
+            guard parameter.oneOf == nil, shape.settles(.null, in: table.shapes) else {
                 throw LinkError(
                     "its default is not a value it takes — null",
                     at: place

@@ -137,6 +137,27 @@ public final class Linked: Sendable {
         try signature.settle(given, over: slots, offered: offered, in: table)
     }
 
+    // This row reached by a path segment: the receiver and the arguments as
+    // its own boundary settles them, or nil where the row declines the shape
+    // it was sent to. Declining reads as absence, the same as a field never
+    // set, so the refusal is the answer rather than something to raise. A row
+    // that took the shape and then refused did not decline it, and that
+    // refusal is raised where the row is called.
+    func reaching(_ value: Value) -> (receiver: Value, arguments: [Value?])? {
+        guard
+            let receiver = try? settling(receiver: value),
+            let arguments = try? settle(
+                Array(repeating: nil, count: slots.count),
+                offered: false,
+                skipping: { position in position == self.receiverPosition }
+            )
+        else {
+            return nil
+        }
+
+        return (receiver, arguments)
+    }
+
     // The receiver settled against the slot at this row's receiver
     // position, or as it is where the row takes none.
     func settling(receiver value: Value) throws -> Value {

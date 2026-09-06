@@ -100,7 +100,7 @@ final class ShapeTable: Sendable {
     func admits(constraint row: Int, value: Value, assuming: [Int]) -> Bool {
         constraints[row].contains { member in
             member.admitsAsScalar(value)
-                ?? ((try? member.settling(value, at: "member", in: self, assuming: assuming + [row])) != nil)
+                ?? member.settles(value, in: self, assuming: assuming + [row])
         }
     }
 

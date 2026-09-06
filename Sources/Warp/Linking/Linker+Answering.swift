@@ -80,12 +80,10 @@ extension Linker {
                 continue
             }
 
-            // The reading ask refuses nothing — what it cannot read is `any`
-            // — so nothing is expected out of here. The belt is for the day
-            // that changes: a refusal is the judging pass's to state, in its
-            // own words and at its own place, and stating one here would put
-            // the first refusal an author sees somewhere the frontier never
-            // decided.
+            // A refusal is the judging pass's to state, in its own words and
+            // at its own place. Raising one here would put the first refusal
+            // an author sees somewhere the frontier never decided, so what
+            // this pass cannot read it treats as unread.
             let read = try? reading(
                 from: only.block,
                 at: only.symbol.place,
