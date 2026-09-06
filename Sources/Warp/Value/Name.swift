@@ -102,30 +102,47 @@ public struct Name: Sendable, Hashable, Comparable {
     // writer's keys. Swift's `<` orders under canonical equivalence and would
     // put two spellings of one name in one place.
     public static func < (lhs: Name, rhs: Name) -> Bool {
-        lhs.spelling.utf8.lexicographicallyPrecedes(rhs.spelling.utf8)
+        Name.compared(lhs.spelling, rhs.spelling) < 0
     }
 
     // Two names are one name by their bytes, for the same reason.
     public static func == (lhs: Name, rhs: Name) -> Bool {
-        lhs.spelling.utf8.elementsEqual(rhs.spelling.utf8)
+        Name.compared(lhs.spelling, rhs.spelling) == 0
     }
 
-    // Hashed over the same bytes `==` reads, in one pass where the spelling
-    // holds them contiguously.
+    // Hashed over the same bytes `==` reads, in one pass.
     public func hash(into hasher: inout Hasher) {
-        let utf8 = spelling.utf8
-        let hashed: Void? = utf8.withContiguousStorageIfAvailable { bytes in
+        var spelling = spelling
+
+        spelling.withUTF8 { bytes in
             hasher.combine(bytes: UnsafeRawBufferPointer(bytes))
-        }
-
-        guard hashed == nil else { return }
-
-        for byte in utf8 {
-            hasher.combine(byte)
         }
     }
 
     // MARK: - Private
+    // Two spellings ordered by their bytes: negative, zero or positive the
+    // way `memcmp` answers, with the shorter first where one is a prefix of
+    // the other. Both orders a name is read in come through here, over the
+    // whole buffer at once rather than a byte at a time.
+    private static func compared(_ left: String, _ right: String) -> Int {
+        var left = left
+        var right = right
+
+        return left.withUTF8 { first in
+            right.withUTF8 { second in
+                let shared = Swift.min(first.count, second.count)
+
+                guard let head = first.baseAddress, let other = second.baseAddress, shared > 0 else {
+                    return first.count - second.count
+                }
+
+                let ordered = memcmp(head, other, shared)
+
+                return ordered != 0 ? Int(ordered) : first.count - second.count
+            }
+        }
+    }
+
     private static func isIdentifier(_ spelling: String) -> Bool {
         func word(_ character: Character, first: Bool) -> Bool {
             character.isASCII
