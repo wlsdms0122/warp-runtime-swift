@@ -20,11 +20,11 @@ struct SpellingTests {
     // MARK: - Test
     @Test("a form can be registered under another word")
     func formTakesTheRegistrysWord() async throws {
-        // Given. `unless` is `branch` spelled differently, and the IR it builds
+        // Given. `unless` is `conditional` spelled differently, and the IR it builds
         // cannot say which of the two was written
         let loader = Loader(
             registry: try ConstructRegistry.standard.registering(
-                BranchForm.self,
+                ConditionalForm.self,
                 as: "unless"
             )
         )
@@ -53,31 +53,31 @@ struct SpellingTests {
     @Test("registering a form twice is an alias, so both words work")
     func aliasKeepsBothWords() throws {
         // Given / When
-        let sut = try ConstructRegistry.standard.registering(BranchForm.self, as: "unless")
+        let sut = try ConstructRegistry.standard.registering(ConditionalForm.self, as: "unless")
 
         // Then
-        #expect(sut.form(for: "branch") != nil)
+        #expect(sut.form(for: "conditional") != nil)
         #expect(sut.form(for: "unless") != nil)
     }
 
     @Test("a word can be given up, and a built-in respelled by giving it up first")
     func removingFreesTheWord() throws {
-        // Given. A notation that wants `invoke` for something of its own takes
+        // Given. A notation that wants `apply` for something of its own takes
         // it by dropping ours, which is why a rename here is not a rename of
         // the language
         let sut = try ConstructRegistry.standard
-            .removing("invoke")
-            .registering(InvokeForm.self, as: "apply")
+            .removing("apply")
+            .registering(ApplyForm.self, as: "invoke")
 
         // Then
-        #expect(sut.form(for: "invoke") == nil)
-        #expect(sut.form(for: "apply") != nil)
+        #expect(sut.form(for: "apply") == nil)
+        #expect(sut.form(for: "invoke") != nil)
     }
 
     @Test("a claimed word is never silently replaced, however it was claimed")
     func claimedWordRejected() throws {
         // Given
-        let sut = try ConstructRegistry.standard.registering(BranchForm.self, as: "unless")
+        let sut = try ConstructRegistry.standard.registering(ConditionalForm.self, as: "unless")
 
         // When / Then. The guard is on the word, not on the form
         #expect(throws: ValidationError.self) {
@@ -87,8 +87,8 @@ struct SpellingTests {
 
     @Test("a word the registry does not hold is not a construct")
     func unregisteredWordRefused() {
-        // Given. `branch` given up is `branch` unspellable
-        let loader = Loader(registry: ConstructRegistry.standard.removing("branch"))
+        // Given. `conditional` given up is `conditional` unspellable
+        let loader = Loader(registry: ConstructRegistry.standard.removing("conditional"))
 
         // When / Then
         #expect(throws: (any Error).self) {
@@ -97,7 +97,7 @@ struct SpellingTests {
                 "body": [
                     [
                         "let": "pick",
-                        "value": ["branch": [
+                        "value": ["conditional": [
                             "when": ["of": ["ref": "kind"], "equal": "a"],
                             "then": [
                                 "body": [["let": "chosen", "value": "took-then"]],

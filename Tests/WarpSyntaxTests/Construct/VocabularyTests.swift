@@ -52,7 +52,7 @@ struct VocabularyTests {
             "body": [
                 ["var": "verdict"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "names.first"], "longerThan": 3],
                         "then": [["set": "verdict", "value": "long"]]
                     ]

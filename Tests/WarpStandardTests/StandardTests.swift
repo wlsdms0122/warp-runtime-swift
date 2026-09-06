@@ -993,7 +993,7 @@ struct StandardTests {
 
     @Test("an arm that refuses does not decide what the arm that stays holds")
     func refusalDoesNotWidenTheOtherArm() throws {
-        // Given. `returns: never` is what keeps the branch a string. Were it
+        // Given. `returns: never` is what keeps the conditional a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
             procedures: [
@@ -1025,7 +1025,7 @@ struct StandardTests {
             ]
         )
 
-        // When / Then. The branch holds a string, and `wants` declares an int
+        // When / Then. The conditional holds a string, and `wants` declares an int
         #expect(throws: LinkError.self) {
             try linker.link([sut] + Module.standard, entry: entryName)
         }

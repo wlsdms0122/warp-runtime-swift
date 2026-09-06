@@ -334,7 +334,7 @@ public struct Executor: Sendable {
         case let .block(body):
             return try await run(body, in: &activation, at: trace)
 
-        // A branch answers nothing: the condition chooses a way through the
+        // A conditional answers nothing: the condition chooses a way through the
         // body, and what an arm keeps it writes to an outer variable.
         case let .conditional(condition, then, otherwise):
             let take = try bool(try read(condition, in: activation))

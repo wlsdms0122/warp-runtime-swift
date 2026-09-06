@@ -25,7 +25,7 @@ struct CanonicalTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a branch reads a condition written as a plain call")
+    @Test("a conditional reads a condition written as a plain call")
     func branchReadsAPlainCondition() async throws {
         // Given. `{ of: x, is: 1 }` is one way to arrive at a condition. The
         // slot asks for an expression, and this is another.
@@ -34,7 +34,7 @@ struct CanonicalTests {
             "body": [
                 ["var": "pick"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": [
                             "call": [
                                 "procedure": "std.logic.equal",
@@ -109,7 +109,7 @@ struct CanonicalTests {
                 "body": [
                     ["var": "pick"],
                     [
-                        "value": ["branch": [
+                        "value": ["conditional": [
                             "when": condition,
                             "then": [["set": "pick", "value": "matched"]],
                             "else": [["set": "pick", "value": "missed"]]
@@ -156,7 +156,7 @@ struct CanonicalTests {
             "body": [
                 ["var": "pick"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["ref": "ready"],
                         "then": [["set": "pick", "value": "go"]],
                         "else": [["set": "pick", "value": "wait"]]

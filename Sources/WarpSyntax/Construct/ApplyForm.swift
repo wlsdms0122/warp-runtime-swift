@@ -1,5 +1,5 @@
 //
-//  InvokeForm.swift
+//  ApplyForm.swift
 //  WarpSyntax
 //
 //  Created by JSilver on 8/17/26.
@@ -15,26 +15,24 @@ import Warp
 // runs; this names an expression, and only a run can say what it holds. Writing
 // both as one word would hide which of those an author had written.
 //
-// The spelling is not negotiated with whoever else wants the word. A word belongs
-// to a `ConstructRegistry`, so a caller that wants `invoke` for itself removes
-// this one and registers its own. Renaming the language to settle an argument
-// between two notations is the wrong layer twice over, and `apply` is already an
-// operator application in the IR.
-public struct InvokeForm: ConstructForm {
+// The spelling is not negotiated with whoever else wants the word. A word
+// belongs to a `ConstructRegistry`, so a caller that wants `apply` for itself
+// removes this one and registers its own.
+public struct ApplyForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure
         case arguments
     }
 
     // MARK: - Property
-    public static let key: Name = "invoke"
+    public static let key: Name = "apply"
 
     private let callee: Expression
     private let arguments: [Name: Expression]
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "invoke")
+        try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "apply")
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
 

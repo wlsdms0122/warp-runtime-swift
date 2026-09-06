@@ -96,7 +96,7 @@ struct WriterTests {
             "parameters": ["ready": "bool"],
             "body": [
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["holds": ["ref": "ready"]],
                         "then": [["let": "kept", "value": "yes"]]
                     ]
@@ -132,7 +132,7 @@ struct WriterTests {
                     "body": [
                         ["var": "pick"],
                         [
-                            "value": ["branch": [
+                            "value": ["conditional": [
                                 "when": ["of": ["ref": "word"], "equal": "hey"],
                                 "then": [["set": "pick", "value": "matched"]],
                                 "else": [["set": "pick", "value": "missed"]]
@@ -202,7 +202,7 @@ struct WriterTests {
             "parameters": ["word": "string"],
             "body": [
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "word"], "equal": "hey"],
                         "then": [["let": "kept", "value": "matched"]]
                     ]
@@ -216,9 +216,9 @@ struct WriterTests {
         // Then
         guard
             case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let message = body.first?["value"]?["branch"]?["when"]?["call"]
+            let message = body.first?["value"]?["conditional"]?["when"]?["call"]
         else {
-            Issue.record("a branch is written with a condition under `when`")
+            Issue.record("a conditional is written with a condition under `when`")
 
             return
         }
@@ -577,7 +577,7 @@ struct WriterTests {
                     ]],
                     ["var": "pick"],
                     [
-                        "value": ["branch": [
+                        "value": ["conditional": [
                             "when": ["ref": "kind"],
                             "then": [["set": "pick", "value": "yes"]],
                             "else": [["set": "pick", "value": "no"]]
@@ -612,10 +612,10 @@ struct WriterTests {
                             ]
                         ]
                     ]],
-                    ["let": "grouped", "value": ["group": ["body": [["let": "inner", "value": 1]]]]],
+                    ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]],
                     [
                         "let": "called",
-                        "value": ["invoke": [
+                        "value": ["apply": [
                             "procedure": [
                                 "closure": ["parameters": ["n": "int"], "result": ["ref": "n"]]
                             ],
@@ -678,7 +678,7 @@ struct WriterTests {
                 ]
             ]
         ],
-        // Branch, group and the condition spellings
+        // Branch, block and the condition spellings
         [
             "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
             "procedures": [
@@ -687,7 +687,7 @@ struct WriterTests {
                     "body": [
                         ["var": "pick"],
                         [
-                            "value": ["branch": [
+                            "value": ["conditional": [
                                 // A connective is a word over sides nobody has
                                 // asked yet, which is why each arrives as a
                                 // closure. A notation may spell that; a document
@@ -724,7 +724,7 @@ struct WriterTests {
                                 "else": [["set": "pick", "value": "no"]]
                             ]
                         ]],
-                        ["let": "grouped", "value": ["group": ["body": [["let": "inner", "value": 1]]]]]
+                        ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
                     ],
                     "result": ["result": ["ref": "pick"]]
                 ]
@@ -799,7 +799,7 @@ struct WriterTests {
                                             ],
                                             "body": [
                                                 [
-                                                    "value": ["branch": [
+                                                    "value": ["conditional": [
                                                         "when": true,
                                                         "then": [
                                                             [
@@ -854,7 +854,7 @@ struct WriterTests {
                         ]],
                         [
                             "let": "called",
-                            "value": ["invoke": [
+                            "value": ["apply": [
                                 "procedure": [
                                     "closure": ["parameters": ["n": "int"], "result": ["ref": "n"]]
                                 ],

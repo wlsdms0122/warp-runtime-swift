@@ -78,11 +78,11 @@ struct ControlFlowTests {
         #expect(!validates(body: sut))
     }
 
-    @Test("a branch answers nothing, and what an arm keeps it writes outward")
+    @Test("a conditional answers nothing, and what an arm keeps it writes outward")
     func aBranchAnswersNothingAndWritesOutward() async throws {
         // Given. The condition chooses a way through the body, not a value:
         // either arm writes the enclosing variable, and that write is the whole
-        // of what the branch leaves behind
+        // of what the conditional leaves behind
         let sut = { (take: Bool) in
             Warp.Expression.conditional(
                 .literal(.bool(take)),
@@ -118,7 +118,7 @@ struct ControlFlowTests {
         #expect(untaken == .string("else"))
     }
 
-    @Test("a declining branch leaves the enclosing names as they were")
+    @Test("a declining conditional leaves the enclosing names as they were")
     func aDecliningBranchWritesNothing() async throws {
         // Given, with no other arm, a condition that declines runs nothing: the
         // variable holds what it held, which is the null it started with
@@ -143,9 +143,9 @@ struct ControlFlowTests {
         #expect(answer == .null)
     }
 
-    @Test("a name on a branch is refused")
+    @Test("a name on a conditional is refused")
     func aNameOnABranchIsRefused() {
-        // Given. A branch answers nothing, so its name could never bind
+        // Given. A conditional answers nothing, so its name could never bind
         let sut = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [Statement(expression: .literal(.int(1)))],

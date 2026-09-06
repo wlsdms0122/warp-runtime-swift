@@ -88,7 +88,7 @@ struct NamelessTests {
         }
     }
 
-    @Test("a name on a branch both of whose arms leave is refused at reading")
+    @Test("a name on a conditional both of whose arms leave is refused at reading")
     func aNamedStructuralLeaveIsRefusedAtReading() {
         // Given. The leave rules reach through structure, and the reading sees
         // the structure: fragments read on their own pass through no
@@ -97,7 +97,7 @@ struct NamelessTests {
             try loader.statements(from: [
                 [
                     "let": "done",
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": true,
                         "then": [["value": ["return": 1]]],
                         "else": [["value": ["return": 2]]]

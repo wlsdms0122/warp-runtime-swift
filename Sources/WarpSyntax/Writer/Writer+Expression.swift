@@ -15,13 +15,13 @@ import Warp
 public extension Writer {
     // MARK: - Public
     func value(of statement: Statement) throws -> Value {
-        // The reader cannot produce a named branch, so this guards the caller
+        // The reader cannot produce a named conditional, so this guards the caller
         // that builds statements directly, with the validator's own words:
         // writing one silently would make a document that reads back as
         // something else.
         if statement.binding != nil, statement.expression.answersNothing {
             throw WritingError(
-                "a branch answers nothing, so its name could never bind."
+                "a conditional answers nothing, so its name could never bind."
                     + " It takes no name"
             )
         }
@@ -167,12 +167,12 @@ public extension Writer {
                 )
             }
 
-            return (try spelling(InvokeForm.self), .dictionary(written))
+            return (try spelling(ApplyForm.self), .dictionary(written))
 
         case let .block(block):
-            return (try spelling(GroupForm.self), .dictionary(try fields(of: block, in: GroupForm.self)))
+            return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
 
-        // A name on a branch was already refused where the statement's envelope
+        // A name on a conditional was already refused where the statement's envelope
         // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
@@ -184,7 +184,7 @@ public extension Writer {
                 written["else"] = .array(try otherwise.map(value(of:)))
             }
 
-            return (try spelling(BranchForm.self), .dictionary(written))
+            return (try spelling(ConditionalForm.self), .dictionary(written))
 
         case let .loop(condition, body, round):
             try named(round, matches: id, in: "loop", binding: "round")
@@ -385,8 +385,8 @@ public extension Writer {
         case .record: "a record"
         case .closure: "a closure"
         case .apply: "an invocation"
-        case .block: "a group"
-        case .conditional: "a branch"
+        case .block: "a block"
+        case .conditional: "a conditional"
         case .loop: "a loop"
         case .attempt: "an attempt"
         case .call: "a message"

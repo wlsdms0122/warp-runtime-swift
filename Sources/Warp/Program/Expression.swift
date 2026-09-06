@@ -65,10 +65,10 @@ public indirect enum Expression: Sendable {
     case cast(Expression, as: TypeExpression, optional: Bool)
 
     case block(Block)
-    // A branch is a statement: it answers nothing, so its arms are statements
-    // alone, the way a walk's body is. What an arm keeps it writes to an outer
-    // variable, and a value leaves through `return`. A condition chooses a way
-    // through the body, not a value.
+    // A conditional is a statement: it answers nothing, so its arms are
+    // statements alone. What an arm keeps it writes to an outer variable, and a
+    // value leaves through `return`. A condition chooses a way through the body,
+    // not a value.
     case conditional(Expression, then: [Statement], else: [Statement]?)
     // Repetition carries no budget of its own. Bounding a loop is the author's
     // to write (a counter and `std.control.abort` say it exactly) and stopping
@@ -145,7 +145,7 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // Whether this construct answers nothing by its own grammar. A branch
+    // Whether this construct answers nothing by its own grammar. A conditional
     // chooses a way through a body, not a value, so it has nothing to give a
     // slot that holds an answer and nothing for a name to bind. The reader, the
     // validator and the writer each ask this; the other nameless family (what

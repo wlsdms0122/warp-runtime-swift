@@ -130,7 +130,7 @@ struct ConditionTests {
             "parameters": ["title": "string"],
             "body": [
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "title"], "regex": "[unclosed"],
                         "then": [["let": "taken", "value": "x"]]
                     ]
@@ -169,7 +169,7 @@ struct ConditionTests {
             "parameters": ["k": "string"],
             "body": [
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "k"], "equal": "a", "notEqual": "b"],
                         "then": [["let": "taken", "value": "x"]]
                     ]

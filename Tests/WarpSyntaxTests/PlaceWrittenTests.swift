@@ -46,14 +46,14 @@ struct PlaceWrittenTests {
         #expect(error?.place?.rendered == "procedures.entry.body.spin[0].loop.while")
     }
 
-    @Test("a branch and a loop hold one slot and write two words")
+    @Test("a conditional and a loop hold one slot and write two words")
     func oneSlotIsWrittenTwoWays() {
         // Given. The language calls both a condition, so the word a place reads
         // with is decided by the construct the walk is inside.
-        let branch = Place.procedure(entryName.spelling, in: .assembled)
+        let conditional = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition(of: .branch))
+            .slot(.condition(of: .conditional))
 
         let loop = Place.procedure(entryName.spelling, in: .assembled)
             .statement("spin", at: 0)
@@ -61,24 +61,24 @@ struct PlaceWrittenTests {
             .slot(.condition(of: .loop))
 
         // Then
-        #expect(branch.written(by: .standard).rendered?.hasSuffix(".branch.when") == true)
+        #expect(conditional.written(by: .standard).rendered?.hasSuffix(".conditional.when") == true)
         #expect(loop.written(by: .standard).rendered?.hasSuffix(".loop.while") == true)
 
         // And the language's own reading says one thing for both
-        #expect(branch.rendered?.hasSuffix(".conditional.condition") == true)
+        #expect(conditional.rendered?.hasSuffix(".conditional.condition") == true)
         #expect(loop.rendered?.hasSuffix(".loop.condition") == true)
     }
 
     @Test("a respelled construct reads as the word its author wrote")
     func aRespelledConstructIsSpelledAsRegistered() throws {
-        // Given. A notation that registers the branch form under another word.
+        // Given. A notation that registers the conditional form under another word.
         // What an author may look for in their file is that word, and nothing
         // here holds a second copy of it to disagree with.
-        let registry = try ConstructRegistry(forms: ["if": BranchForm.self])
+        let registry = try ConstructRegistry(forms: ["if": ConditionalForm.self])
         let sut = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
             .appending(.construct(.conditional))
-            .slot(.condition(of: .branch))
+            .slot(.condition(of: .conditional))
 
         // Then
         #expect(sut.written(by: registry).rendered?.hasSuffix(".if.when") == true)
@@ -122,11 +122,11 @@ struct PlaceWrittenTests {
         // rather than a line number quietly going missing.
         #expect(
             CallForm.CodingKeys.procedure.stringValue
-                == InvokeForm.CodingKeys.procedure.stringValue
+                == ApplyForm.CodingKeys.procedure.stringValue
         )
         #expect(
             CallForm.CodingKeys.arguments.stringValue
-                == InvokeForm.CodingKeys.arguments.stringValue
+                == ApplyForm.CodingKeys.arguments.stringValue
         )
     }
 

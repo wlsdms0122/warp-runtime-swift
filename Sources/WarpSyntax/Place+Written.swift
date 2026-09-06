@@ -70,8 +70,8 @@ public extension Place {
         // grammar's rather than any form's.
         case .closure: ExpressionReader.closureKey.spelling
 
-        case .then: BranchForm.CodingKeys.then.stringValue
-        case .otherwise: BranchForm.CodingKeys.else.stringValue
+        case .then: ConditionalForm.CodingKeys.then.stringValue
+        case .otherwise: ConditionalForm.CodingKeys.else.stringValue
         case .rescue: AttemptForm.CodingKeys.rescue.stringValue
 
         // The one slot two constructs write differently, which is why the slot
@@ -80,7 +80,7 @@ public extension Place {
         // error rather than as a word nobody chose.
         case let .condition(construct):
             switch construct {
-            case .branch: BranchForm.CodingKeys.when.stringValue
+            case .conditional: ConditionalForm.CodingKeys.when.stringValue
             case .loop: LoopForm.CodingKeys.while.stringValue
             }
         }
@@ -93,9 +93,9 @@ public extension Place {
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {
         let form: (any ConstructForm.Type)? = switch construct {
-        case .apply: InvokeForm.self
-        case .block: GroupForm.self
-        case .conditional: BranchForm.self
+        case .apply: ApplyForm.self
+        case .block: BlockForm.self
+        case .conditional: ConditionalForm.self
         case .loop: LoopForm.self
         case .attempt: AttemptForm.self
         case .call: CallForm.self

@@ -38,7 +38,7 @@ struct LeaveTests {
             "body": [
                 ["var": "early", "value": "kept going"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "word"], "equal": "stop"],
                         "then": [["value": ["return": "left early"]]]
                     ]
@@ -78,7 +78,7 @@ struct LeaveTests {
                                 ]
                             ]],
                             [
-                                "value": ["branch": [
+                                "value": ["conditional": [
                                     "when": ["of": ["ref": "seen"], "equal": 3],
                                     "then": [["value": ["break": Value.null]]]
                                 ]
@@ -113,7 +113,7 @@ struct LeaveTests {
                         "body": [
                             ["let": "item", "value": ["ref": "names[kept.index]"]],
                             [
-                                "value": ["branch": [
+                                "value": ["conditional": [
                                     "when": ["of": ["ref": "item"], "equal": "skip"],
                                     "then": [["value": ["continue": Value.null]]]
                                 ]
@@ -300,7 +300,7 @@ struct LeaveTests {
                         ["let": "said", "value": ["call": ["procedure": "helper"]]],
                         [
                             "let": "invoked",
-                            "value": ["invoke": [
+                            "value": ["apply": [
                                 "procedure": [
                                     "closure": [
                                         "returns": "string",
@@ -326,7 +326,7 @@ struct LeaveTests {
     @Test("a body naming no result is worth nothing to the checker too")
     func theCheckerAgreesAboutWhatABodyAnswers() throws {
         // Given. The run answers nothing here, so the checker has to say the
-        // same. While it still read the last statement, this passed the group's
+        // same. While it still read the last statement, this passed the block's
         // answer as an int and then handed null over at the run. A program that
         // linked and could never work, which is the one thing linking promises
         // does not happen.
@@ -334,12 +334,12 @@ struct LeaveTests {
             "procedures": [
                 "entry": [
                     "body": [
-                        ["let": "grouped", "value": ["group": ["body": [["let": "inner", "value": 3]]]]],
+                        ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 3]]]]],
                         [
                             "let": "used",
                             "value": ["call": [
                                 "procedure": "wants",
-                                "arguments": ["it": ["ref": "grouped"]]
+                                "arguments": ["it": ["ref": "blocked"]]
                             ]
                         ]]
                     ],
@@ -443,7 +443,7 @@ struct LeaveTests {
         // assembles it, validation or no validation to follow
         #expect {
             try loader.statement(from: [
-                "value": ["group": [
+                "value": ["block": [
                     "body": [["value": ["return": 1]]],
                     "result": ["value": 2]
                 ]]

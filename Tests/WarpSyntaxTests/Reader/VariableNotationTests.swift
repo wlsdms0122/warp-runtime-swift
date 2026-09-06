@@ -21,14 +21,14 @@ struct VariableNotationTests {
     // MARK: - Test
     @Test("a write inside a block outlives the block")
     func assignmentOutlivesItsBlock() async throws {
-        // Given. The one thing a binding cannot do: a branch that ran changes
+        // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
         let sut = try loader.loadProcedure([
             "parameters": ["kind": "string"],
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
@@ -44,7 +44,7 @@ struct VariableNotationTests {
         #expect(outputs["result"] == .string("touched"))
     }
 
-    @Test("a branch that did not run changes nothing")
+    @Test("a conditional that did not run changes nothing")
     func untakenBranchLeavesVariableAlone() async throws {
         // Given
         let sut = try loader.loadProcedure([
@@ -52,7 +52,7 @@ struct VariableNotationTests {
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
@@ -71,12 +71,12 @@ struct VariableNotationTests {
     @Test("a variable declared inside a block does not escape it")
     func innerVariableDoesNotEscape() throws {
         // Given. The box is shared, but which names exist is not: `var` inside
-        // a branch introduces a name that dies with the branch
+        // a conditional introduces a name that dies with the conditional
         let fixture: Value = [
             "body": [
                 ["let": "seed", "value": 1],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "seed"], "notEqual": .null],
                         "then": [["var": "inner", "value": 1]]
                     ]
@@ -99,7 +99,7 @@ struct VariableNotationTests {
             "body": [
                 ["var": "verdict", "value": "outer"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "verdict"], "notEqual": .null],
                         "then": [["var": "verdict", "value": "inner"]]
                     ]

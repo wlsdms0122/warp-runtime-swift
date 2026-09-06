@@ -1464,25 +1464,29 @@ extension Linker {
                 flow: inner.flow
             )
 
-        // A branch answers nothing. A condition chooses a way through the body,
-        // not a value; the one thing its type still says is `never`, when both
-        // arms have it. The condition runs every way and the arms are the fork,
-        // judged in the environment the condition left: an arm every run takes
-        // does not exist unless both are written (a branch with no other arm
-        // makes every write indefinite) and an arm that leaves hands on
-        // nothing, so the write the staying arm makes is definite again: the
+        // A conditional answers nothing. A condition chooses a way through the
+        // body, not a value; the one thing its type still says is `never`, when
+        // both arms have it. The condition runs every way and the arms are the
+        // fork, judged in the environment the condition left: an arm every run
+        // takes does not exist unless both are written (a conditional with no
+        // other arm makes every write indefinite) and an arm that leaves hands
+        // on nothing, so the write the staying arm makes is definite again: the
         // ways that finish all made it. Unreached arms are followed on purpose.
         case let .conditional(condition, then, otherwise):
             if condition.holdsConstruct {
-                try refuse(Expression.constructInCondition, at: place.slot(.condition(of: .branch)), when: ask)
+                try refuse(
+                    Expression.constructInCondition,
+                    at: place.slot(.condition(of: .conditional)),
+                    when: ask
+                )
             }
 
             // A condition is data and writes nothing (the construct rule above
             // is what makes that a fact) so the arms stand in the environment
-            // the branch stands in.
+            // the conditional stands in.
             let head = try inspected(
                 condition,
-                at: place.slot(.condition(of: .branch)),
+                at: place.slot(.condition(of: .conditional)),
                 in: environment,
                 with: frame,
                 ask: ask

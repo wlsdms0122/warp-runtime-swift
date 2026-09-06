@@ -13,7 +13,7 @@ import Warp
 // The envelope carries no modifiers, not `when:` to say whether the statement
 // runs, not `rescue:` to say what happens if it fails, because no language
 // spells them that way. `some() when x > 0` is not a form anyone writes; `if x
-// > 0 { some() }` is, and that is `branch`. Recovery is `attempt` for the same
+// > 0 { some() }` is, and that is `conditional`. Recovery is `attempt` for the same
 // reason, plus one of its own: what do-catch guards is a body, and an envelope
 // key could only ever guard one statement.
 //
@@ -214,7 +214,7 @@ public struct StatementReader: Decodable {
 
         if binding != nil, expression.answersNothing {
             throw ReadingError(
-                "a branch answers nothing, so its name"
+                "a conditional answers nothing, so its name"
                     + " could never bind. It takes no name; what an arm"
                     + " keeps is written to an outer variable with 'set'",
                 at: decoder.steps

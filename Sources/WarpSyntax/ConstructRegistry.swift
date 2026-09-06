@@ -23,12 +23,12 @@ public struct ConstructRegistry: Sendable {
     // The built-in set is a compile-time constant with unique keys. A throw
     // here would be a kernel bug, so the forced try is the honest reaction.
     public static let standard = try! ConstructRegistry(forms: [
-        BranchForm.self,
+        ConditionalForm.self,
         LoopForm.self,
-        GroupForm.self,
+        BlockForm.self,
         AttemptForm.self,
         CallForm.self,
-        InvokeForm.self,
+        ApplyForm.self,
         ReturnForm.self,
         BreakForm.self,
         ContinueForm.self
@@ -96,7 +96,7 @@ public struct ConstructRegistry: Sendable {
         return registry
     }
 
-    // Giving up a word. A notation that wants `branch` to mean something of its
+    // Giving up a word. A notation that wants `conditional` to mean something of its
     // own has to be able to stop meaning ours by it, and respelling a built-in
     // is this followed by `registering(_:as:)`. The reason a rename is a change
     // to a table here rather than a change to the language.

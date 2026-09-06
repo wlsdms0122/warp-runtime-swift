@@ -234,7 +234,7 @@ public struct Validator: Sendable {
 
                 if statement.expression.answersNothing {
                     throw ValidationError(
-                        "a branch answers nothing, so its name"
+                        "a conditional answers nothing, so its name"
                             + " could never bind. It takes no name",
                         at: here
                     )
@@ -449,13 +449,16 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(condition, at: place.slot(.condition(of: .branch)))
+            try refuseConstructCondition(
+                condition,
+                at: place.slot(.condition(of: .conditional))
+            )
             try validate(
                 condition,
                 visible: visible,
                 variables: variables,
                 surroundings: surroundings,
-                at: place.slot(.condition(of: .branch))
+                at: place.slot(.condition(of: .conditional))
             )
             try validate(
                 then,
@@ -553,7 +556,7 @@ public struct Validator: Sendable {
         }
     }
 
-    // A construct that answers nothing (a branch, a walk) has nothing to give a
+    // A construct that answers nothing (a conditional) has nothing to give a
     // slot that exists to hold an answer. Refused for that reason wherever one
     // asks, rather than as a null that fails to fit downstream.
     private func refuseAnswerless(_ expression: Expression, at place: Place) throws {
@@ -615,9 +618,10 @@ public struct Validator: Sendable {
                 )
             }
 
-            // A branch answers nothing, so a result slot (a place that exists
-            // to hold an answer) has nothing to take from one. Refused for that
-            // reason, rather than as a type that fails to fit downstream.
+            // A conditional answers nothing, so a result slot (a place that
+            // exists to hold an answer) has nothing to take from one. Refused
+            // for that reason, rather than as a type that fails to fit
+            // downstream.
             try refuseAnswerless(result, at: place.slot(.result))
 
             try validate(

@@ -1,5 +1,5 @@
 //
-//  BranchTests.swift
+//  ConditionalTests.swift
 //  WarpSyntaxTests
 //
 //  Created by JSilver on 8/9/26.
@@ -11,22 +11,22 @@ import Testing
 @testable import WarpSyntax
 
 @Suite
-struct BranchTests {
+struct ConditionalTests {
     // MARK: - Property
     private let loader = Loader.testing
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("branch selects the then/else arm by its condition")
+    @Test("conditional selects the then/else arm by its condition")
     func branchSelectsArm() async throws {
         // Given. An arm is statements alone: what it keeps it writes to an
-        // outer variable, and the branch itself answers nothing
+        // outer variable, and the conditional itself answers nothing
         let spec = try loader.loadProcedure([
             "parameters": ["kind": "string"],
             "body": [
                 ["var": "pick"],
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
@@ -45,15 +45,15 @@ struct BranchTests {
         #expect(elseOutputs["result"] == .string("took-else"))
     }
 
-    @Test("a name on a branch is refused at reading")
+    @Test("a name on a conditional is refused at reading")
     func aNameOnABranchIsRefused() {
-        // Given. A branch answers nothing, so its name could never bind
+        // Given. A conditional answers nothing, so its name could never bind
         #expect {
             try loader.loadProcedure([
                 "body": [
                     [
                         "let": "pick",
-                        "value": ["branch": [
+                        "value": ["conditional": [
                             "when": true,
                             "then": [["let": "kept", "value": "yes"]]
                         ]
@@ -68,7 +68,7 @@ struct BranchTests {
     @Test("a bare var declares a name holding null")
     func aBareVarDeclaresNull() async throws {
         // Given. `var` may stand alone: it introduces a name with nothing in it
-        // yet, for the writes a branch's arms make
+        // yet, for the writes a conditional's arms make
         let spec = try loader.loadProcedure([
             "body": [
                 ["var": "kept"]

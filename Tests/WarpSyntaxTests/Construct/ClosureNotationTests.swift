@@ -48,8 +48,8 @@ struct ClosureNotationTests {
                 "twice": [
                     "parameters": ["body": "procedure"],
                     "body": [
-                        ["let": "first", "value": ["invoke": ["procedure": ["ref": "body"]]]],
-                        ["let": "second", "value": ["invoke": ["procedure": ["ref": "body"]]]]
+                        ["let": "first", "value": ["apply": ["procedure": ["ref": "body"]]]],
+                        ["let": "second", "value": ["apply": ["procedure": ["ref": "body"]]]]
                     ],
                     "result": ["said": [["ref": "first"], ["ref": "second"]]]
                 ]
@@ -93,7 +93,7 @@ struct ClosureNotationTests {
                     "parameters": ["body": "procedure"],
                     "body": [
                         ["let": "outer", "value": "called"],
-                        ["let": "ran", "value": ["invoke": ["procedure": ["ref": "body"]]]]
+                        ["let": "ran", "value": ["apply": ["procedure": ["ref": "body"]]]]
                     ],
                     "result": ["said": ["ref": "ran"]]
                 ]
@@ -135,7 +135,7 @@ struct ClosureNotationTests {
                         ],
                         [
                             "let": "said",
-                            "value": ["invoke": ["procedure": ["ref": "doubler"], "arguments": ["n": 3]]
+                            "value": ["apply": ["procedure": ["ref": "doubler"], "arguments": ["n": 3]]
                         ]]
                     ],
                     "result": ["result": ["ref": "said"]]
@@ -200,7 +200,7 @@ struct ClosureNotationTests {
                 ],
                 "twice": [
                     "parameters": ["body": ["type": ["procedure": ["returns": "string"]]]],
-                    "body": [["let": "first", "value": ["invoke": ["procedure": ["ref": "body"]]]]]
+                    "body": [["let": "first", "value": ["apply": ["procedure": ["ref": "body"]]]]]
                 ]
             ]
         ]
@@ -239,7 +239,7 @@ struct ClosureNotationTests {
                 ],
                 "twice": [
                     "parameters": ["body": ["type": ["procedure": ["returns": "string"]]]],
-                    "body": [["let": "first", "value": ["invoke": ["procedure": ["ref": "body"]]]]]
+                    "body": [["let": "first", "value": ["apply": ["procedure": ["ref": "body"]]]]]
                 ]
             ]
         ]

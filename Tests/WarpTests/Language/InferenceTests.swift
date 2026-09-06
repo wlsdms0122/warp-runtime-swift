@@ -429,7 +429,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a name a branch may have rewritten holds neither reading")
+    @Test("a name a conditional may have rewritten holds neither reading")
     func disagreeingWritesAreUnknown() throws {
         // Given. A join that guessed would be a refusal an author cannot act
         // on, so where two readings disagree nothing is claimed

@@ -154,7 +154,7 @@ public extension Expression {
             block.walked(at: here, stepping: stepping)
 
         case let .conditional(condition, then, otherwise):
-            inner(condition, under: .condition(of: .branch))
+            inner(condition, under: .condition(of: .conditional))
                 + then.walked(at: stepping(here, .slot(.then)), stepping: stepping)
                 + (otherwise?.walked(at: stepping(here, .slot(.otherwise)), stepping: stepping) ?? [])
 

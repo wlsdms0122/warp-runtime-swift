@@ -16,7 +16,7 @@ import Foundation
 // asks for and never where to find it, and the entry is an argument rather than
 // a name written into a document.
 //
-// Unreached code is checked too. A misspelled procedure in a branch today's
+// Unreached code is checked too. A misspelled procedure in a conditional today's
 // arguments never take is a defect whether or not this run walks that way, so
 // linking follows the whole call graph and refuses on the first name it cannot
 // resolve rather than on the first one a run happens to reach.
@@ -480,7 +480,7 @@ public struct Linker: Sendable {
 
     // A block answers without running when every part of it is something the
     // pure evaluator can answer, and every name it sends to is pure. Control
-    // flow is not in that set, not because running a branch is impure, but
+    // flow is not in that set, not because running a conditional is impure, but
     // because the surface that answers purely does not run bodies at all. A
     // selector is the declared spelling it names, so the table is asked by the
     // selector as written. `reading` is the module's variables: a body reading

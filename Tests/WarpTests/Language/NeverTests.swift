@@ -336,11 +336,11 @@ struct NeverTests {
         }
     }
 
-    @Test("a statement after a branch both of whose arms leave is refused")
+    @Test("a statement after a conditional both of whose arms leave is refused")
     func nothingRunsAfterABranchThatAlwaysLeaves() {
-        // Given. Neither arm finishes, so the branch never does, and the
+        // Given. Neither arm finishes, so the conditional never does, and the
         // statement after it is unreachable whichever way the condition answers
-        let branch = Warp.Expression.conditional(
+        let conditional = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [
                 Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
@@ -352,16 +352,16 @@ struct NeverTests {
 
         // When / Then
         #expect(!validates(body: [
-            Statement(expression: branch),
+            Statement(expression: conditional),
             Statement(binding: .constant("after"), expression: .literal(.int(3)))
         ]))
     }
 
-    @Test("a name on a branch both of whose arms leave is refused")
+    @Test("a name on a conditional both of whose arms leave is refused")
     func aNamedBranchThatAlwaysLeavesIsRefused() {
         // Given. The name could only ever bind what an arm answers, and both
         // arms answer by leaving instead
-        let branch = Warp.Expression.conditional(
+        let conditional = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [
                 Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
@@ -372,15 +372,15 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect(!validates(body: [Statement(binding: .constant("gone"), expression: branch)]))
+        #expect(!validates(body: [Statement(binding: .constant("gone"), expression: conditional)]))
     }
 
-    @Test("an arm that leaves inside a group is still a leaving arm")
+    @Test("an arm that leaves inside a block is still a leaving arm")
     func anArmLeavingInsideAGroupCounts() {
         // Given. The rule reaches through structure because the fact does: a
-        // group whose body leaves never finishes, and an arm that ends in one
+        // block whose body leaves never finishes, and an arm that ends in one
         // ends every way through the arm
-        let branch = Warp.Expression.conditional(
+        let conditional = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [
                 Statement(
@@ -398,16 +398,16 @@ struct NeverTests {
 
         // When / Then
         #expect(!validates(body: [
-            Statement(expression: branch),
+            Statement(expression: conditional),
             Statement(binding: .constant("after"), expression: .literal(.int(3)))
         ]))
     }
 
-    @Test("a branch that can decline still lets what follows run")
+    @Test("a conditional that can decline still lets what follows run")
     func aDecliningBranchIsNotALeave() {
-        // Given, with no else, the branch finishes whenever the condition
+        // Given, with no else, the conditional finishes whenever the condition
         // declines, so the statement after it is reachable
-        let branch = Warp.Expression.conditional(
+        let conditional = Warp.Expression.conditional(
             .literal(.bool(false)),
             then: [
                 Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
@@ -417,7 +417,7 @@ struct NeverTests {
 
         // When / Then
         #expect(validates(body: [
-            Statement(expression: branch),
+            Statement(expression: conditional),
             Statement(binding: .constant("after"), expression: .literal(.int(3)))
         ]))
     }

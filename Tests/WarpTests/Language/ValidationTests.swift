@@ -191,7 +191,7 @@ struct ValidationTests {
         // so the same rule refuses a construct there
         let construct = Warp.Expression.block(Block(body: [], result: .literal(.bool(true))))
 
-        // When / Then. A branch's condition, and a loop's
+        // When / Then. A conditional's condition, and a loop's
         #expect(
             !validates(body: [
                 Statement(expression: .conditional(construct, then: [], else: nil))
@@ -210,12 +210,12 @@ struct ValidationTests {
         )
     }
 
-    @Test("a branch where a value is wanted is refused at the check")
+    @Test("a conditional where a value is wanted is refused at the check")
     func aBranchWhereAValueIsWantedIsRefused() {
-        // Given. A branch answers nothing, so a slot that exists to hold an
+        // Given. A conditional answers nothing, so a slot that exists to hold an
         // answer has nothing to take from one; refused for that reason rather
         // than as a null that fails to fit downstream
-        let branch = Warp.Expression.conditional(
+        let conditional = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
             else: nil
@@ -224,11 +224,11 @@ struct ValidationTests {
         // When / Then. A result slot, an array element, a record field
         #expect(
             !validates(
-                body: [Statement(binding: .constant("grouped"), expression: .block(Block(body: [], result: branch)))]
+                body: [Statement(binding: .constant("blocked"), expression: .block(Block(body: [], result: conditional)))]
             )
         )
-        #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([branch]))]))
-        #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": branch]))]))
+        #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([conditional]))]))
+        #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": conditional]))]))
     }
 
     @Test("a name is visible only after the statement that introduced it")

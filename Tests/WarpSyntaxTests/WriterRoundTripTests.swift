@@ -25,7 +25,7 @@ struct WriterRoundTripTests {
     @Test("a construct whose body is empty still writes the key its reader wants")
     func anEmptyBodyIsStillWritten() throws {
         // Given. The three constructs whose `body` the document format calls
-        // required. A block written as a `group` is the exception and stays
+        // required. A block written as a `block` is the exception and stays
         // one: nothing there has to have it.
         let constructs: [Name: Warp.Expression] = [
             "spin": .loop(

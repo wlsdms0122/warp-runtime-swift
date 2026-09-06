@@ -55,7 +55,7 @@ struct NotationTests {
     func aConditionsWordsAreOwedByTheFormsThatReadOne() throws {
         // Given. The other half: register a form with a condition slot and the
         // words are owed again. Nothing in this package knows what they are.
-        let sut = Loader(registry: try ConstructRegistry(forms: [BranchForm.self]))
+        let sut = Loader(registry: try ConstructRegistry(forms: [ConditionalForm.self]))
 
         // Then
         #expect(
@@ -77,7 +77,7 @@ struct NotationTests {
                     "body": [
                         ["var": "pick"],
                         [
-                            "value": ["branch": [
+                            "value": ["conditional": [
                                 "when": [
                                     "call": [
                                         "procedure": "std.logic.equal",
@@ -112,7 +112,7 @@ struct NotationTests {
             "parameters": ["ready": "bool"],
             "body": [
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["ref": "ready"],
                         "then": [["let": "kept", "value": "yes"]]
                     ]
@@ -125,7 +125,7 @@ struct NotationTests {
             case let .body(block) = sut.procedures[entryName]?.implementation,
             case let .conditional(condition, _, _) = block.body.first?.expression
         else {
-            Issue.record("a branch reads a condition")
+            Issue.record("a conditional reads a condition")
 
             return
         }
@@ -140,7 +140,7 @@ struct NotationTests {
         // notation that recognises a condition by its subject key, this record
         // would come back a message, so it has no document *there*. Even though
         // it has one in a document, below.
-        let module = try Self.branch(on: .record([
+        let module = try Self.conditional(on: .record([
             "of": .reference(path("word")),
             "equal": .literal(.string("hey"))
         ]))
@@ -255,7 +255,7 @@ struct NotationTests {
             "parameters": ["flag": "any"],
             "body": [
                 [
-                    "value": ["branch": [
+                    "value": ["conditional": [
                         "when": ["as": "bool", "of": ["ref": "flag"]],
                         "then": [["let": "kept", "value": "yes"]]
                     ]
@@ -314,9 +314,9 @@ struct NotationTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One branch around a condition, since a condition slot is a slot rather
+    // One conditional around a condition, since a condition slot is a slot rather
     // than something a document holds on its own.
-    private static func branch(on condition: Warp.Expression) throws -> Module {
+    private static func conditional(on condition: Warp.Expression) throws -> Module {
         try Module(
             procedures: [
                 entryName: Procedure(

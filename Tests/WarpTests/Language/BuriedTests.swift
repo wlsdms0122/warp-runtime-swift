@@ -50,9 +50,9 @@ struct BuriedTests {
                 result: marker("block result")
             )),
             .conditional(
-                marker("branch condition"),
-                then: [Statement(expression: marker("branch then"))],
-                else: [Statement(expression: marker("branch else"))]
+                marker("conditional condition"),
+                then: [Statement(expression: marker("conditional then"))],
+                else: [Statement(expression: marker("conditional else"))]
             ),
             .loop(
                 while: marker("loop condition"),
@@ -80,7 +80,7 @@ struct BuriedTests {
             "apply callee", "apply argument",
             "call receiver", "call argument",
             "block body", "block result",
-            "branch condition", "branch then", "branch else",
+            "conditional condition", "conditional then", "conditional else",
             "loop condition", "loop body",
             "attempt body", "attempt rescue"
         ])

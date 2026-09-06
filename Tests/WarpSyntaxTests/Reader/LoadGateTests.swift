@@ -28,10 +28,10 @@ struct LoadGateTests {
         }
     }
 
-    @Test("a guard written on the envelope is rejected, because branch is where a guard goes")
+    @Test("a guard written on the envelope is rejected, because conditional is where a guard goes")
     func envelopeGuardRejected() {
         // Given. No language spells a guard as a modifier on a statement. `if x
-        // { some() }` is the form, and that is `branch`, so the envelope reads
+        // { some() }` is the form, and that is `conditional`, so the envelope reads
         // `when:` as the unknown key it is.
         let fixture: Value = [
             "parameters": ["kind": "string"],
