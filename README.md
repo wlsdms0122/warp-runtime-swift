@@ -5,9 +5,9 @@ and links them before anything runs, runs them under a caller that can always
 stop them, and brings the host's vocabulary. What the language *is* lives in
 the specification; this package is one implementation of it.
 
-A program can also be built directly as Swift values — `Module`, `Procedure`,
-`Statement`, `Expression` — and never touch a document. That is not a trick:
-it is what a program that stays where it was built looks like.
+A program can also be built directly as Swift values (`Module`, `Procedure`,
+`Statement`, `Expression`) and never touch a document. That is what a program
+that stays where it was built looks like.
 
 ```swift
 import Warp
@@ -58,7 +58,7 @@ let value = try await Executor().run(
 
 The arrow is the architecture, and it is the one line worth cutting on: what a
 caller can leave out. A caller that reads bytes needs all of this, and a caller
-assembling shapes in Swift needs none of it — so `WarpSyntax` is optional in the
+assembling shapes in Swift needs none of it, so `WarpSyntax` is optional in the
 honest sense, and a program that never travels never links it.
 
 Inside it the wire is still written and read without learning what the tree
@@ -81,34 +81,34 @@ let answer = try await Executor().run(image)
 ```
 
 Each step refuses rather than guesses, and everything refusable is refused
-while nothing has run — including the branches this run would not have taken.
+while nothing has run. Including the branches this run would not have taken.
 The stages and what each one checks are the specification's, not this file's.
 
 `Loader` reads the canonical document and nothing else by default. Which
 construct words exist is a `ConstructRegistry`; a host may register its own
-forms. A front end may also hand over a `Notation` — its own condition
-spelling and its own template words — and no table of either is shipped here:
+forms. A front end may also hand over a `Notation`. Its own condition
+spelling and its own template words, and no table of either is shipped here:
 a document has no spellings, so this package names none. The wire never carries
 one.
 
 `Writer` is the way back out: a program that was *built* rather than read has
 no document to hand to anything running elsewhere, and this is how it gets one.
 
-Whatever refuses somewhere says where. A refusal from the two stages that read
-a program before running it carries a `Place` — the path to it through the
-program, and each side reads it for the reader it has. The language names its
-own slots, which is what a caller that built the shapes in Swift can follow;
+Whatever refuses somewhere says where. A refusal from the two stages that read a
+program before running it carries a `Place`. The path to it through the program,
+and each side reads it for the reader it has. The language names its own slots,
+which is what a caller that built the shapes in Swift can follow;
 `Loader.reading { }` reads the same place in the keys the document writes, so
 `procedures.greet.body.total[2].call.arguments.amount` is a line every word of
-which an author can follow in the text in front of them. It is steps rather
-than a sentence because a front end holding the file this was authored in has
-to walk them to point at the line, and only the front end knows that file: what
-crossed the wire is the document. Which is why a step says how it was got: a
-`key` is a word the document itself writes and a reader may go looking for one
-in the text, while a `landmark` — the word for a statement's construct — is
-this implementation's for a shape, since `{ call: … }` and `{ value: { call:
-… } }` arrive here as one. A refusal from a run carries a `Trace` instead —
-where the run had been, which is the other question.
+which an author can follow in the text in front of them. It is steps rather than
+a sentence because a front end holding the file this was authored in has to walk
+them to point at the line, and only the front end knows that file: what crossed
+the wire is the document. Which is why a step says how it was got: a `key` is a
+word the document itself writes and a reader may go looking for one in the text,
+while a `landmark`. The word for a statement's construct. Is this
+implementation's for a shape, since `{ call: … }` and `{ value: { call: … } }`
+arrive here as one. A refusal from a run carries a `Trace` instead. Where the
+run had been, which is the other question.
 
 A declaration's name is its key. A link calls a declaration `wallet.entry`
 because `wallet.entry` is the key the document wrote under `procedures`, dot
@@ -116,13 +116,13 @@ and all. So a place reads `0da2e372bba7/procedures.wallet.entry.body.sent[0].cal
 and the part before the slash is the only part that is not a key.
 
 **Which document a place is in is an `Identity`, and never a name.** A link
-holds several documents and the steps alone do not say which —
+holds several documents and the steps alone do not say which.
 `std.collection.first` and `wallet.first` are two declarations that may sit in
 two documents or in one. Nothing a document says about itself can settle it:
 what a document writes is declarations, and a program split across files
-declares spellings under one prefix from several documents. So identity is derived from
-the document itself — the digest of its canonical bytes, worked out by
-`WarpSyntax` and never written down by anybody. Nothing to declare means
+declares spellings under one prefix from several documents. So identity is
+derived from the document itself. The digest of its canonical bytes, worked out
+by `WarpSyntax` and never written down by anybody. Nothing to declare means
 nothing to declare wrongly, and two callers holding one document arrive at one
 answer without having agreed on anything.
 
@@ -135,7 +135,7 @@ let module = try Loader().load(document, identity: try Identity.of(document))
 ```
 
 Going in rather than on the way out, because a refusal is exactly the moment
-somebody wants the file it came from — a module stamped afterwards would be
+somebody wants the file it came from. A module stamped afterwards would be
 stamped only when nothing was wrong with it.
 
 A place reads `0da2e372bba7/procedures.wallet.charge…`: the part before the
@@ -152,12 +152,12 @@ would read true for a place that does not exist.
 
 Not every refusal has a place, and the ones that do not say so: two modules
 declaring one name is two places and an entry nobody declares is none, so those
-carry `nil` — written out at the call, because the initializer takes no default
+carry `nil`. Written out at the call, because the initializer takes no default
 and a place nobody carried would otherwise look like a place that does not
 exist. What a notation refuses while reading a document is not placed this way
 yet.
 
-## Vocabulary — the boundary to the outside
+## Vocabulary: the boundary to the outside
 
 A word is a procedure whose implementation is native. `Query` answers without
 running; `Effect` answers by running. Everything a program can do to the world
@@ -194,7 +194,7 @@ it wants from, no second name table and no second lookup order.
 
 ## Stopping and watching
 
-A run can always be stopped from outside — cancellation is observed between
+A run can always be stopped from outside. Cancellation is observed between
 statements and at the entry of every round. Nothing is bounded from inside: no
 fan-out cap, no recursion depth, no iteration limit a program did not write
 itself (`loop`'s `guard` is the author bounding their own program). Runaway
