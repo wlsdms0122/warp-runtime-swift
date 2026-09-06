@@ -501,37 +501,46 @@ extension Shape {
 
         guard case let .membership(constraint)? = bound, !assuming.contains(constraint) else { return value }
 
-        let deeper = assuming + [constraint]
-        var refusals: [String] = []
-
-        // Each member in turn, so the refusal carries why every one of them
-        // said no. A membership holding one shape of collection refuses a bad
-        // element, and the element is what the author has to go and fix.
-        for member in table.constraints[constraint] {
-            if let scalar = member.admitsAsScalar(value) {
-                guard scalar else {
-                    refusals.append("as \(member.rendered(in: table)), got \(value.type)")
-
-                    continue
-                }
-
-                return value
-            }
-
-            do {
-                _ = try member.settling(value, at: path(), in: table, assuming: deeper)
-
-                return value
-            } catch {
-                refusals.append("as \(member.rendered(in: table)), \(error)")
-            }
+        guard table.admits(constraint: constraint, value: value, assuming: assuming) else {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), and nothing"
+                    + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
+                    + " \(refused(value, by: constraint, at: path(), in: table, assuming: assuming))"
+            )
         }
 
-        throw ArgumentError(
-            "\(path()): expected \(rendered(in: table)), and nothing"
-                + " '\(table.constraintLabels[constraint])' admits takes \(value.type)."
-                + " \(refusals.joined(separator: ". "))"
-        )
+        return value
+    }
+
+    // Why each member of a membership said no, in one line. A membership
+    // holding one shape of collection refuses a bad element, and the element
+    // is what the author has to go and fix.
+    private func refused(
+        _ value: Value,
+        by constraint: Int,
+        at path: String,
+        in table: ShapeTable,
+        assuming: [Int]
+    ) -> String {
+        let deeper = assuming + [constraint]
+
+        return table.constraints[constraint]
+            .map { member in
+                // A scalar member says only that the kind is wrong, and the
+                // kind is already in front of the reader.
+                if member.admitsAsScalar(value) != nil {
+                    return "as \(member.rendered(in: table)), got \(value.type)"
+                }
+
+                do {
+                    _ = try member.settling(value, at: path, in: table, assuming: deeper)
+
+                    return "as \(member.rendered(in: table)), got \(value.type)"
+                } catch {
+                    return "as \(member.rendered(in: table)), \(error)"
+                }
+            }
+            .joined(separator: ". ")
     }
 
     private func settlingNamed(
