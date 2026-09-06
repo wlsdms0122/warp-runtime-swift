@@ -296,10 +296,10 @@ struct BytesTests {
         }
     }
 
-    @Test("a walk iterates bytes the way an index reads them")
-    func aWalkIteratesBytes() async throws {
-        // Given. The material is bytes, and each round's element is the
-        // ordinary int one byte is
+    @Test("a walk over bytes reads the ordinary int each byte is")
+    func aWalkOverBytesReadsInts() async throws {
+        // Given. Bytes count and index the way an array does, so the loop that
+        // walks one reads each byte as the ordinary int it is
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -310,17 +310,18 @@ struct BytesTests {
                         Statement(binding: .variable("sum"), expression: .literal(.int(0))
                         ),
                         Statement(
-                            expression: .iteration(
-                                over: reference("data"),
+                            binding: .constant("walk"),
+                            expression: walking(
+                                [.key("data")],
+                                element: "element",
                                 body: [
                                     Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
                                             receiver: reference("sum"),
                                             selector: "std.math.plus",
-                                            arguments: ["value": reference("element", "item")]
+                                            arguments: ["value": reference("element")]
                                         ))
                                     )
-                                ],
-                                element: "element"
+                                ]
                             )
                         )
                     ],

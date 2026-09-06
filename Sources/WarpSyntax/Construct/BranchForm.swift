@@ -44,7 +44,7 @@ public struct BranchForm: ConstructForm {
 
     // MARK: - Public
     // The namelessness is not this form's to enforce. `StatementReader` asks
-    // the expression itself (`takesNoName`), so a notation's own spelling of a
+    // the expression itself (`answersNothing`), so a notation's own spelling of a
     // branch is held to the same rule without remembering it.
     public func expression(boundTo id: String?) -> Expression {
         .conditional(condition, then: then, else: otherwise)

@@ -94,13 +94,18 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     body: [
-                        Statement(binding: .constant("walk"), expression: .iteration(
-                                over: .literal(.array([.int(1), .int(2)])),
-                                body: [
-                                    Statement(binding: .constant("step"), expression: reference("each", "item")
+                        Statement(binding: .constant("round"), expression: .loop(
+                                while: .call(
+                                    Call(
+                                        receiver: reference("round", "index"),
+                                        selector: "std.math.lessThan",
+                                        arguments: ["value": .literal(.int(2))]
                                     )
-                                ],
-                                element: "each"
+                                ),
+                                body: Block(body: [
+                                    Statement(binding: .constant("step"), expression: reference("round", "index"))
+                                ]),
+                                round: "round"
                             )
                         )
                     ]
@@ -114,8 +119,8 @@ struct ObservationTests {
         _ = try await Executor(observer: observer).run(image)
 
         // Then
-        #expect(await observer.events.contains(.completed("walk[0].step", .int(1))))
-        #expect(await observer.events.contains(.completed("walk[1].step", .int(2))))
+        #expect(await observer.events.contains(.completed("round[0].step", .int(0))))
+        #expect(await observer.events.contains(.completed("round[1].step", .int(1))))
     }
 
     @Test("a piece of a fan-out is announced under which piece it is")

@@ -200,6 +200,37 @@ struct ShoutEffect: Effect {
 
 // MARK: - Conditions
 
+// Walking a collection is a loop over its count, so a test writing one writes
+// the shape a notation spells `each` with: the round's index against the
+// material's count, and the element read at that index.
+func walking(
+    _ material: [PathSegment],
+    element: Name,
+    round: Name = "walk",
+    body: [Statement]
+) -> Warp.Expression {
+    .loop(
+        while: .call(
+            Call(
+                receiver: .reference([.key(round), .key("index")]),
+                selector: "std.math.lessThan",
+                arguments: [
+                    "value": .call(Call(receiver: .reference(material), selector: "std.collection.count"))
+                ]
+            )
+        ),
+        body: Block(
+            body: [
+                Statement(
+                    binding: .constant(element),
+                    expression: .reference(material + [.indexRef([.key(round), .key("index")])])
+                )
+            ] + body
+        ),
+        round: round
+    )
+}
+
 // Equality and the connectives are words, so a test writing one writes the call
 // the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {

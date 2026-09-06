@@ -19,7 +19,7 @@ public extension Writer {
         // that builds statements directly, with the validator's own words:
         // writing one silently would make a document that reads back as
         // something else.
-        if statement.binding != nil, statement.expression.takesNoName {
+        if statement.binding != nil, statement.expression.answersNothing {
             throw WritingError(
                 "a branch answers nothing, so its name could never bind."
                     + " It takes no name"
@@ -128,11 +128,10 @@ public extension Writer {
             return .dictionary(["call": try message(of: call)])
 
         // Everything left is a construct, and this notation spells constructs
-        // in statement position only. Some of them need to be there (a loop, an
-        // iteration, a fan-out over a collection and an attempt each bind a
-        // name inside themselves and take it from the statement they are
-        // written as) and the rest are there because the expression grammar is
-        // a fixed set and they are not in it.
+        // in statement position only. Some of them need to be there (a loop and
+        // an attempt each bind a name inside themselves and take it from the
+        // statement they are written as) and the rest are there because the
+        // expression grammar is a fixed set and they are not in it.
         default:
             throw WritingError(
                 "\(Self.shape(of: expression)) has no spelling where a value is wanted."
@@ -174,7 +173,7 @@ public extension Writer {
             return (try spelling(GroupForm.self), .dictionary(try fields(of: block, in: GroupForm.self)))
 
         // A name on a branch was already refused where the statement's envelope
-        // is written. `takesNoName`, the one predicate every door asks.
+        // is written. `answersNothing`, the one predicate every door asks.
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
                 "when": try value(of: condition, reserving: conditionKeys),
@@ -197,17 +196,6 @@ public extension Writer {
             written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
 
             return (try spelling(LoopForm.self), .dictionary(written))
-
-        case let .iteration(material, body, element):
-            try named(element, matches: id, in: "each", binding: "element")
-
-            var written: [Name: Value] = ["in": try value(of: material)]
-
-            written.merge(
-                try fields(of: Block(body: body), in: EachForm.self)
-            ) { one, _ in one }
-
-            return (try spelling(EachForm.self), .dictionary(written))
 
         case let .leave(leave):
             switch leave.reach {
@@ -400,7 +388,6 @@ public extension Writer {
         case .block: "a group"
         case .conditional: "a branch"
         case .loop: "a loop"
-        case .iteration: "an iteration"
         case .attempt: "an attempt"
         case .call: "a message"
         case .cast: "a cast"

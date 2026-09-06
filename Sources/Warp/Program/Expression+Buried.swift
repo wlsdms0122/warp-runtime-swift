@@ -162,10 +162,6 @@ public extension Expression {
             inner(condition, under: .condition(of: .loop))
                 + body.walked(at: here, stepping: stepping)
 
-        case let .iteration(material, body, _):
-            inner(material, under: .material)
-                + body.walked(at: stepping(here, .slot(.body)), stepping: stepping)
-
         case let .attempt(attempted, rescue, _):
             attempted.walked(at: here, stepping: stepping)
                 + rescue.walked(at: stepping(here, .slot(.rescue)), stepping: stepping)

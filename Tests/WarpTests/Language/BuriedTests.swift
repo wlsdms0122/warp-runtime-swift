@@ -59,11 +59,6 @@ struct BuriedTests {
                 body: Block(body: [Statement(expression: marker("loop body"))]),
                 round: "round"
             ),
-            .iteration(
-                over: marker("walk material"),
-                body: [Statement(expression: marker("walk body"))],
-                element: "each"
-            ),
             .attempt(
                 Block(body: [Statement(expression: marker("attempt body"))]),
                 rescue: Block(body: [Statement(expression: marker("attempt rescue"))]),
@@ -87,7 +82,6 @@ struct BuriedTests {
             "block body", "block result",
             "branch condition", "branch then", "branch else",
             "loop condition", "loop body",
-            "walk material", "walk body",
             "attempt body", "attempt rescue"
         ])
     }

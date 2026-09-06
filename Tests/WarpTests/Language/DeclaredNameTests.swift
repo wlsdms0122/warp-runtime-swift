@@ -193,14 +193,14 @@ struct DeclaredNameTests {
 
     @Test("a construct that binds the name says what it holds, and the author does not")
     func aConstructBoundNameTakesNoDeclaration() throws {
-        // Given. A walk binds the element under the statement's name
+        // Given. A loop binds the round under the statement's name
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     body: [
                         Statement(
                             binding: .constant("walk", declared: .int),
-                            expression: .iteration(over: .array([.literal(.int(1))]), body: [], element: "walk")
+                            expression: .loop(while: .literal(.bool(false)), body: Block(body: []), round: "walk")
                         )
                     ],
                     result: .literal(.int(1))

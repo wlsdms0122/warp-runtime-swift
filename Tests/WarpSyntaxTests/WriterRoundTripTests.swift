@@ -33,7 +33,6 @@ struct WriterRoundTripTests {
                 body: Block(body: []),
                 round: "spin"
             ),
-            "walk": .iteration(over: .array([]), body: [], element: "walk"),
             "guarded": .attempt(
                 Block(body: []),
                 rescue: Block(body: [], result: .literal(.int(0))),

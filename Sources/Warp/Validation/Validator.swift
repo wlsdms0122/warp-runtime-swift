@@ -232,16 +232,7 @@ public struct Validator: Sendable {
                     )
                 }
 
-                if !binding.isConstant, isIteration(statement.expression) {
-                    throw ValidationError(
-                        "a walk answers nothing, so its name"
-                            + " binds the element and no value. It is not"
-                            + " writable",
-                        at: here
-                    )
-                }
-
-                if statement.expression.takesNoName {
+                if statement.expression.answersNothing {
                     throw ValidationError(
                         "a branch answers nothing, so its name"
                             + " could never bind. It takes no name",
@@ -304,13 +295,6 @@ public struct Validator: Sendable {
             )
 
             switch statement.binding {
-            // A walk answers nothing, so its name is the element's. Alive
-            // inside the body as `item` and `index`, and nothing afterwards.
-            // Leaving it visible would let what follows read a name whose only
-            // value could ever be null, silently.
-            case .constant? where isIteration(statement.expression):
-                break
-
             case let .constant(id, _)?:
                 visible.insert(id)
                 variables.remove(id)
@@ -325,12 +309,6 @@ public struct Validator: Sendable {
         }
 
         return (visible, variables)
-    }
-
-    private func isIteration(_ expression: Expression) -> Bool {
-        guard case .iteration = expression else { return false }
-
-        return true
     }
 
     private func validate(
@@ -518,24 +496,6 @@ public struct Validator: Sendable {
                 variables: variables,
                 surroundings: surroundings.inside(round),
                 at: place
-            )
-
-        case let .iteration(material, body, element):
-            try introduced(element, beside: surroundings.constants, at: place)
-
-            try validate(
-                material,
-                visible: visible,
-                variables: variables,
-                surroundings: surroundings,
-                at: place.slot(.material)
-            )
-            try validate(
-                body,
-                visible: visible.union([element]),
-                variables: variables,
-                surroundings: surroundings.inside(element),
-                at: place.slot(.body)
             )
 
         // While the rescue runs, the failure is a value under the declared name.

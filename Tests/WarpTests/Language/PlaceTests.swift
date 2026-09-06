@@ -26,9 +26,9 @@ struct PlaceTests {
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
     func aPlaceIsSpelledFromTheLanguagesNames() {
-        // Given. The two slots a document calls something else. A loop's
-        // condition is `where` in a document and a walk's collection is `in`,
-        // and neither word appears in what a caller assembling this wrote.
+        // Given. A slot a document calls something else. A loop's condition is
+        // `where` in a document, and that word appears nowhere in what a caller
+        // assembling this wrote.
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
                     while: .block(Block(body: [], result: .literal(.bool(true)))),
@@ -38,14 +38,8 @@ struct PlaceTests {
             )
         )
 
-        let walk = place(
-            refusing: Statement(binding: .constant("walk"), expression: .iteration(over: reference("missing"), body: [], element: "walk")
-            )
-        )
-
         // Then
         #expect(spin?.rendered == "procedures.entry.body.spin[0].loop.condition")
-        #expect(walk?.rendered == "procedures.entry.body.walk[0].iteration.material")
     }
 
     @Test("what a call is written with is named under the key holding it")

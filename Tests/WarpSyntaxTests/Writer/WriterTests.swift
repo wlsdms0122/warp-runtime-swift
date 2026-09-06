@@ -118,7 +118,14 @@ struct WriterTests {
         // everything. Running both is what notices a slot dropped on the way
         // out.
         let document: Value = [
-            "imports": ["std.logic.equal", "std.text.joined", "std.math.plus", "std.text.text"],
+            "imports": [
+                "std.collection.count",
+                "std.logic.equal",
+                "std.math.lessThan",
+                "std.math.plus",
+                "std.text.joined",
+                "std.text.text"
+            ],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>", "word": "string"],
@@ -134,15 +141,18 @@ struct WriterTests {
                         ["var": "walked", "value": 0],
                         [
                             "let": "sized",
-                            "value": ["each": [
-                                "in": ["ref": "names"],
+                            "value": ["loop": [
+                                "while": [
+                                    "of": ["ref": "sized.index"],
+                                    "lessThan": ["call": ["procedure": "std.collection.count", "of": ["ref": "names"]]]
+                                ],
                                 "body": [
                                     [
                                         "set": "walked",
                                         "value": ["call": [
                                             "of": ["ref": "walked"],
                                             "procedure": "std.math.plus",
-                                            "arguments": ["value": ["ref": "sized.item.count"]]
+                                            "arguments": ["value": ["ref": "names[sized.index].count"]]
                                         ]
                                     ]]
                                 ]
@@ -521,7 +531,7 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "imports": ["std.logic.notEqual", "std.math.plus"],
+        "imports": ["std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
         "description": "one of every shape",
         "types": ["Task": ["done": "bool", "id": "string"]],
         "constraints": ["Scalar": ["int", "string"]],
@@ -575,9 +585,20 @@ struct WriterTests {
                     ]],
                     [
                         "let": "mapped",
-                        "value": ["each": [
-                            "in": ["ref": "names"],
-                            "body": [["let": "one", "value": ["ref": "mapped.item"]]]
+                        "value": ["loop": [
+                            "while": [
+                                "call": [
+                                    "procedure": "std.math.lessThan",
+                                    "of": ["ref": "mapped.index"],
+                                    "arguments": [
+                                        "value": ["call": [
+                                            "procedure": "std.collection.count",
+                                            "of": ["ref": "names"]
+                                        ]]
+                                    ]
+                                ]
+                            ],
+                            "body": [["let": "one", "value": ["ref": "names[mapped.index]"]]]
                         ]
                     ]],
                     [
@@ -709,9 +730,9 @@ struct WriterTests {
                 ]
             ]
         ],
-        // Loop, each, attempt
+        // Loop, attempt
         [
-            "imports": ["test.fail", "std.logic.notEqual", "std.math.plus"],
+            "imports": ["test.fail", "std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -735,9 +756,12 @@ struct WriterTests {
                         ]],
                         [
                             "let": "mapped",
-                            "value": ["each": [
-                                "in": ["ref": "names"],
-                                "body": [["let": "one", "value": ["ref": "mapped.item"]]]
+                            "value": ["loop": [
+                                "while": [
+                                    "of": ["ref": "mapped.index"],
+                                    "lessThan": ["call": ["procedure": "std.collection.count", "of": ["ref": "names"]]]
+                                ],
+                                "body": [["let": "one", "value": ["ref": "names[mapped.index]"]]]
                             ]
                         ]],
                         [
@@ -755,6 +779,7 @@ struct WriterTests {
         ],
         // Leaving early, all three ways and both spellings of a target
         [
+            "imports": ["std.collection.count", "std.math.lessThan"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -767,8 +792,11 @@ struct WriterTests {
                                 "body": [
                                     [
                                         "let": "walked",
-                                        "value": ["each": [
-                                            "in": ["ref": "names"],
+                                        "value": ["loop": [
+                                            "while": [
+                                                "of": ["ref": "walked.index"],
+                                                "lessThan": ["call": ["procedure": "std.collection.count", "of": ["ref": "names"]]]
+                                            ],
                                             "body": [
                                                 [
                                                     "value": ["branch": [

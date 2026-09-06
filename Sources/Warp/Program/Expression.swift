@@ -75,11 +75,6 @@ public indirect enum Expression: Sendable {
     // one is the receiver's cancellation; a kernel budget would promise neither
     // side anything it can rely on.
     case loop(while: Expression, body: Block, round: Name)
-    // The one repetition whose body is statements alone. A walk answers
-    // nothing. A pure mapping is `std.collection.map`'s to say; an effectful
-    // round with something to keep writes it to an outer variable. Either way,
-    // nothing is the walk's own answer.
-    case iteration(over: Expression, body: [Statement], element: Name)
     case attempt(Block, rescue: Block, failure: Name)
     case call(Call)
 
@@ -112,7 +107,6 @@ public indirect enum Expression: Sendable {
         case .block: .block
         case .conditional: .conditional
         case .loop: .loop
-        case .iteration: .iteration
         case .attempt: .attempt
         case .call: .call
         case let .leave(leave): .leave(leave.reach)
@@ -151,38 +145,24 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // Whether this is a branch, which takes no name at all. It answers nothing
-    // and binds nothing inside, so its name could never bind. The reader, the
-    // validator and the writer each refuse a named branch by asking this; the
-    // other nameless family (what never finishes) is `alwaysLeaves`'s to say,
-    // and stays its own question because the two facts are refused with two
-    // different sentences.
-    public var takesNoName: Bool {
+    // Whether this construct answers nothing by its own grammar. A branch
+    // chooses a way through a body, not a value, so it has nothing to give a
+    // slot that holds an answer and nothing for a name to bind. The reader, the
+    // validator and the writer each ask this; the other nameless family (what
+    // never finishes) is `alwaysLeaves`'s to say, and stays its own question
+    // because the two facts are refused with two different sentences.
+    public var answersNothing: Bool {
         if case .conditional = self { return true }
 
         return false
     }
 
-    // Whether this construct answers nothing by its own grammar. A branch, or a
-    // walk. Wider than `takesNoName`, because a walk does take a name: the
-    // element's. What asks this is the slot that exists to hold an answer,
-    // which has nothing to take from either.
-    public var answersNothing: Bool {
-        switch self {
-        case .conditional, .iteration:
-            return true
-
-        default:
-            return false
-        }
-    }
-
     // Whether the construct decides what the statement's name holds: a loop's
-    // round, a walk's element, an attempt's failure. The name is the
-    // construct's to bind, so what it holds is not the author's to declare.
+    // round, an attempt's failure. The name is the construct's to bind, so what
+    // it holds is not the author's to declare.
     public var namesItsOwn: Bool {
         switch self {
-        case .loop, .iteration, .attempt:
+        case .loop, .attempt:
             return true
 
         default:
@@ -233,7 +213,7 @@ public indirect enum Expression: Sendable {
         case let .cast(value, _, _):
             return value.holdsConstruct
 
-        case .block, .conditional, .loop, .iteration, .attempt, .leave:
+        case .block, .conditional, .loop, .attempt, .leave:
             return true
         }
     }

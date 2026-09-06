@@ -146,9 +146,6 @@ extension Linker {
             case let .loop(condition, body, _):
                 return holds(condition, declared: declared) && holds(body, declared: declared)
 
-            case let .iteration(collection, body, _):
-                return holds(collection, declared: declared) && holds(body, declared: declared)
-
             case let .attempt(body, rescue, _):
                 return holds(body, declared: declared) && holds(rescue, declared: declared)
 

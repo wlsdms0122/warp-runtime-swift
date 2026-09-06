@@ -141,13 +141,12 @@ struct NamelessTests {
 
     @Test("a construct that binds through its name cannot be written nameless", arguments: [
         ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
-        ["value": ["each": ["in": ["value": [1]], "body": [["let": "x", "value": 1]]]]],
         ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
     ])
     func aBindingConstructRequiresAName(_ statement: Value) {
-        // Given, with no name there is nothing the body could read the
-        // round/element/failure under, and an invented name would be a real
-        // name somewhere
+        // Given, with no name there is nothing the body could read the round or
+        // the failure under, and an invented name would be a real name
+        // somewhere
         #expect {
             try loader.loadProcedure(["body": [statement]])
         } throws: { error in

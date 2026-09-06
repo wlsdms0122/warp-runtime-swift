@@ -146,7 +146,7 @@ public struct Executor: Sendable {
         // attempt can catch, so it belongs to `evaluate`. Reaching here means
         // a construct was written where only data can be read: inside a
         // condition, or among an effect's settled arguments.
-        case .apply, .block, .conditional, .loop, .iteration, .attempt, .leave:
+        case .apply, .block, .conditional, .loop, .attempt, .leave:
             throw ExecutionError("this expression runs, so it cannot be read as data here")
         }
     }
@@ -355,15 +355,6 @@ public struct Executor: Sendable {
                 at: trace
             )
 
-        case let .iteration(material, body, element):
-            return try await iterate(
-                over: material,
-                body: body,
-                element: element,
-                in: &activation,
-                at: trace
-            )
-
         case let .attempt(body, rescue, failure):
             return try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
 
@@ -550,35 +541,6 @@ public struct Executor: Sendable {
 
             index += 1
         }
-    }
-
-    private func iterate(
-        over material: Operation,
-        body: [Instruction],
-        element: Int,
-        in activation: inout Activation,
-        at trace: Trace
-    ) async throws -> Value {
-        let name = activation.frame.names[element]
-        let elements = try await array(of: material, naming: name, in: &activation, at: trace)
-
-        for (index, item) in elements.enumerated() {
-            activation.cells[element] = .value(
-                .record(Record(layout: Executor.walkLayout, values: [.int(index), item]))
-            )
-
-            do {
-                try await perform(body, in: &activation, at: trace.appending(.round(index)))
-            } catch let leaving as Leaving where leaving.claimed(by: name) {
-                // A walk answers nothing, so ending one early ends it and no
-                // more: what its rounds wrote outward is already written.
-                guard leaving.reach == .round else { break }
-
-                continue
-            }
-        }
-
-        return .null
     }
 
     // The material both fan-out shapes walk. Whether the pieces run one after

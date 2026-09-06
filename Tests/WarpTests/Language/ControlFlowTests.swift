@@ -240,23 +240,24 @@ struct ControlFlowTests {
         }
     }
 
-    @Test("a walk answers nothing, and what its rounds wrote outward stays written")
-    func iterationAnswersNothingAndItsWritesRemain() async throws {
-        // Given. A round's contribution is the write; a walk whose rounds
-        // answered values would be a map, and `std.collection.map` is that
-        let sut = Warp.Expression.iteration(
-            over: .array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]),
+    @Test("a walk over a collection is a loop over its count")
+    func aWalkIsALoopOverTheCount() async throws {
+        // Given. Repetition is one construct. Walking a collection is the round
+        // read against the material's count, with the element read at that
+        // index, and a round's contribution is what it writes outward
+        let sut = walking(
+            [.key("counts")],
+            element: "element",
             body: [
                 Statement(binding: .assignment([.key("sum")]), expression: .call(
                         Call(
                             receiver: reference("sum"),
                             selector: "std.math.plus",
-                            arguments: ["value": reference("element", "item")]
+                            arguments: ["value": reference("element")]
                         )
                     )
                 )
-            ],
-            element: "element"
+            ]
         )
 
         // When
@@ -265,47 +266,13 @@ struct ControlFlowTests {
                 Statement(binding: .variable("sum"), expression: .literal(.int(0))),
                 Statement(binding: .constant("walk"), expression: sut)
             ],
-            result: reference("sum")
+            result: reference("sum"),
+            arguments: ["counts": .array([.int(1), .int(2), .int(3)])],
+            signature: Signature(parameters: ["counts": Parameter(type: .array(.int))])
         )
 
         // Then
         #expect(answer == .int(6))
-    }
-
-    @Test("a walk's name is the element's, and is not readable after the walk")
-    func aWalkNameIsNotVisibleAfterTheWalk() {
-        // Given. The walk answers nothing, so a later read of its name could
-        // only ever see null. Refused at the check rather than answered
-        // silently.
-        #expect(!validates(body: [
-            Statement(binding: .constant("walk"), expression: .iteration(
-                    over: .array([.literal(.int(1))]),
-                    body: [],
-                    element: "walk"
-                )
-            ),
-            Statement(binding: .constant("read"), expression: reference("walk"))
-        ]))
-    }
-
-    @Test("iteration over something that is not an array is unfit")
-    func iterationOverNonArrayIsUnfit() async throws {
-        // Given
-        let sut = Warp.Expression.iteration(
-            over: reference("material"),
-            body: [],
-            element: "element"
-        )
-
-        // When / Then
-        await #expect(throws: ReferenceUnfit.self) {
-            try await answer(
-                of: [Statement(binding: .constant("probe"), expression: sut)],
-                result: .literal(.null),
-                arguments: ["material": .string("not an array")],
-                signature: Signature(parameters: ["material": Parameter(type: .string)])
-            )
-        }
     }
 
     @Test("a rescue runs on a recoverable failure and can read it")

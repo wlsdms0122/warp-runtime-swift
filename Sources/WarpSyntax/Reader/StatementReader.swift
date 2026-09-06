@@ -212,7 +212,7 @@ public struct StatementReader: Decodable {
             throw ReadingError(Expression.declarationOnABoundName, at: decoder.steps)
         }
 
-        if binding != nil, expression.takesNoName {
+        if binding != nil, expression.answersNothing {
             throw ReadingError(
                 "a branch answers nothing, so its name"
                     + " could never bind. It takes no name; what an arm"

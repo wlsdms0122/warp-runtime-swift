@@ -72,7 +72,6 @@ public extension Place {
 
         case .then: BranchForm.CodingKeys.then.stringValue
         case .otherwise: BranchForm.CodingKeys.else.stringValue
-        case .material: EachForm.CodingKeys.in.stringValue
         case .rescue: AttemptForm.CodingKeys.rescue.stringValue
 
         // The one slot two constructs write differently, which is why the slot
@@ -98,7 +97,6 @@ public extension Place {
         case .block: GroupForm.self
         case .conditional: BranchForm.self
         case .loop: LoopForm.self
-        case .iteration: EachForm.self
         case .attempt: AttemptForm.self
         case .call: CallForm.self
         case let .leave(reach):

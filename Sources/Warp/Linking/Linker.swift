@@ -535,7 +535,7 @@ public struct Linker: Sendable {
         case .apply:
             return false
 
-        case .block, .conditional, .loop, .iteration, .attempt:
+        case .block, .conditional, .loop, .attempt:
             return false
         }
     }

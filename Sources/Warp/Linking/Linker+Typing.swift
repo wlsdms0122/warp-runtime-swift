@@ -1614,59 +1614,6 @@ extension Linker {
                 )
             )
 
-        // A walk answers nothing. A walk that answered would be a map. Its
-        // rounds follow one another the way a loop's do, so the body reads the
-        // settled environment too, seeded with the element the material's
-        // reading feeds.
-        case let .iteration(material, body, element):
-            let fed = try inspected(
-                material,
-                at: place.slot(.material),
-                in: environment,
-                with: frame,
-                ask: ask
-            )
-            var threaded = environment
-
-            apply(fed.flow, to: &threaded)
-
-            let (inside, probed, converged) = try settled(
-                from: walking(element, holding: fed.reading, in: threaded)
-            ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try inspected(
-                    body,
-                    at: place.slot(.body),
-                    in: entry,
-                    with: frame,
-                    ask: .reading
-                )
-
-                return (walk, walk.flow)
-            }
-
-            if !converged {
-                try refuse(
-                    "the names this walk writes never settle"
-                        + " into one reading, so the link cannot say what"
-                        + " they hold",
-                    at: place,
-                    when: ask
-                )
-            }
-
-            let inner = ask.rewrites
-                ? try inspected(body, at: place.slot(.body), in: inside, with: frame, ask: ask)
-                : probed
-
-            return Inspection(
-                rewritten: ask.rewrites
-                    ? .iteration(over: fed.rewritten, body: inner.body, element: element)
-                    : expression,
-                calls: fed.calls + inner.calls,
-                reading: .null,
-                flow: sequenced(fed.flow, then: absorbed(inner.flow))
-            )
-
         // The body and the rescue are two ways through, not a sequence. A body
         // that fails midway made some of its writes and the rescue runs then,
         // so what either side wrote may be there, whichever way ran and however

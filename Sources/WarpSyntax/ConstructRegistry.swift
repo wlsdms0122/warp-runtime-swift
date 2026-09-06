@@ -25,7 +25,6 @@ public struct ConstructRegistry: Sendable {
     public static let standard = try! ConstructRegistry(forms: [
         BranchForm.self,
         LoopForm.self,
-        EachForm.self,
         GroupForm.self,
         AttemptForm.self,
         CallForm.self,

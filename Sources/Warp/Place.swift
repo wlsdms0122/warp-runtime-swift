@@ -252,7 +252,6 @@ public extension Place {
         case condition(of: Conditional)
         case then
         case otherwise
-        case material
         case rescue
 
         // What the language calls this slot.
@@ -275,7 +274,6 @@ public extension Place {
             case .condition: "condition"
             case .then: "then"
             case .otherwise: "otherwise"
-            case .material: "material"
             case .rescue: "rescue"
             }
         }

@@ -326,7 +326,7 @@ struct EnvelopeTests {
         // Given. A list that missed one would be a list nobody could rely on,
         // so every place a message can be written is walked
         let module = try loader.loadDocument([
-            "imports": ["inClosure", "inEach", "inBody", "inRescue", "inNestedData"],
+            "imports": ["inClosure", "inLoop", "inBody", "inRescue", "inNestedData"],
             "procedures": [
                 "entry": [
                     "parameters": ["names": "array<string>"],
@@ -339,9 +339,9 @@ struct EnvelopeTests {
                         ],
                         [
                             "let": "walked",
-                            "value": ["each": [
-                                "in": ["ref": "names"],
-                                "body": [["let": "seen", "value": ["call": ["procedure": "inEach"]]]]
+                            "value": ["loop": [
+                                "while": false,
+                                "body": [["let": "seen", "value": ["call": ["procedure": "inLoop"]]]]
                             ]
                         ]],
                         [
@@ -368,7 +368,7 @@ struct EnvelopeTests {
         // Then
         #expect(
             module.imports
-                == ["inClosure", "inEach", "inBody", "inRescue", "inNestedData"]
+                == ["inClosure", "inLoop", "inBody", "inRescue", "inNestedData"]
         )
     }
 

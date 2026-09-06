@@ -40,7 +40,6 @@ indirect enum Operation: Sendable {
     // before the result reads. Nil where the result reads none of them.
     case loop(while: Operation, body: Body, round: Int, keeps: Range<Int>?)
 
-    case iteration(over: Operation, body: [Instruction], element: Int)
     case attempt(Body, rescue: Body, failure: Int)
     case call(CallOperation)
     case leave(Leave.Reach, target: Name?, Operation?)
@@ -82,9 +81,6 @@ extension Operation {
 
         case let .loop(condition, body, _, _):
             return condition.reads(slots) || body.reads(slots)
-
-        case let .iteration(material, body, _):
-            return material.reads(slots) || body.contains { instruction in instruction.reads(slots) }
 
         case let .attempt(body, rescue, _):
             return body.reads(slots) || rescue.reads(slots)

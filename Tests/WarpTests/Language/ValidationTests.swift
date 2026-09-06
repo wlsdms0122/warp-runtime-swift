@@ -91,9 +91,6 @@ struct ValidationTests {
 
         // When / Then
         #expect(throws: ValidationError.self) {
-            try Validator().validate(module(running: .iteration(over: .array([]), body: body.body, element: "limit")))
-        }
-        #expect(throws: ValidationError.self) {
             try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body, round: "limit")))
         }
         #expect(throws: ValidationError.self) {
@@ -232,21 +229,6 @@ struct ValidationTests {
         )
         #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([branch]))]))
         #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": branch]))]))
-    }
-
-    @Test("a walk where a value is wanted is refused at the check")
-    func aWalkWhereAValueIsWantedIsRefused() {
-        // Given. A walk answers nothing, the same fact a branch has, so the
-        // same slots refuse it
-        let walk = Warp.Expression.iteration(
-            over: .array([.literal(.int(1))]),
-            body: [],
-            element: "walk"
-        )
-
-        // When / Then
-        #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([walk]))]))
-        #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": walk]))]))
     }
 
     @Test("a name is visible only after the statement that introduced it")

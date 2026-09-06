@@ -26,7 +26,6 @@ public enum Construct: Sendable, Equatable {
     case block
     case conditional
     case loop
-    case iteration
     case attempt
     case call
     case leave(Leave.Reach)
@@ -51,7 +50,6 @@ public enum Construct: Sendable, Equatable {
         case .block: "block"
         case .conditional: "conditional"
         case .loop: "loop"
-        case .iteration: "iteration"
         case .attempt: "attempt"
         case .call: "call"
         case .leave: "leave"

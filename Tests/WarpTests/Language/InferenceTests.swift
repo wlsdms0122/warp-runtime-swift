@@ -384,8 +384,8 @@ struct InferenceTests {
         }
     }
 
-    @Test("an element of an iteration carries the material's element type")
-    func iterationElementIsTyped() throws {
+    @Test("an element read by index carries the material's element type")
+    func walkElementIsTyped() throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -396,12 +396,16 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("round"), expression: .iteration(over: .reference([.key("counts")]), body: [
-                                        Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
-                                                        "word": .reference([.key("round"), .key("item")])
-                                                    ]))
-                                        )
-                                    ], element: "round")
+                        Statement(binding: .constant("walk"), expression: walking(
+                                [.key("counts")],
+                                element: "element",
+                                body: [
+                                    Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
+                                                    "word": reference("element")
+                                                ]))
+                                    )
+                                ]
+                            )
                         )
                     ]
                 ),

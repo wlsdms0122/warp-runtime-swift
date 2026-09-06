@@ -352,18 +352,6 @@ struct Lowering {
                 keeps: keeps
             )
 
-        case let .iteration(material, body, element):
-            let over = try lower(material, in: scope, on: slots, label: label, at: place)
-            var inner = scope
-            let slot = slots.allocate(element)
-            inner.slots[element] = slot
-
-            return .iteration(
-                over: over,
-                body: try lower(body, in: &inner, on: slots, label: label, at: place),
-                element: slot
-            )
-
         case let .attempt(block, rescue, failure):
             let attempted = try lower(block, in: scope, on: slots, label: label, at: place)
             var inner = scope

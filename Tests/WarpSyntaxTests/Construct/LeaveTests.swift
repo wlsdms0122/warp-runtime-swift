@@ -95,7 +95,7 @@ struct LeaveTests {
         #expect(try await answer(sut) == .int(3))
     }
 
-    @Test("continuing ends the round and the walk goes on")
+    @Test("continuing ends the round and the loop goes on")
     func continuingSkipsARound() async throws {
         // Given. A round cut short wrote nothing further outward, which is what
         // skipping it means. So only the rounds that finished are seen.
@@ -105,12 +105,16 @@ struct LeaveTests {
                 ["var": "seen", "value": ""],
                 [
                     "let": "kept",
-                    "value": ["each": [
-                        "in": ["ref": "names"],
+                    "value": ["loop": [
+                        "while": [
+                            "of": ["ref": "kept.index"],
+                            "lessThan": ["call": ["procedure": "std.collection.count", "of": ["ref": "names"]]]
+                        ],
                         "body": [
+                            ["let": "item", "value": ["ref": "names[kept.index]"]],
                             [
                                 "value": ["branch": [
-                                    "when": ["of": ["ref": "kept.item"], "equal": "skip"],
+                                    "when": ["of": ["ref": "item"], "equal": "skip"],
                                     "then": [["value": ["continue": Value.null]]]
                                 ]
                             ]],
@@ -120,7 +124,7 @@ struct LeaveTests {
                                     "format": "${so_far}${item}",
                                     "with": [
                                         "so_far": ["ref": "seen"],
-                                        "item": ["ref": "kept.item"]
+                                        "item": ["ref": "item"]
                                     ]
                                 ]
                             ]
@@ -129,7 +133,13 @@ struct LeaveTests {
                 ]]
             ],
             "result": ["ref": "seen"]
-        ], importing: ["std.logic.equal", "std.text.joined", "std.text.text"])
+        ], importing: [
+            "std.collection.count",
+            "std.logic.equal",
+            "std.math.lessThan",
+            "std.text.joined",
+            "std.text.text"
+        ])
 
         // When
         let answered = try await answer(
