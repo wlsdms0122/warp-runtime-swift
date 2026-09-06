@@ -97,6 +97,10 @@ public struct Linker: Sendable {
         )
         let types = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
 
+        // Every judgment the link asks and every row it builds reads the
+        // table the run will read.
+        let shapes = types.shapes
+
         // The spelling a call writes to reach a contract's word: the
         // contract's name and the word's, with a dot between them. Built here
         // once, so nothing downstream takes a name apart again.
@@ -108,14 +112,12 @@ public struct Linker: Sendable {
                     contract: entry.key,
                     word: word,
                     signature: signature,
+                    slots: signature.lowered(in: shapes),
+                    answers: signature.returns?.lowered(in: shapes),
                     answering: (witnessed[entry.key] ?? [:]).compactMapValues { words in words[word] }
                 )
             }
         }
-
-        // Every judgment the link asks and every row it builds reads the
-        // table the run will read.
-        let shapes = types.shapes
 
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
@@ -167,21 +169,6 @@ public struct Linker: Sendable {
             )
         }
 
-        // Each declaration as the walk reads it: the parameters it takes and
-        // what it answers, both read off the row rather than lowered a second
-        // time. A contract's word declares no row, so its own are lowered
-        // here. What a declaration answers where nobody wrote a `returns` is
-        // filled in by the reading pass below.
-        var declaredSlots = Dictionary(uniqueKeysWithValues: table.map { row in (row.label, row.slots) })
-        var answered = table.reduce(into: [Name: Shape]()) { table, row in
-            table[row.label] = row.returns
-        }
-
-        for (spelling, word) in contractWords {
-            declaredSlots[spelling] = word.signature.lowered(in: shapes)
-            answered[spelling] = word.signature.returns?.lowered(in: shapes)
-        }
-
         // Which declarations a path segment may reach, read off the rows the
         // link just made. A row is the declaration lowered, and whether a path
         // may reach one is a question about the slots it lowered to.
@@ -189,8 +176,16 @@ public struct Linker: Sendable {
             among: symbols,
             pure: settled,
             answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
-            reaching: Set(table.filter(\.isDerivable).map(\.label))
+            reaching: rows,
+            in: table
         )
+
+        // What the link read off a body whose declaration wrote no `returns`.
+        // Only those: what a declaration wrote is on its row already, and a
+        // table holding every spelling would hash every declared name to say
+        // what the row says.
+        var answered: [Name: Shape] = [:]
+        var wordAnswered: [Name: Shape] = [:]
 
         // The tables as the author spelled them, and the form the link's own
         // settling reads: a written body is swapped for the refusal it would
@@ -215,7 +210,9 @@ public struct Linker: Sendable {
             spellings[entry.value.declared, default: []].append(entry.key)
         }
 
-        var wordAnswered = wordSymbols.compactMapValues { symbol in answered[symbol.declared] }
+        // Which row a path reaches under each spelling, so what a word takes
+        // and answers is read off the row rather than lowered again.
+        let wordRows = wordSymbols.compactMapValues { symbol in rows[symbol.declared] }
 
         // Each document's variables in the order a run makes their boxes,
         // decided here once: the layouts read positions from it and the
@@ -227,7 +224,7 @@ public struct Linker: Sendable {
         var lowering = Lowering(
             table: table,
             rows: rows,
-            words: wordSymbols.compactMapValues { symbol in rows[symbol.declared] },
+            words: wordRows,
             variables: orderedVariables.mapValues { names in
                 names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
             },
@@ -255,11 +252,12 @@ public struct Linker: Sendable {
                 symbols: space,
                 signatures: answeringSignatures,
                 types: types,
+                linked: table,
+                rows: rows,
                 answers: answered,
-                slots: declaredSlots,
                 words: answeringWords,
+                wordRows: wordRows,
                 wordAnswers: wordAnswered,
-                wordSlots: wordSymbols.compactMapValues { symbol in declaredSlots[symbol.declared] },
                 pure: settled,
                 isolated: isolatedDeclarations,
                 failing: failingDeclarations,

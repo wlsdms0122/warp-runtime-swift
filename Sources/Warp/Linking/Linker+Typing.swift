@@ -777,7 +777,7 @@ extension Linker {
         // A name a walk may reach declares its receiver. That is what made it
         // reachable. A signature here without one is the frame disagreeing with
         // itself, said rather than passed over.
-        let slots = frame.wordSlots[key] ?? []
+        let slots = frame.slots(reachedBy: key)
 
         guard
             let name = signature.receiver,
@@ -809,7 +809,7 @@ extension Linker {
         switch judged(
             signature,
             over: slots,
-            answering: frame.wordAnswers[key],
+            answering: frame.answer(reachedBy: key),
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
             in: frame.shapes
         ) {
@@ -1379,8 +1379,8 @@ extension Linker {
                     rewritten: expression,
                     reading: try answered(
                         by: signature,
-                        over: frame.slots[call.selector] ?? [],
-                        answering: frame.answers[call.selector],
+                        over: frame.slots(of: call.selector),
+                        answering: frame.answer(of: call.selector),
                         at: call,
                         readings: try call.arguments.reduce(into: [:]) { read, argument in
                             read[argument.key] = try inspected(
@@ -1500,8 +1500,8 @@ extension Linker {
                 ] + calls,
                 reading: answered(
                     by: signature,
-                    over: frame.slots[call.selector] ?? [],
-                    answering: frame.answers[call.selector],
+                    over: frame.slots(of: call.selector),
+                    answering: frame.answer(of: call.selector),
                     at: call,
                     readings: sent,
                     receiver: receiver?.reading,

@@ -231,7 +231,8 @@ extension Linker {
         among symbols: [Symbol],
         pure: Set<Name>,
         answering contracts: Set<Name>,
-        reaching derivable: Set<Name>
+        reaching rows: [Name: Int],
+        in table: [Linked]
     ) throws -> (selectors: [Name: Symbol], words: [Name: Symbol]) {
         var selectors: [Name: Symbol] = [:]
         var words: [Name: Symbol] = [:]
@@ -255,7 +256,7 @@ extension Linker {
 
             selectors[symbol.declared] = symbol
 
-            guard derivable.contains(symbol.declared) else { continue }
+            guard rows[symbol.declared].map({ row in table[row].isDerivable }) == true else { continue }
 
             // A declaration that answers a contract's word is reached through
             // the contract and not by a bare spelling. Two types answering one

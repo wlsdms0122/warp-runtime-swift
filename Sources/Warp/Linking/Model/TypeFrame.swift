@@ -34,17 +34,16 @@ struct TypeFrame: Sendable {
     // document's own spelling is owed to.
     let types: TypeTable
 
-    // What each declaration answers, as the link reads it: the `returns` it
-    // wrote, lowered, or what the link read off a body nobody wrote one for.
-    // Beside the signatures rather than written into them, because a signature
-    // is the author's spelling and this is the link's reading, and no document
-    // spells a row.
-    let answers: [Name: Shape]
+    // The rows the link built, and which row each declared spelling stands
+    // on. What a declaration takes and answers is read off its row: the row
+    // is the declaration lowered, and a second table of the same facts would
+    // hash every declared name to say what the row already says.
+    let linked: [Linked]
+    let rows: [Name: Int]
 
-    // Each declaration's parameters as the run reads them, lowered once with
-    // the rows and read here. Every call site is judged against these, so a
-    // declaration is lowered per link rather than per call.
-    let slots: [Name: [Slot]]
+    // What the link read off a body whose declaration wrote no `returns`.
+    // Only those, for the same reason: what a declaration wrote is on its row.
+    let answers: [Name: Shape]
 
     // The same declarations as the run reads them, lowered once. Every
     // judgment the walk asks goes here, so the walk and the run judge by one
@@ -57,12 +56,10 @@ struct TypeFrame: Sendable {
     // and the declaration it answers with cannot disagree.
     let words: [Name: Signature]
 
-    // What each of those answers, read the same way, under the spelling a path
-    // reaches it by.
+    // Which row a path reaches under each spelling, and what the link read
+    // off a body that declared no answer. Read the way a selector's are.
+    let wordRows: [Name: Int]
     let wordAnswers: [Name: Shape]
-
-    // Their parameters, lowered once, under the same spelling.
-    let wordSlots: [Name: [Slot]]
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
@@ -96,6 +93,34 @@ struct TypeFrame: Sendable {
     // nobody may reach got a type.
     func signature(reachedBy name: Name) -> Signature? {
         words[name]
+    }
+
+    // What a selector takes: the slots of the row it stands on, or the ones a
+    // contract lowered for its word, which stands on no row.
+    func slots(of selector: Name) -> [Slot] {
+        if let row = rows[selector] { return linked[row].slots }
+
+        return contractWords[selector]?.slots ?? []
+    }
+
+    // What it answers: what the link read off a body that declared none, else
+    // what the declaration wrote.
+    func answer(of selector: Name) -> Shape? {
+        if let read = answers[selector] { return read }
+        if let row = rows[selector] { return linked[row].returns }
+
+        return contractWords[selector]?.answers
+    }
+
+    // The same two, under the spelling a path reaches a word by.
+    func slots(reachedBy name: Name) -> [Slot] {
+        wordRows[name].map { row in linked[row].slots } ?? []
+    }
+
+    func answer(reachedBy name: Name) -> Shape? {
+        if let read = wordAnswers[name] { return read }
+
+        return wordRows[name].flatMap { row in linked[row].returns }
     }
 
     // A named type stands for what it was declared as. Inference walks into

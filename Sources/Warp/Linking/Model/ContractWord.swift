@@ -23,6 +23,12 @@ struct ContractWord: Sendable {
     // the word is in one.
     let signature: Signature
 
+    // The same declaration as the run reads it, lowered once here. A word in
+    // a contract declares no row, so this is the only place its lowering
+    // could live.
+    let slots: [Slot]
+    let answers: Shape?
+
     // Which declaration answers this word, by the name of the type that
     // answers it. The link filled this in for every type it found, so a call
     // reads a row out of it rather than resolving anything.
