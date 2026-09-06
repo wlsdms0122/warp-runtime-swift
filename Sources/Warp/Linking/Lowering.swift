@@ -243,18 +243,23 @@ struct Lowering {
                 slots.hold(slot, settling ?? shape(of: code, on: slots))
                 binding = .bind(slot, settling: settling)
 
-            // A box stands for what is in it now, and a write puts in what it
-            // was handed. So a box holds no proven shape: what the link laid
-            // out is what a value settled to, and only a name bound once
-            // settles.
+            // A box that said what it holds is settled to it by its
+            // declaration and by every write, so what stands in it is that
+            // shape. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = slots.allocate(name)
+                let settling = declared?.lowered(in: shapes)
                 scope.slots[name] = slot
-                binding = .declare(slot, settling: declared?.lowered(in: shapes))
+                slots.hold(slot, settling)
+                binding = .declare(slot, settling: settling)
 
+            // A write settles to what the path reaches, so a box that said
+            // what it holds holds it after a write as it did after its
+            // declaration. A box that said nothing reaches nothing, and what
+            // was written stands as it was handed.
             case let .assignment(path)?:
-                let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
-                binding = .assign(slot, steps)
+                let (slot, steps, reached) = try lower(path, in: scope, on: slots, at: place)
+                binding = .assign(slot, steps, settling: reached?.slotUnwrapped)
 
             case nil:
                 binding = nil
@@ -327,7 +332,7 @@ struct Lowering {
             return .literal(value)
 
         case let .reference(path):
-            let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
+            let (slot, steps, _) = try lower(path, in: scope, on: slots, at: place)
 
             return .local(slot, steps)
 
@@ -531,7 +536,7 @@ struct Lowering {
                     throw unjudged("'\(name)' handed to '\(call.selector)' in place without a variable", at: place)
                 }
 
-                let (slot, steps) = try lower(path, in: scope, on: slots, at: place)
+                let (slot, steps, _) = try lower(path, in: scope, on: slots, at: place)
                 handed.append(CallOperation.Handed(position: position, slot: slot, path: steps))
                 arguments.append(nil)
 
@@ -568,7 +573,7 @@ struct Lowering {
         in scope: Names,
         on slots: Slots,
         at place: Place
-    ) throws -> (Int, [Step]) {
+    ) throws -> (slot: Int, steps: [Step], reached: Shape?) {
         // A mark on the head expects a name to be missing, which is not
         // absence but a reading gone wrong.
         if let refusal = path.markedHead {
@@ -608,7 +613,7 @@ struct Lowering {
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
-                let (slot, steps) = try lower(inner, in: scope, on: slots, at: place)
+                let (slot, steps, _) = try lower(inner, in: scope, on: slots, at: place)
                 reached = reached?.element(in: shapes)
 
                 return .at(slot, steps, optional: optional)
@@ -624,7 +629,7 @@ struct Lowering {
             }
         }
 
-        return (slot, steps)
+        return (slot, steps, reached)
     }
 
     // What the link should have refused before lowering and did not. Not a

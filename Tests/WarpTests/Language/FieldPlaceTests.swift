@@ -146,11 +146,12 @@ struct FieldPlaceTests {
         #expect(answer == .int(2))
     }
 
-    @Test("a box is read by name, since a write puts in what it was handed")
-    func aBoxIsReadByName() async throws {
-        // Given. A write lands as it was handed, so what a box holds after one
-        // is laid out by the value and not by the declaration. The written
-        // record carries a field that stands before the declared ones.
+    @Test("a box that said what it holds is read by its place")
+    func aDeclaredBoxIsReadByItsPlace() async throws {
+        // Given. The written record carries a field that stands before the
+        // declared ones, so a place read off the value's own layout would
+        // land on the wrong field. A write settles to what the box said it
+        // holds, so the value is laid out the way the declaration says.
         let sut = Procedure(
             signature: Signature(parameters: ["given": Parameter(type: .any)]),
             body: [
@@ -176,8 +177,67 @@ struct FieldPlaceTests {
         )
 
         // Then
+        #expect(steps == [.field(1, "y", optional: false)])
+        #expect(answer == .int(2))
+    }
+
+    @Test("a write to a box that said nothing stands as it was handed")
+    func anUndeclaredBoxTakesWhatItWasHanded() async throws {
+        // Given. Nothing was declared, so there is nothing for a write to
+        // settle to and nothing the link laid out
+        let sut = Procedure(
+            signature: Signature(parameters: ["given": Parameter(type: .dictionary(.int))]),
+            body: [
+                Statement(binding: .variable("held"), expression: .record(["y": .literal(.int(0))])),
+                Statement(
+                    binding: .assignment([PathSegment.key("held")]),
+                    expression: .reference([.key("given")])
+                )
+            ],
+            result: .reference([.key("held"), .key("y")])
+        )
+
+        // When
+        let steps = try resultSteps(of: sut)
+        let answer = try await run(
+            sut,
+            arguments: ["given": .record(Record(name: nil, ["a": .int(0), "y": .int(2)]))]
+        )
+
+        // Then
         #expect(steps == [.key("y", optional: false)])
         #expect(answer == .int(2))
+    }
+
+    @Test("a box takes the layout it declared, so a write drops what it does not name")
+    func aWriteSettlesToTheDeclaredLayout() async throws {
+        // Given. The declaration is the whole of what the box holds, the way
+        // it is for a parameter and for a name bound once
+        let sut = Procedure(
+            signature: Signature(parameters: ["given": Parameter(type: .any)]),
+            body: [
+                Statement(
+                    binding: .variable("point", declared: .record(["x": .int, "y": .int])),
+                    expression: .record(["x": .literal(.int(1)), "y": .literal(.int(2))])
+                ),
+                Statement(
+                    binding: .assignment([PathSegment.key("point")]),
+                    expression: .reference([.key("given")])
+                )
+            ],
+            result: .reference([.key("point")])
+        )
+
+        // When
+        let answer = try await run(
+            sut,
+            arguments: [
+                "given": .record(Record(name: nil, ["a": .int(0), "x": .int(1), "y": .int(2)]))
+            ]
+        )
+
+        // Then
+        #expect(answer == .record(Record(name: nil, ["x": .int(1), "y": .int(2)])))
     }
 
     @Test("a place and a name answer the same field")

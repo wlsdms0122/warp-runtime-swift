@@ -237,14 +237,17 @@ public struct Executor: Sendable {
                 )
 
             // A write lands in a box the enclosing bodies also hold.
-            case let .assign(slot, steps)?:
+            case let .assign(slot, steps, settling)?:
                 guard case let .hold(handle) = activation.cells[slot] else {
                     throw ExecutionError(
                         "'\(spelled(slot, steps, in: activation).rendered)' writes a name that is not a variable here"
                     )
                 }
 
-                try handle.write(result, at: try positioned(slot, steps, in: activation))
+                try handle.write(
+                    try held(result, as: settling, in: slot, of: activation),
+                    at: try positioned(slot, steps, in: activation)
+                )
 
             // A nameless statement ran for its effect, and the answer is
             // dropped, which is what leaving the name off said.
