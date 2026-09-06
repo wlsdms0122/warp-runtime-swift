@@ -167,13 +167,19 @@ public struct Linker: Sendable {
             )
         }
 
-        // Each declaration's parameters as the run reads them, read off the
-        // rows rather than lowered a second time for the walk. A contract's
-        // word declares no row, so its own are lowered here.
+        // Each declaration as the walk reads it: the parameters it takes and
+        // what it answers, both read off the row rather than lowered a second
+        // time. A contract's word declares no row, so its own are lowered
+        // here. What a declaration answers where nobody wrote a `returns` is
+        // filled in by the reading pass below.
         var declaredSlots = Dictionary(uniqueKeysWithValues: table.map { row in (row.label, row.slots) })
+        var answered = table.reduce(into: [Name: Shape]()) { table, row in
+            table[row.label] = row.returns
+        }
 
         for (spelling, word) in contractWords {
             declaredSlots[spelling] = word.signature.lowered(in: shapes)
+            answered[spelling] = word.signature.returns?.lowered(in: shapes)
         }
 
         // Which declarations a path segment may reach, read off the rows the
@@ -202,27 +208,14 @@ public struct Linker: Sendable {
         let answeringSignatures = signatures
         let answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
 
-        // What each of those answers, as the link reads it. Every declaration
-        // that wrote a `returns` answers it lowered, and the ones that wrote
-        // none are filled in by the reading pass below. A contract's word
-        // answers what the contract wrote.
-        var answered = answeringSignatures.compactMapValues { signature in
-            signature.returns?.lowered(in: shapes)
-        }
-        var wordAnswered = answeringWords.compactMapValues { signature in
-            signature.returns?.lowered(in: shapes)
-        }
-
-        for (spelling, word) in contractWords {
-            answered[spelling] = word.signature.returns?.lowered(in: shapes)
-        }
-
         // Which spellings a path reaches one declaration by. A word may be
         // reachable under more than one, and an answer worked out for it is
         // that declaration's however a walk spelled it.
         let wordSpellings = wordSymbols.reduce(into: [Name: [Name]]()) { spellings, entry in
             spellings[entry.value.declared, default: []].append(entry.key)
         }
+
+        var wordAnswered = wordSymbols.compactMapValues { symbol in answered[symbol.declared] }
 
         // Each document's variables in the order a run makes their boxes,
         // decided here once: the layouts read positions from it and the
