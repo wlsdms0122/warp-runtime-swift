@@ -116,7 +116,9 @@ public struct TypeTable: Sendable {
     // so a table built by hand refuses or answers where a linked one would, and
     // never chases a declaration the link would have refused.
     public func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
-        shapes.admits(constraint: name, reading: reading)
+        guard let row = shapes.constraintRow(named: name) else { return nil }
+
+        return shapes.admits(constraint: row, reading: reading.lowered(in: shapes), assuming: [])
     }
 
     // The same membership, asked of a value at the boundary. Nil again

@@ -410,10 +410,10 @@ struct ShapeTests {
     @Test("a reading naming an undeclared constraint passes membership, since nothing is proven of it")
     func anUndeclaredReadingPassesMembership() {
         // Given
-        let table = types.shapes
+        let reading = TypeExpression.parameter(name: "T", constraint: "app.Nobody")
 
         // When / Then
-        #expect(table.admits(constraint: "app.Ordered", reading: .parameter(name: "T", constraint: "app.Nobody")) == true)
+        #expect(types.admits(constraint: "app.Ordered", reading: reading) == true)
     }
 
     // MARK: - Public

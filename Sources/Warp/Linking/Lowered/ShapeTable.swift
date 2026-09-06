@@ -193,15 +193,6 @@ final class ShapeTable: Sendable {
         }
     }
 
-    // The same membership asked of a document's reading by the constraint's
-    // spelling, for the link's walk. Nil where nothing declares the
-    // constraint.
-    func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
-        guard let row = constraintRow(named: name) else { return nil }
-
-        return admits(constraint: row, reading: reading.lowered(in: self), assuming: [])
-    }
-
     // The record a shape names through the row it stands on, or nil where it
     // names none. The one reading of `recordRows` for a shape that is not
     // itself a row.
