@@ -98,6 +98,35 @@ public struct Draft: Sendable {
         Set(procedures.keys).union(contractWords)
     }
 
+    // The words a path could reach, as far as this document decides it. A
+    // path sends to a receiver and reads an answer back, so a declaration
+    // without a receiver, or answering `never`, or stating that it runs, is
+    // reachable by no walk.
+    //
+    // The rest of the rule is the link's. Whether a written body answers
+    // without running is what it calls, and whether the other things a
+    // declaration asks for are required is read off the shapes. So this is
+    // every candidate and never a verdict: a spelling here may still turn out
+    // unreachable, and none that belongs is missing.
+    //
+    // A contract's word is not one. A path reaches a declaration, and the
+    // spelling that reaches a contract's word is the contract's own.
+    var walkableWords: Set<Name> {
+        Set(
+            procedures
+                .filter { _, procedure in
+                    guard procedure.implementation.isNativelyPure != false else { return false }
+
+                    let signature = procedure.signature
+
+                    guard let receiver = signature.receiver else { return false }
+
+                    return signature.parameters[receiver] != nil && signature.returns != .never
+                }
+                .keys
+        )
+    }
+
     // The spellings a call writes to reach the words of a contract this
     // declares: the contract's name and the word's, with a dot between them.
     var contractWords: Set<Name> {
@@ -136,14 +165,18 @@ public struct Draft: Sendable {
     var walks: Set<Name> {
         var walked: Set<Name> = []
 
-        func step(_ path: [PathSegment], from position: Int) {
-            for segment in path[min(position, path.count)...] {
+        // The head names something in scope rather than a step onto it, so
+        // walking a path is walking everything after its head. An index's own
+        // path is read the same way the path holding it is, head and all, so
+        // it is walked by this same rule rather than by a second one.
+        func step(_ path: [PathSegment]) {
+            for segment in path.dropFirst() {
                 switch segment {
                 case let .key(name, _), let .word(name, _):
                     walked.insert(name)
 
                 case let .indexRef(inner, _):
-                    step(inner, from: 0)
+                    step(inner)
 
                 case .index:
                     break
@@ -154,8 +187,7 @@ public struct Draft: Sendable {
         for held in walking {
             guard case let .reference(path) = held else { continue }
 
-            // The head names something in scope rather than a step onto it.
-            step(path, from: 1)
+            step(path)
         }
 
         return walked

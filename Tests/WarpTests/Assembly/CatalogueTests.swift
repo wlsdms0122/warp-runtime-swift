@@ -192,6 +192,66 @@ struct CatalogueTests {
         #expect(throws: CatalogueError.self) { try Catalogue([mine, theirs]) }
     }
 
+    @Test("a name inside an index is read as the name it is, not as a step")
+    func anIndexNameIsNotAStep() throws {
+        // Given. `items[count]` names a parameter inside the brackets. The
+        // path steps onto nothing called `count`.
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(
+                        parameters: [
+                            "items": Parameter(type: .array(.int)),
+                            "count": Parameter(type: .int)
+                        ],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([
+                        .key("items", optional: false),
+                        .indexRef([.key("count", optional: false)], optional: false)
+                    ])
+                )
+            ]
+        )
+
+        #expect(program.draft.walks.isEmpty)
+        #expect(try Catalogue(Module.standard).world(for: [program]).count == 1)
+    }
+
+    @Test("a spelling no walk could arrive at is a candidate for nothing")
+    func anUnreachableSpellingIsNotACandidate() throws {
+        // Given. `holder` declares a word by a bare spelling the program
+        // walks, but declares no receiver, so no path can reach it.
+        let holder = try Module(
+            procedures: [
+                "lib.count": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .literal(.int(0))
+                )
+            ]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(
+                        parameters: ["items": Parameter(type: .array(.int))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("items"), .key("count")])
+                )
+            ]
+        )
+
+        // When / Then. It is not brought, and the word that can be reached is.
+        let world = try Catalogue([holder] + Module.standard).world(for: [program])
+
+        #expect(world.count == 3)
+        #expect(throws: Never.self) { try linker.link(world, entry: entryName) }
+    }
+
     @Test("the standard vocabulary is a catalogue")
     func theStandardVocabularyIsACatalogue() throws {
         // The bundles shipped with the language declare no name twice between

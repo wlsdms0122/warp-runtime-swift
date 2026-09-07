@@ -34,13 +34,14 @@ public struct Catalogue: Sendable {
     // Which module declares each name, by the spelling a call writes.
     private let words: [Name: Int]
 
-    // The same words under their last segment alone, which is how a path
-    // reaches one. Several to a spelling, because which of the declarations
-    // sharing one a path may reach is settled by purity and reachability, both
-    // read off the link. So this stands every candidate and the link picks.
+    // Which modules declare a word a path could reach, under the last segment
+    // alone, which is how a path names one.
     //
-    // A catalogue whose modules can stand in one world has at most one
-    // reachable candidate per spelling: two would refuse wherever both stood.
+    // Narrowed to what a walk could arrive at, since a spelling no path can
+    // reach is a candidate for nothing. Not narrowed further: whether a
+    // written body answers without running is what it calls, so which of two
+    // candidates a path really reaches is the link's to say, and this stands
+    // both.
     private let walked: [Name: [Int]]
 
     private let shapes: [Name: Int]
@@ -83,15 +84,25 @@ public struct Catalogue: Sendable {
 
         let words = try claimed(.word)
 
+        // Which of them a path could reach, gathered before the tables so the
+        // walked spellings are drawn from the same declarations.
+        let walkable = modules.reduce(into: Set<Name>()) { names, module in
+            names.formUnion(module.draft.walkableWords)
+        }
+
         self.modules = modules
         self.words = words
         self.shapes = try claimed(.shape)
 
-        // Not claimed, gathered: a bare spelling shared by two declarations is
-        // the ordinary case, and which of them a path may reach is settled by
-        // purity and reachability, both read off the link.
+        // Gathered, not claimed. Two candidates for one segment is not a
+        // question this table fails to answer: it is a question whose answer
+        // is the link's, and the link has what it takes to give it. Refusing
+        // here would be that rule copied and made stricter than the original,
+        // which refuses only what really is reachable twice.
         self.walked = words
             .reduce(into: [Name: [Int]]()) { table, entry in
+                guard walkable.contains(entry.key) else { return }
+
                 table[entry.key.unqualified, default: []].append(entry.value)
             }
             .mapValues { positions in positions.sorted() }
