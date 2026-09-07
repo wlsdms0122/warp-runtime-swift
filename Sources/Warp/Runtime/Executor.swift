@@ -1040,19 +1040,22 @@ public struct Executor: Sendable {
         }
 
         for (index, step) in steps.enumerated() {
-            let segment = spelled(step, in: activation)
-
             // The path as far as this step, spelled for a refusal. Only a
             // refusal reads it, so a read that lands spells nothing.
             func walked() -> [PathSegment] {
                 spelled(Address(slot: slot, steps: Array(steps[...index])), in: activation)
             }
 
+            // This step alone, spelled the same way and for the same reader.
+            func segment() -> PathSegment {
+                spelled(step, in: activation)
+            }
+
             // Null stops every reading the same way, and the rule lives with
             // the segment: the link's walk over types asks the same judge, so
             // the two layers cannot drift apart.
             if current == .null {
-                switch segment.meetingNull(at: walked()) {
+                switch segment().meetingNull(at: walked()) {
                 case .reads:
                     return .found(.null)
 
@@ -1069,7 +1072,9 @@ public struct Executor: Sendable {
 
             // The name is a path of its own, read against the same frame.
             case let .at(inner, _):
-                let name = spelled(inner, in: activation).rendered
+                func name() -> String {
+                    spelled(inner, in: activation).rendered
+                }
 
                 switch lookup(inner, in: activation) {
                 case let .found(.int(index)):
@@ -1081,16 +1086,16 @@ public struct Executor: Sendable {
                         read = indexed(current, at: index, walked: walked)
 
                     case .notANumber, .fractional:
-                        return .unfit("index reference \(name) is not a whole number")
+                        return .unfit("index reference \(name()) is not a whole number")
 
                     case .pastTheWord:
                         return .unfit(
-                            "index reference \(name) indexes past the end of any array"
+                            "index reference \(name()) indexes past the end of any array"
                         )
                     }
 
                 case let .found(value):
-                    return .unfit("index reference \(name) is \(value.type), expected int")
+                    return .unfit("index reference \(name()) is \(value.type), expected int")
 
                 case let .unfit(reason):
                     return .unfit(reason)
@@ -1106,16 +1111,16 @@ public struct Executor: Sendable {
 
                 read = .found(record.values[position])
 
-            case let .key(key, _):
+            case let .key(key, optional):
                 guard current.holdsFields else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
                 guard let next = current[key] else {
-                    guard segment.optional else {
+                    guard optional else {
                         return .unfit(
                             "\(walked().rendered): '\(key)' is not there."
-                                + " Only `\(segment.mark)` reads absence"
+                                + " Only `\(segment().mark)` reads absence"
                         )
                     }
 
