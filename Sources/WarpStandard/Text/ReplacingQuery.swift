@@ -12,13 +12,33 @@ import Warp
 // pattern. `regex` is the word that reads patterns, and one word doing both
 // would make which of the two an author meant depend on the argument.
 struct ReplacingQuery: Query {
-    // MARK: - Property
-    // MARK: - Initializer
-    public init() {
+    // What this takes: the text, the piece sought, and what stands in its
+    // place.
+    enum Parameters: Int, ParameterSet {
+        case of
+        case value
+        case with
+
+        var name: Name {
+            switch self {
+            case .of:
+                return "of"
+
+            case .value:
+                return "value"
+
+            case .with:
+                return "with"
+            }
+        }
+
+        var declared: Parameter { Parameter(type: .string) }
     }
 
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard case let .string(text) = question.receiver else {
             throw ExecutionError(
                 "replacing asks \(question.receiver?.type.description ?? "nothing"), expected string"
@@ -26,8 +46,8 @@ struct ReplacingQuery: Query {
         }
 
         guard
-            case let .string(sought) = question["value"],
-            case let .string(replacement) = question["with"]
+            case let .string(sought) = question[.value],
+            case let .string(replacement) = question[.with]
         else {
             throw ExecutionError("replacing asks a non-string piece")
         }

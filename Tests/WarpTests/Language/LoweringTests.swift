@@ -419,11 +419,7 @@ struct LoweringTests {
                     result: .call(Call(receiver: .reference([.key("held")]), selector: "app.echo"))
                 ),
                 "app.echo": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .inout(.int))],
-                        returns: .int
-                    ),
+                    signature: Signature(of: EchoEffect.self, receiver: .of, returns: .int),
                     implementation: .effect(EchoEffect())
                 )
             ]
@@ -442,10 +438,18 @@ struct LoweringTests {
 
 // Answers what it was sent to.
 private struct EchoEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .inout(.int)) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
         invocation.receiver ?? .null
     }
 

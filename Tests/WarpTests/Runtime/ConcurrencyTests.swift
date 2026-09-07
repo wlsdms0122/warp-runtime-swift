@@ -415,12 +415,14 @@ private actor CancellationWatch {
 }
 
 private struct WaitEffect: Effect {
+    typealias Parameters = NoParameters
+
     // MARK: - Property
     let watch: CancellationWatch
 
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
         do {
             try await Task.sleep(for: .seconds(30))
         } catch {

@@ -7,34 +7,27 @@
 
 import Foundation
 
-// The arguments as a row's boundary left them: one value per parameter of
-// the row, standing at that parameter's position. The row is the owner of
-// the positions, so a name is read by asking the row where it stands. A
-// declaration has a few parameters and a word asks for each once, so the
-// name is found along the declaration rather than hashed.
+// The arguments as a row's boundary left them: one value per parameter of the
+// row, standing at that parameter's position. Positions and no names, because
+// the link owns where a parameter stands and a word reads the place its own
+// key says.
 struct Settled: Sendable {
     // MARK: - Property
-    let callee: Linked
     let values: [Value?]
 
     // MARK: - Initializer
-    init(by callee: Linked, values: [Value?]) {
-        self.callee = callee
+    init(values: [Value?]) {
         self.values = values
     }
 
     // MARK: - Public
-    // What a named argument holds. An argument nobody wrote and one written as
-    // null are the same fact here, the same as they are everywhere else.
-    subscript(name: Name) -> Value {
-        guard let position = position(of: name) else { return .null }
+    // What the argument at a place holds. An argument nobody wrote and one
+    // written as null are the same fact here, the same as they are everywhere
+    // else, and so is a place this row does not have.
+    subscript(position: Int) -> Value {
+        guard values.indices.contains(position) else { return .null }
 
         return values[position] ?? .null
-    }
-
-    // Where a name stands in the row, or nil for a name the row lacks.
-    func position(of name: Name) -> Int? {
-        callee.slots.firstIndex { slot in slot.name == name }
     }
 
     // MARK: - Private

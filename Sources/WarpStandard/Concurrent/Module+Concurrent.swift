@@ -35,49 +35,26 @@ public extension Module {
                     + " A record's under its keys, an array's in its order."
                     + " A failure fails the whole word, with every piece's"
                     + " failure reported.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: ["of": Parameter(type: .named("std.concurrent.Pieces"))],
-                    returns: .any
-                ),
-                implementation: .effect(ConcurrentEffect(.all))
+                signature: Signature(of: AllEffect.self, receiver: .of, returns: .any),
+                implementation: .effect(AllEffect())
             ),
             "std.concurrent.first": Procedure(
                 description: "Runs every closure, answers the first success and"
                     + " asks the rest to stop. Which one wins is timing's. The"
                     + " one fact here that is.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: ["of": Parameter(type: .named("std.concurrent.Pieces"))],
-                    returns: .any
-                ),
-                implementation: .effect(ConcurrentEffect(.first))
+                signature: Signature(of: FirstEffect.self, receiver: .of, returns: .any),
+                implementation: .effect(FirstEffect())
             ),
             "std.concurrent.map": Procedure(
                 description: "Runs one closure once per element, offering each"
                     + " call `item` and `index`, and answers in the"
                     + " collection's order.",
                 signature: Signature(
-                    receiver: "over",
-                    parameters: [
-                        "over": Parameter(type: .array(.parameter(name: "Element"))),
-                        "by": Parameter(
-                            type: .procedure(
-                                Signature(
-                                    parameters: [
-                                        "item": Parameter(type: .parameter(name: "Element")),
-                                        "index": Parameter(type: .int)
-                                    ],
-                                    returns: .parameter(name: "Answer")
-                                ),
-                                .unstated,
-                                .isolated
-                            )
-                        )
-                    ],
+                    of: MapEffect.self,
+                    receiver: .over,
                     returns: .array(.parameter(name: "Answer"))
                 ),
-                implementation: .effect(ConcurrentEffect(.map))
+                implementation: .effect(MapEffect())
             )
         ]
     )

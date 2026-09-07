@@ -9,17 +9,16 @@ import Foundation
 import Warp
 
 struct StartsWithQuery: Query {
+    typealias Parameters = StringPair
+
     // MARK: - Property
 
     // MARK: - Initializer
-    public init() {
-    }
-
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }
 
-        guard case let .string(prefix) = question["value"] else {
+        guard case let .string(prefix) = question[.value] else {
             return .bool(false)
         }
 

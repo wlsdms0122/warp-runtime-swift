@@ -1,5 +1,5 @@
 //
-//  BuildingQuery.swift
+//  SortedQuery.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/19/26.
@@ -8,62 +8,32 @@
 import Foundation
 import Warp
 
-// Making an array out of another one. Nothing is written in place: each answers
-// a new array, which is what a language whose names are fixed by default can
-// offer.
-//
-// Without these an array's length is whatever the text wrote down, because the
-// only other way to build one is `each`, which answers one element for every
-// element it was given.
-struct BuildingQuery: Query {
-    enum Building: Sendable {
-        case appending
-        case prepending
-        case dropFirst
-        case dropLast
-        case sorted
+// The elements in order, for numbers or for strings.
+struct SortedQuery: Query {
+    // What this takes: the array, whose element is bounded by the shared
+    // ground's `Comparable`. Ordering is one question wherever it is asked, so
+    // the membership that answers it for `lessThan` answers it here.
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter {
+            Parameter(
+                type: .array(.parameter(name: "Element", constraint: "std.Comparable"))
+            )
+        }
     }
 
     // MARK: - Property
-    private let building: Building
-
     // MARK: - Initializer
-    public init(_ building: Building) {
-        self.building = building
-    }
-
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
-        // equation, and answered in the spelling the receiver arrived in: each
-        // of these is the receiver's own elements, so a compact one stays
-        // compact, until an element that is not a byte is put among them, which
-        // `respelled` reads for itself.
+        // equation, and answered in the spelling the receiver arrived in.
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
-        switch building {
-        // Only the arriving element decides the answer's spelling, so only it
-        // is looked at. The ones already there are what the receiver spells
-        // them as.
-        case .appending:
-            return receiver.adding(question["value"], atFront: false)
-
-        case .prepending:
-            return receiver.adding(question["value"], atFront: true)
-
-        // Dropping from an array that has nothing left answers the empty array
-        // rather than failing: taking none of nothing is nothing. Said by
-        // position, because neither of these has to look at an element, so a
-        // compact spelling is trimmed as what it holds.
-        case .dropFirst:
-            return receiver.elements(at: (0 ..< elements.count).dropFirst())
-
-        case .dropLast:
-            return receiver.elements(at: (0 ..< elements.count).dropLast())
-
-        case .sorted:
-            return receiver.respelled(try sorted(elements))
-        }
+        return receiver.respelled(try sorted(elements))
     }
 
     // MARK: - Private

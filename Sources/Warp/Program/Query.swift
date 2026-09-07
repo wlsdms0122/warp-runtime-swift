@@ -20,31 +20,16 @@ import Foundation
 // Answering nil means the word does not apply to that receiver's shape. It is
 // not a failure. A path that derives nothing reads as absent, the same as a
 // field that was never set.
-public protocol Query: Sendable {
-    // Whether this touches no name another body could touch at the same time.
-    // A word holding state between calls says false, and the link stops
-    // deriving isolation through it and through whatever calls it.
-    var isolated: Bool { get }
-
-    // What may come out of this when the work goes wrong, by the words its
-    // failures name themselves. A word that only ever throws at an author
-    // mistake fails nothing, which is the default, so a word that can fail
-    // says so and one that could fail anything says `unstated`.
-    var failing: Failing { get }
-
+public protocol Query: Word {
     // Checks arguments that are already constant, at load. Type is the
     // signature's business; this is for what a type cannot say. That a regex
     // pattern compiles. An author typo surfaces before any run.
-    func validate(_ arguments: [Name: Value]) throws
+    func validate(_ arguments: [Parameters: Value]) throws
 
-    func evaluate(_ question: Question) throws -> Value?
+    func evaluate(_ question: Question<Parameters>) throws -> Value?
 }
 
 public extension Query {
-    var isolated: Bool { true }
-
-    var failing: Failing { .these([]) }
-
-    func validate(_ arguments: [Name: Value]) throws {
+    func validate(_ arguments: [Parameters: Value]) throws {
     }
 }

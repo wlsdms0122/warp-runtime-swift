@@ -141,10 +141,7 @@ extension Module {
     static let shouting = try! Module(
         procedures: [
             "app.shout": Procedure(
-                signature: Signature(
-                    parameters: ["text": Parameter(type: .string)],
-                    returns: .string
-                ),
+                signature: Signature(of: ShoutEffect.self, returns: .string),
                 implementation: .effect(ShoutEffect())
             )
         ]
@@ -152,11 +149,19 @@ extension Module {
 }
 
 struct ShoutEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case text
+
+        var name: Name { "text" }
+
+        var declared: Parameter { Parameter(type: .string) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
-        .string(invocation.string("text")?.uppercased() ?? "")
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+        .string(invocation.string(.text)?.uppercased() ?? "")
     }
 
     // MARK: - Private

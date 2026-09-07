@@ -1,5 +1,5 @@
 //
-//  ConcurrentEffect.swift
+//  Fanout.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/22/26.
@@ -15,27 +15,13 @@ import Warp
 // closures are isolated the link derived, and each piece is asked as it is
 // started.
 //
-// Three words over one machine:
-//
-// - `all` waits for every closure. A failure fails the whole word, and every
-//   piece's failure is reported, keyed by the piece's label, which failures
-//   there are is not allowed to depend on timing.
-// - `first` answers the first success and asks the rest to stop. Which piece
-//   wins is the one fact here that timing decides, and the word's name says so.
-// - `map` runs one closure once per element of a collection, and answers in
-//   the collection's order. The concurrent reading of what `each` walks.
+// One machine under three words, because what a piece is, how it is started and
+// how a failure is reported are the same for all three, and only what "done"
+// means differs.
 //
 // The rest a sibling ignores: asking is what cancellation is. A piece that
 // carries on still finishes, and its answer is discarded.
-struct ConcurrentEffect: Effect {
-    // Which completion this word sells. One implementation, because the pieces
-    // and the machinery are the same and only what "done" means differs.
-    enum Word: Sendable {
-        case all
-        case first
-        case map
-    }
-
+struct Fanout: Sendable {
     // What one piece answered. A struct rather than a tuple, which the task
     // group needs for its child results.
     private struct Outcome: Sendable {
@@ -57,62 +43,70 @@ struct ConcurrentEffect: Effect {
     }
 
     // MARK: - Property
-    // Every recoverable failure a piece raises is gathered into one, so this
-    // is the only word that comes out however the pieces failed.
-    let failing = Failing.these([ConcurrentFailed.word])
-
-    private let word: Word
+    // The declared spelling, because `first` and `map` are also collection
+    // words. A refusal that says which module's word refused is the one a
+    // caller can act on.
+    private let name: String
 
     // MARK: - Initializer
-    public init(_ word: Word) {
-        self.word = word
+    init(_ name: String) {
+        self.name = name
     }
 
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
-        switch word {
-        case .all:
-            let (pieces, keyed) = try closures(of: invocation)
-            let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
+    // Every piece, waited for. A failure fails the whole word, and every
+    // piece's failure is reported, keyed by the piece's label: which failures
+    // there are is not allowed to depend on timing.
+    func all<Parameters>(_ invocation: Invocation<Parameters>) async throws -> Value {
+        let (pieces, keyed) = try closures(of: invocation)
+        let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
 
-            let failures = failures(among: outcomes)
+        let failures = failures(among: outcomes)
 
-            guard failures.isEmpty else { throw failure(among: failures) }
+        guard failures.isEmpty else { throw failure(among: failures) }
 
-            return try answered(outcomes, keyed: keyed)
+        return try answered(outcomes, keyed: keyed)
+    }
 
-        case .first:
-            // The keys of a record are not wasted on a `first`. The winner's is
-            // not reported, but a failure's is: when nothing wins, every
-            // piece's failure comes back keyed by the name its author gave it.
-            let (pieces, _) = try closures(of: invocation)
+    // The first success, with the rest asked to stop. Which piece wins is the
+    // one fact here that timing decides, and the word's name says so.
+    func first<Parameters>(_ invocation: Invocation<Parameters>) async throws -> Value {
+        // The keys of a record are not wasted on a `first`. The winner's is
+        // not reported, but a failure's is: when nothing wins, every piece's
+        // failure comes back keyed by the name its author gave it.
+        let (pieces, _) = try closures(of: invocation)
 
-            // A `first` with nothing in it has nothing to win it, and waiting
-            // for no one answers nothing. Refused as the author mistake it is.
-            // `all` and `map` answer collections, and a collection may be
-            // empty; a `first` answers exactly one thing, so it cannot be.
-            guard !pieces.isEmpty else {
-                throw ExecutionError("\(name) asks at least one closure, and none arrived")
-            }
-
-            let outcomes = await outcomes(of: pieces, via: invocation, racing: true)
-
-            guard let winner = outcomes.first(where: { outcome in outcome.value != nil })?.value else {
-                throw failure(among: failures(among: outcomes))
-            }
-
-            return winner
-
-        case .map:
-            let pieces = try mapped(of: invocation)
-            let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
-
-            let failures = failures(among: outcomes)
-
-            guard failures.isEmpty else { throw failure(among: failures) }
-
-            return try answered(outcomes, keyed: false)
+        // A `first` with nothing in it has nothing to win it, and waiting for
+        // no one answers nothing. Refused as the author mistake it is. `all`
+        // and `map` answer collections, and a collection may be empty; a
+        // `first` answers exactly one thing, so it cannot be.
+        guard !pieces.isEmpty else {
+            throw ExecutionError("\(name) asks at least one closure, and none arrived")
         }
+
+        let outcomes = await outcomes(of: pieces, via: invocation, racing: true)
+
+        guard let winner = outcomes.first(where: { outcome in outcome.value != nil })?.value else {
+            throw failure(among: failures(among: outcomes))
+        }
+
+        return winner
+    }
+
+    // One closure run once per element, answered in the collection's order.
+    func map<Parameters>(
+        _ invocation: Invocation<Parameters>,
+        over material: Value,
+        by handed: Value
+    ) async throws -> Value {
+        let pieces = try mapped(over: material, by: handed)
+        let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
+
+        let failures = failures(among: outcomes)
+
+        guard failures.isEmpty else { throw failure(among: failures) }
+
+        return try answered(outcomes, keyed: false)
     }
 
     // MARK: - Private
@@ -130,8 +124,10 @@ struct ConcurrentEffect: Effect {
 
     // The receiver. Closures to run, under names for named pieces or an array
     // for positional ones. Which one arrived decides the shape of the answer.
-    private func closures(of invocation: Invocation) throws -> ([Piece], keyed: Bool) {
-        switch try material(of: invocation) {
+    private func closures<Parameters>(
+        of invocation: Invocation<Parameters>
+    ) throws -> ([Piece], keyed: Bool) {
+        switch invocation.receiver ?? .null {
         case let .record(record):
             return (try pieces(of: record.asDictionary), keyed: true)
 
@@ -161,9 +157,7 @@ struct ConcurrentEffect: Effect {
     // The pieces of `map`: the collection sets how many, the one closure is
     // every piece's body. Each call is offered the element and where it sat,
     // and the closure's own signature says which of those it reads.
-    private func mapped(of invocation: Invocation) throws -> [Piece] {
-        let material = try material(of: invocation)
-
+    private func mapped(over material: Value, by handed: Value) throws -> [Piece] {
         // Through the one projection that owns the bytes equation, so a fan-out
         // walks bytes the way `each` does. Read straight from the projection
         // rather than out of a copy of it. A fan-out makes a piece for every
@@ -172,8 +166,6 @@ struct ConcurrentEffect: Effect {
         guard let elements = material.elements else {
             throw ExecutionError("\(name) walks an array, and was sent \(material.type)")
         }
-
-        let handed = invocation["by"]
 
         guard case let .procedure(by) = handed else {
             // Unset and set-to-something-else are different mistakes, and the
@@ -193,10 +185,6 @@ struct ConcurrentEffect: Effect {
                 arguments: [(name: "item", value: element), (name: "index", value: .int(position))]
             )
         }
-    }
-
-    private func material(of invocation: Invocation) throws -> Value {
-        invocation.receiver ?? .null
     }
 
     private func closure(_ value: Value, called label: String) throws -> Closure {
@@ -219,20 +207,9 @@ struct ConcurrentEffect: Effect {
         return closure
     }
 
-    // The declared spelling, because `first` and `map` are also collection
-    // words. A refusal that says which module's word refused is the one a
-    // caller can act on.
-    private var name: String {
-        switch word {
-        case .all: "std.concurrent.all"
-        case .first: "std.concurrent.first"
-        case .map: "std.concurrent.map"
-        }
-    }
-
-    private func outcomes(
+    private func outcomes<Parameters>(
         of pieces: [Piece],
-        via invocation: Invocation,
+        via invocation: Invocation<Parameters>,
         racing: Bool
     ) async -> [Outcome] {
         await withTaskGroup(of: Outcome.self) { group in
@@ -260,7 +237,10 @@ struct ConcurrentEffect: Effect {
         }
     }
 
-    private func outcome(of piece: Piece, via invocation: Invocation) async -> Outcome {
+    private func outcome<Parameters>(
+        of piece: Piece,
+        via invocation: Invocation<Parameters>
+    ) async -> Outcome {
         do {
             return Outcome(
                 key: piece.key,
@@ -276,7 +256,10 @@ struct ConcurrentEffect: Effect {
     // What a piece answers, through the environment's isolation boundary.
     // Ambient state a caller carries on the task must not reach every piece at
     // once.
-    private func answer(_ piece: Piece, via invocation: Invocation) async throws -> Value {
+    private func answer<Parameters>(
+        _ piece: Piece,
+        via invocation: Invocation<Parameters>
+    ) async throws -> Value {
         // The frame carries the bare name. Rendering is what brackets it.
         let frame = piece.key?.spelling ?? "\(piece.position)"
 

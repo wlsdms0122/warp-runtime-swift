@@ -45,6 +45,26 @@ public struct Signature: Sendable, Equatable {
         self.parameters = parameters
         self.returns = returns
     }
+
+    // A native word's declaration, read off the word itself. What it takes is
+    // its own type's to say, so a registration names the word once and the
+    // parameters come with it.
+    public init<W: Word>(
+        of word: W.Type,
+        receiver: W.Parameters? = nil,
+        returns: TypeExpression? = nil
+    ) {
+        self.init(
+            receiver: receiver?.name,
+            parameters: Dictionary(
+                uniqueKeysWithValues: W.Parameters.allCases.map { key in
+                    (key.name, key.declared)
+                }
+            ),
+            returns: returns
+        )
+    }
+
     // The returned value, checked against what was declared. Run time rather
     // than link time because what a body computes is not a thing the linker can
     // read off the text, but a declaration that only ever describes is a

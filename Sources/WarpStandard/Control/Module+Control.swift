@@ -17,15 +17,7 @@ public extension Module {
         procedures: [
             "std.control.abort": Procedure(
                 description: "Refuses with a message, which an attempt around it catches.",
-                signature: Signature(
-                    receiver: "of",
-                    // Anything spells, so a refusal can name what it was holding
-                    // rather than only a sentence written ahead of time. It is
-                    // required: a refusal with nothing to say is the one shape
-                    // this word exists to prevent.
-                    parameters: ["of": Parameter(type: .any)],
-                    returns: .never
-                ),
+                signature: Signature(of: AbortQuery.self, receiver: .of, returns: .never),
                 implementation: .query(AbortQuery())
             )
         ]

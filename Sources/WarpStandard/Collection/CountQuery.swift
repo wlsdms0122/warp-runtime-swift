@@ -11,14 +11,20 @@ import Warp
 // How many. Answers nil for shapes that have no count, which is what makes
 // `x.count` read as absent rather than fail when `x` is a number.
 struct CountQuery: Query {
+    // What this takes: the thing counted, and nothing else.
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .any) }
+    }
+
     // MARK: - Property
 
     // MARK: - Initializer
-    public init() {
-    }
-
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         switch question.receiver {
         case let .string(text):
             return .int(text.count)

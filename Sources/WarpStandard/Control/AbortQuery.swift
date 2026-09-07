@@ -15,15 +15,24 @@ import Warp
 // The refusal it raises carries the recoverable marker, so `attempt` around it
 // catches it and nothing else does.
 struct AbortQuery: Query {
-    // MARK: - Property
-    // MARK: - Initializer
-    public init() {
+    // What this takes: the message it refuses with. Anything spells, so a
+    // refusal can name what it was holding rather than only a sentence
+    // written ahead of time. It is required: a refusal with nothing to say
+    // is the one shape this word exists to prevent.
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .any) }
     }
 
+    // MARK: - Property
     let failing = Failing.these([Aborted.word])
 
+    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard let message = question.receiver else {
             throw ExecutionError("abort refuses with a message, and none arrived")
         }

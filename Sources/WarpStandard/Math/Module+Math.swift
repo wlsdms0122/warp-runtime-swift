@@ -15,137 +15,90 @@ public extension Module {
             "std.math.plus": Procedure(
                 description: "The sum, whole where both sides are.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
-                    ],
+                    of: PlusQuery.self,
+                    receiver: .of,
                     returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
-                implementation: .query(ArithmeticQuery(.plus))
+                implementation: .query(PlusQuery())
             ),
             "std.math.minus": Procedure(
                 description: "The difference.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
-                    ],
+                    of: MinusQuery.self,
+                    receiver: .of,
                     returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
-                implementation: .query(ArithmeticQuery(.minus))
+                implementation: .query(MinusQuery())
             ),
             "std.math.times": Procedure(
                 description: "The product.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
-                    ],
+                    of: TimesQuery.self,
+                    receiver: .of,
                     returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
-                implementation: .query(ArithmeticQuery(.times))
+                implementation: .query(TimesQuery())
             ),
             "std.math.dividedBy": Procedure(
                 description: "The quotient, which is not generally whole.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
-                    ],
-                    returns: .double
-                ),
-                implementation: .query(ArithmeticQuery(.dividedBy))
+                signature: Signature(of: DividedByQuery.self, receiver: .of, returns: .double),
+                implementation: .query(DividedByQuery())
             ),
             "std.math.remainder": Procedure(
                 description: "What is left of a whole division.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
-                    ],
+                    of: RemainderQuery.self,
+                    receiver: .of,
                     returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
-                implementation: .query(ArithmeticQuery(.remainder))
+                implementation: .query(RemainderQuery())
             ),
             "std.math.min": Procedure(
                 description: "The smaller of two of a kind, by the one order.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Comparable")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Comparable"))
-                    ],
-                    returns: .parameter(name: "N", constraint: "std.Comparable")
+                    of: MinQuery.self,
+                    receiver: .of,
+                    returns: .parameter(name: "T", constraint: "std.Comparable")
                 ),
-                implementation: .query(ComparisonQuery(.min))
+                implementation: .query(MinQuery())
             ),
             "std.math.max": Procedure(
                 description: "The larger of two of a kind, by the one order.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "N", constraint: "std.Comparable")),
-                        "value": Parameter(type: .parameter(name: "N", constraint: "std.Comparable"))
-                    ],
-                    returns: .parameter(name: "N", constraint: "std.Comparable")
+                    of: MaxQuery.self,
+                    receiver: .of,
+                    returns: .parameter(name: "T", constraint: "std.Comparable")
                 ),
-                implementation: .query(ComparisonQuery(.max))
+                implementation: .query(MaxQuery())
             ),
             "std.math.absolute": Procedure(
                 description: "The number without its sign.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: ["of": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))],
+                    of: AbsoluteQuery.self,
+                    receiver: .of,
                     returns: .parameter(name: "N", constraint: "std.Numeric")
                 ),
-                implementation: .query(NumberQuery(.absolute))
+                implementation: .query(AbsoluteQuery())
             ),
             "std.math.floored": Procedure(
                 description: "The whole number at or below this one.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: ["of": Parameter(type: .number)],
-                    returns: .int
-                ),
-                implementation: .query(NumberQuery(.floored))
+                signature: Signature(of: FlooredQuery.self, receiver: .of, returns: .int),
+                implementation: .query(FlooredQuery())
             ),
             "std.math.rounded": Procedure(
                 description: "The nearest whole number.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: ["of": Parameter(type: .number)],
-                    returns: .int
-                ),
-                implementation: .query(NumberQuery(.rounded))
+                signature: Signature(of: RoundedQuery.self, receiver: .of, returns: .int),
+                implementation: .query(RoundedQuery())
             ),
             "std.math.lessThan": Procedure(
                 description: "Whether this orders before another.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "T", constraint: "std.Comparable")),
-                        "value": Parameter(type: .parameter(name: "T", constraint: "std.Comparable"))
-                    ],
-                    returns: .bool
-                ),
-                implementation: .query(ComparisonQuery(.lessThan))
+                signature: Signature(of: LessThanQuery.self, receiver: .of, returns: .bool),
+                implementation: .query(LessThanQuery())
             ),
             "std.math.greaterThan": Procedure(
                 description: "Whether this orders after another.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .parameter(name: "T", constraint: "std.Comparable")),
-                        "value": Parameter(type: .parameter(name: "T", constraint: "std.Comparable"))
-                    ],
-                    returns: .bool
-                ),
-                implementation: .query(ComparisonQuery(.greaterThan))
+                signature: Signature(of: GreaterThanQuery.self, receiver: .of, returns: .bool),
+                implementation: .query(GreaterThanQuery())
             )
         ]
     )

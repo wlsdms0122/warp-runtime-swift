@@ -14,137 +14,61 @@ public extension Module {
         procedures: [
             "std.text.decoded": Procedure(
                 description: "The bytes read as text in a named encoding.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .bytes),
-                        "encoding": Parameter(
-                            type: .string,
-                            oneOf: ["utf8"],
-                            default: .string("utf8")
-                        )
-                    ],
-                    returns: .string
-                ),
-                implementation: .query(CodecQuery(.decoded))
+                signature: Signature(of: DecodedQuery.self, receiver: .of, returns: .string),
+                implementation: .query(DecodedQuery())
             ),
             "std.text.encoded": Procedure(
                 description: "The text written out as bytes in a named encoding.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string),
-                        "encoding": Parameter(
-                            type: .string,
-                            oneOf: ["utf8"],
-                            default: .string("utf8")
-                        )
-                    ],
-                    returns: .bytes
-                ),
-                implementation: .query(CodecQuery(.encoded))
+                signature: Signature(of: EncodedQuery.self, receiver: .of, returns: .bytes),
+                implementation: .query(EncodedQuery())
             ),
             "std.text.text": Procedure(
                 description: "How a value reads as text.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: ["of": Parameter(type: .any)],
-                    returns: .string
-                ),
+                signature: Signature(of: SpellingQuery.self, receiver: .of, returns: .string),
                 implementation: .query(SpellingQuery())
             ),
             "std.text.startsWith": Procedure(
                 description: "Whether a string begins with another.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string),
-                        "value": Parameter(type: .string)
-                    ],
-                    returns: .bool
-                ),
+                signature: Signature(of: StartsWithQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(StartsWithQuery())
             ),
             "std.text.regex": Procedure(
                 description: "Whether a string matches a pattern.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string),
-                        "value": Parameter(type: .string)
-                    ],
-                    returns: .bool
-                ),
+                signature: Signature(of: RegexQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(RegexQuery())
             ),
             "std.text.uppercased": Procedure(
                 description: "The text in upper case.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string)
-                    ],
-                    returns: .string
-                ),
-                implementation: .query(TextQuery(.uppercased))
+                signature: Signature(of: UppercasedQuery.self, receiver: .of, returns: .string),
+                implementation: .query(UppercasedQuery())
             ),
             "std.text.lowercased": Procedure(
                 description: "The text in lower case.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string)
-                    ],
-                    returns: .string
-                ),
-                implementation: .query(TextQuery(.lowercased))
+                signature: Signature(of: LowercasedQuery.self, receiver: .of, returns: .string),
+                implementation: .query(LowercasedQuery())
             ),
             "std.text.trimmed": Procedure(
                 description: "The text without surrounding whitespace.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string)
-                    ],
-                    returns: .string
-                ),
-                implementation: .query(TextQuery(.trimmed))
+                signature: Signature(of: TrimmedQuery.self, receiver: .of, returns: .string),
+                implementation: .query(TrimmedQuery())
             ),
             "std.text.split": Procedure(
                 description: "The text cut on a separator.",
                 signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string),
-                        "value": Parameter(type: .string)
-                    ],
+                    of: SplitQuery.self,
+                    receiver: .of,
                     returns: .array(.string)
                 ),
                 implementation: .query(SplitQuery())
             ),
             "std.text.joined": Procedure(
                 description: "The strings written one after another.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .array(.string)),
-                        "value": Parameter(type: .string, default: .string(""))
-                    ],
-                    returns: .string
-                ),
+                signature: Signature(of: JoinedQuery.self, receiver: .of, returns: .string),
                 implementation: .query(JoinedQuery())
             ),
             "std.text.replacing": Procedure(
                 description: "Every occurrence of a piece swapped for another.",
-                signature: Signature(
-                    receiver: "of",
-                    parameters: [
-                        "of": Parameter(type: .string),
-                        "value": Parameter(type: .string),
-                        "with": Parameter(type: .string)
-                    ],
-                    returns: .string
-                ),
+                signature: Signature(of: ReplacingQuery.self, receiver: .of, returns: .string),
                 implementation: .query(ReplacingQuery())
             )
         ]

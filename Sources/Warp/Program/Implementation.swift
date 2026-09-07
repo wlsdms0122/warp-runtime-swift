@@ -77,6 +77,22 @@ public enum Implementation: Sendable {
         }
     }
 
+    // The places a native word reads its arguments at, with the name each
+    // place stands under. Nil for a body, which reads the names its own
+    // declaration gave it.
+    var nativeParameters: [(position: Int, name: Name)]? {
+        switch self {
+        case let .query(query):
+            return places(of: query)
+
+        case let .effect(effect):
+            return places(of: effect)
+
+        case .body:
+            return nil
+        }
+    }
+
     public var block: Block? {
         guard case let .body(block) = self else { return nil }
 
@@ -86,4 +102,13 @@ public enum Implementation: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
+    // Generic, so the word's own parameter type has a name here. Handing an
+    // existential to a generic function opens it.
+    private func places(of word: some Word) -> [(position: Int, name: Name)] {
+        places(of: type(of: word))
+    }
+
+    private func places<W: Word>(of word: W.Type) -> [(position: Int, name: Name)] {
+        W.Parameters.allCases.map { key in (position: key.position, name: key.name) }
+    }
 }

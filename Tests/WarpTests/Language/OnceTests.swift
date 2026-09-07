@@ -242,10 +242,7 @@ struct OnceTests {
                     )
                 ),
                 "app.close": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .named("app.Handle"))]
-                    ),
+                    signature: Signature(of: CloseEffect.self, receiver: .of),
                     implementation: .effect(CloseEffect())
                 ),
                 "app.peek": Procedure(
@@ -259,10 +256,18 @@ struct OnceTests {
 }
 
 struct CloseEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .named("app.Handle")) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
         .null
     }
 

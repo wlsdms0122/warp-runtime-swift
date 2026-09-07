@@ -367,7 +367,7 @@ struct StandardTests {
         // Given. The declaration's oneOf says the same names early; this is the
         // implementation refusing a name it has no mapping for, so a drifted
         // declaration cannot make it answer in the wrong encoding
-        let sut = CodecQuery(.decoded)
+        let sut = DecodedQuery()
 
         // When / Then
         #expect(
@@ -928,7 +928,7 @@ struct StandardTests {
 
         // min and max pick between the values as they arrived. The int wins
         // here, and no conversion flattens it into a tie.
-        let picked = try ComparisonQuery(.max).evaluate(
+        let picked = try MaxQuery().evaluate(
             Question(receiver: above, arguments: ["value": below])
         )
 
@@ -941,7 +941,7 @@ struct StandardTests {
         // order sorted could not answer for; refused, the way a mixed array is,
         // rather than placed arbitrarily
         #expect {
-            try BuildingQuery(.sorted).evaluate(
+            try SortedQuery().evaluate(
                 Question(receiver: .array([.double(1.5), .double(.nan)]))
             )
         } throws: { error in

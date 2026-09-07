@@ -27,20 +27,13 @@ struct VocabularyTests {
         let extra = try Module(
             procedures: [
                 "extra.head": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .array(.any))],
-                        returns: .any
-                    ),
+                    signature: Signature(of: FirstQuery.self, receiver: .of, returns: .any),
                     implementation: .query(FirstQuery())
                 ),
                 "extra.longerThan": Procedure(
                     signature: Signature(
-                        receiver: "of",
-                        parameters: [
-                            "of": Parameter(type: .string),
-                            "value": Parameter(type: .int)
-                        ],
+                        of: LongerThanQuery.self,
+                        receiver: .of,
                         returns: .bool
                     ),
                     implementation: .query(LongerThanQuery())
@@ -98,11 +91,7 @@ struct VocabularyTests {
         let rival = try Module(
             procedures: [
                 "rival.count": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .any)],
-                        returns: .int
-                    ),
+                    signature: Signature(of: FirstQuery.self, receiver: .of, returns: .int),
                     implementation: .query(FirstQuery())
                 )
             ]
@@ -127,10 +116,18 @@ struct VocabularyTests {
 // MARK: - Words a test brings
 
 private struct FirstQuery: Query {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .array(.any)) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard case let .array(elements) = question.receiver else { return nil }
 
         return elements.first
@@ -140,13 +137,38 @@ private struct FirstQuery: Query {
 }
 
 private struct LongerThanQuery: Query {
+    enum Parameters: Int, ParameterSet {
+        case of
+        case value
+
+        var name: Name {
+            switch self {
+            case .of:
+                return "of"
+
+            case .value:
+                return "value"
+            }
+        }
+
+        var declared: Parameter {
+            switch self {
+            case .of:
+                return Parameter(type: .string)
+
+            case .value:
+                return Parameter(type: .int)
+            }
+        }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard
             case let .string(text) = question.receiver,
-            case let .int(limit) = question["value"]
+            case let .int(limit) = question[.value]
         else {
             return nil
         }

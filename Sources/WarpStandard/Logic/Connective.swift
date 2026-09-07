@@ -1,5 +1,5 @@
 //
-//  ChainQuery.swift
+//  Connective.swift
 //  WarpStandard
 //
 //  Created by JSilver
@@ -16,8 +16,8 @@ import Warp
 // Taking procedures is what lets these be declarations. A word receives its
 // arguments already computed, so a connective over values would have run every
 // side before it could decline to.
-struct ChainQuery: Query {
-    enum Chain: Sendable {
+struct Connective: Sendable {
+    enum Chain: Sendable, Equatable {
         case and
         case or
     }
@@ -26,17 +26,20 @@ struct ChainQuery: Query {
     private let chain: Chain
 
     // MARK: - Initializer
-    public init(_ chain: Chain) {
+    init(_ chain: Chain) {
         self.chain = chain
     }
 
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func answer<Parameters>(
+        _ receiver: Value?,
+        asking question: Question<Parameters>
+    ) throws -> Value? {
         // The `.array` case and not the elements projection, for the reason
         // `joined` gives: this declares `array<procedure>`, which leaves no
         // byte as it is, so a bytes receiver is read out and refused at the
         // boundary rather than arriving here compact.
-        guard case let .array(links) = question.receiver else { return nil }
+        guard case let .array(links) = receiver else { return nil }
 
         for link in links {
             let answer = try question.call(link)

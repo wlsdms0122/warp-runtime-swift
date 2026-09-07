@@ -411,16 +411,14 @@ public struct Executor: Sendable {
             // hold holds now, the way the effect reads any receiver.
             let held = try holds.first { position, _ in position == callee.receiverPosition }.map { _, handle in try handle.value() }
 
-            return try await effect.run(
-                Invocation(
-                    selector: callee.label,
-                    signature: callee.signature,
-                    receiver: sent(to: callee, receiver: try received(call, of: callee, handed: handed, in: activation) ?? held, arguments: settled),
-                    settled: settled,
-                    holds: holds,
-                    trace: trace,
-                    executor: self
-                )
+            return try await run(
+                effect,
+                selector: callee.label,
+                signature: callee.signature,
+                receiver: sent(to: callee, receiver: try received(call, of: callee, handed: handed, in: activation) ?? held, arguments: settled),
+                settled: settled,
+                holds: holds,
+                trace: trace
             )
 
         case let .body(body, frame):
@@ -743,7 +741,7 @@ public struct Executor: Sendable {
         given: [Value?],
         skipping: Skipped
     ) throws -> Settled {
-        Settled(by: callee, values: try callee.settle(given, offered: false, skipping: skipping.contains))
+        Settled(values: try callee.settle(given, offered: false, skipping: skipping.contains))
     }
 
     // The pure half of a call. An effect or a body that runs answers only by
@@ -798,12 +796,10 @@ public struct Executor: Sendable {
         // decides for itself what that means: `contains` says false rather
         // than failing.
         case let .query(query):
-            return try query.evaluate(
-                Question(
-                    receiver: sent == .null ? nil : sent,
-                    settled: arguments,
-                    executor: self
-                )
+            return try evaluate(
+                query,
+                receiver: sent == .null ? nil : sent,
+                settled: arguments
             ) ?? .null
 
         // A body the link proved pure runs here, synchronously. Nothing in it
@@ -893,6 +889,39 @@ public struct Executor: Sendable {
         case let .unfit(reason):
             throw ReferenceUnfit(path: spelled(address, in: activation), reason: reason)
         }
+    }
+
+    // The two doors a native word answers through. The word's parameters are
+    // its own type, so the call is made where that type has a name: handing
+    // `any Query` to a generic function opens it.
+    private func evaluate<W: Query>(
+        _ query: W,
+        receiver: Value?,
+        settled: Settled
+    ) throws -> Value? {
+        try query.evaluate(Question(receiver: receiver, settled: settled, executor: self))
+    }
+
+    private func run<W: Effect>(
+        _ effect: W,
+        selector: Name,
+        signature: Signature,
+        receiver: Value?,
+        settled: Settled,
+        holds: [(position: Int, handle: Handle)],
+        trace: Trace
+    ) async throws -> Value {
+        try await effect.run(
+            Invocation(
+                selector: selector,
+                signature: signature,
+                receiver: receiver,
+                settled: settled,
+                holds: holds,
+                trace: trace,
+                executor: self
+            )
+        )
     }
 
     // Where a walk over a path came down: on a value, or on a reading gone
@@ -1060,7 +1089,7 @@ public struct Executor: Sendable {
     private func derive(_ callee: Linked, from value: Value) throws -> Value? {
         guard callee.isDerivable, let reached = callee.reaching(value) else { return nil }
 
-        return try answer(callee, for: reached.receiver, with: Settled(by: callee, values: reached.arguments))
+        return try answer(callee, for: reached.receiver, with: Settled(values: reached.arguments))
     }
 
     // Every index reference read to a position: a write lands on one

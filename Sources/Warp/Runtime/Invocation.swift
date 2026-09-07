@@ -11,7 +11,7 @@ import Foundation
 // body's do; what an effect has beyond a query is the way to write a variable
 // it was handed in place, to call a closure it was handed, and to reach the
 // environment.
-public struct Invocation: Sendable {
+public struct Invocation<Parameters: ParameterSet>: Sendable {
     // MARK: - Property
     public let selector: Name
 
@@ -56,17 +56,18 @@ public struct Invocation: Sendable {
     }
 
     // MARK: - Public
-    // What a named argument holds. An argument nobody wrote and one written as
-    // null are the same fact here, the same as they are everywhere else.
-    public subscript(name: Name) -> Value {
-        settled[name]
+    // What an argument holds, named by the word's own key. An argument nobody
+    // wrote and one written as null are the same fact here, the same as they
+    // are everywhere else.
+    public subscript(key: Parameters) -> Value {
+        settled[key.position]
     }
 
     // What a parameter handed in place holds now.
-    public func held(_ name: Name) throws -> Value {
-        guard let hold = hold(of: name) else {
+    public func held(_ key: Parameters) throws -> Value {
+        guard let hold = hold(of: key) else {
             throw ExecutionError(
-                "'\(selector)' reads '\(name)' in place, and it was not handed a variable"
+                "'\(selector)' reads '\(key.name)' in place, and it was not handed a variable"
             )
         }
 
@@ -77,10 +78,10 @@ public struct Invocation: Sendable {
     // declaring a parameter `inout` answers into the caller's variable this
     // way, and a word writing an argument that is not a path is a word the
     // link should have refused.
-    public func write(_ name: Name, _ value: Value) throws {
-        guard let hold = hold(of: name) else {
+    public func write(_ key: Parameters, _ value: Value) throws {
+        guard let hold = hold(of: key) else {
             throw ExecutionError(
-                "'\(selector)' writes '\(name)' in place, and it was not handed a variable"
+                "'\(selector)' writes '\(key.name)' in place, and it was not handed a variable"
             )
         }
 
@@ -90,8 +91,8 @@ public struct Invocation: Sendable {
     // Nil for an argument that is absent or null, rather than the empty string
     // stringifying null would give: "unset" and "set to nothing" are different
     // instructions to a caller.
-    public func string(_ name: Name) -> String? {
-        switch self[name] {
+    public func string(_ key: Parameters) -> String? {
+        switch self[key] {
         case .null:
             return nil
 
@@ -116,9 +117,7 @@ public struct Invocation: Sendable {
     }
 
     // MARK: - Private
-    private func hold(of name: Name) -> Handle? {
-        guard let position = settled.position(of: name) else { return nil }
-
-        return holds.first { hold in hold.position == position }?.handle
+    private func hold(of key: Parameters) -> Handle? {
+        holds.first { hold in hold.position == key.position }?.handle
     }
 }

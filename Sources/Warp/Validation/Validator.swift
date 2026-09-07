@@ -182,6 +182,8 @@ public struct Validator: Sendable {
             )
         }
 
+        try reads(procedure, at: place)
+
         guard let block = procedure.block else { return }
 
         // A parameter handed in place is a variable in the body: the box is
@@ -198,6 +200,28 @@ public struct Validator: Sendable {
             surroundings: .procedure(constants: bound),
             at: place
         )
+    }
+
+    // A native word reads its arguments at the places its own keys stand at,
+    // and the row a run hands it is the declaration's parameters in order. The
+    // two are the same list or the word reads an argument nobody sent it.
+    private func reads(_ procedure: Procedure, at place: Place) throws {
+        guard let keys = procedure.implementation.nativeParameters else { return }
+
+        let declared = procedure.signature.ordered.map(\.name)
+        let read = keys.sorted { left, right in left.position < right.position }
+
+        guard
+            read.map(\.position) == Array(declared.indices),
+            read.map(\.name) == declared
+        else {
+            throw ValidationError(
+                "this word reads \(read.map(\.name.spelling)) and is declared"
+                    + " with \(declared.map(\.spelling)). A word reads its"
+                    + " arguments at the places its own keys stand at",
+                at: place.part(.parameters)
+            )
+        }
     }
 
     // What the body leaves behind for what follows it: the names it made
@@ -411,7 +435,9 @@ public struct Validator: Sendable {
                 )
             }
 
-            guard let block = procedure.block else { return }
+            try reads(procedure, at: place)
+
+        guard let block = procedure.block else { return }
 
             try validate(
                 block,

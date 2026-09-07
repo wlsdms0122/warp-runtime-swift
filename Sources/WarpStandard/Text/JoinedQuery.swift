@@ -8,17 +8,41 @@
 import Foundation
 import Warp
 
-// Strings written one after another, with a separator between. The separator
-// has a default because joining with nothing between is a thing to want, and
-// declaring the default is what makes `parts.joined` reachable from a path.
+// Strings written one after another, with a separator between.
 struct JoinedQuery: Query {
-    // MARK: - Property
-    // MARK: - Initializer
-    public init() {
+    // What this takes: the strings, and what goes between them. The
+    // separator has a default because joining with nothing between is a
+    // thing to want, and a defaulted parameter is what makes `parts.joined`
+    // reachable from a path.
+    enum Parameters: Int, ParameterSet {
+        case of
+        case value
+
+        var name: Name {
+            switch self {
+            case .of:
+                return "of"
+
+            case .value:
+                return "value"
+            }
+        }
+
+        var declared: Parameter {
+            switch self {
+            case .of:
+                return Parameter(type: .array(.string))
+
+            case .value:
+                return Parameter(type: .string, default: .string(""))
+            }
+        }
     }
 
+    // MARK: - Property
+    // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         // The `.array` case and not the elements projection, because this word
         // declares `array<string>` and bytes cross an `array<…>` slot whole
         // only where the element declaration leaves every byte alone. `string`
@@ -30,7 +54,7 @@ struct JoinedQuery: Query {
             )
         }
 
-        let given = question["value"]
+        let given = question[.value]
 
         guard case let .string(separator) = given else {
             throw ExecutionError("joined asks a string separator, and \(given.type) arrived")

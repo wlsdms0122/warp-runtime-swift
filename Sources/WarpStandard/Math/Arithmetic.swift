@@ -1,5 +1,5 @@
 //
-//  ArithmeticQuery.swift
+//  Arithmetic.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/17/26.
@@ -8,8 +8,9 @@
 import Foundation
 import Warp
 
-// The numeric operations, as one implementation with the operation as its data.
-// A name belongs to the declaration, so several declarations share one of these.
+// The numeric operations. Five words send here, so what a sum and a quotient
+// share is written once: which pairs are numbers at all, where the whole path
+// ends and the fraction path begins, and which answers fall off the edge.
 //
 // Ints stay ints, so `2 plus 2` answers 4 rather than 4.0. Division is the
 // exception, because a quotient is not generally whole. `remainder` is where a
@@ -19,8 +20,8 @@ import Warp
 // fault of the program, not a condition of its data: an overflow and a divisor
 // of zero stop the run the way an index past the end does, without the
 // recoverable marker an `attempt` reads.
-struct ArithmeticQuery: Query {
-    enum Operation: Sendable {
+struct Arithmetic: Sendable {
+    enum Operation: Sendable, Equatable {
         case plus
         case minus
         case times
@@ -32,17 +33,15 @@ struct ArithmeticQuery: Query {
     private let operation: Operation
 
     // MARK: - Initializer
-    public init(_ operation: Operation) {
+    init(_ operation: Operation) {
         self.operation = operation
     }
 
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
-        let operand = question["value"]
-
-        guard let receiver = question.receiver, isNumber(receiver), isNumber(operand) else {
+    func answer(_ receiver: Value?, _ operand: Value) throws -> Value {
+        guard let receiver, isNumber(receiver), isNumber(operand) else {
             throw ExecutionError(
-                "arithmetic asks \(question.receiver?.type.description ?? "nothing") and"
+                "arithmetic asks \(receiver?.type.description ?? "nothing") and"
                     + " \(operand.type), expected two numbers"
             )
         }
@@ -164,14 +163,11 @@ struct ArithmeticQuery: Query {
         case let .double(real):
             return real
 
-        // The numeric guard in `evaluate` already refused everything else, so
+        // The numeric guard in `answer` already refused everything else, so
         // reaching here is this file's own defect. The same line `whole` holds
         // for a quotient, not a failure a program could see.
         default:
             preconditionFailure("arithmetic reads a number it never admitted")
         }
     }
-}
-
-extension ArithmeticQuery.Operation: Equatable {
 }

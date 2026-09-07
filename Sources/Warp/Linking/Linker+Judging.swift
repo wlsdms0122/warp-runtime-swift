@@ -567,11 +567,23 @@ extension Linker {
         // happens here rather than while decoding, because a notation judging
         // arguments would have to know the vocabulary; judging belongs where
         // names resolve.
+        // A word's own keys name its parameters, so what a call wrote by name
+        // is keyed here, where the names still exist.
+        func validate<W: Query>(_ query: W, given constants: [Name: Value]) throws {
+            try query.validate(
+                Dictionary(
+                    uniqueKeysWithValues: W.Parameters.allCases.compactMap { key in
+                        constants[key.name].map { value in (key, value) }
+                    }
+                )
+            )
+        }
+
         if case let .query(query) = callee.implementation {
             let constants = call.arguments.compactMapValues(\.constantValue)
 
             do {
-                try query.validate(constants)
+                try validate(query, given: constants)
             } catch {
                 throw LinkError(
                     "sending '\(call.selector)': \(error)",

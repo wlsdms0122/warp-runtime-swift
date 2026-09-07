@@ -32,11 +32,19 @@ struct TestFatalError: WarpError {
 }
 
 struct FailEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case recoverable
+
+        var name: Name { "recoverable" }
+
+        var declared: Parameter { Parameter(type: .bool, default: .bool(false)) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
-        guard invocation["recoverable"] == .bool(true) else {
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+        guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }
 

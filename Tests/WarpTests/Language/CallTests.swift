@@ -109,7 +109,7 @@ struct CallTests {
             procedures: [
                 "std.collection.count": Procedure(
                     signature: Signature(returns: .int),
-                    implementation: .effect(ShoutEffect())
+                    implementation: .query(TicketQuery())
                 )
             ]
         )

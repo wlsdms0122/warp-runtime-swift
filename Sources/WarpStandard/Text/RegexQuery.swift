@@ -9,19 +9,18 @@ import Foundation
 import Warp
 
 struct RegexQuery: Query {
+    typealias Parameters = StringPair
+
     // MARK: - Property
 
     // MARK: - Initializer
-    public init() {
-    }
-
     // MARK: - Public
     // A pattern that does not compile is an author mistake, and a constant one
     // is knowable before the run, which is the whole reason a word gets to
     // check its own arguments at load.
-    func validate(_ arguments: [String: Value]) throws {
+    func validate(_ arguments: [Parameters: Value]) throws {
         guard
-            case let .string(pattern) = arguments["value"] ?? .null,
+            case let .string(pattern) = arguments[.value] ?? .null,
             (try? NSRegularExpression(pattern: pattern)) != nil
         else {
             // A word judging its own arguments is handed the values and not
@@ -30,10 +29,10 @@ struct RegexQuery: Query {
         }
     }
 
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }
 
-        guard case let .string(pattern) = question["value"] else {
+        guard case let .string(pattern) = question[.value] else {
             return .bool(false)
         }
 

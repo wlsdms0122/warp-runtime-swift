@@ -12,20 +12,19 @@ import Warp
 // wants from splitting is the shape of the text, and dropping the empty ones
 // would be an opinion about the text rather than a reading of it.
 struct SplitQuery: Query {
+    typealias Parameters = StringPair
+
     // MARK: - Property
     // MARK: - Initializer
-    public init() {
-    }
-
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         guard case let .string(text) = question.receiver else {
             throw ExecutionError(
                 "split asks \(question.receiver?.type.description ?? "nothing"), expected string"
             )
         }
 
-        guard case let .string(separator) = question["value"], !separator.isEmpty else {
+        guard case let .string(separator) = question[.value], !separator.isEmpty else {
             throw ExecutionError("split asks an empty separator")
         }
 

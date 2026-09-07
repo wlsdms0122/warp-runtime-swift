@@ -43,13 +43,21 @@ struct TestFatalError: WarpError {
 // Fails on demand, so a test can ask what the language does with a failure
 // without needing a world to fail in.
 struct FailEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case recoverable
+
+        var name: Name { "recoverable" }
+
+        var declared: Parameter { Parameter(type: .bool, default: .bool(false)) }
+    }
+
     // MARK: - Property
     let failing = Failing.these([TestRecoverableFailure.word])
 
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
-        guard invocation["recoverable"] == .bool(true) else {
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+        guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }
 
@@ -175,10 +183,7 @@ extension Module {
     static let shouting = try! Module(
         procedures: [
             "app.shout": Procedure(
-                signature: Signature(
-                    parameters: ["text": Parameter(type: .string)],
-                    returns: .string
-                ),
+                signature: Signature(of: ShoutEffect.self, returns: .string),
                 implementation: .effect(ShoutEffect())
             )
         ]
@@ -198,9 +203,7 @@ extension Module {
     static let failing = try! Module(
         procedures: [
             "app.fail": Procedure(
-                signature: Signature(
-                    parameters: ["recoverable": Parameter(type: .bool, default: .bool(false))]
-                ),
+                signature: Signature(of: FailEffect.self),
                 implementation: .effect(FailEffect())
             )
         ]
@@ -208,6 +211,8 @@ extension Module {
 }
 
 final class TicketQuery: Query, @unchecked Sendable {
+    typealias Parameters = NoParameters
+
     // MARK: - Property
     let isolated = false
 
@@ -216,7 +221,7 @@ final class TicketQuery: Query, @unchecked Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         lock.lock()
         defer { lock.unlock() }
 
@@ -229,11 +234,19 @@ final class TicketQuery: Query, @unchecked Sendable {
 }
 
 struct ShoutEffect: Effect {
+    enum Parameters: Int, ParameterSet {
+        case text
+
+        var name: Name { "text" }
+
+        var declared: Parameter { Parameter(type: .string) }
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation) async throws -> Value {
-        .string(invocation.string("text")?.uppercased() ?? "")
+    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+        .string(invocation.string(.text)?.uppercased() ?? "")
     }
 
     // MARK: - Private

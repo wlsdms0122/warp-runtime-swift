@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Question: Sendable {
+public struct Question<Parameters: ParameterSet>: Sendable {
     // The arguments a word reads: settled by the row a run sent, with the
     // run as the way back in for a word handed a procedure, or offered by
     // name where a caller asks the word directly, with no declaration and no
@@ -41,15 +41,20 @@ public struct Question: Sendable {
     }
 
     // MARK: - Public
-    // What a named argument holds. An argument nobody wrote and one written as
-    // null are the same fact here, the same as they are everywhere else.
-    public subscript(name: Name) -> Value {
+    // What an argument holds, named by the word's own key. An argument nobody
+    // wrote and one written as null are the same fact here, the same as they
+    // are everywhere else.
+    //
+    // A settled question reads the place the key stands at, since the run
+    // ordered the arguments by the declaration this key belongs to. An offered
+    // one was asked with no declaration behind it, so there are only names.
+    public subscript(key: Parameters) -> Value {
         switch arguments {
         case let .settled(settled, _):
-            return settled[name]
+            return settled[key.position]
 
         case let .offered(offered):
-            return offered[name] ?? .null
+            return offered[key.name] ?? .null
         }
     }
 

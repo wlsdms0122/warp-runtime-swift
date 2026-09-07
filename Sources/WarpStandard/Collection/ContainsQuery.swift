@@ -9,19 +9,34 @@ import Foundation
 import Warp
 
 struct ContainsQuery: Query {
+    // What this takes: the string or array, and what is looked for in it.
+    enum Parameters: Int, ParameterSet {
+        case of
+        case value
+
+        var name: Name {
+            switch self {
+            case .of:
+                return "of"
+
+            case .value:
+                return "value"
+            }
+        }
+
+        var declared: Parameter { Parameter(type: .any) }
+    }
+
     // MARK: - Property
 
     // MARK: - Initializer
-    public init() {
-    }
-
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<Parameters>) throws -> Value? {
         // Absence answers false rather than failing: asking whether nothing
         // contains something has an obvious answer.
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }
 
-        let operand = question["value"]
+        let operand = question[.value]
 
         switch receiver {
         case let .string(text):

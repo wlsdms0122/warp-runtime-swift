@@ -14,10 +14,12 @@ import Foundation
 // judged and named, and answers with the refusal) rather than in a flag every
 // resolver would have to carry.
 struct UnsettledWord: Query {
+    typealias Parameters = NoParameters
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question) throws -> Value? {
+    func evaluate(_ question: Question<NoParameters>) throws -> Value? {
         throw ExecutionError(
             "this word has a written body, which runs after the link."
                 + " A constant settles from native words alone"
