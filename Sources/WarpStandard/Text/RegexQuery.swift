@@ -18,9 +18,9 @@ struct RegexQuery: Query {
     // A pattern that does not compile is an author mistake, and a constant one
     // is knowable before the run, which is the whole reason a word gets to
     // check its own arguments at load.
-    func validate(_ arguments: [Parameters: Value]) throws {
+    func validate(_ question: Question<Parameters>) throws {
         guard
-            case let .string(pattern) = arguments[.value] ?? .null,
+            case let .string(pattern) = question[.value],
             (try? NSRegularExpression(pattern: pattern)) != nil
         else {
             // A word judging its own arguments is handed the values and not

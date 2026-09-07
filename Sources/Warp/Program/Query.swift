@@ -24,12 +24,16 @@ public protocol Query: Word {
     // Checks arguments that are already constant, at load. Type is the
     // signature's business; this is for what a type cannot say. That a regex
     // pattern compiles. An author typo surfaces before any run.
-    func validate(_ arguments: [Parameters: Value]) throws
+    //
+    // Asked through the door the word reads its arguments through, so a word
+    // names a key here the way it names one when it answers. There is no run
+    // behind this one, so a procedure it was handed cannot be called.
+    func validate(_ question: Question<Parameters>) throws
 
     func evaluate(_ question: Question<Parameters>) throws -> Value?
 }
 
 public extension Query {
-    func validate(_ arguments: [Parameters: Value]) throws {
+    func validate(_ question: Question<Parameters>) throws {
     }
 }

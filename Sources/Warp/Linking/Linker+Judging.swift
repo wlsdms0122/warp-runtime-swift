@@ -568,15 +568,10 @@ extension Linker {
         // arguments would have to know the vocabulary; judging belongs where
         // names resolve.
         // A word's own keys name its parameters, so what a call wrote by name
-        // is keyed here, where the names still exist.
-        func validate<W: Query>(_ query: W, given constants: [Name: Value]) throws {
-            try query.validate(
-                Dictionary(
-                    uniqueKeysWithValues: W.Parameters.allCases.compactMap { key in
-                        constants[key.name].map { value in (key, value) }
-                    }
-                )
-            )
+        // is asked for by key here, through the same door the word reads an
+        // argument through when it answers.
+        func validate(_ query: some Query, given constants: [Name: Value]) throws {
+            try query.validate(Question(arguments: constants))
         }
 
         if case let .query(query) = callee.implementation {
