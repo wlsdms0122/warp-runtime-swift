@@ -92,10 +92,49 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Internal
-    // The words this declares, by the spelling the link knows each one as.
-    // Each name appears once, since both halves come from keys.
+    // What this declares in the word space, each under the place it was
+    // written at. A contract's word is one of them, by the spelling a call
+    // writes to reach it, and its place is the two steps the document nests it
+    // in rather than the joined name in one.
+    func words(in document: Place.Document) -> [(name: Name, place: Place)] {
+        procedures.keys.map { name in
+            (name, Place.procedure(name.spelling, in: document))
+        }
+            + contracts.flatMap { contract, words in
+                words.keys.map { word in
+                    (
+                        Name(normal: "\(contract.spelling).\(word.spelling)"),
+                        Place.contract(contract.spelling, in: document)
+                            .appending(.key(word.spelling))
+                    )
+                }
+            }
+    }
+
+    // What this declares in the shape space, the same way. Types, constraints
+    // and contracts are one space: a link refuses a name standing for a shape
+    // and a membership at once.
+    func shapes(in document: Place.Document) -> [(name: Name, place: Place)] {
+        types.keys.map { name in
+            (name, Place.type(name.spelling, in: document))
+        }
+            + constraints.keys.map { name in
+                (name, Place.constraint(name.spelling, in: document))
+            }
+            + contracts.keys.map { name in
+                (name, Place.contract(name.spelling, in: document))
+            }
+    }
+
+    // The same two, when only the names are wanted. Read off the lists above
+    // rather than gathered again, so what counts as a word and what counts as
+    // a shape is said in one place.
     var declaredWords: Set<Name> {
-        Set(procedures.keys).union(contractWords)
+        Set(words(in: .assembled).map(\.name))
+    }
+
+    var declaredShapes: Set<Name> {
+        Set(shapes(in: .assembled).map(\.name))
     }
 
     // The words a path could reach, as far as this document decides it. A
@@ -125,23 +164,6 @@ public struct Draft: Sendable {
                 }
                 .keys
         )
-    }
-
-    // The spellings a call writes to reach the words of a contract this
-    // declares: the contract's name and the word's, with a dot between them.
-    var contractWords: Set<Name> {
-        Set(
-            contracts.flatMap { contract, words in
-                words.keys.map { word in Name(normal: "\(contract.spelling).\(word.spelling)") }
-            }
-        )
-    }
-
-    // The shapes this declares. Types, constraints and contracts are one
-    // space: a link refuses a name standing for a shape and a membership at
-    // once.
-    var declaredShapes: Set<Name> {
-        Set(types.keys).union(constraints.keys).union(contracts.keys)
     }
 
     // The bare spellings a path in here steps to.
@@ -243,9 +265,9 @@ public struct Draft: Sendable {
     // signature written inline is held to the same table the top level is, so
     // what it names is asked for the same way.
     private func mentions(buried held: some Burying) -> Set<Name> {
-        held.walked(at: ()) { _, _ in () }
+        held.found
             .reduce(into: Set<Name>()) { mentioned, found in
-                switch found.1 {
+                switch found {
                 case let .statement(statement):
                     guard let declared = statement.binding?.declared else { return }
 

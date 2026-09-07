@@ -68,6 +68,12 @@ public extension Burying {
         buried(at: ()) { _, _ in () }.map(\.1)
     }
 
+    // The same walk, keeping the statements too. What is buried where is a
+    // fact of the language and a stage that reads both asks for both.
+    var found: [Buried] {
+        walked(at: ()) { _, _ in () }.map(\.1)
+    }
+
     // Every type a name in here says it holds, each with where it was said.
     func declaring(at place: Place) -> [(Place, TypeExpression)] {
         walked(at: place) { place, step in place.appending(step) }

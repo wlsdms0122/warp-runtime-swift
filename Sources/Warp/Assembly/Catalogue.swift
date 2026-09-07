@@ -129,9 +129,15 @@ public struct Catalogue: Sendable {
         var taken: Set<Int> = []
         var index = 0
 
+        func bring(_ position: Int?) {
+            guard let position, taken.insert(position).inserted else { return }
+
+            world.append(modules[position])
+        }
+
         func bring(_ positions: [Int]) {
-            for position in positions where taken.insert(position).inserted {
-                world.append(modules[position])
+            for position in positions {
+                bring(position)
             }
         }
 
@@ -143,7 +149,7 @@ public struct Catalogue: Sendable {
             index += 1
 
             for name in draft.sends.sorted() {
-                bring(words[name].map { position in [position] } ?? [])
+                bring(words[name])
             }
 
             for name in draft.walks.sorted() {
@@ -151,7 +157,7 @@ public struct Catalogue: Sendable {
             }
 
             for name in draft.mentions.sorted() {
-                bring(shapes[name].map { position in [position] } ?? [])
+                bring(shapes[name])
             }
         }
 
