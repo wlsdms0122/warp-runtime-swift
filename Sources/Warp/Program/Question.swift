@@ -34,7 +34,11 @@ public struct Question<W: Word>: Sendable {
     private let sends: [Int]
 
     // MARK: - Initializer
-    public init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
+    // Asking a word with no declaration and no run behind it: the link judging
+    // a constant against the word that will settle it. Not a door out of the
+    // package, because what makes a word answerable is the link that took its
+    // declaration, and a question built beside that skips it.
+    init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
         self.receiver = receiver
         self.arguments = .offered(arguments)
         self.sends = []
