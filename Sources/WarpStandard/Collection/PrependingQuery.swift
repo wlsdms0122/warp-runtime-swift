@@ -15,7 +15,7 @@ struct PrependingQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         // Answered in the spelling the receiver arrived in, so a compact one
         // stays compact until an element that is not a byte is put among them,
         // which `adding` reads for itself. Only the arriving element decides

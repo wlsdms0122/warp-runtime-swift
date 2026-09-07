@@ -18,7 +18,7 @@ struct RoundedQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         switch question.receiver {
         case let .int(number):
             return .int(number)

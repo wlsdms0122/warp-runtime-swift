@@ -24,7 +24,7 @@ struct KeysQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         guard let held = question.receiver?.asDictionary else { return nil }
 
         // In name order, the order both spellings hold: a walk that answered a

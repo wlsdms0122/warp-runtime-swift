@@ -18,7 +18,7 @@ struct DividedByQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         try arithmetic.answer(question.receiver, question[.value])
     }
 

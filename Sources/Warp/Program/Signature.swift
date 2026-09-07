@@ -190,6 +190,7 @@ public struct Signature: Sendable, Equatable {
         _ given: [(name: Name, value: Value)],
         over slots: [Slot],
         offered: Bool,
+        skipping: (Int) -> Bool = { _ in false },
         in table: ShapeTable
     ) throws -> [Value?] {
         if !offered {
@@ -218,6 +219,7 @@ public struct Signature: Sendable, Equatable {
             slots.map { slot in given.first { entry in entry.name == slot.name }?.value },
             over: slots,
             offered: offered,
+            skipping: skipping,
             in: table
         )
     }

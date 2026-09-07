@@ -31,9 +31,9 @@ struct Connective: Sendable {
     }
 
     // MARK: - Public
-    func answer<Parameters>(
+    func answer<W: Word>(
         _ receiver: Value?,
-        asking question: Question<Parameters>
+        asking question: Question<W>
     ) throws -> Value? {
         // The `.array` case and not the elements projection, for the reason
         // `joined` gives: this declares `array<procedure>`, which leaves no

@@ -154,8 +154,17 @@ public struct Linker: Sendable {
         var rows: [Name: Int] = [:]
         var table: [Linked] = []
 
-        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
-            rows[symbol.declared] = table.count
+        // The spellings first, so a native word's sends reach a row whatever
+        // order the declarations stand in.
+        let declarations = symbols.sorted { left, right in left.declared < right.declared }
+
+        for (position, symbol) in declarations.enumerated() {
+            rows[symbol.declared] = position
+        }
+
+        let sending = Sending(rows: rows, pure: settled, isolated: isolatedDeclarations)
+
+        for symbol in declarations {
             table.append(
                 Linked.standing(
                     label: symbol.declared,
@@ -164,6 +173,7 @@ public struct Linker: Sendable {
                     pure: settled.contains(symbol.declared),
                     isolated: isolatedDeclarations.contains(symbol.declared),
                     failing: failingDeclarations[symbol.declared] ?? .unstated,
+                    sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
                     in: shapes
                 )
             )

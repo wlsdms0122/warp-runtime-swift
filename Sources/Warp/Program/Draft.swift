@@ -78,6 +78,14 @@ public struct Draft: Sendable {
             + variables.values.flatMap(\.buried)
             + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
 
+        // A native word's sends are its own declaration rather than something
+        // read off a body, since a Swift body is not text this could read. A
+        // list that missed them would understate what the module does, which
+        // is the one thing this list may not do.
+        let native = procedures.values.flatMap { procedure in
+            procedure.implementation.nativeImports?.map(\.selector) ?? []
+        }
+
         // Its own by the spelling the link knows it as. A module names a
         // sibling the way any other module does, so what it declares is not
         // something it imports. A contract's word is one of its own too: the
@@ -90,7 +98,7 @@ public struct Draft: Sendable {
         )
 
         return held
-            .reduce(into: Set()) { sent, expression in
+            .reduce(into: Set(native)) { sent, expression in
                 guard case let .call(call) = expression else { return }
 
                 sent.insert(call.selector)

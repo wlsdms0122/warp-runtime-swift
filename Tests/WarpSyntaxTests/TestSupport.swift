@@ -43,7 +43,7 @@ struct FailEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
         guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }

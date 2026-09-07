@@ -17,7 +17,7 @@ struct SplitQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         guard case let .string(text) = question.receiver else {
             throw ExecutionError(
                 "split asks \(question.receiver?.type.description ?? "nothing"), expected string"

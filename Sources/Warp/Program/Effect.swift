@@ -16,5 +16,5 @@ import Foundation
 // vocabulary, never a new kind of expression, so nothing installed can quietly
 // redefine what `loop` means.
 public protocol Effect: Word {
-    func run(_ invocation: Invocation<Parameters>) async throws -> Value
+    func run(_ invocation: Invocation<Self>) async throws -> Value
 }

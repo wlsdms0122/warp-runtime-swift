@@ -28,12 +28,12 @@ public protocol Query: Word {
     // Asked through the door the word reads its arguments through, so a word
     // names a key here the way it names one when it answers. There is no run
     // behind this one, so a procedure it was handed cannot be called.
-    func validate(_ question: Question<Parameters>) throws
+    func validate(_ question: Question<Self>) throws
 
-    func evaluate(_ question: Question<Parameters>) throws -> Value?
+    func evaluate(_ question: Question<Self>) throws -> Value?
 }
 
 public extension Query {
-    func validate(_ question: Question<Parameters>) throws {
+    func validate(_ question: Question<Self>) throws {
     }
 }

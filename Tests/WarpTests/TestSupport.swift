@@ -56,7 +56,7 @@ struct FailEffect: Effect {
 
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
         guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }
@@ -221,7 +221,7 @@ final class TicketQuery: Query, @unchecked Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<TicketQuery>) throws -> Value? {
         lock.lock()
         defer { lock.unlock() }
 
@@ -245,7 +245,7 @@ struct ShoutEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
         .string(invocation.string(.text)?.uppercased() ?? "")
     }
 

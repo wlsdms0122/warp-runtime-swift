@@ -54,7 +54,7 @@ struct MapQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so a walk reads bytes the way `each` does.
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }

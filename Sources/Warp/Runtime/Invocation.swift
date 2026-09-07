@@ -11,7 +11,7 @@ import Foundation
 // body's do; what an effect has beyond a query is the way to write a variable
 // it was handed in place, to call a closure it was handed, and to reach the
 // environment.
-public struct Invocation<Parameters: ParameterSet>: Sendable {
+public struct Invocation<W: Word>: Sendable {
     // MARK: - Property
     public let selector: Name
 
@@ -34,6 +34,11 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
 
     // The variables handed in place, by parameter position.
     private let holds: [(position: Int, handle: Handle)]
+
+    // The rows this word's declared sends reach, in the places the word names
+    // them at.
+    private let sends: [Int]
+
     private let executor: Executor
 
     // MARK: - Initializer
@@ -43,6 +48,7 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
         receiver: Value?,
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
+        sends: [Int],
         trace: Trace,
         executor: Executor
     ) {
@@ -51,6 +57,7 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
         self.receiver = receiver
         self.settled = settled
         self.holds = holds
+        self.sends = sends
         self.trace = trace
         self.executor = executor
     }
@@ -59,12 +66,12 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
     // What an argument holds, named by the word's own key. An argument nobody
     // wrote and one written as null are the same fact here, the same as they
     // are everywhere else.
-    public subscript(key: Parameters) -> Value {
+    public subscript(key: W.Parameters) -> Value {
         settled[key.position]
     }
 
     // What a parameter handed in place holds now.
-    public func held(_ key: Parameters) throws -> Value {
+    public func held(_ key: W.Parameters) throws -> Value {
         guard let hold = hold(of: key) else {
             throw ExecutionError(
                 "'\(selector)' reads '\(key.name)' in place, and it was not handed a variable"
@@ -78,7 +85,7 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
     // declaring a parameter `inout` answers into the caller's variable this
     // way, and a word writing an argument that is not a path is a word the
     // link should have refused.
-    public func write(_ key: Parameters, _ value: Value) throws {
+    public func write(_ key: W.Parameters, _ value: Value) throws {
         guard let hold = hold(of: key) else {
             throw ExecutionError(
                 "'\(selector)' writes '\(key.name)' in place, and it was not handed a variable"
@@ -91,7 +98,7 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
     // Nil for an argument that is absent or null, rather than the empty string
     // stringifying null would give: "unset" and "set to nothing" are different
     // instructions to a caller.
-    public func string(_ key: Parameters) -> String? {
+    public func string(_ key: W.Parameters) -> String? {
         switch self[key] {
         case .null:
             return nil
@@ -99,6 +106,30 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
         case let value:
             return Rendering(value).text()
         }
+    }
+
+    // Sending a word this word declared it sends. The link resolved the row,
+    // so what happens here is an index and not a lookup, and a word this one
+    // never declared is a word that does not compile.
+    //
+    // The label names which piece of this word's work the send is, the way it
+    // does for a closure, so a refusal from inside says where it happened.
+    public func send(
+        _ key: W.Imports,
+        to receiver: Value? = nil,
+        offering arguments: [(name: Name, value: Value)] = [],
+        piece label: String? = nil
+    ) async throws -> Value {
+        guard sends.indices.contains(key.position) else {
+            throw ExecutionError("'\(selector)' sends '\(key.selector)', and the link resolved no row for it")
+        }
+
+        return try await executor.send(
+            sends[key.position],
+            to: receiver,
+            offering: arguments,
+            at: label.map { name in trace.appending(.piece(name)) } ?? trace
+        )
     }
 
     // Calling a closure the word was handed as a value. The label names which
@@ -117,7 +148,7 @@ public struct Invocation<Parameters: ParameterSet>: Sendable {
     }
 
     // MARK: - Private
-    private func hold(of key: Parameters) -> Handle? {
+    private func hold(of key: W.Parameters) -> Handle? {
         holds.first { hold in hold.position == key.position }?.handle
     }
 }

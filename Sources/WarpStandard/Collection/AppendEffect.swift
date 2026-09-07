@@ -43,7 +43,7 @@ struct AppendEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Parameters>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
         guard case let .array(elements) = try invocation.held(.to) else {
             throw ExecutionError("append writes onto an array, and 'to' holds something else")
         }

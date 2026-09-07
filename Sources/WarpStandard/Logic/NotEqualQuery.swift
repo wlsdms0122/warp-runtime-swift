@@ -15,7 +15,7 @@ struct NotEqualQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         .bool(!(question.receiver ?? .null).matches(question[.value]))
     }
 

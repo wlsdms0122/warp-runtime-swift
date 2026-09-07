@@ -70,6 +70,10 @@ struct Folding {
                         pure: procedure.implementation.isNativelyPure == true,
                         isolated: false,
                         failing: procedure.implementation.nativelyFailing ?? .unstated,
+                        // A constant settles before the link's table exists, so
+                        // a word that sends has no row to send to. It refuses
+                        // when it tries, the way one with a written body does.
+                        sends: [],
                         in: shapes
                     )
                 )

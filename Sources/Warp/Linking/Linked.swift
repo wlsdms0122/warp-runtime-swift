@@ -57,6 +57,10 @@ public final class Linked: Sendable {
     // this one leaves instead of producing one.
     let isDerivable: Bool
 
+    // The rows this row's word sends, in the places the word names them at.
+    // Empty for a body, whose sends are calls its own code carries.
+    let sends: [Int]
+
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -68,6 +72,7 @@ public final class Linked: Sendable {
         isolation: Isolation,
         failing: Failing,
         implementation: Implementation,
+        sends: [Int] = [],
         in table: ShapeTable
     ) {
         let slots = signature.lowered(in: table)
@@ -87,6 +92,7 @@ public final class Linked: Sendable {
         self.failing = failing
         self.table = table
         self.isDerivable = slots.derivable(receiver: receiverPosition, returns: returns, in: table)
+        self.sends = sends
         self.implementation = implementation
     }
 
@@ -102,6 +108,7 @@ public final class Linked: Sendable {
         pure: Bool,
         isolated: Bool,
         failing: Failing,
+        sends: [Int],
         in table: ShapeTable
     ) -> Linked {
         let implementation: Implementation
@@ -125,6 +132,7 @@ public final class Linked: Sendable {
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
             implementation: implementation,
+            sends: sends,
             in: table
         )
     }
@@ -141,9 +149,15 @@ public final class Linked: Sendable {
         try signature.settle(given, over: slots, offered: offered, skipping: skipping, in: table)
     }
 
-    // The same, over arguments given by name.
-    func settle(_ given: [(name: Name, value: Value)], offered: Bool) throws -> [Value?] {
-        try signature.settle(given, over: slots, offered: offered, in: table)
+    // The same, over arguments given by name. `skipping` names the positions
+    // the caller fills another way, as a receiver written in front of the dot
+    // does.
+    func settle(
+        _ given: [(name: Name, value: Value)],
+        offered: Bool,
+        skipping: (Int) -> Bool = { _ in false }
+    ) throws -> [Value?] {
+        try signature.settle(given, over: slots, offered: offered, skipping: skipping, in: table)
     }
 
     // This row reached by a path segment: the receiver and the arguments as

@@ -43,7 +43,7 @@ struct DecodedQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         try encoding.named(question[.encoding])
 
         guard case let .bytes(bytes) = question.receiver else { return nil }

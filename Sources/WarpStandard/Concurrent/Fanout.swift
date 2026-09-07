@@ -57,7 +57,7 @@ struct Fanout: Sendable {
     // Every piece, waited for. A failure fails the whole word, and every
     // piece's failure is reported, keyed by the piece's label: which failures
     // there are is not allowed to depend on timing.
-    func all<Parameters>(_ invocation: Invocation<Parameters>) async throws -> Value {
+    func all<W: Word>(_ invocation: Invocation<W>) async throws -> Value {
         let (pieces, keyed) = try closures(of: invocation)
         let outcomes = await outcomes(of: pieces, via: invocation, racing: false)
 
@@ -70,7 +70,7 @@ struct Fanout: Sendable {
 
     // The first success, with the rest asked to stop. Which piece wins is the
     // one fact here that timing decides, and the word's name says so.
-    func first<Parameters>(_ invocation: Invocation<Parameters>) async throws -> Value {
+    func first<W: Word>(_ invocation: Invocation<W>) async throws -> Value {
         // The keys of a record are not wasted on a `first`. The winner's is
         // not reported, but a failure's is: when nothing wins, every piece's
         // failure comes back keyed by the name its author gave it.
@@ -94,8 +94,8 @@ struct Fanout: Sendable {
     }
 
     // One closure run once per element, answered in the collection's order.
-    func map<Parameters>(
-        _ invocation: Invocation<Parameters>,
+    func map<W: Word>(
+        _ invocation: Invocation<W>,
         over material: Value,
         by handed: Value
     ) async throws -> Value {
@@ -124,8 +124,8 @@ struct Fanout: Sendable {
 
     // The receiver. Closures to run, under names for named pieces or an array
     // for positional ones. Which one arrived decides the shape of the answer.
-    private func closures<Parameters>(
-        of invocation: Invocation<Parameters>
+    private func closures<W: Word>(
+        of invocation: Invocation<W>
     ) throws -> ([Piece], keyed: Bool) {
         switch invocation.receiver ?? .null {
         case let .record(record):
@@ -207,9 +207,9 @@ struct Fanout: Sendable {
         return closure
     }
 
-    private func outcomes<Parameters>(
+    private func outcomes<W: Word>(
         of pieces: [Piece],
-        via invocation: Invocation<Parameters>,
+        via invocation: Invocation<W>,
         racing: Bool
     ) async -> [Outcome] {
         await withTaskGroup(of: Outcome.self) { group in
@@ -237,9 +237,9 @@ struct Fanout: Sendable {
         }
     }
 
-    private func outcome<Parameters>(
+    private func outcome<W: Word>(
         of piece: Piece,
-        via invocation: Invocation<Parameters>
+        via invocation: Invocation<W>
     ) async -> Outcome {
         do {
             return Outcome(
@@ -256,9 +256,9 @@ struct Fanout: Sendable {
     // What a piece answers, through the environment's isolation boundary.
     // Ambient state a caller carries on the task must not reach every piece at
     // once.
-    private func answer<Parameters>(
+    private func answer<W: Word>(
         _ piece: Piece,
-        via invocation: Invocation<Parameters>
+        via invocation: Invocation<W>
     ) async throws -> Value {
         // The frame carries the bare name. Rendering is what brackets it.
         let frame = piece.key?.spelling ?? "\(piece.position)"

@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Question<Parameters: ParameterSet>: Sendable {
+public struct Question<W: Word>: Sendable {
     // The arguments a word reads: settled by the row a run sent, with the
     // run as the way back in for a word handed a procedure, or offered by
     // name where a caller asks the word directly, with no declaration and no
@@ -29,15 +29,21 @@ public struct Question<Parameters: ParameterSet>: Sendable {
     // place.
     private let arguments: Arguments
 
+    // The rows this word's declared sends reach, in the places the word names
+    // them at. Empty for a question asked with no link behind it.
+    private let sends: [Int]
+
     // MARK: - Initializer
     public init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
         self.receiver = receiver
         self.arguments = .offered(arguments)
+        self.sends = []
     }
 
-    init(receiver: Value?, settled: Settled, executor: Executor) {
+    init(receiver: Value?, settled: Settled, sends: [Int], executor: Executor) {
         self.receiver = receiver
         self.arguments = .settled(settled, executor)
+        self.sends = sends
     }
 
     // MARK: - Public
@@ -48,7 +54,7 @@ public struct Question<Parameters: ParameterSet>: Sendable {
     // A settled question reads the place the key stands at, since the run
     // ordered the arguments by the declaration this key belongs to. An offered
     // one was asked with no declaration behind it, so there are only names.
-    public subscript(key: Parameters) -> Value {
+    public subscript(key: W.Parameters) -> Value {
         switch arguments {
         case let .settled(settled, _):
             return settled[key.position]
@@ -56,6 +62,27 @@ public struct Question<Parameters: ParameterSet>: Sendable {
         case let .offered(offered):
             return offered[key.name] ?? .null
         }
+    }
+
+    // Sending a word this word declared it sends. The link resolved the row,
+    // so what happens here is an index and not a lookup, and a word this one
+    // never declared is a word that does not compile.
+    //
+    // Synchronous, because a query answers without running and the link
+    // refused a query declaring it sends anything that runs.
+    public func send(
+        _ key: W.Imports,
+        to receiver: Value? = nil,
+        offering arguments: [(name: Name, value: Value)] = []
+    ) throws -> Value {
+        guard case let .settled(_, executor) = self.arguments, sends.indices.contains(key.position) else {
+            throw ExecutionError(
+                "this word sends '\(key.selector)', and this question was asked"
+                    + " with no link behind it. A constant settles from words that send nothing"
+            )
+        }
+
+        return try executor.send(sends[key.position], to: receiver, offering: arguments)
     }
 
     // Running a procedure this word was handed. What may be handed is what the

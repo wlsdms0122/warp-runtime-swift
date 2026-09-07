@@ -17,7 +17,7 @@ struct OrQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         try connective.answer(question.receiver, asking: question)
     }
 

@@ -48,7 +48,7 @@ struct FilterQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
         let body = question[.value]

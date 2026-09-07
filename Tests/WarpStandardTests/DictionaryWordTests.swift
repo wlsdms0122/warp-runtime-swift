@@ -19,7 +19,7 @@ struct DictionaryWordTests {
     @Test("setting a field answers a dictionary, whatever the receiver was")
     func settingAnswersADictionary() throws {
         // Given
-        let question = Question<SettingQuery.Parameters>(
+        let question = Question<SettingQuery>(
             receiver: .record(Record(name: "app.Point", ["a": .int(1)])),
             arguments: ["key": .string("b"), "value": .int(2)]
         )
@@ -34,7 +34,7 @@ struct DictionaryWordTests {
     @Test("setting refuses a key that is not one byte spelling")
     func settingRefusesAKeyOutsideNormalForm() {
         // Given
-        let question = Question<SettingQuery.Parameters>(
+        let question = Question<SettingQuery>(
             receiver: .dictionary(["a": .int(1)]),
             arguments: ["key": .string("cafe\u{301}"), "value": .int(2)]
         )
@@ -51,11 +51,11 @@ struct DictionaryWordTests {
     func countingReadsEitherSpelling() throws {
         // Given. The declaration answers `int`, so neither spelling may answer
         // absence
-        let held = Question<CountQuery.Parameters>(
+        let held = Question<CountQuery>(
             receiver: .dictionary(["a": .int(1), "b": .int(2)]),
             arguments: [:]
         )
-        let laid = Question<CountQuery.Parameters>(
+        let laid = Question<CountQuery>(
             receiver: .record(Record(name: "app.Point", ["a": .int(1)])),
             arguments: [:]
         )

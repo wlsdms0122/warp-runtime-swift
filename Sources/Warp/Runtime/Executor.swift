@@ -413,8 +413,7 @@ public struct Executor: Sendable {
 
             return try await run(
                 effect,
-                selector: callee.label,
-                signature: callee.signature,
+                of: callee,
                 receiver: sent(to: callee, receiver: try received(call, of: callee, handed: handed, in: activation) ?? held, arguments: settled),
                 settled: settled,
                 holds: holds,
@@ -798,6 +797,7 @@ public struct Executor: Sendable {
         case let .query(query):
             return try evaluate(
                 query,
+                of: callee,
                 receiver: sent == .null ? nil : sent,
                 settled: arguments
             ) ?? .null
@@ -896,16 +896,18 @@ public struct Executor: Sendable {
     // `any Query` to a generic function opens it.
     private func evaluate<W: Query>(
         _ query: W,
+        of callee: Linked,
         receiver: Value?,
         settled: Settled
     ) throws -> Value? {
-        try query.evaluate(Question(receiver: receiver, settled: settled, executor: self))
+        try query.evaluate(
+            Question(receiver: receiver, settled: settled, sends: callee.sends, executor: self)
+        )
     }
 
     private func run<W: Effect>(
         _ effect: W,
-        selector: Name,
-        signature: Signature,
+        of callee: Linked,
         receiver: Value?,
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
@@ -913,13 +915,102 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         try await effect.run(
             Invocation(
-                selector: selector,
-                signature: signature,
+                selector: callee.label,
+                signature: callee.signature,
                 receiver: receiver,
                 settled: settled,
                 holds: holds,
+                sends: callee.sends,
                 trace: trace,
                 executor: self
+            )
+        )
+    }
+
+    // Sending a word a word declared it sends. The row is the link's, resolved
+    // where the word was registered, so nothing is looked up here. The
+    // arguments are offered rather than settled strictly, for the reason a
+    // closure's are: a Swift body is not text the link could read the names
+    // out of, so what the word gives and what the callee declared are matched
+    // where both exist.
+    func send(
+        _ row: Int,
+        to receiver: Value?,
+        offering arguments: [(name: Name, value: Value)],
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[row]
+        let settled = try settled(callee, to: receiver, offering: arguments)
+
+        switch callee.implementation {
+        case .query:
+            return try answer(callee, for: receiver, with: settled)
+
+        case let .effect(effect):
+            return try await run(
+                effect,
+                of: callee,
+                receiver: sent(to: callee, receiver: receiver, arguments: settled),
+                settled: settled,
+                holds: [],
+                trace: trace.appending(.procedure(callee.label.spelling))
+            )
+
+        case let .body(body, frame):
+            var inner = try activation(of: callee, in: frame)
+
+            if let position = callee.receiverPosition, let receiver {
+                inner.cells[frame.parameters[position]] = .value(receiver)
+            }
+
+            for (position, value) in settled.values.enumerated() {
+                guard let value else { continue }
+
+                inner.cells[frame.parameters[position]] = .value(value)
+            }
+
+            return try await answer(
+                body,
+                of: callee,
+                in: &inner,
+                at: trace.appending(.procedure(callee.label.spelling))
+            )
+        }
+    }
+
+    // The same send, where the sender answers without running. The link
+    // refused a query sending anything that runs, so what reaches here answers
+    // as data.
+    func send(
+        _ row: Int,
+        to receiver: Value?,
+        offering arguments: [(name: Name, value: Value)]
+    ) throws -> Value {
+        let callee = linked[row]
+
+        guard callee.purity == .pure else {
+            throw ExecutionError(
+                "'\(callee.label)' answers only by running, so it cannot be"
+                    + " read as data here"
+            )
+        }
+
+        return try answer(callee, for: receiver, with: try settled(callee, to: receiver, offering: arguments))
+    }
+
+    // A send's arguments over the callee's boundary. A receiver stands apart
+    // the way it does for a call written in a document, so the slot it names
+    // is filled by it rather than by the offered list.
+    private func settled(
+        _ callee: Linked,
+        to receiver: Value?,
+        offering arguments: [(name: Name, value: Value)]
+    ) throws -> Settled {
+        Settled(
+            values: try callee.settle(
+                arguments,
+                offered: true,
+                skipping: { position in receiver != nil && position == callee.receiverPosition }
             )
         )
     }

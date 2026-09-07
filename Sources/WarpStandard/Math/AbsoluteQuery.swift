@@ -25,7 +25,7 @@ struct AbsoluteQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Parameters>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) throws -> Value? {
         switch question.receiver {
         case let .int(number):
             // The one magnitude the word does not hold is its own minimum.
