@@ -128,6 +128,11 @@ public struct Draft: Sendable {
     // of the link and not of this text, so every step that could be a word is
     // one here. A reader of this list may look for a word nobody needed; one
     // narrowed by guessing would miss a word somebody did.
+    //
+    // What this document declares is not taken out, unlike the other two. A
+    // bare step is answered from every declaration in the link rather than
+    // from the document holding the path, so a document declaring a word by
+    // that spelling has not thereby answered its own step.
     var walks: Set<Name> {
         var walked: Set<Name> = []
 

@@ -34,11 +34,13 @@ public struct Catalogue: Sendable {
     // Which module declares each name, by the spelling a call writes.
     private let words: [Name: Int]
 
-    // Which modules declare a word ending in each bare spelling. Several,
-    // because a path reaches a word by its last segment alone, and which of
-    // the declarations sharing one may be reached that way is settled by
-    // purity and reachability. Both are read off the link, so what stands here
-    // is every candidate and the link picks among them.
+    // The same words under their last segment alone, which is how a path
+    // reaches one. Several to a spelling, because which of the declarations
+    // sharing one a path may reach is settled by purity and reachability, both
+    // read off the link. So this stands every candidate and the link picks.
+    //
+    // A catalogue whose modules can stand in one world has at most one
+    // reachable candidate per spelling: two would refuse wherever both stood.
     private let walked: [Name: [Int]]
 
     private let shapes: [Name: Int]
@@ -50,77 +52,49 @@ public struct Catalogue: Sendable {
     // link refuses such a pair only when both are in it, and a host may well
     // hold two modules it never puts in one world.
     public init(_ modules: [Module]) throws {
-        var words: [Name: Int] = [:]
-        var shapes: [Name: Int] = [:]
-        var walked: [Name: [Int]] = [:]
-
-        func claim(
-            _ names: some Sequence<Name>,
-            at position: Int,
-            in table: inout [Name: Int],
-            of space: Space,
-            placing place: (Name) -> Place
-        ) throws {
-            for name in names.sorted() {
-                guard let first = table[name] else {
-                    table[name] = position
-
-                    continue
-                }
-
-                throw CatalogueError(
-                    "the \(space.spelled) '\(name)' is declared by"
-                        + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
-                        + " \(Place.Document.of(modules[position]).spelled(at: position)) in"
-                        + " this catalogue, so there is no answer to which one supplies it."
-                        + " A catalogue names each declaration once",
-                    at: place(name)
-                )
-            }
-        }
-
         // Each space walked whole before the next, so which collision is
         // reported is a fact of the list the host wrote and of nothing else.
-        for (position, module) in modules.enumerated() {
-            let draft = module.draft
-            let document = Place.Document.of(module)
+        func claimed(_ space: Space) throws -> [Name: Int] {
+            var table: [Name: Int] = [:]
 
-            try claim(draft.procedures.keys, at: position, in: &words, of: .word) { name in
-                .procedure(name.spelling, in: document)
+            for (position, module) in modules.enumerated() {
+                let declarations = space.declarations(of: module.draft, in: .of(module))
+
+                for declaration in declarations.sorted(by: { $0.name < $1.name }) {
+                    guard let first = table[declaration.name] else {
+                        table[declaration.name] = position
+
+                        continue
+                    }
+
+                    throw CatalogueError(
+                        "the \(space.spelled) '\(declaration.name)' is declared by"
+                            + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
+                            + " \(Place.Document.of(module).spelled(at: position)) in this"
+                            + " catalogue, so there is no answer to which one supplies it."
+                            + " A catalogue names each declaration once",
+                        at: declaration.place
+                    )
+                }
             }
 
-            try claim(draft.contractWords, at: position, in: &words, of: .word) { name in
-                .contract(name.spelling, in: document)
-            }
+            return table
         }
 
-        for (position, module) in modules.enumerated() {
-            let draft = module.draft
-            let document = Place.Document.of(module)
-
-            try claim(draft.types.keys, at: position, in: &shapes, of: .shape) { name in
-                .type(name.spelling, in: document)
-            }
-
-            try claim(draft.constraints.keys, at: position, in: &shapes, of: .shape) { name in
-                .constraint(name.spelling, in: document)
-            }
-
-            try claim(draft.contracts.keys, at: position, in: &shapes, of: .shape) { name in
-                .contract(name.spelling, in: document)
-            }
-        }
-
-        // Not claimed, gathered: a bare spelling shared by two declarations is
-        // the ordinary case and the link tells them apart.
-        for (name, position) in words {
-            walked[name.unqualified, default: []].append(position)
-        }
+        let words = try claimed(.word)
 
         self.modules = modules
         self.words = words
-        self.walked = walked.mapValues { positions in positions.sorted() }
-        self.shapes = shapes
+        self.shapes = try claimed(.shape)
+
+        // Not claimed, gathered: a bare spelling shared by two declarations is
+        // the ordinary case, and which of them a path may reach is settled by
+        // purity and reachability, both read off the link.
+        self.walked = words
+            .reduce(into: [Name: [Int]]()) { table, entry in
+                table[entry.key.unqualified, default: []].append(entry.value)
+            }
+            .mapValues { positions in positions.sorted() }
     }
 
     // MARK: - Public
