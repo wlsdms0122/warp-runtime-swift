@@ -17,16 +17,30 @@ import Foundation
 //
 // The link is not where this happens. It is handed a world and holds one name
 // to one declarer, and a world holding two copies of a module gives that rule
-// nothing to say about which copy was meant. Here the names are keys of a
-// table, so a second copy is not a thing that can be written.
+// nothing to say about which copy was meant. Here the modules are rows of a
+// table and a row is brought in once, so a second copy is not a thing that can
+// be written.
+//
+// What a link needs is not what a document discloses. `imports` says what the
+// program can touch, which is the grant a caller reads before it allows
+// anything; a link needs that and also the words a path steps to and the
+// shapes a signature names, neither of which touches anything. So the needs
+// are read off the module here, in three spellings, and each is looked up in
+// the table it belongs to.
 public struct Catalogue: Sendable {
     // MARK: - Property
     private let modules: [Module]
 
-    // Which module declares each name. Two tables because words and shapes are
-    // two spaces: a link refuses one name standing for a shape and a
-    // membership at once, and says nothing about a word spelled like a type.
+    // Which module declares each name, by the spelling a call writes.
     private let words: [Name: Int]
+
+    // Which modules declare a word ending in each bare spelling. Several,
+    // because a path reaches a word by its last segment alone, and which of
+    // the declarations sharing one may be reached that way is settled by
+    // purity and reachability. Both are read off the link, so what stands here
+    // is every candidate and the link picks among them.
+    private let walked: [Name: [Int]]
+
     private let shapes: [Name: Int]
 
     // MARK: - Initializer
@@ -38,87 +52,121 @@ public struct Catalogue: Sendable {
     public init(_ modules: [Module]) throws {
         var words: [Name: Int] = [:]
         var shapes: [Name: Int] = [:]
+        var walked: [Name: [Int]] = [:]
 
-        // In the order the host wrote them, each space walked whole, so which
-        // collision is reported is a fact of that list and of nothing else.
+        func claim(
+            _ names: some Sequence<Name>,
+            at position: Int,
+            in table: inout [Name: Int],
+            of space: Space,
+            placing place: (Name) -> Place
+        ) throws {
+            for name in names.sorted() {
+                guard let first = table[name] else {
+                    table[name] = position
+
+                    continue
+                }
+
+                throw CatalogueError(
+                    "the \(space.spelled) '\(name)' is declared by"
+                        + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
+                        + " \(Place.Document.of(modules[position]).spelled(at: position)) in"
+                        + " this catalogue, so there is no answer to which one supplies it."
+                        + " A catalogue names each declaration once",
+                    at: place(name)
+                )
+            }
+        }
+
+        // Each space walked whole before the next, so which collision is
+        // reported is a fact of the list the host wrote and of nothing else.
         for (position, module) in modules.enumerated() {
-            try Self.claim(
-                module.declaredWords.sorted(),
-                at: position,
-                in: &words,
-                of: module,
-                calling: "word"
-            )
+            let draft = module.draft
+            let document = Place.Document.of(module)
+
+            try claim(draft.procedures.keys, at: position, in: &words, of: .word) { name in
+                .procedure(name.spelling, in: document)
+            }
+
+            try claim(draft.contractWords, at: position, in: &words, of: .word) { name in
+                .contract(name.spelling, in: document)
+            }
         }
 
         for (position, module) in modules.enumerated() {
-            try Self.claim(
-                module.declaredShapes.sorted(),
-                at: position,
-                in: &shapes,
-                of: module,
-                calling: "shape"
-            )
+            let draft = module.draft
+            let document = Place.Document.of(module)
+
+            try claim(draft.types.keys, at: position, in: &shapes, of: .shape) { name in
+                .type(name.spelling, in: document)
+            }
+
+            try claim(draft.constraints.keys, at: position, in: &shapes, of: .shape) { name in
+                .constraint(name.spelling, in: document)
+            }
+
+            try claim(draft.contracts.keys, at: position, in: &shapes, of: .shape) { name in
+                .contract(name.spelling, in: document)
+            }
+        }
+
+        // Not claimed, gathered: a bare spelling shared by two declarations is
+        // the ordinary case and the link tells them apart.
+        for (name, position) in words {
+            walked[name.unqualified, default: []].append(position)
         }
 
         self.modules = modules
         self.words = words
+        self.walked = walked.mapValues { positions in positions.sorted() }
         self.shapes = shapes
     }
 
     // MARK: - Public
     // The whole world for these modules: what was asked for, and everything in
-    // the catalogue that what was asked for needs, and each of them once.
+    // the catalogue that what was asked for needs, and each of the catalogue's
+    // modules at most once.
+    //
+    // What is asked for is what the caller means to run. Supply belongs in the
+    // catalogue, and a module handed over here as well as held there stands in
+    // the world twice, which the link refuses. Keeping the second one out
+    // instead would mean a name the catalogue declares could be answered by
+    // whatever the caller listed, so a program declaring one word of a granted
+    // module would quietly become the module every other module in the world
+    // calls.
     //
     // A name nothing here declares is left alone. The link refuses it, naming
     // the world it looked in, and a refusal from here would be a second copy
     // of a rule that has to be right once.
-    //
-    // Modules the caller listed are not folded together. Two copies in that
-    // list is a caller holding what it already had, and quietly keeping one of
-    // them would make which one it is depend on the order they were written
-    // in.
     public func world(for wanted: [Module]) -> [Module] {
         var world = wanted
-        var declaredWords: Set<Name> = []
-        var declaredShapes: Set<Name> = []
+        var taken: Set<Int> = []
+        var index = 0
 
-        func declare(_ module: Module) {
-            declaredWords.formUnion(module.declaredWords)
-            declaredShapes.formUnion(module.declaredShapes)
-        }
-
-        func bring(_ name: Name, from table: [Name: Int]) {
-            guard let position = table[name] else { return }
-
-            let supplier = modules[position]
-
-            world.append(supplier)
-            declare(supplier)
-        }
-
-        for module in wanted {
-            declare(module)
+        func bring(_ positions: [Int]) {
+            for position in positions where taken.insert(position).inserted {
+                world.append(modules[position])
+            }
         }
 
         // Over the world as it grows, so a module brought in for a name is
         // asked for its own needs in turn. Names in order, so which modules
         // arrive and where they stand is the same every time.
-        var index = 0
-
         while index < world.count {
-            let module = world[index]
+            let draft = world[index].draft
             index += 1
 
-            // The two spaces are asked separately because they are two tables,
-            // and each name is asked against what stands in the world by then:
-            // one module often supplies several of the names another needs.
-            for name in module.imports.sorted() where !declaredWords.contains(name) {
-                bring(name, from: words)
+            for name in draft.sends.sorted() {
+                bring(words[name].map { position in [position] } ?? [])
             }
 
-            for name in module.mentions.sorted() where !declaredShapes.contains(name) {
-                bring(name, from: shapes)
+            for name in draft.walks.sorted() {
+                bring(walked[name] ?? [])
+            }
+
+            for name in draft.mentions.sorted() {
+                bring(shapes[name].map { position in [position] } ?? [])
             }
         }
 
@@ -126,28 +174,4 @@ public struct Catalogue: Sendable {
     }
 
     // MARK: - Private
-    private static func claim(
-        _ names: [Name],
-        at position: Int,
-        in table: inout [Name: Int],
-        of module: Module,
-        calling kind: String
-    ) throws {
-        for name in names {
-            // A module claiming one spelling twice is one answer, not two: a
-            // contract's word and a procedure of the same name in one module
-            // still leave the catalogue with one module to hand back.
-            if let first = table[name], first != position {
-                throw CatalogueError(
-                    "the \(kind) '\(name)' is declared by the modules at"
-                        + " \(first) and \(position) in this catalogue, so there"
-                        + " is no answer to which one supplies it. A catalogue"
-                        + " names each declaration once",
-                    at: Place(in: .of(module))
-                )
-            }
-
-            table[name] = position
-        }
-    }
 }

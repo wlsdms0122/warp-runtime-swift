@@ -74,8 +74,8 @@ struct CatalogueTests {
         #expect(try linker.link(world, entry: entryName).rows["std.math.plus"] != nil)
     }
 
-    @Test("a module the caller already listed is not brought a second time")
-    func anAlreadyListedModuleIsNotBroughtAgain() throws {
+    @Test("supply handed over as well as held is supply standing twice")
+    func supplyListedBesideTheCatalogueStandsTwice() throws {
         let shapes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
             procedures: [
@@ -87,12 +87,69 @@ struct CatalogueTests {
             ]
         )
 
-        // When. The module that would have been brought is already in the list.
+        // When. What is asked for is what the caller means to run, so a module
+        // handed over here as well as held in the catalogue is in the world
+        // twice.
         let world = try Catalogue([shapes]).world(for: [users, shapes])
 
-        // Then. Nothing was added, and the link does not meet a name twice.
-        #expect(world.count == 2)
+        // Then. The link says so, rather than the catalogue quietly keeping
+        // one of them.
+        #expect(world.count == 3)
+        #expect(throws: LinkError.self) { try linker.link(world, entry: entryName) }
+    }
+
+    @Test("a word a path steps to brings the module that declares it")
+    func aWalkedWordBringsItsModule() throws {
+        // Given. Nothing is called: the body walks a path, and the last step
+        // is a word. `imports` does not hold it, and rightly, since a path
+        // reaches only words that answer without running.
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(
+                        parameters: ["items": Parameter(type: .array(.int))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("items"), .key("count")])
+                )
+            ]
+        )
+
+        #expect(program.imports.isEmpty)
+
+        // When.
+        let world = try Catalogue(Module.standard).world(for: [program])
+
+        // Then. The module declaring the word came, and the link is satisfied.
         #expect(throws: Never.self) { try linker.link(world, entry: entryName) }
+    }
+
+    @Test("a caller cannot supply a granted word to a granted module")
+    func aWantedModuleDoesNotStandInForTheCatalogue() throws {
+        // Given. `supplier` sends a word the catalogue declares, and the
+        // program declares that same word itself.
+        let real = try Module(
+            procedures: ["app.w": Procedure(body: [], result: .literal(.string("host")))]
+        )
+        let supplier = try Module(
+            procedures: ["lib.run": Procedure(body: [], result: .call(Call(selector: "app.w")))]
+        )
+        let program = try Module(
+            procedures: [
+                "app.w": Procedure(body: [], result: .literal(.string("program"))),
+                entryName: Procedure(body: [], result: .call(Call(selector: "lib.run")))
+            ]
+        )
+
+        // When. `supplier` needs the word, so the catalogue's declarer is
+        // brought whatever else declares it.
+        let world = try Catalogue([real, supplier]).world(for: [program])
+
+        // Then. The link meets both and refuses, rather than binding
+        // `lib.run` to the word the program wrote.
+        #expect(world.count == 3)
+        #expect(throws: LinkError.self) { try linker.link(world, entry: entryName) }
     }
 
     @Test("a name the catalogue does not declare is left to the link")

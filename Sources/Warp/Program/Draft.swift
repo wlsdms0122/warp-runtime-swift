@@ -72,11 +72,7 @@ public struct Draft: Sendable {
     // anything, and a caller reading it is reading the bounds of what it is
     // about to allow.
     public var sends: Set<Name> {
-        // A constant is an expression, so it sends words like any other.
-        // Missing them would understate what a program does.
-        let held = constants.values.flatMap(\.buried)
-            + variables.values.flatMap(\.buried)
-            + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
+        let held = walking
 
         // A native word's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A
@@ -96,12 +92,16 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Internal
-    // The words this declares, by the spelling the link knows each one as. A
-    // contract's word is one of them: the spelling a call writes to reach one
-    // is the contract's name and the word's, and this document declared the
-    // contract.
+    // The words this declares, by the spelling the link knows each one as.
+    // Each name appears once, since both halves come from keys.
     var declaredWords: Set<Name> {
-        Set(procedures.keys).union(
+        Set(procedures.keys).union(contractWords)
+    }
+
+    // The spellings a call writes to reach the words of a contract this
+    // declares: the contract's name and the word's, with a dot between them.
+    var contractWords: Set<Name> {
+        Set(
             contracts.flatMap { contract, words in
                 words.keys.map { word in Name(normal: "\(contract.spelling).\(word.spelling)") }
             }
@@ -115,14 +115,48 @@ public struct Draft: Sendable {
         Set(types.keys).union(constraints.keys).union(contracts.keys)
     }
 
-    // The shapes this names and does not itself declare.
+    // The bare spellings a path in here steps to.
     //
-    // Derived, where `sends` is written down. The list a document carries
-    // exists so a caller can decide what it is about to allow before reading
-    // any of it, and what confers that is words. A type name grants nothing,
-    // so there is nothing for a document to disclose about the shapes it
-    // declares against, and what a signature mentions is worked out here from
-    // the module itself.
+    // A path reaches a word by its last segment alone, so what it needs is
+    // spelled differently from what a call needs and is looked up in a
+    // different table. `sends` does not hold these, and rightly: it discloses
+    // what the program can touch, and a path reaches only words that answer
+    // without running.
+    //
+    // Wider than the truth on purpose. Whether `user.count` steps to a field
+    // or to a word is settled by the type the step stands on, which is a fact
+    // of the link and not of this text, so every step that could be a word is
+    // one here. A reader of this list may look for a word nobody needed; one
+    // narrowed by guessing would miss a word somebody did.
+    var walks: Set<Name> {
+        var walked: Set<Name> = []
+
+        func step(_ path: [PathSegment], from position: Int) {
+            for segment in path[min(position, path.count)...] {
+                switch segment {
+                case let .key(name, _), let .word(name, _):
+                    walked.insert(name)
+
+                case let .indexRef(inner, _):
+                    step(inner, from: 0)
+
+                case .index:
+                    break
+                }
+            }
+        }
+
+        for held in walking {
+            guard case let .reference(path) = held else { continue }
+
+            // The head names something in scope rather than a step onto it.
+            step(path, from: 1)
+        }
+
+        return walked
+    }
+
+    // The shapes this names and does not itself declare.
     var mentions: Set<Name> {
         var mentioned: Set<Name> = []
 
@@ -158,6 +192,15 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Private
+    // Every expression this holds. A constant is an expression, so it sends
+    // words and walks paths like any other, and a list that missed them would
+    // understate what the document does.
+    private var walking: [Expression] {
+        Array(constants.values).flatMap(\.buried)
+            + Array(variables.values).flatMap(\.buried)
+            + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
+    }
+
     // The shapes named inside a body: what a local binding says it holds, what
     // a cast asks for, and what a closure literal's own signature writes. A
     // signature written inline is held to the same table the top level is, so

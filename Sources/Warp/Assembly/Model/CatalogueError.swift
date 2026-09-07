@@ -10,6 +10,9 @@ import Foundation
 // What a catalogue refuses. Only one thing: a name it cannot answer for,
 // because two of the modules in it declare that name and nothing says which
 // one a link asking for it meant.
+//
+// The place is the declaration that could not be added, the way it is wherever
+// two declarations collide, with the first named in the sentence.
 public struct CatalogueError: WarpError {
     // MARK: - Property
     public let message: String
