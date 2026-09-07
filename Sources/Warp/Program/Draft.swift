@@ -86,25 +86,103 @@ public struct Draft: Sendable {
             procedure.implementation.nativeImports?.map(\.selector) ?? []
         }
 
-        // Its own by the spelling the link knows it as. A module names a
-        // sibling the way any other module does, so what it declares is not
-        // something it imports. A contract's word is one of its own too: the
-        // spelling a call writes to reach one is the contract's name and the
-        // word's, and this document declared the contract.
-        let declared = Set(procedures.keys).union(
-            contracts.flatMap { contract, words in
-                words.keys.map { word in Name(normal: "\(contract.spelling).\(word.spelling)") }
-            }
-        )
-
         return held
             .reduce(into: Set(native)) { sent, expression in
                 guard case let .call(call) = expression else { return }
 
                 sent.insert(call.selector)
             }
-            .subtracting(declared)
+            .subtracting(declaredWords)
+    }
+
+    // MARK: - Internal
+    // The words this declares, by the spelling the link knows each one as. A
+    // contract's word is one of them: the spelling a call writes to reach one
+    // is the contract's name and the word's, and this document declared the
+    // contract.
+    var declaredWords: Set<Name> {
+        Set(procedures.keys).union(
+            contracts.flatMap { contract, words in
+                words.keys.map { word in Name(normal: "\(contract.spelling).\(word.spelling)") }
+            }
+        )
+    }
+
+    // The shapes this declares. Types, constraints and contracts are one
+    // space: a link refuses a name standing for a shape and a membership at
+    // once.
+    var declaredShapes: Set<Name> {
+        Set(types.keys).union(constraints.keys).union(contracts.keys)
+    }
+
+    // The shapes this names and does not itself declare.
+    //
+    // Derived, where `sends` is written down. The list a document carries
+    // exists so a caller can decide what it is about to allow before reading
+    // any of it, and what confers that is words. A type name grants nothing,
+    // so there is nothing for a document to disclose about the shapes it
+    // declares against, and what a signature mentions is worked out here from
+    // the module itself.
+    var mentions: Set<Name> {
+        var mentioned: Set<Name> = []
+
+        for type in types.values {
+            mentioned.formUnion(type.mentions)
+        }
+
+        for members in constraints.values {
+            for member in members {
+                mentioned.formUnion(member.mentions)
+            }
+        }
+
+        for words in contracts.values {
+            for signature in words.values {
+                mentioned.formUnion(signature.mentions)
+            }
+        }
+
+        for procedure in procedures.values {
+            mentioned.formUnion(procedure.signature.mentions)
+
+            guard let block = procedure.block else { continue }
+
+            mentioned.formUnion(mentions(buried: block))
+        }
+
+        for held in Array(constants.values) + Array(variables.values) {
+            mentioned.formUnion(mentions(buried: held))
+        }
+
+        return mentioned.subtracting(declaredShapes)
     }
 
     // MARK: - Private
+    // The shapes named inside a body: what a local binding says it holds, what
+    // a cast asks for, and what a closure literal's own signature writes. A
+    // signature written inline is held to the same table the top level is, so
+    // what it names is asked for the same way.
+    private func mentions(buried held: some Burying) -> Set<Name> {
+        held.walked(at: ()) { _, _ in () }
+            .reduce(into: Set<Name>()) { mentioned, found in
+                switch found.1 {
+                case let .statement(statement):
+                    guard let declared = statement.binding?.declared else { return }
+
+                    mentioned.formUnion(declared.mentions)
+
+                case let .expression(expression):
+                    switch expression {
+                    case let .cast(_, type, _):
+                        mentioned.formUnion(type.mentions)
+
+                    case let .closure(procedure):
+                        mentioned.formUnion(procedure.signature.mentions)
+
+                    default:
+                        break
+                    }
+                }
+            }
+    }
 }

@@ -157,5 +157,11 @@ public struct Module: Sendable {
     // MARK: - Internal
     var sends: Set<Name> { draft.sends }
 
+    var mentions: Set<Name> { draft.mentions }
+
+    var declaredWords: Set<Name> { draft.declaredWords }
+
+    var declaredShapes: Set<Name> { draft.declaredShapes }
+
     // MARK: - Private
 }

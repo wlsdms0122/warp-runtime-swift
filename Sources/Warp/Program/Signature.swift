@@ -172,6 +172,14 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Internal
+    // Every declared name this signature reaches, through what it takes and
+    // what it answers.
+    var mentions: Set<Name> {
+        parameters.values.reduce(into: returns?.mentions ?? []) { mentioned, parameter in
+            mentioned.formUnion(parameter.declared.mentions)
+        }
+    }
+
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused unless the caller offers.
     func settle(
