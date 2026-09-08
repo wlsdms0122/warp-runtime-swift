@@ -160,9 +160,11 @@ public struct Linker: Sendable {
         //
         // In name order, so which collision is reported first is the text's
         // fact rather than a hash seed's.
-        for spelling in contractWords.keys.sorted() {
-            guard let declared = space[spelling], let asked = contractWords[spelling] else { continue }
-
+        if
+            let spelling = contractWords.keys.sorted().first(where: { taken in space[taken] != nil }),
+            let declared = space[spelling],
+            let asked = contractWords[spelling]
+        {
             throw LinkError(
                 "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
                     + " of '\(asked.contract)', so there is no answer to which one a"
