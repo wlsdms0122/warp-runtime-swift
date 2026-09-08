@@ -1,5 +1,5 @@
 //
-//  Linker+Filling.swift
+//  Linker+Relocating.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -15,7 +15,7 @@ import Foundation
 // fact of the world the documents were linked as. A type declared in a
 // document the caller never names can answer a contract the caller calls
 // through, so this is the one hole a document could not have filled itself.
-struct Filling {
+struct Relocating {
     // MARK: - Property
     // The rows as compiling left them. Read for what a callee takes, which
     // filling does not change.

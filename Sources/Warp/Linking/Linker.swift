@@ -563,7 +563,7 @@ public struct Linker: Sendable {
         // Which rows answer a contract's word: the one thing a document could
         // not have settled about its own calls, since a type in a document it
         // never names can answer a contract it calls through.
-        let linked = try Filling(
+        let linked = try Relocating(
             table: compiled.table,
             rows: compiled.rows,
             contractWords: compiled.contractWords,
