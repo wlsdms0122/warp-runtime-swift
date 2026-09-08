@@ -20,9 +20,9 @@ struct Compiled: Sendable {
     //
     // The bodies carry their document's own numbers, both for what they call
     // and for what they stand on. The rest of a row does not: what its slots
-    // and answer lower to is its signature read against a table, so those are
-    // this compile's link reading and are made again wherever the row is
-    // read against another.
+    // and answer lower to is its signature read against `types`, so a row
+    // here stands only against that table. `Relocating` takes it from here
+    // rather than from its caller, which is what holds the two together.
     let table: [Linked]
 
     // Every declared spelling, by row.
