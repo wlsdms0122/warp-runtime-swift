@@ -369,6 +369,7 @@ public struct Linker: Sendable {
         let constants = try self.constants(
             of: modules,
             lowering: lowering,
+            folding: foldingTable,
             in: types,
             with: declaredFrame
         )
@@ -377,6 +378,7 @@ public struct Linker: Sendable {
             of: modules,
             beside: constants,
             lowering: lowering,
+            folding: foldingTable,
             in: types,
             with: declaredFrame
         )

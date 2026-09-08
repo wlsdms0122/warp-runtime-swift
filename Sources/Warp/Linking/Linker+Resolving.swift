@@ -219,9 +219,13 @@ extension Linker {
     func constants(
         of modules: [Module],
         lowering: Lowering,
+        folding table: [Linked],
         in types: TypeTable,
         with frame: TypeFrame
     ) throws -> [Int: [Name: Value]] {
+        // Folding runs what it reads, and running reads rows. A lowered body
+        // carries its document's own numbers, so the table handed here is the
+        // one whose numbers a link has answered.
         var settled: [Int: [Name: Value]] = [:]
 
         for (origin, module) in modules.enumerated() where !module.constants.isEmpty {
@@ -253,7 +257,7 @@ extension Linker {
                     known[name] = try Folding(
                         constants: known,
                         origin: origin,
-                        table: lowering.table,
+                        table: table,
                         rows: lowering.rows,
                         words: lowering.words,
                         shapes: frame.shapes
@@ -279,6 +283,7 @@ extension Linker {
         of modules: [Module],
         beside constants: [Int: [Name: Value]],
         lowering: Lowering,
+        folding table: [Linked],
         in types: TypeTable,
         with frame: TypeFrame
     ) throws -> [Int: [Name: Value]] {
@@ -303,7 +308,7 @@ extension Linker {
                     started[name] = try Folding(
                         constants: known,
                         origin: origin,
-                        table: lowering.table,
+                        table: table,
                         rows: lowering.rows,
                         words: lowering.words,
                         shapes: frame.shapes

@@ -128,13 +128,20 @@ struct Relocating {
     private func filled(_ body: Body, of origin: Int, at label: Name) throws -> Body {
         Body(
             instructions: try body.instructions.map { instruction in
-                Instruction(
-                    binding: try relocated(instruction.binding, of: origin, at: label),
-                    code: try filled(instruction.code, of: origin, at: label),
-                    label: instruction.label
-                )
+                try relocated(instruction, of: origin, at: label)
             },
             result: try body.result.map { result in try filled(result, of: origin, at: label) }
+        )
+    }
+
+    // One statement, both what it computes and where it writes. A statement
+    // stands in three places (a body, and either arm of a conditional) and
+    // reads the same way in all of them.
+    private func relocated(_ instruction: Instruction, of origin: Int, at label: Name) throws -> Instruction {
+        Instruction(
+            binding: try relocated(instruction.binding, of: origin, at: label),
+            code: try filled(instruction.code, of: origin, at: label),
+            label: instruction.label
         )
     }
 
@@ -180,19 +187,11 @@ struct Relocating {
             return .conditional(
                 try filled(condition, of: origin, at: label),
                 then: try then.map { instruction in
-                    Instruction(
-                        binding: try relocated(instruction.binding, of: origin, at: label),
-                        code: try filled(instruction.code, of: origin, at: label),
-                        label: instruction.label
-                    )
+                    try relocated(instruction, of: origin, at: label)
                 },
                 else: try otherwise.map { instructions in
                     try instructions.map { instruction in
-                        Instruction(
-                            binding: instruction.binding,
-                            code: try filled(instruction.code, of: origin, at: label),
-                            label: instruction.label
-                        )
+                        try relocated(instruction, of: origin, at: label)
                     }
                 }
             )
