@@ -87,5 +87,34 @@ struct CompiledTests {
         }
     }
 
+    @Test("a document's declarations take a run of rows rather than scattering")
+    func aDocumentTakesABlockOfRows() throws {
+        // Given. Two documents whose spellings interleave in name order, so a
+        // table sorted by name alone would scatter both.
+        let first = try Module(
+            procedures: [
+                "a.one": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "c.three": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+            ]
+        )
+        let second = try Module(
+            procedures: [
+                "b.two": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
+                "d.four": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(4)))
+            ]
+        )
+
+        // When.
+        let rows = try linker.compile([first, second]).rows
+
+        // Then. Each document's rows are next to each other, and in name
+        // order inside the run.
+        let ours = try #require(rows["a.one"])
+
+        #expect(rows["c.three"] == ours + 1)
+        #expect(rows["b.two"] == ours + 2)
+        #expect(rows["d.four"] == ours + 3)
+    }
+
     // MARK: - Private
 }

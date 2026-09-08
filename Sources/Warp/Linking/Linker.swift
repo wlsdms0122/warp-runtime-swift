@@ -146,16 +146,22 @@ public struct Linker: Sendable {
         let isolatedDeclarations = isolated(among: symbols, signatures: signatures)
         let failingDeclarations = failing(among: symbols)
 
-        // The table a run reads, one row per declaration in name order. A
-        // native answers as it is from the start; a written body stands as
-        // the refusal it would earn until it is lowered, so nothing folds
-        // through a body half-made.
+        // The table a run reads, one row per declaration. A native answers as
+        // it is from the start; a written body stands as the refusal it would
+        // earn until it is lowered, so nothing folds through a body half-made.
         var rows: [Name: Int] = [:]
         var table: [Linked] = []
 
+        // A document's declarations take a run of rows, in the order the
+        // documents were handed over and in name order inside each. What a
+        // document declares is then a block of the table rather than
+        // declarations scattered through it, so where a document's rows begin
+        // is a number and its own rows are that number and an offset. The
+        // gathering already reads the documents in that order.
+        //
         // The spellings first, so a native word's sends reach a row whatever
         // order the declarations stand in.
-        let declarations = symbols.sorted { left, right in left.declared < right.declared }
+        let declarations = symbols
 
         for (position, symbol) in declarations.enumerated() {
             rows[symbol.declared] = position
