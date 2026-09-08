@@ -135,23 +135,11 @@ public struct Linker: Sendable {
         // table the run will read.
         let shapes = types.shapes
 
-        // The spelling a call writes to reach a contract's word: the
-        // contract's name and the word's, with a dot between them. Built here
-        // once, so nothing downstream takes a name apart again.
-        let contractWords = declaredContracts.reduce(into: [Name: ContractWord]()) { table, entry in
-            for (word, signature) in entry.value.held {
-                let spelling = Name(normal: "\(entry.key.spelling).\(word.spelling)")
-
-                table[spelling] = ContractWord(
-                    contract: entry.key,
-                    word: word,
-                    signature: signature,
-                    slots: signature.lowered(in: shapes),
-                    answers: signature.returns?.lowered(in: shapes),
-                    answering: (witnessed[entry.key] ?? [:]).compactMapValues { words in words[word] }
-                )
-            }
-        }
+        // The words the contracts ask, under the spellings a call writes to
+        // reach them. Read off the table the satisfaction was just written
+        // into, so what a call reaches and what a judgment reads are one
+        // reading rather than two.
+        let contractWords = ContractWord.table(in: types)
 
         // A contract's word and a declaration cannot take one spelling. A call
         // writing it lowers to the pick the contract makes, so the declaration
@@ -578,7 +566,6 @@ public struct Linker: Sendable {
             words: wordRows,
             calls: calls,
             types: types,
-            contractWords: contractWords,
             numbering: numbering,
             shapeNumbering: shaped.numbering,
             variables: variables.reduce(into: [:]) { table, entry in

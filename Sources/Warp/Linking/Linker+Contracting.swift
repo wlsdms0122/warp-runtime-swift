@@ -36,7 +36,7 @@ extension Linker {
                 var words: [Name: Name] = [:]
 
                 for (word, asked) in declaration.held.sorted(by: { $0.key < $1.key }) {
-                    let spelling = Name(normal: "\(type.spelling).\(word.spelling)")
+                    let spelling = ContractWord.spelling(of: type, word: word)
 
                     guard let symbol = space[spelling] else { break }
                     guard

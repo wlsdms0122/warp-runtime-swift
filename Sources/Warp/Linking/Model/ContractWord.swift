@@ -36,5 +36,40 @@ struct ContractWord: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
+    // Every word every contract in these tables asks, under the spelling a
+    // call writes to reach one.
+    //
+    // Which declaration answers a word is read off the tables rather than
+    // carried from where the answers were gathered. A type answering a
+    // contract answers every one of its words by a declaration named for the
+    // type and the word, so the table saying which types answer says the
+    // whole of it.
+    static func table(in types: TypeTable) -> [Name: ContractWord] {
+        types.contracts.reduce(into: [Name: ContractWord]()) { table, entry in
+            let answering = types.shapes.satisfying[entry.key] ?? []
+
+            for (word, signature) in entry.value {
+                table[spelling(of: entry.key, word: word)] = ContractWord(
+                    contract: entry.key,
+                    word: word,
+                    signature: signature,
+                    slots: signature.lowered(in: types.shapes),
+                    answers: signature.returns?.lowered(in: types.shapes),
+                    answering: answering.reduce(into: [Name: Name]()) { held, type in
+                        held[type] = spelling(of: type, word: word)
+                    }
+                )
+            }
+        }
+    }
+
+    // The spelling a call writes to reach a word: the name it is asked of and
+    // the word's, with a dot between them. A contract's word and the
+    // declaration answering it are spelled the same way, by the contract and
+    // by the type.
+    static func spelling(of name: Name, word: Name) -> Name {
+        Name(normal: "\(name.spelling).\(word.spelling)")
+    }
+
     // MARK: - Private
 }

@@ -38,12 +38,6 @@ struct Compiled: Sendable {
 
     let types: TypeTable
 
-    // Every contract's words, and which declaration answers each by the name
-    // of the type that answers it. Which types answer a contract is a fact of
-    // the world rather than of one document, so it is what the link reads to
-    // fill the calls that go through a contract.
-    let contractWords: [Name: ContractWord]
-
     // Where each document's lowered bodies number their calls from. A body
     // carries the document's own numbers, so this is what the link reads to
     // turn them into rows.

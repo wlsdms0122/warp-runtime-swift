@@ -183,7 +183,7 @@ struct Relocating {
             words: compiled.words,
             numbering: compiled.numbering,
             shapeNumbering: compiled.shapeNumbering,
-            contractWords: compiled.contractWords,
+            contractWords: ContractWord.table(in: compiled.types),
             shapes: compiled.types.shapes
         )
     }
@@ -486,7 +486,7 @@ struct Relocating {
     }
 
     private func filled(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
-        let spelling = Name(normal: "\(dispatch.contract.spelling).\(dispatch.word.spelling)")
+        let spelling = ContractWord.spelling(of: dispatch.contract, word: dispatch.word)
 
         guard let asked = contractWords[spelling] else {
             throw LinkError.unjudged("a call to '\(spelling)', which no contract declares", at: place(of: standing.label))
