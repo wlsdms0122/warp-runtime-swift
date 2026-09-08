@@ -76,6 +76,35 @@ struct ContractTests {
         }
     }
 
+    @Test("a declaration cannot take a contract word's spelling")
+    func aDeclarationCannotTakeAContractWordSpelling() throws {
+        // Given. `app.Describable.describe` is both a contract's word and a
+        // declaration, so a call writing that spelling has two readings
+        let sut = try describing(
+            types: ["bank.Plain": .record(["note": .string])],
+            words: [
+                "app.Describable.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("declared"))
+                )
+            ],
+            body: [],
+            result: .literal(.string("x"))
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("A contract's word and a declaration cannot take one spelling")
+        }
+    }
+
     @Test("a word sent through a contract is judged against what the contract said")
     func theContractOwnsTheJudgment() throws {
         // Given. The contract says `describe` answers a string and takes
@@ -176,6 +205,7 @@ struct ContractTests {
     // generic word standing between the caller and both.
     private func describing(
         types extra: [Name: TypeExpression] = [:],
+        words added: [Name: Procedure] = [:],
         body: [Statement],
         result: Warp.Expression
     ) throws -> Module {
@@ -224,7 +254,7 @@ struct ContractTests {
                         spelling(.reference([.key("of"), .key("last")]))
                     )
                 )
-            ]
+            ].merging(added) { _, given in given }
         )
     }
 }

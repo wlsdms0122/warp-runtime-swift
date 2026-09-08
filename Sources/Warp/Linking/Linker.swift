@@ -153,6 +153,25 @@ public struct Linker: Sendable {
             }
         }
 
+        // A contract's word and a declaration cannot take one spelling. A call
+        // writing it lowers to the pick the contract makes, so the declaration
+        // standing under it is reachable by nothing and the two readings of
+        // one name never meet.
+        //
+        // In name order, so which collision is reported first is the text's
+        // fact rather than a hash seed's.
+        for spelling in contractWords.keys.sorted() {
+            guard let declared = space[spelling], let asked = contractWords[spelling] else { continue }
+
+            throw LinkError(
+                "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
+                    + " of '\(asked.contract)', so there is no answer to which one a"
+                    + " call reaches. A contract's word and a declaration cannot take"
+                    + " one spelling",
+                at: declared.place
+            )
+        }
+
         // What every declaration returns, by the name a resolved call site
         // uses. Built before the walk so a call can be judged against a callee
         // the walk has not reached yet.
@@ -224,18 +243,12 @@ public struct Linker: Sendable {
         // outside itself first, its own declarations after. Built from the
         // documents alone, so a body lowers to the same numbers whatever else
         // the caller put in the link.
-        let numbered = modules.enumerated().map { entry in
-            Numbering(
+        let numbering = modules.enumerated().reduce(into: [Int: Numbering]()) { table, entry in
+            table[entry.offset] = Numbering(
                 imports: entry.element.imports,
                 walks: entry.element.draft.walks,
                 declared: declaredBy[entry.offset] ?? []
             )
-        }
-
-        // The same, under the document a row names, for everything that reads
-        // a numbering by where a body came from rather than in order.
-        let numbering = numbered.enumerated().reduce(into: [Int: Numbering]()) { table, entry in
-            table[entry.offset] = entry.element
         }
 
         let sending = numbering.mapValues { held in
@@ -324,21 +337,22 @@ public struct Linker: Sendable {
             shapes: shapes
         )
 
-        // Which row of this link each document's numbers stand for. Compiling
-        // runs what a constant calls, and running reads rows; a lowered body
-        // carries its document's own numbers, so the answer is read off the
-        // numberings once per number rather than written into every body.
+        // Which row of this link each document's numbers stand for, in the
+        // order the documents stand. Compiling runs what a constant calls, and
+        // running reads rows; a lowered body carries its document's own
+        // numbers, so the answer is read off the numberings once per number
+        // rather than written into every body.
         //
         // A name this link has no row for stands as nothing rather than as a
-        // refusal: a document numbers every bare spelling its paths step to,
-        // and a step onto a field reaches no declaration, so a numbering holds
-        // names no body ever calls.
-        let views = numbered.map { held in
-            held.answers(rows: rows, words: wordRows).map { answer -> Int? in
+        // refusal, and a document that numbered nothing lends none: a document
+        // numbers every bare spelling its paths step to, and a step onto a
+        // field reaches no declaration.
+        let views = modules.indices.map { origin in
+            numbering[origin]?.answers(rows: rows, words: wordRows).map { answer -> Int? in
                 guard case let .row(row) = answer else { return nil }
 
                 return row
-            }
+            } ?? []
         }
 
         // What a body's constant paths fold against. The stand-ins, while
@@ -351,7 +365,7 @@ public struct Linker: Sendable {
                 table,
                 rows: rows,
                 words: wordRows,
-                numbering: numbered,
+                numbering: numbering,
                 views: views
             )
         }
