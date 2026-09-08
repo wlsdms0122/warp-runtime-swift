@@ -211,6 +211,15 @@ public struct Linker: Sendable {
             rows[symbol.declared] = position
         }
 
+        // What each document declares, in the order the declarations stand.
+        // Read off in one pass rather than by asking the declarations for a
+        // document's own each time a document asks: the answer is the same
+        // walk either way, and asking once per document walks the world once
+        // per document.
+        let declaredBy = declarations.reduce(into: [Int: [Name]]()) { table, symbol in
+            table[symbol.origin, default: []].append(symbol.declared)
+        }
+
         // Where each document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
         // documents alone, so a body lowers to the same numbers whatever else
@@ -221,9 +230,7 @@ public struct Linker: Sendable {
             table[entry.offset] = Numbering(
                 imports: entry.element.imports,
                 walks: draft.walks,
-                declared: declarations
-                    .filter { symbol in symbol.origin == entry.offset }
-                    .map(\.declared)
+                declared: declaredBy[entry.offset] ?? []
             )
         }
 
