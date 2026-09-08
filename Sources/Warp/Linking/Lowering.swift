@@ -567,12 +567,13 @@ struct Lowering {
             throw unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
         }
 
-        if let stray = call.arguments.keys.first(where: { name in callee.signature.parameters[name] == nil }) {
-            throw unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
-        }
-
         return try CallOperation(
-            handing: try arguments(of: call, in: scope, on: slots, label: label, at: place),
+            handing: { name in
+                try call.arguments[name].map { written in
+                    try argument(written, in: scope, on: slots, label: label, at: place)
+                }
+            },
+            written: call.arguments.keys,
             receiver: try call.receiver.map { written in
                 try argument(written, in: scope, on: slots, label: label, at: place)
             },

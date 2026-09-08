@@ -36,17 +36,20 @@ struct CallOperation: Sendable {
     // the place instead, and a literal settled to the slot it lands in.
     //
     // One rule, whether the callee is the one the call named or one of the
-    // types the link found answering a contract's word. The arguments arrive
-    // lowered, so placing one costs nothing but the placing.
+    // types the link found answering a contract's word. The arguments are
+    // asked for by name in the order the callee's slots stand, so a call the
+    // author wrote lowers each one where it lands and a call through a
+    // contract hands over what it lowered once.
     init(
-        handing arguments: [Name: Argument],
+        handing argument: (Name) throws -> Argument?,
+        written: some Sequence<Name>,
         receiver: Argument?,
         to callee: Linked,
         row: Int,
         in shapes: ShapeTable,
         at place: Place
     ) throws {
-        if let stray = arguments.keys.first(where: { name in callee.signature.parameters[name] == nil }) {
+        if let stray = written.first(where: { name in callee.signature.parameters[name] == nil }) {
             throw LinkError.unjudged(
                 "an argument '\(stray)' that '\(callee.label)' does not declare",
                 at: place
@@ -57,14 +60,20 @@ struct CallOperation: Sendable {
         var placed: [Operation?] = []
         var handed: [Handed] = []
 
+        placed.reserveCapacity(callee.slots.count)
+
         for (position, slot) in callee.slots.enumerated() {
             let name = slot.name
-            let written = name == callee.signature.receiver
-                ? receiver ?? arguments[name]
-                : arguments[name]
+            let isReceiver = name == callee.signature.receiver
+
+            // What the call wrote under this name, and what the slot takes:
+            // the receiver written in front stands under the name the callee
+            // receives by.
+            let written = try argument(name)
+            let given = isReceiver ? receiver ?? written : written
 
             if case .inout = slot.shape {
-                guard case let .reference(address)? = written else {
+                guard case let .reference(address)? = given else {
                     throw LinkError.unjudged(
                         "'\(name)' handed to '\(callee.label)' in place without a variable",
                         at: place
@@ -77,15 +86,15 @@ struct CallOperation: Sendable {
                 continue
             }
 
-            if name == callee.signature.receiver, let given = receiver {
-                guard arguments[name] == nil else {
+            if isReceiver, let receiver {
+                guard written == nil else {
                     throw LinkError.unjudged(
                         "'\(name)' sent to '\(callee.label)' both in front and by name",
                         at: place
                     )
                 }
 
-                sent = given.read
+                sent = receiver.read
                 placed.append(nil)
 
                 continue
@@ -93,7 +102,7 @@ struct CallOperation: Sendable {
 
             // A literal argument is a value the link knows, so the image
             // holds it as the slot takes it rather than as it was written.
-            placed.append(try written.map { argument in
+            placed.append(try given.map { argument in
                 let code = argument.read
 
                 guard case let .literal(value) = code else { return code }
