@@ -116,5 +116,56 @@ struct CompiledTests {
         #expect(rows["d.four"] == ours + 3)
     }
 
+    @Test("a fact nobody declared crosses documents in the order they stand")
+    func aDerivedFactCrossesDocuments() throws {
+        // Given. Three documents in a chain. The bottom one reads its own
+        // variable, so it answers by the run's state rather than on its own,
+        // and the two above reach it only through each other.
+        let bottom = try Module(
+            variables: ["low.count": .literal(.int(0))],
+            procedures: [
+                "low.read": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .reference([.key("low.count")])
+                )
+            ]
+        )
+        let middle = try Module(
+            procedures: [
+                "mid.ask": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "low.read"))
+                )
+            ]
+        )
+        let top = try Module(
+            procedures: [
+                "top.ask": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "mid.ask"))
+                ),
+                "top.alone": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        // When. Handed over with the one that is needed last, so the standing
+        // has to put it first for the answer to be there when it is asked.
+        let compiled = try linker.compile([top, middle, bottom])
+
+        func purity(of declared: Name) throws -> Purity {
+            try compiled.table[#require(compiled.rows[declared])].purity
+        }
+
+        // Then. The whole chain answers by the run, and what reaches none of
+        // it still answers on its own.
+        #expect(try purity(of: "low.read") == .unstated)
+        #expect(try purity(of: "mid.ask") == .unstated)
+        #expect(try purity(of: "top.ask") == .unstated)
+        #expect(try purity(of: "top.alone") == .pure)
+    }
+
     // MARK: - Private
 }

@@ -87,6 +87,16 @@ public struct Linker: Sendable {
 
         let symbols = try self.symbols(of: modules)
 
+        // The order each document's needs stand before it, which is the order
+        // the facts nobody declared are read in. A ring is refused here.
+        //
+        // After the declarations are held to being declared once. Standing
+        // reads a name as whichever document declared it, and where two
+        // declare one name that reading is arbitrary: it can put a document
+        // in its own reach and call the pair a ring. The doubled name is the
+        // defect, so it is the refusal an author gets.
+        let world = try World(modules)
+
         // Every declaration under its declared spelling. The spellings are
         // unique, since the symbol gathering refused a double, and every call
         // in every body asks this table.
@@ -141,10 +151,28 @@ public struct Linker: Sendable {
         let moduleVariables = modules.enumerated().reduce(into: [Int: Set<Name>]()) { table, entry in
             table[entry.offset] = Set(entry.element.variables.keys)
         }
-        let settled = pure(among: symbols, reading: moduleVariables)
 
-        let isolatedDeclarations = isolated(among: symbols, signatures: signatures)
-        let failingDeclarations = failing(among: symbols)
+        // One document at a time, in the order each one's needs stand before
+        // it. All three are fixed points over what a body reaches, so a
+        // document's answer is settled once the documents it reaches have
+        // theirs, and the standing refused a ring where that is not so. Read
+        // over every declaration a document holds rather than the reached
+        // ones: a path names a word the call graph never mentions.
+        let held = symbols.reduce(into: [Int: [Symbol]]()) { table, symbol in
+            table[symbol.origin, default: []].append(symbol)
+        }
+
+        var settled: Set<Name> = []
+        var isolatedDeclarations: Set<Name> = []
+        var failingDeclarations: [Name: Failing] = [:]
+
+        for position in world.standing {
+            let holding = held[position] ?? []
+
+            settled = pure(among: holding, given: settled, reading: moduleVariables)
+            isolatedDeclarations = isolated(among: holding, given: isolatedDeclarations, signatures: signatures)
+            failingDeclarations = failing(among: holding, given: failingDeclarations)
+        }
 
         // The table a run reads, one row per declaration. A native answers as
         // it is from the start; a written body stands as the refusal it would

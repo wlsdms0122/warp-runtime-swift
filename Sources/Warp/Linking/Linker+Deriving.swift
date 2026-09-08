@@ -20,14 +20,18 @@ extension Linker {
     // is struck out when something it reaches is not pure. Starting from "impure
     // until proven" would make two procedures that call each other permanently
     // impure, which is a fact about the algorithm rather than about the code.
-    func pure(among symbols: [Symbol], reading variables: [Int: Set<Name>]) -> Set<Name> {
+    func pure(
+        among symbols: [Symbol],
+        given settled: Set<Name>,
+        reading variables: [Int: Set<Name>]
+    ) -> Set<Name> {
         let bodies = symbols.reduce(into: [Name: (Block, Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (block, variables[symbol.origin] ?? [])
         }
 
-        var pure = Set(
+        var pure = settled.union(
             symbols
                 .filter { symbol in symbol.procedure.implementation.isNativelyPure != false }
                 .map(\.declared)
@@ -55,8 +59,8 @@ extension Linker {
     // that says nothing about itself makes everything reaching it say nothing
     // too. Two procedures calling each other settle where nothing more is
     // added, which the finite set of declared names guarantees.
-    func failing(among symbols: [Symbol]) -> [Name: Failing] {
-        var failing = symbols.reduce(into: [Name: Failing]()) { table, symbol in
+    func failing(among symbols: [Symbol], given answered: [Name: Failing]) -> [Name: Failing] {
+        var failing = symbols.reduce(into: answered) { table, symbol in
             table[symbol.declared] = symbol.procedure.implementation.nativelyFailing ?? .these([])
         }
 

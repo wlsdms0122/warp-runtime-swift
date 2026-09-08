@@ -14,14 +14,18 @@ import Foundation
 // until nothing more is struck.
 extension Linker {
     // MARK: - Internal
-    func isolated(among symbols: [Symbol], signatures: [Name: Signature]) -> Set<Name> {
+    func isolated(
+        among symbols: [Symbol],
+        given settled: Set<Name>,
+        signatures: [Name: Signature]
+    ) -> Set<Name> {
         let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (block, Set(symbol.procedure.signature.parameters.keys))
         }
 
-        var isolated = Set(
+        var isolated = settled.union(
             symbols
                 .filter { symbol in symbol.procedure.implementation.isNativelyIsolated != false }
                 .map(\.declared)

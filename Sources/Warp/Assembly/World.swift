@@ -23,13 +23,23 @@ import Foundation
 //
 // What a module needs is read the way a link reads it: the words it calls, the
 // bare spellings its paths step to, and the shapes its signatures name. A name
-// nothing here declares is left alone, and a name two modules declare takes
-// whichever declared it first. Both are the link's to refuse, and refusing
-// here would be a second copy of a rule that has to be right once.
+// nothing here declares is left alone: the link refuses it, and refusing here
+// would be a second copy of a rule that has to be right once.
+//
+// A name two modules declare is answered by whichever declared it first, which
+// is arbitrary and can put a module in its own reach. Standing a world is
+// therefore worth asking only of modules already held to declaring each name
+// once, and a caller that asks before that can be told about a ring the
+// doubled name made.
 public struct World: Sendable {
     // MARK: - Property
-    // In the order each module's needs stand before it.
-    public let modules: [Module]
+    // Where each module stands in the list it was given in, in the order each
+    // one's needs stand before it. Positions rather than the modules, because
+    // everything else a link builds is keyed by where the caller put a module
+    // and a second numbering would be a second answer to that.
+    public let standing: [Int]
+
+    private let given: [Module]
 
     // MARK: - Initializer
     public init(_ modules: [Module]) throws {
@@ -92,7 +102,7 @@ public struct World: Sendable {
         // it rather than every module the walk had open. Roots in the order the
         // caller handed the modules over, and needs in name order, so which
         // ring is found first is a fact of the world and not of a hash seed.
-        var standing: [Module] = []
+        var standing: [Int] = []
         var settled = [Bool](repeating: false, count: modules.count)
         var walking = [Bool](repeating: false, count: modules.count)
         var route: [(position: Int, name: Name)] = []
@@ -124,16 +134,22 @@ public struct World: Sendable {
             walking[position] = false
             settled[position] = true
 
-            standing.append(modules[position])
+            standing.append(position)
         }
 
         for position in modules.indices {
             try stand(position)
         }
 
-        self.modules = standing
+        self.given = modules
+        self.standing = standing
     }
 
     // MARK: - Public
+    // The modules themselves, in that order.
+    public var modules: [Module] {
+        standing.map { position in given[position] }
+    }
+
     // MARK: - Private
 }
