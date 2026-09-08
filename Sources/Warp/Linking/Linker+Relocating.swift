@@ -122,7 +122,7 @@ struct Answered: Sendable {
 // Two different acts, one walk. A call carries the number its own document
 // gave it, and the link answers with the row: that is renumbering, and what a
 // document said is enough to do it. A call through a contract carries no
-// callee at all, and which types answer one is a fact of the world the
+// callee at all, and which types answer one is a fact of the graph the
 // documents were linked as, since a type in a document the caller never names
 // can answer a contract it calls through: that is filling, and no document
 // could have done it.

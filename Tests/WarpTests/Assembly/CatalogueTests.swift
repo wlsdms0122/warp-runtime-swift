@@ -17,7 +17,7 @@ import WarpStandard
 // catalogue is where a host writes down what it is willing to supply, and
 // closing a list against it is what turns "this program" into "this program
 // and everything it needs, once each".
-@Suite("A catalogue closes the world a link is handed")
+@Suite("A catalogue closes the modules a link is handed")
 struct CatalogueTests {
     // MARK: - Property
     private let linker = Linker()
@@ -40,11 +40,11 @@ struct CatalogueTests {
         )
 
         // When.
-        let world = try Catalogue([shapes]).world(for: [users])
+        let closed = try Catalogue([shapes]).closing([users])
 
         // Then. The link has both, and it links.
-        #expect(world.count == 2)
-        #expect(try linker.link(world, entry: entryName).rows[entryName] != nil)
+        #expect(closed.count == 2)
+        #expect(try linker.link(closed, entry: entryName).rows[entryName] != nil)
     }
 
     @Test("a word a body sends brings the module that declares it")
@@ -66,12 +66,12 @@ struct CatalogueTests {
 
         // When. The catalogue holds the whole standard vocabulary; the program
         // names one word of it.
-        let world = try Catalogue(Module.standard).world(for: [program])
+        let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. `math` came for the word, and `foundation` came after it for
         // the constraint `math`'s own signatures mention.
-        #expect(world.count == 3)
-        #expect(try linker.link(world, entry: entryName).rows["std.math.plus"] != nil)
+        #expect(closed.count == 3)
+        #expect(try linker.link(closed, entry: entryName).rows["std.math.plus"] != nil)
     }
 
     @Test("supply handed over as well as held is supply standing twice")
@@ -88,14 +88,14 @@ struct CatalogueTests {
         )
 
         // When. What is asked for is what the caller means to run, so a module
-        // handed over here as well as held in the catalogue is in the world
+        // handed over here as well as held in the catalogue is in the answer
         // twice.
-        let world = try Catalogue([shapes]).world(for: [users, shapes])
+        let closed = try Catalogue([shapes]).closing([users, shapes])
 
         // Then. The link says so, rather than the catalogue quietly keeping
         // one of them.
-        #expect(world.count == 3)
-        #expect(throws: LinkError.self) { try linker.link(world, entry: entryName) }
+        #expect(closed.count == 3)
+        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
     }
 
     @Test("a word a path steps to brings the module that declares it")
@@ -119,10 +119,10 @@ struct CatalogueTests {
         #expect(program.imports.isEmpty)
 
         // When.
-        let world = try Catalogue(Module.standard).world(for: [program])
+        let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. The module declaring the word came, and the link is satisfied.
-        #expect(throws: Never.self) { try linker.link(world, entry: entryName) }
+        #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
     }
 
     @Test("a caller cannot supply a granted word to a granted module")
@@ -144,12 +144,12 @@ struct CatalogueTests {
 
         // When. `supplier` needs the word, so the catalogue's declarer is
         // brought whatever else declares it.
-        let world = try Catalogue([real, supplier]).world(for: [program])
+        let closed = try Catalogue([real, supplier]).closing([program])
 
         // Then. The link meets both and refuses, rather than binding
         // `lib.run` to the word the program wrote.
-        #expect(world.count == 3)
-        #expect(throws: LinkError.self) { try linker.link(world, entry: entryName) }
+        #expect(closed.count == 3)
+        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
     }
 
     @Test("a name the catalogue does not declare is left to the link")
@@ -165,11 +165,11 @@ struct CatalogueTests {
         )
 
         // When. Nothing in the catalogue declares `Age`.
-        let world = try Catalogue([]).world(for: [users])
+        let closed = try Catalogue([]).closing([users])
 
-        // Then. The world is what was asked for, and the refusal is the link's.
-        #expect(world.count == 1)
-        #expect(throws: LinkError.self) { try linker.link(world, entry: entryName) }
+        // Then. What comes back is what was asked for, and the refusal is the link's.
+        #expect(closed.count == 1)
+        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
     }
 
     @Test("the caller listing one module twice is not quietly folded")
@@ -177,11 +177,11 @@ struct CatalogueTests {
         let shapes = try Module(types: ["Age": .int], procedures: [:])
 
         // When.
-        let world = try Catalogue([]).world(for: [shapes, shapes])
+        let closed = try Catalogue([]).closing([shapes, shapes])
 
         // Then. Both copies stand, and the link says what is wrong with that.
-        #expect(world.count == 2)
-        #expect(throws: LinkError.self) { try linker.link(world, entry: entryName) }
+        #expect(closed.count == 2)
+        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
     }
 
     @Test("two modules declaring one name leave the catalogue no answer")
@@ -216,7 +216,7 @@ struct CatalogueTests {
         )
 
         #expect(program.draft.walks.isEmpty)
-        #expect(try Catalogue(Module.standard).world(for: [program]).count == 1)
+        #expect(try Catalogue(Module.standard).closing([program]).count == 1)
     }
 
     @Test("a spelling no walk could arrive at is a candidate for nothing")
@@ -246,10 +246,10 @@ struct CatalogueTests {
         )
 
         // When / Then. It is not brought, and the word that can be reached is.
-        let world = try Catalogue([holder] + Module.standard).world(for: [program])
+        let closed = try Catalogue([holder] + Module.standard).closing([program])
 
-        #expect(world.count == 3)
-        #expect(throws: Never.self) { try linker.link(world, entry: entryName) }
+        #expect(closed.count == 3)
+        #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
     }
 
     @Test("the standard vocabulary is a catalogue")
@@ -275,9 +275,9 @@ struct CatalogueTests {
         )
 
         // When.
-        let world = try Catalogue(Module.standard).world(for: [program])
+        let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. Whatever came, the link is satisfied by it.
-        #expect(throws: Never.self) { try linker.link(world, entry: entryName) }
+        #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
     }
 }

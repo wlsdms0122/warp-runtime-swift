@@ -14,7 +14,7 @@ extension Lowering {
     // Lowering reads the link's table to judge, so the shape rows it writes
     // are that link's. This turns them into the document's own, which is what
     // leaves compiling: a body carries its document's numbers and nothing
-    // about the world it was linked into.
+    // about the graph it was linked into.
     //
     // The order is the whole reason this stands apart from the lowering. A
     // document's numbering is its names in name order, and no name is in order

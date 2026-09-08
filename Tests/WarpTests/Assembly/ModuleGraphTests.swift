@@ -1,5 +1,5 @@
 //
-//  WorldTests.swift
+//  ModuleGraphTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/8/26.
@@ -15,8 +15,8 @@ import WarpStandard
 // A module is compiled against what it needs, so the order is what makes
 // compiling one module at a time possible at all. Modules that need each
 // other have no such order and are refused here.
-@Suite("A world stands its modules in the order their needs stand")
-struct WorldTests {
+@Suite("A module graph stands its modules in the order their needs stand")
+struct ModuleGraphTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -47,12 +47,12 @@ struct WorldTests {
         )
 
         // When.
-        let world = try World([caller, library])
+        let graph = try ModuleGraph([caller, library])
 
         // Then. What is needed stands first.
-        #expect(world.modules.count == 2)
-        #expect(world.modules[0].procedures["lib.twice"] != nil)
-        #expect(world.modules[1].procedures[entryName] != nil)
+        #expect(graph.modules.count == 2)
+        #expect(graph.modules[0].procedures["lib.twice"] != nil)
+        #expect(graph.modules[1].procedures[entryName] != nil)
     }
 
     @Test("a module stands after the module that declares a shape it names")
@@ -68,10 +68,10 @@ struct WorldTests {
             ]
         )
 
-        let world = try World([users, shapes])
+        let graph = try ModuleGraph([users, shapes])
 
-        #expect(world.modules[0].types["Age"] != nil)
-        #expect(world.modules[1].procedures[entryName] != nil)
+        #expect(graph.modules[0].types["Age"] != nil)
+        #expect(graph.modules[1].procedures[entryName] != nil)
     }
 
     @Test("modules that need each other have no order, so they are refused")
@@ -98,7 +98,7 @@ struct WorldTests {
 
         // When / Then.
         #expect {
-            try World([one, two])
+            try ModuleGraph([one, two])
         } throws: { error in
             "\(error)".contains("need each other") && "\(error)".contains("one.here")
         }
@@ -124,7 +124,7 @@ struct WorldTests {
         )
 
         // When / Then.
-        #expect(try World([alone]).modules.count == 1)
+        #expect(try ModuleGraph([alone]).modules.count == 1)
     }
 
     @Test("a name no module here declares is left to the link")
@@ -138,14 +138,14 @@ struct WorldTests {
             ]
         )
 
-        #expect(try World([program]).modules.count == 1)
+        #expect(try ModuleGraph([program]).modules.count == 1)
     }
 
     @Test("the standard vocabulary stands whole")
     func theStandardVocabularyStands() throws {
-        let world = try World(Module.standard)
+        let graph = try ModuleGraph(Module.standard)
 
-        #expect(world.modules.count == Module.standard.count)
+        #expect(graph.modules.count == Module.standard.count)
     }
 
     // MARK: - Private

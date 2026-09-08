@@ -90,7 +90,7 @@ func reference(_ names: Name...) -> Warp.Expression {
 let entryName: Name = "entry"
 
 // Link the set and run. The way a caller does it, and the way the model reads:
-// the caller states its whole world, then names one procedure in it.
+// the caller states its whole graph, then names one procedure in it.
 func run(
     _ modules: [Module],
     entry: Name = entryName,
@@ -106,7 +106,7 @@ func run(
         .run(image, arguments: arguments)
 }
 
-// One module, for a test that wrote its whole world as one.
+// One module, for a test that wrote its whole graph as one.
 func run(
     _ module: Module,
     entry: Name = entryName,

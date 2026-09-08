@@ -553,7 +553,7 @@ struct LinkerTests {
 
     @Test("a module left out of the link is a module that does not exist")
     func omittedModuleIsUnresolved() throws {
-        // Given. The set is the whole world, so leaving one out is not a lookup
+        // Given. The set is the whole graph, so leaving one out is not a lookup
         // that fails later but a name nothing declares
         let caller = try Module(
             procedures: [
@@ -587,7 +587,7 @@ struct LinkerTests {
 
     @Test("two modules declaring one name are refused")
     func duplicateSymbolIsRefused() throws {
-        // Given. One flat namespace is what taking the whole world at once
+        // Given. One flat namespace is what taking the whole graph at once
         // costs, and two declarations of a name have no way to be told apart
         let left = try Module(
             procedures: [

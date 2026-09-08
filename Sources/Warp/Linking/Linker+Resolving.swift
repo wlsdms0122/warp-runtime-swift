@@ -27,7 +27,7 @@ extension Linker {
             guard held.insert(identity).inserted else {
                 throw LinkError(
                     "this document was handed to the link twice. A link states"
-                        + " its whole world once, so a document already in it is"
+                        + " its whole graph once, so a document already in it is"
                         + " not something to add",
                     at: Place(in: .of(module))
                 )

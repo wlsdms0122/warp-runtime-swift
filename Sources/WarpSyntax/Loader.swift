@@ -33,7 +33,7 @@ public struct Loader: Sendable {
     // Every word a notation reaches on its own through this table. From the
     // readers that spell one, and from the forms registered here. A document
     // written entirely in these spellings still needs them declared somewhere
-    // in its link, so a caller assembling a world can ask what it owes before
+    // in its link, so a caller assembling a graph can ask what it owes before
     // assembling it.
     //
     // What a notation says with a word rather than a construct is a choice it

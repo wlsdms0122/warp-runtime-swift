@@ -10,7 +10,7 @@ import Foundation
 // Takes every module this run was given and one name to start from, and answers
 // with an image, or refuses.
 //
-// A link is handed its whole world at once. The words a program can call are
+// A link is handed its whole module graph at once. The words a program can call are
 // the words the caller put in front of it, so what to link is the caller's
 // statement and joining the names up is this. A module's `imports` says what it
 // asks for and never where to find it, and the entry is an argument rather than
@@ -55,7 +55,7 @@ public struct Linker: Sendable {
     // module is checked against itself, an image is checked across every module
     // given.
     //
-    // What to link is the caller's statement (the whole world at once) and
+    // What to link is the caller's statement (the whole graph at once) and
     // `entry` names which declaration this run starts from. There is no
     // default: guessing which procedure was meant would be an opinion nobody
     // gave.
@@ -89,14 +89,14 @@ public struct Linker: Sendable {
         // declare one name that reading is arbitrary: it can put a document
         // in its own reach and call the pair a ring. The doubled name is the
         // defect, so it is the refusal an author gets.
-        let world = try World(modules)
+        let graph = try ModuleGraph(modules)
 
         // Where each document stands, by where the caller put it. Everything a
         // link builds is keyed by the caller's position, and the rows follow
         // the standing, so this is what turns one into the other.
         var rank = [Int](repeating: 0, count: modules.count)
 
-        for (place, position) in world.standing.enumerated() {
+        for (place, position) in graph.standing.enumerated() {
             rank[position] = place
         }
 
@@ -108,7 +108,7 @@ public struct Linker: Sendable {
             declared: declaredTypes,
             constraints: declaredConstraints,
             contracts: declaredContracts,
-            standing: world.standing.flatMap { position in modules[position].types.keys.sorted() }
+            standing: graph.standing.flatMap { position in modules[position].types.keys.sorted() }
         )
 
         // Every declaration under its declared spelling. The spellings are
@@ -189,7 +189,7 @@ public struct Linker: Sendable {
         var isolatedDeclarations: Set<Name> = []
         var failingDeclarations: [Name: Failing] = [:]
 
-        for position in world.standing {
+        for position in graph.standing {
             let holding = held[position] ?? []
 
             pure(among: holding, settling: &settled, reading: moduleVariables)
@@ -223,7 +223,7 @@ public struct Linker: Sendable {
         // What each document declares, in the order the declarations stand.
         // Read off in one pass rather than by asking the declarations for a
         // document's own each time a document asks: the answer is the same
-        // walk either way, and asking once per document walks the world once
+        // walk either way, and asking once per document walks the graph once
         // per document.
         let declaredBy = declarations.reduce(into: [Int: [Name]]()) { table, symbol in
             table[symbol.origin, default: []].append(symbol.declared)

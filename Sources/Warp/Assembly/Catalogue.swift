@@ -7,7 +7,7 @@
 
 import Foundation
 
-// The modules a host is willing to supply, and the world it hands a link.
+// The modules a host is willing to supply, and the graph it hands a link.
 //
 // A module says what it asks for and never where to find it, so somebody has
 // to decide which modules stand beside it. That decision is a grant: a program
@@ -15,8 +15,8 @@ import Foundation
 // writes down which words those may be. Closing a list against a catalogue
 // reaches only what the host put in one.
 //
-// The link is not where this happens. It is handed a world and holds one name
-// to one declarer, and a world holding two copies of a module gives that rule
+// The link is not where this happens. It is handed a graph and holds one name
+// to one declarer, and a graph holding two copies of a module gives that rule
 // nothing to say about which copy was meant. Here the modules are rows of a
 // table and a row is brought in once, so a second copy is not a thing that can
 // be written.
@@ -51,7 +51,7 @@ public struct Catalogue: Sendable {
     // holds the name twice cannot answer the one question this is asked. That
     // is a fact about the catalogue and not the link's rule stated again: the
     // link refuses such a pair only when both are in it, and a host may well
-    // hold two modules it never puts in one world.
+    // hold two modules it never puts in one graph.
     public init(_ modules: [Module]) throws {
         // Each space walked whole before the next, so which collision is
         // reported is a fact of the list the host wrote and of nothing else.
@@ -109,30 +109,29 @@ public struct Catalogue: Sendable {
     }
 
     // MARK: - Public
-    // The whole world for these modules: what was asked for, and everything in
-    // the catalogue that what was asked for needs, and each of the catalogue's
-    // modules at most once.
+    // These modules closed over what they need: what was asked for, and
+    // everything in the catalogue that what was asked for needs, and each of
+    // the catalogue's modules at most once.
     //
     // What is asked for is what the caller means to run. Supply belongs in the
     // catalogue, and a module handed over here as well as held there stands in
-    // the world twice, which the link refuses. Keeping the second one out
+    // the answer twice, which the link refuses. Keeping the second one out
     // instead would mean a name the catalogue declares could be answered by
     // whatever the caller listed, so a program declaring one word of a granted
-    // module would quietly become the module every other module in the world
-    // calls.
+    // module would quietly become the module every other module calls.
     //
     // A name nothing here declares is left alone. The link refuses it, naming
-    // the world it looked in, and a refusal from here would be a second copy
+    // the modules it looked in, and a refusal from here would be a second copy
     // of a rule that has to be right once.
-    public func world(for wanted: [Module]) -> [Module] {
-        var world = wanted
+    public func closing(_ wanted: [Module]) -> [Module] {
+        var closed = wanted
         var taken: Set<Int> = []
         var index = 0
 
         func bring(_ position: Int?) {
             guard let position, taken.insert(position).inserted else { return }
 
-            world.append(modules[position])
+            closed.append(modules[position])
         }
 
         func bring(_ positions: [Int]) {
@@ -141,11 +140,11 @@ public struct Catalogue: Sendable {
             }
         }
 
-        // Over the world as it grows, so a module brought in for a name is
+        // Over the answer as it grows, so a module brought in for a name is
         // asked for its own needs in turn. Names in order, so which modules
         // arrive and where they stand is the same every time.
-        while index < world.count {
-            let draft = world[index].draft
+        while index < closed.count {
+            let draft = closed[index].draft
             index += 1
 
             for name in draft.sends.sorted() {
@@ -161,7 +160,7 @@ public struct Catalogue: Sendable {
             }
         }
 
-        return world
+        return closed
     }
 
     // MARK: - Private

@@ -7,11 +7,11 @@
 
 import Foundation
 
-// What compiling a world answers: every declaration judged and lowered, the
+// What compiling a module graph answers: every declaration judged and lowered, the
 // facts the judgment read off them, and the call graph it gathered on the way.
 //
 // Everything here is true of the documents alone. Which declaration a run
-// starts from is not, so an entry names nothing in this and one world compiled
+// starts from is not, so an entry names nothing in this and one graph compiled
 // once answers every entry asked of it.
 struct Compiled: Sendable {
     // MARK: - Property

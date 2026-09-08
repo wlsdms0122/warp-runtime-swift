@@ -313,7 +313,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then. The link sees its whole world at once, so the order the
+        // When / Then. The link sees its whole graph at once, so the order the
         // caller listed the modules cannot change the conclusion
         for modules in [[membership, shape], [shape, membership]] {
             #expect {

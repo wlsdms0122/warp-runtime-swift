@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// The boundary between compiling a world and linking one.
+// The boundary between compiling a module graph and linking one.
 //
 // Compiling settles what the documents say on their own. Linking takes that
 // and one name to start from. What each stage may do is what these ask.
@@ -21,7 +21,7 @@ struct CompiledTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("one world compiled once answers every entry asked of it")
+    @Test("one graph compiled once answers every entry asked of it")
     func oneCompileAnswersManyEntries() throws {
         // Given. Two entries, neither reaching the other.
         let sut = try Module(
@@ -230,7 +230,7 @@ struct CompiledTests {
         let compiled = try linker.compile(sut + Module.standard)
 
         // Then. The call stands where the caller's imports put it, which is
-        // not the row the world gave the callee.
+        // not the row the graph gave the callee.
         let number = try called(in: compiled.table, at: compiled.rows["b.asks"])
 
         #expect(number == 0)
@@ -243,7 +243,7 @@ struct CompiledTests {
     }
 
     @Test("what a document lowers to does not move when the link grows")
-    func loweredNumbersDoNotFollowTheWorld() throws {
+    func loweredNumbersDoNotFollowTheGraph() throws {
         // Given. The same two documents, compiled once alone and once beside a
         // third whose declarations sort in front of theirs.
         let sut = try calling()
@@ -288,7 +288,7 @@ struct CompiledTests {
     }
 
     @Test("what a document stands on does not move when the link grows")
-    func loweredShapesDoNotFollowTheWorld() throws {
+    func loweredShapesDoNotFollowTheGraph() throws {
         // Given. The same document, compiled once alone and once beside one
         // whose type takes a row in front of its own.
         let sut = try casting()

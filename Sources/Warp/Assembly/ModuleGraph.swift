@@ -1,5 +1,5 @@
 //
-//  World.swift
+//  ModuleGraph.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -27,11 +27,11 @@ import Foundation
 // would be a second copy of a rule that has to be right once.
 //
 // A name two modules declare is answered by whichever declared it first, which
-// is arbitrary and can put a module in its own reach. Standing a world is
+// is arbitrary and can put a module in its own reach. Standing a graph is
 // therefore worth asking only of modules already held to declaring each name
 // once, and a caller that asks before that can be told about a ring the
 // doubled name made.
-public struct World: Sendable {
+public struct ModuleGraph: Sendable {
     // MARK: - Property
     // Where each module stands in the list it was given in, in the order each
     // one's needs stand before it. Positions rather than the modules, because
@@ -45,7 +45,7 @@ public struct World: Sendable {
     public init(_ modules: [Module]) throws {
         // Which module declares each name, by the spelling that reaches it.
         // Three tables because a name is looked up three ways, the same three
-        // a catalogue closes a world on.
+        // a catalogue closes a list of modules on.
         var words: [Name: Int] = [:]
         var walked: [Name: [Int]] = [:]
         var shapes: [Name: Int] = [:]
@@ -101,7 +101,7 @@ public struct World: Sendable {
         // Depth first, so the ring a refusal names is the one path that closed
         // it rather than every module the walk had open. Roots in the order the
         // caller handed the modules over, and needs in name order, so which
-        // ring is found first is a fact of the world and not of a hash seed.
+        // ring is found first is a fact of the modules and not of a hash seed.
         var standing: [Int] = []
         var settled = [Bool](repeating: false, count: modules.count)
         var walking = [Bool](repeating: false, count: modules.count)
@@ -113,7 +113,7 @@ public struct World: Sendable {
             guard !walking[position] else {
                 let ring = route.drop { step in step.position != position }
 
-                throw WorldError(
+                throw ModuleGraphError(
                     "these modules need each other, so there is no order to compile them in:"
                         + " \(ring.map { step in "\(Place.Document.of(modules[step.position]).spelled(at: step.position)) needs '\(step.name)'" }.joined(separator: ", then "))."
                         + " A module is compiled against what it needs, so what it needs stands first",

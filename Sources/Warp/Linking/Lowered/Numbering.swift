@@ -11,7 +11,7 @@ import Foundation
 //
 // A document numbers from itself: the names it looks for outside itself first,
 // its own declarations after. A call in its body is one of those numbers and
-// nothing else, so what the document lowers to says nothing about the world it
+// nothing else, so what the document lowers to says nothing about the graph it
 // was linked into, and the same text numbers the same way in every link.
 //
 // What runs while a link is still being made is numbered by that link's table

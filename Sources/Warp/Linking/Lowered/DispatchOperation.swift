@@ -14,7 +14,7 @@ import Foundation
 // Apart from `CallOperation` because the two are different facts. A call names
 // the row the link settled; this names a contract's word and leaves which rows
 // answer it to the link, because which types answer a contract is a fact of
-// the world rather than of the document holding the call. A document's own
+// the graph rather than of the document holding the call. A document's own
 // text cannot say it: a type declared in a document this one never names can
 // answer a contract this one calls through.
 //

@@ -22,7 +22,7 @@ extension Linker {
     // impure, which is a fact about the algorithm rather than about the code.
     // What is settled grows in place rather than being handed over and handed
     // back. A document is settled against everything standing in front of it,
-    // so taking that as a value would copy the whole world's answer once per
+    // so taking that as a value would copy the whole graph's answer once per
     // document, and this call only ever adds its own.
     func pure(
         among symbols: [Symbol],
@@ -43,7 +43,7 @@ extension Linker {
 
         // Only what this call was handed can be struck. What was settled
         // before it stands in front of it, so nothing there reaches a name
-        // here, and asking after those again is asking the whole world once
+        // here, and asking after those again is asking the whole graph once
         // per document.
         while true {
             let struck = bodies.compactMap { name, body in
