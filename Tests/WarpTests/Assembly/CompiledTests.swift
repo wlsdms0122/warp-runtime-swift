@@ -221,6 +221,50 @@ struct CompiledTests {
         #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
     }
 
+    @Test("a document numbers its calls from itself, and the link answers with rows")
+    func aCallCarriesTheDocumentsOwnNumber() throws {
+        // Given. A document calling a word it does not declare.
+        let sut = try calling()
+
+        // When. Compiled.
+        let compiled = try linker.compile(sut + Module.standard)
+
+        // Then. The call stands where the caller's imports put it, which is
+        // not the row the world gave the callee.
+        let number = try called(in: compiled.table, at: compiled.rows["b.asks"])
+
+        #expect(number == 0)
+        #expect(number != compiled.rows["a.answers"])
+
+        // And. The link answers with the row.
+        let image = try linker.link(compiled, entry: entryName)
+
+        #expect(try called(in: image.linked, at: image.rows["b.asks"]) == image.rows["a.answers"])
+    }
+
+    @Test("what a document lowers to does not move when the link grows")
+    func loweredNumbersDoNotFollowTheWorld() throws {
+        // Given. The same two documents, compiled once alone and once beside a
+        // third whose declarations sort in front of theirs.
+        let sut = try calling()
+        let ahead = try Module(
+            procedures: [
+                "aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+            ]
+        )
+
+        // When.
+        let alone = try linker.compile(sut + Module.standard)
+        let beside = try linker.compile([ahead] + sut + Module.standard)
+
+        // Then. The rows moved and the number the body carries did not.
+        #expect(alone.rows["a.answers"] != beside.rows["a.answers"])
+        #expect(
+            try called(in: alone.table, at: alone.rows["b.asks"])
+                == called(in: beside.table, at: beside.rows["b.asks"])
+        )
+    }
+
     // MARK: - Private
 
     // The call through a contract a row's result holds.
@@ -313,6 +357,42 @@ struct CompiledTests {
                             literal("card "),
                             spelling(.reference([.key("of"), .key("last")]))
                         )
+                    )
+                ]
+            )
+        ]
+    }
+
+    // The number the call in a row's result carries.
+    private func called(in table: [Linked], at row: Int?) throws -> Int {
+        let row = try #require(row)
+
+        guard
+            case let .body(body, _) = table[row].implementation,
+            case let .call(call)? = body.result
+        else {
+            throw LinkError("'b.asks' holds no call", at: nil)
+        }
+
+        return call.procedure
+    }
+
+    // Two documents, the second calling a word the first declares.
+    private func calling() throws -> [Module] {
+        [
+            try Module(
+                procedures: [
+                    "a.aaa": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0))),
+                    "a.answers": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                ]
+            ),
+            try Module(
+                procedures: [
+                    entryName: Procedure(body: [], result: .call(Call(selector: "b.asks"))),
+                    "b.asks": Procedure(
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "a.answers"))
                     )
                 ]
             )

@@ -20,8 +20,15 @@ struct Lowering {
     private(set) var table: [Linked]
 
     // Rows by declared spelling, and by the bare spelling a path word writes.
+    // Read for what a callee takes, which is what judging a call against it
+    // needs. What a body is written with is the document's own numbering.
     let rows: [Name: Int]
     let words: [Name: Int]
+
+    // Where each document's calls are numbered from. A body carries these
+    // numbers rather than the rows above, so a document lowers the same way
+    // whatever else the link was handed.
+    let numbering: [Int: Numbering]
 
     // Each document's variables by name, in the order a run makes their boxes.
     let variables: [Int: [Name: Int]]
@@ -40,6 +47,7 @@ struct Lowering {
         table: [Linked],
         rows: [Name: Int],
         words: [Name: Int],
+        numbering: [Int: Numbering],
         variables: [Int: [Name: Int]],
         contractWords: [Name: ContractWord] = [:],
         shapes: ShapeTable
@@ -47,6 +55,7 @@ struct Lowering {
         self.table = table
         self.rows = rows
         self.words = words
+        self.numbering = numbering
         self.variables = variables
         self.contractWords = contractWords
         self.shapes = shapes
@@ -71,16 +80,7 @@ struct Lowering {
 
         let body = try lower(block, in: scope, on: slots, label: declared.label, at: place)
 
-        table[row] = Linked(
-            label: declared.label,
-            origin: declared.origin,
-            signature: declared.signature,
-            purity: declared.purity,
-            isolation: declared.isolation,
-            failing: declared.failing,
-            implementation: .body(body, slots.frame),
-            in: shapes
-        )
+        table[row] = Linked(declared, implementation: .body(body, slots.frame), sends: declared.sends)
     }
 
     // Lowers one expression read against a frame of constants, as a constant's
@@ -301,16 +301,18 @@ struct Lowering {
                 case .index, .at:
                     return reached?.element(in: shapes)
 
-                case let .word(row, _, _):
-                    return table[row].returns
+                case let .word(_, spelling, _):
+                    return words[spelling].map { row in table[row].returns } ?? nil
 
                 case .key:
                     return nil
                 }
             }
 
+        // The call carries its document's number, so what it answers is read
+        // by the row that number stands for here.
         case let .call(call):
-            return table[call.procedure].returns
+            return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
 
         case let .cast(_, shape, optional):
             return optional ? nil : shape
@@ -561,6 +563,10 @@ struct Lowering {
 
         let callee = table[row]
 
+        guard let stands = numbered(slots.origin).call(call.selector) else {
+            throw unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
+        }
+
         if let stray = call.arguments.keys.first(where: { name in callee.signature.parameters[name] == nil }) {
             throw unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
         }
@@ -571,7 +577,7 @@ struct Lowering {
                 try argument(written, in: scope, on: slots, label: label, at: place)
             },
             to: callee,
-            row: row,
+            row: stands,
             in: shapes,
             at: place
         )
@@ -628,17 +634,43 @@ struct Lowering {
                 return .at(address, optional: optional)
 
             case let .word(name, optional):
-                guard let row = words[name] else {
+                guard let row = words[name], let stands = numbered(slots.origin).word(name) else {
                     throw unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
                 }
 
                 reached = table[row].returns
 
-                return .word(row, name, optional: optional)
+                return .word(stands, name, optional: optional)
             }
         }
 
         return (Address(slot: slot, steps: steps), reached)
+    }
+
+    // Which row of the link a number in a lowered body stands for. The body
+    // carries its document's numbering, and this walk reads what it just
+    // wrote.
+    private func reached(_ number: Int, on slots: Slots) -> Int? {
+        switch numbered(slots.origin).reference(at: number) {
+        case let .sent(declared):
+            return rows[declared]
+
+        case let .walked(spelling):
+            return words[spelling]
+
+        case let .row(row):
+            return row
+
+        case nil:
+            return nil
+        }
+    }
+
+    // Where the document being lowered numbers its calls from. A document
+    // with nothing to number has none, and a call in a body it never held is
+    // the link's own mistake.
+    private func numbered(_ origin: Int) -> Numbering {
+        numbering[origin] ?? Numbering(imports: [], walks: [], declared: [])
     }
 
     // What the link should have refused before lowering and did not. Not a

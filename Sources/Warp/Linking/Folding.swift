@@ -100,7 +100,17 @@ struct Folding {
     // What an expression reads here. A closure it holds is carried in the
     // code, so the table is read and never grown.
     func read(_ expression: Expression, at place: Place = .given(Self.label.spelling)) throws -> Value {
-        let lowering = Lowering(table: table, rows: rows, words: words, variables: [:], shapes: shapes)
+        // Folding runs what it lowers, here and now, against this table. So
+        // it numbers by the table rather than by the document: there is no
+        // link afterwards to renumber it.
+        let lowering = Lowering(
+            table: table,
+            rows: rows,
+            words: words,
+            numbering: [origin: Numbering(rows: rows, words: words)],
+            variables: [:],
+            shapes: shapes
+        )
         let (code, frame) = try lowering.lower(expression, reading: names, origin: origin, label: Self.label, at: place)
         var activation = Activation(frame)
 

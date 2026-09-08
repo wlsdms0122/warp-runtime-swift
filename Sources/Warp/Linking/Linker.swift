@@ -211,7 +211,25 @@ public struct Linker: Sendable {
             rows[symbol.declared] = position
         }
 
-        let sending = Sending(rows: rows, pure: settled, isolated: isolatedDeclarations)
+        // Where each document numbers its calls from: what it looks for
+        // outside itself first, its own declarations after. Built from the
+        // documents alone, so a body lowers to the same numbers whatever else
+        // the caller put in the link.
+        let numbering = modules.enumerated().reduce(into: [Int: Numbering]()) { table, entry in
+            let draft = entry.element.draft
+
+            table[entry.offset] = Numbering(
+                imports: entry.element.imports,
+                walks: draft.walks,
+                declared: declarations
+                    .filter { symbol in symbol.origin == entry.offset }
+                    .map(\.declared)
+            )
+        }
+
+        let sending = numbering.mapValues { held in
+            Sending(numbering: held, pure: settled, isolated: isolatedDeclarations)
+        }
 
         for symbol in declarations {
             table.append(
@@ -222,7 +240,10 @@ public struct Linker: Sendable {
                     pure: settled.contains(symbol.declared),
                     isolated: isolatedDeclarations.contains(symbol.declared),
                     failing: failingDeclarations[symbol.declared] ?? .unstated,
-                    sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
+                    sends: try sending[symbol.origin]?.rows(
+                        of: symbol.procedure,
+                        called: symbol.declared
+                    ) ?? [],
                     in: shapes
                 )
             )
@@ -284,6 +305,7 @@ public struct Linker: Sendable {
             table: table,
             rows: rows,
             words: wordRows,
+            numbering: numbering,
             variables: orderedVariables.mapValues { names in
                 names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
             },
@@ -291,12 +313,26 @@ public struct Linker: Sendable {
             shapes: shapes
         )
 
+        // Compiling runs what a constant calls, and running reads rows. A
+        // lowered body carries its document's own numbers, so what folding
+        // runs is the table with those turned into rows.
+        func relocating(_ table: [Linked]) throws -> [Linked] {
+            try Relocating(
+                table: table,
+                rows: rows,
+                words: wordRows,
+                numbering: numbering,
+                contractWords: contractWords,
+                shapes: shapes
+            ).linked()
+        }
+
         // What a body's constant paths fold against. The stand-ins, while
         // the words themselves settle: a word folding through a word would
         // be a circle, and which words are already lowered is a fact of
         // name order rather than of the text. Once the words are resolved,
         // folding runs them.
-        var foldingTable = table
+        var foldingTable = try relocating(table)
 
         func row(of symbol: Symbol) throws -> Int {
             guard let row = rows[symbol.declared] else {
@@ -486,7 +522,7 @@ public struct Linker: Sendable {
             _ = try resolved(symbol)
         }
 
-        foldingTable = lowering.table
+        foldingTable = try relocating(lowering.table)
 
         // Every declaration, one document at a time in the order they stand
         // and in name order inside each, which is the order their rows stand
@@ -521,9 +557,11 @@ public struct Linker: Sendable {
         return Compiled(
             table: lowering.table,
             rows: rows,
+            words: wordRows,
             calls: calls,
             types: types,
             contractWords: contractWords,
+            numbering: numbering,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
                     (name: name, value: entry.value[name] ?? .null)
@@ -560,15 +598,9 @@ public struct Linker: Sendable {
             frontier.append(contentsOf: compiled.calls[declared] ?? [])
         }
 
-        // Which rows answer a contract's word: the one thing a document could
-        // not have settled about its own calls, since a type in a document it
-        // never names can answer a contract it calls through.
-        let linked = try Relocating(
-            table: compiled.table,
-            rows: compiled.rows,
-            contractWords: compiled.contractWords,
-            shapes: compiled.types.shapes
-        ).filled()
+        // The documents' own numbers turned into this link's rows, and the
+        // calls through a contract filled with the rows that answer them.
+        let linked = try Relocating(compiled).linked()
 
         return Image(
             linked: linked,

@@ -96,6 +96,26 @@ public final class Linked: Sendable {
         self.implementation = implementation
     }
 
+    // The same row holding different code. What a row lowered from its
+    // signature is the signature's, and neither lowering a body nor answering
+    // the numbers in one touches the signature, so the slots are carried over
+    // rather than worked out again.
+    init(_ row: Linked, implementation: Implementation, sends: [Int]) {
+        self.label = row.label
+        self.origin = row.origin
+        self.signature = row.signature
+        self.receiverPosition = row.receiverPosition
+        self.purity = row.purity
+        self.isolation = row.isolation
+        self.slots = row.slots
+        self.returns = row.returns
+        self.failing = row.failing
+        self.table = row.table
+        self.isDerivable = row.isDerivable
+        self.sends = sends
+        self.implementation = implementation
+    }
+
     // MARK: - Public
     // A declaration's row before its body is lowered: a native answers as it
     // is, and a written body stands as the refusal it earns until then, so

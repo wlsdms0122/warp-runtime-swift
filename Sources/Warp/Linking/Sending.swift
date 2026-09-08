@@ -7,16 +7,16 @@
 
 import Foundation
 
-// Where a native word's declared sends land in the table. A word names the
-// spellings it sends and the link answers with rows, so the run reads a row
-// where the word wrote a spelling.
+// Where a native word's declared sends stand in its document's numbering. A
+// word names the spellings it sends and this answers with numbers, so the run
+// reads a number where the word wrote a spelling.
 //
-// A spelling nothing declares is refused here, before anything runs, the same
-// way a call written in a document is.
+// Which row a number is stays the link's answer, the same as for a call a body
+// wrote. A spelling nothing declares is refused there.
 //
-// So are the two claims a word makes that sending can contradict. A query is
-// the claim that it answers without running, and running is not something a
-// caller can catch; an isolated word is the claim that it touches no name
+// Refused here are the two claims a word makes that sending can contradict. A
+// query is the claim that it answers without running, and running is not
+// something a caller can catch; an isolated word is the claim that it touches no name
 // another body could touch at the same time, and neither is that. A word
 // making either claim while sending something that breaks it is refused.
 //
@@ -25,7 +25,7 @@ import Foundation
 // itself and not contradicting itself.
 struct Sending {
     // MARK: - Property
-    private let rows: [Name: Int]
+    private let numbering: Numbering
 
     // Which declarations answer without running, where the link has worked it
     // out. Nil where nothing has: a folding table stands before the purity
@@ -37,8 +37,8 @@ struct Sending {
     private let isolated: Set<Name>?
 
     // MARK: - Initializer
-    init(rows: [Name: Int], pure: Set<Name>? = nil, isolated: Set<Name>? = nil) {
-        self.rows = rows
+    init(numbering: Numbering, pure: Set<Name>? = nil, isolated: Set<Name>? = nil) {
+        self.numbering = numbering
         self.pure = pure
         self.isolated = isolated
     }
@@ -63,9 +63,9 @@ struct Sending {
         }
 
         return try ordered.map { send in
-            guard let row = rows[send.selector] else {
+            guard let stands = numbering.call(send.selector) else {
                 throw LinkError(
-                    "'\(label)' sends '\(send.selector)', and nothing in this link declares it",
+                    "'\(label)' sends '\(send.selector)', and its document never asked for it",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)
                 )
             }
@@ -86,7 +86,7 @@ struct Sending {
                 )
             }
 
-            return row
+            return stands
         }
     }
 

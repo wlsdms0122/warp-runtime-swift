@@ -22,6 +22,9 @@ struct Compiled: Sendable {
     // Every declared spelling, by row.
     let rows: [Name: Int]
 
+    // Every bare spelling a path may step to, by the row it reaches.
+    let words: [Name: Int]
+
     // What each declaration calls, by declared spelling. Read off the bodies
     // as they were judged, so what a link walks is what was proved rather
     // than what a second reading of the same text would find.
@@ -34,6 +37,11 @@ struct Compiled: Sendable {
     // the world rather than of one document, so it is what the link reads to
     // fill the calls that go through a contract.
     let contractWords: [Name: ContractWord]
+
+    // Where each document's lowered bodies number their calls from. A body
+    // carries the document's own numbers, so this is what the link reads to
+    // turn them into rows.
+    let numbering: [Int: Numbering]
 
     // What each document's variables start a run holding, in the order the
     // layouts read them.
