@@ -43,3 +43,12 @@ public struct LinkError: WarpError {
 
     // MARK: - Private
 }
+
+extension LinkError {
+    // A body the link lowered without judging it first: what the lowering
+    // cannot place is the link's own mistake rather than the author's, and
+    // reads that way.
+    static func unjudged(_ what: String, at place: Place) -> LinkError {
+        LinkError("the link lowered \(what) without judging it", at: place)
+    }
+}

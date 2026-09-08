@@ -191,5 +191,131 @@ struct CompiledTests {
         #expect(try #require(row("z.Also")) + 1 == #require(row("z.Wraps")))
     }
 
+    @Test("compiling leaves which types answer a contract to the link")
+    func aContractCallIsFilledAtTheLink() throws {
+        // Given. A word calling through a contract, and two types answering it
+        // from a document that word never names.
+        let sut = try describing()
+
+        // When. Compiled.
+        let compiled = try linker.compile(sut + Module.standard)
+
+        // Then. The call names the contract's word and no row.
+        let compiledCall = try dispatch(in: compiled.table, at: compiled.rows["app.tell"])
+
+        #expect(compiledCall.contract == "app.Describable")
+        #expect(compiledCall.word == "describe")
+        #expect(compiledCall.calls.isEmpty)
+
+        // And. Linking fills one call for every type that answers.
+        let image = try linker.link(compiled, entry: entryName)
+        let linkedCall = try dispatch(in: image.linked, at: image.rows["app.tell"])
+
+        #expect(Set(linkedCall.calls.keys) == ["bank.Account", "bank.Card"])
+    }
+
+    @Test("a type answering a contract from a document the caller never names")
+    func aWitnessOutsideTheCallersReachAnswers() async throws {
+        // Given / When / Then. Both answered, and the word that called them
+        // mentions neither type.
+        #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
+    }
+
     // MARK: - Private
+
+    // The call through a contract a row's result holds.
+    private func dispatch(in table: [Linked], at row: Int?) throws -> DispatchOperation {
+        let row = try #require(row)
+
+        guard
+            case let .body(body, _) = table[row].implementation,
+            case let .dispatch(dispatch)? = body.result
+        else {
+            throw LinkError("'app.tell' holds no call through a contract", at: nil)
+        }
+
+        return dispatch
+    }
+
+    // Two documents. The first declares the contract and the word calling
+    // through it; the second declares the types answering, and the first names
+    // neither of them.
+    private func describing() throws -> [Module] {
+        [
+            try Module(
+                contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+                procedures: [
+                    "app.tell": Procedure(
+                        signature: Signature(
+                            receiver: "it",
+                            parameters: [
+                                "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                            ],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: .call(
+                            Call(receiver: reference("it"), selector: "app.Describable.describe")
+                        )
+                    )
+                ]
+            ),
+            try Module(
+                types: [
+                    "bank.Account": .record(["balance": .int]),
+                    "bank.Card": .record(["last": .string])
+                ],
+                procedures: [
+                    entryName: Procedure(
+                        body: [
+                            Statement(
+                                binding: .constant("account"),
+                                expression: .cast(
+                                    .record(["balance": .literal(.int(7))]),
+                                    as: .named("bank.Account"),
+                                    optional: false
+                                )
+                            ),
+                            Statement(
+                                binding: .constant("card"),
+                                expression: .cast(
+                                    .record(["last": .literal(.string("42"))]),
+                                    as: .named("bank.Card"),
+                                    optional: false
+                                )
+                            )
+                        ],
+                        result: .array([
+                            .call(Call(receiver: reference("account"), selector: "app.tell")),
+                            .call(Call(receiver: reference("card"), selector: "app.tell"))
+                        ])
+                    ),
+                    "bank.Account.describe": Procedure(
+                        signature: Signature(
+                            receiver: "of",
+                            parameters: ["of": Parameter(type: .named("bank.Account"))],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: interpolated(
+                            literal("balance "),
+                            spelling(.reference([.key("of"), .key("balance")]))
+                        )
+                    ),
+                    "bank.Card.describe": Procedure(
+                        signature: Signature(
+                            receiver: "of",
+                            parameters: ["of": Parameter(type: .named("bank.Card"))],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: interpolated(
+                            literal("card "),
+                            spelling(.reference([.key("of"), .key("last")]))
+                        )
+                    )
+                ]
+            )
+        ]
+    }
 }

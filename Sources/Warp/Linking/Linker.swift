@@ -523,6 +523,7 @@ public struct Linker: Sendable {
             rows: rows,
             calls: calls,
             types: types,
+            contractWords: contractWords,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
                     (name: name, value: entry.value[name] ?? .null)
@@ -559,8 +560,18 @@ public struct Linker: Sendable {
             frontier.append(contentsOf: compiled.calls[declared] ?? [])
         }
 
+        // Which rows answer a contract's word: the one thing a document could
+        // not have settled about its own calls, since a type in a document it
+        // never names can answer a contract it calls through.
+        let linked = try Filling(
+            table: compiled.table,
+            rows: compiled.rows,
+            contractWords: compiled.contractWords,
+            shapes: compiled.types.shapes
+        ).filled()
+
         return Image(
-            linked: compiled.table,
+            linked: linked,
             start: start,
             rows: compiled.rows,
             reached: reached,

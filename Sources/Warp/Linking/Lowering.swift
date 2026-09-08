@@ -486,24 +486,66 @@ struct Lowering {
 
         let receiver = try lower(written, in: scope, on: slots, label: label, at: place)
 
-        // The receiver is dropped from each call: it is read once here, and
-        // the run hands what it read to whichever row it picked.
-        let sent = Call(selector: call.selector, arguments: call.arguments)
+        if let stray = call.arguments.keys.first(where: { name in asked.signature.parameters[name] == nil }) {
+            throw unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
+        }
 
+        // The receiver is dropped from the arguments: it is read once here,
+        // and the run hands what it read to whichever row it picked.
         return DispatchOperation(
             contract: asked.contract,
             word: asked.word,
             receiver: receiver,
-            calls: try asked.answering.mapValues { declaration in
-                try lower(
-                    Call(receiver: nil, selector: declaration, arguments: sent.arguments),
+            arguments: try arguments(
+                of: call,
+                in: scope,
+                on: slots,
+                label: label,
+                at: place
+            )
+        )
+    }
+
+    // What a call was written with, lowered once and under the names it was
+    // written under. In name order, so which slots a nested body takes is the
+    // text's fact rather than a dictionary's.
+    private func arguments(
+        of call: Call,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> [Name: Argument] {
+        try call.arguments
+            .sorted { left, right in left.key < right.key }
+            .reduce(into: [Name: Argument]()) { lowered, entry in
+                lowered[entry.key] = try argument(
+                    entry.value,
                     in: scope,
                     on: slots,
                     label: label,
                     at: place
                 )
             }
-        )
+    }
+
+    // One argument, kept as the place it names where it names one: a slot
+    // taking it in place takes the caller's hold, and which slots do is the
+    // callee's to say.
+    private func argument(
+        _ expression: Expression,
+        in scope: Names,
+        on slots: Slots,
+        label: Name,
+        at place: Place
+    ) throws -> Argument {
+        guard case let .reference(path) = expression else {
+            return .value(try lower(expression, in: scope, on: slots, label: label, at: place))
+        }
+
+        let (address, _) = try lower(path, in: scope, on: slots, at: place)
+
+        return .reference(address)
     }
 
     private func lower(
@@ -523,49 +565,16 @@ struct Lowering {
             throw unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
         }
 
-        var receiver: Operation?
-        var arguments: [Operation?] = []
-        var handed: [CallOperation.Handed] = []
-
-        for (position, slot) in callee.slots.enumerated() {
-            let name = slot.name
-            let written = call.handed(name, to: callee.signature)
-
-            if case .inout = slot.shape {
-                guard case let .reference(path)? = written else {
-                    throw unjudged("'\(name)' handed to '\(call.selector)' in place without a variable", at: place)
-                }
-
-                let (address, _) = try lower(path, in: scope, on: slots, at: place)
-                handed.append(CallOperation.Handed(position: position, address: address))
-                arguments.append(nil)
-
-                continue
-            }
-
-            if name == callee.signature.receiver, let sent = call.receiver {
-                guard call.arguments[name] == nil else {
-                    throw unjudged("'\(name)' sent to '\(call.selector)' both in front and by name", at: place)
-                }
-
-                receiver = try lower(sent, in: scope, on: slots, label: label, at: place)
-                arguments.append(nil)
-
-                continue
-            }
-
-            // A literal argument is a value the link knows, so the image
-            // holds it as the slot takes it rather than as it was written.
-            arguments.append(try written.map { argument in
-                let code = try lower(argument, in: scope, on: slots, label: label, at: place)
-
-                guard case let .literal(value) = code else { return code }
-
-                return .literal(try slot.taking(value, in: shapes))
-            })
-        }
-
-        return CallOperation(procedure: row, receiver: receiver, arguments: arguments, handed: handed)
+        return try CallOperation(
+            handing: try arguments(of: call, in: scope, on: slots, label: label, at: place),
+            receiver: try call.receiver.map { written in
+                try argument(written, in: scope, on: slots, label: label, at: place)
+            },
+            to: callee,
+            row: row,
+            in: shapes,
+            at: place
+        )
     }
 
     private func lower(

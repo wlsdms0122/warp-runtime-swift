@@ -15,7 +15,8 @@ import Foundation
 // once answers every entry asked of it.
 struct Compiled: Sendable {
     // MARK: - Property
-    // One row per declaration, in name order.
+    // One row per declaration, a document's own taking a run of them
+    // in the order the documents stand.
     let table: [Linked]
 
     // Every declared spelling, by row.
@@ -27,6 +28,12 @@ struct Compiled: Sendable {
     let calls: [Name: [Name]]
 
     let types: TypeTable
+
+    // Every contract's words, and which declaration answers each by the name
+    // of the type that answers it. Which types answer a contract is a fact of
+    // the world rather than of one document, so it is what the link reads to
+    // fill the calls that go through a contract.
+    let contractWords: [Name: ContractWord]
 
     // What each document's variables start a run holding, in the order the
     // layouts read them.
