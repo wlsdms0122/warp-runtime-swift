@@ -34,37 +34,24 @@ struct Workload {
     }
 
     // MARK: - Public
-    // Seconds one run of `rounds` rounds takes. The program answers something it
+    // How long one run of `rounds` rounds takes. The program answers something it
     // computed so that no round can be skipped.
     func time(rounds: Int) async throws -> Duration {
-        let clock = ContinuousClock()
-        let started = clock.now
-
-        _ = try await Executor().run(image, arguments: ["rounds": .int(rounds)])
-
-        return clock.now - started
+        try await elapsed { _ = try await Executor().run(image, arguments: ["rounds": .int(rounds)]) }
     }
 
-    // Seconds one link of this module takes.
+    // How long one link of this module takes.
     func link() throws -> Duration {
-        let clock = ContinuousClock()
-        let started = clock.now
-
-        _ = try Self.linked(module)
-
-        return clock.now - started
+        try elapsed { _ = try Self.linked(module) }
     }
 
-    // Seconds a document that arrives, links, runs one round and is dropped
+    // How long a document that arrives, links, runs one round and is dropped
     // takes. The two halves of the same measurement, timed together rather
     // than added, so nothing between them is left out.
     func once() async throws -> Duration {
-        let clock = ContinuousClock()
-        let started = clock.now
-
-        _ = try await Executor().run(try Self.linked(module), arguments: ["rounds": .int(1)])
-
-        return clock.now - started
+        try await elapsed {
+            _ = try await Executor().run(try Self.linked(module), arguments: ["rounds": .int(1)])
+        }
     }
 
     // MARK: - Private
