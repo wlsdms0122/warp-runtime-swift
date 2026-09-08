@@ -37,9 +37,13 @@ extension Linker {
                 .map(\.declared)
         )
 
+        // Only what this call was handed can be struck. What was settled
+        // before it stands in front of it, so nothing there reaches a name
+        // here, and asking after those again is asking the whole world once
+        // per document.
         while true {
-            let struck = pure.filter { name in
-                guard let (block, reading) = bodies[name] else { return false }
+            let struck = bodies.keys.filter { name in
+                guard pure.contains(name), let (block, reading) = bodies[name] else { return false }
 
                 return !isPure(block, given: pure, reading: reading)
             }

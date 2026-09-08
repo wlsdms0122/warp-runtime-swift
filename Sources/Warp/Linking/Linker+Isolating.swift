@@ -31,9 +31,12 @@ extension Linker {
                 .map(\.declared)
         )
 
+        // Only what this call was handed can be struck, for the reason purity
+        // reads the same way: what was settled before it stands in front of
+        // it and reaches nothing here.
         while true {
-            let struck = isolated.filter { name in
-                guard let body = bodies[name] else { return false }
+            let struck = bodies.keys.filter { name in
+                guard isolated.contains(name), let body = bodies[name] else { return false }
 
                 return !isIsolated(body.block, declaring: body.declaring, given: isolated, signatures: signatures)
             }
