@@ -337,37 +337,13 @@ public struct Linker: Sendable {
             shapes: shapes
         )
 
-        // Which row of this link each document's numbers stand for, in the
-        // order the documents stand. Compiling runs what a constant calls, and
-        // running reads rows; a lowered body carries its document's own
-        // numbers, so the answer is read off the numberings once per number
-        // rather than written into every body.
-        //
-        // A name this link has no row for stands as nothing rather than as a
-        // refusal, and a document that numbered nothing lends none: a document
-        // numbers every bare spelling its paths step to, and a step onto a
-        // field reaches no declaration.
-        let views = modules.indices.map { origin in
-            numbering[origin]?.answers(rows: rows, words: wordRows).map { answer -> Int? in
-                guard case let .row(row) = answer else { return nil }
-
-                return row
-            } ?? []
-        }
-
         // What a body's constant paths fold against. The stand-ins, while
         // the words themselves settle: a word folding through a word would
         // be a circle, and which words are already lowered is a fact of
         // name order rather than of the text. Once the words are resolved,
         // folding runs them.
         func folding(_ table: [Linked]) -> Answered {
-            Answered.documents(
-                table,
-                rows: rows,
-                words: wordRows,
-                numbering: numbering,
-                views: views
-            )
+            Answered.documents(table, rows: rows, words: wordRows, numbering: numbering)
         }
 
         var foldingTable = folding(table)

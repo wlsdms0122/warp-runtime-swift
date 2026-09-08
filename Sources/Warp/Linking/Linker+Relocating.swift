@@ -37,17 +37,30 @@ struct Answered: Sendable {
         Answered(table: table, rows: rows, words: words, numbers: .rows)
     }
 
-    // A table as compiling left it, beside which row each document's numbers
-    // stand for. The bodies keep the numbers they were lowered with, so what
-    // reads one is told which document it came from.
+    // A table as compiling left it, and where each document numbers from. The
+    // bodies keep the numbers they were lowered with, so what reads one is
+    // told which document it came from.
+    //
+    // Which row each of those numbers stands for is worked out here, once per
+    // number rather than once per body standing on one. A name this link has
+    // no row for stands as nothing rather than as a refusal: a document
+    // numbers every bare spelling its paths step to, and a step onto a field
+    // reaches no declaration.
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
         words: [Name: Int],
-        numbering: [Int: Numbering],
-        views: [[Int?]]
+        numbering: [Int: Numbering]
     ) -> Answered {
-        Answered(
+        let views = numbering.mapValues { held in
+            held.answers(rows: rows, words: words).map { answer -> Int? in
+                guard case let .row(row) = answer else { return nil }
+
+                return row
+            }
+        }
+
+        return Answered(
             table: table,
             rows: rows,
             words: words,
@@ -93,7 +106,7 @@ struct Answered: Sendable {
 
         // Each document's own, with where its numbers came from and which row
         // each of them stands for.
-        case documents([Int: Numbering], views: [[Int?]])
+        case documents([Int: Numbering], views: [Int: [Int?]])
     }
 }
 

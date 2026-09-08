@@ -23,7 +23,7 @@ enum Resolving: Sendable {
     // number. A number the link found no row for stands as nothing: a document
     // numbers every bare spelling its paths step to, and a step onto a field
     // reaches no declaration, so a numbering holds names no body ever calls.
-    case documents([[Int?]])
+    case documents([Int: [Int?]])
 
     // MARK: - Public
     func row(_ number: Int, from origin: Int) -> Int? {
@@ -32,11 +32,9 @@ enum Resolving: Sendable {
             return number
 
         case let .documents(held):
-            guard held.indices.contains(origin), held[origin].indices.contains(number) else {
-                return nil
-            }
+            guard let view = held[origin], view.indices.contains(number) else { return nil }
 
-            return held[origin][number]
+            return view[number]
         }
     }
 }
