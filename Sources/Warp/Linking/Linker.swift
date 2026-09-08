@@ -344,11 +344,12 @@ public struct Linker: Sendable {
         // be a circle, and which words are already lowered is a fact of
         // name order rather than of the text. Once the words are resolved,
         // folding runs them.
-        func folding(_ table: [Linked]) -> Answered {
-            Answered.documents(table, rows: rows, words: wordRows, numbering: numbering)
-        }
-
-        var foldingTable = folding(table)
+        var foldingTable = Answered.documents(
+            table,
+            rows: rows,
+            words: wordRows,
+            numbering: numbering
+        )
 
         func row(of symbol: Symbol) throws -> Int {
             guard let row = rows[symbol.declared] else {
@@ -534,7 +535,7 @@ public struct Linker: Sendable {
             _ = try resolved(symbol)
         }
 
-        foldingTable = folding(lowering.table)
+        foldingTable = foldingTable.holding(lowering.table)
 
         // Every declaration, one document at a time in the order they stand
         // and in name order inside each, which is the order their rows stand

@@ -75,6 +75,13 @@ struct Answered: Sendable {
     }
 
     // MARK: - Public
+    // The same answer over a table lowered since. What a number stands for is
+    // the documents' and this link's, and neither moved while the bodies were
+    // lowered into their rows.
+    func holding(_ table: [Linked]) -> Answered {
+        Answered(table: table, rows: rows, words: words, numbers: numbers)
+    }
+
     // How a run reads the numbers the bodies carry.
     var resolving: Resolving {
         switch numbers {
