@@ -11,7 +11,9 @@ import Foundation
 // nanoseconds per round and how that compares to the loop alone, beside the
 // cost of linking the same program and the cost of a document that arrives,
 // links, runs one round and is dropped. The second is the cost of linking a
-// world as the number of documents in it grows.
+// chain of words as the chain grows, once with the words spread one to a
+// document and once with all of them in one, so that a figure says which of
+// the two a link is paying for.
 //
 // Usage: `WarpBench [rounds] [repeats] [--against <table>]`. Rounds default to
 // a million, repeats to three; the reported figure is the fastest repeat. Every
@@ -82,8 +84,11 @@ struct Bench {
         var gathered: [Int: Double] = [:]
 
         for count in chainCounts {
-            spread[count] = try Self.linking(Chain(of: count, across: count))
-            gathered[count] = try Self.linking(Chain(of: count, across: 1))
+            let apart = try Chain(of: count, across: count)
+            let together = try Chain(of: count, across: 1)
+
+            spread[apart.words] = try Self.linking(apart)
+            gathered[together.words] = try Self.linking(together)
         }
 
         print(Self.table(
