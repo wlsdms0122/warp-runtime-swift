@@ -28,8 +28,9 @@ public final class Linked: Sendable {
 
     public let signature: Signature
 
-    // Where the receiver stands among the slots, for a declaration that
-    // takes one.
+    // Where the receiver stands among the slots, which is where it stands
+    // among the parameters: a lowering reads a parameter's shape and leaves
+    // the order alone.
     public let receiverPosition: Int?
 
     public let purity: Purity
@@ -77,9 +78,7 @@ public final class Linked: Sendable {
     ) {
         let slots = signature.lowered(in: table)
         let returns = signature.returns?.lowered(in: table)
-        let receiverPosition = signature.receiver.flatMap { receiver in
-            slots.firstIndex { slot in slot.name == receiver }
-        }
+        let receiverPosition = signature.receiverPosition
 
         self.label = label
         self.origin = origin

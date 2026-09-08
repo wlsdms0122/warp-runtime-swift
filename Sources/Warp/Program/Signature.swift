@@ -82,6 +82,13 @@ public struct Signature: Sendable, Equatable {
         return try parameter.checking(receiver: value, called: receiver, in: types)
     }
 
+    // Where the receiver stands among the parameters, for a declaration that
+    // takes one. Read off the order the parameters stand in and nothing else,
+    // so what a lowering does to their shapes cannot move it.
+    var receiverPosition: Int? {
+        receiver.flatMap { name in ordered.firstIndex { held in held.name == name } }
+    }
+
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
     func lowered(in table: ShapeTable) -> [Slot] {
@@ -119,7 +126,7 @@ public struct Signature: Sendable, Equatable {
         let slots = lowered(in: table)
 
         return slots.derivable(
-            receiver: receiver.flatMap { name in slots.firstIndex { slot in slot.name == name } },
+            receiver: receiverPosition,
             returns: returns?.lowered(in: table),
             in: table
         )
