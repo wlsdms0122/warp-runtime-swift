@@ -55,16 +55,5 @@ struct DispatchOperation: Sendable {
     }
 
     // MARK: - Public
-    // The same call with the rows the link found answering it.
-    func filled(_ calls: [Name: CallOperation]) -> DispatchOperation {
-        DispatchOperation(
-            contract: contract,
-            word: word,
-            receiver: receiver,
-            arguments: arguments,
-            calls: calls
-        )
-    }
-
     // MARK: - Private
 }

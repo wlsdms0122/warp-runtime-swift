@@ -90,38 +90,36 @@ struct Relocating {
         Place.procedure(label.spelling, in: .assembled)
     }
 
-    // Which row of this link a document's number stands for.
+    // Which row of this link a document's number stands for. The reading is
+    // the numbering's; what to say when the link has no such name is this.
     private func row(_ number: Int, of origin: Int, at label: Name) throws -> Int {
-        guard let reference = numbering[origin]?.reference(at: number) else {
+        guard let numbering = numbering[origin] else {
             throw LinkError.unjudged(
-                "a call standing at \(number), which its document never numbered",
+                "a call standing at \(number) in a document that numbered nothing",
                 at: place(of: label)
             )
         }
 
-        switch reference {
-        case let .sent(declared):
-            guard let row = rows[declared] else {
-                throw LinkError(
-                    "'\(declared)' is called here, and no module in this link declares it",
-                    at: place(of: label)
-                )
-            }
+        if let row = numbering.row(number, rows: rows, words: words) { return row }
 
-            return row
+        switch numbering.reference(at: number) {
+        case let .sent(declared):
+            throw LinkError(
+                "'\(declared)' is called here, and no module in this link declares it",
+                at: place(of: label)
+            )
 
         case let .walked(spelling):
-            guard let row = words[spelling] else {
-                throw LinkError(
-                    "'\(spelling)' is walked here, and no path in this link may reach it",
-                    at: place(of: label)
-                )
-            }
+            throw LinkError(
+                "'\(spelling)' is walked here, and no path in this link may reach it",
+                at: place(of: label)
+            )
 
-            return row
-
-        case let .row(row):
-            return row
+        case .row, nil:
+            throw LinkError.unjudged(
+                "a call standing at \(number), which its document never numbered",
+                at: place(of: label)
+            )
         }
     }
 

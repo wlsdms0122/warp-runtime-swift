@@ -652,19 +652,7 @@ struct Lowering {
     // carries its document's numbering, and this walk reads what it just
     // wrote.
     private func reached(_ number: Int, on slots: Slots) -> Int? {
-        switch numbered(slots.origin).reference(at: number) {
-        case let .sent(declared):
-            return rows[declared]
-
-        case let .walked(spelling):
-            return words[spelling]
-
-        case let .row(row):
-            return row
-
-        case nil:
-            return nil
-        }
+        numbered(slots.origin).row(number, rows: rows, words: words)
     }
 
     // Where the document being lowered numbers its calls from. A document
