@@ -30,7 +30,7 @@ import Foundation
 // `std.math.plus`, and that is the one declaration it can mean, wherever it was
 // written; the image the executor runs is spelled the way the documents were,
 // so a run never has to ask again. Constants do change here: a name bound to a
-// value at load has nothing left to do at run time, so linking folds it into
+// value at load has nothing left to do at run time, so compiling folds it into
 // the literal it always was.
 //
 // What it can promise is narrower than "nothing unresolved remains": arguments
@@ -38,10 +38,12 @@ import Foundation
 // the types of *constant* arguments. Calling a value is outside the promise
 // entirely, because a closure's callee is a run-time fact.
 //
-// What `link` does it does in four stages, each in a file of its own beside
-// this one: resolving (`Linker+Resolving`), the facts nobody declared
-// (`Linker+Deriving`, `Linker+Isolating`), judging (`Linker+Judging`,
-// `Linker+Typing`) and lowering (`Lowering`).
+// Two stages, and the entry names nothing in the first. Compiling settles
+// everything the documents say on their own: resolving (`Linker+Resolving`),
+// the facts nobody declared (`Linker+Deriving`, `Linker+Isolating`), judging
+// (`Linker+Judging`, `Linker+Typing`) and lowering (`Lowering`). It runs the
+// words a constant calls, which is what folding is. Linking takes what that
+// answered and one name to start from, and runs nothing.
 public struct Linker: Sendable {
     // MARK: - Property
     // MARK: - Initializer
@@ -61,6 +63,14 @@ public struct Linker: Sendable {
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: Name) throws -> Image {
+        try link(compile(modules), entry: entry)
+    }
+
+    // MARK: - Internal
+    // Everything the documents settle on their own. No entry reaches in here:
+    // what a document says has to hold whichever declaration a run starts
+    // from.
+    func compile(_ modules: [Module]) throws -> Compiled {
         // Type and constraint declarations first, because everything after
         // this reads type expressions against them. The qualifying pass owns
         // their uniqueness, so it hands over the tables that fact was proved on.
@@ -117,17 +127,6 @@ public struct Linker: Sendable {
                     answering: (witnessed[entry.key] ?? [:]).compactMapValues { words in words[word] }
                 )
             }
-        }
-
-        // A name is its declared spelling and nothing else, so the entry is
-        // looked up as the caller wrote it.
-        guard let start = space[entry] else {
-            throw LinkError(
-                "entry '\(entry)' is not declared by any module in this link."
-                    + " A name is its declared spelling. Declared:"
-                    + " \(symbols.map(\.declared).sorted().map(\.spelling).joined(separator: ", "))",
-                at: nil
-            )
         }
 
         // What every declaration returns, by the name a resolved call site
@@ -442,12 +441,12 @@ public struct Linker: Sendable {
         // judged is not a question the entry answers. In name order, so which
         // mistake is reported first is the text's fact rather than a hash
         // seed's.
-        var calls: [Name: [Symbol]] = [:]
+        var calls: [Name: [Name]] = [:]
 
         for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
             let (procedure, gathered) = try resolved(symbol)
 
-            calls[symbol.declared] = gathered.map(\.callee)
+            calls[symbol.declared] = gathered.map { call in call.callee.declared }
 
             // A constant answer is knowable from the text, so it is held to the
             // declaration here, the way a constant argument is. An answer only
@@ -466,33 +465,54 @@ public struct Linker: Sendable {
             }
         }
 
-        // Which declarations a run from this entry reaches. Breadth over the
-        // call graph the judgment gathered, so nothing is judged here: the
-        // answer is read off declarations that all stand judged already.
-        var reached: Set<Name> = []
-        var frontier: [Symbol] = [start]
-        var index = 0
-
-        while index < frontier.count {
-            let symbol = frontier[index]
-            index += 1
-
-            guard reached.insert(symbol.declared).inserted else { continue }
-
-            frontier.append(contentsOf: calls[symbol.declared] ?? [])
-        }
-
-        return Image(
-            linked: lowering.table,
-            start: try row(of: start),
+        return Compiled(
+            table: lowering.table,
             rows: rows,
-            reached: reached,
+            calls: calls,
             types: types,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
                     (name: name, value: entry.value[name] ?? .null)
                 }
             }
+        )
+    }
+
+    // Which row a run starts from, and which declarations it reaches. Nothing
+    // is judged and nothing runs: every declaration stands judged already, and
+    // the answer is read off the call graph the judgment gathered.
+    func link(_ compiled: Compiled, entry: Name) throws -> Image {
+        // A name is its declared spelling and nothing else, so the entry is
+        // looked up as the caller wrote it.
+        guard let start = compiled.rows[entry] else {
+            throw LinkError(
+                "entry '\(entry)' is not declared by any module in this link."
+                    + " A name is its declared spelling. Declared:"
+                    + " \(compiled.rows.keys.sorted().map(\.spelling).joined(separator: ", "))",
+                at: nil
+            )
+        }
+
+        var reached: Set<Name> = []
+        var frontier: [Name] = [entry]
+        var index = 0
+
+        while index < frontier.count {
+            let declared = frontier[index]
+            index += 1
+
+            guard reached.insert(declared).inserted else { continue }
+
+            frontier.append(contentsOf: compiled.calls[declared] ?? [])
+        }
+
+        return Image(
+            linked: compiled.table,
+            start: start,
+            rows: compiled.rows,
+            reached: reached,
+            types: compiled.types,
+            variables: compiled.variables
         )
     }
 

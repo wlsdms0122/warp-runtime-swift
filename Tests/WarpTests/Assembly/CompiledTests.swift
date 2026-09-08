@@ -1,0 +1,91 @@
+//
+//  CompiledTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 9/8/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpStandard
+
+// The boundary between compiling a world and linking one.
+//
+// Compiling settles what the documents say on their own. Linking takes that
+// and one name to start from. What each stage may do is what these ask.
+@Suite("What compiling settles and what linking decides")
+struct CompiledTests {
+    // MARK: - Property
+    private let linker = Linker()
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("one world compiled once answers every entry asked of it")
+    func oneCompileAnswersManyEntries() throws {
+        // Given. Two entries, neither reaching the other.
+        let sut = try Module(
+            procedures: [
+                "app.here": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "app.there": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        // When. Compiled once, linked twice.
+        let compiled = try linker.compile([sut] + Module.standard)
+
+        // Then. Each image starts where it was asked to.
+        #expect(try linker.link(compiled, entry: "app.here").start == compiled.rows["app.here"])
+        #expect(try linker.link(compiled, entry: "app.there").start == compiled.rows["app.there"])
+    }
+
+    @Test("what a document says holds whichever entry a caller names")
+    func judgementDoesNotDependOnTheEntry() throws {
+        // Given. A declaration nothing reaches, calling a word nobody declares.
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.int(1))),
+                "app.stray": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "nobody.declares"))
+                )
+            ]
+        )
+
+        // When / Then. Compiling refuses, and no entry was named to refuse it.
+        #expect(throws: LinkError.self) {
+            try linker.compile([sut] + Module.standard)
+        }
+    }
+
+    @Test("a declaration an entry never calls is not reported as reached")
+    func reachIsStillTheEntrysOwn() throws {
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.int(1))),
+                "app.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        let image = try linker.link(try linker.compile([sut] + Module.standard), entry: entryName)
+
+        #expect(image.reached.contains(entryName))
+        #expect(!image.reached.contains("app.aside"))
+    }
+
+    @Test("an entry no module declares is refused by the link and not by the compile")
+    func anUnknownEntryIsTheLinksRefusal() throws {
+        let sut = try Module(
+            procedures: [entryName: Procedure(body: [], result: .literal(.int(1)))]
+        )
+
+        let compiled = try linker.compile([sut] + Module.standard)
+
+        #expect(throws: LinkError.self) {
+            try linker.link(compiled, entry: "app.nowhere")
+        }
+    }
+
+    // MARK: - Private
+}
