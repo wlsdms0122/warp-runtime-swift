@@ -117,13 +117,13 @@ struct Folding {
             shapes: shapes
         )
         let (code, frame) = try lowering.lower(expression, reading: names, origin: origin, label: Self.label, at: place)
-        var activation = Activation(frame)
+        var activation = Activation(frame, of: origin)
 
         for (slot, cell) in cells.enumerated() {
             activation.cells[slot] = cell
         }
 
-        return try Executor(observer: nil, environment: nil, linked: table, shapes: shapes).read(code, in: activation)
+        return try Executor(observer: nil, environment: nil, linked: table, resolving: .rows, shapes: shapes).read(code, in: activation)
     }
 
     // MARK: - Private

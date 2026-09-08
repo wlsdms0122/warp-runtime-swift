@@ -16,15 +16,21 @@ struct Activation: Sendable {
     var cells: [Cell]
     let frame: Frame
 
+    // Which document the running body came from. The numbers the body carries
+    // are that document's, so this is what a call reads them against.
+    let origin: Int
+
     // MARK: - Initializer
-    init(_ frame: Frame) {
+    init(_ frame: Frame, of origin: Int) {
         self.cells = Array(repeating: .value(.null), count: frame.size)
         self.frame = frame
+        self.origin = origin
     }
 
-    init(cells: [Cell], frame: Frame) {
+    init(cells: [Cell], frame: Frame, of origin: Int) {
         self.cells = cells
         self.frame = frame
+        self.origin = origin
     }
 
     // MARK: - Public

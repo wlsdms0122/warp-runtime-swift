@@ -20,6 +20,9 @@ public struct Executor: Sendable {
     // until then, which is why nothing but `run(_ image:)` can start a run.
     let linked: [Linked]
 
+    // What the numbers in those bodies stand for.
+    let resolving: Resolving
+
     // The shapes the link declared, by row. Every boundary that settles a
     // value reads it.
     let shapes: ShapeTable
@@ -39,7 +42,7 @@ public struct Executor: Sendable {
         observer: (any ExecutionObserver)? = nil,
         environment: (any Environment)? = nil
     ) {
-        self.init(observer: observer, environment: environment, linked: [])
+        self.init(observer: observer, environment: environment, linked: [], resolving: .rows)
     }
 
     // Seeded, and not public: the table is the link's answer, so a caller
@@ -48,12 +51,14 @@ public struct Executor: Sendable {
         observer: (any ExecutionObserver)?,
         environment: (any Environment)?,
         linked: [Linked],
+        resolving: Resolving,
         shapes: ShapeTable = .empty,
         boxes: [Int: [Handle]] = [:]
     ) {
         self.observer = observer
         self.environment = environment
         self.linked = linked
+        self.resolving = resolving
         self.shapes = shapes
         self.boxes = boxes
     }
@@ -69,6 +74,7 @@ public struct Executor: Sendable {
             observer: observer,
             environment: environment,
             linked: image.linked,
+            resolving: .rows,
             shapes: image.shapes,
             boxes: image.variables.mapValues { started in
                 started.map { name, value in Handle(name, value) }
@@ -391,7 +397,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let callee = linked[call.procedure]
+        let callee = linked[resolving.row(call.procedure, from: activation.origin)]
 
         switch callee.implementation {
         // A query answers without running, so the pure half is the whole
@@ -618,7 +624,7 @@ public struct Executor: Sendable {
 
     // The frame a row runs in, with the module variables it reads in place.
     private func activation(of callee: Linked, in frame: Frame) throws -> Activation {
-        var activation = Activation(frame)
+        var activation = Activation(frame, of: callee.origin)
 
         guard !frame.variables.isEmpty else { return activation }
 
@@ -751,7 +757,7 @@ public struct Executor: Sendable {
         receiving handed: Value? = nil,
         in activation: Activation
     ) throws -> Value {
-        let callee = linked[call.procedure]
+        let callee = linked[resolving.row(call.procedure, from: activation.origin)]
 
         guard callee.purity == .pure else {
             throw ExecutionError(
