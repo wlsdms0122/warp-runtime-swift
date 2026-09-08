@@ -215,26 +215,21 @@ extension Linker {
         }
     }
 
-    // What can be answered without running, under every name something may look
-    // it up by. Two names, because there are two ways to reach one:
+    // Which declaration a path segment reaches, by the bare spelling it writes.
+    // `x.count` names no module: the front end cannot know whether a trailing
+    // segment is a field or a word, so this is the one name still answered at
+    // run time, and the one place an ambiguity has to be refused before the run
+    // rather than during it.
     //
-    //   `std.count` . A selector, resolved at link like any other
-    //   `count`     . A path segment. `x.count` names no module, because the
-    //                  front end cannot know whether a trailing segment is a
-    //                  field or a word, so this is the one name still answered
-    //                  at run time, and the one place an ambiguity has to be
-    //                  refused before the run rather than during it.
-    //
-    // Built from every declaration rather than the reached ones: a path names a
-    // word the call graph never mentions, so reachability is the wrong question.
+    // A selector needs no table of its own. `std.count` is resolved by the
+    // declared spelling like every other call.
     func derivable(
         among symbols: [Symbol],
         pure: Set<Name>,
         answering contracts: Set<Name>,
         reaching rows: [Name: Int],
         in table: [Linked]
-    ) throws -> (selectors: [Name: Symbol], words: [Name: Symbol]) {
-        var selectors: [Name: Symbol] = [:]
+    ) throws -> [Name: Symbol] {
         var words: [Name: Symbol] = [:]
         // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
@@ -244,17 +239,11 @@ extension Linker {
         // hides the declaration the other two are colliding with.
         var contested: [Name: [Symbol]] = [:]
 
-        // Two tables, because a name answers two different questions. What a
-        // selector reaches, and what a bare spelling a path writes may call.
-        // One table held both and let a declaration whose declared spelling
-        // matched another's bare last segment quietly answer the wrong
-        // question. Symbols rather than procedures, because the bodies are
-        // still to be read: the caller reads them through the same judgment
-        // every reached body takes.
+        // Symbols rather than procedures, because the bodies are still to be
+        // read: the caller reads them through the same judgment every other
+        // declaration takes.
         for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
             guard pure.contains(symbol.declared) else { continue }
-
-            selectors[symbol.declared] = symbol
 
             guard rows[symbol.declared].map({ row in table[row].isDerivable }) == true else { continue }
 
@@ -301,6 +290,6 @@ extension Linker {
             )
         }
 
-        return (selectors, words)
+        return words
     }
 }

@@ -16,10 +16,10 @@ import Foundation
 // asks for and never where to find it, and the entry is an argument rather than
 // a name written into a document.
 //
-// Unreached code is checked too. A misspelled procedure in an arm today's
-// arguments never take is a defect whether or not this run walks that way, so
-// linking follows the whole call graph and refuses on the first name it cannot
-// resolve rather than on the first one a run happens to reach.
+// Every declaration is judged, not the reached ones. A misspelled procedure in
+// an arm today's arguments never take is a defect whether or not this run walks
+// that way, and so is one in a declaration this entry never calls. The entry
+// says which declarations a run reaches and nothing about which ones hold.
 //
 // Every call goes through the same gate: a library word and a procedure are
 // checked against a signature by the same code, and the only difference is
@@ -182,7 +182,7 @@ public struct Linker: Sendable {
         // Which declarations a path segment may reach, read off the rows the
         // link just made. A row is the declaration lowered, and whether a path
         // may reach one is a question about the slots it lowered to.
-        let (selectorSymbols, wordSymbols) = try derivable(
+        let wordSymbols = try derivable(
             among: symbols,
             pure: settled,
             answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
@@ -437,31 +437,23 @@ public struct Linker: Sendable {
 
         foldingTable = lowering.table
 
-        var procedures: [Name: Procedure] = [:]
-        var frontier: [Symbol] = [start]
-        var index = 0
-        var linked: Procedure?
+        // Every declaration, in name order. What a document says has to hold
+        // whether or not this entry walks that way, so which declarations are
+        // judged is not a question the entry answers. In name order, so which
+        // mistake is reported first is the text's fact rather than a hash
+        // seed's.
+        var calls: [Name: [Symbol]] = [:]
 
-        // Breadth over the frontier, so the first refusal an author sees is the
-        // first mistake they wrote. Memoising by declared spelling is what makes a
-        // recursive procedure link once instead of forever.
-        while index < frontier.count {
-            let symbol = frontier[index]
-            index += 1
+        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
+            let (procedure, gathered) = try resolved(symbol)
 
-            if procedures[symbol.declared] != nil { continue }
-
-            let (resolved, calls) = try resolved(symbol)
-
-            procedures[symbol.declared] = resolved
-
-            if symbol.declared == start.declared { linked = resolved }
+            calls[symbol.declared] = gathered.map(\.callee)
 
             // A constant answer is knowable from the text, so it is held to the
             // declaration here, the way a constant argument is. An answer only
             // a run can produce is settled at the boundary instead.
-            if let returns = resolved.signature.returns,
-               let answer = resolved.block?.result?.constantValue {
+            if let returns = procedure.signature.returns,
+               let answer = procedure.block?.result?.constantValue {
                 do {
                     _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
                 } catch {
@@ -472,27 +464,29 @@ public struct Linker: Sendable {
                     )
                 }
             }
-
-            for call in calls {
-                frontier.append(call.callee)
-            }
         }
 
-        // Every pure body compiles and has its sends checked, reached or not.
-        // The same promise the frontier makes for the call graph. After the
-        // frontier on purpose, so a mistake on a path from the entry is
-        // reported before one in a declaration nothing reaches; in name order,
-        // so which unreached mistake comes first is a fact of the text rather
-        // than of a hash seed.
-        for (_, symbol) in selectorSymbols.sorted { $0.key < $1.key } {
-            _ = try resolved(symbol)
+        // Which declarations a run from this entry reaches. Breadth over the
+        // call graph the judgment gathered, so nothing is judged here: the
+        // answer is read off declarations that all stand judged already.
+        var reached: Set<Name> = []
+        var frontier: [Symbol] = [start]
+        var index = 0
+
+        while index < frontier.count {
+            let symbol = frontier[index]
+            index += 1
+
+            guard reached.insert(symbol.declared).inserted else { continue }
+
+            frontier.append(contentsOf: calls[symbol.declared] ?? [])
         }
 
         return Image(
             linked: lowering.table,
             start: try row(of: start),
             rows: rows,
-            reached: Set(procedures.keys),
+            reached: reached,
             types: types,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
