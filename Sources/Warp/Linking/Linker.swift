@@ -478,22 +478,25 @@ public struct Linker: Sendable {
         // checking a word's calls does not resolve the callees, so no other
         // declaration is ever folded against the stand-ins, and whether a
         // declaration links stays a fact of its text rather than of who happens
-        // to call it. In name order, so which mistake is reported first is the
-        // text's fact too.
-        for (_, symbol) in wordSymbols.sorted { $0.key < $1.key } {
+        // to call it. In the order the rows stand, so which mistake is
+        // reported first is the text's fact too.
+        for symbol in wordSymbols.values.sorted(by: { left, right in
+            (rank[left.origin], left.declared) < (rank[right.origin], right.declared)
+        }) {
             _ = try resolved(symbol)
         }
 
         foldingTable = lowering.table
 
-        // Every declaration, in name order. What a document says has to hold
-        // whether or not this entry walks that way, so which declarations are
-        // judged is not a question the entry answers. In name order, so which
-        // mistake is reported first is the text's fact rather than a hash
-        // seed's.
+        // Every declaration, one document at a time in the order they stand
+        // and in name order inside each, which is the order their rows stand
+        // in. What a document says has to hold whether or not this entry walks
+        // that way, so which declarations are judged is not a question the
+        // entry answers, and a document is judged after the documents it
+        // reaches rather than wherever its spellings fall among theirs.
         var calls: [Name: [Name]] = [:]
 
-        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
+        for symbol in declarations {
             let (procedure, gathered) = try resolved(symbol)
 
             calls[symbol.declared] = gathered.map { call in call.callee.declared }
