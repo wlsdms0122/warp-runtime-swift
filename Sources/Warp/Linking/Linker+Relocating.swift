@@ -59,15 +59,13 @@ struct Relocating {
     private let words: [Name: Int]
     private let numbering: [Int: Numbering]
 
-    // Which row of this link each document's shape numbers stand for, and nil
-    // where the bodies stand on this link's rows already. What compiling hands
-    // over carries each document's own shape numbers; what runs while a link
-    // is still being made was lowered against this link's table.
+    // What each document's shape numbers turned out to be in this link, or
+    // nil where the bodies stand on this link's rows already.
     //
-    // Read off the numbering once rather than at every shape met: a name is
-    // hashed as many times as a document numbered one, and not as many times
-    // as its bodies stand on it.
-    private let shapeRows: [Int: (types: [(name: Name, row: Int?)], memberships: [(name: Name, row: Int?)])]?
+    // Answered once per number rather than at every shape met: a name is read
+    // as many times as a document numbered one, and not as many times as its
+    // bodies stand on it.
+    private let shapeRows: [Int: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]?
 
     private let contractWords: [Name: ContractWord]
     private let shapes: ShapeTable
@@ -78,7 +76,7 @@ struct Relocating {
         rows: [Name: Int],
         words: [Name: Int],
         numbering: [Int: Numbering],
-        shapeNumbering: [Int: ShapeNumbering]? = nil,
+        shapeNumbering: ShapeNumbering.Space,
         contractWords: [Name: ContractWord],
         shapes: ShapeTable
     ) {
@@ -86,13 +84,20 @@ struct Relocating {
         self.rows = rows
         self.words = words
         self.numbering = numbering
-        self.shapeRows = shapeNumbering.map { held in
-            held.mapValues { numbering in
+
+        switch shapeNumbering {
+        case let .documents(held):
+            self.shapeRows = held.mapValues { numbering in
                 (
-                    types: numbering.types.map { name in (name, shapes.row(named: name)) },
-                    memberships: numbering.memberships.map { name in (name, shapes.constraintRow(named: name)) }
+                    types: numbering.types.indices.map { number in numbering.type(number, in: shapes) },
+                    memberships: numbering.memberships.indices.map { number in
+                        numbering.membership(number, in: shapes)
+                    }
                 )
             }
+
+        case .link:
+            self.shapeRows = nil
         }
         self.contractWords = contractWords
         self.shapes = shapes
@@ -104,7 +109,7 @@ struct Relocating {
             rows: compiled.rows,
             words: compiled.words,
             numbering: compiled.numbering,
-            shapeNumbering: compiled.shapeNumbering,
+            shapeNumbering: .documents(compiled.shapeNumbering),
             contractWords: compiled.contractWords,
             shapes: compiled.types.shapes
         )
@@ -343,46 +348,44 @@ struct Relocating {
         }
 
         return try shape.renumbered(
-            type: { number in
-                guard rows.types.indices.contains(number) else {
-                    throw LinkError.unjudged(
-                        "a type standing at \(number), which its document never numbered",
-                        at: place(of: label)
-                    )
-                }
-
-                let stands = rows.types[number]
-
-                guard let row = stands.row else {
-                    throw LinkError(
-                        "'\(stands.name)' is named here, and no module in this link declares it",
-                        at: place(of: label)
-                    )
-                }
-
-                return row
-            },
+            type: { number in try row(rows.types, at: number, standing: "named", at: label) },
             membership: { number in
-                guard rows.memberships.indices.contains(number) else {
-                    throw LinkError.unjudged(
-                        "a membership standing at \(number), which its document never numbered",
-                        at: place(of: label)
-                    )
-                }
-
-                let stands = rows.memberships[number]
-
-                guard let row = stands.row else {
-                    throw LinkError(
-                        "'\(stands.name)' bounds a parameter here,"
-                            + " and no module in this link declares it",
-                        at: place(of: label)
-                    )
-                }
-
-                return row
+                try row(rows.memberships, at: number, standing: "bounding a parameter", at: label)
             }
         )
+    }
+
+    // Which row a document's shape number turned out to be. The reading is
+    // the numbering's; what to say when it does not answer is this.
+    private func row(
+        _ answers: [ShapeNumbering.Answer],
+        at number: Int,
+        standing: String,
+        at label: Name
+    ) throws -> Int {
+        guard answers.indices.contains(number) else {
+            throw LinkError.unjudged(
+                "a shape standing at \(number), which its document never numbered",
+                at: place(of: label)
+            )
+        }
+
+        switch answers[number] {
+        case let .row(row):
+            return row
+
+        case let .unfound(name):
+            throw LinkError(
+                "'\(name)' is \(standing) here, and no module in this link declares it",
+                at: place(of: label)
+            )
+
+        case .unnumbered:
+            throw LinkError.unjudged(
+                "a shape standing at \(number), which its document never numbered",
+                at: place(of: label)
+            )
+        }
     }
 
     // A path with the rows its word steps stand for.

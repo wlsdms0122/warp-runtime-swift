@@ -16,33 +16,11 @@ extension Lowering {
     // leaves compiling: a body carries its document's numbers and nothing
     // about the world it was linked into.
     //
-    // Two walks, and the first is what makes the second total. A document's
-    // numbering is its names in name order, and no name is in order until
-    // every one of them is known, so what its bodies stand on is read first
-    // and written after. Read off what was lowered rather than off the text:
-    // a shape reaches a body through what a path walked as well as through
-    // what an author wrote.
+    // The order is the whole reason this stands apart from the lowering. A
+    // document's numbering is its names in name order, and no name is in order
+    // until every one of them is known, so the numbers are written once the
+    // last body is lowered and not while one is.
     func numbered() throws -> (table: [Linked], numbering: [Int: ShapeNumbering]) {
-        var types: [Int: Set<Int>] = [:]
-        var memberships: [Int: Set<Int>] = [:]
-
-        for row in table {
-            _ = shaped(row) { origin, shape in
-                shape.renumbered(
-                    type: { row in
-                        types[origin, default: []].insert(row)
-
-                        return row
-                    },
-                    membership: { row in
-                        memberships[origin, default: []].insert(row)
-
-                        return row
-                    }
-                )
-            }
-        }
-
         // Every document holding a body, and not only the ones that turned out
         // to stand on a declared name: a body standing on nothing declared has
         // an empty numbering, which is a different thing from a document this
@@ -57,9 +35,10 @@ extension Lowering {
         var places: [Int: (types: [Int: Int], memberships: [Int: Int])] = [:]
 
         for origin in origins {
+            let stood = standing[origin] ?? Standing()
             let held = ShapeNumbering(
-                types: Set((types[origin] ?? []).map { row in shapes.labels[row] }),
-                memberships: Set((memberships[origin] ?? []).map { row in shapes.constraintLabels[row] })
+                types: Set(stood.types.map { row in shapes.labels[row] }),
+                memberships: Set(stood.memberships.map { row in shapes.constraintLabels[row] })
             )
 
             numbering[origin] = held
@@ -68,12 +47,12 @@ extension Lowering {
             // writes them reads a place rather than hashing a name at every
             // shape it meets.
             places[origin] = (
-                types: (types[origin] ?? []).reduce(into: [Int: Int]()) { places, row in
-                    places[row] = held.type(shapes.labels[row])
-                },
-                memberships: (memberships[origin] ?? []).reduce(into: [Int: Int]()) { places, row in
-                    places[row] = held.membership(shapes.constraintLabels[row])
-                }
+                types: Self.placed(stood.types, among: held.types, spelling: shapes.labels),
+                memberships: Self.placed(
+                    stood.memberships,
+                    among: held.memberships,
+                    spelling: shapes.constraintLabels
+                )
             )
         }
 
@@ -116,6 +95,22 @@ extension Lowering {
     }
 
     // MARK: - Private
+    // Where each of a link's rows stands in the document's numbering, read
+    // off the names once rather than at every shape the walk meets.
+    private static func placed(
+        _ rows: Set<Int>,
+        among names: [Name],
+        spelling: [Name]
+    ) -> [Int: Int] {
+        let numbers = names.enumerated().reduce(into: [Name: Int]()) { numbers, entry in
+            numbers[entry.element] = entry.offset
+        }
+
+        return rows.reduce(into: [Int: Int]()) { places, row in
+            places[row] = numbers[spelling[row]]
+        }
+    }
+
     // One row with every shape its body stands on answered again. A native
     // holds no body and stands on no shape a document numbered: its slots are
     // its signature lowered, which is the link's reading of it and not
@@ -247,6 +242,8 @@ extension Lowering {
         case let .call(call):
             return .call(try shaped(call, of: origin, answer))
 
+        // The calls a dispatch picks from are the link's to fill, so there is
+        // nothing here for a document to number.
         case let .dispatch(dispatch):
             return .dispatch(
                 DispatchOperation(
@@ -256,9 +253,7 @@ extension Lowering {
                     arguments: try dispatch.arguments.mapValues { argument in
                         try shaped(argument, of: origin, answer)
                     },
-                    calls: try dispatch.calls.mapValues { call in
-                        try shaped(call, of: origin, answer)
-                    }
+                    calls: dispatch.calls
                 )
             )
 

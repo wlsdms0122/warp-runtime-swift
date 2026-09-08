@@ -42,6 +42,12 @@ struct Lowering {
     // closure's row.
     let shapes: ShapeTable
 
+    // What each document's lowered bodies stand on, by the rows of the table
+    // above. Noted where a shape is written into a body, which is where the
+    // document that wrote it is known; the document's own numbering is worked
+    // out from it once everything is lowered.
+    private(set) var standing: [Int: Standing] = [:]
+
     // MARK: - Initializer
     init(
         table: [Linked],
@@ -80,6 +86,9 @@ struct Lowering {
 
         let body = try lower(block, in: scope, on: slots, label: declared.label, at: place)
 
+        standing[declared.origin, default: Standing()].types.formUnion(slots.types)
+        standing[declared.origin, default: Standing()].memberships.formUnion(slots.memberships)
+
         table[row] = Linked(declared, implementation: .body(body, slots.frame), sends: declared.sends)
     }
 
@@ -104,6 +113,14 @@ struct Lowering {
         let code = try lower(expression, in: scope, on: slots, label: label, at: place)
 
         return (code, slots.frame)
+    }
+
+    // MARK: - Internal
+    // What one document's lowered bodies stand on, by the rows of the table
+    // they were lowered against.
+    struct Standing {
+        var types: Set<Int> = []
+        var memberships: Set<Int> = []
     }
 
     // MARK: - Private
@@ -134,6 +151,12 @@ struct Lowering {
         // the link laid out is lowered to the place it stands in.
         private var held: [Int: Shape] = [:]
 
+        // The declarations the shapes written into this body stand on, by the
+        // rows of the table it was lowered against. Read where the document's
+        // own numbering is worked out.
+        private(set) var types: Set<Int> = []
+        private(set) var memberships: Set<Int> = []
+
         init(origin: Int, variables: [Name: Int], outer: (slots: Slots, names: Names)? = nil) {
             self.origin = origin
             self.variables = variables
@@ -141,6 +164,34 @@ struct Lowering {
         }
 
         var size: Int { names.count }
+
+        // The same shape, with what it stands on noted. A closure notes into
+        // the body it was written in: the two are one document, and a document
+        // has one numbering.
+        func standing(_ shape: Shape?) -> Shape? {
+            shape.map { held in standing(held) }
+        }
+
+        func standing(_ shape: Shape) -> Shape {
+            let root = self.root
+
+            return shape.renumbered(
+                type: { row in
+                    root.types.insert(row)
+
+                    return row
+                },
+                membership: { row in
+                    root.memberships.insert(row)
+
+                    return row
+                }
+            )
+        }
+
+        private var root: Slots {
+            outer?.slots.root ?? self
+        }
 
         func allocate(_ name: Name) -> Int {
             names.append(name)
@@ -238,7 +289,7 @@ struct Lowering {
             // the code it was given stands as.
             case let .constant(name, declared)?:
                 let slot = slots.allocate(name)
-                let settling = declared?.lowered(in: shapes)
+                let settling = slots.standing(declared?.lowered(in: shapes))
                 scope.slots[name] = slot
                 slots.hold(slot, settling ?? shape(of: code, on: slots))
                 binding = .bind(slot, settling: settling)
@@ -248,7 +299,7 @@ struct Lowering {
             // shape. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = slots.allocate(name)
-                let settling = declared?.lowered(in: shapes)
+                let settling = slots.standing(declared?.lowered(in: shapes))
                 scope.slots[name] = slot
                 slots.hold(slot, settling)
                 binding = .declare(slot, settling: settling)
@@ -259,7 +310,7 @@ struct Lowering {
             // was written stands as it was handed.
             case let .assignment(path)?:
                 let (address, reached) = try lower(path, in: scope, on: slots, at: place)
-                binding = .assign(address, settling: reached?.slotUnwrapped)
+                binding = .assign(address, settling: slots.standing(reached?.slotUnwrapped))
 
             case nil:
                 binding = nil
@@ -393,7 +444,7 @@ struct Lowering {
         case let .cast(value, type, optional):
             return .cast(
                 try lower(value, in: scope, on: slots, label: label, at: place),
-                as: type.lowered(in: shapes),
+                as: slots.standing(type.lowered(in: shapes)),
                 optional: optional
             )
 
