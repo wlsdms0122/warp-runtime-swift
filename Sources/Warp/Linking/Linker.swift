@@ -316,7 +316,7 @@ public struct Linker: Sendable {
         // Compiling runs what a constant calls, and running reads rows. A
         // lowered body carries its document's own numbers, so what folding
         // runs is the table with those turned into rows.
-        func relocating(_ table: [Linked]) throws -> [Linked] {
+        func relocating(_ table: [Linked]) throws -> Answered {
             try Relocating(
                 table: table,
                 rows: rows,
@@ -368,18 +368,14 @@ public struct Linker: Sendable {
         // other constants is spelling it with words like any other expression.
         let constants = try self.constants(
             of: modules,
-            lowering: lowering,
             folding: foldingTable,
-            in: types,
             with: declaredFrame
         )
 
         let variables = try self.variables(
             of: modules,
             beside: constants,
-            lowering: lowering,
             folding: foldingTable,
-            in: types,
             with: declaredFrame
         )
 
@@ -453,9 +449,7 @@ public struct Linker: Sendable {
                 let folding = Folding(
                     constants: constants[symbol.origin] ?? [:],
                     origin: symbol.origin,
-                    table: foldingTable,
-                    rows: lowering.rows,
-                    words: lowering.words,
+                    in: foldingTable,
                     shapes: shapes
                 )
 
@@ -605,7 +599,7 @@ public struct Linker: Sendable {
         let linked = try Relocating(compiled).linked()
 
         return Image(
-            linked: linked,
+            linked: linked.table,
             start: start,
             rows: compiled.rows,
             reached: reached,

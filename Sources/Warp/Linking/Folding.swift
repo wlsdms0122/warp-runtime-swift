@@ -23,12 +23,12 @@ struct Folding {
     let shapes: ShapeTable
 
     // MARK: - Initializer
+    // The table is one a link has answered, since folding runs what it lowers
+    // and running reads rows.
     init(
         constants: [Name: Value],
         origin: Int,
-        table: [Linked],
-        rows: [Name: Int],
-        words: [Name: Int],
+        in answered: Answered,
         shapes: ShapeTable
     ) {
         let names = constants.keys.sorted()
@@ -36,9 +36,9 @@ struct Folding {
         self.names = names
         self.cells = names.map { name in .value(constants[name] ?? .null) }
         self.origin = origin
-        self.table = table
-        self.rows = rows
-        self.words = words
+        self.table = answered.table
+        self.rows = answered.rows
+        self.words = answered.words
         self.shapes = shapes
     }
 
@@ -80,7 +80,12 @@ struct Folding {
             }
         }
 
-        self.init(constants: bindings, origin: 0, table: table, rows: rows, words: words, shapes: shapes)
+        self.init(
+            constants: bindings,
+            origin: 0,
+            in: .unanswerable(table, rows: rows, words: words),
+            shapes: shapes
+        )
     }
 
     // MARK: - Public

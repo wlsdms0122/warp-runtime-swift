@@ -7,6 +7,36 @@
 
 import Foundation
 
+// A table whose numbers a link has answered, beside the names that reach its
+// rows.
+//
+// Running reads rows, and a lowered body carries its document's own numbers,
+// so nothing may run against a table until a link has answered it. Only
+// `Relocating` makes one out of what compiling left, which is what keeps a
+// table nobody answered from reaching anything that runs.
+struct Answered: Sendable {
+    // MARK: - Property
+    let table: [Linked]
+    let rows: [Name: Int]
+    let words: [Name: Int]
+
+    // MARK: - Initializer
+    fileprivate init(table: [Linked], rows: [Name: Int], words: [Name: Int]) {
+        self.table = table
+        self.rows = rows
+        self.words = words
+    }
+
+    // A table holding nothing a link could answer: rows built from native
+    // words alone, which carry no lowered body and send nothing.
+    static func unanswerable(_ table: [Linked], rows: [Name: Int], words: [Name: Int]) -> Answered {
+        Answered(table: table, rows: rows, words: words)
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+}
+
 // What compiling a document left for the link, written into its bodies.
 //
 // Two different acts, one walk. A call carries the number its own document
@@ -62,8 +92,12 @@ struct Relocating {
     // MARK: - Public
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
-    func linked() throws -> [Linked] {
-        try table.map { row in try relocated(row) }
+    func linked() throws -> Answered {
+        Answered(
+            table: try table.map { row in try relocated(row) },
+            rows: rows,
+            words: words
+        )
     }
 
     // MARK: - Private
@@ -91,7 +125,7 @@ struct Relocating {
     }
 
     // Which row of this link a document's number stands for. The reading is
-    // the numbering's; what to say when the link has no such name is this.
+    // the numbering's; what to say when it does not answer is this.
     private func row(_ number: Int, of origin: Int, at label: Name) throws -> Int {
         guard let numbering = numbering[origin] else {
             throw LinkError.unjudged(
@@ -100,22 +134,23 @@ struct Relocating {
             )
         }
 
-        if let row = numbering.row(number, rows: rows, words: words) { return row }
+        switch numbering.row(number, rows: rows, words: words) {
+        case let .row(row):
+            return row
 
-        switch numbering.reference(at: number) {
-        case let .sent(declared):
+        case let .unfound(.sent(declared)):
             throw LinkError(
                 "'\(declared)' is called here, and no module in this link declares it",
                 at: place(of: label)
             )
 
-        case let .walked(spelling):
+        case let .unfound(.walked(spelling)):
             throw LinkError(
                 "'\(spelling)' is walked here, and no path in this link may reach it",
                 at: place(of: label)
             )
 
-        case .row, nil:
+        case .unnumbered:
             throw LinkError.unjudged(
                 "a call standing at \(number), which its document never numbered",
                 at: place(of: label)
