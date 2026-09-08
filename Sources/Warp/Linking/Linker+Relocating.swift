@@ -58,6 +58,17 @@ struct Relocating {
     private let rows: [Name: Int]
     private let words: [Name: Int]
     private let numbering: [Int: Numbering]
+
+    // Which row of this link each document's shape numbers stand for, and nil
+    // where the bodies stand on this link's rows already. What compiling hands
+    // over carries each document's own shape numbers; what runs while a link
+    // is still being made was lowered against this link's table.
+    //
+    // Read off the numbering once rather than at every shape met: a name is
+    // hashed as many times as a document numbered one, and not as many times
+    // as its bodies stand on it.
+    private let shapeRows: [Int: (types: [(name: Name, row: Int?)], memberships: [(name: Name, row: Int?)])]?
+
     private let contractWords: [Name: ContractWord]
     private let shapes: ShapeTable
 
@@ -67,6 +78,7 @@ struct Relocating {
         rows: [Name: Int],
         words: [Name: Int],
         numbering: [Int: Numbering],
+        shapeNumbering: [Int: ShapeNumbering]? = nil,
         contractWords: [Name: ContractWord],
         shapes: ShapeTable
     ) {
@@ -74,6 +86,14 @@ struct Relocating {
         self.rows = rows
         self.words = words
         self.numbering = numbering
+        self.shapeRows = shapeNumbering.map { held in
+            held.mapValues { numbering in
+                (
+                    types: numbering.types.map { name in (name, shapes.row(named: name)) },
+                    memberships: numbering.memberships.map { name in (name, shapes.constraintRow(named: name)) }
+                )
+            }
+        }
         self.contractWords = contractWords
         self.shapes = shapes
     }
@@ -84,6 +104,7 @@ struct Relocating {
             rows: compiled.rows,
             words: compiled.words,
             numbering: compiled.numbering,
+            shapeNumbering: compiled.shapeNumbering,
             contractWords: compiled.contractWords,
             shapes: compiled.types.shapes
         )
@@ -211,7 +232,11 @@ struct Relocating {
             )
 
         case let .cast(value, shape, optional):
-            return .cast(try filled(value, of: origin, at: label), as: shape, optional: optional)
+            return .cast(
+                try filled(value, of: origin, at: label),
+                as: try relocated(shape, of: origin, at: label),
+                optional: optional
+            )
 
         case let .block(body):
             return .block(try filled(body, of: origin, at: label))
@@ -277,15 +302,87 @@ struct Relocating {
         )
     }
 
-    // What a statement writes to, where writing to it walks a path.
+    // What a statement writes to and the shape it takes it as: the path where
+    // writing to it walks one, and the row of every shape either way.
     private func relocated(
         _ binding: Instruction.Binding?,
         of origin: Int,
         at label: Name
     ) throws -> Instruction.Binding? {
-        guard case let .assign(address, settling)? = binding else { return binding }
+        switch binding {
+        case let .bind(slot, settling)?:
+            return .bind(slot, settling: try relocated(settling, of: origin, at: label))
 
-        return .assign(try relocated(address, of: origin, at: label), settling: settling)
+        case let .declare(slot, settling)?:
+            return .declare(slot, settling: try relocated(settling, of: origin, at: label))
+
+        case let .assign(address, settling)?:
+            return .assign(
+                try relocated(address, of: origin, at: label),
+                settling: try relocated(settling, of: origin, at: label)
+            )
+
+        case nil:
+            return nil
+        }
+    }
+
+    // A shape with the rows its document's numbers stand for. Untouched where
+    // the bodies stand on this link's rows already.
+    private func relocated(_ shape: Shape?, of origin: Int, at label: Name) throws -> Shape? {
+        try shape.map { held in try relocated(held, of: origin, at: label) }
+    }
+
+    private func relocated(_ shape: Shape, of origin: Int, at label: Name) throws -> Shape {
+        guard let shapeRows else { return shape }
+        guard let rows = shapeRows[origin] else {
+            throw LinkError.unjudged(
+                "a shape in a document that numbered none",
+                at: place(of: label)
+            )
+        }
+
+        return try shape.renumbered(
+            type: { number in
+                guard rows.types.indices.contains(number) else {
+                    throw LinkError.unjudged(
+                        "a type standing at \(number), which its document never numbered",
+                        at: place(of: label)
+                    )
+                }
+
+                let stands = rows.types[number]
+
+                guard let row = stands.row else {
+                    throw LinkError(
+                        "'\(stands.name)' is named here, and no module in this link declares it",
+                        at: place(of: label)
+                    )
+                }
+
+                return row
+            },
+            membership: { number in
+                guard rows.memberships.indices.contains(number) else {
+                    throw LinkError.unjudged(
+                        "a membership standing at \(number), which its document never numbered",
+                        at: place(of: label)
+                    )
+                }
+
+                let stands = rows.memberships[number]
+
+                guard let row = stands.row else {
+                    throw LinkError(
+                        "'\(stands.name)' bounds a parameter here,"
+                            + " and no module in this link declares it",
+                        at: place(of: label)
+                    )
+                }
+
+                return row
+            }
+        )
     }
 
     // A path with the rows its word steps stand for.

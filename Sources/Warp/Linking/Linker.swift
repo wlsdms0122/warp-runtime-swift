@@ -550,14 +550,20 @@ public struct Linker: Sendable {
             }
         }
 
+        // The shapes the bodies stand on, written as each document's own
+        // numbers. Lowering read this link's table to judge, so what it wrote
+        // is this link's rows; what leaves compiling is the document's.
+        let shaped = try lowering.numbered()
+
         return Compiled(
-            table: lowering.table,
+            table: shaped.table,
             rows: rows,
             words: wordRows,
             calls: calls,
             types: types,
             contractWords: contractWords,
             numbering: numbering,
+            shapeNumbering: shaped.numbering,
             variables: variables.reduce(into: [:]) { table, entry in
                 table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
                     (name: name, value: entry.value[name] ?? .null)

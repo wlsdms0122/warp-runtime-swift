@@ -43,6 +43,12 @@ struct Compiled: Sendable {
     // turn them into rows.
     let numbering: [Int: Numbering]
 
+    // Where each document's lowered bodies number their shapes from. Stands
+    // beside the numbering above for the same reason: a body carries the
+    // document's own numbers, and which row of a link each one is stays the
+    // link's answer.
+    let shapeNumbering: [Int: ShapeNumbering]
+
     // What each document's variables start a run holding, in the order the
     // layouts read them.
     let variables: [Int: [(name: Name, value: Value)]]

@@ -265,7 +265,88 @@ struct CompiledTests {
         )
     }
 
+    @Test("a cast carries the number its own document gave the type")
+    func aCastCarriesTheDocumentsOwnShapeNumber() throws {
+        // Given. A document casting to a type it declares.
+        let sut = try casting()
+
+        // When. Compiled.
+        let compiled = try linker.compile(sut + Module.standard)
+
+        // Then. The cast stands on the document's own number.
+        let number = try #require(cast(in: compiled.table, at: compiled.rows[entryName]).row)
+
+        #expect(number == 0)
+
+        // And. The link answers with the row of its own table.
+        let image = try linker.link(compiled, entry: entryName)
+
+        #expect(
+            try cast(in: image.linked, at: image.rows[entryName]).row
+                == compiled.types.shapes.row(named: "bank.Account")
+        )
+    }
+
+    @Test("what a document stands on does not move when the link grows")
+    func loweredShapesDoNotFollowTheWorld() throws {
+        // Given. The same document, compiled once alone and once beside one
+        // whose type takes a row in front of its own.
+        let sut = try casting()
+        let ahead = try Module(
+            types: ["aaa.Ahead": .record(["first": .int])],
+            procedures: [
+                "aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+            ]
+        )
+
+        // When.
+        let alone = try linker.compile(sut + Module.standard)
+        let beside = try linker.compile([ahead] + sut + Module.standard)
+
+        // Then. The row moved and the number the cast stands on did not.
+        #expect(
+            alone.types.shapes.row(named: "bank.Account")
+                != beside.types.shapes.row(named: "bank.Account")
+        )
+        #expect(
+            try cast(in: alone.table, at: alone.rows[entryName]).row
+                == cast(in: beside.table, at: beside.rows[entryName]).row
+        )
+    }
+
     // MARK: - Private
+    // The shape the cast in a row's result stands on.
+    private func cast(in table: [Linked], at row: Int?) throws -> Shape {
+        let row = try #require(row)
+
+        guard
+            case let .body(body, _) = table[row].implementation,
+            case let .cast(_, shape, _)? = body.result
+        else {
+            throw LinkError("the entry holds no cast", at: nil)
+        }
+
+        return shape
+    }
+
+    // One document declaring a type and casting to it.
+    private func casting() throws -> [Module] {
+        [
+            try Module(
+                types: ["bank.Account": .record(["balance": .int])],
+                procedures: [
+                    entryName: Procedure(
+                        body: [],
+                        result: .cast(
+                            .record(["balance": .literal(.int(7))]),
+                            as: .named("bank.Account"),
+                            optional: false
+                        )
+                    )
+                ]
+            )
+        ]
+    }
 
     // The call through a contract a row's result holds.
     private func dispatch(in table: [Linked], at row: Int?) throws -> DispatchOperation {
