@@ -46,13 +46,11 @@ extension Lowering {
             // Which number each row of this link stands at, so the walk that
             // writes them reads a place rather than hashing a name at every
             // shape it meets.
-            let declared = held.declared ?? (types: [], memberships: [])
-
             places[origin] = (
-                types: Self.placed(stood.types, among: declared.types, spelling: shapes.labels),
+                types: Self.placed(stood.types, among: held.types, spelling: shapes.labels),
                 memberships: Self.placed(
                     stood.memberships,
-                    among: declared.memberships,
+                    among: held.memberships,
                     spelling: shapes.constraintLabels
                 )
             )

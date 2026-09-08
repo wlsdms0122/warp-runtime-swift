@@ -33,8 +33,11 @@ struct ShapeNumbering: Sendable {
     }
 
     // MARK: - Property
-    private let types: [Name]
-    private let memberships: [Name]
+    // The declarations this numbered, in the order it numbered them. The order
+    // is the whole of what a caller cannot work out for itself, so it is read
+    // here rather than said twice.
+    let types: [Name]
+    let memberships: [Name]
 
     // MARK: - Initializer
     init(types: Set<Name>, memberships: Set<Name>) {
@@ -58,13 +61,6 @@ struct ShapeNumbering: Sendable {
         let name = memberships[number]
 
         return shapes.constraintRow(named: name).map(Answer.row) ?? .unfound(name)
-    }
-
-    // The declarations this numbered, in the order it numbered them. The order
-    // is the whole of what a caller cannot work out for itself, so it is read
-    // here rather than said twice.
-    var declared: (types: [Name], memberships: [Name]) {
-        (types, memberships)
     }
 
     // MARK: - Private
