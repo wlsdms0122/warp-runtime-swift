@@ -71,7 +71,10 @@ extension Shape {
 
             return .parameter(label: label, bound: .membership(try membership(row)))
 
-        default:
+        // Every case that stands on no row, listed rather than let through:
+        // a case added here has to say whether it holds one.
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number,
+            .ranged, .reading, .undeclared:
             return self
         }
     }

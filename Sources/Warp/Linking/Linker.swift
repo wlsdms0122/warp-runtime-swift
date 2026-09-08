@@ -322,7 +322,7 @@ public struct Linker: Sendable {
                 rows: rows,
                 words: wordRows,
                 numbering: numbering,
-                shapeNumbering: .link,
+                shapeNumbering: numbering.mapValues { _ in ShapeNumbering.link },
                 contractWords: contractWords,
                 shapes: shapes
             ).linked()

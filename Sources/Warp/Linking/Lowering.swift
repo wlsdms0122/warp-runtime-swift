@@ -165,17 +165,23 @@ struct Lowering {
 
         var size: Int { names.count }
 
-        // The same shape, with what it stands on noted. A closure notes into
-        // the body it was written in: the two are one document, and a document
-        // has one numbering.
-        func standing(_ shape: Shape?) -> Shape? {
-            shape.map { held in standing(held) }
+        // Notes what a shape written into this body stands on. A closure notes
+        // into the body it was written in: the two are one document, and a
+        // document has one numbering.
+        //
+        // Read through the walk that rewrites a shape's rows, so which cases
+        // hold a row is answered in one place. What that walk rebuilds is
+        // dropped here.
+        func note(_ shape: Shape?) {
+            guard let shape else { return }
+
+            note(shape)
         }
 
-        func standing(_ shape: Shape) -> Shape {
+        func note(_ shape: Shape) {
             let root = self.root
 
-            return shape.renumbered(
+            _ = shape.renumbered(
                 type: { row in
                     root.types.insert(row)
 
@@ -289,7 +295,8 @@ struct Lowering {
             // the code it was given stands as.
             case let .constant(name, declared)?:
                 let slot = slots.allocate(name)
-                let settling = slots.standing(declared?.lowered(in: shapes))
+                let settling = declared?.lowered(in: shapes)
+                slots.note(settling)
                 scope.slots[name] = slot
                 slots.hold(slot, settling ?? shape(of: code, on: slots))
                 binding = .bind(slot, settling: settling)
@@ -299,7 +306,8 @@ struct Lowering {
             // shape. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = slots.allocate(name)
-                let settling = slots.standing(declared?.lowered(in: shapes))
+                let settling = declared?.lowered(in: shapes)
+                slots.note(settling)
                 scope.slots[name] = slot
                 slots.hold(slot, settling)
                 binding = .declare(slot, settling: settling)
@@ -310,7 +318,9 @@ struct Lowering {
             // was written stands as it was handed.
             case let .assignment(path)?:
                 let (address, reached) = try lower(path, in: scope, on: slots, at: place)
-                binding = .assign(address, settling: slots.standing(reached?.slotUnwrapped))
+                let settling = reached?.slotUnwrapped
+                slots.note(settling)
+                binding = .assign(address, settling: settling)
 
             case nil:
                 binding = nil
@@ -442,9 +452,12 @@ struct Lowering {
             )
 
         case let .cast(value, type, optional):
+            let shape = type.lowered(in: shapes)
+            slots.note(shape)
+
             return .cast(
                 try lower(value, in: scope, on: slots, label: label, at: place),
-                as: slots.standing(type.lowered(in: shapes)),
+                as: shape,
                 optional: optional
             )
 

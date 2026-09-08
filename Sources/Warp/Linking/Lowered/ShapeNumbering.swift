@@ -24,15 +24,6 @@ import Foundation
 // Two lists, because a shape names two tables. A declared type and a
 // membership are separate spaces and no name is in both.
 struct ShapeNumbering: Sendable {
-    // Which numbering the shapes in a table's bodies stand in. What compiling
-    // hands over carries each document's own numbers; what runs while a link
-    // is still being made was lowered against that link's table, so its
-    // numbers are rows already.
-    enum Space: Sendable {
-        case documents([Int: ShapeNumbering])
-        case link
-    }
-
     // What a number turned out to be, with the reason where it is not a row:
     // a name the link does not declare, or a number the document never gave.
     enum Answer: Sendable {
@@ -42,33 +33,58 @@ struct ShapeNumbering: Sendable {
     }
 
     // MARK: - Property
-    // The declarations the document's bodies stand on, in name order. A
-    // number one of those bodies carries is a place in one of these.
-    let types: [Name]
-    let memberships: [Name]
+    private let space: Space
+
+    // What runs while a link is still being made was lowered against that
+    // link's table, so the number a body carries there is the row.
+    static let link = ShapeNumbering()
 
     // MARK: - Initializer
     init(types: Set<Name>, memberships: Set<Name>) {
-        self.types = types.sorted()
-        self.memberships = memberships.sorted()
+        space = .document(types: types.sorted(), memberships: memberships.sorted())
+    }
+
+    private init() {
+        space = .link
     }
 
     // MARK: - Public
     // Which row of a link a number stands for, read from that link's table.
+    // A number counted from the link is a row already, so it answers itself.
     func type(_ number: Int, in shapes: ShapeTable) -> Answer {
-        guard types.indices.contains(number) else { return .unnumbered }
+        guard case let .document(names, _) = space else { return .row(number) }
+        guard names.indices.contains(number) else { return .unnumbered }
 
-        let name = types[number]
+        let name = names[number]
 
         return shapes.row(named: name).map(Answer.row) ?? .unfound(name)
     }
 
     func membership(_ number: Int, in shapes: ShapeTable) -> Answer {
-        guard memberships.indices.contains(number) else { return .unnumbered }
+        guard case let .document(_, names) = space else { return .row(number) }
+        guard names.indices.contains(number) else { return .unnumbered }
 
-        let name = memberships[number]
+        let name = names[number]
 
         return shapes.constraintRow(named: name).map(Answer.row) ?? .unfound(name)
+    }
+
+    // The declarations this numbered, in the order it numbered them. Nil
+    // where the numbers are a link's rows and nothing was numbered.
+    //
+    // The order is the whole of what a caller cannot work out for itself, so
+    // it is read here rather than said twice.
+    var declared: (types: [Name], memberships: [Name])? {
+        guard case let .document(types, memberships) = space else { return nil }
+
+        return (types, memberships)
+    }
+
+    // Where a number is counted from. The document's lists are the whole of
+    // the difference: a number counted from the link is its own answer.
+    private enum Space: Sendable {
+        case document(types: [Name], memberships: [Name])
+        case link
     }
 
     // MARK: - Private

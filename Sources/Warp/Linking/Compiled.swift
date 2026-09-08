@@ -17,6 +17,12 @@ struct Compiled: Sendable {
     // MARK: - Property
     // One row per declaration, a document's own taking a run of them
     // in the order the documents stand.
+    //
+    // The bodies carry their document's own numbers, both for what they call
+    // and for what they stand on. The rest of a row does not: what its slots
+    // and answer lower to is its signature read against a table, so those are
+    // this compile's link reading and are made again wherever the row is
+    // read against another.
     let table: [Linked]
 
     // Every declared spelling, by row.

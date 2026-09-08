@@ -59,13 +59,13 @@ struct Relocating {
     private let words: [Name: Int]
     private let numbering: [Int: Numbering]
 
-    // What each document's shape numbers turned out to be in this link, or
-    // nil where the bodies stand on this link's rows already.
+    // What each document's shape numbers turned out to be in this link.
     //
     // Answered once per number rather than at every shape met: a name is read
     // as many times as a document numbered one, and not as many times as its
-    // bodies stand on it.
-    private let shapeRows: [Int: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]?
+    // bodies stand on it. A document whose numbers are this link's rows has
+    // nothing to answer and no entry here.
+    private let shapeRows: [Int: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]
 
     private let contractWords: [Name: ContractWord]
     private let shapes: ShapeTable
@@ -76,7 +76,7 @@ struct Relocating {
         rows: [Name: Int],
         words: [Name: Int],
         numbering: [Int: Numbering],
-        shapeNumbering: ShapeNumbering.Space,
+        shapeNumbering: [Int: ShapeNumbering],
         contractWords: [Name: ContractWord],
         shapes: ShapeTable
     ) {
@@ -84,20 +84,15 @@ struct Relocating {
         self.rows = rows
         self.words = words
         self.numbering = numbering
+        self.shapeRows = shapeNumbering.compactMapValues { held in
+            guard let declared = held.declared else { return nil }
 
-        switch shapeNumbering {
-        case let .documents(held):
-            self.shapeRows = held.mapValues { numbering in
-                (
-                    types: numbering.types.indices.map { number in numbering.type(number, in: shapes) },
-                    memberships: numbering.memberships.indices.map { number in
-                        numbering.membership(number, in: shapes)
-                    }
-                )
-            }
-
-        case .link:
-            self.shapeRows = nil
+            return (
+                types: declared.types.indices.map { number in held.type(number, in: shapes) },
+                memberships: declared.memberships.indices.map { number in
+                    held.membership(number, in: shapes)
+                }
+            )
         }
         self.contractWords = contractWords
         self.shapes = shapes
@@ -109,7 +104,7 @@ struct Relocating {
             rows: compiled.rows,
             words: compiled.words,
             numbering: compiled.numbering,
-            shapeNumbering: .documents(compiled.shapeNumbering),
+            shapeNumbering: compiled.shapeNumbering,
             contractWords: compiled.contractWords,
             shapes: compiled.types.shapes
         )
@@ -127,9 +122,18 @@ struct Relocating {
     }
 
     // MARK: - Private
+    // Where the walk is: which document wrote this row, what a refusal calls
+    // it, and this link's answers to the shape numbers that document gave.
+    // Read once on entering a row rather than at every shape inside it.
+    private struct Standing {
+        let origin: Int
+        let label: Name
+        let shapes: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])?
+    }
+
     private func relocated(_ row: Linked) throws -> Linked {
-        let label = row.label
-        let sends = try row.sends.map { number in try self.row(number, of: row.origin, at: label) }
+        let standing = Standing(origin: row.origin, label: row.label, shapes: shapeRows[row.origin])
+        let sends = try row.sends.map { number in try self.row(number, in: standing) }
 
         guard case let .body(body, frame) = row.implementation else {
             guard sends != row.sends else { return row }
@@ -139,7 +143,7 @@ struct Relocating {
 
         return Linked(
             row,
-            implementation: .body(try filled(body, of: row.origin, at: label), frame),
+            implementation: .body(try filled(body, in: standing), frame),
             sends: sends
         )
     }
@@ -152,11 +156,11 @@ struct Relocating {
 
     // Which row of this link a document's number stands for. The reading is
     // the numbering's; what to say when it does not answer is this.
-    private func row(_ number: Int, of origin: Int, at label: Name) throws -> Int {
-        guard let numbering = numbering[origin] else {
+    private func row(_ number: Int, in standing: Standing) throws -> Int {
+        guard let numbering = numbering[standing.origin] else {
             throw LinkError.unjudged(
                 "a call standing at \(number) in a document that numbered nothing",
-                at: place(of: label)
+                at: place(of: standing.label)
             )
         }
 
@@ -167,59 +171,59 @@ struct Relocating {
         case let .unfound(.sent(declared)):
             throw LinkError(
                 "'\(declared)' is called here, and no module in this link declares it",
-                at: place(of: label)
+                at: place(of: standing.label)
             )
 
         case let .unfound(.walked(spelling)):
             throw LinkError(
                 "'\(spelling)' is walked here, and no path in this link may reach it",
-                at: place(of: label)
+                at: place(of: standing.label)
             )
 
         case .unnumbered:
             throw LinkError.unjudged(
                 "a call standing at \(number), which its document never numbered",
-                at: place(of: label)
+                at: place(of: standing.label)
             )
         }
     }
 
-    private func filled(_ body: Body, of origin: Int, at label: Name) throws -> Body {
+    private func filled(_ body: Body, in standing: Standing) throws -> Body {
         Body(
             instructions: try body.instructions.map { instruction in
-                try relocated(instruction, of: origin, at: label)
+                try relocated(instruction, in: standing)
             },
-            result: try body.result.map { result in try filled(result, of: origin, at: label) }
+            result: try body.result.map { result in try filled(result, in: standing) }
         )
     }
 
     // One statement, both what it computes and where it writes. A statement
     // stands in three places (a body, and either arm of a conditional) and
     // reads the same way in all of them.
-    private func relocated(_ instruction: Instruction, of origin: Int, at label: Name) throws -> Instruction {
+    private func relocated(_ instruction: Instruction, in standing: Standing) throws -> Instruction {
         Instruction(
-            binding: try relocated(instruction.binding, of: origin, at: label),
-            code: try filled(instruction.code, of: origin, at: label),
+            binding: try relocated(instruction.binding, in: standing),
+            code: try filled(instruction.code, in: standing),
             label: instruction.label
         )
     }
 
-    private func filled(_ operation: Operation, of origin: Int, at label: Name) throws -> Operation {
+    private func filled(_ operation: Operation, in standing: Standing) throws -> Operation {
         switch operation {
         case .literal:
             return operation
 
         case let .local(address):
-            return .local(try relocated(address, of: origin, at: label))
+            return .local(try relocated(address, in: standing))
 
         case let .array(elements):
-            return .array(try elements.map { element in try filled(element, of: origin, at: label) })
+            return .array(try elements.map { element in try filled(element, in: standing) })
 
         case let .record(held):
             return .record(
                 RecordOperation(
                     layout: held.layout,
-                    fields: try held.fields.map { field in try filled(field, of: origin, at: label) }
+                    fields: try held.fields.map { field in try filled(field, in: standing) }
                 )
             )
 
@@ -230,58 +234,58 @@ struct Relocating {
 
         case let .apply(callee, arguments):
             return .apply(
-                try filled(callee, of: origin, at: label),
+                try filled(callee, in: standing),
                 arguments: try arguments.map { name, argument in
-                    (name, try filled(argument, of: origin, at: label))
+                    (name, try filled(argument, in: standing))
                 }
             )
 
         case let .cast(value, shape, optional):
             return .cast(
-                try filled(value, of: origin, at: label),
-                as: try relocated(shape, of: origin, at: label),
+                try filled(value, in: standing),
+                as: try relocated(shape, in: standing),
                 optional: optional
             )
 
         case let .block(body):
-            return .block(try filled(body, of: origin, at: label))
+            return .block(try filled(body, in: standing))
 
         case let .conditional(condition, then, otherwise):
             return .conditional(
-                try filled(condition, of: origin, at: label),
+                try filled(condition, in: standing),
                 then: try then.map { instruction in
-                    try relocated(instruction, of: origin, at: label)
+                    try relocated(instruction, in: standing)
                 },
                 else: try otherwise.map { instructions in
                     try instructions.map { instruction in
-                        try relocated(instruction, of: origin, at: label)
+                        try relocated(instruction, in: standing)
                     }
                 }
             )
 
         case let .loop(condition, body, round, keeps):
             return .loop(
-                while: try filled(condition, of: origin, at: label),
-                body: try filled(body, of: origin, at: label),
+                while: try filled(condition, in: standing),
+                body: try filled(body, in: standing),
                 round: round,
                 keeps: keeps
             )
 
         case let .attempt(body, rescue, failure):
             return .attempt(
-                try filled(body, of: origin, at: label),
-                rescue: try filled(rescue, of: origin, at: label),
+                try filled(body, in: standing),
+                rescue: try filled(rescue, in: standing),
                 failure: failure
             )
 
         case let .call(call):
-            return .call(try relocated(call, of: origin, at: label))
+            return .call(try relocated(call, in: standing))
 
         case let .dispatch(dispatch):
-            return .dispatch(try filled(dispatch, of: origin, at: label))
+            return .dispatch(try filled(dispatch, in: standing))
 
         case let .leave(reach, target, value):
-            return .leave(reach, target: target, try value.map { value in try filled(value, of: origin, at: label) })
+            return .leave(reach, target: target, try value.map { value in try filled(value, in: standing) })
         }
     }
 
@@ -289,19 +293,18 @@ struct Relocating {
     // operands walked.
     private func relocated(
         _ call: CallOperation,
-        of origin: Int,
-        at label: Name
+        in standing: Standing
     ) throws -> CallOperation {
         CallOperation(
-            procedure: try row(call.procedure, of: origin, at: label),
-            receiver: try call.receiver.map { receiver in try filled(receiver, of: origin, at: label) },
+            procedure: try row(call.procedure, in: standing),
+            receiver: try call.receiver.map { receiver in try filled(receiver, in: standing) },
             arguments: try call.arguments.map { argument in
-                try argument.map { operation in try filled(operation, of: origin, at: label) }
+                try argument.map { operation in try filled(operation, in: standing) }
             },
             handed: try call.handed.map { handed in
                 CallOperation.Handed(
                     position: handed.position,
-                    address: try relocated(handed.address, of: origin, at: label)
+                    address: try relocated(handed.address, in: standing)
                 )
             }
         )
@@ -311,20 +314,19 @@ struct Relocating {
     // writing to it walks one, and the row of every shape either way.
     private func relocated(
         _ binding: Instruction.Binding?,
-        of origin: Int,
-        at label: Name
+        in standing: Standing
     ) throws -> Instruction.Binding? {
         switch binding {
         case let .bind(slot, settling)?:
-            return .bind(slot, settling: try relocated(settling, of: origin, at: label))
+            return .bind(slot, settling: try relocated(settling, in: standing))
 
         case let .declare(slot, settling)?:
-            return .declare(slot, settling: try relocated(settling, of: origin, at: label))
+            return .declare(slot, settling: try relocated(settling, in: standing))
 
         case let .assign(address, settling)?:
             return .assign(
-                try relocated(address, of: origin, at: label),
-                settling: try relocated(settling, of: origin, at: label)
+                try relocated(address, in: standing),
+                settling: try relocated(settling, in: standing)
             )
 
         case nil:
@@ -334,23 +336,17 @@ struct Relocating {
 
     // A shape with the rows its document's numbers stand for. Untouched where
     // the bodies stand on this link's rows already.
-    private func relocated(_ shape: Shape?, of origin: Int, at label: Name) throws -> Shape? {
-        try shape.map { held in try relocated(held, of: origin, at: label) }
+    private func relocated(_ shape: Shape?, in standing: Standing) throws -> Shape? {
+        try shape.map { held in try relocated(held, in: standing) }
     }
 
-    private func relocated(_ shape: Shape, of origin: Int, at label: Name) throws -> Shape {
-        guard let shapeRows else { return shape }
-        guard let rows = shapeRows[origin] else {
-            throw LinkError.unjudged(
-                "a shape in a document that numbered none",
-                at: place(of: label)
-            )
-        }
+    private func relocated(_ shape: Shape, in standing: Standing) throws -> Shape {
+        guard let answers = standing.shapes else { return shape }
 
         return try shape.renumbered(
-            type: { number in try row(rows.types, at: number, standing: "named", at: label) },
+            type: { number in try row(answers.types, at: number, calling: "named", in: standing) },
             membership: { number in
-                try row(rows.memberships, at: number, standing: "bounding a parameter", at: label)
+                try row(answers.memberships, at: number, calling: "bounding a parameter", in: standing)
             }
         )
     }
@@ -360,13 +356,13 @@ struct Relocating {
     private func row(
         _ answers: [ShapeNumbering.Answer],
         at number: Int,
-        standing: String,
-        at label: Name
+        calling what: String,
+        in standing: Standing
     ) throws -> Int {
         guard answers.indices.contains(number) else {
             throw LinkError.unjudged(
                 "a shape standing at \(number), which its document never numbered",
-                at: place(of: label)
+                at: place(of: standing.label)
             )
         }
 
@@ -376,29 +372,29 @@ struct Relocating {
 
         case let .unfound(name):
             throw LinkError(
-                "'\(name)' is \(standing) here, and no module in this link declares it",
-                at: place(of: label)
+                "'\(name)' is \(what) here, and no module in this link declares it",
+                at: place(of: standing.label)
             )
 
         case .unnumbered:
             throw LinkError.unjudged(
                 "a shape standing at \(number), which its document never numbered",
-                at: place(of: label)
+                at: place(of: standing.label)
             )
         }
     }
 
     // A path with the rows its word steps stand for.
-    private func relocated(_ address: Address, of origin: Int, at label: Name) throws -> Address {
+    private func relocated(_ address: Address, in standing: Standing) throws -> Address {
         Address(
             slot: address.slot,
             steps: try address.steps.map { step in
                 switch step {
                 case let .word(number, spelling, optional):
-                    return .word(try row(number, of: origin, at: label), spelling, optional: optional)
+                    return .word(try row(number, in: standing), spelling, optional: optional)
 
                 case let .at(inner, optional):
-                    return .at(try relocated(inner, of: origin, at: label), optional: optional)
+                    return .at(try relocated(inner, in: standing), optional: optional)
 
                 case .field, .key, .index:
                     return step
@@ -407,21 +403,21 @@ struct Relocating {
         )
     }
 
-    private func filled(_ dispatch: DispatchOperation, of origin: Int, at label: Name) throws -> DispatchOperation {
+    private func filled(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
         let spelling = Name(normal: "\(dispatch.contract.spelling).\(dispatch.word.spelling)")
 
         guard let asked = contractWords[spelling] else {
-            throw LinkError.unjudged("a call to '\(spelling)', which no contract declares", at: place(of: label))
+            throw LinkError.unjudged("a call to '\(spelling)', which no contract declares", at: place(of: standing.label))
         }
 
-        let receiver = try filled(dispatch.receiver, of: origin, at: label)
+        let receiver = try filled(dispatch.receiver, in: standing)
         let arguments = try dispatch.arguments.mapValues { argument -> Argument in
             switch argument {
             case let .value(operation):
-                return .value(try filled(operation, of: origin, at: label))
+                return .value(try filled(operation, in: standing))
 
             case let .reference(address):
-                return .reference(try relocated(address, of: origin, at: label))
+                return .reference(try relocated(address, in: standing))
             }
         }
 
@@ -434,7 +430,7 @@ struct Relocating {
                 guard let row = rows[entry.value] else {
                     throw LinkError.unjudged(
                         "'\(entry.value)' answering '\(spelling)', which has no row",
-                        at: place(of: label)
+                        at: place(of: standing.label)
                     )
                 }
 
@@ -445,7 +441,7 @@ struct Relocating {
                     to: table[row],
                     row: row,
                     in: shapes,
-                    at: place(of: label)
+                    at: place(of: standing.label)
                 )
             }
         )
