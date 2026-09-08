@@ -122,8 +122,8 @@ struct Relocating {
     //
     // Answered once per number rather than at every shape met: a name is read
     // as many times as a document numbered one, and not as many times as its
-    // bodies stand on it. A document whose numbers are this link's rows has
-    // nothing to answer and no entry here.
+    // bodies stand on it. A document that lowered no body numbered no shape
+    // and has no entry here.
     private let shapeRows: [Int: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]
 
     private let contractWords: [Name: ContractWord]
@@ -143,12 +143,10 @@ struct Relocating {
         self.rows = rows
         self.words = words
         self.numbering = numbering
-        self.shapeRows = shapeNumbering.compactMapValues { held in
-            guard let declared = held.declared else { return nil }
-
-            return (
-                types: declared.types.indices.map { number in held.type(number, in: shapes) },
-                memberships: declared.memberships.indices.map { number in
+        self.shapeRows = shapeNumbering.mapValues { held in
+            (
+                types: held.declared.types.indices.map { number in held.type(number, in: shapes) },
+                memberships: held.declared.memberships.indices.map { number in
                     held.membership(number, in: shapes)
                 }
             )

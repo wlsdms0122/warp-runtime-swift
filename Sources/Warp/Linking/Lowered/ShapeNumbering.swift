@@ -33,58 +33,38 @@ struct ShapeNumbering: Sendable {
     }
 
     // MARK: - Property
-    private let space: Space
-
-    // What runs while a link is still being made was lowered against that
-    // link's table, so the number a body carries there is the row.
-    static let link = ShapeNumbering()
+    private let types: [Name]
+    private let memberships: [Name]
 
     // MARK: - Initializer
     init(types: Set<Name>, memberships: Set<Name>) {
-        space = .document(types: types.sorted(), memberships: memberships.sorted())
-    }
-
-    private init() {
-        space = .link
+        self.types = types.sorted()
+        self.memberships = memberships.sorted()
     }
 
     // MARK: - Public
     // Which row of a link a number stands for, read from that link's table.
-    // A number counted from the link is a row already, so it answers itself.
     func type(_ number: Int, in shapes: ShapeTable) -> Answer {
-        guard case let .document(names, _) = space else { return .row(number) }
-        guard names.indices.contains(number) else { return .unnumbered }
+        guard types.indices.contains(number) else { return .unnumbered }
 
-        let name = names[number]
+        let name = types[number]
 
         return shapes.row(named: name).map(Answer.row) ?? .unfound(name)
     }
 
     func membership(_ number: Int, in shapes: ShapeTable) -> Answer {
-        guard case let .document(_, names) = space else { return .row(number) }
-        guard names.indices.contains(number) else { return .unnumbered }
+        guard memberships.indices.contains(number) else { return .unnumbered }
 
-        let name = names[number]
+        let name = memberships[number]
 
         return shapes.constraintRow(named: name).map(Answer.row) ?? .unfound(name)
     }
 
-    // The declarations this numbered, in the order it numbered them. Nil
-    // where the numbers are a link's rows and nothing was numbered.
-    //
-    // The order is the whole of what a caller cannot work out for itself, so
-    // it is read here rather than said twice.
-    var declared: (types: [Name], memberships: [Name])? {
-        guard case let .document(types, memberships) = space else { return nil }
-
-        return (types, memberships)
-    }
-
-    // Where a number is counted from. The document's lists are the whole of
-    // the difference: a number counted from the link is its own answer.
-    private enum Space: Sendable {
-        case document(types: [Name], memberships: [Name])
-        case link
+    // The declarations this numbered, in the order it numbered them. The order
+    // is the whole of what a caller cannot work out for itself, so it is read
+    // here rather than said twice.
+    var declared: (types: [Name], memberships: [Name]) {
+        (types, memberships)
     }
 
     // MARK: - Private
