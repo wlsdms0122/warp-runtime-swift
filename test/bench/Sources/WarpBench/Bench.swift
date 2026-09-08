@@ -49,7 +49,7 @@ struct Bench {
         let rounds = numbers.first.flatMap(Int.init) ?? defaultRounds
         let repeats = numbers.dropFirst().first.flatMap(Int.init) ?? defaultRepeats
         let against = arguments.firstIndex(of: "--against").map { at in arguments[at + 1] }
-        let baseline = try against.map(Self.reading)
+        let printed = try against.map(Self.reading)
         let workloads = try Self.workloads()
 
         var measured: [String: Measurement] = [:]
@@ -78,7 +78,7 @@ struct Bench {
             )
         }
 
-        var scaled: [Int: Double] = [:]
+        var linkedByCount: [Int: Double] = [:]
 
         for count in chainCounts {
             let chain = try Chain(of: count)
@@ -91,12 +91,18 @@ struct Bench {
                 links.append(try chain.link())
             }
 
-            scaled[chain.count] = Self.nanoseconds(Self.fastest(links))
+            linkedByCount[chain.count] = Self.nanoseconds(Self.fastest(links))
         }
 
-        print(Self.table(measured, against: baseline, from: against, rounds: rounds, repeats: repeats))
+        print(Self.table(
+            measured,
+            against: printed?["workload"],
+            from: against,
+            rounds: rounds,
+            repeats: repeats
+        ))
         print("")
-        print(Self.table(scaled, against: baseline))
+        print(Self.table(linkedByCount, against: printed?["documents"]))
     }
 
     // MARK: - Private
@@ -129,14 +135,19 @@ struct Bench {
             + Double(duration.components.attoseconds) / 1e9
     }
 
-    // The rows of the tables this printed earlier, by what the first column
-    // called the row and then by heading. The figures are read under the
-    // heading they were printed under rather than by position, so one reader
-    // takes both tables and neither is held to a column order. Whatever a
-    // column holds that is not a number is not a figure, which is how the
-    // moved columns of an earlier comparison are passed over.
-    private static func reading(_ path: String) throws -> [String: [String: Double]] {
-        var read: [String: [String: Double]] = [:]
+    // The tables this printed earlier: each one under what its first column
+    // calls its rows, and then by row and by heading.
+    //
+    // A table apiece rather than every row in one, because a row label only
+    // means something under the table it was printed in: one table calls its
+    // rows by workload and the other by a count, and nothing stops a program
+    // under `program/` from being named a number. The figures are read under
+    // the heading they were printed under rather than by position, so neither
+    // table is held to a column order. Whatever a column holds that is not a
+    // number is not a figure, which is how the moved columns of an earlier
+    // comparison are passed over.
+    private static func reading(_ path: String) throws -> [String: [String: [String: Double]]] {
+        var read: [String: [String: [String: Double]]] = [:]
         var headings: [String] = []
         var above: [String] = []
 
@@ -153,9 +164,9 @@ struct Bench {
 
             above = cells
 
-            guard !headings.isEmpty else { continue }
+            guard let rows = headings.first else { continue }
 
-            read[label] = Dictionary(
+            read[rows, default: [:]][label] = Dictionary(
                 zip(headings, cells).compactMap { heading, cell in Double(cell).map { read in (heading, read) } },
                 uniquingKeysWith: { first, _ in first }
             )
@@ -222,26 +233,30 @@ struct Bench {
     // not move, and subtracting the smallest world is what leaves the count's
     // own. A column that holds still as the count doubles is a link growing
     // with its world rather than with the square of it.
-    private static func table(_ scaled: [Int: Double], against: [String: [String: Double]]?) -> String {
-        let one = scaled[chainCounts.first ?? 1] ?? 0
+    private static func table(_ linkedByCount: [Int: Double], against: [String: [String: Double]]?) -> String {
+        let counts = linkedByCount.keys.sorted()
+
+        guard let smallest = counts.first, let base = linkedByCount[smallest], base > 0 else { return "" }
+
         var lines = [
             "linking a chain of documents, each calling the one in front of it;"
                 + " fastest of \(linkSamples)",
             "",
             against == nil
-                ? "| documents | link us | x 1 | us each |"
-                : "| documents | link us | x 1 | us each | moved |",
+                ? "| documents | link us | x \(smallest) | us each |"
+                : "| documents | link us | x \(smallest) | us each | moved |",
             against == nil ? "|---|---|---|---|" : "|---|---|---|---|---|"
         ]
 
-        for count in chainCounts.sorted() {
-            guard let link = scaled[count] else { continue }
+        for count in counts {
+            guard let link = linkedByCount[count] else { continue }
 
-            let ratio = one > 0 ? link / one : 0
-            let each = count > 1 ? (link - one) / Double(count - 1) / 1000 : 0
+            let each = count > smallest
+                ? String(format: "%.1f", (link - base) / Double(count - smallest) / 1000)
+                : ""
             let figures = String(
                 format: "| %d | %.0f | %.2f | %@ |",
-                count, link / 1000, ratio, count > 1 ? String(format: "%.1f", each) : ""
+                count, link / 1000, link / base, each
             )
 
             guard let against else {
