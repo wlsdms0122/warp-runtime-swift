@@ -21,9 +21,6 @@ extension Lowering {
     // until every one of them is known, so the numbers are written once the
     // last body is lowered and not while one is.
     func numbered() throws -> (table: [Linked], numbering: [Int: ShapeNumbering]) {
-        var types: [Int: Set<Int>] = [:]
-        var memberships: [Int: Set<Int>] = [:]
-
         // Every document holding a body, and not only the ones that turned out
         // to stand on a declared name: a body standing on nothing declared has
         // an empty numbering, which is a different thing from a document this
