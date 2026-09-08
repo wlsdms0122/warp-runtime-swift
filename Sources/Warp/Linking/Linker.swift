@@ -224,14 +224,18 @@ public struct Linker: Sendable {
         // outside itself first, its own declarations after. Built from the
         // documents alone, so a body lowers to the same numbers whatever else
         // the caller put in the link.
-        let numbering = modules.enumerated().reduce(into: [Int: Numbering]()) { table, entry in
-            let draft = entry.element.draft
-
-            table[entry.offset] = Numbering(
+        let numbered = modules.enumerated().map { entry in
+            Numbering(
                 imports: entry.element.imports,
-                walks: draft.walks,
+                walks: entry.element.draft.walks,
                 declared: declaredBy[entry.offset] ?? []
             )
+        }
+
+        // The same, under the document a row names, for everything that reads
+        // a numbering by where a body came from rather than in order.
+        let numbering = numbered.enumerated().reduce(into: [Int: Numbering]()) { table, entry in
+            table[entry.offset] = entry.element
         }
 
         let sending = numbering.mapValues { held in
@@ -320,19 +324,21 @@ public struct Linker: Sendable {
             shapes: shapes
         )
 
-        // Compiling runs what a constant calls, and running reads rows. A
-        // lowered body carries its document's own numbers, so what folding
-        // runs is the table with those turned into rows.
-        func relocating(_ table: [Linked]) throws -> Answered {
-            try Relocating(
-                table: table,
-                rows: rows,
-                words: wordRows,
-                numbering: numbering,
-                shapeNumbering: numbering.mapValues { _ in ShapeNumbering.link },
-                contractWords: contractWords,
-                shapes: shapes
-            ).linked()
+        // Which row of this link each document's numbers stand for. Compiling
+        // runs what a constant calls, and running reads rows; a lowered body
+        // carries its document's own numbers, so the answer is read off the
+        // numberings once per number rather than written into every body.
+        //
+        // A name this link has no row for stands as nothing rather than as a
+        // refusal: a document numbers every bare spelling its paths step to,
+        // and a step onto a field reaches no declaration, so a numbering holds
+        // names no body ever calls.
+        let views = numbered.map { held in
+            held.answers(rows: rows, words: wordRows).map { answer -> Int? in
+                guard case let .row(row) = answer else { return nil }
+
+                return row
+            }
         }
 
         // What a body's constant paths fold against. The stand-ins, while
@@ -340,7 +346,17 @@ public struct Linker: Sendable {
         // be a circle, and which words are already lowered is a fact of
         // name order rather than of the text. Once the words are resolved,
         // folding runs them.
-        var foldingTable = try relocating(table)
+        func folding(_ table: [Linked]) -> Answered {
+            Answered.documents(
+                table,
+                rows: rows,
+                words: wordRows,
+                numbering: numbered,
+                views: views
+            )
+        }
+
+        var foldingTable = folding(table)
 
         func row(of symbol: Symbol) throws -> Int {
             guard let row = rows[symbol.declared] else {
@@ -526,7 +542,7 @@ public struct Linker: Sendable {
             _ = try resolved(symbol)
         }
 
-        foldingTable = try relocating(lowering.table)
+        foldingTable = folding(lowering.table)
 
         // Every declaration, one document at a time in the order they stand
         // and in name order inside each, which is the order their rows stand

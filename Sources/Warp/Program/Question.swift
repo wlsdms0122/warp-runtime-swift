@@ -13,7 +13,10 @@ public struct Question<W: Word>: Sendable {
     // name where a caller asks the word directly, with no declaration and no
     // run behind them.
     private enum Arguments: Sendable {
-        case settled(Settled, Executor)
+        // The numbers this word's declared sends stand at travel with the run,
+        // since they are the sender's document's numbers and only a run can
+        // say which rows they are.
+        case settled(Settled, sends: [Int], from: Int, Executor)
         case offered([Name: Value])
     }
 
@@ -29,10 +32,6 @@ public struct Question<W: Word>: Sendable {
     // place.
     private let arguments: Arguments
 
-    // The rows this word's declared sends reach, in the places the word names
-    // them at. Empty for a question asked with no link behind it.
-    private let sends: [Int]
-
     // MARK: - Initializer
     // Asking a word with no declaration and no run behind it: the link judging
     // a constant against the word that will settle it. Not a door out of the
@@ -41,13 +40,11 @@ public struct Question<W: Word>: Sendable {
     init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
         self.receiver = receiver
         self.arguments = .offered(arguments)
-        self.sends = []
     }
 
-    init(receiver: Value?, settled: Settled, sends: [Int], executor: Executor) {
+    init(receiver: Value?, settled: Settled, sends: [Int], from origin: Int, executor: Executor) {
         self.receiver = receiver
-        self.arguments = .settled(settled, executor)
-        self.sends = sends
+        self.arguments = .settled(settled, sends: sends, from: origin, executor)
     }
 
     // MARK: - Public
@@ -60,7 +57,7 @@ public struct Question<W: Word>: Sendable {
     // one was asked with no declaration behind it, so there are only names.
     public subscript(key: W.Parameters) -> Value {
         switch arguments {
-        case let .settled(settled, _):
+        case let .settled(settled, _, _, _):
             return settled[key.position]
 
         case let .offered(offered):
@@ -79,14 +76,16 @@ public struct Question<W: Word>: Sendable {
         to receiver: Value? = nil,
         offering arguments: [(name: Name, value: Value)] = []
     ) throws -> Value {
-        guard case let .settled(_, executor) = self.arguments, sends.indices.contains(key.position) else {
+        guard case let .settled(_, sends, origin, executor) = self.arguments,
+            sends.indices.contains(key.position)
+        else {
             throw ExecutionError(
                 "this word sends '\(key.selector)', and this question was asked"
                     + " with no link behind it. A constant settles from words that send nothing"
             )
         }
 
-        return try executor.send(sends[key.position], to: receiver, offering: arguments)
+        return try executor.send(sends[key.position], from: origin, to: receiver, offering: arguments)
     }
 
     // Running a procedure this word was handed. What may be handed is what the
@@ -100,7 +99,7 @@ public struct Question<W: Word>: Sendable {
             )
         }
 
-        guard case let .settled(_, executor) = self.arguments else {
+        guard case let .settled(_, _, _, executor) = self.arguments else {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 

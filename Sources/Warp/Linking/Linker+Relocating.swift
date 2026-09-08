@@ -7,34 +7,93 @@
 
 import Foundation
 
-// A table whose numbers a link has answered, beside the names that reach its
-// rows.
+// A table something may run against, beside how the numbers its bodies carry
+// are read.
 //
 // Running reads rows, and a lowered body carries its document's own numbers,
-// so nothing may run against a table until a link has answered it. Only
-// `Relocating` makes one out of what compiling left, which is what keeps a
-// table nobody answered from reaching anything that runs.
+// so nothing may run against a table until something says which the numbers
+// are. `Relocating` says it by writing every body over. Compiling says it
+// beside the bodies instead, since it runs a few of them once and writing all
+// of them over would cost more than the running.
 struct Answered: Sendable {
     // MARK: - Property
     let table: [Linked]
     let rows: [Name: Int]
     let words: [Name: Int]
 
+    private let numbers: Numbers
+
     // MARK: - Initializer
-    fileprivate init(table: [Linked], rows: [Name: Int], words: [Name: Int]) {
+    private init(table: [Linked], rows: [Name: Int], words: [Name: Int], numbers: Numbers) {
         self.table = table
         self.rows = rows
         self.words = words
+        self.numbers = numbers
     }
 
     // A table holding nothing a link could answer: rows built from native
     // words alone, which carry no lowered body and send nothing.
     static func unanswerable(_ table: [Linked], rows: [Name: Int], words: [Name: Int]) -> Answered {
-        Answered(table: table, rows: rows, words: words)
+        Answered(table: table, rows: rows, words: words, numbers: .rows)
+    }
+
+    // A table as compiling left it, beside which row each document's numbers
+    // stand for. The bodies keep the numbers they were lowered with, so what
+    // reads one is told which document it came from.
+    static func documents(
+        _ table: [Linked],
+        rows: [Name: Int],
+        words: [Name: Int],
+        numbering: [Numbering],
+        views: [[Int?]]
+    ) -> Answered {
+        Answered(
+            table: table,
+            rows: rows,
+            words: words,
+            numbers: .documents(numbering, views: views)
+        )
+    }
+
+    // Made by `Relocating` alone, which is what keeps a table nobody answered
+    // from standing as one whose numbers are rows.
+    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], words: [Name: Int]) -> Answered {
+        Answered(table: table, rows: rows, words: words, numbers: .rows)
     }
 
     // MARK: - Public
+    // How a run reads the numbers the bodies carry.
+    var resolving: Resolving {
+        switch numbers {
+        case .rows:
+            return .rows
+
+        case let .documents(_, views):
+            return .documents(views)
+        }
+    }
+
+    // How an expression folded beside a document's bodies is numbered, so that
+    // what is lowered now and what was lowered before stand in one numbering.
+    func numbering(of origin: Int) -> Numbering {
+        switch numbers {
+        case .rows:
+            return Numbering(rows: rows, words: words)
+
+        case let .documents(numbering, _):
+            return numbering[origin]
+        }
+    }
+
     // MARK: - Private
+    private enum Numbers: Sendable {
+        // This link's own rows.
+        case rows
+
+        // Each document's own, with where its numbers came from and which row
+        // each of them stands for.
+        case documents([Numbering], views: [[Int?]])
+    }
 }
 
 // What compiling a document left for the link, written into its bodies.
@@ -114,8 +173,8 @@ struct Relocating {
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
     func linked() throws -> Answered {
-        Answered(
-            table: try table.map { row in try relocated(row) },
+        Answered.relocated(
+            try table.map { row in try relocated(row) },
             rows: rows,
             words: words
         )

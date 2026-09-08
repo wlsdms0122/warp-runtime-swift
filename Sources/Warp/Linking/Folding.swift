@@ -17,14 +17,16 @@ struct Folding {
     let names: [Name]
     let cells: [Cell]
     let origin: Int
-    let table: [Linked]
-    let rows: [Name: Int]
-    let words: [Name: Int]
     let shapes: ShapeTable
 
+    // The table this folds against, and how the numbers its bodies carry are
+    // read. An expression folded beside them is lowered in the same numbering,
+    // so one run stands in one numbering.
+    private let answered: Answered
+
     // MARK: - Initializer
-    // The table is one a link has answered, since folding runs what it lowers
-    // and running reads rows.
+    // The table is one that says how its numbers read, since folding runs what
+    // it lowers and running reads rows.
     init(
         constants: [Name: Value],
         origin: Int,
@@ -36,10 +38,8 @@ struct Folding {
         self.names = names
         self.cells = names.map { name in .value(constants[name] ?? .null) }
         self.origin = origin
-        self.table = answered.table
-        self.rows = answered.rows
-        self.words = answered.words
         self.shapes = shapes
+        self.answered = answered
     }
 
     // Against native words alone: every declaration of the modules by its
@@ -105,14 +105,15 @@ struct Folding {
     // What an expression reads here. A closure it holds is carried in the
     // code, so the table is read and never grown.
     func read(_ expression: Expression, at place: Place = .given(Self.label.spelling)) throws -> Value {
-        // Folding runs what it lowers, here and now, against this table. So
-        // it numbers by the table rather than by the document: there is no
-        // link afterwards to renumber it.
+        // Folding runs what it lowers beside bodies the table already holds,
+        // so it lowers in the numbering those bodies stand in. A number the
+        // expression carries and a number a body it calls carries are then
+        // read the same way.
         let lowering = Lowering(
-            table: table,
-            rows: rows,
-            words: words,
-            numbering: [origin: Numbering(rows: rows, words: words)],
+            table: answered.table,
+            rows: answered.rows,
+            words: answered.words,
+            numbering: [origin: answered.numbering(of: origin)],
             variables: [:],
             shapes: shapes
         )
@@ -123,7 +124,15 @@ struct Folding {
             activation.cells[slot] = cell
         }
 
-        return try Executor(observer: nil, environment: nil, linked: table, resolving: .rows, shapes: shapes).read(code, in: activation)
+        let executor = Executor(
+            observer: nil,
+            environment: nil,
+            linked: answered.table,
+            resolving: answered.resolving,
+            shapes: shapes
+        )
+
+        return try executor.read(code, in: activation)
     }
 
     // MARK: - Private

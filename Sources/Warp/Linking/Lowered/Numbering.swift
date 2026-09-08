@@ -82,6 +82,19 @@ struct Numbering: Sendable {
         }
     }
 
+    // Which row of a link each number this document gave stands for, in
+    // number order. A numbering that took the link's rows gave no numbers of
+    // its own, so it answers with nothing.
+    //
+    // Read once per number rather than once per body standing on one: a
+    // document gives a number to a name, and how many bodies write that name
+    // is not part of the question.
+    func answers(rows: [Name: Int], words: [Name: Int]) -> [Answer] {
+        guard case let .document(references) = space else { return [] }
+
+        return references.indices.map { number in row(number, rows: rows, words: words) }
+    }
+
     // Where a call to this spelling stands: among the document's own
     // declarations where it declared one, among what it looks for otherwise.
     func call(_ selector: Name) -> Int? {

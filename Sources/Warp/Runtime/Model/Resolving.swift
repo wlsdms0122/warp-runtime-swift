@@ -20,11 +20,13 @@ enum Resolving: Sendable {
     case rows
 
     // What each document's numbers stand for, by the document and then by the
-    // number.
-    case documents([[Int]])
+    // number. A number the link found no row for stands as nothing: a document
+    // numbers every bare spelling its paths step to, and a step onto a field
+    // reaches no declaration, so a numbering holds names no body ever calls.
+    case documents([[Int?]])
 
     // MARK: - Public
-    func row(_ number: Int, from origin: Int) -> Int {
+    func row(_ number: Int, from origin: Int) -> Int? {
         switch self {
         case .rows:
             return number

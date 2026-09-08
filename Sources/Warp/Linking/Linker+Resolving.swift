@@ -222,8 +222,8 @@ extension Linker {
         with frame: TypeFrame
     ) throws -> [Int: [Name: Value]] {
         // Folding runs what it reads, and running reads rows. A lowered body
-        // carries its document's own numbers, so the table handed here is the
-        // one whose numbers a link has answered.
+        // carries its document's own numbers, so the table handed here is one
+        // that says which row each of those numbers stands for.
         var settled: [Int: [Name: Value]] = [:]
 
         for (origin, module) in modules.enumerated() where !module.constants.isEmpty {

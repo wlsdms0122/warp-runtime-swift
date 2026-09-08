@@ -397,7 +397,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let callee = linked[resolving.row(call.procedure, from: activation.origin)]
+        let callee = linked[try row(call.procedure, from: activation.origin)]
 
         switch callee.implementation {
         // A query answers without running, so the pure half is the whole
@@ -757,7 +757,7 @@ public struct Executor: Sendable {
         receiving handed: Value? = nil,
         in activation: Activation
     ) throws -> Value {
-        let callee = linked[resolving.row(call.procedure, from: activation.origin)]
+        let callee = linked[try row(call.procedure, from: activation.origin)]
 
         guard callee.purity == .pure else {
             throw ExecutionError(
@@ -907,7 +907,13 @@ public struct Executor: Sendable {
         settled: Settled
     ) throws -> Value? {
         try query.evaluate(
-            Question(receiver: receiver, settled: settled, sends: callee.sends, executor: self)
+            Question(
+                receiver: receiver,
+                settled: settled,
+                sends: callee.sends,
+                from: callee.origin,
+                executor: self
+            )
         )
     }
 
@@ -927,25 +933,37 @@ public struct Executor: Sendable {
                 settled: settled,
                 holds: holds,
                 sends: callee.sends,
+                from: callee.origin,
                 trace: trace,
                 executor: self
             )
         )
     }
 
-    // Sending a word a word declared it sends. The row is the link's, resolved
-    // where the word was registered, so nothing is looked up here. The
-    // arguments are offered rather than settled strictly, for the reason a
-    // closure's are: a Swift body is not text the link could read the names
-    // out of, so what the word gives and what the callee declared are matched
-    // where both exist.
+    // Which row of this table a number written in a body stands for. A number
+    // the link found no row for is a body it lowered without judging: nothing
+    // a run does can answer it.
+    private func row(_ number: Int, from origin: Int) throws -> Int {
+        guard let row = resolving.row(number, from: origin) else {
+            throw ExecutionError("a call standing at \(number) reaches no row of this link")
+        }
+
+        return row
+    }
+
+    // Sending a word a word declared it sends. The number is the sender's
+    // document's, the same as one written in a body. The arguments are offered
+    // rather than settled strictly, for the reason a closure's are: a Swift
+    // body is not text the link could read the names out of, so what the word
+    // gives and what the callee declared are matched where both exist.
     func send(
-        _ row: Int,
+        _ number: Int,
+        from origin: Int,
         to receiver: Value?,
         offering arguments: [(name: Name, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        let callee = linked[row]
+        let callee = linked[try row(number, from: origin)]
         let settled = try settled(callee, to: receiver, offering: arguments)
 
         switch callee.implementation {
@@ -988,11 +1006,12 @@ public struct Executor: Sendable {
     // refused a query sending anything that runs, so what reaches here answers
     // as data.
     func send(
-        _ row: Int,
+        _ number: Int,
+        from origin: Int,
         to receiver: Value?,
         offering arguments: [(name: Name, value: Value)]
     ) throws -> Value {
-        let callee = linked[row]
+        let callee = linked[try row(number, from: origin)]
 
         guard callee.purity == .pure else {
             throw ExecutionError(
@@ -1135,9 +1154,11 @@ public struct Executor: Sendable {
 
                 read = .found(next)
 
-            case let .word(row, key, _):
+            case let .word(number, key, _):
                 do {
-                    guard let derived = try derive(linked[row], from: current) else {
+                    let sent = linked[try row(number, from: activation.origin)]
+
+                    guard let derived = try derive(sent, from: current) else {
                         return .unfit(
                             "\(walked().rendered) sends '\(key)', which does not take \(current.type)"
                         )

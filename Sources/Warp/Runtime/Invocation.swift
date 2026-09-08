@@ -39,6 +39,10 @@ public struct Invocation<W: Word>: Sendable {
     // them at.
     private let sends: [Int]
 
+    // Which document numbered them. A word's declared sends are numbered the
+    // way a call written in a body is, by the document that declared it.
+    private let origin: Int
+
     private let executor: Executor
 
     // MARK: - Initializer
@@ -49,6 +53,7 @@ public struct Invocation<W: Word>: Sendable {
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
         sends: [Int],
+        from origin: Int,
         trace: Trace,
         executor: Executor
     ) {
@@ -58,6 +63,7 @@ public struct Invocation<W: Word>: Sendable {
         self.settled = settled
         self.holds = holds
         self.sends = sends
+        self.origin = origin
         self.trace = trace
         self.executor = executor
     }
@@ -126,6 +132,7 @@ public struct Invocation<W: Word>: Sendable {
 
         return try await executor.send(
             sends[key.position],
+            from: origin,
             to: receiver,
             offering: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
