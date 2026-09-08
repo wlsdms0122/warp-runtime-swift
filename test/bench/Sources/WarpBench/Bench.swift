@@ -78,20 +78,12 @@ struct Bench {
             )
         }
 
-        var linkedByCount: [Int: Double] = [:]
+        var spread: [Int: Double] = [:]
+        var gathered: [Int: Double] = [:]
 
         for count in chainCounts {
-            let chain = try Chain(of: count)
-
-            _ = try chain.link()
-
-            var links: [Duration] = []
-
-            for _ in 0 ..< linkSamples {
-                links.append(try chain.link())
-            }
-
-            linkedByCount[chain.count] = Self.nanoseconds(Self.fastest(links))
+            spread[count] = try Self.linking(Chain(of: count, across: count))
+            gathered[count] = try Self.linking(Chain(of: count, across: 1))
         }
 
         print(Self.table(
@@ -102,7 +94,7 @@ struct Bench {
             repeats: repeats
         ))
         print("")
-        print(Self.table(linkedByCount, against: printed?["documents"]))
+        print(Self.table(spread: spread, gathered: gathered, against: printed?["words"]))
     }
 
     // MARK: - Private
@@ -124,6 +116,19 @@ struct Bench {
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
         return try files.map(Workload.init(reading:))
+    }
+
+    // Nanoseconds the fastest of many links of one world took.
+    private static func linking(_ chain: Chain) throws -> Double {
+        _ = try chain.link()
+
+        var links: [Duration] = []
+
+        for _ in 0 ..< linkSamples {
+            links.append(try chain.link())
+        }
+
+        return Self.nanoseconds(Self.fastest(links))
     }
 
     private static func fastest(_ samples: [Duration]) -> Duration {
@@ -226,37 +231,49 @@ struct Bench {
         return lines.joined(separator: "\n")
     }
 
-    // What linking a world costs as the number of documents in it grows.
+    // What linking a chain of words costs, once with the words dealt one to a
+    // document and once with all of them in a single document.
     //
-    // Beside the total, what one more document adds: the standard vocabulary is
-    // in every one of these worlds, so the total carries a cost the count does
-    // not move, and subtracting the smallest world is what leaves the count's
-    // own. A column that holds still as the count doubles is a link growing
-    // with its world rather than with the square of it.
-    private static func table(_ linkedByCount: [Int: Double], against: [String: [String: Double]]?) -> String {
-        let counts = linkedByCount.keys.sorted()
+    // Beside each total, what one more word adds: the standard vocabulary is in
+    // every one of these worlds, so a total carries a cost the count does not
+    // move, and subtracting the smallest chain is what leaves the count's own.
+    //
+    // The two series carry the same words, the same bodies and the same names,
+    // and differ only in how many documents hold them. A column that climbs on
+    // both is a link growing with the words it was given; one that climbs only
+    // where the words are spread is a link growing with the documents.
+    private static func table(
+        spread: [Int: Double],
+        gathered: [Int: Double],
+        against: [String: [String: Double]]?
+    ) -> String {
+        let counts = spread.keys.sorted()
 
-        guard let smallest = counts.first, let base = linkedByCount[smallest], base > 0 else { return "" }
+        guard
+            let smallest = counts.first,
+            let spreadBase = spread[smallest], spreadBase > 0,
+            let gatheredBase = gathered[smallest], gatheredBase > 0
+        else { return "" }
 
         var lines = [
-            "linking a chain of documents, each calling the one in front of it;"
-                + " fastest of \(linkSamples)",
+            "linking a chain of words, each calling the one in front of it;"
+                + " spread one to a document and gathered into one; fastest of \(linkSamples)",
             "",
             against == nil
-                ? "| documents | link us | x \(smallest) | us each |"
-                : "| documents | link us | x \(smallest) | us each | moved |",
-            against == nil ? "|---|---|---|---|" : "|---|---|---|---|---|"
+                ? "| words | spread us | spread each | gathered us | gathered each |"
+                : "| words | spread us | spread each | gathered us | gathered each |"
+                    + " spread moved | gathered moved |",
+            against == nil ? "|---|---|---|---|---|" : "|---|---|---|---|---|---|---|"
         ]
 
         for count in counts {
-            guard let link = linkedByCount[count] else { continue }
+            guard let apart = spread[count], let together = gathered[count] else { continue }
 
-            let each = count > smallest
-                ? String(format: "%.1f", (link - base) / Double(count - smallest) / 1000)
-                : ""
             let figures = String(
-                format: "| %d | %.0f | %.2f | %@ |",
-                count, link / 1000, link / base, each
+                format: "| %d | %.0f | %@ | %.0f | %@ |",
+                count,
+                apart / 1000, Self.each(apart, over: spreadBase, from: smallest, to: count),
+                together / 1000, Self.each(together, over: gatheredBase, from: smallest, to: count)
             )
 
             guard let against else {
@@ -266,11 +283,19 @@ struct Bench {
             }
 
             lines.append(figures + String(
-                format: " %@ |",
-                Self.moved(link / 1000, from: against["\(count)"]?["link us"])
+                format: " %@ | %@ |",
+                Self.moved(apart / 1000, from: against["\(count)"]?["spread us"]),
+                Self.moved(together / 1000, from: against["\(count)"]?["gathered us"])
             ))
         }
 
         return lines.joined(separator: "\n")
+    }
+
+    // Microseconds each word past the smallest chain added, where any did.
+    private static func each(_ link: Double, over base: Double, from smallest: Int, to count: Int) -> String {
+        guard count > smallest else { return "" }
+
+        return String(format: "%.1f", (link - base) / Double(count - smallest) / 1000)
     }
 }
