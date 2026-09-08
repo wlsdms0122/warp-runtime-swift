@@ -78,17 +78,11 @@ public struct Linker: Sendable {
 
         let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
 
-        let declaring = try self.types(
-            of: modules,
-            declared: declaredTypes,
-            constraints: declaredConstraints,
-            contracts: declaredContracts
-        )
-
         let symbols = try self.symbols(of: modules)
 
         // The order each document's needs stand before it, which is the order
-        // the facts nobody declared are read in. A ring is refused here.
+        // the facts nobody declared are read in and the order the rows stand
+        // in. A ring is refused here.
         //
         // After the declarations are held to being declared once. Standing
         // reads a name as whichever document declared it, and where two
@@ -96,6 +90,26 @@ public struct Linker: Sendable {
         // in its own reach and call the pair a ring. The doubled name is the
         // defect, so it is the refusal an author gets.
         let world = try World(modules)
+
+        // Where each document stands, by where the caller put it. Everything a
+        // link builds is keyed by the caller's position, and the rows follow
+        // the standing, so this is what turns one into the other.
+        var rank = [Int](repeating: 0, count: modules.count)
+
+        for (place, position) in world.standing.enumerated() {
+            rank[position] = place
+        }
+
+        // A document's types take a run of shape rows the way its declarations
+        // take a run of table rows, in the standing order, so a document's
+        // shapes are behind the shapes it names.
+        let declaring = try self.types(
+            of: modules,
+            declared: declaredTypes,
+            constraints: declaredConstraints,
+            contracts: declaredContracts,
+            standing: world.standing.flatMap { position in modules[position].types.keys.sorted() }
+        )
 
         // Every declaration under its declared spelling. The spellings are
         // unique, since the symbol gathering refused a double, and every call
@@ -181,15 +195,17 @@ public struct Linker: Sendable {
         var table: [Linked] = []
 
         // A document's declarations take a run of rows, in the order the
-        // documents were handed over and in name order inside each. What a
-        // document declares is then a block of the table rather than
-        // declarations scattered through it, so where a document's rows begin
-        // is a number and its own rows are that number and an offset. The
-        // gathering already reads the documents in that order.
+        // documents stand and in name order inside each. What a document
+        // declares is then a block of the table rather than declarations
+        // scattered through it, so where a document's rows begin is a number
+        // and its own rows are that number and an offset. In the standing
+        // order, so a document's rows are behind the rows it reaches.
         //
         // The spellings first, so a native word's sends reach a row whatever
         // order the declarations stand in.
-        let declarations = symbols
+        let declarations = symbols.sorted { left, right in
+            (rank[left.origin], left.declared) < (rank[right.origin], right.declared)
+        }
 
         for (position, symbol) in declarations.enumerated() {
             rows[symbol.declared] = position

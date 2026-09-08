@@ -114,6 +114,7 @@ struct CompiledTests {
         #expect(rows["c.three"] == ours + 1)
         #expect(rows["b.two"] == ours + 2)
         #expect(rows["d.four"] == ours + 3)
+
     }
 
     @Test("a fact nobody declared crosses documents in the order they stand")
@@ -165,6 +166,29 @@ struct CompiledTests {
         #expect(try purity(of: "mid.ask") == .unstated)
         #expect(try purity(of: "top.ask") == .unstated)
         #expect(try purity(of: "top.alone") == .pure)
+    }
+
+    @Test("a document's types take a run of shape rows behind the ones it names")
+    func aDocumentTakesABlockOfShapeRows() throws {
+        // Given. The naming document is handed over first, so only the
+        // standing can put what it names behind it.
+        let naming = try Module(
+            types: ["z.Wraps": .named("a.Held"), "z.Also": .named("a.Held")],
+            procedures: [
+                entryName: Procedure(signature: Signature(returns: .named("z.Wraps")), body: [], result: .literal(.int(1)))
+            ]
+        )
+        let held = try Module(types: ["a.Held": .int], procedures: [:])
+
+        // When.
+        let shapes = try linker.compile([naming, held]).types.shapes
+
+        // Then. The named document's rows come first, and the naming
+        // document's are a run of their own after them.
+        let row = { (declared: Name) in shapes.labels.firstIndex(of: declared) }
+
+        #expect(try #require(row("a.Held")) < #require(row("z.Also")))
+        #expect(try #require(row("z.Also")) + 1 == #require(row("z.Wraps")))
     }
 
     // MARK: - Private

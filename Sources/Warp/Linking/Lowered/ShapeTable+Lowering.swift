@@ -8,15 +8,18 @@
 import Foundation
 
 extension ShapeTable {
-    // The declarations as the run reads them. Rows are numbered by the order
-    // of the declared spellings, so what a link concludes does not depend on
-    // the order a caller listed its modules in. A name that names itself
-    // through a chain of names stands for no shape and lowers to the shape
-    // every judgment refuses, so a chain of names is always finite.
+    // The declarations as the run reads them. A link says which order its rows
+    // stand in, so a document's types take a run of rows the way its
+    // declarations do; where nothing says, the declared spellings order them.
+    // Either way a row is a row of one table and nothing a link concludes
+    // reads one to decide what to say. A name that names itself through a
+    // chain of names stands for no shape and lowers to the shape every
+    // judgment refuses, so a chain of names is always finite.
     static func lowering(
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
         satisfying: [Name: Set<Name>] = [:],
+        standing: [Name]? = nil,
         of linkage: Linkage
     ) -> ShapeTable {
         // A table of its own even where nothing is declared: a body carried
@@ -34,7 +37,7 @@ extension ShapeTable {
             )
         }
 
-        let labels = types.keys.sorted()
+        let labels = standing ?? types.keys.sorted()
         let constraintLabels = constraints.keys.sorted()
 
         // The index first, so a declaration naming another lowers against

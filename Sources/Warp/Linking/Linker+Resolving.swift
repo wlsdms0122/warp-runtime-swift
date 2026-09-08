@@ -89,12 +89,14 @@ extension Linker {
         of modules: [Module],
         declared: [Name: Declared<TypeExpression>],
         constraints members: [Name: Declared<[TypeExpression]>],
-        contracts: [Name: Declared<[Name: Signature]>]
+        contracts: [Name: Declared<[Name: Signature]>],
+        standing: [Name]
     ) throws -> TypeTable {
         let table = TypeTable(
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
             contracts: contracts.mapValues(\.held),
+            standing: standing,
             of: Linkage()
         )
 
@@ -103,9 +105,10 @@ extension Linker {
         // never becomes one, and the lowering says which do, so the refusal
         // reads the lowering rather than walking the names a second way.
         // Refused first, so every walk below through `named` is finite.
-        for row in table.shapes.circling {
-            let label = table.shapes.labels[row]
-
+        // In name order rather than the rows', so which of two names that
+        // name themselves is reported does not follow how the documents were
+        // handed over.
+        for label in table.shapes.circling.map({ row in table.shapes.labels[row] }).sorted() {
             guard let declaration = declared[label] else { continue }
 
             throw LinkError(
