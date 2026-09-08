@@ -32,6 +32,10 @@ enum Resolving: Sendable {
             return number
 
         case let .documents(held):
+            guard held.indices.contains(origin), held[origin].indices.contains(number) else {
+                return nil
+            }
+
             return held[origin][number]
         }
     }

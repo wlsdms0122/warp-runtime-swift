@@ -44,7 +44,7 @@ struct Answered: Sendable {
         _ table: [Linked],
         rows: [Name: Int],
         words: [Name: Int],
-        numbering: [Numbering],
+        numbering: [Int: Numbering],
         views: [[Int?]]
     ) -> Answered {
         Answered(
@@ -75,7 +75,8 @@ struct Answered: Sendable {
 
     // How an expression folded beside a document's bodies is numbered, so that
     // what is lowered now and what was lowered before stand in one numbering.
-    func numbering(of origin: Int) -> Numbering {
+    // Nothing where the document numbered nothing.
+    func numbering(of origin: Int) -> Numbering? {
         switch numbers {
         case .rows:
             return Numbering(rows: rows, words: words)
@@ -92,7 +93,7 @@ struct Answered: Sendable {
 
         // Each document's own, with where its numbers came from and which row
         // each of them stands for.
-        case documents([Numbering], views: [[Int?]])
+        case documents([Int: Numbering], views: [[Int?]])
     }
 }
 
@@ -145,8 +146,8 @@ struct Relocating {
         self.numbering = numbering
         self.shapeRows = shapeNumbering.mapValues { held in
             (
-                types: held.declared.types.indices.map { number in held.type(number, in: shapes) },
-                memberships: held.declared.memberships.indices.map { number in
+                types: held.types.indices.map { number in held.type(number, in: shapes) },
+                memberships: held.memberships.indices.map { number in
                     held.membership(number, in: shapes)
                 }
             )
@@ -391,14 +392,18 @@ struct Relocating {
         }
     }
 
-    // A shape with the rows its document's numbers stand for. Untouched where
-    // the bodies stand on this link's rows already.
+    // A shape with the rows its document's numbers stand for.
     private func relocated(_ shape: Shape?, in standing: Standing) throws -> Shape? {
         try shape.map { held in try relocated(held, in: standing) }
     }
 
     private func relocated(_ shape: Shape, in standing: Standing) throws -> Shape {
-        guard let answers = standing.shapes else { return shape }
+        guard let answers = standing.shapes else {
+            throw LinkError.unjudged(
+                "a shape in a document that numbered none",
+                at: place(of: standing.label)
+            )
+        }
 
         return try shape.renumbered(
             type: { number in try row(answers.types, at: number, calling: "named", in: standing) },

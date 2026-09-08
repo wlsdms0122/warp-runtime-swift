@@ -109,11 +109,15 @@ struct Folding {
         // so it lowers in the numbering those bodies stand in. A number the
         // expression carries and a number a body it calls carries are then
         // read the same way.
+        guard let numbering = answered.numbering(of: origin) else {
+            throw LinkError.unjudged("an expression in a document that numbered nothing", at: place)
+        }
+
         let lowering = Lowering(
             table: answered.table,
             rows: answered.rows,
             words: answered.words,
-            numbering: [origin: answered.numbering(of: origin)],
+            numbering: [origin: numbering],
             variables: [:],
             shapes: shapes
         )
