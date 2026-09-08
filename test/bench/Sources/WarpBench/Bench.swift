@@ -7,10 +7,11 @@
 
 import Foundation
 
-// Runs every program under `program/` and prints one table: nanoseconds per
-// round and how that compares to the loop alone, beside the cost of linking
-// the same program and the cost of a document that arrives, links, runs one
-// round and is dropped.
+// Runs every program under `program/` and prints two tables. The first is
+// nanoseconds per round and how that compares to the loop alone, beside the
+// cost of linking the same program and the cost of a document that arrives,
+// links, runs one round and is dropped. The second is the cost of linking a
+// world as the number of documents in it grows.
 //
 // Usage: `WarpBench [rounds] [repeats] [--against <table>]`. Rounds default to
 // a million, repeats to three; the reported figure is the fastest repeat. Every
@@ -34,6 +35,11 @@ struct Bench {
     // so they are sampled many times and the fastest reported.
     private static let linkSamples = 201
     private static let baseline = "loop"
+
+    // Doubling rather than stepping: what the second table is read for is the
+    // shape of the curve, and a shape shows over a range rather than between
+    // neighbours.
+    private static let chainCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
     // MARK: - Initializer
     // MARK: - Public
@@ -72,7 +78,25 @@ struct Bench {
             )
         }
 
+        var scaled: [Int: Double] = [:]
+
+        for count in chainCounts {
+            let chain = try Chain(of: count)
+
+            _ = try chain.link()
+
+            var links: [Duration] = []
+
+            for _ in 0 ..< linkSamples {
+                links.append(try chain.link())
+            }
+
+            scaled[chain.count] = Self.nanoseconds(Self.fastest(links))
+        }
+
         print(Self.table(measured, against: baseline, from: against, rounds: rounds, repeats: repeats))
+        print("")
+        print(Self.table(scaled, against: baseline))
     }
 
     // MARK: - Private
@@ -105,18 +129,36 @@ struct Bench {
             + Double(duration.components.attoseconds) / 1e9
     }
 
-    // A table this printed earlier, read back by workload. Only the two
-    // figures a comparison moves are taken; the rest are worked out again.
-    private static func reading(_ path: String) throws -> [String: Measurement] {
-        var read: [String: Measurement] = [:]
+    // The rows of the tables this printed earlier, by what the first column
+    // called the row and then by heading. The figures are read under the
+    // heading they were printed under rather than by position, so one reader
+    // takes both tables and neither is held to a column order. Whatever a
+    // column holds that is not a number is not a figure, which is how the
+    // moved columns of an earlier comparison are passed over.
+    private static func reading(_ path: String) throws -> [String: [String: Double]] {
+        var read: [String: [String: Double]] = [:]
+        var headings: [String] = []
+        var above: [String] = []
 
         for line in try String(contentsOfFile: path, encoding: .utf8).split(separator: "\n") {
-            let cells = line.split(separator: "|", omittingEmptySubsequences: false)
-                .map { cell in cell.trimmingCharacters(in: .whitespaces) }
+            let cells = line.split(separator: "|").map { cell in cell.trimmingCharacters(in: .whitespaces) }
 
-            guard cells.count >= 7, let perRound = Double(cells[2]), let link = Double(cells[5]) else { continue }
+            guard let label = cells.first else { continue }
 
-            read[cells[1]] = Measurement(perRound: perRound, link: link * 1000, once: 0)
+            if cells.allSatisfy({ cell in !cell.isEmpty && cell.allSatisfy { character in character == "-" } }) {
+                headings = above
+
+                continue
+            }
+
+            above = cells
+
+            guard !headings.isEmpty else { continue }
+
+            read[label] = Dictionary(
+                zip(headings, cells).compactMap { heading, cell in Double(cell).map { read in (heading, read) } },
+                uniquingKeysWith: { first, _ in first }
+            )
         }
 
         return read
@@ -130,7 +172,7 @@ struct Bench {
 
     private static func table(
         _ measured: [String: Measurement],
-        against: [String: Measurement]?,
+        against: [String: [String: Double]]?,
         from path: String?,
         rounds: Int,
         repeats: Int
@@ -165,8 +207,52 @@ struct Bench {
 
             lines.append(String(
                 format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ |",
-                name, measurement.perRound, Self.moved(measurement.perRound, from: before.perRound),
-                ratio, measurement.link / 1000, Self.moved(measurement.link, from: before.link)
+                name, measurement.perRound, Self.moved(measurement.perRound, from: before["ns/round"]),
+                ratio, measurement.link / 1000, Self.moved(measurement.link / 1000, from: before["link us"])
+            ))
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    // What linking a world costs as the number of documents in it grows.
+    //
+    // Beside the total, what one more document adds: the standard vocabulary is
+    // in every one of these worlds, so the total carries a cost the count does
+    // not move, and subtracting the smallest world is what leaves the count's
+    // own. A column that holds still as the count doubles is a link growing
+    // with its world rather than with the square of it.
+    private static func table(_ scaled: [Int: Double], against: [String: [String: Double]]?) -> String {
+        let one = scaled[chainCounts.first ?? 1] ?? 0
+        var lines = [
+            "linking a chain of documents, each calling the one in front of it;"
+                + " fastest of \(linkSamples)",
+            "",
+            against == nil
+                ? "| documents | link us | x 1 | us each |"
+                : "| documents | link us | x 1 | us each | moved |",
+            against == nil ? "|---|---|---|---|" : "|---|---|---|---|---|"
+        ]
+
+        for count in chainCounts.sorted() {
+            guard let link = scaled[count] else { continue }
+
+            let ratio = one > 0 ? link / one : 0
+            let each = count > 1 ? (link - one) / Double(count - 1) / 1000 : 0
+            let figures = String(
+                format: "| %d | %.0f | %.2f | %@ |",
+                count, link / 1000, ratio, count > 1 ? String(format: "%.1f", each) : ""
+            )
+
+            guard let against else {
+                lines.append(figures)
+
+                continue
+            }
+
+            lines.append(figures + String(
+                format: " %@ |",
+                Self.moved(link / 1000, from: against["\(count)"]?["link us"])
             ))
         }
 
