@@ -183,9 +183,9 @@ public struct Linker: Sendable {
         for position in world.standing {
             let holding = held[position] ?? []
 
-            settled = pure(among: holding, given: settled, reading: moduleVariables)
-            isolatedDeclarations = isolated(among: holding, given: isolatedDeclarations, signatures: signatures)
-            failingDeclarations = failing(among: holding, given: failingDeclarations)
+            pure(among: holding, settling: &settled, reading: moduleVariables)
+            isolated(among: holding, settling: &isolatedDeclarations, signatures: signatures)
+            failing(among: holding, settling: &failingDeclarations)
         }
 
         // The table a run reads, one row per declaration. A native answers as

@@ -16,16 +16,16 @@ extension Linker {
     // MARK: - Internal
     func isolated(
         among symbols: [Symbol],
-        given settled: Set<Name>,
+        settling isolated: inout Set<Name>,
         signatures: [Name: Signature]
-    ) -> Set<Name> {
+    ) {
         let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (block, Set(symbol.procedure.signature.parameters.keys))
         }
 
-        var isolated = settled.union(
+        isolated.formUnion(
             symbols
                 .filter { symbol in symbol.procedure.implementation.isNativelyIsolated != false }
                 .map(\.declared)
@@ -35,13 +35,14 @@ extension Linker {
         // reads the same way: what was settled before it stands in front of
         // it and reaches nothing here.
         while true {
-            let struck = bodies.keys.filter { name in
-                guard isolated.contains(name), let body = bodies[name] else { return false }
-
-                return !isIsolated(body.block, declaring: body.declaring, given: isolated, signatures: signatures)
+            let struck = bodies.compactMap { name, body in
+                isolated.contains(name)
+                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, signatures: signatures)
+                    ? name
+                    : nil
             }
 
-            guard !struck.isEmpty else { return isolated }
+            guard !struck.isEmpty else { return }
 
             isolated.subtract(struck)
         }

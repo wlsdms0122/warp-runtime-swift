@@ -20,18 +20,22 @@ extension Linker {
     // is struck out when something it reaches is not pure. Starting from "impure
     // until proven" would make two procedures that call each other permanently
     // impure, which is a fact about the algorithm rather than about the code.
+    // What is settled grows in place rather than being handed over and handed
+    // back. A document is settled against everything standing in front of it,
+    // so taking that as a value would copy the whole world's answer once per
+    // document, and this call only ever adds its own.
     func pure(
         among symbols: [Symbol],
-        given settled: Set<Name>,
+        settling pure: inout Set<Name>,
         reading variables: [Int: Set<Name>]
-    ) -> Set<Name> {
-        let bodies = symbols.reduce(into: [Name: (Block, Set<Name>)]()) { table, symbol in
+    ) {
+        let bodies = symbols.reduce(into: [Name: (block: Block, reading: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
             table[symbol.declared] = (block, variables[symbol.origin] ?? [])
         }
 
-        var pure = settled.union(
+        pure.formUnion(
             symbols
                 .filter { symbol in symbol.procedure.implementation.isNativelyPure != false }
                 .map(\.declared)
@@ -42,13 +46,11 @@ extension Linker {
         // here, and asking after those again is asking the whole world once
         // per document.
         while true {
-            let struck = bodies.keys.filter { name in
-                guard pure.contains(name), let (block, reading) = bodies[name] else { return false }
-
-                return !isPure(block, given: pure, reading: reading)
+            let struck = bodies.compactMap { name, body in
+                pure.contains(name) && !isPure(body.block, given: pure, reading: body.reading) ? name : nil
             }
 
-            guard !struck.isEmpty else { return pure }
+            guard !struck.isEmpty else { return }
 
             pure.subtract(struck)
         }
@@ -63,9 +65,9 @@ extension Linker {
     // that says nothing about itself makes everything reaching it say nothing
     // too. Two procedures calling each other settle where nothing more is
     // added, which the finite set of declared names guarantees.
-    func failing(among symbols: [Symbol], given answered: [Name: Failing]) -> [Name: Failing] {
-        var failing = symbols.reduce(into: answered) { table, symbol in
-            table[symbol.declared] = symbol.procedure.implementation.nativelyFailing ?? .these([])
+    func failing(among symbols: [Symbol], settling failing: inout [Name: Failing]) {
+        for symbol in symbols {
+            failing[symbol.declared] = symbol.procedure.implementation.nativelyFailing ?? .these([])
         }
 
         let bodies = symbols
@@ -84,7 +86,7 @@ extension Linker {
                 grown = true
             }
 
-            guard grown else { return failing }
+            guard grown else { return }
         }
     }
 
