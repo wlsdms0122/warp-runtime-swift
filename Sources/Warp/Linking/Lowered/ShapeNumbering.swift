@@ -32,6 +32,60 @@ struct ShapeNumbering: Sendable {
         case unnumbered
     }
 
+    // A document's shape numbers answered as the rows of one link, worked out
+    // once per number rather than at every shape standing on one.
+    struct Rows {
+        // MARK: - Property
+        let types: [Answer]
+        let memberships: [Answer]
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // One shape a document wrote, read as this link's rows.
+        func read(_ shape: Shape, at place: Place) throws -> Shape {
+            try shape.renumbered(
+                type: { number in try row(types, at: number, calling: "named", in: place) },
+                membership: { number in
+                    try row(memberships, at: number, calling: "bounding a parameter", in: place)
+                }
+            )
+        }
+
+        // MARK: - Private
+        // Which row a document's shape number turned out to be. The reading is
+        // the numbering's; what to say when it does not answer is this.
+        private func row(
+            _ answers: [Answer],
+            at number: Int,
+            calling what: String,
+            in place: Place
+        ) throws -> Int {
+            guard answers.indices.contains(number) else {
+                throw LinkError.unjudged(
+                    "a shape standing at \(number), which its document never numbered",
+                    at: place
+                )
+            }
+
+            switch answers[number] {
+            case let .row(row):
+                return row
+
+            case let .unfound(name):
+                throw LinkError(
+                    "'\(name)' is \(what) here, and no module in this link declares it",
+                    at: place
+                )
+
+            case .unnumbered:
+                throw LinkError.unjudged(
+                    "a shape standing at \(number), which its document never numbered",
+                    at: place
+                )
+            }
+        }
+    }
+
     // MARK: - Property
     // The declarations this numbered, in the order it numbered them. The order
     // is the whole of what a caller cannot work out for itself, so it is read
@@ -46,6 +100,14 @@ struct ShapeNumbering: Sendable {
     }
 
     // MARK: - Public
+    // Every number this gave, answered as the rows of one link.
+    func rows(in shapes: ShapeTable) -> Rows {
+        Rows(
+            types: types.indices.map { number in type(number, in: shapes) },
+            memberships: memberships.indices.map { number in membership(number, in: shapes) }
+        )
+    }
+
     // Which row of a link a number stands for, read from that link's table.
     func type(_ number: Int, in shapes: ShapeTable) -> Answer {
         guard types.indices.contains(number) else { return .unnumbered }

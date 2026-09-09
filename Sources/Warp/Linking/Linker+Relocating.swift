@@ -178,7 +178,7 @@ struct Relocating {
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no shape
     // and has no entry here.
-    private let shapeRows: [(types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]
+    private let shapeRows: [ShapeNumbering.Rows]
 
     private let contractWords: [Name: ContractWord]
     private let shapes: ShapeTable
@@ -204,14 +204,7 @@ struct Relocating {
         self.rows = rows
         self.words = words
         self.numbering = numbering
-        self.shapeRows = shapeNumbering.map { held in
-            (
-                types: held.types.indices.map { number in held.type(number, in: shapes) },
-                memberships: held.memberships.indices.map { number in
-                    held.membership(number, in: shapes)
-                }
-            )
-        }
+        self.shapeRows = shapeNumbering.map { held in held.rows(in: shapes) }
         self.contractWords = contractWords
         self.shapes = shapes
     }
@@ -282,7 +275,7 @@ struct Relocating {
         // entering rather than built at every refusal that never happens.
         let place: Place
 
-        let shapes: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])
+        let shapes: ShapeNumbering.Rows
     }
 
     // A folded value read as this link's rows. A closure was made by running a
@@ -554,47 +547,7 @@ struct Relocating {
     }
 
     private func relocated(_ shape: Shape, in standing: Standing) throws -> Shape {
-        let answers = standing.shapes
-
-        return try shape.renumbered(
-            type: { number in try row(answers.types, at: number, calling: "named", in: standing) },
-            membership: { number in
-                try row(answers.memberships, at: number, calling: "bounding a parameter", in: standing)
-            }
-        )
-    }
-
-    // Which row a document's shape number turned out to be. The reading is
-    // the numbering's; what to say when it does not answer is this.
-    private func row(
-        _ answers: [ShapeNumbering.Answer],
-        at number: Int,
-        calling what: String,
-        in standing: Standing
-    ) throws -> Int {
-        guard answers.indices.contains(number) else {
-            throw LinkError.unjudged(
-                "a shape standing at \(number), which its document never numbered",
-                at: standing.place
-            )
-        }
-
-        switch answers[number] {
-        case let .row(row):
-            return row
-
-        case let .unfound(name):
-            throw LinkError(
-                "'\(name)' is \(what) here, and no module in this link declares it",
-                at: standing.place
-            )
-
-        case .unnumbered:
-            throw LinkError.unjudged(
-                "a shape standing at \(number), which its document never numbered",
-                at: standing.place
-            )
-        }
+        try standing.shapes.read(shape, at: standing.place)
     }
 
     // A path with the rows its word steps stand for.
