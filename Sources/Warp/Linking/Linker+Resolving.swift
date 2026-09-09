@@ -13,6 +13,22 @@ import Foundation
 // in the order they read each other.
 extension Linker {
     // MARK: - Internal
+    // What only the whole list answers: the two refusals no document can make
+    // about itself, and the order each document's needs stand before it. A
+    // compile is told all three rather than reading the list again.
+    //
+    // The order matters. Standing reads a name as whichever document declared
+    // it, and where two declare one name that reading is arbitrary: it can put
+    // a document in its own reach and call the pair a ring. The doubled name is
+    // the defect, so it is the refusal an author gets.
+    func graph(of modules: [Module]) throws -> (standing: [Int], symbols: [Symbol]) {
+        try once(modules)
+
+        let symbols = try self.symbols(of: modules)
+
+        return (try ModuleGraph(modules).standing, symbols)
+    }
+
     // No document twice. An identity is derived from the text, so two copies of
     // one are one document, and every name in it collides with itself.
     //

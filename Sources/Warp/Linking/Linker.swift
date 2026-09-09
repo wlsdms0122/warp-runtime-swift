@@ -63,40 +63,34 @@ public struct Linker: Sendable {
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: Name) throws -> Image {
-        try link(compile(modules), entry: entry)
+        let (standing, symbols) = try graph(of: modules)
+
+        return try link(
+            compile(modules, standing: standing, symbols: symbols),
+            entry: entry
+        )
     }
 
     // MARK: - Internal
     // Everything the documents settle on their own. No entry reaches in here:
     // what a document says has to hold whichever declaration a run starts
     // from.
-    func compile(_ modules: [Module]) throws -> Compiled {
+    //
+    // What the graph answered is handed over rather than worked out again: the
+    // order the documents stand in, and every declaration they make. Both are
+    // readings of the whole list, and a document has no say in either.
+    func compile(_ modules: [Module], standing: [Int], symbols: [Symbol]) throws -> Compiled {
         // Type and constraint declarations first, because everything after
         // this reads type expressions against them. The qualifying pass owns
         // their uniqueness, so it hands over the tables that fact was proved on.
-        try once(modules)
-
         let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
-
-        let symbols = try self.symbols(of: modules)
-
-        // The order each document's needs stand before it, which is the order
-        // the facts nobody declared are read in and the order the rows stand
-        // in. A ring is refused here.
-        //
-        // After the declarations are held to being declared once. Standing
-        // reads a name as whichever document declared it, and where two
-        // declare one name that reading is arbitrary: it can put a document
-        // in its own reach and call the pair a ring. The doubled name is the
-        // defect, so it is the refusal an author gets.
-        let graph = try ModuleGraph(modules)
 
         // Where each document stands, by where the caller put it. Everything a
         // link builds is keyed by the caller's position, and the rows follow
         // the standing, so this is what turns one into the other.
         var rank = [Int](repeating: 0, count: modules.count)
 
-        for (place, position) in graph.standing.enumerated() {
+        for (place, position) in standing.enumerated() {
             rank[position] = place
         }
 
@@ -108,7 +102,7 @@ public struct Linker: Sendable {
             declared: declaredTypes,
             constraints: declaredConstraints,
             contracts: declaredContracts,
-            standing: graph.standing.flatMap { position in modules[position].types.keys.sorted() }
+            standing: standing.flatMap { position in modules[position].types.keys.sorted() }
         )
 
         // Every declaration under its declared spelling. The spellings are
@@ -189,7 +183,7 @@ public struct Linker: Sendable {
         var isolatedDeclarations: Set<Name> = []
         var failingDeclarations: [Name: Failing] = [:]
 
-        for position in graph.standing {
+        for position in standing {
             let holding = held[position] ?? []
 
             pure(among: holding, settling: &settled, reading: moduleVariables)
@@ -600,7 +594,7 @@ public struct Linker: Sendable {
                     }
                 )
             },
-            standing: graph.standing,
+            standing: standing,
             words: wordSymbols.map { held in held.mapValues { symbol in symbol.declared } },
             types: types
         )
