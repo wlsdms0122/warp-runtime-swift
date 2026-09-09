@@ -168,6 +168,39 @@ struct CompiledTests {
         #expect(try purity(of: "top.alone") == .pure)
     }
 
+    @Test("a constant runs a written word a document standing before it declared")
+    func aConstantRunsAWordOfADocumentBehindIt() async throws {
+        // Given. Two documents, the second holding a constant that calls the
+        // first's written word.
+        let answering = try Module(
+            procedures: [
+                "a.answer": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .literal(.int(7))
+                )
+            ]
+        )
+        let asking = try Module(
+            constants: ["held": .call(Call(selector: "a.answer"))],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .reference([.key("held")])
+                )
+            ]
+        )
+
+        // When. Handed over with the one that answers last, so the standing
+        // has to put it first for its body to be lowered when the constant
+        // runs.
+        let answer = try await run([asking, answering])
+
+        // Then. The constant is the value the word answered.
+        #expect(answer == .int(7))
+    }
+
     @Test("a document's types take a run of shape rows behind the ones it names")
     func aDocumentTakesABlockOfShapeRows() throws {
         // Given. The naming document is handed over first, so only the

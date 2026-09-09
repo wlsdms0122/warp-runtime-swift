@@ -303,23 +303,10 @@ public struct Linker: Sendable {
         }
 
 
-        // Settled after the words are known, because a constant may call one:
-        // interpolation is `joined` now, and a constant that spells a URL out of
-        // other constants is spelling it with words like any other expression.
-        let constants = try self.constants(
-            of: modules,
-            folding: foldingTable,
-            writing: &lowering,
-            with: frame
-        )
-
-        let variables = try self.variables(
-            of: modules,
-            beside: constants,
-            folding: foldingTable,
-            writing: &lowering,
-            with: frame
-        )
+        // What each document settled, filled as the walk reaches it.
+        var constants: [Int: [Name: Value]] = [:]
+        var variables: [Int: [Name: Value]] = [:]
+        var calls: [Name: [Name]] = [:]
 
         // The names in scope before a body's first statement: its parameters,
         // the constants its module declared beside them, and the variables. A
@@ -335,35 +322,6 @@ public struct Linker: Sendable {
                     (variables[symbol.origin] ?? [:]).mapValues { value in .inout(type(of: value, in: shapes)) }
                 ) { _, variable in variable }
         }
-
-        // What every declaration whose `returns` nobody wrote answers, read
-        // off its body.
-        answers(
-            of: gathered.symbols.compactMap { symbol -> Unsaid? in
-                guard
-                    symbol.procedure.signature.returns == nil,
-                    let block = symbol.procedure.block
-                else { return nil }
-
-                return Unsaid(
-                    symbol: symbol,
-                    block: block,
-                    environment: opening(symbol, of: symbol.procedure.signature),
-                    sends: sent(in: block, reaching: wordSymbols[symbol.origin])
-                )
-            },
-            reading: frame,
-            recording: { qualified, answer in
-                answered[qualified] = answer
-
-                for origin in wordSpellings.indices {
-                    for spelling in wordSpellings[origin][qualified] ?? [] {
-                        wordAnswered[origin][spelling] = answer
-                    }
-                }
-            }
-        )
-
 
         // One declaration resolves once, whichever table asks. The frontier for
         // a reached body, the derivable tables for a body a path may run.
@@ -445,57 +403,119 @@ public struct Linker: Sendable {
             return answer
         }
 
-        // The words first, and only the words: they are what every other body's
-        // folding executes, so they settle before anything folds through them.
-        // Their own constant paths meet the stand-ins (a word folding through a
-        // word is the circle the stand-ins refuse) and that is a fact of each
-        // word's own text, the same every link. Nothing else resolves here:
-        // checking a word's calls does not resolve the callees, so no other
-        // declaration is ever folded against the stand-ins, and whether a
-        // declaration links stays a fact of its text rather than of who happens
-        // to call it. In the order the rows stand, so which mistake is
-        // reported first is the text's fact too.
-        // A declaration reachable from more than one document stands once,
-        // under the spelling it was declared by rather than under each bare
-        // segment that reaches it.
-        let reachable = wordSymbols.reduce(into: [Name: Symbol]()) { held, words in
-            for symbol in words.values { held[symbol.declared] = symbol }
+        // Which declarations a path steps to, by the document that declared
+        // them. A word is read where it was written, whichever document walks
+        // to it, and one reachable from more than one stands once, under the
+        // spelling it was declared by rather than under each bare segment that
+        // reaches it.
+        let walkable = wordSymbols.reduce(into: [Int: [Name: Symbol]]()) { held, words in
+            for symbol in words.values { held[symbol.origin, default: [:]][symbol.declared] = symbol }
         }
 
-        for symbol in reachable.values.sorted(by: { left, right in
-            (rank[left.origin], left.declared) < (rank[right.origin], right.declared)
-        }) {
-            _ = try resolved(symbol)
-        }
+        // One document at a time, in the order each one's needs stand before
+        // it. What a document reads of another is settled before it is read:
+        // the documents it reaches stand behind it, and its own rows are the
+        // stand-ins their refusal makes until it lowers them.
+        for origin in gathered.standing {
+            let module = modules[origin]
 
-        foldingTable = foldingTable.holding(lowering.table, closures: lowering.closureRows)
+            // The bodies the documents behind this one lowered, which this one
+            // may run.
+            foldingTable = foldingTable.holding(lowering.table, closures: lowering.closureRows)
 
-        // Every declaration, one document at a time in the order they stand
-        // and in name order inside each, which is the order their rows stand
-        // in. What a document says has to hold whether or not this entry walks
-        // that way, so which declarations are judged is not a question the
-        // entry answers, and a document is judged after the documents it
-        // reaches rather than wherever its spellings fall among theirs.
-        var calls: [Name: [Name]] = [:]
+            // Settled after the words are known, because a constant may call
+            // one: interpolation is `joined` now, and a constant that spells a
+            // URL out of other constants is spelling it with words like any
+            // other expression.
+            let settledConstants = try self.constants(
+                of: module,
+                at: origin,
+                folding: foldingTable,
+                writing: &lowering,
+                with: frame
+            )
 
-        for symbol in declarations {
-            let (procedure, gathered) = try resolved(symbol)
+            constants[origin] = settledConstants
 
-            calls[symbol.declared] = gathered.map { call in call.callee.declared }
+            variables[origin] = try self.variables(
+                of: module,
+                at: origin,
+                beside: settledConstants,
+                folding: foldingTable,
+                writing: &lowering,
+                with: frame
+            )
 
-            // A constant answer is knowable from the text, so it is held to the
-            // declaration here, the way a constant argument is. An answer only
-            // a run can produce is settled at the boundary instead.
-            if let returns = procedure.signature.returns,
-               let answer = procedure.block?.result?.constantValue {
-                do {
-                    _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
-                } catch {
-                    throw LinkError(
-                        "answers \(answer.type), and its"
-                            + " declaration promises \(returns): \(error)",
-                        at: symbol.place.part(.result)
+            // What every declaration of this document whose `returns` nobody
+            // wrote answers, read off its body.
+            answers(
+                of: (held[origin] ?? []).compactMap { symbol -> Unsaid? in
+                    guard
+                        symbol.procedure.signature.returns == nil,
+                        let block = symbol.procedure.block
+                    else { return nil }
+
+                    return Unsaid(
+                        symbol: symbol,
+                        block: block,
+                        environment: opening(symbol, of: symbol.procedure.signature),
+                        sends: sent(in: block, reaching: wordSymbols[symbol.origin])
                     )
+                },
+                reading: frame,
+                recording: { qualified, answer in
+                    answered[qualified] = answer
+
+                    for origin in wordSpellings.indices {
+                        for spelling in wordSpellings[origin][qualified] ?? [] {
+                            wordAnswered[origin][spelling] = answer
+                        }
+                    }
+                }
+            )
+
+            // The words this document declared first, and only the words: they
+            // are what every other body's folding executes, so they settle
+            // before anything folds through them. Their own constant paths
+            // meet the stand-ins (a word folding through a word is the circle
+            // the stand-ins refuse) and that is a fact of each word's own text,
+            // the same every link. Nothing else resolves here: checking a
+            // word's calls does not resolve the callees, so whether a
+            // declaration links stays a fact of its text rather than of who
+            // happens to call it. In name order, so which mistake is reported
+            // first is the text's fact too.
+            for symbol in (walkable[origin] ?? [:]).values.sorted(by: { left, right in
+                left.declared < right.declared
+            }) {
+                _ = try resolved(symbol)
+            }
+
+            foldingTable = foldingTable.holding(lowering.table, closures: lowering.closureRows)
+
+            // Every declaration this document makes, in name order, which is
+            // the order its rows stand in. What a document says has to hold
+            // whether or not this entry walks that way, so which declarations
+            // are judged is not a question the entry answers.
+            for symbol in held[origin] ?? [] {
+                let (procedure, gathered) = try resolved(symbol)
+
+                calls[symbol.declared] = gathered.map { call in call.callee.declared }
+
+                // A constant answer is knowable from the text, so it is held to
+                // the declaration here, the way a constant argument is. An
+                // answer only a run can produce is settled at the boundary
+                // instead.
+                if let returns = procedure.signature.returns,
+                   let answer = procedure.block?.result?.constantValue {
+                    do {
+                        _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
+                    } catch {
+                        throw LinkError(
+                            "answers \(answer.type), and its"
+                                + " declaration promises \(returns): \(error)",
+                            at: symbol.place.part(.result)
+                        )
+                    }
                 }
             }
         }

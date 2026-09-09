@@ -326,7 +326,7 @@ extension Linker {
         }
     }
 
-    // Each module's constants, settled. They are evaluated here because there is
+    // A document's constants, settled. They are evaluated here because there is
     // nothing about them left for a run to do: a constant sees no scope, so what
     // it will be is knowable the moment the document is read.
     //
@@ -335,122 +335,112 @@ extension Linker {
     // with a set of constants is a fact about that order, and asking the order
     // is the whole of finding it.
     func constants(
-        of modules: [Module],
+        of module: Module,
+        at origin: Int,
         folding answered: Answered,
         writing lowering: inout Lowering,
         with framing: (Int) -> TypeFrame
-    ) throws -> [Int: [Name: Value]] {
+    ) throws -> [Name: Value] {
         // Folding runs what it reads, and running reads rows. A lowered body
         // carries its document's own numbers, so the table handed here is one
         // that says which row each of those numbers stands for.
-        var settled: [Int: [Name: Value]] = [:]
+        //
+        // A document reads its own constants, so the reading is its own.
+        let frame = framing(origin)
 
-        for (origin, module) in modules.enumerated() where !module.constants.isEmpty {
-            // A document reads its own constants, so the reading is its own.
-            let frame = framing(origin)
+        var known: [Name: Value] = [:]
 
-            var known: [Name: Value] = [:]
+        // Handed over with what each one reads, so nothing looks a name
+        // back up in the table the order was read from. Everything this one
+        // needs comes before it, and asking again is a second chance to ask
+        // a different table.
+        for (name, expression) in try order(module.constants, in: module) {
+            // A constant's dots are judged before it settles, the way a
+            // body's are: the settled neighbours' types are the
+            // environment, so an absent field or a needless `?.` refuses
+            // here by the one rule, and carries its own place.
+            let (judged, calls) = try resolvedSites(
+                in: expression,
+                at: .constant(name.spelling, in: .of(module)),
+                in: known.mapValues { value in type(of: value, in: frame.shapes) },
+                with: frame,
+                folding: nil
+            )
 
-            // Handed over with what each one reads, so nothing looks a name
-            // back up in the table the order was read from. Everything this one
-            // needs comes before it, and asking again is a second chance to ask
-            // a different table.
-            for (name, expression) in try order(module.constants, in: module) {
-                // A constant's dots are judged before it settles, the way a
-                // body's are: the settled neighbours' types are the
-                // environment, so an absent field or a needless `?.` refuses
-                // here by the one rule, and carries its own place.
-                let (judged, calls) = try resolvedSites(
-                    in: expression,
-                    at: .constant(name.spelling, in: .of(module)),
-                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
-                    with: frame,
-                    folding: nil
+            // A closure a constant holds runs later, so evaluating the
+            // constant proves nothing about the sends inside it. They pass
+            // the same gate every gathered call does.
+            try checked(calls, in: frame)
+
+            do {
+                known[name] = try Folding(
+                    constants: known,
+                    origin: origin,
+                    in: answered,
+                    shapes: frame.shapes
+                ).read(
+                    judged,
+                    as: name,
+                    writing: &lowering,
+                    at: .constant(name.spelling, in: .of(module))
                 )
-
-                // A closure a constant holds runs later, so evaluating the
-                // constant proves nothing about the sends inside it. They pass
-                // the same gate every gathered call does.
-                try checked(calls, in: frame)
-
-                do {
-                    known[name] = try Folding(
-                        constants: known,
-                        origin: origin,
-                        in: answered,
-                        shapes: frame.shapes
-                    ).read(
-                        judged,
-                        as: name,
-                        writing: &lowering,
-                        at: .constant(name.spelling, in: .of(module))
-                    )
-                } catch let refused as LinkError {
-                    throw refused
-                } catch {
-                    throw LinkError("\(error)", at: .constant(name.spelling, in: .of(module)))
-                }
+            } catch let refused as LinkError {
+                throw refused
+            } catch {
+                throw LinkError("\(error)", at: .constant(name.spelling, in: .of(module)))
             }
-
-            settled[origin] = known
         }
 
-        return settled
+        return known
     }
 
-    // What each document's variables start a run holding. Settled the way a
+    // What a document's variables start a run holding. Settled the way a
     // constant is, from native words alone, reading the constants beside it
     // and no variable; the starting value is a fact the link reads, and a
     // variable's type is the type of that value.
     func variables(
-        of modules: [Module],
-        beside constants: [Int: [Name: Value]],
+        of module: Module,
+        at origin: Int,
+        beside known: [Name: Value],
         folding answered: Answered,
         writing lowering: inout Lowering,
         with framing: (Int) -> TypeFrame
-    ) throws -> [Int: [Name: Value]] {
-        var settled: [Int: [Name: Value]] = [:]
+    ) throws -> [Name: Value] {
+        let frame = framing(origin)
 
-        for (origin, module) in modules.enumerated() where !module.variables.isEmpty {
-            let frame = framing(origin)
+        var started: [Name: Value] = [:]
 
-            let known = constants[origin] ?? [:]
-            var started: [Name: Value] = [:]
+        for (name, expression) in module.variables.sorted { $0.key < $1.key } {
+            let (judged, calls) = try resolvedSites(
+                in: expression,
+                at: .variable(name.spelling, in: .of(module)),
+                in: known.mapValues { value in type(of: value, in: frame.shapes) },
+                with: frame,
+                folding: nil
+            )
 
-            for (name, expression) in module.variables.sorted { $0.key < $1.key } {
-                let (judged, calls) = try resolvedSites(
-                    in: expression,
-                    at: .variable(name.spelling, in: .of(module)),
-                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
-                    with: frame,
-                    folding: nil
+            try checked(calls, in: frame)
+
+            do {
+                started[name] = try Folding(
+                    constants: known,
+                    origin: origin,
+                    in: answered,
+                    shapes: frame.shapes
+                ).read(
+                    judged,
+                    as: name,
+                    writing: &lowering,
+                    at: .variable(name.spelling, in: .of(module))
                 )
-
-                try checked(calls, in: frame)
-
-                do {
-                    started[name] = try Folding(
-                        constants: known,
-                        origin: origin,
-                        in: answered,
-                        shapes: frame.shapes
-                    ).read(
-                        judged,
-                        as: name,
-                        writing: &lowering,
-                        at: .variable(name.spelling, in: .of(module))
-                    )
-                } catch let refused as LinkError {
-                    throw refused
-                } catch {
-                    throw LinkError("\(error)", at: .variable(name.spelling, in: .of(module)))
-                }
+            } catch let refused as LinkError {
+                throw refused
+            } catch {
+                throw LinkError("\(error)", at: .variable(name.spelling, in: .of(module)))
             }
-
-            settled[origin] = started
         }
 
-        return settled
+        return started
     }
 
     // The order a module's constants settle in: what a constant reads comes
