@@ -242,7 +242,7 @@ extension Linker {
         // declared, so a value handed on lands somewhere that says it takes
         // one. A slot that does not say so would let the obligation go.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
-            let signature = frame.signatures[call.selector]
+            let signature = frame.signature(of: call.selector)
                 ?? frame.contractWords[call.selector]?.signature
 
             var carried = held
@@ -299,7 +299,7 @@ extension Linker {
         private func handedOnce(_ expression: Expression, held: Held) -> Bool {
             switch expression {
             case let .call(call):
-                let signature = frame.signatures[call.selector]
+                let signature = frame.signature(of: call.selector)
                     ?? frame.contractWords[call.selector]?.signature
 
                 return signature?.returns.map(handedOnce) ?? false

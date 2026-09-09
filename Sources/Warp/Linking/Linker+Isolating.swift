@@ -17,7 +17,7 @@ extension Linker {
     func isolated(
         among symbols: [Symbol],
         settling isolated: inout Set<Name>,
-        signatures: [Name: Signature]
+        in space: [Name: Symbol]
     ) {
         let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
@@ -37,7 +37,7 @@ extension Linker {
         while true {
             let struck = bodies.compactMap { name, body in
                 isolated.contains(name)
-                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, signatures: signatures)
+                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, in: space)
                     ? name
                     : nil
             }
@@ -59,15 +59,19 @@ extension Linker {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: Set<Name>,
-        signatures: [Name: Signature]
+        in space: [Name: Symbol]
     ) -> Bool {
-        Isolating(isolated: isolated, signatures: signatures).holds(block, declared: parameters)
+        Isolating(isolated: isolated, space: space).holds(block, declared: parameters)
     }
 
     // MARK: - Private
     private struct Isolating {
         let isolated: Set<Name>
-        let signatures: [Name: Signature]
+
+        // Every declaration under its declared spelling. What a call hands in
+        // place is read off the callee's signature, which the declaration
+        // holds, so nothing here keeps a second table of them.
+        let space: [Name: Symbol]
 
         func holds(_ block: Block, declared: Set<Name>) -> Bool {
             var declared = declared
@@ -127,7 +131,10 @@ extension Linker {
                 return true
 
             case let .call(call):
-                guard isolated.contains(call.selector), let signature = signatures[call.selector] else {
+                guard
+                    isolated.contains(call.selector),
+                    let signature = space[call.selector]?.procedure.signature
+                else {
                     return false
                 }
 

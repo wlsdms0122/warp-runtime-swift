@@ -87,13 +87,6 @@ public struct Linker: Sendable {
         // table the run will read.
         let shapes = gathered.types.shapes
 
-        // What every declaration returns, by the name a resolved call site
-        // uses. Built before the walk so a call can be judged against a callee
-        // the walk has not reached yet.
-        let signatures = gathered.symbols.reduce(into: [Name: Signature]()) { table, symbol in
-            table[symbol.declared] = symbol.procedure.signature
-        }
-
         // Purity is worked out over every declaration rather than the reached
         // ones: a path names a word the call graph never mentions.
         let moduleVariables = modules.enumerated().reduce(into: [Int: Set<Name>]()) { table, entry in
@@ -118,7 +111,7 @@ public struct Linker: Sendable {
             let holding = held[position] ?? []
 
             pure(among: holding, settling: &settled, reading: moduleVariables)
-            isolated(among: holding, settling: &isolatedDeclarations, signatures: signatures)
+            isolated(among: holding, settling: &isolatedDeclarations, in: gathered.space)
             failing(among: holding, settling: &failingDeclarations)
         }
 
@@ -208,20 +201,14 @@ public struct Linker: Sendable {
         var answered: [Name: Shape] = [:]
         var wordAnswered = [[Name: Shape]](repeating: [:], count: modules.count)
 
-        // The tables as the author spelled them, and the form the link's own
-        // settling reads: a written body is swapped for the refusal it would
-        // earn, because it is itself still being resolved beside the constants
-        // it may read. The table carries the fact, so no resolver needs a flag
-        // saying when it runs. Selectors and path words are two tables, because
-        // they are two questions: what a selector reaches, and what a bare
-        // spelling a walk writes may call. One table masked by a set let one
-        // spelling answer with the other question's declaration.
+        // What a bare spelling a walk writes may call, as the author spelled
+        // it. Its own table rather than a mask over the declarations, because
+        // a selector and a path segment ask two questions: what a call
+        // reaches, and what a step may reach. One table masked by a set let
+        // one spelling answer with the other question's declaration.
         //
-        // Both are filled with the answers read off bodies whose declaration
-        // wrote none, and both by the same reading. A spelling that answers one
-        // way through a call and another through a path would be one
-        // declaration saying two things.
-        let answeringSignatures = signatures
+        // What a selector reaches is asked of the declarations themselves,
+        // which is where an author's signature already stands.
         let answeringWords = wordSymbols.map { held in
             held.mapValues { symbol in symbol.procedure.signature }
         }
@@ -310,7 +297,6 @@ public struct Linker: Sendable {
         func frame(for origin: Int) -> TypeFrame {
             TypeFrame(
                 symbols: gathered.space,
-                signatures: answeringSignatures,
                 types: gathered.types,
                 linked: table,
                 rows: rows,

@@ -1282,7 +1282,7 @@ extension Linker {
                     block,
                     declaring: Set(procedure.signature.parameters.keys),
                     given: frame.isolated,
-                    signatures: frame.signatures
+                    in: frame.symbols
                 )
             } ?? false
 
@@ -1372,7 +1372,7 @@ extension Linker {
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
         case let .call(call):
-            let signature = frame.signatures[call.selector] ?? frame.contractWords[call.selector]?.signature
+            let signature = frame.signature(of: call.selector) ?? frame.contractWords[call.selector]?.signature
 
             guard case .judging = ask else {
                 return Inspection(

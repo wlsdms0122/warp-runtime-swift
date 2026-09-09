@@ -17,18 +17,8 @@ struct TypeFrame: Sendable {
     // MARK: - Property
     // Every declaration under its declared spelling, as the author wrote it.
     // A walk that meets a call finds the declaration here, once, and hands it
-    // on with the call. The same spellings key `signatures`, where the link
-    // has filled in what each declaration answers.
+    // on with the call.
     let symbols: [Name: Symbol]
-
-    // Keyed by the resolved selector for a call, and by that alone: the bare
-    // spelling a path writes lives in `words`, because the two spellings ask
-    // two different questions.
-    //
-    // Whole signatures rather than what each answers, because a declaration
-    // with a type parameter in it does not answer anything until a call site
-    // fills it, and what fills it is read from the arguments.
-    let signatures: [Name: Signature]
 
     // The declared types as the documents wrote them, for the surfaces a
     // document's own spelling is owed to.
@@ -93,6 +83,18 @@ struct TypeFrame: Sendable {
     // nobody may reach got a type.
     func signature(reachedBy name: Name) -> Signature? {
         words[name]
+    }
+
+    // What a call is written against: the whole signature rather than what it
+    // answers, because a declaration with a type parameter in it does not
+    // answer anything until a call site fills it, and what fills it is read
+    // from the arguments.
+    //
+    // By the resolved selector, and by that alone: the bare spelling a path
+    // writes is `signature(reachedBy:)`, because the two spellings ask two
+    // different questions.
+    func signature(of selector: Name) -> Signature? {
+        symbols[selector]?.procedure.signature
     }
 
     // What a selector takes: the slots of the row it stands on, or the ones a
