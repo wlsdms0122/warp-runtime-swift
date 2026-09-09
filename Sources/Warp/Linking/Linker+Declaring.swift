@@ -20,7 +20,8 @@ extension Linker {
     func declared(in documents: [any Declaring]) throws -> (
         types: [Name: Declared<TypeExpression>],
         constraints: [Name: Declared<[TypeExpression]>],
-        contracts: [Name: Declared<[Name: Signature]>]
+        contracts: [Name: Declared<[Name: Signature]>],
+        claims: [Declared<Claim>]
     ) {
         // Where each name was written, gathered here and carried with what it
         // holds. This is where both halves of the joining are in hand. Anywhere
@@ -125,6 +126,39 @@ extension Linker {
             }
         }
 
-        return (declaredTypes, declaredConstraints, declaredContracts)
+        // What each document said one of its types, or another document's,
+        // answers. Gathered here with the rest so a pair two documents claim
+        // is refused where every other doubled declaration is, and handed on
+        // as a list, since a claim declares no name for a table to be keyed
+        // by.
+        var claimed: [Name: [Name: Declared<Claim>]] = [:]
+        var claims: [Declared<Claim>] = []
+
+        for (origin, held) in documents.enumerated() {
+            for (type, contracts) in held.satisfying.sorted(by: { $0.key < $1.key }) {
+                for contract in contracts.sorted() {
+                    let declaration = Declared(
+                        Claim(type: type, contract: contract),
+                        at: .satisfies(type.spelling, in: held.document),
+                        of: origin
+                    )
+
+                    if let first = claimed[type]?[contract] {
+                        throw LinkError(
+                            "'\(type)' is said to answer '\(contract)' by"
+                                + " \(first.spelled) and by \(declaration.spelled)."
+                                + " One type answers one contract once",
+                            at: declaration.place
+                        )
+                    }
+
+                    claimed[type, default: [:]][contract] = declaration
+
+                    claims.append(declaration)
+                }
+            }
+        }
+
+        return (declaredTypes, declaredConstraints, declaredContracts, claims)
     }
 }

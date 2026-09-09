@@ -87,9 +87,9 @@ public struct TypeTable: Sendable {
 
     // MARK: - Public
     // The same declarations with the satisfaction worked out. Which types
-    // answer a contract's words is read off the procedures, which are gathered
-    // after this table is first built, so the table is remade rather than
-    // holding an answer it did not have. The rows are numbered from the
+    // answer a contract is read off the documents' claims and the procedures
+    // behind them, which are gathered after this table is first built, so the
+    // table is remade rather than holding an answer it did not have. The rows are numbered from the
     // declarations alone, so they are the rows the first table had.
     func satisfying(_ satisfying: [Name: Set<Name>]) -> TypeTable {
         TypeTable(

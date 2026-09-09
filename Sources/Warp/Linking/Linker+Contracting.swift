@@ -33,82 +33,46 @@ extension Linker {
     // there: a document saying a type answers a contract is saying every word
     // of it is answered, and the half that is missing is the author's to write.
     func witnesses(
-        declared documents: [any Declaring],
-        of contracts: [Name: Declared<[Name: Signature]>],
+        of claims: [Declared<Claim>],
+        asking contracts: [Name: Declared<[Name: Signature]>],
         over types: [Name: Declared<TypeExpression>],
         among space: [Name: Declared<Signature>],
         in table: TypeTable
     ) throws -> [Name: [Name: [Name: Name]]] {
-        // What each claim was backed by, under the type it is about and the
-        // contract it names, carrying where it was written. One table and not
-        // a second beside it saying which pairs are taken: a claim is a
-        // declaration like any other, and a refusal about one names the
-        // document that already made it.
-        var claimed: [Name: [Name: Declared<[Name: Name]>]] = [:]
-
-        for (origin, document) in documents.enumerated() {
-            for (type, answered) in document.satisfying.sorted(by: { $0.key < $1.key }) {
-                let claim = Place.satisfies(type.spelling, in: document.document)
-
-                guard types[type] != nil else {
-                    throw LinkError(
-                        "'\(type)' is not a type this link declares, and only a"
-                            + " type answers a contract",
-                        at: claim
-                    )
-                }
-
-                for contract in answered.sorted() {
-                    guard let asked = contracts[contract] else {
-                        throw LinkError(
-                            "'\(contract)' is not a contract this link declares,"
-                                + " so there are no words for '\(type)' to answer",
-                            at: claim
-                        )
-                    }
-
-                    // Before the words are looked for, because a pair
-                    // claimed twice is the more basic defect and both claims
-                    // would otherwise be held to the same declarations and
-                    // refuse for the same missing one.
-                    if let first = claimed[type]?[contract] {
-                        throw LinkError(
-                            "'\(type)' is said to answer '\(contract)' by"
-                                + " \(first.spelled) and by"
-                                + " \(claim.document.spelled(at: origin))."
-                                + " One type answers one contract once",
-                            at: claim
-                        )
-                    }
-
-                    claimed[type, default: [:]][contract] = Declared(
-                        try answering(
-                            asked.held,
-                            of: contract,
-                            by: type,
-                            claimed: claim,
-                            among: space,
-                            in: table
-                        ),
-                        at: claim,
-                        of: origin
-                    )
-                }
-            }
-        }
-
-        // Read back by contract, which is the question a call through one
-        // asks. Every contract has an entry, answered or not: the entry is
-        // what says a name is a contract at all, and a bound naming one no
-        // type answers is a different thing from a bound naming nothing.
+        // Every contract, answered or not. The entry is what says a name is a
+        // contract at all, so a bound naming one no type answers stays a
+        // different thing from a bound naming nothing.
         var gathered = contracts.keys.reduce(into: [Name: [Name: [Name: Name]]]()) { table, contract in
             table[contract] = [:]
         }
 
-        for (type, answered) in claimed {
-            for (contract, backed) in answered {
-                gathered[contract]?[type] = backed.held
+        for claim in claims {
+            let (type, contract) = (claim.held.type, claim.held.contract)
+
+            guard types[type] != nil else {
+                throw LinkError(
+                    "'\(type)' is not a type this link declares, and only a"
+                        + " type answers a contract",
+                    at: claim.place
+                )
             }
+
+            guard let asked = contracts[contract] else {
+                throw LinkError(
+                    "'\(contract)' is not a contract this link declares,"
+                        + " so there are no words for '\(type)' to answer",
+                    at: claim.place
+                )
+            }
+
+            gathered[contract]?[type] = try answering(
+                asked.held,
+                of: contract,
+                by: type,
+                claimed: claim.place,
+                among: space,
+                in: table
+            )
         }
 
         return gathered

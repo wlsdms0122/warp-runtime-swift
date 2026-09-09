@@ -25,7 +25,12 @@ extension Linker {
         try once(modules)
 
         let symbols = try self.symbols(of: modules)
-        let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
+        let declaredSpaces = try declared(in: modules)
+        let (declaredTypes, declaredConstraints, declaredContracts) = (
+            declaredSpaces.types,
+            declaredSpaces.constraints,
+            declaredSpaces.contracts
+        )
         let standing = try ModuleGraph(modules).standing
 
         let declaring = try self.types(
@@ -49,7 +54,7 @@ extension Linker {
 
         let shaped = try self.shaped(
             declaring,
-            declared: modules,
+            claims: declaredSpaces.claims,
             types: declaredTypes,
             contracts: declaredContracts,
             among: space.mapValues { symbol in
@@ -74,14 +79,14 @@ extension Linker {
     // shape.
     func shaped(
         _ declaring: TypeTable,
-        declared documents: [any Declaring],
+        claims: [Declared<Claim>],
         types: [Name: Declared<TypeExpression>],
         contracts: [Name: Declared<[Name: Signature]>],
         among signatures: [Name: Declared<Signature>]
     ) throws -> (types: TypeTable, contractWords: [Name: ContractWord], answering: Set<Name>) {
         let witnessed = try witnesses(
-            declared: documents,
-            of: contracts,
+            of: claims,
+            asking: contracts,
             over: types,
             among: signatures,
             in: declaring

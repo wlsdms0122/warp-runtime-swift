@@ -43,8 +43,12 @@ final class ShapeTable: Sendable {
 
     // Which types satisfy each declared contract, by the contract's own
     // spelling. A contract's members are not a shape the table lowers: what
-    // puts a type in one is that it declares the words, which the link works
-    // out from the declarations rather than from the type language.
+    // puts a type in one is a document's claim, held to the declarations that
+    // answer the words, which the link works out rather than the type
+    // language.
+    //
+    // Every declared contract has an entry, so a name with none is a name no
+    // document declared as a contract at all.
     let satisfying: [Name: Set<Name>]
 
     private let rows: [Name: Int]

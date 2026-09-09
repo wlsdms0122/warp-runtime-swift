@@ -183,7 +183,7 @@ public struct Linker: Sendable {
 
         let shaped = try self.shaped(
             declaring,
-            declared: documents,
+            claims: declared.claims,
             types: declared.types,
             contracts: declared.contracts,
             among: signatures
@@ -592,7 +592,7 @@ public struct Linker: Sendable {
                 standing: Array(compiled.indices),
                 numbered: Linkage()
             ),
-            declared: compiled,
+            claims: declared.claims,
             types: declared.types,
             contracts: declared.contracts,
             among: assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in
