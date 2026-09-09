@@ -368,7 +368,51 @@ struct CompiledTests {
         )
     }
 
+    @Test("an answer the link read carries the number its own document gave")
+    func aReadAnswerCarriesTheDocumentsOwnShapeNumber() throws {
+        // Given. A declaration writing no `returns`, whose body answers a type
+        // its document declares.
+        let sut = try casting()
+
+        // When. Compiled alone, and again beside a document whose type takes a
+        // shape row in front of its own.
+        let alone = try compiled(sut + Module.standard)
+        let beside = try compiled(
+            [
+                try Module(
+                    types: ["aaa.Ahead": .record(["first": .int])],
+                    procedures: [
+                        "aaa.first": Procedure(
+                            signature: Signature(returns: .int),
+                            body: [],
+                            result: .literal(.int(0))
+                        )
+                    ]
+                )
+            ] + sut + Module.standard
+        )
+
+        // Then. The answer is carried, in the document's own numbers.
+        #expect(try answer(of: entryName, in: alone) == .named(0))
+
+        // And. The row it stands on moved and the number did not.
+        #expect(
+            try linker.link(alone, entry: entryName).types.shapes.row(named: "bank.Account")
+                != linker.link(beside, entry: entryName).types.shapes.row(named: "bank.Account")
+        )
+        #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
+    }
+
     // MARK: - Private
+    // What a compile read off the body of a declaration that wrote no answer.
+    private func answer(of declared: Name, in compiled: Compiled) throws -> Shape {
+        guard let read = compiled.documents.compactMap({ document in document.answers[declared] }).first else {
+            throw LinkError("nothing read an answer for '\(declared)'", at: nil)
+        }
+
+        return read
+    }
+
     // Compiling a whole graph: what the list answers first, then the
     // documents against it.
     private func compiled(_ modules: [Module]) throws -> Compiled {

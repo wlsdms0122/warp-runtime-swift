@@ -116,6 +116,17 @@ struct Lowering {
         }
     }
 
+    // A shape the link read off a body rather than out of a signature. It is
+    // written into no body, so what it stands on is noted here: its document
+    // numbers it beside the shapes its bodies stand on.
+    mutating func stands(on shape: Shape, of origin: Int) {
+        var stood = standing[origin] ?? Standing()
+
+        shape.standing(into: &stood.types, and: &stood.memberships)
+
+        standing[origin] = stood
+    }
+
     // Which row each bare spelling that document's paths step to reaches.
     // Read off the rows, so it is said after they stand.
     mutating func stepping(_ origin: Int, to reached: [Name: Int]) {

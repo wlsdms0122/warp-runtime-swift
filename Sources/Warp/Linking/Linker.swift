@@ -440,6 +440,11 @@ public struct Linker: Sendable {
                 recording: { qualified, answer in
                     answered[qualified] = answer
 
+                    // The shape is the document's to carry, so the rows it
+                    // stands on are numbered beside the ones its bodies stand
+                    // on.
+                    lowering.stands(on: answer, of: origin)
+
                     for origin in wordSpellings.indices {
                         for spelling in wordSpellings[origin][qualified] ?? [] {
                             wordAnswered[origin][spelling] = answer
@@ -496,7 +501,7 @@ public struct Linker: Sendable {
         // The shapes the bodies stand on, written as each document's own
         // numbers. Lowering read this link's table to judge, so what it wrote
         // is this link's rows; what leaves compiling is the document's.
-        let shaped = try lowering.numbered()
+        let shaped = try lowering.numbered(answering: answered)
 
         // The rows as each document's own block: what it declared in name
         // order, then the closures its bodies lifted. The link lays the blocks
@@ -517,6 +522,9 @@ public struct Linker: Sendable {
                     table: declared.compactMap { name in lowering.rows[name].map { row in judged[row] } }
                         + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
                     calls: declared.map { name in calls[name] ?? [] },
+                    answers: declared.reduce(into: [Name: Shape]()) { held, name in
+                        held[name] = shaped.answers[name]
+                    },
                     words: wordSymbols[origin].mapValues { symbol in symbol.declared },
                     numbering: lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
                     shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),

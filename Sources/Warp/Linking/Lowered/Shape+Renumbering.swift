@@ -16,6 +16,24 @@ extension Shape {
     // Two answers, because a shape names two tables. A declared type and a
     // membership are separate spaces and no name is in both, so which of them
     // a number counts in is a fact of the case it stands in.
+    // Which rows of a link this shape stands on, in the two spaces it names.
+    // Read by answering every number with itself, so the walk over the tree
+    // stays written once.
+    func standing(into types: inout Set<Int>, and memberships: inout Set<Int>) {
+        _ = renumbered(
+            type: { row in
+                types.insert(row)
+
+                return row
+            },
+            membership: { row in
+                memberships.insert(row)
+
+                return row
+            }
+        )
+    }
+
     func renumbered(
         type: (Int) throws -> Int,
         membership: (Int) throws -> Int

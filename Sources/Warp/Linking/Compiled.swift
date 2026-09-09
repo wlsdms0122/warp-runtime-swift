@@ -47,6 +47,16 @@ struct Compiled: Sendable {
         // would find.
         let calls: [[Name]]
 
+        // What the link read off a body whose declaration wrote no `returns`,
+        // by the spelling it was declared under and in this document's own
+        // shape numbers. A declaration that wrote its answer is not here:
+        // what an author wrote stands on the row.
+        //
+        // Read off a body rather than out of a signature, so it is the one
+        // thing a document compiled against this cannot work out for itself
+        // without reading the body again.
+        let answers: [Name: Shape]
+
         // Which declaration each bare spelling a path in here steps to
         // reaches. A path names only its last segment, and a document steps
         // only to what it declared or named, so the reading is this
