@@ -265,13 +265,37 @@ public struct Linker: Sendable {
         // be a circle, and which words are already lowered is a fact of
         // name order rather than of the text. Once the words are resolved,
         // folding runs them.
-        var foldingTable = Answered.documents(
+        let standins = Answered.documents(
             table,
             rows: rows,
             words: wordRows,
             numbering: numbering,
             closures: [:]
         )
+
+        // The rows folding runs against, held here rather than read off the
+        // lowering: a row is written in when the phase that lowered it ends,
+        // so what a body folds through is what stood settled before its phase
+        // began rather than whatever the row order reached first. Lowering is
+        // then the only holder of its own table, and writing a row into it
+        // copies nothing.
+        var foldingRows = table
+        var loweredRows: [Int] = []
+
+        func foldingTable() -> Answered {
+            standins.holding(foldingRows, closures: lowering.closureRows)
+        }
+
+        // What has been lowered since the last phase, written in.
+        func foldable() {
+            foldingRows.append(contentsOf: lowering.table[foldingRows.count...])
+
+            for row in loweredRows {
+                foldingRows[row] = lowering.table[row]
+            }
+
+            loweredRows.removeAll(keepingCapacity: true)
+        }
 
         func row(of symbol: Symbol) throws -> Int {
             guard let row = rows[symbol.declared] else {
@@ -350,7 +374,7 @@ public struct Linker: Sendable {
                 let folding = Folding(
                     constants: constants[symbol.origin] ?? [:],
                     origin: symbol.origin,
-                    in: foldingTable,
+                    in: foldingTable(),
                     shapes: shapes
                 )
 
@@ -397,7 +421,11 @@ public struct Linker: Sendable {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try lowering.settle(try row(of: symbol), body: rewritten, at: symbol.place)
+                let numbered = try row(of: symbol)
+
+                try lowering.settle(numbered, body: rewritten, at: symbol.place)
+
+                loweredRows.append(numbered)
             }
 
             return answer
@@ -421,7 +449,7 @@ public struct Linker: Sendable {
 
             // The bodies the documents behind this one lowered, which this one
             // may run.
-            foldingTable = foldingTable.holding(lowering.table, closures: lowering.closureRows)
+            foldable()
 
             // Settled after the words are known, because a constant may call
             // one: interpolation is `joined` now, and a constant that spells a
@@ -430,7 +458,7 @@ public struct Linker: Sendable {
             let settledConstants = try self.constants(
                 of: module,
                 at: origin,
-                folding: foldingTable,
+                folding: foldingTable(),
                 writing: &lowering,
                 with: frame
             )
@@ -441,7 +469,7 @@ public struct Linker: Sendable {
                 of: module,
                 at: origin,
                 beside: settledConstants,
-                folding: foldingTable,
+                folding: foldingTable(),
                 writing: &lowering,
                 with: frame
             )
@@ -490,7 +518,7 @@ public struct Linker: Sendable {
                 _ = try resolved(symbol)
             }
 
-            foldingTable = foldingTable.holding(lowering.table, closures: lowering.closureRows)
+            foldable()
 
             // Every declaration this document makes, in name order, which is
             // the order its rows stand in. What a document says has to hold

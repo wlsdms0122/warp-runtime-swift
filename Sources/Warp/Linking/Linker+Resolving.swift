@@ -345,6 +345,8 @@ extension Linker {
         // carries its document's own numbers, so the table handed here is one
         // that says which row each of those numbers stands for.
         //
+        guard !module.constants.isEmpty else { return [:] }
+
         // A document reads its own constants, so the reading is its own.
         let frame = framing(origin)
 
@@ -406,6 +408,8 @@ extension Linker {
         writing lowering: inout Lowering,
         with framing: (Int) -> TypeFrame
     ) throws -> [Name: Value] {
+        guard !module.variables.isEmpty else { return [:] }
+
         let frame = framing(origin)
 
         var started: [Name: Value] = [:]
