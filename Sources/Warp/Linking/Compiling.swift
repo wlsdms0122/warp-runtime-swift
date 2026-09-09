@@ -62,15 +62,94 @@ struct Compiling {
 
     // MARK: - Initializer
     init(_ gathered: Gathered, naming documents: [Place.Document]) {
-        self.types = gathered.types
-        self.contractWords = gathered.contractWords
-        self.answering = gathered.answering
+        self.init(
+            types: gathered.types,
+            contractWords: gathered.contractWords,
+            answering: gathered.answering,
+            naming: documents
+        )
+    }
+
+    private init(
+        types: TypeTable,
+        contractWords: [Name: ContractWord],
+        answering: Set<Name>,
+        naming documents: [Place.Document]
+    ) {
+        self.types = types
+        self.contractWords = contractWords
+        self.answering = answering
         self.documents = documents
         self.lowering = Lowering(
             documents: documents.count,
-            contractWords: gathered.contractWords,
-            shapes: gathered.types.shapes
+            contractWords: contractWords,
+            shapes: types.shapes
         )
+    }
+
+    // What a caller already had compiled, laid down the way the walk lays a
+    // document it just compiled. A document arriving here says nothing about
+    // how it was made, so what the two ways build is one accumulator.
+    //
+    // The rows keep the numbers their documents gave their calls, which is
+    // what `named` answers, and their shapes are read as this link's rows:
+    // folding runs these bodies, and running reads a shape where it stands.
+    init(
+        _ compiled: [Compiled],
+        types: TypeTable,
+        contractWords: [Name: ContractWord],
+        answering: Set<Name>,
+        naming documents: [Place.Document]
+    ) throws {
+        self.init(
+            types: types,
+            contractWords: contractWords,
+            answering: answering,
+            naming: documents
+        )
+
+        for (origin, document) in compiled.enumerated() {
+            let standing = document.shapeNumbering.rows(in: types.shapes)
+            let rows = try document.table.map { judged -> Linked in
+                let row = judged.lowered(in: types.shapes, of: origin)
+
+                return try row.shaped { shape in
+                    try standing.read(shape, at: .procedure(row.label.spelling, in: document.document))
+                }
+            }
+
+            hold(
+                origin,
+                standing: Array(rows.prefix(document.declared.count)),
+                closures: Array(rows.dropFirst(document.declared.count)),
+                numbering: document.numbering,
+                variables: document.variables.map(\.name)
+            )
+
+            for row in rows.prefix(document.declared.count) {
+                if row.purity == .pure { pure.insert(row.label) }
+                if row.isolation == .isolated { isolated.insert(row.label) }
+
+                failing[row.label] = row.failing
+            }
+
+            for (declared, answer) in document.answers {
+                answers[declared] = try standing.read(
+                    answer,
+                    at: .procedure(declared.spelling, in: document.document)
+                )
+            }
+        }
+
+        // Said after every block stands, since a path steps to a declaration
+        // of another document as readily as to one of its own.
+        for (origin, document) in compiled.enumerated() {
+            steps(origin, to: document.words.compactMapValues { declared in lowering.rows[declared] })
+        }
+
+        // Every body handed over is lowered already, so all of them are
+        // something the next document may fold through.
+        foldable()
     }
 
     // MARK: - Public
@@ -79,11 +158,18 @@ struct Compiling {
     // written with.
     mutating func hold(
         _ origin: Int,
-        standing rows: [Linked],
+        standing block: [Linked],
+        closures lifted: [Linked] = [],
         numbering: Numbering,
         variables ordered: [Name]
     ) {
-        lowering.hold(origin, standing: rows, numbering: numbering, variables: ordered)
+        lowering.hold(
+            origin,
+            standing: block,
+            closures: lifted,
+            numbering: numbering,
+            variables: ordered
+        )
     }
 
     // Which row each bare spelling this document's paths step to reaches, and

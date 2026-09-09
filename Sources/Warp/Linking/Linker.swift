@@ -104,6 +104,94 @@ public struct Linker: Sendable {
         return ordered
     }
 
+    // One document compiled against documents already compiled, which is what
+    // a caller holding a cache of them has.
+    //
+    // The order is the caller's statement: what is handed over stands before
+    // this document, in the order it was handed over. A compile of the whole
+    // graph works that order out from the imports and refuses a ring; here it
+    // arrives already worked out, and a caller that hands over the wrong order
+    // is handing over a document that was never compiled against these.
+    //
+    // What the list answers is read again, since the shape spaces of a link
+    // are its documents' together and this document was not in the ones the
+    // others were compiled against.
+    func compile(_ module: Module, against compiled: [Compiled]) throws -> Compiled {
+        let origin = compiled.count
+        let documents: [any Declaring] = compiled + [module]
+        let declared = try declared(in: documents)
+
+        let declaring = try types(
+            declared: declared.types,
+            constraints: declared.constraints,
+            contracts: declared.contracts,
+            of: documents,
+            standing: Array(documents.indices),
+            numbered: Linkage()
+        )
+
+        try judge([module], in: declaring)
+
+        // Every declaration in the link, by the spelling it was declared by:
+        // what the documents behind this one left on their rows, and what this
+        // one wrote. A name two of them declare is refused here, for the same
+        // reason two `.c` files cannot both define a symbol.
+        var signatures: [Name: Declared<Signature>] = [:]
+
+        for (position, document) in compiled.enumerated() {
+            for (offset, name) in document.declared.enumerated() {
+                signatures[name] = Declared(
+                    document.table[offset].signature,
+                    at: .procedure(name.spelling, in: document.document),
+                    of: position
+                )
+            }
+        }
+
+        let symbols = try self.symbols(of: [module]).map { symbol in
+            Symbol(
+                declared: symbol.declared,
+                document: symbol.document,
+                origin: origin,
+                procedure: symbol.procedure
+            )
+        }
+
+        for symbol in symbols {
+            if let first = signatures[symbol.declared] {
+                throw LinkError(
+                    "'\(symbol.declared)' is declared more than once in this link, by"
+                        + " \(first.spelled) and \(symbol.spelled). Two declarations"
+                        + " of a name have no way to be told apart",
+                    at: symbol.place
+                )
+            }
+
+            signatures[symbol.declared] = Declared(
+                symbol.procedure.signature,
+                at: symbol.place,
+                of: origin
+            )
+        }
+
+        let shaped = try self.shaped(
+            declaring,
+            types: declared.types,
+            contracts: declared.contracts,
+            among: signatures
+        )
+
+        var compiling = try Compiling(
+            compiled,
+            types: shaped.types,
+            contractWords: shaped.contractWords,
+            answering: shaped.answering,
+            naming: documents.map(\.document)
+        )
+
+        return try compile(module, at: origin, declaring: symbols, in: &compiling)
+    }
+
     // One document compiled against what stands before it, and what it proves
     // written into that. Its own rows stand as the refusal they would earn
     // until it lowers them, so a word folding through a word is refused as the

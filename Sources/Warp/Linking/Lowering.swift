@@ -97,19 +97,29 @@ struct Lowering {
 
     // MARK: - Public
     // One document laid down: its declarations take the rows after the ones
-    // already here, in the order they are handed over, and its numbering says
-    // what the bodies it lowers are written with.
+    // already here, in the order they are handed over, then the closures its
+    // bodies lifted, and its numbering says what the bodies it lowers are
+    // written with.
+    //
+    // A document being compiled lifts its closures as it lowers, so it hands
+    // none over here. One already compiled hands over the block it left.
     mutating func hold(
         _ origin: Int,
-        standing: [Linked],
+        standing block: [Linked],
+        closures lifted: [Linked] = [],
         numbering held: Numbering,
         variables ordered: [Name]
     ) {
-        for (offset, row) in standing.enumerated() {
-            rows[row.label] = table.count + offset
+        let start = table.count
+
+        for (offset, row) in block.enumerated() {
+            rows[row.label] = start + offset
         }
 
-        table.append(contentsOf: standing)
+        closureRows[origin] = lifted.indices.map { offset in start + block.count + offset }
+
+        table.append(contentsOf: block)
+        table.append(contentsOf: lifted)
         numbering[origin] = held
         variables[origin] = ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
             positions[name.element] = name.offset

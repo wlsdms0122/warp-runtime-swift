@@ -404,6 +404,91 @@ struct CompiledTests {
         #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
     }
 
+    @Test("a document compiled against the ones behind it runs the same as the graph")
+    func aDocumentCompilesAgainstWhatIsAlreadyCompiled() async throws {
+        // Given. A document whose constant runs a word another declared, and
+        // that word's body standing on a type its own document declared, so
+        // running it reads a shape as well as a row.
+        let answering = try Module(
+            types: ["a.Held": .record(["count": .int])],
+            procedures: [
+                "a.answer": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("held"),
+                            expression: .cast(
+                                .record(["count": .literal(.int(7))]),
+                                as: .named("a.Held"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .reference([.key("held"), .key("count")])
+                )
+            ]
+        )
+        let asking = try Module(
+            constants: ["held": .call(Call(selector: "a.answer"))],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .reference([.key("held")])
+                )
+            ]
+        )
+
+        let modules = [asking, answering] + Module.standard
+
+        // When. Each document compiled on its own, against the ones already
+        // compiled, in the order the graph says they stand.
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(try linker.compile(modules[origin], against: compiled))
+        }
+
+        // Then. The image runs to what the whole graph compiled at once
+        // answers.
+        let image = try linker.link(compiled, entry: entryName)
+
+        #expect(try await Executor(environment: nil).run(image, arguments: [:]) == .int(7))
+        #expect(try await run(modules, vocabulary: []) == .int(7))
+    }
+
+    @Test("a document cannot declare a name a document it is compiled against declared")
+    func aCompileAgainstRefusesADoubledName() throws {
+        // Given. Two documents declaring one spelling.
+        let first = try Module(
+            procedures: [
+                "app.word": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+        let second = try Module(
+            procedures: [
+                "app.word": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .literal(.int(2))
+                )
+            ]
+        )
+
+        // When. The first is compiled, the second against it.
+        let compiled = [try linker.compile(first, against: [])]
+
+        // Then. Two declarations of a name have no way to be told apart,
+        // whether the link reads them together or one after the other.
+        #expect(throws: LinkError.self) {
+            try linker.compile(second, against: compiled)
+        }
+    }
+
     // MARK: - Private
     // What a compile read off the body of a declaration that wrote no answer.
     private func answer(of declared: Name, in compiled: [Compiled]) throws -> Shape {
