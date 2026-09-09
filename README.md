@@ -81,8 +81,31 @@ let answer = try await Executor().run(image)
 ```
 
 Each step refuses rather than guesses, and everything refusable is refused
-while nothing has run. Including the branches this run would not have taken.
+while nothing has run, including the branches this run would not have taken.
 The stages and what each one checks are the specification's, not this file's.
+
+## The stages inside a link
+
+The specification names three stages a refusal can come from: `load`, `link`
+and `run`. `load` is `Loader`, `run` is `Executor`, and `link` is `Linker`.
+
+Inside `Linker` that middle stage is two, and they are the two an ordinary
+toolchain has.
+
+| stage | what it answers | what varies |
+|---|---|---|
+| compile | every declaration judged and lowered, and the call graph read off it | the modules |
+| link | one table a run reads, walked from a named entry | the entry |
+
+The line between them is the numbering. **A lowered body carries the numbers
+its own document gave**, so what a document lowers to is the same text in every
+link, and turning those numbers into rows of a table is the link's work. That is
+why one compile answers every entry asked of it: which declaration a run starts
+from is not a fact about the documents.
+
+A caller sees one door, `Linker.link(_ modules:entry:)`, and the split is inside
+it. Compiling still takes the whole set of modules at once, and the table a
+compile is read against is its own.
 
 `Loader` reads the canonical document and nothing else by default. Which
 construct words exist is a `ConstructRegistry`; a host may register its own
@@ -94,21 +117,24 @@ one.
 `Writer` is the way back out: a program that was *built* rather than read has
 no document to hand to anything running elsewhere, and this is how it gets one.
 
-Whatever refuses somewhere says where. A refusal from the two stages that read a
-program before running it carries a `Place`. The path to it through the program,
-and each side reads it for the reader it has. The language names its own slots,
-which is what a caller that built the shapes in Swift can follow;
+Whatever refuses somewhere says where. A refusal from the stages that read a
+program before running it carries a `Place`, the path to it through the program,
+and each side reads that path for the reader it has. The language names its own
+slots, which is what a caller that built the shapes in Swift can follow.
 `Loader.reading { }` reads the same place in the keys the document writes, so
 `procedures.greet.body.total[2].call.arguments.amount` is a line every word of
-which an author can follow in the text in front of them. It is steps rather than
-a sentence because a front end holding the file this was authored in has to walk
-them to point at the line, and only the front end knows that file: what crossed
-the wire is the document. Which is why a step says how it was got: a `key` is a
-word the document itself writes and a reader may go looking for one in the text,
-while a `landmark`. The word for a statement's construct. Is this
-implementation's for a shape, since `{ call: … }` and `{ value: { call: … } }`
-arrive here as one. A refusal from a run carries a `Trace` instead. Where the
-run had been, which is the other question.
+which an author can follow in the text in front of them.
+
+It is steps rather than a sentence because a front end holding the file this was
+authored in has to walk them to point at the line, and only the front end knows
+that file: what crossed the wire is the document. So a step says how it was got.
+A `key` is a word the document itself writes, and a reader may go looking for
+one in the text. A `landmark` is this implementation's word for a shape the
+document does not name on its own, since `{ call: … }` and
+`{ value: { call: … } }` arrive here as one.
+
+A refusal from a run carries a `Trace` instead: where the run had been, which is
+the other question.
 
 A declaration's name is its key. A link calls a declaration `wallet.entry`
 because `wallet.entry` is the key the document wrote under `procedures`, dot
