@@ -210,6 +210,7 @@ struct ContractTests {
         result: Warp.Expression
     ) throws -> Module {
         try Module(
+            walked: ["std.collection.last"],
             types: [
                 "bank.Account": .record(["balance": .int]),
                 "bank.Card": .record(["last": .string])

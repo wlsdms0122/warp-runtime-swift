@@ -96,6 +96,7 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
+        walked: Set<Name> = [],
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
@@ -108,6 +109,7 @@ public struct Module: Sendable {
             Draft(
                 description: description,
                 imports: imports,
+                walked: walked,
                 types: types,
                 constraints: constraints,
                 contracts: contracts,
@@ -131,7 +133,7 @@ public struct Module: Sendable {
         self.variables = draft.variables
         self.procedures = draft.procedures
         self.identity = identity
-        self.imports = draft.imports ?? draft.sends
+        self.imports = draft.imports ?? draft.sends.union(draft.walked)
 
         try Validator().validate(self)
     }

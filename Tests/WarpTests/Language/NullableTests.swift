@@ -139,6 +139,7 @@ struct NullableTests {
         // Given. Text or null; `?.count` counts the text that arrived and
         // answers null for the null
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -267,6 +268,7 @@ struct NullableTests {
         // And a `?.` that could not have read past anything refuses on a
         // constant exactly as on any other name.
         let needless = try Module(
+            walked: ["std.collection.count"],
             constants: ["word": .literal(.string("hey"))],
             procedures: [
                 entryName: Procedure(
@@ -394,6 +396,7 @@ struct NullableTests {
         // A word's receiver is proven non-null by the time the call is
         // judged, so the same rule holds on the word surface.
         let onAWord = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -644,6 +647,7 @@ struct IndexReferenceJudgmentTests {
         // body folds, so a constant-headed path may run a written word: the
         // circle the settling refuses is the constants' own
         let sut = try Module(
+            walked: ["std.collection.count"],
             constants: ["greeting": .literal(.string("hi"))],
             procedures: [
                 "shout": Procedure(
@@ -705,6 +709,7 @@ struct IndexReferenceJudgmentTests {
         ]
 
         let sut = try Module(
+            walked: ["std.collection.count"],
             constants: ["greeting": .literal(.string("hi"))],
             procedures: procedures
         )
@@ -717,6 +722,7 @@ struct IndexReferenceJudgmentTests {
 
         #expect(
             try await run(try Module(
+                walked: ["std.collection.count"],
                 constants: ["greeting": .literal(.string("hi"))],
                 procedures: without
             )) == .int(2)
@@ -831,6 +837,7 @@ struct IndexReferenceJudgmentTests {
     func aWordBehindAnIndexReferenceIsJudged() async throws {
         // Given. `items[i].count` must mean what `items[0].count` means
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -996,6 +1003,7 @@ struct ParameterReceiverTests {
         // record carrying `count`, and the field wins because nothing here ever
         // judged the dot a word
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1028,6 +1036,7 @@ struct ParameterReceiverTests {
         // shape the call decides, the way the parameter is, so the dot after it
         // stands as written and the call's value answers it
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1071,6 +1080,7 @@ struct ParameterReceiverTests {
         // along with it. `some N: Comparable` proving `of.inner` comparable on
         // nothing but where it was read from.
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1131,6 +1141,7 @@ struct ParameterReceiverTests {
         // reason an author could see.
         func module(marking: Bool) throws -> Module {
             try Module(
+                walked: ["std.collection.count"],
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -1192,6 +1203,7 @@ struct ParameterReceiverTests {
         // was refused. The root is the parameter, so a name in between changes
         // nothing about where the walk landed.
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1240,6 +1252,7 @@ struct ParameterReceiverTests {
         // once, so they hold one shape, and the same field of it read through
         // either name is the same field.
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(

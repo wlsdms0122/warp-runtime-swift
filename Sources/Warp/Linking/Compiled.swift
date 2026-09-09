@@ -57,8 +57,9 @@ struct Compiled: Sendable {
         // Every declared spelling, by row.
         let rows: [Name: Int]
 
-        // Every bare spelling a path may step to, by the row it reaches.
-        let words: [Name: Int]
+        // Every bare spelling a path may step to, by the row it reaches, and
+        // by the document that steps to it.
+        let words: [[Name: Int]]
 
         // Which row each document's closures took, in the order that document
         // numbers them. A closure is a row like any other and no declared
@@ -85,10 +86,14 @@ struct Compiled: Sendable {
     // laid down: a document's rows are behind the rows it reaches.
     let standing: [Int]
 
-    // Which declaration a bare spelling a path steps to reaches. Not any
-    // document's own: a declaration answering a contract is left out of this,
-    // and which types answer which contracts is a fact of the graph.
-    let words: [Name: Name]
+    // Which declaration a bare spelling a path steps to reaches, by the
+    // document that steps to it. A document walks only to what it declared or
+    // named, so the reading is that document's.
+    //
+    // Not the document's own to settle, though: a declaration answering a
+    // contract is left out, and which types answer which contracts is a fact
+    // of the graph.
+    let words: [[Name: Name]]
 
     let types: TypeTable
 
@@ -132,7 +137,7 @@ struct Compiled: Sendable {
         return Assembled(
             table: table,
             rows: rows,
-            words: words.compactMapValues { declared in rows[declared] },
+            words: words.map { held in held.compactMapValues { declared in rows[declared] } },
             closures: closures,
             calls: calls,
             numbering: documents.map(\.numbering),

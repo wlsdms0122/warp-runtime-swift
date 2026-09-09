@@ -269,6 +269,7 @@ public struct Linker: Sendable {
         // may reach one is a question about the slots it lowered to.
         let wordSymbols = try derivable(
             among: symbols,
+            for: modules,
             pure: settled,
             answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
             reaching: rows,
@@ -280,7 +281,7 @@ public struct Linker: Sendable {
         // table holding every spelling would hash every declared name to say
         // what the row says.
         var answered: [Name: Shape] = [:]
-        var wordAnswered: [Name: Shape] = [:]
+        var wordAnswered = [[Name: Shape]](repeating: [:], count: modules.count)
 
         // The tables as the author spelled them, and the form the link's own
         // settling reads: a written body is swapped for the refusal it would
@@ -296,18 +297,24 @@ public struct Linker: Sendable {
         // way through a call and another through a path would be one
         // declaration saying two things.
         let answeringSignatures = signatures
-        let answeringWords = wordSymbols.mapValues { symbol in symbol.procedure.signature }
+        let answeringWords = wordSymbols.map { held in
+            held.mapValues { symbol in symbol.procedure.signature }
+        }
 
         // Which spellings a path reaches one declaration by. A word may be
         // reachable under more than one, and an answer worked out for it is
         // that declaration's however a walk spelled it.
-        let wordSpellings = wordSymbols.reduce(into: [Name: [Name]]()) { spellings, entry in
-            spellings[entry.value.declared, default: []].append(entry.key)
+        let wordSpellings = wordSymbols.map { held in
+            held.reduce(into: [Name: [Name]]()) { spellings, entry in
+                spellings[entry.value.declared, default: []].append(entry.key)
+            }
         }
 
         // Which row a path reaches under each spelling, so what a word takes
         // and answers is read off the row rather than lowered again.
-        let wordRows = wordSymbols.compactMapValues { symbol in rows[symbol.declared] }
+        let wordRows = wordSymbols.map { held in
+            held.compactMapValues { symbol in rows[symbol.declared] }
+        }
 
         // Each document's variables in the order a run makes their boxes,
         // decided here once: the layouts read positions from it and the
@@ -349,7 +356,9 @@ public struct Linker: Sendable {
             return row
         }
 
-        func frame() -> TypeFrame {
+        // One document's reading. What a path may walk to is the document's
+        // own, so a frame is made for the document whose body is being read.
+        func frame(for origin: Int) -> TypeFrame {
             TypeFrame(
                 symbols: space,
                 signatures: answeringSignatures,
@@ -357,9 +366,9 @@ public struct Linker: Sendable {
                 linked: table,
                 rows: rows,
                 answers: answered,
-                words: answeringWords,
-                wordRows: wordRows,
-                wordAnswers: wordAnswered,
+                words: answeringWords[origin],
+                wordRows: wordRows[origin],
+                wordAnswers: wordAnswered[origin],
                 pure: settled,
                 isolated: isolatedDeclarations,
                 failing: failingDeclarations,
@@ -368,7 +377,6 @@ public struct Linker: Sendable {
             )
         }
 
-        let declaredFrame = frame()
 
         // Settled after the words are known, because a constant may call one:
         // interpolation is `joined` now, and a constant that spells a URL out of
@@ -376,14 +384,14 @@ public struct Linker: Sendable {
         let constants = try self.constants(
             of: modules,
             folding: foldingTable,
-            with: declaredFrame
+            with: frame
         )
 
         let variables = try self.variables(
             of: modules,
             beside: constants,
             folding: foldingTable,
-            with: declaredFrame
+            with: frame
         )
 
         // The names in scope before a body's first statement: its parameters,
@@ -414,20 +422,21 @@ public struct Linker: Sendable {
                     symbol: symbol,
                     block: block,
                     environment: opening(symbol, of: symbol.procedure.signature),
-                    sends: sent(in: block, reaching: wordSymbols)
+                    sends: sent(in: block, reaching: wordSymbols[symbol.origin])
                 )
             },
             reading: frame,
             recording: { qualified, answer in
                 answered[qualified] = answer
 
-                for spelling in wordSpellings[qualified] ?? [] {
-                    wordAnswered[spelling] = answer
+                for origin in wordSpellings.indices {
+                    for spelling in wordSpellings[origin][qualified] ?? [] {
+                        wordAnswered[origin][spelling] = answer
+                    }
                 }
             }
         )
 
-        let frame = frame()
 
         // One declaration resolves once, whichever table asks. The frontier for
         // a reached body, the derivable tables for a body a path may run.
@@ -469,7 +478,7 @@ public struct Linker: Sendable {
                     in: block,
                     at: symbol.place,
                     in: environment,
-                    with: frame,
+                    with: frame(for: symbol.origin),
                     folding: folding,
                     origin: symbol.origin
                 )
@@ -487,7 +496,7 @@ public struct Linker: Sendable {
 
             resolvedBodies[symbol.declared] = answer
 
-            try checked(answer.calls, in: frame)
+            try checked(answer.calls, in: frame(for: symbol.origin))
 
             // Read off the body the link is about to lower, so what is proven
             // is what runs. The environment is the one the body was judged in.
@@ -496,7 +505,7 @@ public struct Linker: Sendable {
                     rewritten,
                     at: symbol.place,
                     holding: declared.signature,
-                    in: frame
+                    in: frame(for: symbol.origin)
                 )
             }
 
@@ -519,7 +528,14 @@ public struct Linker: Sendable {
         // declaration links stays a fact of its text rather than of who happens
         // to call it. In the order the rows stand, so which mistake is
         // reported first is the text's fact too.
-        for symbol in wordSymbols.values.sorted(by: { left, right in
+        // A declaration reachable from more than one document stands once,
+        // under the spelling it was declared by rather than under each bare
+        // segment that reaches it.
+        let reachable = wordSymbols.reduce(into: [Name: Symbol]()) { held, words in
+            for symbol in words.values { held[symbol.declared] = symbol }
+        }
+
+        for symbol in reachable.values.sorted(by: { left, right in
             (rank[left.origin], left.declared) < (rank[right.origin], right.declared)
         }) {
             _ = try resolved(symbol)
@@ -585,7 +601,7 @@ public struct Linker: Sendable {
                 )
             },
             standing: graph.standing,
-            words: wordSymbols.mapValues { symbol in symbol.declared },
+            words: wordSymbols.map { held in held.mapValues { symbol in symbol.declared } },
             types: types
         )
     }

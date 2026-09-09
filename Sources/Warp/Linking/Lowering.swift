@@ -24,7 +24,7 @@ struct Lowering {
     // Read for what a callee takes, which is what judging a call against it
     // needs. What a body is written with is the document's own numbering.
     let rows: [Name: Int]
-    let words: [Name: Int]
+    let words: [[Name: Int]]
 
     // Where each document's calls are numbered from. A body carries these
     // numbers rather than the rows above, so a document lowers the same way
@@ -65,7 +65,7 @@ struct Lowering {
     init(
         table: [Linked],
         rows: [Name: Int],
-        words: [Name: Int],
+        words: [[Name: Int]],
         numbering: [Int: Numbering],
         variables: [Int: [Name: Int]],
         contractWords: [Name: ContractWord] = [:],
@@ -376,7 +376,7 @@ struct Lowering {
                     return reached?.element(in: shapes)
 
                 case let .word(_, spelling, _):
-                    return words[spelling].map { row in table[row].returns } ?? nil
+                    return words[slots.origin][spelling].map { row in table[row].returns } ?? nil
 
                 case .key:
                     return nil
@@ -740,7 +740,10 @@ struct Lowering {
                 return .at(address, optional: optional)
 
             case let .word(name, optional):
-                guard let row = words[name], let stands = numbered(slots.origin).word(name) else {
+                guard
+                    let row = words[slots.origin][name],
+                    let stands = numbered(slots.origin).word(name)
+                else {
                     throw unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
                 }
 
@@ -760,7 +763,7 @@ struct Lowering {
         guard case let .row(row) = numbered(slots.origin).row(
             number,
             rows: rows,
-            words: words,
+            words: words[slots.origin],
             closures: closureRows[slots.origin] ?? []
         ) else {
             return nil

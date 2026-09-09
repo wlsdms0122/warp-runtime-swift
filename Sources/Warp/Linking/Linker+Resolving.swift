@@ -219,7 +219,7 @@ extension Linker {
     func constants(
         of modules: [Module],
         folding answered: Answered,
-        with frame: TypeFrame
+        with framing: (Int) -> TypeFrame
     ) throws -> [Int: [Name: Value]] {
         // Folding runs what it reads, and running reads rows. A lowered body
         // carries its document's own numbers, so the table handed here is one
@@ -227,6 +227,9 @@ extension Linker {
         var settled: [Int: [Name: Value]] = [:]
 
         for (origin, module) in modules.enumerated() where !module.constants.isEmpty {
+            // A document reads its own constants, so the reading is its own.
+            let frame = framing(origin)
+
             var known: [Name: Value] = [:]
 
             // Handed over with what each one reads, so nothing looks a name
@@ -279,11 +282,13 @@ extension Linker {
         of modules: [Module],
         beside constants: [Int: [Name: Value]],
         folding answered: Answered,
-        with frame: TypeFrame
+        with framing: (Int) -> TypeFrame
     ) throws -> [Int: [Name: Value]] {
         var settled: [Int: [Name: Value]] = [:]
 
         for (origin, module) in modules.enumerated() where !module.variables.isEmpty {
+            let frame = framing(origin)
+
             let known = constants[origin] ?? [:]
             var started: [Name: Value] = [:]
 

@@ -235,19 +235,32 @@ extension Linker {
     // declared spelling like every other call.
     func derivable(
         among symbols: [Symbol],
+        for modules: [Module],
         pure: Set<Name>,
         answering contracts: Set<Name>,
         reaching rows: [Name: Int],
         in table: [Linked]
-    ) throws -> [Name: Symbol] {
-        var words: [Name: Symbol] = [:]
+    ) throws -> [[Name: Symbol]] {
+        // Which documents named each declaration. A path names no module, so
+        // what a document may walk to is what it declared and what it said it
+        // imports, and nothing else in the link is something it could have
+        // meant.
+        var wanted: [Name: [Int]] = [:]
+
+        for (origin, module) in modules.enumerated() {
+            for name in module.imports {
+                wanted[name, default: []].append(origin)
+            }
+        }
+
+        var words = [[Name: Symbol]](repeating: [:], count: modules.count)
         // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
         // on a declaration, which makes all of them something a reader has to
         // be able to reach. A slot holding the latest collision would keep the
         // newest two and drop whoever took the name first, so a third arrival
         // hides the declaration the other two are colliding with.
-        var contested: [Name: [Symbol]] = [:]
+        var contested = [[Name: [Symbol]]](repeating: [:], count: modules.count)
 
         // Symbols rather than procedures, because the bodies are still to be
         // read: the caller reads them through the same judgment every other
@@ -266,23 +279,35 @@ extension Linker {
 
             let bare = symbol.declared.unqualified
 
-            // Only two words a path could both reach are ambiguous. A
-            // declaration a path cannot reach shares the link but not the
-            // question, so it is not competing for the name.
-            if let first = words.updateValue(symbol, forKey: bare) {
-                contested[bare, default: [first]].append(symbol)
+            func hold(in origin: Int) {
+                // Only two words a path could both reach are ambiguous. A
+                // declaration a path cannot reach shares the link but not the
+                // question, so it is not competing for the name.
+                if let first = words[origin].updateValue(symbol, forKey: bare) {
+                    contested[origin][bare, default: [first]].append(symbol)
+                }
+            }
+
+            hold(in: symbol.origin)
+
+            for origin in wanted[symbol.declared] ?? [] where origin != symbol.origin {
+                hold(in: origin)
             }
         }
 
-        // The place is one declaration and the sentence names every contested
-        // word, so the name that is walked to is picked in sorted order. The
-        // order a dictionary hands its keys back is seeded per process, and
-        // which declaration an author is sent to would change between runs.
+        // The first document holding a collision, in the order the caller
+        // handed them over, and inside it the first name in sorted order. Two
+        // documents may each hold one, and the order a dictionary hands its
+        // keys back is seeded per process, so which declaration an author is
+        // sent to would otherwise change between runs.
         //
         // The second is what is walked to, the way it is wherever two
         // declarations collide. A name reaches this table only by colliding,
         // so there are always at least two.
-        if let (word, declarations) = contested.min(by: { one, other in one.key < other.key }) {
+        if
+            let origin = contested.indices.first(where: { origin in !contested[origin].isEmpty }),
+            let (word, declarations) = contested[origin].min(by: { one, other in one.key < other.key })
+        {
             // In the order the caller handed the modules over, which is the
             // order every collision refusal is read in: the second is the one
             // that could not be added. Gathered in name order above, because
@@ -291,8 +316,8 @@ extension Linker {
             let ranked = declarations.sorted { one, other in one.origin < other.origin }
 
             throw LinkError(
-                "\(contested.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
-                    + " than one module as something a path may reach. '\(word)' by"
+                "\(contested[origin].keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
+                    + " than one module this document may walk to. '\(word)' by"
                     + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."
                     + " A path segment names no module, so there is no spelling that"
                     + " would tell them apart",

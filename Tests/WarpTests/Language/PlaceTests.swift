@@ -732,7 +732,21 @@ struct PlaceTests {
         let catalog = try declaring("catalog", as: Identity([0x01]))
         let pricing = try declaring("pricing", as: Identity([0x02]))
         let shipping = try declaring("shipping", as: Identity([0x03]))
-        let caller = try Module(procedures: [entryName: Procedure(body: [])])
+        // The caller names all three, which is what makes the three something
+        // one path in it could have meant.
+        let caller = try Module(
+            walked: ["catalog.discounted", "pricing.discounted", "shipping.discounted"],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(
+                        parameters: ["of": Parameter(type: .int)],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: reference("of", "discounted")
+                )
+            ]
+        )
 
         // When. Three of them, because a slot holding the latest collision
         // keeps the newest two and drops whoever took the name first. With two

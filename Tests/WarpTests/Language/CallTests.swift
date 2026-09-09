@@ -92,6 +92,7 @@ struct CallTests {
         let answer = try await answer(
             of: [Statement(binding: .constant("probe"), expression: sut)],
             result: reference("probe"),
+            walked: ["std.collection.count"],
             arguments: ["items": .array([.int(1), .int(2), .int(3)])],
             signature: Signature(parameters: ["items": Parameter(type: .array(.any))])
         )

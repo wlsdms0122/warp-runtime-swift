@@ -19,12 +19,16 @@ struct Answered: Sendable {
     // MARK: - Property
     let table: [Linked]
     let rows: [Name: Int]
-    let words: [Name: Int]
+
+    // By the document that reads them: what a bare spelling reaches is that
+    // document's reading, since a path may walk only to what its document
+    // named.
+    let words: [[Name: Int]]
 
     private let numbers: Numbers
 
     // MARK: - Initializer
-    private init(table: [Linked], rows: [Name: Int], words: [Name: Int], numbers: Numbers) {
+    private init(table: [Linked], rows: [Name: Int], words: [[Name: Int]], numbers: Numbers) {
         self.table = table
         self.rows = rows
         self.words = words
@@ -34,7 +38,7 @@ struct Answered: Sendable {
     // A table holding nothing a link could answer: rows built from native
     // words alone, which carry no lowered body and send nothing.
     static func unanswerable(_ table: [Linked], rows: [Name: Int], words: [Name: Int]) -> Answered {
-        Answered(table: table, rows: rows, words: words, numbers: .rows)
+        Answered(table: table, rows: rows, words: [words], numbers: .rows)
     }
 
     // A table as compiling left it, and where each document numbers from. The
@@ -49,16 +53,18 @@ struct Answered: Sendable {
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
-        words: [Name: Int],
+        words: [[Name: Int]],
         numbering: [Int: Numbering],
         closures: [Int: [Int]]
     ) -> Answered {
-        let named = numbering.mapValues { held in
-            held.answers(rows: rows, words: words).map { answer -> Int? in
-                guard case let .row(row) = answer else { return nil }
+        let named = numbering.reduce(into: [Int: [Int?]]()) { named, entry in
+            named[entry.key] = entry.value
+                .answers(rows: rows, words: words[entry.key])
+                .map { answer -> Int? in
+                    guard case let .row(row) = answer else { return nil }
 
-                return row
-            }
+                    return row
+                }
         }
 
         return Answered(
@@ -71,7 +77,7 @@ struct Answered: Sendable {
 
     // Made by `Relocating` alone, which is what keeps a table nobody answered
     // from standing as one whose numbers are rows.
-    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], words: [Name: Int]) -> Answered {
+    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], words: [[Name: Int]]) -> Answered {
         Answered(table: table, rows: rows, words: words, numbers: .rows)
     }
 
@@ -125,7 +131,7 @@ struct Answered: Sendable {
     func numbering(of origin: Int) -> Numbering? {
         switch numbers {
         case .rows:
-            return Numbering(rows: rows, words: words)
+            return Numbering(rows: rows, words: words.indices.contains(origin) ? words[origin] : [:])
 
         case let .documents(numbering, _, _):
             return numbering[origin]
@@ -164,7 +170,7 @@ struct Relocating {
     private let table: [Linked]
 
     private let rows: [Name: Int]
-    private let words: [Name: Int]
+    private let words: [[Name: Int]]
     private let numbering: [Numbering]
 
     // What each document's shape numbers turned out to be in this link.
@@ -187,7 +193,7 @@ struct Relocating {
     init(
         table: [Linked],
         rows: [Name: Int],
-        words: [Name: Int],
+        words: [[Name: Int]],
         numbering: [Numbering],
         shapeNumbering: [ShapeNumbering],
         contractWords: [Name: ContractWord],
@@ -280,7 +286,7 @@ struct Relocating {
         switch numbering[standing.origin].row(
             number,
             rows: rows,
-            words: words,
+            words: words[standing.origin],
             closures: closures[standing.origin]
         ) {
         case let .row(row):

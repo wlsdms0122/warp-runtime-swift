@@ -718,6 +718,7 @@ struct StandardTests {
     func nilaryWordsAreReachableFromPaths() async throws {
         // Given
         let sut = try Module(
+            walked: ["std.collection.first", "std.collection.last", "std.collection.reversed", "std.text.joined", "std.text.uppercased"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(

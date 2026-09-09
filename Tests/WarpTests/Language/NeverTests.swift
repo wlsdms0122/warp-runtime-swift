@@ -242,7 +242,7 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect(try await run(sut) == .int(2))
+        #expect(try await run(sut, walked: ["std.collection.count"]) == .int(2))
     }
 
     @Test("a loop whose rounds never finish still answers its result")

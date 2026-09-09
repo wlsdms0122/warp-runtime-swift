@@ -253,6 +253,7 @@ struct RangeTests {
     func aDotOnARangeSendsAWord() async throws {
         // Given. A range's value has no fields; the dot reaches vocabulary
         let sut = try Module(
+            walked: ["std.math.absolute"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(

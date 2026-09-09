@@ -350,6 +350,7 @@ struct InferenceTests {
         // Given. `${names.count}` is `count` sent to `names`, and `count`
         // declares that it answers an int
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -685,6 +686,7 @@ struct InferenceTests {
     func aWordReachedFromAPathIsAllowed() throws {
         // Given
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(

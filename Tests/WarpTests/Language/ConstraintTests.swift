@@ -646,6 +646,7 @@ struct ConstraintTests {
         // Given. `"abc".absolute` and `absolute(of: "abc")` mean the same call,
         // so they refuse on the same surface
         let sut = try Module(
+            walked: ["std.math.absolute"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -749,6 +750,7 @@ struct ConstraintTests {
         // bounded receiver refuses the text's reading the way the written call
         // would
         let sut = try Module(
+            walked: ["std.math.absolute"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -775,6 +777,7 @@ struct ConstraintTests {
         // reads fields alone: the word by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
+            walked: ["std.math.absolute"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -892,6 +895,7 @@ struct ConstraintTests {
         // Given. A module's bare `first` lives among the selectors and std's
         // `first` among the path words; one spelling, two questions, two tables
         let sut = try Module(
+            walked: ["std.collection.first"],
             procedures: [
                 "first": Procedure(
                     signature: Signature(
@@ -929,6 +933,7 @@ struct ConstraintTests {
         // receiver's path ends in a word, so a resolver assembled without the
         // word table would read absence where the link approved a call.
         let sut = try Module(
+            walked: ["std.collection.reversed"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(

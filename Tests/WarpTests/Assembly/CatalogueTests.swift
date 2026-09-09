@@ -101,9 +101,10 @@ struct CatalogueTests {
     @Test("a word a path steps to brings the module that declares it")
     func aWalkedWordBringsItsModule() throws {
         // Given. Nothing is called: the body walks a path, and the last step
-        // is a word. `imports` does not hold it, and rightly, since a path
-        // reaches only words that answer without running.
+        // is a word. A path writes only the last segment, so which declaration
+        // it means is what the document says.
         let program = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -116,7 +117,7 @@ struct CatalogueTests {
             ]
         )
 
-        #expect(program.imports.isEmpty)
+        #expect(program.imports == ["std.collection.count"])
 
         // When.
         let closed = try Catalogue(Module.standard).closing([program])
@@ -233,6 +234,7 @@ struct CatalogueTests {
             ]
         )
         let program = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(

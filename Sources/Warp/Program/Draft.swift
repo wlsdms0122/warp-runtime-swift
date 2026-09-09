@@ -25,6 +25,15 @@ public struct Draft: Sendable {
     // module resolves this; here it is still only what was written.
     public let imports: Set<Name>?
 
+    // Which declarations the bare steps in this document's paths mean. What
+    // the text says it uses is read off it, and a path names only the last
+    // segment, so that half of the reading cannot be finished from the text.
+    // Whoever built the draft finishes it here.
+    //
+    // Read only where the document said nothing about its imports: a document
+    // that states them states all of them.
+    public let walked: Set<Name>
+
     public let types: [Name: TypeExpression]
     public let constraints: [Name: [TypeExpression]]
 
@@ -47,6 +56,7 @@ public struct Draft: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
+        walked: Set<Name> = [],
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
@@ -56,6 +66,7 @@ public struct Draft: Sendable {
     ) {
         self.description = description
         self.imports = imports
+        self.walked = walked
         self.types = types
         self.constraints = constraints
         self.contracts = contracts

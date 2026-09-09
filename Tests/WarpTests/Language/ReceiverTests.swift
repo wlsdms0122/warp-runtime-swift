@@ -112,6 +112,7 @@ struct ReceiverTests {
         // Given. The receiver is written on the other side of the dot, so the
         // linker must not read its parameter as one nobody supplied
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -222,6 +223,7 @@ struct ReceiverTests {
         // native, and `${tasks.summarize}` reaches it because the link proved
         // it answers without running.
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -372,6 +374,7 @@ struct ReceiverTests {
         // link reads `array<any>`, finds no field there, and judges the word
         // against the receiver it declared
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -410,6 +413,7 @@ struct ReceiverTests {
         // though a word by that name exists. A word on an undeclared value is
         // reached by declaring the value.
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -444,6 +448,7 @@ struct ReceiverTests {
     func aPathAppliesDefaults() async throws {
         // Given
         let sut = try Module(
+            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -499,6 +504,7 @@ struct ReceiverTests {
             try await answer(
                 of: [Statement(binding: .constant("probe"), expression: sut)],
                 result: reference("probe"),
+                walked: ["std.math.floored"],
                 arguments: ["x": .double(.nan)],
                 signature: Signature(parameters: ["x": Parameter(type: .double)])
             )

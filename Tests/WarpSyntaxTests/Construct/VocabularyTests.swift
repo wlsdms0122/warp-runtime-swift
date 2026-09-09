@@ -52,7 +52,7 @@ struct VocabularyTests {
                 ]]
             ],
             "result": ["result": ["ref": "verdict"], "head": ["ref": "names.first"]]
-        ], importing: ["extra.longerThan"])
+        ], importing: ["extra.longerThan", "std.collection.first"])
 
         // When
         let outputs = try await run(
@@ -96,7 +96,10 @@ struct VocabularyTests {
                 )
             ]
         )
-        let sut = try loader.loadProcedure(["body": [["let": "done", "value": "end"]]])
+        let sut = try loader.loadProcedure([
+            "parameters": ["x": "array<string>"],
+            "body": [["let": "size", "value": ["ref": "x.count"]]]
+        ], importing: ["rival.count", "std.collection.count"])
 
         // When / Then
         #expect(throws: LinkError.self) {
