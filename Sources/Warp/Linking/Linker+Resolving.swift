@@ -59,7 +59,6 @@ extension Linker {
         return Gathered(
             standing: standing,
             symbols: symbols,
-            space: space,
             types: shaped.types,
             contractWords: shaped.contractWords,
             answering: shaped.answering

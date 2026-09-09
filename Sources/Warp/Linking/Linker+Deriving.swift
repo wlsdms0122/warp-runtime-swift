@@ -235,8 +235,8 @@ extension Linker {
     // declared spelling like every other call.
     func derivable(
         for module: Module,
-        declaring holding: [Symbol],
-        among space: [Name: Symbol],
+        declaring declared: [Name],
+        naming documents: [Place.Document],
         pure: Set<Name>,
         answering contracts: Set<Name>,
         reaching rows: [Name: Int],
@@ -245,41 +245,40 @@ extension Linker {
         // What this document may walk to is what it declared and what it said
         // it imports, and nothing else in the link is something it could have
         // meant. A path names no module.
-        let reachable = holding + module.imports.sorted().compactMap { name in space[name] }
+        //
+        // Read off the rows, since a row is the declaration lowered and
+        // whether a path may reach one is a question about the slots it
+        // lowered to. A name with no row is one nothing in this link declares,
+        // which the judgment that owns undeclared names refuses.
+        let reachable = (declared + module.imports.sorted()).compactMap { name in
+            rows[name].map { row in (declared: name, row: row) }
+        }
 
+        var held: [Name: (declared: Name, row: Int)] = [:]
         // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
         // on a declaration, which makes all of them something a reader has to
         // be able to reach. A slot holding the latest collision would keep the
         // newest two and drop whoever took the name first, so a third arrival
         // hides the declaration the other two are colliding with.
-        var contested: [Name: [Symbol]] = [:]
+        var contested: [Name: [(declared: Name, row: Int)]] = [:]
 
-        // The declarations themselves while the walk runs, since a collision
-        // is refused standing on the two that made it. What leaves is the
-        // spelling each bare name reaches, which is all a reading of it needs.
-        var held: [Name: Symbol] = [:]
-
-        // Symbols rather than procedures, because the bodies are still to be
-        // read: the caller reads them through the same judgment every other
-        // declaration takes.
-        for symbol in reachable.sorted(by: { $0.declared < $1.declared }) {
-            guard pure.contains(symbol.declared) else { continue }
-
-            guard rows[symbol.declared].map({ row in table[row].isDerivable }) == true else { continue }
+        for reached in reachable.sorted(by: { $0.declared < $1.declared }) {
+            guard pure.contains(reached.declared) else { continue }
+            guard table[reached.row].isDerivable else { continue }
 
             // A declaration that answers a contract's word is reached through
             // the contract and not by a bare spelling. Two types answering one
             // word is the ordinary case, and a bare segment cannot say which
             // of them is meant, which is the very thing this table refuses.
             // The contract is the spelling that tells them apart.
-            guard !contracts.contains(symbol.declared) else { continue }
+            guard !contracts.contains(reached.declared) else { continue }
 
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
             // question, so it is not competing for the name.
-            if let first = held.updateValue(symbol, forKey: symbol.declared.unqualified) {
-                contested[symbol.declared.unqualified, default: [first]].append(symbol)
+            if let first = held.updateValue(reached, forKey: reached.declared.unqualified) {
+                contested[reached.declared.unqualified, default: [first]].append(reached)
             }
         }
 
@@ -292,7 +291,9 @@ extension Linker {
             // that could not be added. Gathered in name order above, because
             // that is the order the tables are built in, so the two are sorted
             // apart here rather than one being made to serve for both.
-            let ranked = declarations.sorted { one, other in one.origin < other.origin }
+            let ranked = declarations.sorted { one, other in
+                table[one.row].origin < table[other.row].origin
+            }
 
             throw LinkError(
                 "\(contested.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
@@ -300,10 +301,13 @@ extension Linker {
                     + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."
                     + " A path segment names no module, so there is no spelling that"
                     + " would tell them apart",
-                at: ranked[1].place
+                at: .procedure(
+                    ranked[1].declared.spelling,
+                    in: documents[table[ranked[1].row].origin]
+                )
             )
         }
 
-        return held.mapValues { symbol in symbol.declared }
+        return held.mapValues { reached in reached.declared }
     }
 }

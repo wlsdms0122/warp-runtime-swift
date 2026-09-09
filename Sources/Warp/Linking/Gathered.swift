@@ -25,11 +25,6 @@ struct Gathered {
     // handed over and in name order inside each.
     let symbols: [Symbol]
 
-    // The same, by the spelling it was declared by. The spellings are unique,
-    // since the gathering refused a double, and every call in every body asks
-    // this table.
-    let space: [Name: Symbol]
-
     // Every shape the list declared, lowered, with which types answer which
     // contracts worked out. Every judgment a compile makes is asked of this.
     let types: TypeTable

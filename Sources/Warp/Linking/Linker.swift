@@ -78,6 +78,9 @@ public struct Linker: Sendable {
         // table the run will read.
         let shapes = gathered.types.shapes
 
+        // Which document each position is, for a refusal that names one.
+        let documents = modules.map { module in Place.Document.of(module) }
+
         // Purity is worked out over every declaration rather than the reached
         // ones: a path names a word the call graph never mentions.
         let moduleVariables = modules.enumerated().reduce(into: [Int: Set<Name>]()) { table, entry in
@@ -313,11 +316,20 @@ public struct Linker: Sendable {
             // ring where that is not so. Read over every declaration the
             // document holds rather than the reached ones: a path names a word
             // the call graph never mentions.
+            // What this document declares, by the spelling a call in it
+            // writes. Its own rows do not stand yet, and this is what says
+            // what they take until they do.
+            let own = holding.reduce(into: [Name: Signature]()) { asked, symbol in
+                asked[symbol.declared] = symbol.procedure.signature
+            }
+
             pure(among: holding, settling: &settled, reading: moduleVariables)
             isolated(
                 among: holding,
                 settling: &isolatedDeclarations,
-                taking: { selector in gathered.space[selector]?.procedure.signature }
+                taking: { [rows = lowering.rows, table = lowering.table] selector in
+                    own[selector] ?? rows[selector].map { row in table[row].signature }
+                }
             )
             failing(among: holding, settling: &failingDeclarations)
 
@@ -368,8 +380,8 @@ public struct Linker: Sendable {
             // it lowered to.
             let words = try derivable(
                 for: module,
-                declaring: holding,
-                among: gathered.space,
+                declaring: declared,
+                naming: documents,
                 pure: settled,
                 answering: gathered.answering,
                 reaching: lowering.rows,
