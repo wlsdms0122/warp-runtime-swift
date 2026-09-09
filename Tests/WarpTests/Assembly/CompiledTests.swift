@@ -35,8 +35,8 @@ struct CompiledTests {
         let compiled = try compiled([sut] + Module.standard)
 
         // Then. Each image starts where it was asked to.
-        #expect(try linker.link(compiled, entry: "app.here").start == compiled.assembled().rows["app.here"])
-        #expect(try linker.link(compiled, entry: "app.there").start == compiled.assembled().rows["app.there"])
+        #expect(try linker.link(compiled, entry: "app.here").start == Assembled(compiled).rows["app.here"])
+        #expect(try linker.link(compiled, entry: "app.there").start == Assembled(compiled).rows["app.there"])
     }
 
     @Test("what a document says holds whichever entry a caller names")
@@ -105,7 +105,7 @@ struct CompiledTests {
         )
 
         // When.
-        let rows = try compiled([first, second]).assembled().rows
+        let rows = try Assembled(compiled([first, second])).rows
 
         // Then. Each document's rows are next to each other, and in name
         // order inside the run.
@@ -157,7 +157,7 @@ struct CompiledTests {
         let compiled = try compiled([top, middle, bottom])
 
         func purity(of declared: Name) throws -> Purity {
-            try compiled.assembled().table[#require(compiled.assembled().rows[declared])].purity
+            try Assembled(compiled).table[#require(Assembled(compiled).rows[declared])].purity
         }
 
         // Then. The whole chain answers by the run, and what reaches none of
@@ -201,10 +201,10 @@ struct CompiledTests {
         #expect(answer == .int(7))
     }
 
-    @Test("a document's types take a run of shape rows behind the ones it names")
+    @Test("a document's types take a run of shape rows of their own")
     func aDocumentTakesABlockOfShapeRows() throws {
-        // Given. The naming document is handed over first, so only the
-        // standing can put what it names behind it.
+        // Given. A document naming a type another declares, handed over first,
+        // so the rows follow the documents and not what they name.
         let naming = try Module(
             types: ["z.Wraps": .named("a.Held"), "z.Also": .named("a.Held")],
             procedures: [
@@ -216,12 +216,13 @@ struct CompiledTests {
         // When.
         let shapes = try linker.link(compiled([naming, held]), entry: entryName).types.shapes
 
-        // Then. The named document's rows come first, and the naming
-        // document's are a run of their own after them.
+        // Then. Each document's rows are a run of their own, in name order
+        // inside it, laid down in the order the caller handed the documents
+        // over.
         let row = { (declared: Name) in shapes.labels.firstIndex(of: declared) }
 
-        #expect(try #require(row("a.Held")) < #require(row("z.Also")))
         #expect(try #require(row("z.Also")) + 1 == #require(row("z.Wraps")))
+        #expect(try #require(row("z.Wraps")) < #require(row("a.Held")))
     }
 
     @Test("compiling leaves which types answer a contract to the link")
@@ -267,7 +268,7 @@ struct CompiledTests {
         let number = try called(in: code(of: "b.asks", in: compiled))
 
         #expect(number == 0)
-        #expect(number != compiled.assembled().rows["a.answers"])
+        #expect(number != Assembled(compiled).rows["a.answers"])
 
         // And. The link answers with the row.
         let image = try linker.link(compiled, entry: entryName)
@@ -291,7 +292,7 @@ struct CompiledTests {
         let beside = try compiled([ahead] + sut + Module.standard)
 
         // Then. The rows moved and the number the body carries did not.
-        #expect(alone.assembled().rows["a.answers"] != beside.assembled().rows["a.answers"])
+        #expect(Assembled(alone).rows["a.answers"] != Assembled(beside).rows["a.answers"])
         #expect(
             try called(in: code(of: "b.asks", in: alone))
                 == called(in: code(of: "b.asks", in: beside))
@@ -315,7 +316,7 @@ struct CompiledTests {
 
         // Then. The rows moved, and the block the document holds did not: the
         // same spellings in the same order, and its closures behind them.
-        #expect(alone.assembled().rows["b.asks"] != beside.assembled().rows["b.asks"])
+        #expect(Assembled(alone).rows["b.asks"] != Assembled(beside).rows["b.asks"])
         #expect(try block(holding: "b.asks", in: alone) == block(holding: "b.asks", in: beside))
     }
 
@@ -405,8 +406,8 @@ struct CompiledTests {
 
     // MARK: - Private
     // What a compile read off the body of a declaration that wrote no answer.
-    private func answer(of declared: Name, in compiled: Compiled) throws -> Shape {
-        guard let read = compiled.documents.compactMap({ document in document.answers[declared] }).first else {
+    private func answer(of declared: Name, in compiled: [Compiled]) throws -> Shape {
+        guard let read = compiled.compactMap({ document in document.answers[declared] }).first else {
             throw LinkError("nothing read an answer for '\(declared)'", at: nil)
         }
 
@@ -415,7 +416,7 @@ struct CompiledTests {
 
     // Compiling a whole graph: what the list answers first, then the
     // documents against it.
-    private func compiled(_ modules: [Module]) throws -> Compiled {
+    private func compiled(_ modules: [Module]) throws -> [Compiled] {
         try linker.compile(modules, in: linker.gathering(of: modules))
     }
 
@@ -423,18 +424,18 @@ struct CompiledTests {
     // in the order its rows stand, and what each of those rows is called.
     private func block(
         holding declared: Name,
-        in compiled: Compiled
+        in compiled: [Compiled]
     ) throws -> (declared: [Name], rows: [Name]) {
         let document = try #require(
-            compiled.documents.first { document in document.declared.contains(declared) }
+            compiled.first { document in document.declared.contains(declared) }
         )
 
         return (document.declared, document.table.map(\.label))
     }
 
     // What a declaration's row holds, whichever table it was read out of.
-    private func code(of declared: Name, in compiled: Compiled) throws -> Linked.Implementation {
-        let assembled = compiled.assembled()
+    private func code(of declared: Name, in compiled: [Compiled]) throws -> Linked.Implementation {
+        let assembled = Assembled(compiled)
 
         return try assembled.table[#require(assembled.rows[declared])].implementation
     }

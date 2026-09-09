@@ -220,7 +220,7 @@ struct Relocating {
     // contract reads the row the link found answering it, over the parameters
     // that row takes, so every row is made to stand here rather than as the
     // walk reaches it.
-    init(_ assembled: Compiled.Assembled, types: TypeTable) {
+    init(_ assembled: Assembled, types: TypeTable) {
         let shapes = types.shapes
 
         self.init(

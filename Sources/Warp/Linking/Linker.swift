@@ -73,7 +73,7 @@ public struct Linker: Sendable {
     //
     // What the whole list answered is handed over rather than read again. A
     // document has no say in any of it.
-    func compile(_ modules: [Module], in gathered: Gathered) throws -> Compiled {
+    func compile(_ modules: [Module], in gathered: Gathered) throws -> [Compiled] {
         // Every judgment the link asks and every row it builds reads the
         // table the run will read.
         let shapes = gathered.types.shapes
@@ -518,41 +518,38 @@ public struct Linker: Sendable {
         // where they sit leaves here.
         let judged = shaped.table.map(Judged.init)
 
-        return Compiled(
-            documents: modules.indices.map { origin in
-                let declared = declaredBy[origin]
+        return modules.indices.map { origin in
+            let declared = declaredBy[origin]
 
-                return Compiled.Document(
-                    document: .of(modules[origin]),
-                    types: modules[origin].types,
-                    constraints: modules[origin].constraints,
-                    contracts: modules[origin].contracts,
-                    declared: declared,
-                    table: declared.compactMap { name in lowering.rows[name].map { row in judged[row] } }
-                        + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
-                    calls: declared.map { name in calls[name] ?? [] },
-                    answers: declared.reduce(into: [Name: Shape]()) { held, name in
-                        held[name] = shaped.answers[name]
-                    },
-                    words: walked[origin],
-                    numbering: lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
-                    shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
-                    variables: orderedVariables[origin].map { name in
-                        (name: name, value: variables[origin]?[name] ?? .null)
-                    }
-                )
-            },
-            standing: gathered.standing
-        )
+            return Compiled(
+                document: .of(modules[origin]),
+                types: modules[origin].types,
+                constraints: modules[origin].constraints,
+                contracts: modules[origin].contracts,
+                declared: declared,
+                table: declared.compactMap { name in lowering.rows[name].map { row in judged[row] } }
+                    + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
+                calls: declared.map { name in calls[name] ?? [] },
+                answers: declared.reduce(into: [Name: Shape]()) { held, name in
+                    held[name] = shaped.answers[name]
+                },
+                words: walked[origin],
+                numbering: lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
+                shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
+                variables: orderedVariables[origin].map { name in
+                    (name: name, value: variables[origin]?[name] ?? .null)
+                }
+            )
+        }
     }
 
     // Which row a run starts from, and which declarations it reaches. Nothing
     // is judged and nothing runs: every declaration stands judged already, and
     // the answer is read off the call graph the judgment gathered.
-    func link(_ compiled: Compiled, entry: Name) throws -> Image {
+    func link(_ compiled: [Compiled], entry: Name) throws -> Image {
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
-        let assembled = compiled.assembled()
+        let assembled = Assembled(compiled)
 
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
@@ -583,14 +580,14 @@ public struct Linker: Sendable {
         // laid down in the order their blocks are. Which types answer which
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
-        let declared = try declared(in: compiled.documents)
+        let declared = try declared(in: compiled)
         let types = try shaped(
             self.types(
                 declared: declared.types,
                 constraints: declared.constraints,
                 contracts: declared.contracts,
-                of: compiled.documents,
-                standing: compiled.standing,
+                of: compiled,
+                standing: Array(compiled.indices),
                 numbered: Linkage()
             ),
             types: declared.types,
@@ -600,7 +597,7 @@ public struct Linker: Sendable {
 
                 table[entry.key] = Declared(
                     assembled.table[entry.value].signature,
-                    at: .procedure(entry.key.spelling, in: compiled.documents[origin].document),
+                    at: .procedure(entry.key.spelling, in: compiled[origin].document),
                     of: origin
                 )
             }
