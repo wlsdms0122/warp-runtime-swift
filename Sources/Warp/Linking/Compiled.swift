@@ -11,9 +11,8 @@ import Foundation
 // few facts no document could have settled alone.
 //
 // A document's compile stands on its own and is `Document`. What sits here
-// next to them is the graph's. Which declaration a bare spelling reaches
-// depends on which types answer which contracts, and that is read off the
-// documents together rather than off any one of them.
+// next to them is the graph's: the order the blocks are laid down, and the
+// shapes of the whole link.
 //
 // Which declaration a run starts from is not here either, so an entry names
 // nothing in this and one graph compiled once answers every entry asked of it.
@@ -36,6 +35,12 @@ struct Compiled: Sendable {
         // what was proved rather than what a second reading of the same text
         // would find.
         let calls: [[Name]]
+
+        // Which declaration each bare spelling a path in here steps to
+        // reaches. A path names only its last segment, and a document steps
+        // only to what it declared or named, so the reading is this
+        // document's.
+        let words: [Name: Name]
 
         // Where this document's lowered bodies number their calls and their
         // shapes from. A body carries the document's own numbers, so this is
@@ -86,15 +91,6 @@ struct Compiled: Sendable {
     // laid down: a document's rows are behind the rows it reaches.
     let standing: [Int]
 
-    // Which declaration a bare spelling a path steps to reaches, by the
-    // document that steps to it. A document walks only to what it declared or
-    // named, so the reading is that document's.
-    //
-    // Not the document's own to settle, though: a declaration answering a
-    // contract is left out, and which types answer which contracts is a fact
-    // of the graph.
-    let words: [[Name: Name]]
-
     let types: TypeTable
 
     // MARK: - Initializer
@@ -137,7 +133,9 @@ struct Compiled: Sendable {
         return Assembled(
             table: table,
             rows: rows,
-            words: words.map { held in held.compactMapValues { declared in rows[declared] } },
+            words: documents.map { document in
+                document.words.compactMapValues { declared in rows[declared] }
+            },
             closures: closures,
             calls: calls,
             numbering: documents.map(\.numbering),

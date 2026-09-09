@@ -587,6 +587,7 @@ public struct Linker: Sendable {
                     table: declared.compactMap { name in rows[name].map { row in judged[row] } }
                         + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
                     calls: declared.map { name in calls[name] ?? [] },
+                    words: wordSymbols[origin].mapValues { symbol in symbol.declared },
                     numbering: numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
                     shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
                     variables: (orderedVariables[origin] ?? []).map { name in
@@ -595,7 +596,6 @@ public struct Linker: Sendable {
                 )
             },
             standing: standing,
-            words: wordSymbols.map { held in held.mapValues { symbol in symbol.declared } },
             types: types
         )
     }
