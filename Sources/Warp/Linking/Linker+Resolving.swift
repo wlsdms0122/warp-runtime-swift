@@ -47,6 +47,9 @@ extension Linker {
         let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
             table[symbol.declared] = symbol
         }
+        let signatures = space.mapValues { symbol in
+            Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
+        }
 
         // Which types answer which contracts. Read off the declarations, so it
         // is worked out here rather than where the types were declared, and
@@ -56,7 +59,7 @@ extension Linker {
         let witnessed = try witnesses(
             of: declaredContracts,
             over: declaredTypes,
-            among: space,
+            among: signatures,
             in: declaring
         )
         let types = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })

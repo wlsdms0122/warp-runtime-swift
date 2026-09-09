@@ -24,7 +24,7 @@ extension Linker {
     func witnesses(
         of contracts: [Name: Declared<[Name: Signature]>],
         over types: [Name: Declared<TypeExpression>],
-        among space: [Name: Symbol],
+        among space: [Name: Declared<Signature>],
         in table: TypeTable
     ) throws -> [Name: [Name: [Name: Name]]] {
         var gathered: [Name: [Name: [Name: Name]]] = [:]
@@ -38,13 +38,13 @@ extension Linker {
                 for (word, asked) in declaration.held.sorted(by: { $0.key < $1.key }) {
                     let spelling = ContractWord.spelling(of: type, word: word)
 
-                    guard let symbol = space[spelling] else { break }
+                    guard let witness = space[spelling] else { break }
                     guard
                         try answers(
                             asked,
-                            as: symbol.procedure.signature,
+                            as: witness.held,
                             receiving: type,
-                            at: symbol.place,
+                            at: witness.place,
                             of: contract,
                             word: word,
                             in: table
