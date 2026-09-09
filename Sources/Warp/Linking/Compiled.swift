@@ -31,10 +31,11 @@ struct Compiled: Sendable {
 
         let table: [Judged]
 
-        // What each declaration calls, by declared spelling. Read off the
-        // bodies as they were judged, so what a link walks is what was proved
-        // rather than what a second reading of the same text would find.
-        let calls: [Name: [Name]]
+        // What each declaration calls, beside the spelling it was declared
+        // by. Read off the bodies as they were judged, so what a link walks is
+        // what was proved rather than what a second reading of the same text
+        // would find.
+        let calls: [[Name]]
 
         // Where this document's lowered bodies number their calls and their
         // shapes from. A body carries the document's own numbers, so this is
@@ -62,12 +63,17 @@ struct Compiled: Sendable {
         // Which row each document's closures took, in the order that document
         // numbers them. A closure is a row like any other and no declared
         // spelling reaches it, so it stands here rather than in `rows`.
-        let closures: [Int: [Int]]
+        let closures: [[Int]]
 
-        let calls: [Name: [Name]]
-        let numbering: [Int: Numbering]
-        let shapeNumbering: [Int: ShapeNumbering]
-        let variables: [Int: [(name: Name, value: Value)]]
+        // What each row calls, by row. A closure calls through its own body
+        // and is reached by no spelling, so its entry is empty.
+        let calls: [[Name]]
+
+        // By document, which is what a body carries and what a row says it
+        // came from. Read at every row walked, so read by position.
+        let numbering: [Numbering]
+        let shapeNumbering: [ShapeNumbering]
+        let variables: [[(name: Name, value: Value)]]
     }
 
     // MARK: - Property
@@ -93,15 +99,16 @@ struct Compiled: Sendable {
     // read: the blocks are copied in and the names are answered with where
     // their block began.
     func assembled() -> Assembled {
-        var table: [Judged] = []
-        var rows: [Name: Int] = [:]
-        var closures: [Int: [Int]] = [:]
-        var calls: [Name: [Name]] = [:]
-        var numbering: [Int: Numbering] = [:]
-        var shapeNumbering: [Int: ShapeNumbering] = [:]
-        var variables: [Int: [(name: Name, value: Value)]] = [:]
+        let held = documents.reduce(0) { held, document in held + document.table.count }
 
-        table.reserveCapacity(documents.reduce(0) { held, document in held + document.table.count })
+        var table: [Judged] = []
+        var calls: [[Name]] = []
+        var rows: [Name: Int] = [:]
+        var closures = [[Int]](repeating: [], count: documents.count)
+
+        table.reserveCapacity(held)
+        calls.reserveCapacity(held)
+        rows.reserveCapacity(held)
 
         for origin in standing {
             let document = documents[origin]
@@ -114,12 +121,12 @@ struct Compiled: Sendable {
             closures[origin] = (document.declared.count..<document.table.count).map { row in
                 start + row
             }
-            calls.merge(document.calls) { first, _ in first }
-            numbering[origin] = document.numbering
-            shapeNumbering[origin] = document.shapeNumbering
-            variables[origin] = document.variables
 
             table.append(contentsOf: document.table)
+            calls.append(contentsOf: document.calls)
+            calls.append(
+                contentsOf: [[Name]](repeating: [], count: document.table.count - document.calls.count)
+            )
         }
 
         return Assembled(
@@ -128,9 +135,9 @@ struct Compiled: Sendable {
             words: words.compactMapValues { declared in rows[declared] },
             closures: closures,
             calls: calls,
-            numbering: numbering,
-            shapeNumbering: shapeNumbering,
-            variables: variables
+            numbering: documents.map(\.numbering),
+            shapeNumbering: documents.map(\.shapeNumbering),
+            variables: documents.map(\.variables)
         )
     }
 

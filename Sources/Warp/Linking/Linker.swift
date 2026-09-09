@@ -576,9 +576,7 @@ public struct Linker: Sendable {
                     declared: declared,
                     table: declared.compactMap { name in rows[name].map { row in judged[row] } }
                         + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
-                    calls: declared.reduce(into: [Name: [Name]]()) { held, name in
-                        held[name] = calls[name] ?? []
-                    },
+                    calls: declared.map { name in calls[name] ?? [] },
                     numbering: numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
                     shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
                     variables: (orderedVariables[origin] ?? []).map { name in
@@ -620,8 +618,9 @@ public struct Linker: Sendable {
             index += 1
 
             guard reached.insert(declared).inserted else { continue }
+            guard let row = assembled.rows[declared] else { continue }
 
-            frontier.append(contentsOf: assembled.calls[declared] ?? [])
+            frontier.append(contentsOf: assembled.calls[row])
         }
 
         // The documents' own numbers turned into this link's rows, and the
@@ -634,7 +633,9 @@ public struct Linker: Sendable {
             rows: assembled.rows,
             reached: reached,
             types: compiled.types,
-            variables: assembled.variables
+            variables: assembled.variables.enumerated().reduce(into: [:]) { held, entry in
+                held[entry.offset] = entry.element
+            }
         )
     }
 

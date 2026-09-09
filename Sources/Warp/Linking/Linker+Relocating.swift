@@ -165,7 +165,7 @@ struct Relocating {
 
     private let rows: [Name: Int]
     private let words: [Name: Int]
-    private let numbering: [Int: Numbering]
+    private let numbering: [Numbering]
 
     // What each document's shape numbers turned out to be in this link.
     //
@@ -173,7 +173,7 @@ struct Relocating {
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no shape
     // and has no entry here.
-    private let shapeRows: [Int: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]
+    private let shapeRows: [(types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])]
 
     private let contractWords: [Name: ContractWord]
     private let shapes: ShapeTable
@@ -181,17 +181,17 @@ struct Relocating {
     // Which row each document's closures took. A closure is reached by a
     // number and by nothing else, so this answers where the two name tables
     // answer a spelling.
-    private let closures: [Int: [Int]]
+    private let closures: [[Int]]
 
     // MARK: - Initializer
     init(
         table: [Linked],
         rows: [Name: Int],
         words: [Name: Int],
-        numbering: [Int: Numbering],
-        shapeNumbering: [Int: ShapeNumbering],
+        numbering: [Numbering],
+        shapeNumbering: [ShapeNumbering],
         contractWords: [Name: ContractWord],
-        closures: [Int: [Int]],
+        closures: [[Int]],
         shapes: ShapeTable
     ) {
         self.closures = closures
@@ -199,7 +199,7 @@ struct Relocating {
         self.rows = rows
         self.words = words
         self.numbering = numbering
-        self.shapeRows = shapeNumbering.mapValues { held in
+        self.shapeRows = shapeNumbering.map { held in
             (
                 types: held.types.indices.map { number in held.type(number, in: shapes) },
                 memberships: held.memberships.indices.map { number in
@@ -248,7 +248,7 @@ struct Relocating {
     private struct Standing {
         let origin: Int
         let label: Name
-        let shapes: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])?
+        let shapes: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])
     }
 
     private func relocated(_ row: Linked) throws -> Linked {
@@ -277,18 +277,11 @@ struct Relocating {
     // Which row of this link a document's number stands for. The reading is
     // the numbering's; what to say when it does not answer is this.
     private func row(_ number: Int, in standing: Standing) throws -> Int {
-        guard let numbering = numbering[standing.origin] else {
-            throw LinkError.unjudged(
-                "a call standing at \(number) in a document that numbered nothing",
-                at: place(of: standing.label)
-            )
-        }
-
-        switch numbering.row(
+        switch numbering[standing.origin].row(
             number,
             rows: rows,
             words: words,
-            closures: closures[standing.origin] ?? []
+            closures: closures[standing.origin]
         ) {
         case let .row(row):
             return row
@@ -471,12 +464,7 @@ struct Relocating {
     }
 
     private func relocated(_ shape: Shape, in standing: Standing) throws -> Shape {
-        guard let answers = standing.shapes else {
-            throw LinkError.unjudged(
-                "a shape in a document that numbered none",
-                at: place(of: standing.label)
-            )
-        }
+        let answers = standing.shapes
 
         return try shape.renumbered(
             type: { number in try row(answers.types, at: number, calling: "named", in: standing) },
