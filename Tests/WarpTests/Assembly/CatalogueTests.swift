@@ -282,4 +282,57 @@ struct CatalogueTests {
         // Then. Whatever came, the link is satisfied by it.
         #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
     }
+
+    @Test("a claim brings the documents that answer it")
+    func aClaimBringsItsWitnesses() throws {
+        // Given. Three documents: the type and the claim in one, the contract
+        // in another, and the declaration that answers it in a third. The
+        // program names the type and never the contract.
+        let holding = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            claiming: ["bank.Account": ["app.Describable"]],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
+        )
+        let answering = try Module(
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                )
+            ]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .named("bank.Account")),
+                    body: [],
+                    result: .cast(
+                        .record(["balance": .literal(.int(7))]),
+                        as: .named("bank.Account"),
+                        optional: false
+                    )
+                )
+            ]
+        )
+
+        // When. The program is closed against the catalogue
+        let closed = try Catalogue([holding, asking, answering]).closing([program])
+
+        // Then. The document answering the claim came too, and the list links.
+        // A claim nothing answers refuses, so a closing that left it out would
+        // refuse a program that says nothing about the contract at all
+        #expect(closed.count == 4)
+        #expect(throws: Never.self) {
+            try linker.link(closed + Module.standard, entry: entryName)
+        }
+    }
 }
