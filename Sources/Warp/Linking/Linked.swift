@@ -7,13 +7,17 @@
 
 import Foundation
 
-// A declaration, or a closure literal, as the link left it. A written body is
-// lowered code with its frame layout; a native answers as it is. A class, so a
-// call reads it without copying it and a closure value holds its own.
+// A declaration, or a closure literal, read against a shape table: the
+// parameters as a run settles them and what the answer settles against, which
+// are that table's rows. What a document settles without one is `Judged`.
 //
-// A declaration stands as a row of the table a run reads. A closure literal
-// does not: it has no declared spelling, so nothing could reach it by name,
-// and `Operation.closure` carries it inside the body that wrote it.
+// A written body is lowered code with its frame layout; a native answers as it
+// is. A class, so a call reads it without copying it and a closure value holds
+// its own.
+//
+// Both stand as rows of the table a run reads. A closure literal has no
+// declared spelling, so no table of names reaches it and `Operation.closure`
+// carries the number that does.
 public final class Linked: Sendable {
     enum Implementation: Sendable {
         case body(Body, Frame)
