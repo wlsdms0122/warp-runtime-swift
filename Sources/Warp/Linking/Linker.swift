@@ -211,11 +211,10 @@ public struct Linker: Sendable {
         let reading = Set(module.variables.keys)
 
         // What the link read off this document's bodies whose declarations
-        // wrote no `returns`, and the spellings a path reaches each of them
-        // by. A word may be reachable under more than one, and an answer
-        // worked out for it is that declaration's however a walk spelled it.
+        // wrote no `returns`, and which declaration each bare spelling its
+        // paths step to reaches.
         var read: [Name: Shape] = [:]
-        var stepping: [Name: Shape] = [:]
+        var reached: [Name: Name] = [:]
 
         // What this document settled, and what each of its declarations calls.
         var constants: [Name: Value] = [:]
@@ -225,7 +224,7 @@ public struct Linker: Sendable {
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.
         func frame() -> TypeFrame {
-            compiling.frame(of: origin, stepping: stepping, reading: reading)
+            compiling.frame(stepping: reached, reading: reading)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -407,9 +406,7 @@ public struct Linker: Sendable {
             in: compiling.lowering.table
         )
 
-        let spellings = words.reduce(into: [Name: [Name]]()) { spellings, entry in
-            spellings[entry.value, default: []].append(entry.key)
-        }
+        reached = words
 
         compiling.steps(origin, to: words.compactMapValues { declared in compiling.lowering.rows[declared] })
 
@@ -462,10 +459,6 @@ public struct Linker: Sendable {
                 read[qualified] = answer
 
                 compiling.read(answer, as: qualified, of: origin)
-
-                for spelling in spellings[qualified] ?? [] {
-                    stepping[spelling] = answer
-                }
             }
         )
 

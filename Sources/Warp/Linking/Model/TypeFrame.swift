@@ -35,14 +35,12 @@ struct TypeFrame: Sendable {
     // table and by one language.
     var shapes: ShapeTable { types.shapes }
 
-    // Which row a path reaches under each spelling, and what the link read
-    // off a body that declared no answer. Read the way a selector's are.
-    //
-    // The rows are the gate as well as the reading: a bare spelling is in here
-    // when a path of this document may step to it, so what it may call and
-    // what it answers with cannot disagree.
-    let wordRows: [Name: Int]
-    let wordAnswers: [Name: Shape]
+    // Which declaration a path reaches under each bare spelling. The gate as
+    // well as the reading: a spelling is in here when a path of this document
+    // may step to it, and what it takes and answers is then read the way a
+    // selector's is, so the two spellings never disagree about one
+    // declaration.
+    let words: [Name: Name]
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
@@ -75,7 +73,7 @@ struct TypeFrame: Sendable {
     // asking whether a path may call it. A softer question was how a word
     // nobody may reach got a type.
     func signature(reachedBy name: Name) -> Signature? {
-        wordRows[name].map { row in linked[row].signature }
+        words[name].flatMap { declared in signature(of: declared) }
     }
 
     // What a call is written against: the whole signature rather than what it
@@ -115,13 +113,11 @@ struct TypeFrame: Sendable {
 
     // The same two, under the spelling a path reaches a word by.
     func slots(reachedBy name: Name) -> [Slot] {
-        wordRows[name].map { row in linked[row].slots } ?? []
+        words[name].map { declared in slots(of: declared) } ?? []
     }
 
     func answer(reachedBy name: Name) -> Shape? {
-        if let read = wordAnswers[name] { return read }
-
-        return wordRows[name].flatMap { row in linked[row].returns }
+        words[name].flatMap { declared in answer(of: declared) }
     }
 
     // A named type stands for what it was declared as. Inference walks into

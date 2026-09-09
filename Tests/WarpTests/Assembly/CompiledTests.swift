@@ -489,6 +489,52 @@ struct CompiledTests {
         }
     }
 
+    @Test("a path steps to a word of another document and reads what its body answers")
+    func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
+        // Given. A document declaring a word that writes no `returns`, and
+        // another whose path steps to it and then into what it answers.
+        let answering = try Module(
+            types: ["a.Held": .record(["count": .int])],
+            procedures: [
+                "a.first": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .array(.int))]
+                    ),
+                    body: [],
+                    result: .cast(
+                        .record(["count": .literal(.int(3))]),
+                        as: .named("a.Held"),
+                        optional: false
+                    )
+                )
+            ]
+        )
+        let walking = try Module(
+            walked: ["a.first"],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(
+                        parameters: ["items": Parameter(type: .array(.int))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("items"), .key("first"), .key("count")])
+                )
+            ]
+        )
+
+        // When / Then. The step into `count` is judged against what the word's
+        // body answers, which is a shape only the other document's reading
+        // knows.
+        #expect(
+            try await run(
+                [walking, answering],
+                arguments: ["items": .array([.int(1)])]
+            ) == .int(3)
+        )
+    }
+
     // MARK: - Private
     // What a compile read off the body of a declaration that wrote no answer.
     private func answer(of declared: Name, in compiled: [Compiled]) throws -> Shape {

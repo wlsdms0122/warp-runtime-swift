@@ -230,18 +230,13 @@ struct Compiling {
 
     // One document's reading. What a path may walk to is the document's own,
     // so a frame is made for the document whose body is being read.
-    func frame(
-        of origin: Int,
-        stepping words: [Name: Shape],
-        reading variables: Set<Name>
-    ) -> TypeFrame {
+    func frame(stepping words: [Name: Name], reading variables: Set<Name>) -> TypeFrame {
         TypeFrame(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,
             answers: answers,
-            wordRows: lowering.words[origin],
-            wordAnswers: words,
+            words: words,
             pure: pure,
             isolated: isolated,
             failing: failing,
