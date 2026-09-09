@@ -84,28 +84,27 @@ Each step refuses rather than guesses, and everything refusable is refused
 while nothing has run, including the branches this run would not have taken.
 The stages and what each one checks are the specification's, not this file's.
 
-## The stages inside a link
+## Compiling and linking
 
 The specification names three stages a refusal can come from: `load`, `link`
-and `run`. `load` is `Loader`, `run` is `Executor`, and `link` is `Linker`.
-
-Inside `Linker` that middle stage is two, and they are the two an ordinary
+and `run`. `load` is `Loader` and `run` is `Executor`. The middle one is a
+**build**, and a build is compiling and linking, the same two an ordinary
 toolchain has.
 
-| stage | what it answers | what varies |
+| | what it answers | what varies |
 |---|---|---|
 | compile | every declaration judged and lowered, and the call graph read off it | the modules |
 | link | one table a run reads, walked from a named entry | the entry |
 
 The line between them is the numbering. **A lowered body carries the numbers
 its own document gave**, so what a document lowers to is the same text in every
-link, and turning those numbers into rows of a table is the link's work. That is
+link, and resolving those numbers to rows of a table is the link's work. That is
 why one compile answers every entry asked of it: which declaration a run starts
 from is not a fact about the documents.
 
-A caller sees one door, `Linker.link(_ modules:entry:)`, and the split is inside
-it. Compiling still takes the whole set of modules at once, and the table a
-compile is read against is its own.
+`Linker` performs the whole build today and a caller sees one door,
+`Linker.link(_ modules:entry:)`. Compiling takes the whole set of modules at
+once, and the table a compile is read against is its own.
 
 `Loader` reads the canonical document and nothing else by default. Which
 construct words exist is a `ConstructRegistry`; a host may register its own

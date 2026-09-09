@@ -27,10 +27,9 @@ struct Numbering: Sendable {
         case sent(Name)
         case walked(Name)
 
-        // A closure literal the document wrote, by which one it is. No name
-        // reaches it, so the link answers it by position rather than by
-        // spelling, the way a Wasm function index space holds functions no
-        // export names.
+        // A closure literal the document wrote, by which one it is. Lifting one
+        // out leaves a procedure no declared spelling reaches, so the link
+        // answers it by position rather than by spelling.
         case closure(Int)
     }
 

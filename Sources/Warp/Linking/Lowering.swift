@@ -13,8 +13,9 @@ import Foundation
 // judged here: a name this walk cannot place is a body the link let through
 // unjudged, and is refused as the link's own mistake.
 //
-// The table has one row per declaration. A closure literal is a body of its
-// own with its own frame, lowered into a row the closure code holds itself.
+// The table has one row per procedure. A closure literal is a procedure the
+// document wrote inside another, so it is lifted out into a row of its own and
+// the code that made it holds the number that reaches it.
 struct Lowering {
     // MARK: - Property
     private(set) var table: [Linked]
