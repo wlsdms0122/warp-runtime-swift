@@ -102,8 +102,8 @@ struct Folding {
         try read(.reference(path), at: place)
     }
 
-    // What an expression reads here. A closure it holds is carried in the
-    // code, so the table is read and never grown.
+    // What an expression reads here. A closure it holds takes a row of its
+    // own, so the table this runs against is the one lowering just grew.
     func read(_ expression: Expression, at place: Place = .given(Self.label.spelling)) throws -> Value {
         // Folding runs what it lowers beside bodies the table already holds,
         // so it lowers in the numbering those bodies stand in. A number the
@@ -113,11 +113,20 @@ struct Folding {
             throw LinkError.unjudged("an expression in a document that numbered nothing", at: place)
         }
 
-        let lowering = Lowering(
+        // Room for the closures this expression writes. They stand after the
+        // document's own, and the rows they take are handed to the run below
+        // the same way.
+        let written = expression.buried.count { held in
+            guard case .closure = held else { return false }
+
+            return true
+        }
+
+        var lowering = Lowering(
             table: answered.table,
             rows: answered.rows,
             words: answered.words,
-            numbering: [origin: numbering],
+            numbering: [origin: numbering.folding(written, for: Self.label)],
             variables: [:],
             shapes: shapes
         )
@@ -131,8 +140,8 @@ struct Folding {
         let executor = Executor(
             observer: nil,
             environment: nil,
-            linked: answered.table,
-            resolving: answered.resolving,
+            linked: lowering.table,
+            resolving: answered.resolving.holding(lowering.closureRows[origin] ?? [], of: origin),
             shapes: shapes
         )
 

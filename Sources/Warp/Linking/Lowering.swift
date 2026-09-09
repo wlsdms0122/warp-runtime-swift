@@ -48,6 +48,18 @@ struct Lowering {
     // out from it once everything is lowered.
     private(set) var standing: [Int: Standing] = [:]
 
+    // Which row of this table each document's closures took, in the order the
+    // document numbers them. A closure is a row like any other; what tells it
+    // apart is that no declared spelling reaches it, so this stands beside
+    // `rows` rather than in it.
+    private(set) var closureRows: [Int: [Int]] = [:]
+
+    // How many closures each declaration has been lowered so far, by the
+    // document that declared it. A closure's number is its declaration's start
+    // plus this, so nesting counts with the rest: a closure inside a closure is
+    // still one its declaration wrote.
+    private var written: [Int: [Name: Int]] = [:]
+
     // MARK: - Initializer
     init(
         table: [Linked],
@@ -96,7 +108,7 @@ struct Lowering {
     // own expression is, and as a body's constant path is when it folds. The
     // frame starts as `names` in slot order and grows with what the
     // expression declares; the frame says how large it is.
-    func lower(
+    mutating func lower(
         _ expression: Expression,
         reading names: [Name],
         origin: Int,
@@ -257,7 +269,7 @@ struct Lowering {
         }
     }
 
-    private func lower(
+    private mutating func lower(
         _ block: Block,
         in scope: Names,
         on slots: Slots,
@@ -276,7 +288,7 @@ struct Lowering {
     // Statements in order: a statement's expression is lowered before the
     // name it binds exists, so a name reads what the statement before it
     // bound.
-    private func lower(
+    private mutating func lower(
         _ statements: [Statement],
         in scope: inout Names,
         on slots: Slots,
@@ -383,7 +395,7 @@ struct Lowering {
         }
     }
 
-    private func lower(
+    private mutating func lower(
         _ expression: Expression,
         in scope: Names,
         on slots: Slots,
@@ -429,7 +441,27 @@ struct Lowering {
             }
 
             let body = try lower(block, in: innerScope, on: inner, label: label, at: place)
-            return .closure(
+
+            // Taken before the body is lowered would number a closure before
+            // the ones it holds; taken after numbers the innermost first. The
+            // count read off the document walks the same way, so this reads it
+            // here.
+            let count = written[slots.origin, default: [:]][label, default: 0]
+            written[slots.origin, default: [:]][label] = count + 1
+
+            let held = numbered(slots.origin)
+            let row = table.count
+            let stands: (number: Int, written: Int)?
+
+            if held.numbersAreRows {
+                stands = nil
+            } else if let given = held.closure(count, of: label) {
+                stands = given
+            } else {
+                throw unjudged("a closure in a declaration whose document numbered none", at: place)
+            }
+
+            table.append(
                 Linked(
                     label: label,
                     origin: slots.origin,
@@ -439,9 +471,21 @@ struct Lowering {
                     failing: procedure.failing,
                     implementation: .body(body, inner.frame),
                     in: shapes
-                ),
-                captures: inner.captures
+                )
             )
+
+            guard let stands else { return .closure(row, captures: inner.captures) }
+
+            var taken = closureRows[slots.origin] ?? []
+
+            if taken.count <= stands.written {
+                taken.append(contentsOf: Array(repeating: row, count: stands.written + 1 - taken.count))
+            }
+
+            taken[stands.written] = row
+            closureRows[slots.origin] = taken
+
+            return .closure(stands.number, captures: inner.captures)
 
         case let .apply(callee, arguments):
             return .apply(
@@ -538,7 +582,7 @@ struct Lowering {
         }
     }
 
-    private func lower(
+    private mutating func lower(
         _ call: Call,
         through asked: ContractWord,
         in scope: Names,
@@ -575,30 +619,26 @@ struct Lowering {
     // What a call was written with, lowered once and under the names it was
     // written under. In name order, so which slots a nested body takes is the
     // text's fact rather than a dictionary's.
-    private func arguments(
+    private mutating func arguments(
         of call: Call,
         in scope: Names,
         on slots: Slots,
         label: Name,
         at place: Place
     ) throws -> [Name: Argument] {
-        try call.arguments
-            .sorted { left, right in left.key < right.key }
-            .reduce(into: [Name: Argument]()) { lowered, entry in
-                lowered[entry.key] = try argument(
-                    entry.value,
-                    in: scope,
-                    on: slots,
-                    label: label,
-                    at: place
-                )
-            }
+        var lowered: [Name: Argument] = [:]
+
+        for (name, written) in call.arguments.sorted(by: { left, right in left.key < right.key }) {
+            lowered[name] = try argument(written, in: scope, on: slots, label: label, at: place)
+        }
+
+        return lowered
     }
 
     // One argument, kept as the place it names where it names one: a slot
     // taking it in place takes the caller's hold, and which slots do is the
     // callee's to say.
-    private func argument(
+    private mutating func argument(
         _ expression: Expression,
         in scope: Names,
         on slots: Slots,
@@ -614,7 +654,7 @@ struct Lowering {
         return .reference(address)
     }
 
-    private func lower(
+    private mutating func lower(
         _ call: Call,
         in scope: Names,
         on slots: Slots,
@@ -648,7 +688,7 @@ struct Lowering {
         )
     }
 
-    private func lower(
+    private mutating func lower(
         _ path: [PathSegment],
         in scope: Names,
         on slots: Slots,
@@ -716,7 +756,12 @@ struct Lowering {
     // carries its document's numbering, and this walk reads what it just
     // wrote.
     private func reached(_ number: Int, on slots: Slots) -> Int? {
-        guard case let .row(row) = numbered(slots.origin).row(number, rows: rows, words: words) else {
+        guard case let .row(row) = numbered(slots.origin).row(
+            number,
+            rows: rows,
+            words: words,
+            closures: closureRows[slots.origin] ?? []
+        ) else {
             return nil
         }
 

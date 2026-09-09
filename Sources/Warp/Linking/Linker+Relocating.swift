@@ -50,9 +50,10 @@ struct Answered: Sendable {
         _ table: [Linked],
         rows: [Name: Int],
         words: [Name: Int],
-        numbering: [Int: Numbering]
+        numbering: [Int: Numbering],
+        closures: [Int: [Int]]
     ) -> Answered {
-        let views = numbering.mapValues { held in
+        let named = numbering.mapValues { held in
             held.answers(rows: rows, words: words).map { answer -> Int? in
                 guard case let .row(row) = answer else { return nil }
 
@@ -64,7 +65,7 @@ struct Answered: Sendable {
             table: table,
             rows: rows,
             words: words,
-            numbers: .documents(numbering, views: views)
+            numbers: .documents(numbering, named: named, closures: closures)
         )
     }
 
@@ -75,11 +76,23 @@ struct Answered: Sendable {
     }
 
     // MARK: - Public
-    // The same answer over a table lowered since. What a number stands for is
-    // the documents' and this link's, and neither moved while the bodies were
-    // lowered into their rows.
-    func holding(_ table: [Linked]) -> Answered {
-        Answered(table: table, rows: rows, words: words, numbers: numbers)
+    // The same answer over a table lowered since, with the closure rows that
+    // lowering took. What a name stands for is the documents' and this link's,
+    // and neither moved while the bodies were lowered; the closures are the
+    // rows those bodies just made, so only they are handed again.
+    func holding(_ table: [Linked], closures: [Int: [Int]]) -> Answered {
+        switch numbers {
+        case .rows:
+            return Answered(table: table, rows: rows, words: words, numbers: numbers)
+
+        case let .documents(numbering, named, _):
+            return Answered(
+                table: table,
+                rows: rows,
+                words: words,
+                numbers: .documents(numbering, named: named, closures: closures)
+            )
+        }
     }
 
     // How a run reads the numbers the bodies carry.
@@ -88,8 +101,21 @@ struct Answered: Sendable {
         case .rows:
             return .rows
 
-        case let .documents(_, views):
-            return .documents(views)
+        case let .documents(numbering, named, closures):
+            return .documents(
+                named.reduce(into: [Int: [Int?]]()) { views, entry in
+                    // A closure the link has no row for yet stands as nothing,
+                    // the same as a name it has no row for. Constants fold
+                    // before any body is lowered, so at that point every one of
+                    // them is nothing, and nothing there can reach one.
+                    let held = closures[entry.key] ?? []
+                    let counted = numbering[entry.key]?.closureCount ?? held.count
+
+                    views[entry.key] = entry.value + (0..<counted).map { written in
+                        held.indices.contains(written) ? held[written] : nil
+                    }
+                }
+            )
         }
     }
 
@@ -101,7 +127,7 @@ struct Answered: Sendable {
         case .rows:
             return Numbering(rows: rows, words: words)
 
-        case let .documents(numbering, _):
+        case let .documents(numbering, _, _):
             return numbering[origin]
         }
     }
@@ -112,8 +138,10 @@ struct Answered: Sendable {
         case rows
 
         // Each document's own, with where its numbers came from and which row
-        // each of them stands for.
-        case documents([Int: Numbering], views: [Int: [Int?]])
+        // each of them stands for. The names and the closures stand apart
+        // because they settle at different times: a name's row is the link's
+        // before anything is lowered, and a closure's row is made by lowering.
+        case documents([Int: Numbering], named: [Int: [Int?]], closures: [Int: [Int]])
     }
 }
 
@@ -150,6 +178,11 @@ struct Relocating {
     private let contractWords: [Name: ContractWord]
     private let shapes: ShapeTable
 
+    // Which row each document's closures took. A closure is reached by a
+    // number and by nothing else, so this answers where the two name tables
+    // answer a spelling.
+    private let closures: [Int: [Int]]
+
     // MARK: - Initializer
     init(
         table: [Linked],
@@ -158,8 +191,10 @@ struct Relocating {
         numbering: [Int: Numbering],
         shapeNumbering: [Int: ShapeNumbering],
         contractWords: [Name: ContractWord],
+        closures: [Int: [Int]],
         shapes: ShapeTable
     ) {
+        self.closures = closures
         self.table = table
         self.rows = rows
         self.words = words
@@ -184,6 +219,7 @@ struct Relocating {
             numbering: compiled.numbering,
             shapeNumbering: compiled.shapeNumbering,
             contractWords: ContractWord.table(in: compiled.types),
+            closures: compiled.closures,
             shapes: compiled.types.shapes
         )
     }
@@ -242,7 +278,12 @@ struct Relocating {
             )
         }
 
-        switch numbering.row(number, rows: rows, words: words) {
+        switch numbering.row(
+            number,
+            rows: rows,
+            words: words,
+            closures: closures[standing.origin] ?? []
+        ) {
         case let .row(row):
             return row
 
@@ -255,6 +296,12 @@ struct Relocating {
         case let .unfound(.walked(spelling)):
             throw LinkError(
                 "'\(spelling)' is walked here, and no path in this link may reach it",
+                at: place(of: standing.label)
+            )
+
+        case let .unfound(.closure(written)):
+            throw LinkError.unjudged(
+                "closure \(written) of this document, which the link lowered no row for",
                 at: place(of: standing.label)
             )
 
@@ -307,8 +354,8 @@ struct Relocating {
 
         // A closure is a body of its own, and a call through a contract can be
         // written in one.
-        case let .closure(linked, captures):
-            return .closure(try relocated(linked), captures: captures)
+        case let .closure(number, captures):
+            return .closure(try row(number, in: standing), captures: captures)
 
         case let .apply(callee, arguments):
             return .apply(

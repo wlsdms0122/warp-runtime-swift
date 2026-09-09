@@ -131,10 +131,10 @@ public struct Executor: Sendable {
         // Making a closure runs nothing: it is the capture, and the capture is
         // these cells. Which is why it belongs to the pure half and a
         // condition may hand one to a word.
-        case let .closure(row, captures):
+        case let .closure(number, captures):
             return .procedure(
                 Closure(
-                    linked: row,
+                    linked: linked[try row(number, from: activation.origin)],
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
                 )
             )

@@ -237,7 +237,8 @@ public struct Linker: Sendable {
             table[entry.offset] = Numbering(
                 imports: entry.element.imports,
                 walks: entry.element.draft.walks,
-                declared: declaredBy[entry.offset] ?? []
+                declared: declaredBy[entry.offset] ?? [],
+                closures: entry.element.draft.closures
             )
         }
 
@@ -336,7 +337,8 @@ public struct Linker: Sendable {
             table,
             rows: rows,
             words: wordRows,
-            numbering: numbering
+            numbering: numbering,
+            closures: [:]
         )
 
         func row(of symbol: Symbol) throws -> Int {
@@ -523,7 +525,7 @@ public struct Linker: Sendable {
             _ = try resolved(symbol)
         }
 
-        foldingTable = foldingTable.holding(lowering.table)
+        foldingTable = foldingTable.holding(lowering.table, closures: lowering.closureRows)
 
         // Every declaration, one document at a time in the order they stand
         // and in name order inside each, which is the order their rows stand
@@ -564,6 +566,7 @@ public struct Linker: Sendable {
             table: shaped.table,
             rows: rows,
             words: wordRows,
+            closures: lowering.closureRows,
             calls: calls,
             types: types,
             numbering: numbering,

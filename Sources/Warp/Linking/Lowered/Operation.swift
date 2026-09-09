@@ -23,9 +23,10 @@ indirect enum Operation: Sendable {
 
     case record(RecordOperation)
 
-    // A closure literal: the row its body was lowered into, and which cells
-    // of the frame it takes with it, as (outer slot, inner slot).
-    case closure(Linked, captures: [(Int, Int)])
+    // A closure literal: the number its document gave the row its body was
+    // lowered into, and which cells of the frame it takes with it, as
+    // (outer slot, inner slot).
+    case closure(Int, captures: [(Int, Int)])
 
     // Calling a value. Which signature it has is the value's, so the
     // arguments travel by name and settle where the closure is known.

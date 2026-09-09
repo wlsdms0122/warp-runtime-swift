@@ -26,6 +26,21 @@ enum Resolving: Sendable {
     case documents([Int: [Int?]])
 
     // MARK: - Public
+    // The same reading with one document's closure rows written in, for code
+    // lowered beside that document and run at once. What folds numbers its own
+    // closures after the document's, so the rows it took go on the end.
+    func holding(_ closures: [Int], of origin: Int) -> Resolving {
+        guard case let .documents(held) = self, !closures.isEmpty else { return self }
+
+        var view = held[origin] ?? []
+
+        // A closure this run made stands where the document's own end, so a
+        // view shorter than that is filled out before they are written on.
+        view.append(contentsOf: closures.map { row in row })
+
+        return .documents(held.merging([origin: view]) { _, folded in folded })
+    }
+
     func row(_ number: Int, from origin: Int) -> Int? {
         switch self {
         case .rows:

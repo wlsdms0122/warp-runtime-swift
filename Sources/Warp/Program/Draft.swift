@@ -260,6 +260,27 @@ public struct Draft: Sendable {
             + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
     }
 
+    // How many closure literals each declaration wrote, at whatever depth. A
+    // closure inside a closure counts with the rest: what the number tells
+    // apart is which of its declaration's closures this is, and nesting does
+    // not change that.
+    //
+    // Read off the document so a closure's number is the document's fact. The
+    // link lowers the words before the rest, and which declarations are words
+    // depends on the whole graph, so a count taken while lowering would move
+    // when an unrelated module joins.
+    var closures: [Name: Int] {
+        procedures.reduce(into: [Name: Int]()) { counts, entry in
+            guard let block = entry.value.block else { return }
+
+            counts[entry.key] = block.buried.count { held in
+                guard case .closure = held else { return false }
+
+                return true
+            }
+        }
+    }
+
     // The shapes named inside a body: what a local binding says it holds, what
     // a cast asks for, and what a closure literal's own signature writes. A
     // signature written inline is held to the same table the top level is, so

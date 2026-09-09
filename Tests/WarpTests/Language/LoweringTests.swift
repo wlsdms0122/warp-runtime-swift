@@ -110,7 +110,7 @@ struct LoweringTests {
         guard
             case let .body(body, _) = image.entry.implementation,
             case let .closure(row, captures) = body.instructions[3].code,
-            case let .body(_, inner) = row.implementation
+            case let .body(_, inner) = image.linked[row].implementation
         else {
             Issue.record("the closure was not lowered")
 

@@ -31,6 +31,11 @@ struct Compiled: Sendable {
     // Every bare spelling a path may step to, by the row it reaches.
     let words: [Name: Int]
 
+    // Which row each document's closures took, in the order that document
+    // numbers them. A closure is a row like any other and no declared spelling
+    // reaches it, so it stands here rather than in `rows`.
+    let closures: [Int: [Int]]
+
     // What each declaration calls, by declared spelling. Read off the bodies
     // as they were judged, so what a link walks is what was proved rather
     // than what a second reading of the same text would find.

@@ -191,9 +191,11 @@ extension Lowering {
                 )
             )
 
-        // A closure is a body of its own, written in the same document.
-        case let .closure(linked, captures):
-            return .closure(try shaped(linked, answer), captures: captures)
+        // A closure stands as a row of its own, which this walk reaches on its
+        // own turn. What is written here is the number that reaches it, and a
+        // number carries no shape.
+        case .closure:
+            return operation
 
         case let .apply(callee, arguments):
             return .apply(
