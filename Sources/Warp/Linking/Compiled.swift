@@ -19,11 +19,10 @@ struct Compiled: Sendable {
     // in the order the documents stand.
     //
     // The bodies carry their document's own numbers, both for what they call
-    // and for what they stand on. The rest of a row does not: what its slots
-    // and answer lower to is its signature read against `types`, so a row
-    // here stands only against that table. `Relocating` takes it from here
-    // rather than from its caller, which is what holds the two together.
-    let table: [Linked]
+    // and for what they stand on. Nothing else here is numbered at all: a row
+    // holds what its document settled, and what a table makes of that is left
+    // to whoever holds a table.
+    let table: [Judged]
 
     // Every declared spelling, by row.
     let rows: [Name: Int]

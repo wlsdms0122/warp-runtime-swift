@@ -563,7 +563,7 @@ public struct Linker: Sendable {
         let shaped = try lowering.numbered()
 
         return Compiled(
-            table: shaped.table,
+            table: shaped.table.map(Judged.init),
             rows: rows,
             words: wordRows,
             closures: lowering.closureRows,

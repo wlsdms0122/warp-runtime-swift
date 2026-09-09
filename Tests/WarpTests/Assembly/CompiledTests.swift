@@ -201,7 +201,7 @@ struct CompiledTests {
         let compiled = try linker.compile(sut + Module.standard)
 
         // Then. The call names the contract's word and no row.
-        let compiledCall = try dispatch(in: compiled.table, at: compiled.rows["app.tell"])
+        let compiledCall = try dispatch(in: code(of: "app.tell", in: compiled))
 
         #expect(compiledCall.contract == "app.Describable")
         #expect(compiledCall.word == "describe")
@@ -209,7 +209,7 @@ struct CompiledTests {
 
         // And. Linking fills one call for every type that answers.
         let image = try linker.link(compiled, entry: entryName)
-        let linkedCall = try dispatch(in: image.linked, at: image.rows["app.tell"])
+        let linkedCall = try dispatch(in: code(of: "app.tell", in: image))
 
         #expect(Set(linkedCall.calls.keys) == ["bank.Account", "bank.Card"])
     }
@@ -231,7 +231,7 @@ struct CompiledTests {
 
         // Then. The call stands where the caller's imports put it, which is
         // not the row the graph gave the callee.
-        let number = try called(in: compiled.table, at: compiled.rows["b.asks"])
+        let number = try called(in: code(of: "b.asks", in: compiled))
 
         #expect(number == 0)
         #expect(number != compiled.rows["a.answers"])
@@ -239,7 +239,7 @@ struct CompiledTests {
         // And. The link answers with the row.
         let image = try linker.link(compiled, entry: entryName)
 
-        #expect(try called(in: image.linked, at: image.rows["b.asks"]) == image.rows["a.answers"])
+        #expect(try called(in: code(of: "b.asks", in: image)) == image.rows["a.answers"])
     }
 
     @Test("what a document lowers to does not move when the link grows")
@@ -260,8 +260,8 @@ struct CompiledTests {
         // Then. The rows moved and the number the body carries did not.
         #expect(alone.rows["a.answers"] != beside.rows["a.answers"])
         #expect(
-            try called(in: alone.table, at: alone.rows["b.asks"])
-                == called(in: beside.table, at: beside.rows["b.asks"])
+            try called(in: code(of: "b.asks", in: alone))
+                == called(in: code(of: "b.asks", in: beside))
         )
     }
 
@@ -274,7 +274,7 @@ struct CompiledTests {
         let compiled = try linker.compile(sut + Module.standard)
 
         // Then. The cast stands on the document's own number.
-        let number = try #require(cast(in: compiled.table, at: compiled.rows[entryName]).row)
+        let number = try #require(cast(in: code(of: entryName, in: compiled)).row)
 
         #expect(number == 0)
 
@@ -282,7 +282,7 @@ struct CompiledTests {
         let image = try linker.link(compiled, entry: entryName)
 
         #expect(
-            try cast(in: image.linked, at: image.rows[entryName]).row
+            try cast(in: code(of: entryName, in: image)).row
                 == compiled.types.shapes.row(named: "bank.Account")
         )
     }
@@ -309,18 +309,25 @@ struct CompiledTests {
                 != beside.types.shapes.row(named: "bank.Account")
         )
         #expect(
-            try cast(in: alone.table, at: alone.rows[entryName]).row
-                == cast(in: beside.table, at: beside.rows[entryName]).row
+            try cast(in: code(of: entryName, in: alone)).row
+                == cast(in: code(of: entryName, in: beside)).row
         )
     }
 
     // MARK: - Private
-    // The shape the cast in a row's result stands on.
-    private func cast(in table: [Linked], at row: Int?) throws -> Shape {
-        let row = try #require(row)
+    // What a declaration's row holds, whichever table it was read out of.
+    private func code(of declared: Name, in compiled: Compiled) throws -> Linked.Implementation {
+        try compiled.table[#require(compiled.rows[declared])].implementation
+    }
 
+    private func code(of declared: Name, in image: Image) throws -> Linked.Implementation {
+        try image.linked[#require(image.rows[declared])].implementation
+    }
+
+    // The shape the cast in a row's result stands on.
+    private func cast(in implementation: Linked.Implementation) throws -> Shape {
         guard
-            case let .body(body, _) = table[row].implementation,
+            case let .body(body, _) = implementation,
             case let .cast(_, shape, _)? = body.result
         else {
             throw LinkError("the entry holds no cast", at: nil)
@@ -349,11 +356,9 @@ struct CompiledTests {
     }
 
     // The call through a contract a row's result holds.
-    private func dispatch(in table: [Linked], at row: Int?) throws -> DispatchOperation {
-        let row = try #require(row)
-
+    private func dispatch(in implementation: Linked.Implementation) throws -> DispatchOperation {
         guard
-            case let .body(body, _) = table[row].implementation,
+            case let .body(body, _) = implementation,
             case let .dispatch(dispatch)? = body.result
         else {
             throw LinkError("'app.tell' holds no call through a contract", at: nil)
@@ -445,11 +450,9 @@ struct CompiledTests {
     }
 
     // The number the call in a row's result carries.
-    private func called(in table: [Linked], at row: Int?) throws -> Int {
-        let row = try #require(row)
-
+    private func called(in implementation: Linked.Implementation) throws -> Int {
         guard
-            case let .body(body, _) = table[row].implementation,
+            case let .body(body, _) = implementation,
             case let .call(call)? = body.result
         else {
             throw LinkError("'b.asks' holds no call", at: nil)

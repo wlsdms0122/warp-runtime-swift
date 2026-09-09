@@ -159,8 +159,8 @@ struct Answered: Sendable {
 // there is nothing the second needs that the first has not already read.
 struct Relocating {
     // MARK: - Property
-    // The rows as compiling left them. Read for what a callee takes, which
-    // neither act changes.
+    // The rows of this link, every one of them standing before the first body
+    // is walked.
     private let table: [Linked]
 
     private let rows: [Name: Int]
@@ -211,16 +211,22 @@ struct Relocating {
         self.shapes = shapes
     }
 
+    // What compiling left, read as this link's rows. Filling a call through a
+    // contract reads the row the link found answering it, over the parameters
+    // that row takes, so every row is made to stand here rather than as the
+    // walk reaches it.
     init(_ compiled: Compiled) {
+        let shapes = compiled.types.shapes
+
         self.init(
-            table: compiled.table,
+            table: compiled.table.map { judged in judged.lowered(in: shapes) },
             rows: compiled.rows,
             words: compiled.words,
             numbering: compiled.numbering,
             shapeNumbering: compiled.shapeNumbering,
             contractWords: ContractWord.table(in: compiled.types),
             closures: compiled.closures,
-            shapes: compiled.types.shapes
+            shapes: shapes
         )
     }
 
