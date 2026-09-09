@@ -335,4 +335,52 @@ struct CatalogueTests {
             try linker.link(closed + Module.standard, entry: entryName)
         }
     }
+
+    @Test("a claim is followed when the program itself declares the contract")
+    func aClaimIsFollowedThroughTheProgramsOwnContract() throws {
+        // Given. The catalogue holds the type and the declaration that answers
+        // the claim. The contract, and the claim itself, are the program's.
+        let holding = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let answering = try Module(
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                )
+            ]
+        )
+        let program = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            claiming: ["bank.Account": ["app.Describable"]],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .named("bank.Account")),
+                    body: [],
+                    result: .cast(
+                        .record(["balance": .literal(.int(7))]),
+                        as: .named("bank.Account"),
+                        optional: false
+                    )
+                )
+            ]
+        )
+
+        // When. The contract is nowhere in the catalogue, so the words a claim
+        // is spelled from are read off the answer as it grows
+        let closed = try Catalogue([holding, answering]).closing([program])
+
+        // Then
+        #expect(closed.count == 3)
+        #expect(throws: Never.self) {
+            try linker.link(closed + Module.standard, entry: entryName)
+        }
+    }
 }

@@ -46,11 +46,6 @@ public struct Catalogue: Sendable {
 
     private let shapes: [Name: Int]
 
-    // The words each contract asks, by the contract's own name. What a claim
-    // depends on is a declaration named for its type and one of these, and the
-    // words are the contract's, so a claim cannot be followed without them.
-    private let asked: [Name: [Name: Signature]]
-
     // MARK: - Initializer
     // Two modules declaring one name is refused here, because a table that
     // holds the name twice cannot answer the one question this is asked. That
@@ -98,9 +93,6 @@ public struct Catalogue: Sendable {
         self.modules = modules
         self.words = words
         self.shapes = try claimed(.shape)
-        self.asked = modules.reduce(into: [Name: [Name: Signature]]()) { table, module in
-            table.merge(module.contracts) { first, _ in first }
-        }
 
         // Gathered, not claimed. Two candidates for one segment is not a
         // question this table fails to answer: it is a question whose answer
@@ -148,43 +140,57 @@ public struct Catalogue: Sendable {
             }
         }
 
-        // Over the answer as it grows, so a module brought in for a name is
-        // asked for its own needs in turn. Names in order, so which modules
-        // arrive and where they stand is the same every time.
-        while index < closed.count {
-            let draft = closed[index].draft
-            index += 1
+        // Two walks, until neither adds anything. Names first, then claims,
+        // because what a claim needs is spelled from the contract's words, and
+        // the contract may be a document the name walk has only just brought.
+        // Each walk on its own would answer for a list the other is still
+        // growing.
+        while true {
+            let held = closed.count
 
-            for name in draft.sends.sorted() {
-                bring(words[name])
+            // Over the answer as it grows, so a module brought in for a name
+            // is asked for its own needs in turn. Names in order, so which
+            // modules arrive and where they stand is the same every time.
+            while index < closed.count {
+                let draft = closed[index].draft
+                index += 1
+
+                for name in draft.sends.sorted() {
+                    bring(words[name])
+                }
+
+                for name in draft.walks.sorted() {
+                    bring(walked[name] ?? [])
+                }
+
+                for name in draft.mentions.sorted() {
+                    bring(shapes[name])
+                }
             }
 
-            for name in draft.walks.sorted() {
-                bring(walked[name] ?? [])
-            }
-
-            for name in draft.mentions.sorted() {
-                bring(shapes[name])
-            }
-
-            // A claim depends on the declarations that answer it, and a
-            // document making one may declare none of them. The spelling is
-            // the type's name and one of the contract's words, so the words
-            // are looked up here rather than left to the draft, which cannot
-            // read another document's contract.
+            // A claim is answered by declarations named for its type and the
+            // words its contract asks, and a document making one may declare
+            // neither. The words are the contract's, so they are looked for
+            // among what is closed rather than in the draft, which cannot read
+            // another document's contract.
             //
-            // A contract nothing in this catalogue declares asks no words
-            // this could follow. Which is a refusal, and the link's to make.
-            for (type, contracts) in draft.claiming.sorted(by: { $0.key < $1.key }) {
-                for contract in contracts.sorted() {
-                    for word in (asked[contract] ?? [:]).keys.sorted() {
-                        bring(words[ContractWord.spelling(of: type, word: word)])
+            // Every closed document declaring the name is read. Two declaring
+            // one is the link's refusal, and choosing between them here would
+            // be that rule copied and made to answer earlier.
+            for module in closed {
+                for (type, contracts) in module.draft.claiming.sorted(by: { $0.key < $1.key }) {
+                    for contract in contracts.sorted() {
+                        let asked = closed.flatMap { held in (held.contracts[contract] ?? [:]).keys }
+
+                        for word in asked.sorted() {
+                            bring(words[ContractWord.spelling(of: type, word: word)])
+                        }
                     }
                 }
             }
-        }
 
-        return closed
+            guard closed.count > held else { return closed }
+        }
     }
 
     // MARK: - Private
