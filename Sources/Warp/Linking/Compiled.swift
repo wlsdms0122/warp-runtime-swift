@@ -11,8 +11,7 @@ import Foundation
 // few facts no document could have settled alone.
 //
 // A document's compile stands on its own and is `Document`. What sits here
-// next to them is the graph's: the order the blocks are laid down, and the
-// shapes of the whole link.
+// next to them is the graph's: the order the blocks are laid down.
 //
 // Which declaration a run starts from is not here either, so an entry names
 // nothing in this and one graph compiled once answers every entry asked of it.
@@ -23,7 +22,19 @@ struct Compiled: Sendable {
     // declarations in name order, then the closures its bodies lifted, in the
     // order the document numbers them. Where the block lands in a link is the
     // link's answer, so nothing here says it.
-    struct Document: Sendable {
+    struct Document: Sendable, Declaring {
+        // Which document this is, so a refusal a link makes about it says
+        // where the words are.
+        let document: Place.Document
+
+        // What it declares in the three shape spaces, as it wrote them. A
+        // link lays these down in the standing order to make the table its
+        // rows are numbered against, and reads no shape of this document
+        // anywhere else.
+        let types: [Name: TypeExpression]
+        let constraints: [Name: [TypeExpression]]
+        let contracts: [Name: [Name: Signature]]
+
         // The declared spellings, in the order their rows stand. A row past
         // the end of this is a closure, which no spelling reaches.
         let declared: [Name]
@@ -91,7 +102,11 @@ struct Compiled: Sendable {
     // laid down: a document's rows are behind the rows it reaches.
     let standing: [Int]
 
-    let types: TypeTable
+    // Where the numbers in the values this folded mean something. A constant
+    // holding a closure holds it lowered, and a lowered body reads rows, so a
+    // link reads this compile's rows against the same one it numbered them
+    // against.
+    let linkage: Linkage
 
     // MARK: - Initializer
     // MARK: - Public

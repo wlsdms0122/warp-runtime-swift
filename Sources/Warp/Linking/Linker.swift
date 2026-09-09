@@ -514,6 +514,10 @@ public struct Linker: Sendable {
                 let declared = declaredBy[origin] ?? []
 
                 return Compiled.Document(
+                    document: .of(modules[origin]),
+                    types: modules[origin].types,
+                    constraints: modules[origin].constraints,
+                    contracts: modules[origin].contracts,
                     declared: declared,
                     table: declared.compactMap { name in rows[name].map { row in judged[row] } }
                         + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
@@ -527,7 +531,7 @@ public struct Linker: Sendable {
                 )
             },
             standing: gathered.standing,
-            types: gathered.types
+            linkage: gathered.types.linkage
         )
     }
 
@@ -564,16 +568,43 @@ public struct Linker: Sendable {
             frontier.append(contentsOf: assembled.calls[row])
         }
 
+        // The shapes of this link, made from what its documents declared and
+        // laid down in the order their blocks are. Which types answer which
+        // contracts is read across the documents, so the rows a body stands on
+        // are answered here rather than carried out of a compile.
+        let declared = try declared(in: compiled.documents)
+        let types = try shaped(
+            self.types(
+                declared: declared.types,
+                constraints: declared.constraints,
+                contracts: declared.contracts,
+                of: compiled.documents,
+                standing: compiled.standing,
+                numbered: compiled.linkage
+            ),
+            types: declared.types,
+            contracts: declared.contracts,
+            among: assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in
+                let row = assembled.table[entry.value]
+
+                table[entry.key] = Declared(
+                    row.signature,
+                    at: .procedure(entry.key.spelling, in: compiled.documents[row.origin].document),
+                    of: row.origin
+                )
+            }
+        ).types
+
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let linked = try Relocating(assembled, types: compiled.types).linked()
+        let linked = try Relocating(assembled, types: types).linked()
 
         return Image(
             linked: linked.table,
             start: start,
             rows: assembled.rows,
             reached: reached,
-            types: compiled.types,
+            types: types,
             variables: assembled.variables
         )
     }

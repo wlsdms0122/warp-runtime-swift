@@ -181,7 +181,7 @@ struct CompiledTests {
         let held = try Module(types: ["a.Held": .int], procedures: [:])
 
         // When.
-        let shapes = try compiled([naming, held]).types.shapes
+        let shapes = try linker.link(compiled([naming, held]), entry: entryName).types.shapes
 
         // Then. The named document's rows come first, and the naming
         // document's are a run of their own after them.
@@ -304,7 +304,7 @@ struct CompiledTests {
 
         #expect(
             try cast(in: code(of: entryName, in: image)).row
-                == compiled.types.shapes.row(named: "bank.Account")
+                == image.types.shapes.row(named: "bank.Account")
         )
     }
 
@@ -326,8 +326,8 @@ struct CompiledTests {
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
-            alone.types.shapes.row(named: "bank.Account")
-                != beside.types.shapes.row(named: "bank.Account")
+            try linker.link(alone, entry: entryName).types.shapes.row(named: "bank.Account")
+                != linker.link(beside, entry: entryName).types.shapes.row(named: "bank.Account")
         )
         #expect(
             try cast(in: code(of: entryName, in: alone)).row

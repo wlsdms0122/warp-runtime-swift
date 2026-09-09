@@ -28,14 +28,13 @@ extension Linker {
         let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
         let standing = try ModuleGraph(modules).standing
 
-        // A document's types take a run of shape rows the way its declarations
-        // take a run of table rows, in the standing order, so a document's
-        // shapes are behind the shapes it names.
         let declaring = try self.types(
             declared: declaredTypes,
             constraints: declaredConstraints,
             contracts: declaredContracts,
-            standing: standing.flatMap { position in modules[position].types.keys.sorted() }
+            of: modules,
+            standing: standing,
+            numbered: Linkage()
         )
 
         // Every shape each document names, held to being one the list
@@ -47,28 +46,53 @@ extension Linker {
         let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
             table[symbol.declared] = symbol
         }
-        let signatures = space.mapValues { symbol in
-            Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
-        }
 
-        // Which types answer which contracts. Read off the declarations, so it
-        // is worked out here rather than where the types were declared, and
-        // the table is remade holding it. The rows are numbered from the
-        // declarations alone, so a shape lowered against either table is the
-        // same shape.
+        let shaped = try self.shaped(
+            declaring,
+            types: declaredTypes,
+            contracts: declaredContracts,
+            among: space.mapValues { symbol in
+                Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
+            }
+        )
+
+        return Gathered(
+            standing: standing,
+            symbols: symbols,
+            space: space,
+            types: shaped.types,
+            contractWords: shaped.contractWords,
+            answering: shaped.answering
+        )
+    }
+
+    // Which types answer which contracts, worked out over the declarations
+    // together. A slot bounded by a contract may be filled by a type no call
+    // in this link mentions, so it is read off every declaration rather than
+    // the reached ones.
+    //
+    // The table is remade holding the answer. Its rows are numbered from the
+    // declarations alone, so a shape lowered against either table is the same
+    // shape.
+    func shaped(
+        _ declaring: TypeTable,
+        types: [Name: Declared<TypeExpression>],
+        contracts: [Name: Declared<[Name: Signature]>],
+        among signatures: [Name: Declared<Signature>]
+    ) throws -> (types: TypeTable, contractWords: [Name: ContractWord], answering: Set<Name>) {
         let witnessed = try witnesses(
-            of: declaredContracts,
-            over: declaredTypes,
+            of: contracts,
+            over: types,
             among: signatures,
             in: declaring
         )
-        let types = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
+        let table = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
 
         // The words the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
         // into, so what a call reaches and what a judgment reads are one
         // reading rather than two.
-        let contractWords = ContractWord.table(in: types)
+        let contractWords = ContractWord.table(in: table)
 
         // A contract's word and a declaration cannot take one spelling. A call
         // writing it lowers to the pick the contract makes, so the declaration
@@ -78,8 +102,8 @@ extension Linker {
         // In name order, so which collision is reported first is the text's
         // fact rather than a hash seed's.
         if
-            let spelling = contractWords.keys.sorted().first(where: { taken in space[taken] != nil }),
-            let declared = space[spelling],
+            let spelling = contractWords.keys.sorted().first(where: { taken in signatures[taken] != nil }),
+            let declared = signatures[spelling],
             let asked = contractWords[spelling]
         {
             throw LinkError(
@@ -91,11 +115,8 @@ extension Linker {
             )
         }
 
-        return Gathered(
-            standing: standing,
-            symbols: symbols,
-            space: space,
-            types: types,
+        return (
+            types: table,
             contractWords: contractWords,
             answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) })
         )
@@ -177,14 +198,19 @@ extension Linker {
         declared: [Name: Declared<TypeExpression>],
         constraints members: [Name: Declared<[TypeExpression]>],
         contracts: [Name: Declared<[Name: Signature]>],
-        standing: [Name]
+        of documents: [any Declaring],
+        standing: [Int],
+        numbered linkage: Linkage
     ) throws -> TypeTable {
+        // A document's types take a run of shape rows the way its declarations
+        // take a run of table rows, in the standing order, so a document's
+        // shapes are behind the shapes it names.
         let table = TypeTable(
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
             contracts: contracts.mapValues(\.held),
-            standing: standing,
-            of: Linkage()
+            standing: standing.flatMap { position in documents[position].types.keys.sorted() },
+            of: linkage
         )
 
         // A name that reaches a shape may name itself along the way: `Tree`
