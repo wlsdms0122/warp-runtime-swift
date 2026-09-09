@@ -63,12 +63,7 @@ public struct Linker: Sendable {
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: Name) throws -> Image {
-        let (standing, symbols) = try graph(of: modules)
-
-        return try link(
-            compile(modules, standing: standing, symbols: symbols),
-            entry: entry
-        )
+        try link(compile(modules, in: gathering(of: modules)), entry: entry)
     }
 
     // MARK: - Internal
@@ -76,21 +71,15 @@ public struct Linker: Sendable {
     // what a document says has to hold whichever declaration a run starts
     // from.
     //
-    // What the graph answered is handed over rather than worked out again: the
-    // order the documents stand in, and every declaration they make. Both are
-    // readings of the whole list, and a document has no say in either.
-    func compile(_ modules: [Module], standing: [Int], symbols: [Symbol]) throws -> Compiled {
-        // Type and constraint declarations first, because everything after
-        // this reads type expressions against them. The qualifying pass owns
-        // their uniqueness, so it hands over the tables that fact was proved on.
-        let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
-
+    // What the whole list answered is handed over rather than read again. A
+    // document has no say in any of it.
+    func compile(_ modules: [Module], in gathered: Gathered) throws -> Compiled {
         // Where each document stands, by where the caller put it. Everything a
         // link builds is keyed by the caller's position, and the rows follow
         // the standing, so this is what turns one into the other.
         var rank = [Int](repeating: 0, count: modules.count)
 
-        for (place, position) in standing.enumerated() {
+        for (place, position) in gathered.standing.enumerated() {
             rank[position] = place
         }
 
@@ -99,16 +88,16 @@ public struct Linker: Sendable {
         // shapes are behind the shapes it names.
         let declaring = try self.types(
             of: modules,
-            declared: declaredTypes,
-            constraints: declaredConstraints,
-            contracts: declaredContracts,
-            standing: standing.flatMap { position in modules[position].types.keys.sorted() }
+            declared: gathered.types,
+            constraints: gathered.constraints,
+            contracts: gathered.contracts,
+            standing: gathered.standing.flatMap { position in modules[position].types.keys.sorted() }
         )
 
         // Every declaration under its declared spelling. The spellings are
         // unique, since the symbol gathering refused a double, and every call
         // in every body asks this table.
-        let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
+        let space = gathered.symbols.reduce(into: [Name: Symbol]()) { table, symbol in
             table[symbol.declared] = symbol
         }
 
@@ -118,8 +107,8 @@ public struct Linker: Sendable {
         // declarations alone, so a shape lowered against either table is the
         // same shape.
         let witnessed = try witnesses(
-            of: declaredContracts,
-            over: declaredTypes,
+            of: gathered.contracts,
+            over: gathered.types,
             among: space,
             in: declaring
         )
@@ -159,7 +148,7 @@ public struct Linker: Sendable {
         // What every declaration returns, by the name a resolved call site
         // uses. Built before the walk so a call can be judged against a callee
         // the walk has not reached yet.
-        let signatures = symbols.reduce(into: [Name: Signature]()) { table, symbol in
+        let signatures = gathered.symbols.reduce(into: [Name: Signature]()) { table, symbol in
             table[symbol.declared] = symbol.procedure.signature
         }
 
@@ -175,7 +164,7 @@ public struct Linker: Sendable {
         // theirs, and the standing refused a ring where that is not so. Read
         // over every declaration a document holds rather than the reached
         // ones: a path names a word the call graph never mentions.
-        let held = symbols.reduce(into: [Int: [Symbol]]()) { table, symbol in
+        let held = gathered.symbols.reduce(into: [Int: [Symbol]]()) { table, symbol in
             table[symbol.origin, default: []].append(symbol)
         }
 
@@ -183,7 +172,7 @@ public struct Linker: Sendable {
         var isolatedDeclarations: Set<Name> = []
         var failingDeclarations: [Name: Failing] = [:]
 
-        for position in standing {
+        for position in gathered.standing {
             let holding = held[position] ?? []
 
             pure(among: holding, settling: &settled, reading: moduleVariables)
@@ -206,7 +195,7 @@ public struct Linker: Sendable {
         //
         // The spellings first, so a native word's sends reach a row whatever
         // order the declarations stand in.
-        let declarations = symbols.sorted { left, right in
+        let declarations = gathered.symbols.sorted { left, right in
             (rank[left.origin], left.declared) < (rank[right.origin], right.declared)
         }
 
@@ -262,7 +251,7 @@ public struct Linker: Sendable {
         // link just made. A row is the declaration lowered, and whether a path
         // may reach one is a question about the slots it lowered to.
         let wordSymbols = try derivable(
-            among: symbols,
+            among: gathered.symbols,
             for: modules,
             pure: settled,
             answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
@@ -406,7 +395,7 @@ public struct Linker: Sendable {
         // What every declaration whose `returns` nobody wrote answers, read
         // off its body.
         answers(
-            of: symbols.compactMap { symbol -> Unsaid? in
+            of: gathered.symbols.compactMap { symbol -> Unsaid? in
                 guard
                     symbol.procedure.signature.returns == nil,
                     let block = symbol.procedure.block
@@ -595,7 +584,7 @@ public struct Linker: Sendable {
                     }
                 )
             },
-            standing: standing,
+            standing: gathered.standing,
             types: types
         )
     }
