@@ -142,7 +142,6 @@ struct Folding {
             rows: answered.rows,
             words: answered.words,
             numbering: [origin: numbering],
-            variables: [:],
             shapes: shapes
         )
         let (code, frame) = try lowering.lower(

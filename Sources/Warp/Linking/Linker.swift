@@ -74,15 +74,6 @@ public struct Linker: Sendable {
     // What the whole list answered is handed over rather than read again. A
     // document has no say in any of it.
     func compile(_ modules: [Module], in gathered: Gathered) throws -> Compiled {
-        // Where each document stands, by where the caller put it. Everything a
-        // link builds is keyed by the caller's position, and the rows follow
-        // the standing, so this is what turns one into the other.
-        var rank = [Int](repeating: 0, count: modules.count)
-
-        for (place, position) in gathered.standing.enumerated() {
-            rank[position] = place
-        }
-
         // Every judgment the link asks and every row it builds reads the
         // table the run will read.
         let shapes = gathered.types.shapes
@@ -93,106 +84,17 @@ public struct Linker: Sendable {
             table[entry.offset] = Set(entry.element.variables.keys)
         }
 
-        // One document at a time, in the order each one's needs stand before
-        // it. All three are fixed points over what a body reaches, so a
-        // document's answer is settled once the documents it reaches have
-        // theirs, and the standing refused a ring where that is not so. Read
-        // over every declaration a document holds rather than the reached
-        // ones: a path names a word the call graph never mentions.
+        // What each document declares, in name order, which is the order its
+        // rows stand in.
         let held = gathered.symbols.reduce(into: [Int: [Symbol]]()) { table, symbol in
             table[symbol.origin, default: []].append(symbol)
         }
 
+        // What the documents already laid down proved, which is what the next
+        // one is compiled against.
         var settled: Set<Name> = []
         var isolatedDeclarations: Set<Name> = []
         var failingDeclarations: [Name: Failing] = [:]
-
-        for position in gathered.standing {
-            let holding = held[position] ?? []
-
-            pure(among: holding, settling: &settled, reading: moduleVariables)
-            isolated(among: holding, settling: &isolatedDeclarations, in: gathered.space)
-            failing(among: holding, settling: &failingDeclarations)
-        }
-
-        // The table a run reads, one row per declaration. A native answers as
-        // it is from the start; a written body stands as the refusal it would
-        // earn until it is lowered, so nothing folds through a body half-made.
-        var rows: [Name: Int] = [:]
-        var table: [Linked] = []
-
-        // A document's declarations take a run of rows, in the order the
-        // documents stand and in name order inside each. What a document
-        // declares is then a block of the table rather than declarations
-        // scattered through it, so where a document's rows begin is a number
-        // and its own rows are that number and an offset. In the standing
-        // order, so a document's rows are behind the rows it reaches.
-        //
-        // The spellings first, so a native word's sends reach a row whatever
-        // order the declarations stand in.
-        let declarations = gathered.symbols.sorted { left, right in
-            (rank[left.origin], left.declared) < (rank[right.origin], right.declared)
-        }
-
-        for (position, symbol) in declarations.enumerated() {
-            rows[symbol.declared] = position
-        }
-
-        // What each document declares, in the order the declarations stand.
-        // Read off in one pass rather than by asking the declarations for a
-        // document's own each time a document asks: the answer is the same
-        // walk either way, and asking once per document walks the graph once
-        // per document.
-        let declaredBy = declarations.reduce(into: [Int: [Name]]()) { table, symbol in
-            table[symbol.origin, default: []].append(symbol.declared)
-        }
-
-        // Where each document numbers its calls from: what it looks for
-        // outside itself first, its own declarations after. Built from the
-        // documents alone, so a body lowers to the same numbers whatever else
-        // the caller put in the link.
-        let numbering = modules.enumerated().reduce(into: [Int: Numbering]()) { table, entry in
-            table[entry.offset] = Numbering(
-                imports: entry.element.imports,
-                walks: entry.element.draft.walks,
-                declared: declaredBy[entry.offset] ?? [],
-                closures: entry.element.draft.closures
-            )
-        }
-
-        let sending = numbering.mapValues { held in
-            Sending(numbering: held, pure: settled, isolated: isolatedDeclarations)
-        }
-
-        for symbol in declarations {
-            table.append(
-                Linked.standing(
-                    label: symbol.declared,
-                    origin: symbol.origin,
-                    procedure: symbol.procedure,
-                    pure: settled.contains(symbol.declared),
-                    isolated: isolatedDeclarations.contains(symbol.declared),
-                    failing: failingDeclarations[symbol.declared] ?? .unstated,
-                    sends: try sending[symbol.origin]?.rows(
-                        of: symbol.procedure,
-                        called: symbol.declared
-                    ) ?? [],
-                    in: shapes
-                )
-            )
-        }
-
-        // Which declarations a path segment may reach, read off the rows the
-        // link just made. A row is the declaration lowered, and whether a path
-        // may reach one is a question about the slots it lowered to.
-        let wordSymbols = try derivable(
-            among: gathered.symbols,
-            for: modules,
-            pure: settled,
-            answering: gathered.answering,
-            reaching: rows,
-            in: table
-        )
 
         // What the link read off a body whose declaration wrote no `returns`.
         // Only those: what a declaration wrote is on its row already, and a
@@ -201,64 +103,41 @@ public struct Linker: Sendable {
         var answered: [Name: Shape] = [:]
         var wordAnswered = [[Name: Shape]](repeating: [:], count: modules.count)
 
-        // What a bare spelling a walk writes may call, as the author spelled
-        // it. Its own table rather than a mask over the declarations, because
-        // a selector and a path segment ask two questions: what a call
-        // reaches, and what a step may reach. One table masked by a set let
-        // one spelling answer with the other question's declaration.
+        // Which declarations each document's paths step to, and the three
+        // readings of that table the walk asks for. What a bare spelling may
+        // call is its own table rather than a mask over the declarations,
+        // because a selector and a path segment ask two questions: what a call
+        // reaches, and what a step may reach. One table masked by a set let one
+        // spelling answer with the other question's declaration.
         //
         // What a selector reaches is asked of the declarations themselves,
         // which is where an author's signature already stands.
-        let answeringWords = wordSymbols.map { held in
-            held.mapValues { symbol in symbol.procedure.signature }
-        }
+        var wordSymbols = [[Name: Symbol]](repeating: [:], count: modules.count)
+        var answeringWords = [[Name: Signature]](repeating: [:], count: modules.count)
 
         // Which spellings a path reaches one declaration by. A word may be
         // reachable under more than one, and an answer worked out for it is
         // that declaration's however a walk spelled it.
-        let wordSpellings = wordSymbols.map { held in
-            held.reduce(into: [Name: [Name]]()) { spellings, entry in
-                spellings[entry.value.declared, default: []].append(entry.key)
-            }
-        }
+        var wordSpellings = [[Name: [Name]]](repeating: [:], count: modules.count)
 
-        // Which row a path reaches under each spelling, so what a word takes
-        // and answers is read off the row rather than lowered again.
-        let wordRows = wordSymbols.map { held in
-            held.compactMapValues { symbol in rows[symbol.declared] }
-        }
+        // What each document declares and what its variables are called, in
+        // the order the rows and the boxes stand in.
+        var declaredBy = [[Name]](repeating: [], count: modules.count)
+        var orderedVariables = [[Name]](repeating: [], count: modules.count)
 
-        // Each document's variables in the order a run makes their boxes,
-        // decided here once: the layouts read positions from it and the
-        // image carries the starting values in it.
-        let orderedVariables = modules.enumerated().reduce(into: [Int: [Name]]()) { table, entry in
-            table[entry.offset] = entry.element.variables.keys.sorted()
-        }
-
+        // The rows, and where every number a body carries stands. Held here
+        // and read from here: a second holder of a growing table makes every
+        // write to it copy the whole thing.
         var lowering = Lowering(
-            table: table,
-            rows: rows,
-            words: wordRows,
-            numbering: numbering,
-            variables: orderedVariables.mapValues { names in
-                names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
-            },
+            documents: modules.count,
             contractWords: gathered.contractWords,
             shapes: shapes
         )
 
-        // What a body's constant paths fold against. The stand-ins, while
-        // the words themselves settle: a word folding through a word would
-        // be a circle, and which words are already lowered is a fact of
-        // name order rather than of the text. Once the words are resolved,
-        // folding runs them.
-        let standins = Answered.documents(
-            table,
-            rows: rows,
-            words: wordRows,
-            numbering: numbering,
-            closures: [:]
-        )
+        // Which row each document's numbers stand for, answered when the
+        // document is laid down. A number of its own reaches a name it
+        // declared or one behind it, so the answer never moves after that.
+        var named: [Int: [Int?]] = [:]
 
         // The rows folding runs against, held here rather than read off the
         // lowering: a row is written in when the phase that lowered it ends,
@@ -266,11 +145,21 @@ public struct Linker: Sendable {
         // began rather than whatever the row order reached first. Lowering is
         // then the only holder of its own table, and writing a row into it
         // copies nothing.
-        var foldingRows = table
+        var foldingRows: [Linked] = []
         var loweredRows: [Int] = []
 
+        // The stand-ins, while the words themselves settle: a word folding
+        // through a word would be a circle, and which words are already
+        // lowered is a fact of name order rather than of the text.
         func foldingTable() -> Answered {
-            standins.holding(foldingRows, closures: lowering.closureRows)
+            Answered.documents(
+                foldingRows,
+                rows: lowering.rows,
+                words: lowering.words,
+                numbering: lowering.numbering,
+                named: named,
+                closures: lowering.closureRows
+            )
         }
 
         // What has been lowered since the last phase, written in.
@@ -285,7 +174,7 @@ public struct Linker: Sendable {
         }
 
         func row(of symbol: Symbol) throws -> Int {
-            guard let row = rows[symbol.declared] else {
+            guard let row = lowering.rows[symbol.declared] else {
                 throw LinkError("'\(symbol.declared)' has no row in the table", at: symbol.place)
             }
 
@@ -298,11 +187,11 @@ public struct Linker: Sendable {
             TypeFrame(
                 symbols: gathered.space,
                 types: gathered.types,
-                linked: table,
-                rows: rows,
+                linked: lowering.table,
+                rows: lowering.rows,
                 answers: answered,
                 words: answeringWords[origin],
-                wordRows: wordRows[origin],
+                wordRows: lowering.words[origin],
                 wordAnswers: wordAnswered[origin],
                 pure: settled,
                 isolated: isolatedDeclarations,
@@ -417,21 +306,92 @@ public struct Linker: Sendable {
             return answer
         }
 
-        // Which declarations a path steps to, by the document that declared
-        // them. A word is read where it was written, whichever document walks
-        // to it, and one reachable from more than one stands once, under the
-        // spelling it was declared by rather than under each bare segment that
-        // reaches it.
-        let walkable = wordSymbols.reduce(into: [Int: [Name: Symbol]]()) { held, words in
-            for symbol in words.values { held[symbol.origin, default: [:]][symbol.declared] = symbol }
-        }
-
         // One document at a time, in the order each one's needs stand before
         // it. What a document reads of another is settled before it is read:
         // the documents it reaches stand behind it, and its own rows are the
         // stand-ins their refusal makes until it lowers them.
         for origin in gathered.standing {
             let module = modules[origin]
+            let holding = held[origin] ?? []
+
+            // The facts nobody declared. All three are fixed points over what
+            // a body reaches, so a document's answer is settled once the
+            // documents it reaches have theirs, and the standing refused a
+            // ring where that is not so. Read over every declaration the
+            // document holds rather than the reached ones: a path names a word
+            // the call graph never mentions.
+            pure(among: holding, settling: &settled, reading: moduleVariables)
+            isolated(among: holding, settling: &isolatedDeclarations, in: gathered.space)
+            failing(among: holding, settling: &failingDeclarations)
+
+            // Where this document numbers its calls from: what it looks for
+            // outside itself first, its own declarations after. Built from the
+            // document alone, so a body lowers to the same numbers whatever
+            // else the caller put in the link.
+            let declared = holding.map(\.declared)
+            let numbering = Numbering(
+                imports: module.imports,
+                walks: module.draft.walks,
+                declared: declared,
+                closures: module.draft.closures
+            )
+            let sending = Sending(numbering: numbering, pure: settled, isolated: isolatedDeclarations)
+
+            declaredBy[origin] = declared
+            orderedVariables[origin] = module.variables.keys.sorted()
+
+            // This document's block of the table, in name order. What a
+            // document declares is a run of rows rather than declarations
+            // scattered through the table, so where its rows begin is a number
+            // and its own are that number and an offset. A native answers as
+            // it is from the start; a written body stands as the refusal it
+            // would earn until it is lowered, so nothing folds through a body
+            // half-made.
+            lowering.hold(
+                origin,
+                standing: try holding.map { symbol in
+                    Linked.standing(
+                        label: symbol.declared,
+                        origin: symbol.origin,
+                        procedure: symbol.procedure,
+                        pure: settled.contains(symbol.declared),
+                        isolated: isolatedDeclarations.contains(symbol.declared),
+                        failing: failingDeclarations[symbol.declared] ?? .unstated,
+                        sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
+                        in: shapes
+                    )
+                },
+                numbering: numbering,
+                variables: orderedVariables[origin]
+            )
+
+            // Which declarations this document's paths may step to, read off
+            // the rows it just laid down. A row is the declaration lowered,
+            // and whether a path may reach one is a question about the slots
+            // it lowered to.
+            let words = try derivable(
+                for: module,
+                declaring: holding,
+                among: gathered.space,
+                pure: settled,
+                answering: gathered.answering,
+                reaching: lowering.rows,
+                in: lowering.table
+            )
+
+            wordSymbols[origin] = words
+            answeringWords[origin] = words.mapValues { symbol in symbol.procedure.signature }
+            wordSpellings[origin] = words.reduce(into: [Name: [Name]]()) { spellings, entry in
+                spellings[entry.value.declared, default: []].append(entry.key)
+            }
+
+            lowering.stepping(origin, to: words.compactMapValues { symbol in lowering.rows[symbol.declared] })
+
+            named[origin] = Answered.answering(
+                numbering,
+                rows: lowering.rows,
+                words: lowering.words[origin]
+            )
 
             // The bodies the documents behind this one lowered, which this one
             // may run.
@@ -446,7 +406,7 @@ public struct Linker: Sendable {
                 at: origin,
                 folding: foldingTable(),
                 writing: &lowering,
-                with: frame
+                in: frame(for: origin)
             )
 
             constants[origin] = settledConstants
@@ -457,13 +417,13 @@ public struct Linker: Sendable {
                 beside: settledConstants,
                 folding: foldingTable(),
                 writing: &lowering,
-                with: frame
+                in: frame(for: origin)
             )
 
             // What every declaration of this document whose `returns` nobody
             // wrote answers, read off its body.
             answers(
-                of: (held[origin] ?? []).compactMap { symbol -> Unsaid? in
+                of: holding.compactMap { symbol -> Unsaid? in
                     guard
                         symbol.procedure.signature.returns == nil,
                         let block = symbol.procedure.block
@@ -498,9 +458,8 @@ public struct Linker: Sendable {
             // declaration links stays a fact of its text rather than of who
             // happens to call it. In name order, so which mistake is reported
             // first is the text's fact too.
-            for symbol in (walkable[origin] ?? [:]).values.sorted(by: { left, right in
-                left.declared < right.declared
-            }) {
+            for symbol in words.values.filter({ symbol in symbol.origin == origin })
+                .sorted(by: { left, right in left.declared < right.declared }) {
                 _ = try resolved(symbol)
             }
 
@@ -510,7 +469,7 @@ public struct Linker: Sendable {
             // the order its rows stand in. What a document says has to hold
             // whether or not this entry walks that way, so which declarations
             // are judged is not a question the entry answers.
-            for symbol in held[origin] ?? [] {
+            for symbol in holding {
                 let (procedure, gathered) = try resolved(symbol)
 
                 calls[symbol.declared] = gathered.map { call in call.callee.declared }
@@ -547,7 +506,7 @@ public struct Linker: Sendable {
 
         return Compiled(
             documents: modules.indices.map { origin in
-                let declared = declaredBy[origin] ?? []
+                let declared = declaredBy[origin]
 
                 return Compiled.Document(
                     document: .of(modules[origin]),
@@ -555,13 +514,13 @@ public struct Linker: Sendable {
                     constraints: modules[origin].constraints,
                     contracts: modules[origin].contracts,
                     declared: declared,
-                    table: declared.compactMap { name in rows[name].map { row in judged[row] } }
+                    table: declared.compactMap { name in lowering.rows[name].map { row in judged[row] } }
                         + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
                     calls: declared.map { name in calls[name] ?? [] },
                     words: wordSymbols[origin].mapValues { symbol in symbol.declared },
-                    numbering: numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
+                    numbering: lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
                     shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
-                    variables: (orderedVariables[origin] ?? []).map { name in
+                    variables: orderedVariables[origin].map { name in
                         (name: name, value: variables[origin]?[name] ?? .null)
                     }
                 )

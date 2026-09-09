@@ -339,16 +339,16 @@ extension Linker {
         at origin: Int,
         folding answered: Answered,
         writing lowering: inout Lowering,
-        with framing: (Int) -> TypeFrame
+        in frame: TypeFrame
     ) throws -> [Name: Value] {
         // Folding runs what it reads, and running reads rows. A lowered body
         // carries its document's own numbers, so the table handed here is one
         // that says which row each of those numbers stands for.
         //
+        // The frame is the document's own, since a document reads its own
+        // constants, and it is handed over rather than asked for: the lowering
+        // this writes into is one of the tables a frame is read off.
         guard !module.constants.isEmpty else { return [:] }
-
-        // A document reads its own constants, so the reading is its own.
-        let frame = framing(origin)
 
         var known: [Name: Value] = [:]
 
@@ -406,11 +406,9 @@ extension Linker {
         beside known: [Name: Value],
         folding answered: Answered,
         writing lowering: inout Lowering,
-        with framing: (Int) -> TypeFrame
+        in frame: TypeFrame
     ) throws -> [Name: Value] {
         guard !module.variables.isEmpty else { return [:] }
-
-        let frame = framing(origin)
 
         var started: [Name: Value] = [:]
 

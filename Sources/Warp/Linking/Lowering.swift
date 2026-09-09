@@ -23,16 +23,20 @@ struct Lowering {
     // Rows by declared spelling, and by the bare spelling a path word writes.
     // Read for what a callee takes, which is what judging a call against it
     // needs. What a body is written with is the document's own numbering.
-    let rows: [Name: Int]
-    let words: [[Name: Int]]
+    //
+    // Held here and nowhere else while a compile lays its documents down. A
+    // second holder of a growing table makes every write to it copy the whole
+    // thing.
+    private(set) var rows: [Name: Int] = [:]
+    private(set) var words: [[Name: Int]]
 
     // Where each document's calls are numbered from. A body carries these
     // numbers rather than the rows above, so a document lowers the same way
     // whatever else the link was handed.
-    let numbering: [Int: Numbering]
+    private(set) var numbering: [Int: Numbering] = [:]
 
     // Each document's variables by name, in the order a run makes their boxes.
-    let variables: [Int: [Name: Int]]
+    private(set) var variables: [Int: [Name: Int]] = [:]
 
     // Every contract's words, under the spelling a call writes to reach one.
     // A selector in here names no row: it names the table of rows the run
@@ -63,24 +67,61 @@ struct Lowering {
 
     // MARK: - Initializer
     init(
+        documents: Int,
+        table: [Linked] = [],
+        contractWords: [Name: ContractWord] = [:],
+        shapes: ShapeTable
+    ) {
+        self.table = table
+        self.words = [[Name: Int]](repeating: [:], count: documents)
+        self.contractWords = contractWords
+        self.shapes = shapes
+    }
+
+    // A lowering standing on tables something else holds: an expression
+    // folded beside a document's bodies rather than into a row of its own.
+    init(
         table: [Linked],
         rows: [Name: Int],
         words: [[Name: Int]],
         numbering: [Int: Numbering],
-        variables: [Int: [Name: Int]],
-        contractWords: [Name: ContractWord] = [:],
         shapes: ShapeTable
     ) {
         self.table = table
         self.rows = rows
         self.words = words
         self.numbering = numbering
-        self.variables = variables
-        self.contractWords = contractWords
+        self.contractWords = [:]
         self.shapes = shapes
     }
 
     // MARK: - Public
+    // One document laid down: its declarations take the rows after the ones
+    // already here, in the order they are handed over, and its numbering says
+    // what the bodies it lowers are written with.
+    mutating func hold(
+        _ origin: Int,
+        standing: [Linked],
+        numbering held: Numbering,
+        variables ordered: [Name]
+    ) {
+        for (offset, row) in standing.enumerated() {
+            rows[row.label] = table.count + offset
+        }
+
+        table.append(contentsOf: standing)
+        numbering[origin] = held
+        variables[origin] = ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
+            positions[name.element] = name.offset
+        }
+    }
+
+    // Which row each bare spelling that document's paths step to reaches.
+    // Read off the rows, so it is said after they stand.
+    mutating func stepping(_ origin: Int, to reached: [Name: Int]) {
+        words[origin] = reached
+    }
+
     // Lowers a declaration's body into its row.
     mutating func settle(
         _ row: Int,

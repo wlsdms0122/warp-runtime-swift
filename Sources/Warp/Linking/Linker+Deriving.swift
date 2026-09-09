@@ -234,38 +234,32 @@ extension Linker {
     // A selector needs no table of its own. `std.count` is resolved by the
     // declared spelling like every other call.
     func derivable(
-        among symbols: [Symbol],
-        for modules: [Module],
+        for module: Module,
+        declaring holding: [Symbol],
+        among space: [Name: Symbol],
         pure: Set<Name>,
         answering contracts: Set<Name>,
         reaching rows: [Name: Int],
         in table: [Linked]
-    ) throws -> [[Name: Symbol]] {
-        // Which documents named each declaration. A path names no module, so
-        // what a document may walk to is what it declared and what it said it
-        // imports, and nothing else in the link is something it could have
-        // meant.
-        var wanted: [Name: [Int]] = [:]
+    ) throws -> [Name: Symbol] {
+        // What this document may walk to is what it declared and what it said
+        // it imports, and nothing else in the link is something it could have
+        // meant. A path names no module.
+        let reachable = holding + module.imports.sorted().compactMap { name in space[name] }
 
-        for (origin, module) in modules.enumerated() {
-            for name in module.imports {
-                wanted[name, default: []].append(origin)
-            }
-        }
-
-        var words = [[Name: Symbol]](repeating: [:], count: modules.count)
+        var words: [Name: Symbol] = [:]
         // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
         // on a declaration, which makes all of them something a reader has to
         // be able to reach. A slot holding the latest collision would keep the
         // newest two and drop whoever took the name first, so a third arrival
         // hides the declaration the other two are colliding with.
-        var contested = [[Name: [Symbol]]](repeating: [:], count: modules.count)
+        var contested: [Name: [Symbol]] = [:]
 
         // Symbols rather than procedures, because the bodies are still to be
         // read: the caller reads them through the same judgment every other
         // declaration takes.
-        for symbol in symbols.sorted(by: { $0.declared < $1.declared }) {
+        for symbol in reachable.sorted(by: { $0.declared < $1.declared }) {
             guard pure.contains(symbol.declared) else { continue }
 
             guard rows[symbol.declared].map({ row in table[row].isDerivable }) == true else { continue }
@@ -277,37 +271,18 @@ extension Linker {
             // The contract is the spelling that tells them apart.
             guard !contracts.contains(symbol.declared) else { continue }
 
-            let bare = symbol.declared.unqualified
-
-            func hold(in origin: Int) {
-                // Only two words a path could both reach are ambiguous. A
-                // declaration a path cannot reach shares the link but not the
-                // question, so it is not competing for the name.
-                if let first = words[origin].updateValue(symbol, forKey: bare) {
-                    contested[origin][bare, default: [first]].append(symbol)
-                }
-            }
-
-            hold(in: symbol.origin)
-
-            for origin in wanted[symbol.declared] ?? [] where origin != symbol.origin {
-                hold(in: origin)
+            // Only two words a path could both reach are ambiguous. A
+            // declaration a path cannot reach shares the link but not the
+            // question, so it is not competing for the name.
+            if let first = words.updateValue(symbol, forKey: symbol.declared.unqualified) {
+                contested[symbol.declared.unqualified, default: [first]].append(symbol)
             }
         }
 
-        // The first document holding a collision, in the order the caller
-        // handed them over, and inside it the first name in sorted order. Two
-        // documents may each hold one, and the order a dictionary hands its
-        // keys back is seeded per process, so which declaration an author is
-        // sent to would otherwise change between runs.
-        //
-        // The second is what is walked to, the way it is wherever two
-        // declarations collide. A name reaches this table only by colliding,
-        // so there are always at least two.
-        if
-            let origin = contested.indices.first(where: { origin in !contested[origin].isEmpty }),
-            let (word, declarations) = contested[origin].min(by: { one, other in one.key < other.key })
-        {
+        // The first name in sorted order, so which declaration an author is
+        // sent to does not change with the order a dictionary hands its keys
+        // back.
+        if let (word, declarations) = contested.min(by: { one, other in one.key < other.key }) {
             // In the order the caller handed the modules over, which is the
             // order every collision refusal is read in: the second is the one
             // that could not be added. Gathered in name order above, because
@@ -316,7 +291,7 @@ extension Linker {
             let ranked = declarations.sorted { one, other in one.origin < other.origin }
 
             throw LinkError(
-                "\(contested[origin].keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
+                "\(contested.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
                     + " than one module this document may walk to. '\(word)' by"
                     + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."
                     + " A path segment names no module, so there is no spelling that"

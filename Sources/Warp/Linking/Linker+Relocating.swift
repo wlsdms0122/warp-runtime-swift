@@ -43,36 +43,35 @@ struct Answered: Sendable {
 
     // A table as compiling left it, and where each document numbers from. The
     // bodies keep the numbers they were lowered with, so what reads one is
-    // told which document it came from.
-    //
-    // Which row each of those numbers stands for is worked out here, once per
-    // number rather than once per body standing on one. A name this link has
-    // no row for stands as nothing rather than as a refusal: a document
-    // numbers every bare spelling its paths step to, and a step onto a field
-    // reaches no declaration.
+    // told which document it came from, and `named` says which row each of
+    // those numbers stands for.
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
         words: [[Name: Int]],
         numbering: [Int: Numbering],
+        named: [Int: [Int?]],
         closures: [Int: [Int]]
     ) -> Answered {
-        let named = numbering.reduce(into: [Int: [Int?]]()) { named, entry in
-            named[entry.key] = entry.value
-                .answers(rows: rows, words: words[entry.key])
-                .map { answer -> Int? in
-                    guard case let .row(row) = answer else { return nil }
-
-                    return row
-                }
-        }
-
-        return Answered(
+        Answered(
             table: table,
             rows: rows,
             words: words,
             numbers: .documents(numbering, named: named, closures: closures)
         )
+    }
+
+    // Which row each of one document's numbers stands for, worked out once per
+    // number rather than once per body standing on one. A name this link has
+    // no row for stands as nothing rather than as a refusal: a document
+    // numbers every bare spelling its paths step to, and a step onto a field
+    // reaches no declaration.
+    static func answering(_ numbering: Numbering, rows: [Name: Int], words: [Name: Int]) -> [Int?] {
+        numbering.answers(rows: rows, words: words).map { answer -> Int? in
+            guard case let .row(row) = answer else { return nil }
+
+            return row
+        }
     }
 
     // Made by `Relocating` alone, which is what keeps a table nobody answered
