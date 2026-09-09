@@ -533,7 +533,7 @@ public struct Linker: Sendable {
             types: module.types,
             constraints: module.constraints,
             contracts: module.contracts,
-            satisfying: module.satisfying,
+            claiming: module.claiming,
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },

@@ -72,7 +72,7 @@ public struct ModuleReader: Decodable {
                 .mapValues { members in members.map(\.type) },
             contracts: try Self.record([String: ContractWordReader].self, in: container, forKey: .contracts)
                 .mapValues { words in try words.mapValues(\.signature).named(at: []) },
-            satisfying: try Self.record([String].self, in: container, forKey: .satisfies)
+            claiming: try Self.record([String].self, in: container, forKey: .satisfies)
                 .mapValues { contracts in try Set(contracts).named(at: []) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
@@ -125,7 +125,7 @@ public struct ModuleReader: Decodable {
     // away for its keys rather than for what it is.
     //
     // Anything outside the range this reader knows is refused rather than
-    // guessed at. Below it, the document is satisfying a language that never
+    // guessed at. Below it, the document is claiming a language that never
     // existed. Read through its own container, before anything else and before
     // the keys are judged, because everything after it is read by rules a newer
     // document may not be written to. Including which keys exist. A later

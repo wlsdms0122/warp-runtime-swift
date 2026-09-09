@@ -666,7 +666,7 @@ struct CompiledTests {
                     "bank.Account": .record(["balance": .int]),
                     "bank.Card": .record(["last": .string])
                 ],
-                satisfying: [
+                claiming: [
                     "bank.Account": ["app.Describable"],
                     "bank.Card": ["app.Describable"]
                 ],

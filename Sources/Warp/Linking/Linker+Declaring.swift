@@ -135,7 +135,7 @@ extension Linker {
         var claims: [Declared<Claim>] = []
 
         for (origin, held) in documents.enumerated() {
-            for (type, contracts) in held.satisfying.sorted(by: { $0.key < $1.key }) {
+            for (type, contracts) in held.claiming.sorted(by: { $0.key < $1.key }) {
                 for contract in contracts.sorted() {
                     let declaration = Declared(
                         Claim(type: type, contract: contract),

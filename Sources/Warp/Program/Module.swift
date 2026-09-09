@@ -54,7 +54,7 @@ public struct Module: Sendable {
     // contract because a document says it does, and this is where one says it.
     // Which declarations back the claim is the link's to find and to hold the
     // claim to.
-    public let satisfying: [Name: Set<Name>]
+    public let claiming: [Name: Set<Name>]
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
@@ -106,7 +106,7 @@ public struct Module: Sendable {
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
-        satisfying: [Name: Set<Name>] = [:],
+        claiming: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure],
@@ -120,7 +120,7 @@ public struct Module: Sendable {
                 types: types,
                 constraints: constraints,
                 contracts: contracts,
-                satisfying: satisfying,
+                claiming: claiming,
                 constants: constants,
                 variables: variables,
                 procedures: procedures
@@ -137,7 +137,7 @@ public struct Module: Sendable {
         self.types = draft.types
         self.constraints = draft.constraints
         self.contracts = draft.contracts
-        self.satisfying = draft.satisfying
+        self.claiming = draft.claiming
         self.constants = draft.constants
         self.variables = draft.variables
         self.procedures = draft.procedures
@@ -159,7 +159,7 @@ public struct Module: Sendable {
             types: types,
             constraints: constraints,
             contracts: contracts,
-            satisfying: satisfying,
+            claiming: claiming,
             constants: constants,
             variables: variables,
             procedures: procedures

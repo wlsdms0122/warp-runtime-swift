@@ -145,7 +145,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            satisfying: ["bank.Account": ["app.Describable"]],
+            claiming: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
@@ -209,7 +209,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Plain": .record(["note": .string])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            satisfying: ["bank.Plain": ["app.Describable"]],
+            claiming: ["bank.Plain": ["app.Describable"]],
             procedures: [entryName: Procedure(body: [], result: .literal(.null))]
         )
 
@@ -227,7 +227,7 @@ struct ContractTests {
         let held = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            satisfying: ["bank.Account": ["app.Describable"]],
+            claiming: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
@@ -242,7 +242,7 @@ struct ContractTests {
             ]
         )
         let again = try Module(
-            satisfying: ["bank.Account": ["app.Describable"]],
+            claiming: ["bank.Account": ["app.Describable"]],
             procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
         )
 
@@ -260,7 +260,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             constraints: ["app.Scalar": [.int, .string]],
-            satisfying: ["bank.Account": ["app.Scalar"]],
+            claiming: ["bank.Account": ["app.Scalar"]],
             procedures: [entryName: Procedure(body: [], result: .literal(.null))]
         )
 
@@ -322,7 +322,7 @@ struct ContractTests {
                 "bank.Card": .record(["last": .string])
             ].merging(extra) { _, added in added },
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            satisfying: [
+            claiming: [
                 "bank.Account": ["app.Describable"],
                 "bank.Card": ["app.Describable"]
             ],

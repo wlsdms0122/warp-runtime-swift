@@ -59,7 +59,7 @@ struct WriterRoundTripTests {
         let module = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            satisfying: ["bank.Account": ["app.Describable"]],
+            claiming: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
@@ -78,7 +78,7 @@ struct WriterRoundTripTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(try Loader().load(written, identity: nil).satisfying == module.satisfying)
+        #expect(try Loader().load(written, identity: nil).claiming == module.claiming)
     }
 
     // MARK: - Public
