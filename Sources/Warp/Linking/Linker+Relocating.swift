@@ -224,7 +224,9 @@ struct Relocating {
         let shapes = types.shapes
 
         self.init(
-            table: assembled.table.map { judged in judged.lowered(in: shapes) },
+            table: zip(assembled.table, assembled.origins).map { judged, origin in
+                judged.lowered(in: shapes, of: origin)
+            },
             rows: assembled.rows,
             words: assembled.words,
             numbering: assembled.numbering,

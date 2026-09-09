@@ -596,12 +596,12 @@ public struct Linker: Sendable {
             types: declared.types,
             contracts: declared.contracts,
             among: assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in
-                let row = assembled.table[entry.value]
+                let origin = assembled.origins[entry.value]
 
                 table[entry.key] = Declared(
-                    row.signature,
-                    at: .procedure(entry.key.spelling, in: compiled.documents[row.origin].document),
-                    of: row.origin
+                    assembled.table[entry.value].signature,
+                    at: .procedure(entry.key.spelling, in: compiled.documents[origin].document),
+                    of: origin
                 )
             }
         ).types

@@ -13,10 +13,14 @@ import Foundation
 // What a row's slots and answer lower to is this signature read against a
 // shape table, so it stands where a table does. A document has none, and
 // that is the whole difference between this and a row.
+//
+// Which document a row came out of is not here either: the block it stands in
+// says it. A link lays the blocks down and stamps each row with where its
+// block landed, so a document reused in another link carries nothing it would
+// have to be corrected about.
 struct Judged: Sendable {
     // MARK: - Property
     let label: Name
-    let origin: Int
     let signature: Signature
     let purity: Purity
     let isolation: Isolation
@@ -34,7 +38,6 @@ struct Judged: Sendable {
     // this against a table, which any table gives again.
     init(_ row: Linked) {
         self.label = row.label
-        self.origin = row.origin
         self.signature = row.signature
         self.purity = row.purity
         self.isolation = row.isolation
@@ -44,10 +47,10 @@ struct Judged: Sendable {
     }
 
     // MARK: - Public
-    // This declaration as a row of the table given. Compiling and linking both
-    // call this, each against its own table, which is what makes the two
-    // readings one.
-    func lowered(in table: ShapeTable) -> Linked {
+    // This declaration as a row of the table given, standing at the position
+    // its block landed at. Compiling and linking both call this, each against
+    // its own table, which is what makes the two readings one.
+    func lowered(in table: ShapeTable, of origin: Int) -> Linked {
         Linked(
             label: label,
             origin: origin,

@@ -80,6 +80,10 @@ struct Compiled: Sendable {
     struct Assembled: Sendable {
         let table: [Judged]
 
+        // Which document each row's block came from, stamped as the blocks
+        // were laid down. A row does not say it, so this is where it is said.
+        let origins: [Int]
+
         // Every declared spelling, by row.
         let rows: [Name: Int]
 
@@ -122,11 +126,13 @@ struct Compiled: Sendable {
         let held = documents.reduce(0) { held, document in held + document.table.count }
 
         var table: [Judged] = []
+        var origins: [Int] = []
         var calls: [[Name]] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
 
         table.reserveCapacity(held)
+        origins.reserveCapacity(held)
         calls.reserveCapacity(held)
         rows.reserveCapacity(held)
 
@@ -143,6 +149,7 @@ struct Compiled: Sendable {
             }
 
             table.append(contentsOf: document.table)
+            origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
             calls.append(contentsOf: document.calls)
             calls.append(
                 contentsOf: [[Name]](repeating: [], count: document.table.count - document.calls.count)
@@ -151,6 +158,7 @@ struct Compiled: Sendable {
 
         return Assembled(
             table: table,
+            origins: origins,
             rows: rows,
             words: documents.map { document in
                 document.words.compactMapValues { declared in rows[declared] }
