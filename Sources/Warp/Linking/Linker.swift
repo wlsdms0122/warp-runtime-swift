@@ -562,20 +562,33 @@ public struct Linker: Sendable {
         // is this link's rows; what leaves compiling is the document's.
         let shaped = try lowering.numbered()
 
+        // The rows as each document's own block: what it declared in name
+        // order, then the closures its bodies lifted. The link lays the blocks
+        // down and answers the names with where each began, so nothing about
+        // where they sit leaves here.
+        let judged = shaped.table.map(Judged.init)
+
         return Compiled(
-            table: shaped.table.map(Judged.init),
-            rows: rows,
-            words: wordRows,
-            closures: lowering.closureRows,
-            calls: calls,
-            types: types,
-            numbering: numbering,
-            shapeNumbering: shaped.numbering,
-            variables: variables.reduce(into: [:]) { table, entry in
-                table[entry.key] = (orderedVariables[entry.key] ?? []).map { name in
-                    (name: name, value: entry.value[name] ?? .null)
-                }
-            }
+            documents: modules.indices.map { origin in
+                let declared = declaredBy[origin] ?? []
+
+                return Compiled.Document(
+                    declared: declared,
+                    table: declared.compactMap { name in rows[name].map { row in judged[row] } }
+                        + (lowering.closureRows[origin] ?? []).map { row in judged[row] },
+                    calls: declared.reduce(into: [Name: [Name]]()) { held, name in
+                        held[name] = calls[name] ?? []
+                    },
+                    numbering: numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
+                    shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
+                    variables: (orderedVariables[origin] ?? []).map { name in
+                        (name: name, value: variables[origin]?[name] ?? .null)
+                    }
+                )
+            },
+            standing: graph.standing,
+            words: wordSymbols.mapValues { symbol in symbol.declared },
+            types: types
         )
     }
 
@@ -583,13 +596,17 @@ public struct Linker: Sendable {
     // is judged and nothing runs: every declaration stands judged already, and
     // the answer is read off the call graph the judgment gathered.
     func link(_ compiled: Compiled, entry: Name) throws -> Image {
+        // Every document's block laid down, which is where its rows first
+        // stand somewhere. What a name reaches is answered from here on.
+        let assembled = compiled.assembled()
+
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
-        guard let start = compiled.rows[entry] else {
+        guard let start = assembled.rows[entry] else {
             throw LinkError(
                 "entry '\(entry)' is not declared by any module in this link."
                     + " A name is its declared spelling. Declared:"
-                    + " \(compiled.rows.keys.sorted().map(\.spelling).joined(separator: ", "))",
+                    + " \(assembled.rows.keys.sorted().map(\.spelling).joined(separator: ", "))",
                 at: nil
             )
         }
@@ -604,20 +621,20 @@ public struct Linker: Sendable {
 
             guard reached.insert(declared).inserted else { continue }
 
-            frontier.append(contentsOf: compiled.calls[declared] ?? [])
+            frontier.append(contentsOf: assembled.calls[declared] ?? [])
         }
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let linked = try Relocating(compiled).linked()
+        let linked = try Relocating(assembled, types: compiled.types).linked()
 
         return Image(
             linked: linked.table,
             start: start,
-            rows: compiled.rows,
+            rows: assembled.rows,
             reached: reached,
             types: compiled.types,
-            variables: compiled.variables
+            variables: assembled.variables
         )
     }
 

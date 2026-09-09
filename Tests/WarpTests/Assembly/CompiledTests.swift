@@ -35,8 +35,8 @@ struct CompiledTests {
         let compiled = try linker.compile([sut] + Module.standard)
 
         // Then. Each image starts where it was asked to.
-        #expect(try linker.link(compiled, entry: "app.here").start == compiled.rows["app.here"])
-        #expect(try linker.link(compiled, entry: "app.there").start == compiled.rows["app.there"])
+        #expect(try linker.link(compiled, entry: "app.here").start == compiled.assembled().rows["app.here"])
+        #expect(try linker.link(compiled, entry: "app.there").start == compiled.assembled().rows["app.there"])
     }
 
     @Test("what a document says holds whichever entry a caller names")
@@ -105,7 +105,7 @@ struct CompiledTests {
         )
 
         // When.
-        let rows = try linker.compile([first, second]).rows
+        let rows = try linker.compile([first, second]).assembled().rows
 
         // Then. Each document's rows are next to each other, and in name
         // order inside the run.
@@ -157,7 +157,7 @@ struct CompiledTests {
         let compiled = try linker.compile([top, middle, bottom])
 
         func purity(of declared: Name) throws -> Purity {
-            try compiled.table[#require(compiled.rows[declared])].purity
+            try compiled.assembled().table[#require(compiled.assembled().rows[declared])].purity
         }
 
         // Then. The whole chain answers by the run, and what reaches none of
@@ -234,7 +234,7 @@ struct CompiledTests {
         let number = try called(in: code(of: "b.asks", in: compiled))
 
         #expect(number == 0)
-        #expect(number != compiled.rows["a.answers"])
+        #expect(number != compiled.assembled().rows["a.answers"])
 
         // And. The link answers with the row.
         let image = try linker.link(compiled, entry: entryName)
@@ -258,11 +258,32 @@ struct CompiledTests {
         let beside = try linker.compile([ahead] + sut + Module.standard)
 
         // Then. The rows moved and the number the body carries did not.
-        #expect(alone.rows["a.answers"] != beside.rows["a.answers"])
+        #expect(alone.assembled().rows["a.answers"] != beside.assembled().rows["a.answers"])
         #expect(
             try called(in: code(of: "b.asks", in: alone))
                 == called(in: code(of: "b.asks", in: beside))
         )
+    }
+
+    @Test("a document's block is its own, whatever else the link holds")
+    func aDocumentsBlockDoesNotFollowTheGraph() throws {
+        // Given. The same two documents, compiled once alone and once beside a
+        // third whose declarations sort in front of theirs.
+        let sut = try calling()
+        let ahead = try Module(
+            procedures: [
+                "aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+            ]
+        )
+
+        // When.
+        let alone = try linker.compile(sut + Module.standard)
+        let beside = try linker.compile([ahead] + sut + Module.standard)
+
+        // Then. The rows moved, and the block the document holds did not: the
+        // same spellings in the same order, and its closures behind them.
+        #expect(alone.assembled().rows["b.asks"] != beside.assembled().rows["b.asks"])
+        #expect(try block(holding: "b.asks", in: alone) == block(holding: "b.asks", in: beside))
     }
 
     @Test("a cast carries the number its own document gave the type")
@@ -315,9 +336,24 @@ struct CompiledTests {
     }
 
     // MARK: - Private
+    // The block a document holds, by a spelling it declares: what it declared
+    // in the order its rows stand, and what each of those rows is called.
+    private func block(
+        holding declared: Name,
+        in compiled: Compiled
+    ) throws -> (declared: [Name], rows: [Name]) {
+        let document = try #require(
+            compiled.documents.first { document in document.declared.contains(declared) }
+        )
+
+        return (document.declared, document.table.map(\.label))
+    }
+
     // What a declaration's row holds, whichever table it was read out of.
     private func code(of declared: Name, in compiled: Compiled) throws -> Linked.Implementation {
-        try compiled.table[#require(compiled.rows[declared])].implementation
+        let assembled = compiled.assembled()
+
+        return try assembled.table[#require(assembled.rows[declared])].implementation
     }
 
     private func code(of declared: Name, in image: Image) throws -> Linked.Implementation {
