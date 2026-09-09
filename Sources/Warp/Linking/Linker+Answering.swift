@@ -53,7 +53,7 @@ extension Linker {
     // them per declaration is the whole graph copied once per node.
     func answers(
         of unsaid: [Unsaid],
-        reading frame: (Int) -> TypeFrame,
+        reading frame: () -> TypeFrame,
         recording: (Name, Shape) -> Void
     ) {
         let declared = Dictionary(
@@ -88,7 +88,7 @@ extension Linker {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: frame(only.symbol.origin)
+                with: frame()
             )
 
             // A reading naming a type parameter is handed on as it is. What a

@@ -1,0 +1,168 @@
+//
+//  Compiling.swift
+//  Warp
+//
+//  Created by JSilver on 9/9/26.
+//
+
+import Foundation
+
+// What the documents already compiled proved, which is what the next one is
+// compiled against.
+//
+// A document is compiled against the seven things it asks of what stands
+// before it: what a declaration takes and answers, whether it is pure,
+// isolated and failing, what the link read off a body that declared no
+// answer, and a body it can run while folding a constant. All seven are here,
+// and a document reaches nothing else outside itself.
+//
+// It grows as each document is laid down, and the growing is the whole reason
+// it is one value rather than a dozen. A table handed to a second holder is
+// copied whole the next time it is written to, so the tables a compile grows
+// are held here and read from here.
+struct Compiling {
+    // MARK: - Property
+    // What only the whole list answers, which a document has no say in.
+    let types: TypeTable
+    let contractWords: [Name: ContractWord]
+    let answering: Set<Name>
+
+    // Which document each position is, for a refusal that names one.
+    let documents: [Place.Document]
+
+    // The facts nobody declared, over every declaration laid down so far.
+    var pure: Set<Name> = []
+    var isolated: Set<Name> = []
+    var failing: [Name: Failing] = [:]
+
+    // What the link read off a body whose declaration wrote no `returns`.
+    // Only those: what a declaration wrote is on its row already, and a table
+    // holding every spelling would hash every declared name to say what the
+    // row says.
+    var answers: [Name: Shape] = [:]
+
+    // The rows, and where every number a body carries stands.
+    var lowering: Lowering
+
+    // Every judgment the compile asks and every row it builds reads the table
+    // the run will read.
+    var shapes: ShapeTable { types.shapes }
+
+    // Which row each document's numbers stand for, answered when the document
+    // is laid down.
+    private var named: [Int: [Int?]] = [:]
+
+    // The rows folding runs against, held apart from the lowering: a row is
+    // written in when the phase that lowered it ends, so what a body folds
+    // through is what stood settled before its phase began rather than
+    // whatever the row order reached first. Lowering is then the only holder
+    // of its own table, and writing a row into it copies nothing.
+    private var foldingRows: [Linked] = []
+    private var loweredRows: [Int] = []
+
+    // MARK: - Initializer
+    init(_ gathered: Gathered, naming documents: [Place.Document]) {
+        self.types = gathered.types
+        self.contractWords = gathered.contractWords
+        self.answering = gathered.answering
+        self.documents = documents
+        self.lowering = Lowering(
+            documents: documents.count,
+            contractWords: gathered.contractWords,
+            shapes: gathered.types.shapes
+        )
+    }
+
+    // MARK: - Public
+    // One document laid down: its declarations take the rows after the ones
+    // already here, and its numbering says what the bodies it lowers are
+    // written with.
+    mutating func hold(
+        _ origin: Int,
+        standing rows: [Linked],
+        numbering: Numbering,
+        variables ordered: [Name]
+    ) {
+        lowering.hold(origin, standing: rows, numbering: numbering, variables: ordered)
+    }
+
+    // Which row each bare spelling this document's paths step to reaches, and
+    // what each number of its own reaches with it. A number of its own reaches
+    // a name it declared or one behind it, so the answer never moves after
+    // this.
+    mutating func steps(_ origin: Int, to reached: [Name: Int]) {
+        lowering.stepping(origin, to: reached)
+
+        named[origin] = Answered.answering(
+            lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
+            rows: lowering.rows,
+            words: lowering.words[origin]
+        )
+    }
+
+    // A shape the link read off a body rather than out of a signature, held to
+    // the document that wrote the body: the rows it stands on are numbered
+    // beside the ones that document's bodies stand on.
+    mutating func read(_ answer: Shape, as declared: Name, of origin: Int) {
+        answers[declared] = answer
+
+        lowering.stands(on: answer, of: origin)
+    }
+
+    // A body lowered into its row. Noted as well as written, because what
+    // folding runs is a table of its own and this is what is copied into it.
+    mutating func settle(_ row: Int, body block: Block, at place: Place) throws {
+        try lowering.settle(row, body: block, at: place)
+
+        loweredRows.append(row)
+    }
+
+    // The stand-ins, while the words themselves settle: a word folding through
+    // a word would be a circle, and which words are already lowered is a fact
+    // of name order rather than of the text.
+    func folding() -> Answered {
+        Answered.documents(
+            foldingRows,
+            rows: lowering.rows,
+            words: lowering.words,
+            numbering: lowering.numbering,
+            named: named,
+            closures: lowering.closureRows
+        )
+    }
+
+    // What has been lowered since the last phase, written in.
+    mutating func foldable() {
+        foldingRows.append(contentsOf: lowering.table[foldingRows.count...])
+
+        for row in loweredRows {
+            foldingRows[row] = lowering.table[row]
+        }
+
+        loweredRows.removeAll(keepingCapacity: true)
+    }
+
+    // One document's reading. What a path may walk to is the document's own,
+    // so a frame is made for the document whose body is being read.
+    func frame(
+        of origin: Int,
+        stepping words: [Name: Shape],
+        reading variables: Set<Name>
+    ) -> TypeFrame {
+        TypeFrame(
+            types: types,
+            linked: lowering.table,
+            rows: lowering.rows,
+            answers: answers,
+            wordRows: lowering.words[origin],
+            wordAnswers: words,
+            pure: pure,
+            isolated: isolated,
+            failing: failing,
+            contractWords: contractWords,
+            variables: variables
+        )
+    }
+
+    // MARK: - Private
+}

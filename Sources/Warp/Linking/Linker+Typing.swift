@@ -1272,8 +1272,8 @@ extension Linker {
 
             var reading: Set<Name> = []
 
-            if case let .judging(_, origin?) = ask {
-                reading = frame.variables[origin] ?? []
+            if case .judging(_, _?) = ask {
+                reading = frame.variables
             }
 
             let pure = body.map { block in isPure(block, given: frame.pure, reading: reading) } ?? false

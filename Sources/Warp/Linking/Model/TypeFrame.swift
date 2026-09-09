@@ -64,9 +64,9 @@ struct TypeFrame: Sendable {
     // declaration, and which declaration runs is the receiver's to say.
     let contractWords: [Name: ContractWord]
 
-    // Each document's variables by name. A body reading one answers by the
-    // run's state, so purity is read against these.
-    let variables: [Int: Set<Name>]
+    // The variables of the document being read, by name. A body reading one
+    // answers by the run's state, so purity is read against these.
+    let variables: Set<Name>
 
     // MARK: - Initializer
     // MARK: - Public

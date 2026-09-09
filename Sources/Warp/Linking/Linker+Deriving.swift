@@ -27,12 +27,10 @@ extension Linker {
     func pure(
         among symbols: [Symbol],
         settling pure: inout Set<Name>,
-        reading variables: [Int: Set<Name>]
+        reading variables: Set<Name>
     ) {
-        let bodies = symbols.reduce(into: [Name: (block: Block, reading: Set<Name>)]()) { table, symbol in
-            guard let block = symbol.procedure.block else { return }
-
-            table[symbol.declared] = (block, variables[symbol.origin] ?? [])
+        let bodies = symbols.reduce(into: [Name: Block]()) { table, symbol in
+            table[symbol.declared] = symbol.procedure.block
         }
 
         pure.formUnion(
@@ -46,8 +44,8 @@ extension Linker {
         // here, and asking after those again is asking the whole graph once
         // per document.
         while true {
-            let struck = bodies.compactMap { name, body in
-                pure.contains(name) && !isPure(body.block, given: pure, reading: body.reading) ? name : nil
+            let struck = bodies.compactMap { name, block in
+                pure.contains(name) && !isPure(block, given: pure, reading: variables) ? name : nil
             }
 
             guard !struck.isEmpty else { return }
