@@ -83,66 +83,15 @@ public struct Linker: Sendable {
             rank[position] = place
         }
 
-        // A document's types take a run of shape rows the way its declarations
-        // take a run of table rows, in the standing order, so a document's
-        // shapes are behind the shapes it names.
-        let declaring = try self.types(
-            of: modules,
-            declared: gathered.types,
-            constraints: gathered.constraints,
-            contracts: gathered.contracts,
-            standing: gathered.standing.flatMap { position in modules[position].types.keys.sorted() }
-        )
-
-        // Every declaration under its declared spelling. The spellings are
-        // unique, since the symbol gathering refused a double, and every call
-        // in every body asks this table.
-        let space = gathered.symbols.reduce(into: [Name: Symbol]()) { table, symbol in
-            table[symbol.declared] = symbol
-        }
-
-        // Which types answer which contracts. Read off the declarations, so it
-        // is worked out here rather than where the types were declared, and
-        // the table is remade holding it. The rows are numbered from the
-        // declarations alone, so a shape lowered against either table is the
-        // same shape.
-        let witnessed = try witnesses(
-            of: gathered.contracts,
-            over: gathered.types,
-            among: space,
-            in: declaring
-        )
-        let types = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
-
         // Every judgment the link asks and every row it builds reads the
         // table the run will read.
-        let shapes = types.shapes
+        let shapes = gathered.types.shapes
 
-        // The words the contracts ask, under the spellings a call writes to
-        // reach them. Read off the table the satisfaction was just written
-        // into, so what a call reaches and what a judgment reads are one
-        // reading rather than two.
-        let contractWords = ContractWord.table(in: types)
-
-        // A contract's word and a declaration cannot take one spelling. A call
-        // writing it lowers to the pick the contract makes, so the declaration
-        // standing under it is reachable by nothing and the two readings of
-        // one name never meet.
-        //
-        // In name order, so which collision is reported first is the text's
-        // fact rather than a hash seed's.
-        if
-            let spelling = contractWords.keys.sorted().first(where: { taken in space[taken] != nil }),
-            let declared = space[spelling],
-            let asked = contractWords[spelling]
-        {
-            throw LinkError(
-                "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
-                    + " of '\(asked.contract)', so there is no answer to which one a"
-                    + " call reaches. A contract's word and a declaration cannot take"
-                    + " one spelling",
-                at: declared.place
-            )
+        // Every declaration under its declared spelling. The spellings are
+        // unique, since the gathering refused a double, and every call in
+        // every body asks this table.
+        let space = gathered.symbols.reduce(into: [Name: Symbol]()) { table, symbol in
+            table[symbol.declared] = symbol
         }
 
         // What every declaration returns, by the name a resolved call site
@@ -254,7 +203,7 @@ public struct Linker: Sendable {
             among: gathered.symbols,
             for: modules,
             pure: settled,
-            answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) }),
+            answering: gathered.answering,
             reaching: rows,
             in: table
         )
@@ -314,7 +263,7 @@ public struct Linker: Sendable {
             variables: orderedVariables.mapValues { names in
                 names.enumerated().reduce(into: [:]) { positions, variable in positions[variable.element] = variable.offset }
             },
-            contractWords: contractWords,
+            contractWords: gathered.contractWords,
             shapes: shapes
         )
 
@@ -345,7 +294,7 @@ public struct Linker: Sendable {
             TypeFrame(
                 symbols: space,
                 signatures: answeringSignatures,
-                types: types,
+                types: gathered.types,
                 linked: table,
                 rows: rows,
                 answers: answered,
@@ -355,7 +304,7 @@ public struct Linker: Sendable {
                 pure: settled,
                 isolated: isolatedDeclarations,
                 failing: failingDeclarations,
-                contractWords: contractWords,
+                contractWords: gathered.contractWords,
                 variables: moduleVariables
             )
         }
@@ -585,7 +534,7 @@ public struct Linker: Sendable {
                 )
             },
             standing: gathered.standing,
-            types: types
+            types: gathered.types
         )
     }
 

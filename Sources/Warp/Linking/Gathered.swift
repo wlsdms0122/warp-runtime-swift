@@ -25,11 +25,18 @@ struct Gathered {
     // by.
     let symbols: [Symbol]
 
-    // The three shape spaces, each carrying where its names were written so a
-    // refusal can say which document it is addressed to.
-    let types: [Name: Declared<TypeExpression>]
-    let constraints: [Name: Declared<[TypeExpression]>]
-    let contracts: [Name: Declared<[Name: Signature]>]
+    // Every shape the list declared, lowered, with which types answer which
+    // contracts worked out. Every judgment a compile makes is asked of this.
+    let types: TypeTable
+
+    // The words the contracts ask, under the spellings a call writes to reach
+    // them.
+    let contractWords: [Name: ContractWord]
+
+    // The declarations that answer some contract's word. A path steps to a
+    // word by its last segment, and which of these a segment means is the
+    // contract's pick rather than a name's, so no path reaches one.
+    let answering: Set<Name>
 
     // MARK: - Initializer
     // MARK: - Public

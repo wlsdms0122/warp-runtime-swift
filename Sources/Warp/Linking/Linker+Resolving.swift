@@ -25,14 +25,75 @@ extension Linker {
         try once(modules)
 
         let symbols = try self.symbols(of: modules)
-        let (types, constraints, contracts) = try declared(in: modules)
+        let (declaredTypes, declaredConstraints, declaredContracts) = try declared(in: modules)
+        let standing = try ModuleGraph(modules).standing
+
+        // A document's types take a run of shape rows the way its declarations
+        // take a run of table rows, in the standing order, so a document's
+        // shapes are behind the shapes it names.
+        let declaring = try self.types(
+            declared: declaredTypes,
+            constraints: declaredConstraints,
+            contracts: declaredContracts,
+            standing: standing.flatMap { position in modules[position].types.keys.sorted() }
+        )
+
+        // Every shape each document names, held to being one the list
+        // declares. Before the satisfaction, because a name nobody declared is
+        // the more basic defect and a signature holding one would be refused
+        // here for missing a word instead.
+        try judge(modules, in: declaring)
+
+        let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
+            table[symbol.declared] = symbol
+        }
+
+        // Which types answer which contracts. Read off the declarations, so it
+        // is worked out here rather than where the types were declared, and
+        // the table is remade holding it. The rows are numbered from the
+        // declarations alone, so a shape lowered against either table is the
+        // same shape.
+        let witnessed = try witnesses(
+            of: declaredContracts,
+            over: declaredTypes,
+            among: space,
+            in: declaring
+        )
+        let types = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
+
+        // The words the contracts ask, under the spellings a call writes to
+        // reach them. Read off the table the satisfaction was just written
+        // into, so what a call reaches and what a judgment reads are one
+        // reading rather than two.
+        let contractWords = ContractWord.table(in: types)
+
+        // A contract's word and a declaration cannot take one spelling. A call
+        // writing it lowers to the pick the contract makes, so the declaration
+        // standing under it is reachable by nothing and the two readings of
+        // one name never meet.
+        //
+        // In name order, so which collision is reported first is the text's
+        // fact rather than a hash seed's.
+        if
+            let spelling = contractWords.keys.sorted().first(where: { taken in space[taken] != nil }),
+            let declared = space[spelling],
+            let asked = contractWords[spelling]
+        {
+            throw LinkError(
+                "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
+                    + " of '\(asked.contract)', so there is no answer to which one a"
+                    + " call reaches. A contract's word and a declaration cannot take"
+                    + " one spelling",
+                at: declared.place
+            )
+        }
 
         return Gathered(
-            standing: try ModuleGraph(modules).standing,
+            standing: standing,
             symbols: symbols,
             types: types,
-            constraints: constraints,
-            contracts: contracts
+            contractWords: contractWords,
+            answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) })
         )
     }
 
@@ -109,7 +170,6 @@ extension Linker {
     // what that fact was proved on. This judges content: what a declaration
     // holds, not what it is called.
     func types(
-        of modules: [Module],
         declared: [Name: Declared<TypeExpression>],
         constraints members: [Name: Declared<[TypeExpression]>],
         contracts: [Name: Declared<[Name: Signature]>],
@@ -206,6 +266,13 @@ extension Linker {
             }
         }
 
+        return table
+    }
+
+    // Every shape a document names, held to being one the link declares. A
+    // document is read on its own: what is judged is its own text, and the
+    // table is what the whole link declared.
+    func judge(_ modules: [Module], in table: TypeTable) throws {
         for module in modules {
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
@@ -227,8 +294,6 @@ extension Linker {
                 try judge(buried: variable, at: .variable(name.spelling, in: .of(module)), in: table)
             }
         }
-
-        return table
     }
 
     // Each module's constants, settled. They are evaluated here because there is
