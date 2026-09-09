@@ -455,6 +455,25 @@ struct CompiledTests {
 
         #expect(try await Executor(environment: nil).run(image, arguments: [:]) == .int(7))
         #expect(try await run(modules, vocabulary: []) == .int(7))
+
+        // And. The two ways of building the accumulator settle the documents
+        // the same, name for name and number for number.
+        let whole = try self.compiled(modules)
+
+        for (position, origin) in try ModuleGraph(modules).standing.enumerated() {
+            let one = compiled[position]
+            let other = whole[origin]
+
+            #expect(one.document == other.document)
+            #expect(one.declared == other.declared)
+            #expect(one.calls == other.calls)
+            #expect(one.words == other.words)
+            #expect(one.answers == other.answers)
+            #expect(one.shapeNumbering.types == other.shapeNumbering.types)
+            #expect(one.shapeNumbering.memberships == other.shapeNumbering.memberships)
+            #expect(one.variables.map(\.name) == other.variables.map(\.name))
+            #expect(one.table.count == other.table.count)
+        }
     }
 
     @Test("a document cannot declare a name a document it is compiled against declared")

@@ -132,10 +132,17 @@ public struct Linker: Sendable {
 
         try judge([module], in: declaring)
 
-        // Every declaration in the link, by the spelling it was declared by:
-        // what the documents behind this one left on their rows, and what this
-        // one wrote. A name two of them declare is refused here, for the same
-        // reason two `.c` files cannot both define a symbol.
+        // Every declaration this document is compiled beside, by the spelling
+        // it was declared by: what the documents behind it left on their rows,
+        // and what it wrote itself. A name two of them declare is refused
+        // here, for the same reason two `.c` files cannot both define a
+        // symbol.
+        //
+        // Refused rather than taken as the caller's statement, which the order
+        // is: a doubled spelling is not a question of which document to read
+        // first, it is a table with no answer for that name. A ring and a
+        // document handed over twice are the order's, and this is handed an
+        // order that was worked out already.
         var signatures: [Name: Declared<Signature>] = [:]
 
         for (position, document) in compiled.enumerated() {
@@ -160,9 +167,9 @@ public struct Linker: Sendable {
         for symbol in symbols {
             if let first = signatures[symbol.declared] {
                 throw LinkError(
-                    "'\(symbol.declared)' is declared more than once in this link, by"
-                        + " \(first.spelled) and \(symbol.spelled). Two declarations"
-                        + " of a name have no way to be told apart",
+                    "'\(symbol.declared)' is declared by \(first.spelled), which this"
+                        + " document is compiled against, and by \(symbol.spelled)."
+                        + " Two declarations of a name have no way to be told apart",
                     at: symbol.place
                 )
             }
