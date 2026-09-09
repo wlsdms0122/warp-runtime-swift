@@ -18,7 +18,14 @@ extension Linker {
     // the walk found for it, and is judged against that.
     func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
         for call in calls {
-            try check(call, against: call.callee.procedure, with: frame)
+            guard let callee = frame.declared(call.callee) else {
+                throw LinkError.unjudged(
+                    "a call to '\(call.callee)', which has no row",
+                    at: call.place
+                )
+            }
+
+            try check(call, against: callee, with: frame)
         }
     }
 
@@ -454,7 +461,7 @@ extension Linker {
 
     private func check(
         _ site: CallSite,
-        against callee: Procedure,
+        against callee: Linked,
         with frame: TypeFrame
     ) throws {
         let call = site.call

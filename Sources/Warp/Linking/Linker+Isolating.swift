@@ -17,7 +17,7 @@ extension Linker {
     func isolated(
         among symbols: [Symbol],
         settling isolated: inout Set<Name>,
-        in space: [Name: Symbol]
+        taking asked: @escaping (Name) -> Signature?
     ) {
         let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
@@ -37,7 +37,7 @@ extension Linker {
         while true {
             let struck = bodies.compactMap { name, body in
                 isolated.contains(name)
-                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, in: space)
+                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, taking: asked)
                     ? name
                     : nil
             }
@@ -59,19 +59,20 @@ extension Linker {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: Set<Name>,
-        in space: [Name: Symbol]
+        taking asked: @escaping (Name) -> Signature?
     ) -> Bool {
-        Isolating(isolated: isolated, space: space).holds(block, declared: parameters)
+        Isolating(isolated: isolated, asked: asked).holds(block, declared: parameters)
     }
 
     // MARK: - Private
     private struct Isolating {
         let isolated: Set<Name>
 
-        // Every declaration under its declared spelling. What a call hands in
-        // place is read off the callee's signature, which the declaration
-        // holds, so nothing here keeps a second table of them.
-        let space: [Name: Symbol]
+        // What a callee takes, which is where a call handing something in
+        // place says which slot it lands in. Asked rather than held, because
+        // where a declaration's signature is read from is the caller's: the
+        // link's rows once they stand, and the documents themselves before.
+        let asked: (Name) -> Signature?
 
         func holds(_ block: Block, declared: Set<Name>) -> Bool {
             var declared = declared
@@ -133,7 +134,7 @@ extension Linker {
             case let .call(call):
                 guard
                     isolated.contains(call.selector),
-                    let signature = space[call.selector]?.procedure.signature
+                    let signature = asked(call.selector)
                 else {
                     return false
                 }

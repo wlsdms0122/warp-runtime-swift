@@ -15,9 +15,9 @@ struct CallSite: Sendable {
     let call: Call
     let place: Place
 
-    // The declaration the selector names, found by the walk that gathered
+    // The spelling the selector resolved to, found by the walk that gathered
     // this call, so nothing has to find it again.
-    let callee: Symbol
+    let callee: Name
 
     // What each operand held where this was written. The walk's own answers,
     // carried so the check never walks a body a second time for them. A call's
@@ -30,7 +30,7 @@ struct CallSite: Sendable {
     init(
         call: Call,
         place: Place,
-        callee: Symbol,
+        callee: Name,
         readings: [Name: Shape],
         received: Shape?
     ) {

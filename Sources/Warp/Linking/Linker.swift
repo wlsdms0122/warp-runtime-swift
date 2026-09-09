@@ -185,7 +185,6 @@ public struct Linker: Sendable {
         // own, so a frame is made for the document whose body is being read.
         func frame(for origin: Int) -> TypeFrame {
             TypeFrame(
-                symbols: gathered.space,
                 types: gathered.types,
                 linked: lowering.table,
                 rows: lowering.rows,
@@ -321,7 +320,11 @@ public struct Linker: Sendable {
             // document holds rather than the reached ones: a path names a word
             // the call graph never mentions.
             pure(among: holding, settling: &settled, reading: moduleVariables)
-            isolated(among: holding, settling: &isolatedDeclarations, in: gathered.space)
+            isolated(
+                among: holding,
+                settling: &isolatedDeclarations,
+                taking: { selector in gathered.space[selector]?.procedure.signature }
+            )
             failing(among: holding, settling: &failingDeclarations)
 
             // Where this document numbers its calls from: what it looks for
@@ -477,7 +480,7 @@ public struct Linker: Sendable {
             for symbol in holding {
                 let (procedure, gathered) = try resolved(symbol)
 
-                calls[symbol.declared] = gathered.map { call in call.callee.declared }
+                calls[symbol.declared] = gathered.map { call in call.callee }
 
                 // A constant answer is knowable from the text, so it is held to
                 // the declaration here, the way a constant argument is. An

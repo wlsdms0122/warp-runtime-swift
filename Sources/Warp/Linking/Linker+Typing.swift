@@ -1282,7 +1282,7 @@ extension Linker {
                     block,
                     declaring: Set(procedure.signature.parameters.keys),
                     given: frame.isolated,
-                    in: frame.symbols
+                    taking: { selector in frame.signature(of: selector) }
                 )
             } ?? false
 
@@ -1423,7 +1423,7 @@ extension Linker {
             // it. Its answer is unknown, and a dot on an unknown answer would
             // be refused first for what the dot reads, which is not what the
             // author got wrong.
-            guard let callee = frame.symbols[call.selector] else {
+            guard let callee = frame.declared(call.selector) else {
                 throw LinkError(
                     "sends '\(call.selector)', which no module in this link declares",
                     at: place
@@ -1474,7 +1474,7 @@ extension Linker {
 
             try handedInPlace(
                 by: call,
-                to: callee,
+                to: callee.signature,
                 in: environment,
                 with: frame,
                 at: place,
@@ -1493,7 +1493,7 @@ extension Linker {
                     CallSite(
                         call: rewritten,
                         place: place,
-                        callee: callee,
+                        callee: call.selector,
                         readings: sent,
                         received: receiver?.reading
                     )
@@ -2532,15 +2532,13 @@ extension Linker {
     // them apart.
     private func handedInPlace(
         by call: Call,
-        to callee: Symbol,
+        to signature: Signature,
         in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
         when ask: Ask
     ) throws {
         guard case .judging = ask else { return }
-
-        let signature = callee.procedure.signature
 
         for (name, parameter) in signature.parameters.sorted(by: { $0.key < $1.key })
         where parameter.declared.isInout {

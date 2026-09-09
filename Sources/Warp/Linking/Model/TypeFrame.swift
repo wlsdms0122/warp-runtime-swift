@@ -15,11 +15,6 @@ import Foundation
 // sides.
 struct TypeFrame: Sendable {
     // MARK: - Property
-    // Every declaration under its declared spelling, as the author wrote it.
-    // A walk that meets a call finds the declaration here, once, and hands it
-    // on with the call.
-    let symbols: [Name: Symbol]
-
     // The declared types as the documents wrote them, for the surfaces a
     // document's own spelling is owed to.
     let types: TypeTable
@@ -94,7 +89,13 @@ struct TypeFrame: Sendable {
     // writes is `signature(reachedBy:)`, because the two spellings ask two
     // different questions.
     func signature(of selector: Name) -> Signature? {
-        symbols[selector]?.procedure.signature
+        declared(selector)?.signature
+    }
+
+    // The row a selector names. A walk that meets a call finds it here, once,
+    // and hands the spelling on with the call so nothing finds it again.
+    func declared(_ selector: Name) -> Linked? {
+        rows[selector].map { row in linked[row] }
     }
 
     // What a selector takes: the slots of the row it stands on, or the ones a
