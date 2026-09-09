@@ -532,8 +532,7 @@ public struct Linker: Sendable {
                     }
                 )
             },
-            standing: gathered.standing,
-            linkage: gathered.types.linkage
+            standing: gathered.standing
         )
     }
 
@@ -582,7 +581,7 @@ public struct Linker: Sendable {
                 contracts: declared.contracts,
                 of: compiled.documents,
                 standing: compiled.standing,
-                numbered: compiled.linkage
+                numbered: Linkage()
             ),
             types: declared.types,
             contracts: declared.contracts,
@@ -599,7 +598,8 @@ public struct Linker: Sendable {
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let linked = try Relocating(assembled, types: types).linked()
+        let relocating = Relocating(assembled, types: types)
+        let linked = try relocating.linked()
 
         return Image(
             linked: linked.table,
@@ -607,7 +607,7 @@ public struct Linker: Sendable {
             rows: assembled.rows,
             reached: reached,
             types: types,
-            variables: assembled.variables
+            variables: try relocating.started(assembled.variables)
         )
     }
 

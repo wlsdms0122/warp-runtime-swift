@@ -368,6 +368,8 @@ extension Closure {
     // captures, claiming nothing. What a slot that asks nothing takes.
     static func assembled(answering result: Value? = nil, in table: ShapeTable = .empty) -> Closure {
         Closure(
+            origin: 0,
+            number: 0,
             linked: Linked(
                 label: "assembled",
                 origin: 0,

@@ -247,18 +247,104 @@ struct Relocating {
         )
     }
 
+    // What each document's variables start a run holding, read as this link's
+    // rows. A starting value was folded before anything was relocated, the way
+    // a literal in a body was.
+    func started(_ variables: [[(name: Name, value: Value)]]) throws -> [[(name: Name, value: Value)]] {
+        try variables.enumerated().map { origin, held in
+            try held.map { name, value in
+                guard value.holdsProcedure else { return (name, value) }
+
+                return (
+                    name,
+                    try relocated(
+                        value,
+                        in: Standing(
+                            origin: origin,
+                            place: .variable(name.spelling, in: .assembled),
+                            shapes: shapeRows[origin]
+                        )
+                    )
+                )
+            }
+        }
+    }
+
     // MARK: - Private
     // Where the walk is: which document wrote this row, what a refusal calls
     // it, and this link's answers to the shape numbers that document gave.
     // Read once on entering a row rather than at every shape inside it.
     private struct Standing {
         let origin: Int
-        let label: Name
+
+        // Where a refusal about what is being walked points. Read once on
+        // entering rather than built at every refusal that never happens.
+        let place: Place
+
         let shapes: (types: [ShapeNumbering.Answer], memberships: [ShapeNumbering.Answer])
     }
 
+    // A folded value read as this link's rows. A closure was made by running a
+    // closure literal before anything was relocated, so it holds the number
+    // its document gave and a body standing in the tables the fold read. Both
+    // are answered here the way a call's number is.
+    //
+    // The body is relocated where it is met rather than read out of a table of
+    // finished rows: the rows are being made in this same walk, and a row
+    // holding a closure of another is the reason a value carries one at all.
+    private func relocated(_ value: Value, in standing: Standing) throws -> Value {
+        guard value.holdsProcedure else { return value }
+
+        switch value {
+        case let .procedure(closure):
+            let held = Standing(
+                origin: closure.origin,
+                place: standing.place,
+                shapes: shapeRows[closure.origin]
+            )
+            let row = try self.row(closure.number, in: held)
+
+            return .procedure(
+                closure.standing(
+                    at: row,
+                    as: try relocated(table[row]),
+                    holding: try closure.captured.map { slot, cell in
+                        guard case let .value(inner) = cell else { return (slot, cell) }
+
+                        return (slot, .value(try relocated(inner, in: standing)))
+                    }
+                )
+            )
+
+        case let .array(items):
+            return .array(try items.map { item in try relocated(item, in: standing) })
+
+        case let .record(record):
+            return .record(
+                Record(
+                    layout: record.layout,
+                    values: try record.values.map { held in try relocated(held, in: standing) }
+                )
+            )
+
+        case let .dictionary(held):
+            return .dictionary(
+                try Value.Dictionary(
+                    try held.entries.map { name, inner in (name, try relocated(inner, in: standing)) }
+                )
+            )
+
+        default:
+            return value
+        }
+    }
+
     private func relocated(_ row: Linked) throws -> Linked {
-        let standing = Standing(origin: row.origin, label: row.label, shapes: shapeRows[row.origin])
+        let standing = Standing(
+            origin: row.origin,
+            place: .procedure(row.label.spelling, in: .assembled),
+            shapes: shapeRows[row.origin]
+        )
         let sends = try row.sends.map { number in try self.row(number, in: standing) }
 
         guard case let .body(body, frame) = row.implementation else {
@@ -272,12 +358,6 @@ struct Relocating {
             implementation: .body(try filled(body, in: standing), frame),
             sends: sends
         )
-    }
-
-    // Where a refusal about a row's code points. Built where one is raised
-    // rather than for every row walked.
-    private func place(of label: Name) -> Place {
-        Place.procedure(label.spelling, in: .assembled)
     }
 
     // Which row of this link a document's number stands for. The reading is
@@ -295,25 +375,25 @@ struct Relocating {
         case let .unfound(.sent(declared)):
             throw LinkError(
                 "'\(declared)' is called here, and no module in this link declares it",
-                at: place(of: standing.label)
+                at: standing.place
             )
 
         case let .unfound(.walked(spelling)):
             throw LinkError(
                 "'\(spelling)' is walked here, and no path in this link may reach it",
-                at: place(of: standing.label)
+                at: standing.place
             )
 
         case let .unfound(.closure(written)):
             throw LinkError.unjudged(
                 "closure \(written) of this document, which the link lowered no row for",
-                at: place(of: standing.label)
+                at: standing.place
             )
 
         case .unnumbered:
             throw LinkError.unjudged(
                 "a call standing at \(number), which its document never numbered",
-                at: place(of: standing.label)
+                at: standing.place
             )
         }
     }
@@ -340,8 +420,11 @@ struct Relocating {
 
     private func filled(_ operation: Operation, in standing: Standing) throws -> Operation {
         switch operation {
-        case .literal:
-            return operation
+        // A value the folding made may hold a closure, and a closure is a row.
+        case let .literal(value):
+            guard value.holdsProcedure else { return operation }
+
+            return .literal(try relocated(value, in: standing))
 
         case let .local(address):
             return .local(try relocated(address, in: standing))
@@ -491,7 +574,7 @@ struct Relocating {
         guard answers.indices.contains(number) else {
             throw LinkError.unjudged(
                 "a shape standing at \(number), which its document never numbered",
-                at: place(of: standing.label)
+                at: standing.place
             )
         }
 
@@ -502,13 +585,13 @@ struct Relocating {
         case let .unfound(name):
             throw LinkError(
                 "'\(name)' is \(what) here, and no module in this link declares it",
-                at: place(of: standing.label)
+                at: standing.place
             )
 
         case .unnumbered:
             throw LinkError.unjudged(
                 "a shape standing at \(number), which its document never numbered",
-                at: place(of: standing.label)
+                at: standing.place
             )
         }
     }
@@ -536,7 +619,7 @@ struct Relocating {
         let spelling = ContractWord.spelling(of: dispatch.contract, word: dispatch.word)
 
         guard let asked = contractWords[spelling] else {
-            throw LinkError.unjudged("a call to '\(spelling)', which no contract declares", at: place(of: standing.label))
+            throw LinkError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 
         let receiver = try filled(dispatch.receiver, in: standing)
@@ -559,7 +642,7 @@ struct Relocating {
                 guard let row = rows[entry.value] else {
                     throw LinkError.unjudged(
                         "'\(entry.value)' answering '\(spelling)', which has no row",
-                        at: place(of: standing.label)
+                        at: standing.place
                     )
                 }
 
@@ -570,7 +653,7 @@ struct Relocating {
                     to: table[row],
                     row: row,
                     in: shapes,
-                    at: place(of: standing.label)
+                    at: standing.place
                 )
             }
         )

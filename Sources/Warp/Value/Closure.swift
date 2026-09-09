@@ -12,6 +12,12 @@ import Foundation
 // the closure's own frame. A value cell was copied; a hold shares its box.
 public struct Closure: Sendable {
     // MARK: - Property
+    // Which closure of which document this is, read the way the operation that
+    // made it is read: the number is the document's own until a link answers
+    // it, and the row once one has.
+    let origin: Int
+    let number: Int
+
     public let linked: Linked
     let captured: [(slot: Int, cell: Cell)]
 
@@ -24,9 +30,18 @@ public struct Closure: Sendable {
     public var isolation: Isolation { linked.isolation }
 
     // MARK: - Initializer
-    init(linked: Linked, captured: [(slot: Int, cell: Cell)]) {
+    init(origin: Int, number: Int, linked: Linked, captured: [(slot: Int, cell: Cell)]) {
+        self.origin = origin
+        self.number = number
         self.linked = linked
         self.captured = captured
+    }
+
+    // The same closure as another link reads it: the row it turned out to be
+    // there, the body standing in that link's tables, and what it captured
+    // read the same way.
+    func standing(at number: Int, as linked: Linked, holding captured: [(slot: Int, cell: Cell)]) -> Closure {
+        Closure(origin: origin, number: number, linked: linked, captured: captured)
     }
 
     // MARK: - Public

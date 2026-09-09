@@ -102,12 +102,6 @@ struct Compiled: Sendable {
     // laid down: a document's rows are behind the rows it reaches.
     let standing: [Int]
 
-    // Where the numbers in the values this folded mean something. A constant
-    // holding a closure holds it lowered, and a lowered body reads rows, so a
-    // link reads this compile's rows against the same one it numbered them
-    // against.
-    let linkage: Linkage
-
     // MARK: - Initializer
     // MARK: - Public
     // Every document's block laid down in the standing order, and the tables

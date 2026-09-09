@@ -39,7 +39,7 @@ public struct TypeTable: Sendable {
     // The link these rows are numbered against, kept so the table can be
     // remade with what a later pass worked out and still hand back the rows a
     // body already holds.
-    let linkage: Linkage
+    private let linkage: Linkage
 
     // The order the rows stand in, where a link said one. Kept for the same
     // reason the linkage is: remaking the table has to hand back the rows a

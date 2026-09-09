@@ -134,6 +134,8 @@ public struct Executor: Sendable {
         case let .closure(number, captures):
             return .procedure(
                 Closure(
+                    origin: activation.origin,
+                    number: number,
                     linked: linked[try row(number, from: activation.origin)],
                     captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
                 )
