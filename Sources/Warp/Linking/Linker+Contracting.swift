@@ -7,16 +7,23 @@
 
 import Foundation
 
-// Which types answer which contracts. A contract is the words a value must
-// have, and a document says which types have them: the claim names a type and
-// a contract, and the declaration behind each word is the one named for the
-// type and the word, whose signature is the contract's with the receiver
-// filled in by the type itself.
+// Which types answer which contracts, and whether the documents are good for
+// what they said. A contract is the words a value must have, and a document
+// says which types have them: the claim names a type and a contract, and the
+// declaration behind each word is the one named for the type and the word,
+// whose signature is the contract's with the receiver filled in by the type
+// itself.
 //
 // Read off the claims and not off the whole declaration space. A spelling that
 // happens to join a type's name to a contract's word is that document's word
 // until some document says otherwise, so what a link declares does not decide
 // what an unrelated document may call things.
+//
+// Two passes, because the two answer to different things. What a type answers
+// is what a document said, so a compile reads the claims and nothing else.
+// Whether the declarations behind a claim are there and fit is a sentence
+// about the link ("nothing in this link declares"), so it is asked once, where
+// the whole list is in hand.
 //
 // Every claim is held, not the reached ones, the way purity is worked out over
 // every declaration. A slot bounded by a contract may be filled by a type no
@@ -28,17 +35,13 @@ extension Linker {
     // receiver's own name, so what is gathered here is the whole of what a
     // call the link cannot settle will need.
     //
-    // A claim naming a shape that is not a type, or a contract nothing
-    // declares, refuses at the claim. So does one whose words are not all
-    // there: a document saying a type answers a contract is saying every word
-    // of it is answered, and the half that is missing is the author's to write.
+    // Read off the claims alone. Which declaration answers a word is the
+    // spelling the type's name and the word's make, and that spelling is
+    // known from the claim whether or not the declaration has arrived.
     func witnesses(
         of claims: [Declared<Claim>],
-        asking contracts: [Name: Declared<[Name: Signature]>],
-        over types: [Name: Declared<TypeExpression>],
-        among space: [Name: Declared<Signature>],
-        in table: TypeTable
-    ) throws -> [Name: [Name: [Name: Name]]] {
+        asking contracts: [Name: Declared<[Name: Signature]>]
+    ) -> [Name: [Name: [Name: Name]]] {
         // Every contract, answered or not. The entry is what says a name is a
         // contract at all, so a bound naming one no type answers stays a
         // different thing from a bound naming nothing.
@@ -46,6 +49,32 @@ extension Linker {
             table[contract] = [:]
         }
 
+        for claim in claims {
+            let (type, contract) = (claim.held.type, claim.held.contract)
+
+            guard let asked = contracts[contract] else { continue }
+
+            gathered[contract]?[type] = asked.held.keys.reduce(into: [Name: Name]()) { words, word in
+                words[word] = ContractWord.spelling(of: type, word: word)
+            }
+        }
+
+        return gathered
+    }
+
+    // Every claim held to what stands behind it.
+    //
+    // Asked where the whole list is in hand and nowhere else. Each of these
+    // refusals is a sentence about the link, and a document compiled against
+    // part of one would be told its claim is unanswered by a list that was
+    // never asked to answer it.
+    func backing(
+        _ claims: [Declared<Claim>],
+        asking contracts: [Name: Declared<[Name: Signature]>],
+        over types: [Name: Declared<TypeExpression>],
+        among space: [Name: Declared<Signature>],
+        in table: TypeTable
+    ) throws {
         for claim in claims {
             let (type, contract) = (claim.held.type, claim.held.contract)
 
@@ -65,61 +94,33 @@ extension Linker {
                 )
             }
 
-            gathered[contract]?[type] = try answering(
-                asked.held,
-                of: contract,
-                by: type,
-                claimed: claim.place,
-                among: space,
-                in: table
-            )
-        }
+            for (word, signature) in asked.held.sorted(by: { $0.key < $1.key }) {
+                let spelling = ContractWord.spelling(of: type, word: word)
 
-        return gathered
+                guard let witness = space[spelling] else {
+                    throw LinkError(
+                        "says '\(type)' answers '\(contract)', which asks '\(word)',"
+                            + " and nothing in this link declares '\(spelling)'."
+                            + " A contract's word is answered by a declaration named"
+                            + " for the type and the word",
+                        at: claim.place
+                    )
+                }
+
+                try answers(
+                    signature,
+                    as: witness.held,
+                    receiving: type,
+                    at: witness.place,
+                    of: contract,
+                    word: word,
+                    in: table
+                )
+            }
+        }
     }
 
     // MARK: - Private
-    // Which declaration answers each word of one contract for one type, for a
-    // claim the link has just read.
-    private func answering(
-        _ asked: [Name: Signature],
-        of contract: Name,
-        by type: Name,
-        claimed: Place,
-        among space: [Name: Declared<Signature>],
-        in table: TypeTable
-    ) throws -> [Name: Name] {
-        var words: [Name: Name] = [:]
-
-        for (word, signature) in asked.sorted(by: { $0.key < $1.key }) {
-            let spelling = ContractWord.spelling(of: type, word: word)
-
-            guard let witness = space[spelling] else {
-                throw LinkError(
-                    "says '\(type)' answers '\(contract)', which asks '\(word)',"
-                        + " and nothing in this link declares '\(spelling)'."
-                        + " A contract's word is answered by a declaration named"
-                        + " for the type and the word",
-                    at: claimed
-                )
-            }
-
-            try answers(
-                signature,
-                as: witness.held,
-                receiving: type,
-                at: witness.place,
-                of: contract,
-                word: word,
-                in: table
-            )
-
-            words[word] = spelling
-        }
-
-        return words
-    }
-
     // One declaration held to one word of a contract.
     //
     // The claim says the declaration was meant to answer, so a signature that

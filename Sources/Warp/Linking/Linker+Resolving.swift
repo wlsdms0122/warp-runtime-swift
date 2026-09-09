@@ -52,14 +52,27 @@ extension Linker {
             table[symbol.declared] = symbol
         }
 
+        let signatures = space.mapValues { symbol in
+            Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
+        }
+
+        // Every claim held to what stands behind it. Here rather than inside
+        // the shaping, because this is one of the two places the whole list is
+        // in hand, and the sentence each of these refusals makes is about the
+        // link.
+        try backing(
+            declaredSpaces.claims,
+            asking: declaredContracts,
+            over: declaredTypes,
+            among: signatures,
+            in: declaring
+        )
+
         let shaped = try self.shaped(
             declaring,
             claims: declaredSpaces.claims,
-            types: declaredTypes,
             contracts: declaredContracts,
-            among: space.mapValues { symbol in
-                Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
-            }
+            among: signatures
         )
 
         return Gathered(
@@ -71,8 +84,7 @@ extension Linker {
         )
     }
 
-    // Which types answer which contracts, read off what the documents claimed
-    // and held to the declarations behind each claim.
+    // Which types answer which contracts, read off what the documents claimed.
     //
     // The table is remade holding the answer. Its rows are numbered from the
     // declarations alone, so a shape lowered against either table is the same
@@ -80,17 +92,10 @@ extension Linker {
     func shaped(
         _ declaring: TypeTable,
         claims: [Declared<Claim>],
-        types: [Name: Declared<TypeExpression>],
         contracts: [Name: Declared<[Name: Signature]>],
         among signatures: [Name: Declared<Signature>]
     ) throws -> (types: TypeTable, contractWords: [Name: ContractWord], answering: Set<Name>) {
-        let witnessed = try witnesses(
-            of: claims,
-            asking: contracts,
-            over: types,
-            among: signatures,
-            in: declaring
-        )
+        let witnessed = witnesses(of: claims, asking: contracts)
         let table = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
 
         // The words the contracts ask, under the spellings a call writes to

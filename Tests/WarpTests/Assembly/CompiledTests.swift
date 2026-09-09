@@ -255,6 +255,64 @@ struct CompiledTests {
         #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
     }
 
+    @Test("a claim is answered by the whole list, not by what a document was compiled against")
+    func aClaimIsBackedWhereTheListIsWhole() throws {
+        // Given. The claim and the declaration that answers it in two
+        // documents. Neither names the other, so the standing may put the
+        // claim first, and a document compiled against what stands before it
+        // would then be asked for an answer that has not arrived.
+        let holding = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            claiming: ["bank.Account": ["app.Describable"]],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
+        )
+        let answering = try Module(
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                )
+            ]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .named("bank.Account")),
+                    body: [],
+                    result: .cast(
+                        .record(["balance": .literal(.int(7))]),
+                        as: .named("bank.Account"),
+                        optional: false
+                    )
+                )
+            ]
+        )
+
+        let modules = [holding, asking, answering, program] + Module.standard
+
+        // When. Each document compiled against the ones already compiled, in
+        // the order the graph says they stand.
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(try linker.compile(modules[origin], against: compiled))
+        }
+
+        // Then. It links, and refusing a claim as unanswered is the whole
+        // list's to do rather than a compile's.
+        #expect(throws: Never.self) { try linker.link(compiled, entry: entryName) }
+        #expect(throws: Never.self) { try linker.link(modules, entry: entryName) }
+    }
+
     @Test("a document numbers its calls from itself, and the link answers with rows")
     func aCallCarriesTheDocumentsOwnNumber() throws {
         // Given. A document calling a word it does not declare.

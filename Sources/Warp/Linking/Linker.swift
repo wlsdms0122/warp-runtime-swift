@@ -184,7 +184,6 @@ public struct Linker: Sendable {
         let shaped = try self.shaped(
             declaring,
             claims: declared.claims,
-            types: declared.types,
             contracts: declared.contracts,
             among: signatures
         )
@@ -583,27 +582,40 @@ public struct Linker: Sendable {
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
         let declared = try declared(in: compiled)
-        let types = try shaped(
-            self.types(
-                declared: declared.types,
-                constraints: declared.constraints,
-                contracts: declared.contracts,
-                of: compiled,
-                standing: Array(compiled.indices),
-                numbered: Linkage()
-            ),
-            claims: declared.claims,
-            types: declared.types,
+        let declaring = try self.types(
+            declared: declared.types,
+            constraints: declared.constraints,
             contracts: declared.contracts,
-            among: assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in
-                let origin = assembled.origins[entry.value]
+            of: compiled,
+            standing: Array(compiled.indices),
+            numbered: Linkage()
+        )
+        let signatures = assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in
+            let origin = assembled.origins[entry.value]
 
-                table[entry.key] = Declared(
-                    assembled.table[entry.value].signature,
-                    at: .procedure(entry.key.spelling, in: compiled[origin].document),
-                    of: origin
-                )
-            }
+            table[entry.key] = Declared(
+                assembled.table[entry.value].signature,
+                at: .procedure(entry.key.spelling, in: compiled[origin].document),
+                of: origin
+            )
+        }
+
+        // The other place the whole list is in hand. A document compiled
+        // against part of one was never asked to answer for a claim the rest
+        // of the list backs, so this is where every claim is held to it.
+        try backing(
+            declared.claims,
+            asking: declared.contracts,
+            over: declared.types,
+            among: signatures,
+            in: declaring
+        )
+
+        let types = try shaped(
+            declaring,
+            claims: declared.claims,
+            contracts: declared.contracts,
+            among: signatures
         ).types
 
         // The documents' own numbers turned into this link's rows, and the
