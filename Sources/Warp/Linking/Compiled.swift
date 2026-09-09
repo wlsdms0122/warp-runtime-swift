@@ -30,6 +30,11 @@ struct Compiled: Sendable, Declaring {
     let constraints: [Name: [TypeExpression]]
     let contracts: [Name: [Name: Signature]]
 
+    // Which contracts it said each type answers, as it wrote them. The link
+    // holds the claim to the declarations behind it, and which declarations
+    // those are is a fact of the link rather than of this document.
+    let satisfying: [Name: Set<Name>]
+
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.
     let declared: [Name]

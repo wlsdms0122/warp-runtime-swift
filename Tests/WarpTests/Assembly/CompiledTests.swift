@@ -666,6 +666,10 @@ struct CompiledTests {
                     "bank.Account": .record(["balance": .int]),
                     "bank.Card": .record(["last": .string])
                 ],
+                satisfying: [
+                    "bank.Account": ["app.Describable"],
+                    "bank.Card": ["app.Describable"]
+                ],
                 procedures: [
                     entryName: Procedure(
                         body: [

@@ -53,6 +53,34 @@ struct WriterRoundTripTests {
         }
     }
 
+    @Test("a claim that a type answers a contract reads back as it was written")
+    func aSatisfactionSurvivesAWriting() throws {
+        // Given
+        let module = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            satisfying: ["bank.Account": ["app.Describable"]],
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.null)),
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                )
+            ]
+        )
+
+        // When
+        let written = try sut.value(of: module)
+
+        // Then
+        #expect(try Loader().load(written, identity: nil).satisfying == module.satisfying)
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

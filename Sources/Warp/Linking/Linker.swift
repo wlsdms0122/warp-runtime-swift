@@ -183,6 +183,7 @@ public struct Linker: Sendable {
 
         let shaped = try self.shaped(
             declaring,
+            declared: documents,
             types: declared.types,
             contracts: declared.contracts,
             among: signatures
@@ -532,6 +533,7 @@ public struct Linker: Sendable {
             types: module.types,
             constraints: module.constraints,
             contracts: module.contracts,
+            satisfying: module.satisfying,
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
@@ -590,6 +592,7 @@ public struct Linker: Sendable {
                 standing: Array(compiled.indices),
                 numbered: Linkage()
             ),
+            declared: compiled,
             types: declared.types,
             contracts: declared.contracts,
             among: assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in

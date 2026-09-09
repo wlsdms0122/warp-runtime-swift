@@ -105,6 +105,14 @@ public struct Writer: Sendable {
             )
         }
 
+        if !draft.satisfying.isEmpty {
+            written[ModuleReader.CodingKeys.satisfies.name] = .dictionary(
+                draft.satisfying.mapValues { contracts in
+                    .array(contracts.sorted().map { name in .string(name.spelling) })
+                }
+            )
+        }
+
         if !draft.constants.isEmpty {
             written[ModuleReader.CodingKeys.const.name] = .dictionary(
                 try draft.constants.mapValues { constant in try value(of: constant) }

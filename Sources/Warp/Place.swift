@@ -137,6 +137,13 @@ public struct Place: Sendable, Equatable {
         Place([.part(.contracts), .key(name)], in: document)
     }
 
+    // A claim that one type answers some contracts, under the name of the
+    // type. What is refused about one is refused about the type it is about,
+    // which is the key an author wrote it under.
+    public static func satisfies(_ name: String, in document: Document) -> Place {
+        Place([.part(.satisfies), .key(name)], in: document)
+    }
+
     // A caller holding a program it assembled itself, with no document under
     // it. There is no key to name, so the place says what was handed in, and no
     // document either, which is a third thing and not a module that wrote no
@@ -236,6 +243,7 @@ public extension Place {
         case types
         case constraints
         case contracts
+        case satisfies
         case imports
 
         case parameters
@@ -271,6 +279,7 @@ public extension Place {
             case .types: "types"
             case .constraints: "constraints"
             case .contracts: "contracts"
+            case .satisfies: "satisfies"
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"

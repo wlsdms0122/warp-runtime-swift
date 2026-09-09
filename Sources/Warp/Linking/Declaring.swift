@@ -19,4 +19,9 @@ protocol Declaring {
     var types: [Name: TypeExpression] { get }
     var constraints: [Name: [TypeExpression]] { get }
     var contracts: [Name: [Name: Signature]] { get }
+
+    // Which contracts this document says each type answers. Not a shape space
+    // and gathered apart from the three: it declares no name, it says
+    // something about two that are declared elsewhere.
+    var satisfying: [Name: Set<Name>] { get }
 }

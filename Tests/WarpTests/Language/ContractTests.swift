@@ -9,10 +9,11 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A contract: the words a value must answer. A type satisfies one by declaring
-// them, a signature bounds a type parameter by it, and a body calls them
-// without knowing which type it holds. The link works out which declarations
-// answer, and the run reads a row out of that by the name the value wears.
+// A contract: the words a value must answer. A document says which types
+// answer one, a signature bounds a type parameter by it, and a body calls the
+// words without knowing which type it holds. The link finds the declaration
+// behind each claimed word, and the run reads a row out of that by the name
+// the value wears.
 @Suite("What a value is able to do")
 struct ContractTests {
     // MARK: - Property
@@ -144,6 +145,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            satisfying: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
@@ -163,6 +165,110 @@ struct ContractTests {
             try Linker().link([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("answers int where the contract writes string")
+        }
+    }
+
+    @Test("a declaration named for a type and a word answers nothing nobody claimed")
+    func anUnclaimedSpellingIsAnOrdinaryWord() throws {
+        // Given. One document declares `bank.Account.describe` and says
+        // nothing about any contract. Another, which it never names, declares
+        // a contract asking `describe` and answering a string
+        let held = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.null)),
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: [
+                "app.ask": Procedure(body: [], result: .literal(.null))
+            ]
+        )
+
+        // When / Then. The spelling is that document's word, so a contract
+        // arriving beside it reserves nothing
+        #expect(throws: Never.self) {
+            try Linker().link([held, asking] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a claim is held to every word the contract asks")
+    func aClaimMissingAWordRefuses() throws {
+        // Given. `bank.Plain` is said to answer, and nothing declares
+        // `bank.Plain.describe`
+        let sut = try Module(
+            types: ["bank.Plain": .record(["note": .string])],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            satisfying: ["bank.Plain": ["app.Describable"]],
+            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
+        }
+    }
+
+    @Test("one type answers one contract once")
+    func twoDocumentsCannotClaimOnePair() throws {
+        // Given. Two documents say the same type answers the same contract
+        let held = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            satisfying: ["bank.Account": ["app.Describable"]],
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.null)),
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("x"))
+                )
+            ]
+        )
+        let again = try Module(
+            satisfying: ["bank.Account": ["app.Describable"]],
+            procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([held, again] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("One type answers one contract once")
+        }
+    }
+
+    @Test("a claim names a type and a contract, and nothing else")
+    func aClaimNamesWhatItIsAbout() throws {
+        // Given. A constraint stands where the contract should
+        let sut = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            constraints: ["app.Scalar": [.int, .string]],
+            satisfying: ["bank.Account": ["app.Scalar"]],
+            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+        )
+
+        // When / Then
+        #expect {
+            try Linker().link([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("'app.Scalar' is not a contract this link declares")
         }
     }
 
@@ -216,6 +322,10 @@ struct ContractTests {
                 "bank.Card": .record(["last": .string])
             ].merging(extra) { _, added in added },
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            satisfying: [
+                "bank.Account": ["app.Describable"],
+                "bank.Card": ["app.Describable"]
+            ],
             procedures: [
                 entryName: Procedure(body: body, result: result),
                 "app.tell": Procedure(

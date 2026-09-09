@@ -43,6 +43,18 @@ public struct Draft: Sendable {
     // implementing type itself.
     public let contracts: [Name: [Name: Signature]]
 
+    // Which contracts each type this document names answers, by the name of
+    // the type. A type answers a contract because a document says it does: the
+    // link holds the claim to the declarations that back it, and a declaration
+    // named for a type and a word nobody claimed is that document's word and
+    // nothing more.
+    //
+    // Said here rather than beside the type, because the type may be another
+    // document's. A document that arrives later gives a shape it did not
+    // declare the words a contract asks, and saying it beside the type would
+    // leave that document nowhere to say it.
+    public let satisfying: [Name: Set<Name>]
+
     public let constants: [Name: Expression]
 
     // Names bound to boxes the document's procedures share, each holding what
@@ -60,6 +72,7 @@ public struct Draft: Sendable {
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
+        satisfying: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure]
@@ -70,6 +83,7 @@ public struct Draft: Sendable {
         self.types = types
         self.constraints = constraints
         self.contracts = contracts
+        self.satisfying = satisfying
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
@@ -244,6 +258,15 @@ public struct Draft: Sendable {
             for signature in words.values {
                 mentioned.formUnion(signature.mentions)
             }
+        }
+
+        // A claim names two shapes, and both are mentions like any other: the
+        // type it is about and the contract it says that type answers. The
+        // link reads the contract's words to hold the claim to them, so a
+        // document making one stands behind the document that wrote it.
+        for (type, contracts) in satisfying {
+            mentioned.insert(type)
+            mentioned.formUnion(contracts)
         }
 
         for procedure in procedures.values {

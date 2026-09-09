@@ -192,6 +192,10 @@ struct ModuleDeclarationTests {
             "contracts": [
                 "app.Describable": ["describe": ["returns": "string"]]
             ],
+            "satisfies": [
+                "bank.Account": ["app.Describable"],
+                "bank.Card": ["app.Describable"]
+            ],
             "procedures": [
                 "entry": [
                     "body": [

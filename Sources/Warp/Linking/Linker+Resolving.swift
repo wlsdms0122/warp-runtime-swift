@@ -49,6 +49,7 @@ extension Linker {
 
         let shaped = try self.shaped(
             declaring,
+            declared: modules,
             types: declaredTypes,
             contracts: declaredContracts,
             among: space.mapValues { symbol in
@@ -65,21 +66,21 @@ extension Linker {
         )
     }
 
-    // Which types answer which contracts, worked out over the declarations
-    // together. A slot bounded by a contract may be filled by a type no call
-    // in this link mentions, so it is read off every declaration rather than
-    // the reached ones.
+    // Which types answer which contracts, read off what the documents claimed
+    // and held to the declarations behind each claim.
     //
     // The table is remade holding the answer. Its rows are numbered from the
     // declarations alone, so a shape lowered against either table is the same
     // shape.
     func shaped(
         _ declaring: TypeTable,
+        declared documents: [any Declaring],
         types: [Name: Declared<TypeExpression>],
         contracts: [Name: Declared<[Name: Signature]>],
         among signatures: [Name: Declared<Signature>]
     ) throws -> (types: TypeTable, contractWords: [Name: ContractWord], answering: Set<Name>) {
         let witnessed = try witnesses(
+            declared: documents,
             of: contracts,
             over: types,
             among: signatures,

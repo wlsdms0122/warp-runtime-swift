@@ -50,6 +50,12 @@ public struct Module: Sendable {
     // that it declares the words. Only one of those can be judged by listing.
     public let contracts: [Name: [Name: Signature]]
 
+    // Which contracts each type this document names answers. A type answers a
+    // contract because a document says it does, and this is where one says it.
+    // Which declarations back the claim is the link's to find and to hold the
+    // claim to.
+    public let satisfying: [Name: Set<Name>]
+
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second name table in path
@@ -100,6 +106,7 @@ public struct Module: Sendable {
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
+        satisfying: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure],
@@ -113,6 +120,7 @@ public struct Module: Sendable {
                 types: types,
                 constraints: constraints,
                 contracts: contracts,
+                satisfying: satisfying,
                 constants: constants,
                 variables: variables,
                 procedures: procedures
@@ -129,6 +137,7 @@ public struct Module: Sendable {
         self.types = draft.types
         self.constraints = draft.constraints
         self.contracts = draft.contracts
+        self.satisfying = draft.satisfying
         self.constants = draft.constants
         self.variables = draft.variables
         self.procedures = draft.procedures
@@ -150,6 +159,7 @@ public struct Module: Sendable {
             types: types,
             constraints: constraints,
             contracts: contracts,
+            satisfying: satisfying,
             constants: constants,
             variables: variables,
             procedures: procedures
