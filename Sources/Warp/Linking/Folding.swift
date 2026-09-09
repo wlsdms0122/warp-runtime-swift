@@ -89,8 +89,34 @@ struct Folding {
     }
 
     // MARK: - Public
-    // What a closure made here is called. It was written in no declaration.
-    static let label: Name = "folding"
+    // What a fold with no document behind it writes under. Its table numbers
+    // its own rows, so nothing looks the name up.
+    static let assembled: Name = "folding"
+
+    // What an expression a document's declaration wrote reads here, lowered
+    // into the document's own rows. A closure it holds is a closure literal of
+    // its document, so it takes a row of that document's block and a number of
+    // its numbering, the same as one written in a body.
+    func read(
+        _ expression: Expression,
+        as label: Name,
+        writing lowering: inout Lowering,
+        at place: Place
+    ) throws -> Value {
+        let (code, frame) = try lowering.lower(
+            expression,
+            reading: names,
+            origin: origin,
+            label: label,
+            at: place
+        )
+
+        return try read(
+            code,
+            in: frame,
+            of: answered.holding(lowering.table, closures: lowering.closureRows)
+        )
+    }
 
     // Whether a name is bound here.
     func holds(_ name: Name) -> Bool {
@@ -102,35 +128,42 @@ struct Folding {
         try read(.reference(path), at: place)
     }
 
-    // What an expression reads here. A closure it holds takes a row of its
-    // own, so the table this runs against is the one lowering just grew.
-    func read(_ expression: Expression, at place: Place = .given(Self.label.spelling)) throws -> Value {
-        // Folding runs what it lowers beside bodies the table already holds,
-        // so it lowers in the numbering those bodies stand in. A number the
-        // expression carries and a number a body it calls carries are then
-        // read the same way.
+    // What an expression reads here, lowered into a table of its own. For what
+    // is folded where no declaration is being read: a path a body writes, and a
+    // condition a caller hands over. A closure written in one is numbered by
+    // nothing this document holds and is refused where it is lowered.
+    func read(_ expression: Expression, at place: Place = .given(Folding.assembled.spelling)) throws -> Value {
         guard let numbering = answered.numbering(of: origin) else {
             throw LinkError.unjudged("an expression in a document that numbered nothing", at: place)
-        }
-
-        // Room for the closures this expression writes. They stand after the
-        // document's own, and the rows they take are handed to the run below
-        // the same way.
-        let written = expression.buried.count { held in
-            guard case .closure = held else { return false }
-
-            return true
         }
 
         var lowering = Lowering(
             table: answered.table,
             rows: answered.rows,
             words: answered.words,
-            numbering: [origin: numbering.folding(written, for: Self.label)],
+            numbering: [origin: numbering],
             variables: [:],
             shapes: shapes
         )
-        let (code, frame) = try lowering.lower(expression, reading: names, origin: origin, label: Self.label, at: place)
+        let (code, frame) = try lowering.lower(
+            expression,
+            reading: names,
+            origin: origin,
+            label: Folding.assembled,
+            at: place
+        )
+
+        // Against the table lowering just grew: what it wrote takes rows of
+        // that table and nothing else answers them.
+        return try read(
+            code,
+            in: frame,
+            of: answered.holding(lowering.table, closures: lowering.closureRows)
+        )
+    }
+
+    // MARK: - Private
+    private func read(_ code: Operation, in frame: Frame, of answered: Answered) throws -> Value {
         var activation = Activation(frame, of: origin)
 
         for (slot, cell) in cells.enumerated() {
@@ -140,13 +173,11 @@ struct Folding {
         let executor = Executor(
             observer: nil,
             environment: nil,
-            linked: lowering.table,
-            resolving: answered.resolving.holding(lowering.closureRows[origin] ?? [], of: origin),
+            linked: answered.table,
+            resolving: answered.resolving,
             shapes: shapes
         )
 
         return try executor.read(code, in: activation)
     }
-
-    // MARK: - Private
 }

@@ -62,8 +62,8 @@ struct Numbering: Sendable {
     // order: the numbering is the document's fact and a set has no order to
     // lend it.
     //
-    // `closures` says how many each declaration wrote, which is read off the
-    // document rather than counted while lowering. Lowering runs the words
+    // `closures` says how many each of the document's names wrote, which is
+    // read off the document rather than counted while lowering. Lowering runs the words
     // before the rest, and which declarations are words is a fact of the graph,
     // so a number counted in that order would move when an unrelated module
     // joins the link.
@@ -72,10 +72,13 @@ struct Numbering: Sendable {
         let stepped = walks.sorted()
         let opening = sent.count + stepped.count + declared.count
 
+        // In name order, over whatever wrote one. A procedure, a constant and
+        // a variable are all names the document declared, and a name holds one
+        // thing, so the three spaces are one order.
         var starting: [Name: Int] = [:]
         var written = 0
 
-        for name in declared {
+        for name in closures.keys.sorted() {
             guard let count = closures[name], count > 0 else { continue }
 
             starting[name] = opening + written
@@ -121,22 +124,6 @@ struct Numbering: Sendable {
         guard case let .document(references) = space else { return 0 }
 
         return references.count - opening
-    }
-
-    // The same numbering with room for the closures an expression folded
-    // beside this document writes. What folds runs at once and never leaves,
-    // so its closures take numbers after the document's own and nothing that
-    // ships is numbered by them.
-    func folding(_ count: Int, for declared: Name) -> Numbering {
-        guard case let .document(references) = space, count > 0 else { return self }
-
-        return Numbering(
-            space: .document(references + (0..<count).map { written in .closure(references.count - opening + written) }),
-            called: called,
-            walked: walked,
-            closing: closing.merging([declared: references.count]) { _, folded in folded },
-            opening: opening
-        )
     }
 
     // Which row of a link the number stands for, read from the tables that

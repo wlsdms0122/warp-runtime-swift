@@ -276,20 +276,40 @@ public struct Draft: Sendable {
     // apart is which of its declaration's closures this is, and nesting does
     // not change that.
     //
+    // A constant and a variable are expressions like a body, so a closure
+    // written in one is the document's the way a closure written in a body is.
+    // The same three the document is read over everywhere else.
+    //
     // Read off the document so a closure's number is the document's fact. The
     // link lowers the words before the rest, and which declarations are words
     // depends on the whole graph, so a count taken while lowering would move
     // when an unrelated module joins.
     var closures: [Name: Int] {
-        procedures.reduce(into: [Name: Int]()) { counts, entry in
-            guard let block = entry.value.block else { return }
-
-            counts[entry.key] = block.buried.count { held in
-                guard case .closure = held else { return false }
+        func written(in held: some Burying) -> Int {
+            held.buried.count { expression in
+                guard case .closure = expression else { return false }
 
                 return true
             }
         }
+
+        var counts: [Name: Int] = [:]
+
+        for (name, procedure) in procedures {
+            guard let block = procedure.block else { continue }
+
+            counts[name] = written(in: block)
+        }
+
+        for (name, expression) in constants {
+            counts[name] = written(in: expression)
+        }
+
+        for (name, expression) in variables {
+            counts[name] = written(in: expression)
+        }
+
+        return counts
     }
 
     // The shapes named inside a body: what a local binding says it holds, what

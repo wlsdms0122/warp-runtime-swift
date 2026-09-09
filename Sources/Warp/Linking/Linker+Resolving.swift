@@ -337,6 +337,7 @@ extension Linker {
     func constants(
         of modules: [Module],
         folding answered: Answered,
+        writing lowering: inout Lowering,
         with framing: (Int) -> TypeFrame
     ) throws -> [Int: [Name: Value]] {
         // Folding runs what it reads, and running reads rows. A lowered body
@@ -378,7 +379,12 @@ extension Linker {
                         origin: origin,
                         in: answered,
                         shapes: frame.shapes
-                    ).read(judged, at: .constant(name.spelling, in: .of(module)))
+                    ).read(
+                        judged,
+                        as: name,
+                        writing: &lowering,
+                        at: .constant(name.spelling, in: .of(module))
+                    )
                 } catch let refused as LinkError {
                     throw refused
                 } catch {
@@ -400,6 +406,7 @@ extension Linker {
         of modules: [Module],
         beside constants: [Int: [Name: Value]],
         folding answered: Answered,
+        writing lowering: inout Lowering,
         with framing: (Int) -> TypeFrame
     ) throws -> [Int: [Name: Value]] {
         var settled: [Int: [Name: Value]] = [:]
@@ -427,7 +434,12 @@ extension Linker {
                         origin: origin,
                         in: answered,
                         shapes: frame.shapes
-                    ).read(judged, at: .variable(name.spelling, in: .of(module)))
+                    ).read(
+                        judged,
+                        as: name,
+                        writing: &lowering,
+                        at: .variable(name.spelling, in: .of(module))
+                    )
                 } catch let refused as LinkError {
                     throw refused
                 } catch {
