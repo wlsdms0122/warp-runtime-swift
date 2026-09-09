@@ -111,13 +111,13 @@ extension Linker {
     // that turns out not to be a call only ever adds an edge, and an edge
     // only ever turns a reading into `any`. Missing one would do the
     // opposite.
-    func sent(in block: Block, reaching words: [Name: Symbol]) -> Set<Name> {
+    func sent(in block: Block, reaching words: [Name: Name]) -> Set<Name> {
         var sent: Set<Name> = []
 
         func gather(_ path: [PathSegment]) {
             for segment in path {
                 if let name = segment.named, let word = words[name] {
-                    sent.insert(word.declared)
+                    sent.insert(word)
                 }
 
                 guard case let .indexRef(inner, _) = segment else { continue }

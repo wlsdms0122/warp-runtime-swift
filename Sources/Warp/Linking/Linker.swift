@@ -103,17 +103,12 @@ public struct Linker: Sendable {
         var answered: [Name: Shape] = [:]
         var wordAnswered = [[Name: Shape]](repeating: [:], count: modules.count)
 
-        // Which declarations each document's paths step to, and the three
-        // readings of that table the walk asks for. What a bare spelling may
-        // call is its own table rather than a mask over the declarations,
-        // because a selector and a path segment ask two questions: what a call
-        // reaches, and what a step may reach. One table masked by a set let one
-        // spelling answer with the other question's declaration.
-        //
-        // What a selector reaches is asked of the declarations themselves,
-        // which is where an author's signature already stands.
-        var wordSymbols = [[Name: Symbol]](repeating: [:], count: modules.count)
-        var answeringWords = [[Name: Signature]](repeating: [:], count: modules.count)
+        // Which declarations each document's paths step to. A selector and a
+        // path segment ask two questions (what a call reaches, and what a step
+        // may reach), and both are answered off the rows: the rows a document
+        // steps to are its own table, so the step's gate and what it answers
+        // with cannot disagree.
+        var walked = [[Name: Name]](repeating: [:], count: modules.count)
 
         // Which spellings a path reaches one declaration by. A word may be
         // reachable under more than one, and an answer worked out for it is
@@ -189,7 +184,6 @@ public struct Linker: Sendable {
                 linked: lowering.table,
                 rows: lowering.rows,
                 answers: answered,
-                words: answeringWords[origin],
                 wordRows: lowering.words[origin],
                 wordAnswers: wordAnswered[origin],
                 pure: settled,
@@ -382,13 +376,12 @@ public struct Linker: Sendable {
                 in: lowering.table
             )
 
-            wordSymbols[origin] = words
-            answeringWords[origin] = words.mapValues { symbol in symbol.procedure.signature }
+            walked[origin] = words
             wordSpellings[origin] = words.reduce(into: [Name: [Name]]()) { spellings, entry in
-                spellings[entry.value.declared, default: []].append(entry.key)
+                spellings[entry.value, default: []].append(entry.key)
             }
 
-            lowering.stepping(origin, to: words.compactMapValues { symbol in lowering.rows[symbol.declared] })
+            lowering.stepping(origin, to: words.compactMapValues { declared in lowering.rows[declared] })
 
             named[origin] = Answered.answering(
                 numbering,
@@ -436,7 +429,7 @@ public struct Linker: Sendable {
                         symbol: symbol,
                         block: block,
                         environment: opening(symbol, of: symbol.procedure.signature),
-                        sends: sent(in: block, reaching: wordSymbols[symbol.origin])
+                        sends: sent(in: block, reaching: walked[symbol.origin])
                     )
                 },
                 reading: frame,
@@ -466,8 +459,9 @@ public struct Linker: Sendable {
             // declaration links stays a fact of its text rather than of who
             // happens to call it. In name order, so which mistake is reported
             // first is the text's fact too.
-            for symbol in words.values.filter({ symbol in symbol.origin == origin })
-                .sorted(by: { left, right in left.declared < right.declared }) {
+            let stepped = Set(words.values)
+
+            for symbol in holding where stepped.contains(symbol.declared) {
                 _ = try resolved(symbol)
             }
 
@@ -528,7 +522,7 @@ public struct Linker: Sendable {
                     answers: declared.reduce(into: [Name: Shape]()) { held, name in
                         held[name] = shaped.answers[name]
                     },
-                    words: wordSymbols[origin].mapValues { symbol in symbol.declared },
+                    words: walked[origin],
                     numbering: lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
                     shapeNumbering: shaped.numbering[origin] ?? ShapeNumbering(types: [], memberships: []),
                     variables: orderedVariables[origin].map { name in

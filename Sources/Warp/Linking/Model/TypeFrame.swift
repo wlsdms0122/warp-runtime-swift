@@ -35,14 +35,12 @@ struct TypeFrame: Sendable {
     // table and by one language.
     var shapes: ShapeTable { types.shapes }
 
-    // What a bare spelling a path writes may call: the pure declarations whose
-    // only required slot is the receiver, by the name a walk reaches them
-    // under. Its own table rather than a mask over `signatures`, so the gate
-    // and the declaration it answers with cannot disagree.
-    let words: [Name: Signature]
-
     // Which row a path reaches under each spelling, and what the link read
     // off a body that declared no answer. Read the way a selector's are.
+    //
+    // The rows are the gate as well as the reading: a bare spelling is in here
+    // when a path of this document may step to it, so what it may call and
+    // what it answers with cannot disagree.
     let wordRows: [Name: Int]
     let wordAnswers: [Name: Shape]
 
@@ -77,7 +75,7 @@ struct TypeFrame: Sendable {
     // asking whether a path may call it. A softer question was how a word
     // nobody may reach got a type.
     func signature(reachedBy name: Name) -> Signature? {
-        words[name]
+        wordRows[name].map { row in linked[row].signature }
     }
 
     // What a call is written against: the whole signature rather than what it

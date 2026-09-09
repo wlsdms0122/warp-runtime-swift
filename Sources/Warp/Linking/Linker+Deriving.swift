@@ -241,13 +241,12 @@ extension Linker {
         answering contracts: Set<Name>,
         reaching rows: [Name: Int],
         in table: [Linked]
-    ) throws -> [Name: Symbol] {
+    ) throws -> [Name: Name] {
         // What this document may walk to is what it declared and what it said
         // it imports, and nothing else in the link is something it could have
         // meant. A path names no module.
         let reachable = holding + module.imports.sorted().compactMap { name in space[name] }
 
-        var words: [Name: Symbol] = [:]
         // Every declaration that contests a name, and not only that one is
         // contested. Nothing a path writes can tell them apart, so the fix is
         // on a declaration, which makes all of them something a reader has to
@@ -255,6 +254,11 @@ extension Linker {
         // newest two and drop whoever took the name first, so a third arrival
         // hides the declaration the other two are colliding with.
         var contested: [Name: [Symbol]] = [:]
+
+        // The declarations themselves while the walk runs, since a collision
+        // is refused standing on the two that made it. What leaves is the
+        // spelling each bare name reaches, which is all a reading of it needs.
+        var held: [Name: Symbol] = [:]
 
         // Symbols rather than procedures, because the bodies are still to be
         // read: the caller reads them through the same judgment every other
@@ -274,7 +278,7 @@ extension Linker {
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
             // question, so it is not competing for the name.
-            if let first = words.updateValue(symbol, forKey: symbol.declared.unqualified) {
+            if let first = held.updateValue(symbol, forKey: symbol.declared.unqualified) {
                 contested[symbol.declared.unqualified, default: [first]].append(symbol)
             }
         }
@@ -300,6 +304,6 @@ extension Linker {
             )
         }
 
-        return words
+        return held.mapValues { symbol in symbol.declared }
     }
 }
