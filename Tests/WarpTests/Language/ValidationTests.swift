@@ -386,7 +386,7 @@ struct ValidationTests {
         #expect(
             error?.message
                 == "sends [\"std.collection.count\"], which it does not import,"
-                    + " and imports [\"std.math.minus\"], which it does not call"
+                    + " and imports [\"std.math.minus\"], which it neither calls nor walks to"
         )
     }
 

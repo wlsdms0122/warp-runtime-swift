@@ -201,7 +201,7 @@ struct EnvelopeTests {
                 ]
             ])
         } throws: { error in
-            "\(error)".contains("imports [\"std.math.minus\"], which it does not call")
+            "\(error)".contains("imports [\"std.math.minus\"], which it neither calls nor walks to")
         }
     }
 
