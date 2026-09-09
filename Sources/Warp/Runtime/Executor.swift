@@ -29,7 +29,7 @@ public struct Executor: Sendable {
 
     // One box per module variable, made when the run starts, by the document
     // that declared it, in the order its frame reads them.
-    let boxes: [Int: [Handle]]
+    let boxes: [[Handle]]
 
     // What a loop hands its body each round, and what a walk hands its own.
     private static let walkLayout = Layout(name: nil, ordered: ["index", "item"])
@@ -53,7 +53,7 @@ public struct Executor: Sendable {
         linked: [Linked],
         resolving: Resolving,
         shapes: ShapeTable = .empty,
-        boxes: [Int: [Handle]] = [:]
+        boxes: [[Handle]] = []
     ) {
         self.observer = observer
         self.environment = environment
@@ -76,7 +76,7 @@ public struct Executor: Sendable {
             linked: image.linked,
             resolving: .rows,
             shapes: image.shapes,
-            boxes: image.variables.mapValues { started in
+            boxes: image.variables.map { started in
                 started.map { name, value in Handle(name, value) }
             }
         )
@@ -628,9 +628,11 @@ public struct Executor: Sendable {
 
         guard !frame.variables.isEmpty else { return activation }
 
-        guard let held = boxes[callee.origin] else {
+        guard boxes.indices.contains(callee.origin) else {
             throw ExecutionError("'\(callee.label)' reads its document's variables, and this run holds none")
         }
+
+        let held = boxes[callee.origin]
 
         for (variable, slot) in frame.variables {
             activation.cells[slot] = .hold(held[variable])

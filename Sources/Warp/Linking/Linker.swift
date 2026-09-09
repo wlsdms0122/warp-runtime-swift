@@ -643,9 +643,7 @@ public struct Linker: Sendable {
             rows: assembled.rows,
             reached: reached,
             types: compiled.types,
-            variables: assembled.variables.enumerated().reduce(into: [:]) { held, entry in
-                held[entry.offset] = entry.element
-            }
+            variables: assembled.variables
         )
     }
 
