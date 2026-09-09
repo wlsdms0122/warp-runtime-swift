@@ -91,6 +91,7 @@ extension Linker {
         return Gathered(
             standing: standing,
             symbols: symbols,
+            space: space,
             types: types,
             contractWords: contractWords,
             answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) })

@@ -87,13 +87,6 @@ public struct Linker: Sendable {
         // table the run will read.
         let shapes = gathered.types.shapes
 
-        // Every declaration under its declared spelling. The spellings are
-        // unique, since the gathering refused a double, and every call in
-        // every body asks this table.
-        let space = gathered.symbols.reduce(into: [Name: Symbol]()) { table, symbol in
-            table[symbol.declared] = symbol
-        }
-
         // What every declaration returns, by the name a resolved call site
         // uses. Built before the walk so a call can be judged against a callee
         // the walk has not reached yet.
@@ -292,7 +285,7 @@ public struct Linker: Sendable {
         // own, so a frame is made for the document whose body is being read.
         func frame(for origin: Int) -> TypeFrame {
             TypeFrame(
-                symbols: space,
+                symbols: gathered.space,
                 signatures: answeringSignatures,
                 types: gathered.types,
                 linked: table,
