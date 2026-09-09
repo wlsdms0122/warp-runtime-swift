@@ -383,4 +383,60 @@ struct CatalogueTests {
             try linker.link(closed + Module.standard, entry: entryName)
         }
     }
+
+    @Test("what a claim brought is asked for its own needs in turn")
+    func aClaimsAnswerIsClosedOverToo() throws {
+        // Given. The declaration answering the claim names a type no other
+        // document does, so what the claim brought has a need of its own. The
+        // walk that finds it has already run by the time the claim is
+        // followed, so the answer only closes if the two take turns.
+        let holding = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            claiming: ["bank.Account": ["app.Describable"]],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
+        )
+        let spelling = try Module(
+            types: ["bank.Wording": .string],
+            procedures: ["bank.wording": Procedure(body: [], result: .literal(.null))]
+        )
+        let answering = try Module(
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .named("bank.Wording")
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                )
+            ]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .named("bank.Account")),
+                    body: [],
+                    result: .cast(
+                        .record(["balance": .literal(.int(7))]),
+                        as: .named("bank.Account"),
+                        optional: false
+                    )
+                )
+            ]
+        )
+
+        // When
+        let closed = try Catalogue([holding, asking, spelling, answering]).closing([program])
+
+        // Then. The answer came, and so did the type its signature names
+        #expect(closed.count == 5)
+        #expect(throws: Never.self) {
+            try linker.link(closed + Module.standard, entry: entryName)
+        }
+    }
 }

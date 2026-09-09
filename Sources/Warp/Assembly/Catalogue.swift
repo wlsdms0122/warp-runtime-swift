@@ -168,21 +168,30 @@ public struct Catalogue: Sendable {
                 }
             }
 
-            // A claim is answered by declarations named for its type and the
-            // words its contract asks, and a document making one may declare
-            // neither. The words are the contract's, so they are looked for
-            // among what is closed rather than in the draft, which cannot read
-            // another document's contract.
+            // What each contract asks, read off the answer as this round found
+            // it. Read once, so what this round follows is one list rather
+            // than whatever the walk had brought by the time it reached each
+            // claim. A contract that arrives during it is followed by the
+            // next round.
             //
             // Every closed document declaring the name is read. Two declaring
             // one is the link's refusal, and choosing between them here would
             // be that rule copied and made to answer earlier.
-            for module in closed {
-                for (type, contracts) in module.draft.claiming.sorted(by: { $0.key < $1.key }) {
-                    for contract in contracts.sorted() {
-                        let asked = closed.flatMap { held in (held.contracts[contract] ?? [:]).keys }
+            let asked = closed.reduce(into: [Name: Set<Name>]()) { table, module in
+                for (contract, words) in module.contracts {
+                    table[contract, default: []].formUnion(words.keys)
+                }
+            }
 
-                        for word in asked.sorted() {
+            // A claim is answered by declarations named for its type and the
+            // words its contract asks, and a document making one may declare
+            // neither. The words are the contract's, which is why they are
+            // read above rather than off the draft, which cannot see another
+            // document's contract.
+            for module in closed {
+                for (type, contracts) in module.claiming.sorted(by: { $0.key < $1.key }) {
+                    for contract in contracts.sorted() {
+                        for word in (asked[contract] ?? []).sorted() {
                             bring(words[ContractWord.spelling(of: type, word: word)])
                         }
                     }
