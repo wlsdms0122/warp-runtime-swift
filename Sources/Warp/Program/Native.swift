@@ -52,7 +52,60 @@ enum Native: Sendable {
         }
     }
 
+    // The places it reads its arguments at, with the name each place stands
+    // under. Its own, so a declaration whose parameters stand elsewhere is a
+    // word reading an argument nobody sent it.
+    var parameters: [(position: Int, name: Name)] {
+        switch self {
+        case let .query(query):
+            return places(of: query)
+
+        case let .effect(effect):
+            return places(of: effect)
+        }
+    }
+
+    // The words it sends, in the places it names them at.
+    var imports: [(position: Int, selector: Name)] {
+        switch self {
+        case let .query(query):
+            return sends(of: query)
+
+        case let .effect(effect):
+            return sends(of: effect)
+        }
+    }
+
+    // The two above as a link compares them: in position order, spellings
+    // only. A row records these where it was compiled, and a word brought
+    // later saying something else reads and sends at other places than the
+    // row stands on.
+    var reading: [Name] {
+        parameters.sorted { left, right in left.position < right.position }.map(\.name)
+    }
+
+    var sending: [Name] {
+        imports.sorted { left, right in left.position < right.position }.map(\.selector)
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
+    // Generic, so the word's own parameter type has a name here. Handing an
+    // existential to a generic function opens it.
+    private func places(of word: some Word) -> [(position: Int, name: Name)] {
+        places(of: type(of: word))
+    }
+
+    private func places<W: Word>(of word: W.Type) -> [(position: Int, name: Name)] {
+        W.Parameters.allCases.map { key in (position: key.position, name: key.name) }
+    }
+
+    private func sends(of word: some Word) -> [(position: Int, selector: Name)] {
+        sends(of: type(of: word))
+    }
+
+    private func sends<W: Word>(of word: W.Type) -> [(position: Int, selector: Name)] {
+        W.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
+    }
 }

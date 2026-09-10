@@ -19,18 +19,27 @@ import Foundation
 // words a host brings are the same words every run, and joining them up is
 // what a link would otherwise pay for again each time.
 public struct Supplying: Sendable {
+    // A word a host brought, beside what it declares about itself. Read once
+    // when the supply is built: a link asks the same questions of the same
+    // words every time it joins them up.
+    struct Brought: Sendable {
+        let word: Native
+        let reading: [Name]
+        let sending: [Name]
+    }
+
     // MARK: - Property
-    private let words: [Name: Native]
+    private let words: [Name: Brought]
 
     // MARK: - Initializer
     public init(_ modules: [Module]) {
-        var words: [Name: Native] = [:]
+        var words: [Name: Brought] = [:]
 
         for module in modules {
             for (name, procedure) in module.procedures {
                 guard let word = procedure.implementation.native else { continue }
 
-                words[name] = word
+                words[name] = Brought(word: word, reading: word.reading, sending: word.sending)
             }
         }
 
@@ -41,7 +50,7 @@ public struct Supplying: Sendable {
     // The code brought under that spelling, or nil where the host brought
     // none. What a row does about that is the row's: it is the one holding
     // what its document was compiled against.
-    subscript(_ name: Name) -> Native? {
+    subscript(_ name: Name) -> Brought? {
         words[name]
     }
 

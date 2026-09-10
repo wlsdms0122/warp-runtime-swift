@@ -25,7 +25,13 @@ struct Judged: Sendable {
     // comes from the host.
     enum Implementation: Sendable {
         case body(Body, Frame)
-        case native
+
+        // What the word this row was compiled against declared beyond what
+        // the row already says: the names it reads its arguments under and
+        // the spellings it sends, both in the places it names them at. A row
+        // stands on those places, so a word brought later that names others
+        // is a different word under one spelling.
+        case native(reading: [Name], sending: [Name])
     }
 
     // MARK: - Property
@@ -57,8 +63,11 @@ struct Judged: Sendable {
         case let .body(body, frame):
             self.implementation = .body(body, frame)
 
-        case .query, .effect:
-            self.implementation = .native
+        case let .query(query):
+            self.implementation = Self.native(.query(query))
+
+        case let .effect(effect):
+            self.implementation = Self.native(.effect(effect))
         }
     }
 
@@ -82,18 +91,30 @@ struct Judged: Sendable {
         case let .body(body, frame):
             implementation = .body(body, frame)
 
-        case .native:
-            guard let word = supplied[label] else { throw brought(nothing: document) }
+        case let .native(reading, sending):
+            guard let brought = supplied[label] else { throw self.brought(nothing: document) }
 
-            // A word declares its own purity, isolation and failing, and this
-            // row carries what the word a compile was handed declared. A host
-            // bringing a word saying something else brings a row judged
-            // against claims nothing in this link makes.
-            guard purity == word.purity, isolation == word.isolation, failing == word.failing else {
-                throw brought(otherwise: word, in: document)
+            // A word declares its own purity, isolation, failing, and the
+            // places it reads and sends at. This row carries what the word a
+            // compile was handed declared, so a host bringing a word saying
+            // something else brings a row standing on claims nothing in this
+            // link makes.
+            guard
+                purity == brought.word.purity,
+                isolation == brought.word.isolation,
+                failing == brought.word.failing,
+                reading == brought.reading,
+                sending == brought.sending
+            else {
+                throw self.brought(
+                    otherwise: brought,
+                    reading: reading,
+                    sending: sending,
+                    in: document
+                )
             }
 
-            switch word {
+            switch brought.word {
             case let .query(query):
                 implementation = .query(query)
 
@@ -116,6 +137,13 @@ struct Judged: Sendable {
     }
 
     // MARK: - Private
+    // What this row was compiled against, where it was left to native code.
+    // A body reads and sends nothing a word declared, so it answers with
+    // neither.
+    private static func native(_ word: Native) -> Implementation {
+        .native(reading: word.reading, sending: word.sending)
+    }
+
     // A row whose document left it to native code, and a link that brought
     // none. It is refused here rather than where the call is made: what a
     // caller brings is a statement about the whole run.
@@ -127,11 +155,18 @@ struct Judged: Sendable {
         )
     }
 
-    private func brought(otherwise word: Native, in document: Place.Document) -> LinkError {
+    private func brought(
+        otherwise brought: Supplying.Brought,
+        reading: [Name],
+        sending: [Name],
+        in document: Place.Document
+    ) -> LinkError {
         let differing = [
-            purity == word.purity ? nil : "purity",
-            isolation == word.isolation ? nil : "isolation",
-            failing == word.failing ? nil : "failing"
+            purity == brought.word.purity ? nil : "purity",
+            isolation == brought.word.isolation ? nil : "isolation",
+            failing == brought.word.failing ? nil : "failing",
+            reading == brought.reading ? nil : "parameters",
+            sending == brought.sending ? nil : "sends"
         ].compactMap { axis in axis }
 
         return LinkError(

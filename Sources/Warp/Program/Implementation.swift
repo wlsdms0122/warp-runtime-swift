@@ -62,31 +62,13 @@ public enum Implementation: Sendable {
     // place stands under. Nil for a body, which reads the names its own
     // declaration gave it.
     var nativeParameters: [(position: Int, name: Name)]? {
-        switch self {
-        case let .query(query):
-            return places(of: query)
-
-        case let .effect(effect):
-            return places(of: effect)
-
-        case .body:
-            return nil
-        }
+        native?.parameters
     }
 
     // The words a native word sends, in the places it names them at. Nil for
     // a body, whose sends are read off its text.
     var nativeImports: [(position: Int, selector: Name)]? {
-        switch self {
-        case let .query(query):
-            return sends(of: query)
-
-        case let .effect(effect):
-            return sends(of: effect)
-
-        case .body:
-            return nil
-        }
+        native?.imports
     }
 
     public var block: Block? {
@@ -98,21 +80,4 @@ public enum Implementation: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
-    // Generic, so the word's own parameter type has a name here. Handing an
-    // existential to a generic function opens it.
-    private func places(of word: some Word) -> [(position: Int, name: Name)] {
-        places(of: type(of: word))
-    }
-
-    private func places<W: Word>(of word: W.Type) -> [(position: Int, name: Name)] {
-        W.Parameters.allCases.map { key in (position: key.position, name: key.name) }
-    }
-
-    private func sends(of word: some Word) -> [(position: Int, selector: Name)] {
-        sends(of: type(of: word))
-    }
-
-    private func sends<W: Word>(of word: W.Type) -> [(position: Int, selector: Name)] {
-        W.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
-    }
 }

@@ -216,8 +216,43 @@ struct BakedTests {
         }
     }
 
+    @Test("a word brought under a spelling reads its arguments where the row stands")
+    func aBroughtWordReadsWhereTheRowStands() throws {
+        // Given. A document compiled against a word reading one argument under
+        // 'of'.
+        let baked = try linker.compile([try reading(under: "of")] + Module.standard)
+
+        // When / Then. A word of the same spelling reading under another name
+        // reads its arguments at places this row does not stand on.
+        #expect {
+            try linker.link(
+                baked,
+                entry: "app.counted",
+                supplying: Supplying([try reading(under: "value")] + Module.standard)
+            )
+        } throws: { error in
+            "\(error)".contains("said about its parameters, and the word brought under")
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
+
+    // A document declaring one native word reading a single argument under
+    // the name given.
+    private func reading(under name: Name) throws -> Module {
+        try Module(
+            procedures: [
+                "app.counted": Procedure(
+                    signature: Signature(
+                        parameters: [name: Parameter(type: .int)],
+                        returns: .int
+                    ),
+                    implementation: name == "of" ? .query(OfQuery()) : .query(ValueQuery())
+                )
+            ]
+        )
+    }
 
     // A document declaring one native word, which says whether it touches
     // anything shared.
@@ -266,6 +301,46 @@ private struct CountingQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) throws -> Value? {
         .int(1)
+    }
+
+    // MARK: - Private
+}
+
+// Two words answering the same way, each reading its one argument under its
+// own name.
+private struct OfQuery: Query {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .int) }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        question[.of]
+    }
+
+    // MARK: - Private
+}
+
+private struct ValueQuery: Query {
+    enum Parameters: Int, ParameterSet {
+        case value
+
+        var name: Name { "value" }
+
+        var declared: Parameter { Parameter(type: .int) }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        question[.value]
     }
 
     // MARK: - Private
