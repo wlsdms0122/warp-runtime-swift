@@ -76,44 +76,16 @@ enum Native: Sendable {
         }
     }
 
-    // The two above as a link compares them: in position order, spellings
-    // only. A row records these where it was compiled, and a word brought
-    // later saying something else reads and sends at other places than the
-    // row stands on.
-    var reading: [Name] {
-        let word = ObjectIdentifier(kind)
-
-        if let held = Self.lock.withLock({ Self.read[word] }) { return held }
-
-        let places = parameters.sorted { left, right in left.position < right.position }.map(\.name)
-
-        Self.lock.withLock { Self.read[word] = places }
-
-        return places
-    }
-
+    // The words it sends as a link compares them: in position order,
+    // spellings only. A row records these where it was compiled, and a word
+    // brought later naming others sends where the row does not stand.
     var sending: [Name] {
-        let word = ObjectIdentifier(kind)
-
-        if let held = Self.lock.withLock({ Self.sent[word] }) { return held }
-
-        let places = imports.sorted { left, right in left.position < right.position }.map(\.selector)
-
-        Self.lock.withLock { Self.sent[word] = places }
-
-        return places
+        imports.sorted { left, right in left.position < right.position }.map(\.selector)
     }
 
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
-    // What a word's type says about its own places, read once for each type.
-    // `allCases` builds its array again on every read and answers the same
-    // thing every time, and a link asks once for every row it lays.
-    private nonisolated(unsafe) static var read: [ObjectIdentifier: [Name]] = [:]
-    private nonisolated(unsafe) static var sent: [ObjectIdentifier: [Name]] = [:]
-    private static let lock = NSLock()
-
     private var kind: Any.Type {
         switch self {
         case let .query(query):

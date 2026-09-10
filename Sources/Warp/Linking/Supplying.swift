@@ -24,7 +24,11 @@ public struct Supplying: Sendable {
     // words every time it joins them up.
     struct Brought: Sendable {
         let word: Native
-        let reading: [Name]
+
+        // What the module bringing it declared it takes and answers. A row
+        // stands on the declaration it was compiled against, so this is what
+        // says the two are one word.
+        let signature: Signature
         let sending: [Name]
 
         // MARK: - Property
@@ -71,7 +75,11 @@ public struct Supplying: Sendable {
                     )
                 }
 
-                words[name] = Brought(word: word, reading: word.reading, sending: word.sending)
+                words[name] = Brought(
+                    word: word,
+                    signature: procedure.signature,
+                    sending: word.sending
+                )
             }
         }
 

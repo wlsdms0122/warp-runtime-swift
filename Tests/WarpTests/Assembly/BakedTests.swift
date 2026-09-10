@@ -216,8 +216,8 @@ struct BakedTests {
         }
     }
 
-    @Test("a word brought under a spelling reads its arguments where the row stands")
-    func aBroughtWordReadsWhereTheRowStands() throws {
+    @Test("a word brought under a spelling takes what the row was compiled against")
+    func aBroughtWordTakesWhatTheRowWasCompiledAgainst() throws {
         // Given. A document compiled against a word reading one argument under
         // 'of'.
         let baked = try linker.compile([try reading(under: "of")] + Module.standard)
@@ -231,7 +231,7 @@ struct BakedTests {
                 supplying: Supplying([try reading(under: "value")] + Module.standard)
             )
         } throws: { error in
-            "\(error)".contains("said about its parameters, and the word brought under")
+            "\(error)".contains("said about its declaration, and the word brought under")
         }
     }
 

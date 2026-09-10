@@ -91,29 +91,22 @@ struct Judged: Sendable {
         case let .native(sending):
             guard let brought = supplied[label] else { throw self.brought(nothing: document) }
 
-            let row = row(brought.code, of: origin, in: table)
-
-            // A word declares its own purity, isolation, failing, and the
-            // places it reads and sends at. This row carries what the word a
-            // compile was handed declared, and its slots stand in the order
-            // that word read them, so a host bringing a word saying something
-            // else brings a row standing on claims nothing here makes.
+            // A word declares its own purity, isolation, failing and the
+            // places it sends at, and the module bringing it declares what it
+            // takes and answers. This row carries what the word a compile was
+            // handed declared, so a host bringing a word saying something else
+            // brings a row standing on claims nothing here makes.
             guard
                 purity == brought.word.purity,
                 isolation == brought.word.isolation,
                 failing == brought.word.failing,
-                sending == brought.sending,
-                row.reads(brought.reading)
+                signature == brought.signature,
+                sending == brought.sending
             else {
-                throw self.brought(
-                    otherwise: brought,
-                    reading: row.reads(brought.reading),
-                    sending: sending,
-                    in: document
-                )
+                throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row
+            return row(brought.code, of: origin, in: table)
         }
     }
 
@@ -156,7 +149,6 @@ struct Judged: Sendable {
 
     private func brought(
         otherwise brought: Supplying.Brought,
-        reading: Bool,
         sending: [Name],
         in document: Place.Document
     ) -> LinkError {
@@ -164,7 +156,7 @@ struct Judged: Sendable {
             purity == brought.word.purity ? nil : "purity",
             isolation == brought.word.isolation ? nil : "isolation",
             failing == brought.word.failing ? nil : "failing",
-            reading ? nil : "parameters",
+            signature == brought.signature ? nil : "declaration",
             sending == brought.sending ? nil : "sends"
         ].compactMap { axis in axis }
 
