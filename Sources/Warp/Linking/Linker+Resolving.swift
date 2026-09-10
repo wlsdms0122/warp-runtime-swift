@@ -332,6 +332,8 @@ extension Linker {
             // the same gate every gathered call does.
             try checked(calls, in: frame, writing: requiring)
 
+            requiring.folding(.constant(name.spelling, in: .of(module)))
+
             do {
                 known[name] = try Folding(
                     constants: known,
@@ -382,6 +384,8 @@ extension Linker {
             )
 
             try checked(calls, in: frame, writing: requiring)
+
+            requiring.folding(.variable(name.spelling, in: .of(module)))
 
             do {
                 started[name] = try Folding(

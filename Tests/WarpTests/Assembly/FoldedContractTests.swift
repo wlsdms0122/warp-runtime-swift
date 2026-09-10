@@ -97,17 +97,15 @@ struct FoldedContractTests {
         }
 
         // Then. The pair the fold handed over is answered by the list, which
-        // is the same answer the whole graph gives.
-        #expect {
-            try Linker().link(compiled, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("no document in this link says 'bank.Plain' answers it")
-        }
-
-        #expect {
-            try Linker().link(modules, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+        // is the same answer the whole graph gives, and both say which
+        // declaration was being settled when the fold turned it up.
+        for link in [compiled, try Linker().compile(modules)] {
+            #expect {
+                try Linker().link(link, entry: entryName)
+            } throws: { error in
+                "\(error)".contains("constants.app.counted:")
+                    && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+            }
         }
     }
 }

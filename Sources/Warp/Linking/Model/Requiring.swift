@@ -44,6 +44,13 @@ final class Requiring: @unchecked Sendable {
         }
     }
 
+    // What is being folded from here on. A fold runs past the text, so what it
+    // turns up says only which declaration was being settled, and that is what
+    // this answers.
+    func folding(_ place: Place) {
+        lock.withLock { folding = place }
+    }
+
     func claims(of origin: Int) -> [Claim: Place] {
         lock.withLock { held[origin] ?? [:] }
     }

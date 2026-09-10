@@ -324,6 +324,8 @@ public struct Linker: Sendable {
             var answer = (procedure: declaration, calls: [CallSite]())
 
             if let block = declaration.block {
+                requiring.folding(symbol.place)
+
                 // A body not yet lowered stands as its refusal, so a word
                 // folding through a word is refused as the circle it is.
                 let folding = Folding(
