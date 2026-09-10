@@ -75,7 +75,7 @@ struct Workload {
 
     // The native code behind that vocabulary, joined up once, the way a host
     // that brings the same words every run holds them.
-    private static let brought = Supplying(Module.standard)
+    private static let brought = try! Supplying(Module.standard)
 
     private static func linked(_ module: Module) throws -> Image {
         try Linker().link([module] + Module.standard, entry: "entry")

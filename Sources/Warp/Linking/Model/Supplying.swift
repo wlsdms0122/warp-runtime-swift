@@ -29,15 +29,35 @@ public struct Supplying: Sendable {
     }
 
     // MARK: - Property
+    // A caller bringing no native code at all. What a document left to its
+    // host is then refused wherever it stands.
+    public static let none = Supplying()
+
     private let words: [Name: Brought]
 
     // MARK: - Initializer
-    public init(_ modules: [Module]) {
+    private init() {
+        self.words = [:]
+    }
+
+    // A spelling two of them bring is refused here, for the reason a link
+    // refuses a name two documents declare: a table with two answers for one
+    // name has no answer, and which of the two a run would get is the order
+    // the caller happened to write.
+    public init(_ modules: [Module]) throws {
         var words: [Name: Brought] = [:]
 
         for module in modules {
             for (name, procedure) in module.procedures {
                 guard let word = procedure.implementation.native else { continue }
+
+                guard !words.keys.contains(name) else {
+                    throw LinkError(
+                        "'\(name)' is brought by two of the modules handed over."
+                            + " Two words under one spelling have no way to be told apart",
+                        at: .procedure(name.spelling, in: .of(module))
+                    )
+                }
 
                 words[name] = Brought(word: word, reading: word.reading, sending: word.sending)
             }

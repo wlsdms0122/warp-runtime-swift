@@ -235,6 +235,17 @@ struct BakedTests {
         }
     }
 
+    @Test("a spelling two modules bring native code for is refused")
+    func aDoubledBroughtSpellingIsRefused() throws {
+        // Given / When / Then. Two modules declaring one spelling in native
+        // code, handed over together.
+        #expect {
+            try Supplying([try counting(isolated: true), try counting(isolated: false)])
+        } throws: { error in
+            "\(error)".contains("'app.counted' is brought by two of the modules handed over")
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
 

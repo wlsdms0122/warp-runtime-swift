@@ -92,7 +92,7 @@ public struct Linker: Sendable {
     public func compile(
         _ modules: [Module],
         against compiled: [Compiled] = [],
-        supplying natives: Supplying = Supplying([])
+        supplying natives: Supplying = .none
     ) throws -> [Compiled] {
         try once(modules, against: compiled)
 
