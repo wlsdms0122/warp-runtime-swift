@@ -741,10 +741,8 @@ struct CompiledTests {
         return read
     }
 
-    // Compiling a whole graph: what the list answers first, then the
-    // documents against it.
     private func compiled(_ modules: [Module]) throws -> [Compiled] {
-        try linker.compile(modules, in: linker.gathering(of: modules))
+        try linker.compile(modules)
     }
 
     // The block a document holds, by a spelling it declares: what it declared

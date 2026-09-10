@@ -63,7 +63,7 @@ public struct Linker: Sendable {
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: Name) throws -> Image {
-        try link(compile(modules, in: gathering(of: modules)), entry: entry)
+        try link(compile(modules), entry: entry)
     }
 
     // Documents compiled and handed back, for a caller that means to link
@@ -87,8 +87,14 @@ public struct Linker: Sendable {
     public func compile(_ modules: [Module], against compiled: [Compiled] = []) throws -> [Compiled] {
         try once(modules)
 
+        // Held to one declarer apiece before the standing is read. Standing
+        // reads a name as whichever document declared it, and where two
+        // declare one name that reading is arbitrary: it can put a document in
+        // its own reach and call the pair a ring. The doubled name is the
+        // defect, so it is the refusal an author gets.
+        let declaring = try symbols(of: modules)
         let standing = try ModuleGraph(modules).standing
-        let laid = try compile(modules, at: standing, against: compiled)
+        let laid = try compile(modules, at: standing, declaring: declaring, against: compiled)
 
         // Back in the order the documents were handed over. A document says
         // nothing about where it stands, so the order a link reads them in is
@@ -158,7 +164,12 @@ public struct Linker: Sendable {
     // What the list answers is read again, since the shape spaces of a link
     // are its documents' together and this document was not in the ones the
     // others were compiled against.
-    func compile(_ modules: [Module], at standing: [Int], against compiled: [Compiled]) throws -> [Compiled] {
+    func compile(
+        _ modules: [Module],
+        at standing: [Int],
+        declaring symbols: [Symbol],
+        against compiled: [Compiled]
+    ) throws -> [Compiled] {
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
         let declared = try declared(in: documents)
@@ -195,8 +206,14 @@ public struct Linker: Sendable {
             }
         }
 
-        let holding = try laying.enumerated().map { offset, module in
-            try self.symbols(of: [module]).map { symbol in
+        // The declarations of each document laid down, under the row it will
+        // take here. What a document declares is its own; where the rows stand
+        // is this compile's.
+        let written = symbols.reduce(into: [Int: [Symbol]]()) { held, symbol in
+            held[symbol.origin, default: []].append(symbol)
+        }
+        let holding = standing.enumerated().map { offset, position in
+            (written[position] ?? []).map { symbol in
                 Symbol(
                     declared: symbol.declared,
                     document: symbol.document,

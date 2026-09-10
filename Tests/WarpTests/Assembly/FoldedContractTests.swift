@@ -107,7 +107,7 @@ struct FoldedContractTests {
         #expect {
             try Linker().link(modules, entry: entryName)
         } throws: { error in
-            "\(error)".contains("'bank.Plain' does not answer every word 'app.Describable' asks")
+            "\(error)".contains("no document in this link says 'bank.Plain' answers it")
         }
     }
 }
