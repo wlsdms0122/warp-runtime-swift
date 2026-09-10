@@ -140,6 +140,13 @@ final class Slot: Sendable {
 }
 
 extension Array where Element == Slot {
+    // Where the receiver stands among these, for a declaration that takes
+    // one. A position is a fact about the lowered slots, so it is read off
+    // them rather than worked out from the declaration a second time.
+    func position(of receiver: Name?) -> Int? {
+        receiver.flatMap { name in firstIndex { slot in slot.name == name } }
+    }
+
     // Whether a path segment may reach a declaration with these slots: it
     // takes a receiver, so there is something for the walk to send it to,
     // and it needs nothing else, so `x.count` supplies everything it asks

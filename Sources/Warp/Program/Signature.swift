@@ -21,6 +21,11 @@ public struct Signature: Sendable, Equatable {
     // reachable through a path: it is what lets `x.name` find it.
     public let receiver: Name?
 
+    // What the declaration takes, under the names it wrote them under. A
+    // document writes them as a record, so the declaration says which
+    // parameters there are and nothing about their order. Where a run needs
+    // one, an argument's position is the names sorted, which `Name` orders and
+    // the lowering puts in place.
     public let parameters: [Name: Parameter]
 
     // What a call returns, or nil where nothing was declared. Absence is
@@ -29,12 +34,6 @@ public struct Signature: Sendable, Equatable {
     // somebody wrote. Nothing is checked either way; they differ in what they
     // say.
     public let returns: TypeExpression?
-
-    // The parameters in the order arguments stand in, settled where the
-    // declaration is written. A dictionary keeps no order, and every reading
-    // of a call runs over this one, so working it out again at each reading
-    // is the same list built as many times as it is read.
-    public let ordered: [Taken]
 
     // MARK: - Initializer
     public init(
@@ -45,9 +44,6 @@ public struct Signature: Sendable, Equatable {
         self.receiver = receiver
         self.parameters = parameters
         self.returns = returns
-        self.ordered = parameters
-            .sorted { left, right in left.key < right.key }
-            .map { entry in Taken(name: entry.key, parameter: entry.value) }
     }
 
     // A native word's declaration, read off the word itself. What it takes is
@@ -86,17 +82,19 @@ public struct Signature: Sendable, Equatable {
         return try parameter.checking(receiver: value, called: receiver, in: types)
     }
 
-    // Where the receiver stands among the parameters, for a declaration that
-    // takes one. Read off the order the parameters stand in and nothing else,
-    // so what a lowering does to their shapes cannot move it.
-    var receiverPosition: Int? {
-        receiver.flatMap { name in ordered.firstIndex { taken in taken.name == name } }
-    }
-
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
+    //
+    // Ordered after they are lowered rather than before. A slot carries the
+    // name it stands under, so the order is there to be put in place on the
+    // slots themselves, and a declaration never builds a second list to hold
+    // what a dictionary holds already.
     func lowered(in table: ShapeTable) -> [Slot] {
-        ordered.map { taken in taken.parameter.lowered(named: taken.name, in: table) }
+        var slots = parameters.map { name, parameter in parameter.lowered(named: name, in: table) }
+
+        slots.sort { left, right in left.name < right.name }
+
+        return slots
     }
 
     // The same, with what a call put in the type parameters written in. The
@@ -104,7 +102,11 @@ public struct Signature: Sendable, Equatable {
     // because what a call read is a shape and a declaration is a document's
     // spelling.
     func lowered(in table: ShapeTable, filling bound: [Name: Shape]) -> [Slot] {
-        ordered.map { taken in taken.parameter.lowered(named: taken.name, in: table, filling: bound) }
+        var slots = parameters.map { name, parameter in parameter.lowered(named: name, in: table, filling: bound) }
+
+        slots.sort { left, right in left.name < right.name }
+
+        return slots
     }
 
     // Whether something declared this way may stand where this is required.
@@ -130,7 +132,7 @@ public struct Signature: Sendable, Equatable {
         let slots = lowered(in: table)
 
         return slots.derivable(
-            receiver: receiverPosition,
+            receiver: slots.position(of: receiver),
             returns: returns?.lowered(in: table),
             in: table
         )
@@ -173,15 +175,6 @@ public struct Signature: Sendable, Equatable {
         let slots = lowered(in: types.shapes)
 
         return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
-    }
-
-    // Two declarations are one where they take and answer the same. The order
-    // is those same parameters sorted, so reading it here would compare what
-    // was just compared.
-    public static func == (left: Signature, right: Signature) -> Bool {
-        left.receiver == right.receiver
-            && left.returns == right.returns
-            && left.parameters == right.parameters
     }
 
     // MARK: - Internal

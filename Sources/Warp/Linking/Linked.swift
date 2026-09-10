@@ -84,7 +84,7 @@ public final class Linked: Sendable {
     ) {
         let slots = signature.lowered(in: table)
         let returns = signature.returns?.lowered(in: table)
-        let receiverPosition = signature.receiverPosition
+        let receiverPosition = slots.position(of: signature.receiver)
 
         self.label = label
         self.origin = origin
