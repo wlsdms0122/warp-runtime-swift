@@ -22,6 +22,11 @@ public struct Name: Sendable, Hashable, Comparable {
     // MARK: - Property
     public let spelling: String
 
+    // The spelling's bytes folded to a word, worked out where the name is
+    // written. Every table a link keeps is keyed by a name, so the bytes would
+    // otherwise be walked again at each probe.
+    private let digest: Int
+
     // The words the text encoding reads bare as values, and what each one
     // is. A name is never one of them: a bare `true` in front of a record
     // would otherwise be read as the record's name, and the value would be
@@ -92,6 +97,7 @@ public struct Name: Sendable, Hashable, Comparable {
         // string to answer.
         guard spelling.utf8.contains(where: { byte in byte >= 0x80 }) else {
             self.spelling = spelling
+            self.digest = Name.digested(spelling)
 
             return
         }
@@ -101,6 +107,7 @@ public struct Name: Sendable, Hashable, Comparable {
         }
 
         self.spelling = spelling
+        self.digest = Name.digested(spelling)
     }
 
     // A spelling this package built out of parts that are already normal. A
@@ -109,6 +116,7 @@ public struct Name: Sendable, Hashable, Comparable {
     // reachable from outside the package.
     public init(normal spelling: String) {
         self.spelling = spelling
+        self.digest = Name.digested(spelling)
     }
 
     // MARK: - Public
@@ -122,18 +130,32 @@ public struct Name: Sendable, Hashable, Comparable {
 
     // Two names are one name by their bytes, for the same reason.
     public static func == (lhs: Name, rhs: Name) -> Bool {
-        Name.compared(lhs.spelling, rhs.spelling) == 0
+        lhs.digest == rhs.digest && Name.compared(lhs.spelling, rhs.spelling) == 0
     }
 
-    // Hashed over the same bytes `==` reads, in one pass.
+    // Hashed over what the bytes folded to, which is what `==` reads before
+    // it reads the bytes.
     public func hash(into hasher: inout Hasher) {
-        Name.withBytes(spelling) { bytes in
-            hasher.combine(bytes: bytes)
-        }
+        hasher.combine(digest)
     }
 
     // MARK: - Private
     private static let dot = UInt8(ascii: ".")
+
+    // Fowler-Noll-Vo, folded over the bytes once. What it is for is telling
+    // two spellings apart before they are compared, so what it needs is to
+    // spread and to be cheap to work out.
+    private static func digested(_ spelling: String) -> Int {
+        withBytes(spelling) { bytes in
+            var folded: UInt64 = 0xcbf2_9ce4_8422_2325
+
+            for byte in bytes {
+                folded = (folded ^ UInt64(byte)) &* 0x100_0000_01b3
+            }
+
+            return Int(bitPattern: UInt(folded))
+        }
+    }
 
     // Two spellings ordered by their bytes: negative, zero or positive the
     // way `memcmp` answers, with the shorter first where one is a prefix of
