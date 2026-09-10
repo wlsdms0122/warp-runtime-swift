@@ -19,9 +19,15 @@ struct Symbol: Sendable {
     // Which document this was written in.
     let document: Place.Document
 
-    // Which module declared it, by position in the link, so two modules a
-    // caller built are still two modules.
+    // Which module declared it, by where its rows stand in the link. Rows are
+    // laid in the order each document's needs stand before it, which is not
+    // the order the caller handed them over in.
     let origin: Int
+
+    // Where the caller put that module. What a sentence names, since a caller
+    // reading a refusal counts the list it handed over rather than the order
+    // the link worked out.
+    let position: Int
 
     let procedure: Procedure
 
@@ -31,7 +37,7 @@ struct Symbol: Sendable {
     // What a sentence calls this declaration when it names one among several.
     // The position is the document's discriminator where it has no identity,
     // and this is the one place that holds both.
-    var spelled: String { document.spelled(at: origin) }
+    var spelled: String { document.spelled(at: position) }
 
     // MARK: - Initializer
     // MARK: - Public

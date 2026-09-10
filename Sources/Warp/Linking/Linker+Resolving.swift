@@ -121,6 +121,7 @@ extension Linker {
                     declared: name,
                     document: .of(module),
                     origin: origin,
+                    position: origin,
                     procedure: procedure
                 )
 

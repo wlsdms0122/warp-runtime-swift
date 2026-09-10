@@ -184,6 +184,7 @@ public struct Linker: Sendable {
                     declared: symbol.declared,
                     document: symbol.document,
                     origin: compiled.count + offset,
+                    position: compiled.count + position,
                     procedure: symbol.procedure
                 )
             }
@@ -203,7 +204,7 @@ public struct Linker: Sendable {
                 signatures[symbol.declared] = Declared(
                     symbol.procedure.signature,
                     at: symbol.place,
-                    of: symbol.origin
+                    of: symbol.position
                 )
             }
         }
