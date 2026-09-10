@@ -11,6 +11,10 @@
 # back on a quiet machine: the figures are the fastest sample, so anything else
 # running only ever makes a run look slower.
 set -e
+# The figures go through `tee`, whose exit status is the pipeline's. Without
+# this a bench that dies mid-run ends quietly and leaves the last table in
+# place, which then reads as a measurement of whatever is checked out now.
+set -o pipefail
 cd "$(dirname "$0")"
 swift build -c release --package-path . >/dev/null
 .build/release/WarpBench "$@" | tee result/latest.md
