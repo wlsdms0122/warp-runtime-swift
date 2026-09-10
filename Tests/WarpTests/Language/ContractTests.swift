@@ -164,7 +164,8 @@ struct ContractTests {
         #expect {
             try Linker().link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("answers int where the contract writes string")
+            "\(error)".hasPrefix("procedures.entry.result: 'bank.Account.describe' is named for")
+                && "\(error)".contains("answers int where the contract writes string")
         }
     }
 

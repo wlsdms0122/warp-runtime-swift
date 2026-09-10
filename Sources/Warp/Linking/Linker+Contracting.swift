@@ -177,7 +177,10 @@ extension Linker {
                     in: table
                 )
             } catch let refusal as LinkError {
-                return .waits("\(refusal)")
+                // The reason and not the refusal. A refusal renders its own
+                // place, and this one stands at the declaration while the
+                // sentence it ends up in stands where the pair was leaned on.
+                return .waits("'\(spelling)' " + refusal.message)
             }
 
             answering[word] = spelling
