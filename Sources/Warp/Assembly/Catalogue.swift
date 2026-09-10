@@ -156,34 +156,6 @@ public struct Catalogue: Sendable {
                 }
             }
 
-            // Which shapes the answer declares so far. A document leaning on a
-            // pair names both of them, so a claim about two shapes this list
-            // has is a claim this list may be leaning on, and the document
-            // making it has to stand in the link for the pair to be answered.
-            //
-            // A claim about two shapes nothing here pairs is brought as well.
-            // Which pairs are really leaned on is read off bodies against the
-            // signatures they call, which is a compile's answer and not a
-            // list's, and a table that guessed narrower would leave a link
-            // refusing a pair the host was willing to answer.
-            let named = closed.reduce(into: Set<Name>()) { names, module in
-                names.formUnion(module.draft.declaredShapes)
-            }
-
-            for (position, module) in modules.enumerated() {
-                let claiming = module.draft.claiming
-
-                guard
-                    claiming.contains(where: { type, contracts in
-                        named.contains(type) && contracts.contains(where: { named.contains($0) })
-                    })
-                else {
-                    continue
-                }
-
-                bring(position)
-            }
-
             // What each contract asks, read off the answer as this round found
             // it. Read once, so what this round follows is one list rather
             // than whatever the walk had brought by the time it reached each
@@ -197,6 +169,49 @@ public struct Catalogue: Sendable {
                 for (contract, words) in module.contracts {
                     table[contract, default: []].formUnion(words.keys)
                 }
+            }
+
+            // Which shapes the answer declares so far. A document leaning on a
+            // pair names both of them, so a claim about two shapes this list
+            // has is a claim this list may be leaning on, and the document
+            // making it has to stand in the link for the pair to be answered.
+            let named = closed.reduce(into: Set<Name>()) { names, module in
+                names.formUnion(module.draft.declaredShapes)
+            }
+
+            // And only where the words that answer it can be found. A claim in
+            // the link is held to every one of them, so bringing one nothing
+            // can answer would refuse a program that never leaned on the pair.
+            // A host holds modules it never puts in one graph, and one of them
+            // saying something this list cannot make good on is not this list's
+            // to refuse.
+            //
+            // A document handed over rather than granted is in the answer
+            // whatever this says, so an author's own claim is still held to
+            // its words where it is written.
+            func answerable(_ type: Name, _ contract: Name) -> Bool {
+                guard named.contains(type), let words = asked[contract] else { return false }
+
+                return words.allSatisfy { word in
+                    let spelling = ContractWord.spelling(of: type, word: word)
+
+                    return declares[.word(spelling)] != nil
+                        || closed.contains { module in module.draft.declaredWords.contains(spelling) }
+                }
+            }
+
+            for (position, module) in modules.enumerated() {
+                let claiming = module.draft.claiming
+
+                guard
+                    claiming.contains(where: { type, contracts in
+                        contracts.contains { contract in answerable(type, contract) }
+                    })
+                else {
+                    continue
+                }
+
+                bring(position)
             }
 
             // A claim is answered by declarations named for its type and the
