@@ -46,6 +46,12 @@ public struct Module: Sendable {
     // the document's fact, so it is settled with the document.
     let closures: [Name: Int]
 
+    // What this declares, by the name a link resolves to it. Where each one
+    // was written is not here: a refusal that names a place reads it off the
+    // draft, and every other reader wants the names alone.
+    let declaredWords: Set<Name>
+    let declaredShapes: Set<Name>
+
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
@@ -168,6 +174,8 @@ public struct Module: Sendable {
         self.walks = reading.walks
         self.walkableWords = draft.walkableWords
         self.closures = reading.closures
+        self.declaredWords = draft.declaredWords
+        self.declaredShapes = draft.declaredShapes
 
         try Validator().validate(self)
     }

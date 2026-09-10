@@ -58,12 +58,15 @@ public struct ModuleGraph: Sendable {
         for (position, module) in modules.enumerated() {
             let walkable = module.walkableWords
 
-            for declared in module.draft.declarations(in: .assembled).sorted(by: { $0.reference < $1.reference }) {
-                guard declares[declared.reference] == nil else { continue }
+            let declared = module.declaredWords.map(Reference.word)
+                + module.declaredShapes.map(Reference.shape)
 
-                declares[declared.reference] = position
+            for reference in declared.sorted() {
+                guard declares[reference] == nil else { continue }
 
-                guard case let .word(name) = declared.reference, walkable.contains(name) else { continue }
+                declares[reference] = position
+
+                guard case let .word(name) = reference, walkable.contains(name) else { continue }
 
                 walked[name.unqualified, default: []].append(position)
             }
