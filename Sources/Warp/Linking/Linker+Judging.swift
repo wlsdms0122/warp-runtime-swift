@@ -507,7 +507,8 @@ extension Linker {
             ),
             in: shapes,
             requiring: frame.requiring,
-            at: site.place
+            at: site.place,
+            when: .judging(folding: nil)
         ) {
         case let .refusal(reason):
             throw LinkError(

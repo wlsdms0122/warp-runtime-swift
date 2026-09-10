@@ -41,7 +41,7 @@ struct Compiled: Sendable, Declaring {
     // the whole list, and a claim may be written in a document this one never
     // names, so a compile writes down what it leaned on and the link answers
     // for it.
-    let requiring: [Claim: Place?]
+    let requiring: [Claim: Place]
 
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.

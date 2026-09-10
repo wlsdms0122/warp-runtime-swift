@@ -73,7 +73,8 @@ struct ContractTests {
         #expect {
             try Linker().link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+            "\(error)".contains("procedures.entry.result")
+                && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
         }
     }
 

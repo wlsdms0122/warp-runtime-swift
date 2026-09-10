@@ -69,7 +69,7 @@ extension Linker {
     // document the one leaning on it never names. So the question waits for
     // the list that holds every claim there is.
     func leaning(
-        _ requiring: [Claim: Place?],
+        _ requiring: [Claim: Place],
         on satisfying: [Name: Set<Name>],
         of document: Place.Document
     ) throws {
@@ -80,7 +80,7 @@ extension Linker {
                 "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
                     + " document in this link says '\(claim.type)' answers it."
                     + " A type answers a contract because a document says so",
-                at: requiring[claim] ?? nil ?? Place(in: document)
+                at: requiring[claim] ?? Place(in: document)
             )
         }
     }
