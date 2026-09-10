@@ -113,47 +113,44 @@ final class ShapeTable: Sendable {
         return members.contains(type)
     }
 
-    // The name a reading stands for, where it stands for one. Only a named
-    // type has one: a parameter stands for whatever fills it, and a reading
-    // nothing can be said about stands for no name in particular. The wrappers
-    // are stepped through the way the contract judgment steps through them.
-    func nominal(of reading: Shape) -> Name? {
-        switch reading {
-        case let .named(row):
-            return labels[row]
-
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return nominal(of: inner)
-
-        default:
-            return nil
-        }
+    // What a reading standing where a contract is asked comes to.
+    //
+    // Two answers, not a yes and a no. What the shape alone settles is settled
+    // here, and a named type settles nothing: which types answer a contract is
+    // read off the claims, and a claim may be written in a document the one
+    // asking never names. So the name comes back instead of a verdict and the
+    // asker writes it down.
+    //
+    // One machine, so a surface added later cannot judge a named reading here
+    // and reach the old answer.
+    enum Answering {
+        case settled(Bool)
+        case leansOn(Name)
     }
 
-    // Whether a reading is of a type that answers a contract. One-sided the
-    // way every judgment before the run is: only what is provably outside is
-    // refused, and a reading nothing can be said about passes here and is
-    // judged again where the value arrives.
-    func satisfies(contract name: Name, reading: Shape) -> Bool {
+    // One-sided the way every judgment before the run is: only what is
+    // provably outside is refused, and a reading nothing can be said about
+    // passes here and is judged again where the value arrives.
+    func answering(contract name: Name, reading: Shape) -> Answering {
         switch reading {
         case .any, .reading, .undeclared, .never:
-            return true
+            return .settled(true)
 
         case let .named(row):
-            return satisfies(contract: name, type: labels[row]) ?? false
+            return .leansOn(labels[row])
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something the same bound was asked of.
         case let .parameter(_, bound):
-            guard case let .contract(held)? = bound else { return false }
+            guard case let .contract(held)? = bound else { return .settled(false) }
 
-            return held == name
+            return .settled(held == name)
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return satisfies(contract: name, reading: inner)
+            return answering(contract: name, reading: inner)
 
         default:
-            return false
+            return .settled(false)
         }
     }
 

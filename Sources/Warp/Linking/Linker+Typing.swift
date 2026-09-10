@@ -133,19 +133,14 @@ extension Linker {
                 // admits is a set of shapes, what a contract asks is a set of
                 // words the reading's own type answers.
                 if shapes.satisfying[bound] != nil {
-                    // Which types answer a contract is read off the claims,
-                    // and a claim may be written in a document this one never
-                    // names. So a named reading is not judged here: the pair
-                    // is written down and held where the whole list is in
-                    // hand. What the shape alone settles is still settled
-                    // here, since no claim can change it.
-                    if let type = shapes.nominal(of: reading) {
+                    switch shapes.answering(contract: bound, reading: reading) {
+                    case let .leansOn(type):
                         requiring.require(Claim(type: type, contract: bound), at: place, when: ask)
 
-                        continue
-                    }
+                    case .settled(true):
+                        break
 
-                    guard shapes.satisfies(contract: bound, reading: reading) else {
+                    case .settled(false):
                         return "'\(parameter)' is read as \(reading.rendered(in: shapes)),"
                             + " which does not answer every word '\(bound)' asks"
                     }
@@ -1790,16 +1785,18 @@ extension Linker {
             ask: ask
         )
 
-        // A named receiver is written down rather than judged, the same way a
-        // bound one is: which types answer a contract is read off the claims,
-        // and a claim may be written in a document this one never names.
-        if let type = frame.shapes.nominal(of: receiver.reading) {
+        switch frame.shapes.answering(contract: asked.contract, reading: receiver.reading) {
+        case let .leansOn(type):
             frame.requiring.require(
                 Claim(type: type, contract: asked.contract),
                 at: place.part(.receiver),
                 when: ask
             )
-        } else if !frame.shapes.satisfies(contract: asked.contract, reading: receiver.reading) {
+
+        case .settled(true):
+            break
+
+        case .settled(false):
             throw LinkError(
                 "sends '\(call.selector)' to \(receiver.reading.rendered(in: frame.shapes)),"
                     + " which does not answer every word '\(asked.contract)' asks",
