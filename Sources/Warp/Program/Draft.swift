@@ -97,23 +97,7 @@ public struct Draft: Sendable {
     // anything, and a caller reading it is reading the bounds of what it is
     // about to allow.
     public var sends: Set<Name> {
-        let held = walking
-
-        // A native word's sends are its own declaration rather than something
-        // read off a body, since a Swift body is not text this could read. A
-        // list that missed them would understate what the module does, which
-        // is the one thing this list may not do.
-        let native = procedures.values.flatMap { procedure in
-            procedure.implementation.nativeImports?.map(\.selector) ?? []
-        }
-
-        return held
-            .reduce(into: Set(native)) { sent, expression in
-                guard case let .call(call) = expression else { return }
-
-                sent.insert(call.selector)
-            }
-            .subtracting(declaredWords)
+        read().sends
     }
 
     // MARK: - Internal
@@ -164,14 +148,7 @@ public struct Draft: Sendable {
     // it is looked up by a different key and answered by more than one
     // document.
     var uses: Set<Reference> {
-        uses(sending: sends)
-    }
-
-    // The same, over a list of sends already in hand. Reading the sends walks
-    // every expression this holds, and a caller that has walked them once has
-    // no reason to walk them again.
-    func uses(sending sent: Set<Name>) -> Set<Reference> {
-        Set(sent.map(Reference.word)).union(mentions.map(Reference.shape))
+        read().uses
     }
 
     // The same two, when only the names are wanted. Read off the lists above
@@ -233,34 +210,7 @@ public struct Draft: Sendable {
     // from the document holding the path, so a document declaring a word by
     // that spelling has not thereby answered its own step.
     var walks: Set<Name> {
-        var walked: Set<Name> = []
-
-        // The head names something in scope rather than a step onto it, so
-        // walking a path is walking everything after its head. An index's own
-        // path is read the same way the path holding it is, head and all, so
-        // it is walked by this same rule rather than by a second one.
-        func step(_ path: [PathSegment]) {
-            for segment in path.dropFirst() {
-                switch segment {
-                case let .key(name, _), let .word(name, _):
-                    walked.insert(name)
-
-                case let .indexRef(inner, _):
-                    step(inner)
-
-                case .index:
-                    break
-                }
-            }
-        }
-
-        for held in walking {
-            guard case let .reference(path) = held else { continue }
-
-            step(path)
-        }
-
-        return walked
+        read().walks
     }
 
     // The shapes this names and does not itself declare.
@@ -307,16 +257,6 @@ public struct Draft: Sendable {
         return mentioned.subtracting(declaredShapes)
     }
 
-    // MARK: - Private
-    // Every expression this holds. A constant is an expression, so it sends
-    // words and walks paths like any other, and a list that missed them would
-    // understate what the document does.
-    private var walking: [Expression] {
-        Array(constants.values).flatMap(\.buried)
-            + Array(variables.values).flatMap(\.buried)
-            + procedures.values.flatMap { procedure in procedure.block?.buried ?? [] }
-    }
-
     // How many closure literals each declaration wrote, at whatever depth. A
     // closure inside a closure counts with the rest: what the number tells
     // apart is which of its declaration's closures this is, and nesting does
@@ -331,33 +271,104 @@ public struct Draft: Sendable {
     // depends on the whole graph, so a count taken while lowering would move
     // when an unrelated module joins.
     var closures: [Name: Int] {
-        func written(in held: some Burying) -> Int {
-            held.buried.count { expression in
-                guard case .closure = expression else { return false }
+        read().closures
+    }
 
-                return true
+    // What one walk over a document's text answers: what it leans on, and how
+    // many closures each of its declarations wrote.
+    struct Reading: Sendable {
+        let sends: Set<Name>
+        let uses: Set<Reference>
+        let walks: Set<Name>
+        let closures: [Name: Int]
+    }
+
+    // What this document says it leans on and how many closures it wrote,
+    // read in one walk over its text.
+    //
+    // Every one of these is answered by walking the same expressions, so
+    // asking for them apart walks the text once for each. A document is made
+    // once and read by every link it stands in, and this is where that reading
+    // happens.
+    func read() -> Reading {
+        // A native word's sends are its own declaration rather than something
+        // read off a body, since a Swift body is not text this could read. A
+        // list that missed them would understate what the module does, which
+        // is the one thing this list may not do.
+        var sent = Set(
+            procedures.values.flatMap { procedure in
+                procedure.implementation.nativeImports?.map(\.selector) ?? []
+            }
+        )
+        var walked: Set<Name> = []
+        var counts: [Name: Int] = [:]
+
+        // The head names something in scope rather than a step onto it, so
+        // walking a path is walking everything after its head. An index's own
+        // path is read the same way the path holding it is, head and all, so
+        // it is walked by this same rule rather than by a second one.
+        func step(_ path: [PathSegment]) {
+            for segment in path.dropFirst() {
+                switch segment {
+                case let .key(name, _), let .word(name, _):
+                    walked.insert(name)
+
+                case let .indexRef(inner, _):
+                    step(inner)
+
+                case .index:
+                    break
+                }
             }
         }
 
-        var counts: [Name: Int] = [:]
+        func read(_ name: Name, _ held: some Burying) {
+            var written = 0
+
+            for expression in held.buried {
+                switch expression {
+                case let .call(call):
+                    sent.insert(call.selector)
+
+                case let .reference(path):
+                    step(path)
+
+                case .closure:
+                    written += 1
+
+                default:
+                    break
+                }
+            }
+
+            counts[name] = written
+        }
 
         for (name, procedure) in procedures {
             guard let block = procedure.block else { continue }
 
-            counts[name] = written(in: block)
+            read(name, block)
         }
 
         for (name, expression) in constants {
-            counts[name] = written(in: expression)
+            read(name, expression)
         }
 
         for (name, expression) in variables {
-            counts[name] = written(in: expression)
+            read(name, expression)
         }
 
-        return counts
+        let sends = sent.subtracting(declaredWords)
+
+        return Reading(
+            sends: sends,
+            uses: Set(sends.map(Reference.word)).union(mentions.map(Reference.shape)),
+            walks: walked,
+            closures: counts
+        )
     }
 
+    // MARK: - Private
     // The shapes named inside a body: what a local binding says it holds, what
     // a cast asks for, and what a closure literal's own signature writes. A
     // signature written inline is held to the same table the top level is, so

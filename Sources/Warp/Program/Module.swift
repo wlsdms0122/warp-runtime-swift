@@ -46,6 +46,7 @@ public struct Module: Sendable {
     // the document's fact, so it is settled with the document.
     let closures: [Name: Int]
 
+
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
@@ -159,14 +160,14 @@ public struct Module: Sendable {
         self.variables = draft.variables
         self.procedures = draft.procedures
         self.identity = identity
-        let sent = draft.sends
+        let reading = draft.read()
 
-        self.sends = sent
-        self.imports = draft.imports ?? sent.union(draft.walked)
-        self.uses = draft.uses(sending: sent)
-        self.walks = draft.walks
+        self.sends = reading.sends
+        self.imports = draft.imports ?? reading.sends.union(draft.walked)
+        self.uses = reading.uses
+        self.walks = reading.walks
         self.walkableWords = draft.walkableWords
-        self.closures = draft.closures
+        self.closures = reading.closures
 
         try Validator().validate(self)
     }
