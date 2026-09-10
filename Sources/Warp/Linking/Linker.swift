@@ -81,18 +81,24 @@ public struct Linker: Sendable {
     // signatures name, none of which a caller wrote down, so a caller has
     // nothing to sort by.
     //
+    public func compile(_ modules: [Module]) throws -> [Compiled] {
+        try compile(modules, against: [], supplying: .none)
+    }
+
+    // The same, against documents the caller already holds.
+    //
     // `compiled` is what the caller already holds, and the documents given
     // here are compiled against it. A word a document sends is answered by
     // either, and one that nothing here answers is refused where it is sent.
     //
-    // `supplying` is the native code behind `compiled`. Folding a constant
-    // runs the words the documents behind it declared, and an artifact names
-    // its natives without holding them, so the modules that declared them come
-    // back here.
+    // The artifacts and the code behind them are asked for together, since
+    // neither is any use here without the other: an artifact names its
+    // natives and holds none of the code, and folding a constant runs the
+    // words the documents behind it declared.
     public func compile(
         _ modules: [Module],
-        against compiled: [Compiled] = [],
-        supplying natives: Supplying = .none
+        against compiled: [Compiled],
+        supplying natives: Supplying
     ) throws -> [Compiled] {
         try once(modules, against: compiled)
 
