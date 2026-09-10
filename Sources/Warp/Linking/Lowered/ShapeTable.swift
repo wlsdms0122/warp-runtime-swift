@@ -103,10 +103,15 @@ final class ShapeTable: Sendable {
         constraintRows[name]
     }
 
-    // Whether a type of this spelling answers every word a contract asks. Nil
-    // where nothing declares the contract, the way an undeclared constraint
-    // answers nil: what an undeclared name means is the asking surface's.
-    func satisfies(contract name: Name, type: Name?) -> Bool? {
+    // Whether the type a value arrived wearing answers every word a contract
+    // asks. Nil where nothing declares the contract, the way an undeclared
+    // constraint answers nil: what an undeclared name means is the asking
+    // surface's.
+    //
+    // For a value already in hand and nothing else. A reading before the run
+    // is not a name yet, and asking this of one would settle here what the
+    // whole list settles.
+    func answering(contract name: Name, arrived type: Name?) -> Bool? {
         guard let members = satisfying[name] else { return nil }
         guard let type else { return false }
 
