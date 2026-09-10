@@ -429,7 +429,7 @@ public struct Linker: Sendable {
         // else the caller put in the link.
         let numbering = Numbering(
             imports: module.imports,
-            walks: module.draft.walks,
+            walks: module.walks,
             declared: declared,
             closures: module.draft.closures
         )

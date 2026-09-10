@@ -55,16 +55,10 @@ public struct ModuleGraph: Sendable {
         var declares: [Reference: Int] = [:]
         var walked: [Name: [Int]] = [:]
 
-        // Read once for each module and then asked twice, since what a
-        // document declares and what it needs are two readings of the same
-        // text and the text does not move between them.
-        let drafts = modules.map(\.draft)
-
         for (position, module) in modules.enumerated() {
-            let draft = drafts[position]
-            let walkable = draft.walkableWords
+            let walkable = module.walkableWords
 
-            for declared in draft.declarations(in: .assembled).sorted(by: { $0.reference < $1.reference }) {
+            for declared in module.draft.declarations(in: .assembled).sorted(by: { $0.reference < $1.reference }) {
                 guard declares[declared.reference] == nil else { continue }
 
                 declares[declared.reference] = position
@@ -77,8 +71,7 @@ public struct ModuleGraph: Sendable {
 
         // What each module needs of another, and under which name, so a
         // refusal can name the step rather than the ring.
-        let needs = modules.indices.map { position in
-            let draft = drafts[position]
+        let needs = modules.enumerated().map { position, module in
             var reached: [(position: Int, name: Name)] = []
 
             func need(_ name: Name, of declaring: Int?) {
@@ -87,11 +80,11 @@ public struct ModuleGraph: Sendable {
                 reached.append((declaring, name))
             }
 
-            for used in draft.uses.sorted() {
+            for used in module.uses.sorted() {
                 need(used.name, of: declares[used])
             }
 
-            for name in draft.walks.sorted() {
+            for name in module.walks.sorted() {
                 for declaring in walked[name] ?? [] {
                     need(name, of: declaring)
                 }

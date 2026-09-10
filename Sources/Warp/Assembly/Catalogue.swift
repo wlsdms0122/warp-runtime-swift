@@ -81,7 +81,7 @@ public struct Catalogue: Sendable {
         // Which of them a path could reach, gathered before the tables so the
         // walked spellings are drawn from the same declarations.
         let walkable = modules.reduce(into: Set<Name>()) { names, module in
-            names.formUnion(module.draft.walkableWords)
+            names.formUnion(module.walkableWords)
         }
 
         self.modules = modules
@@ -145,14 +145,14 @@ public struct Catalogue: Sendable {
             // is asked for its own needs in turn. Names in order, so which
             // modules arrive and where they stand is the same every time.
             while index < closed.count {
-                let draft = closed[index].draft
+                let module = closed[index]
                 index += 1
 
-                for used in draft.uses.sorted() {
+                for used in module.uses.sorted() {
                     bring(declares[used])
                 }
 
-                for name in draft.walks.sorted() {
+                for name in module.walks.sorted() {
                     bring(walked[name] ?? [])
                 }
             }
@@ -190,7 +190,7 @@ public struct Catalogue: Sendable {
             // does not cost is a refusal, since a claim whose words are
             // missing puts its type under no contract.
             for (position, module) in modules.enumerated() {
-                let claiming = module.draft.claiming
+                let claiming = module.claiming
 
                 guard
                     claiming.contains(where: { type, contracts in

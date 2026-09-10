@@ -124,7 +124,7 @@ public struct Validator: Sendable {
         // spellings a path could be stepping to is not settled until the types
         // are. So an import stands on either of two grounds: the module calls
         // it, or a path in it steps to that last segment.
-        let walked = module.draft.walks
+        let walked = module.walks
 
         let undisclosed = sends.subtracting(module.imports).sorted().map(\.spelling)
         let unspent = module.imports

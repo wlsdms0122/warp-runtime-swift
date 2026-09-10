@@ -29,6 +29,17 @@ public struct Module: Sendable {
     // refused for is `Validator`'s to say.
     public let imports: Set<Name>
 
+    // The same fact said as lookups rather than as a grant: every word and
+    // shape this names and does not declare, and the bare spellings its paths
+    // step to. Read where the module is made, since a link asks each module it
+    // is handed for both and the text they are read off does not move.
+    let uses: Set<Reference>
+    let walks: Set<Name>
+
+    // The words a path could reach among the ones this declares, as far as
+    // this document decides it.
+    let walkableWords: Set<Name>
+
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
@@ -143,6 +154,9 @@ public struct Module: Sendable {
         self.procedures = draft.procedures
         self.identity = identity
         self.imports = draft.imports ?? draft.sends.union(draft.walked)
+        self.uses = draft.uses
+        self.walks = draft.walks
+        self.walkableWords = draft.walkableWords
 
         try Validator().validate(self)
     }
