@@ -21,8 +21,7 @@ import Foundation
 public final class Linked: Sendable {
     enum Implementation: Sendable {
         case body(Body, Frame)
-        case query(any Query)
-        case effect(any Effect)
+        case native(Native)
     }
 
     // MARK: - Property
@@ -137,27 +136,14 @@ public final class Linked: Sendable {
         sends: [Int],
         in table: ShapeTable
     ) -> Linked {
-        let implementation: Implementation
-
-        switch procedure.implementation {
-        case .body:
-            implementation = .query(UnsettledWord())
-
-        case let .query(query):
-            implementation = .query(query)
-
-        case let .effect(effect):
-            implementation = .effect(effect)
-        }
-
-        return Linked(
+        Linked(
             label: label,
             origin: origin,
             signature: procedure.signature,
             purity: pure ? .pure : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
-            implementation: implementation,
+            implementation: .native(procedure.implementation.native ?? .query(UnsettledWord())),
             sends: sends,
             in: table
         )

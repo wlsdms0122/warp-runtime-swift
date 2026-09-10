@@ -584,7 +584,7 @@ extension Linker {
             try query.validate(Question(arguments: constants))
         }
 
-        if case let .query(query) = callee.implementation {
+        if case let .native(.query(query)) = callee.implementation {
             let constants = call.arguments.compactMapValues(\.constantValue)
 
             do {

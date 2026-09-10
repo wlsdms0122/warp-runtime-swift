@@ -405,10 +405,10 @@ public struct Executor: Sendable {
         // A query answers without running, so the pure half is the whole
         // implementation. It is here only so that `x.count` and the same
         // word written as a statement mean the same thing.
-        case .query:
+        case .native(.query):
             return try self.call(call, in: activation)
 
-        case let .effect(effect):
+        case let .native(.effect(effect)):
             let holds = try holds(call.handed, of: callee, in: activation)
             let settled = try settled(
                 callee,
@@ -804,7 +804,7 @@ public struct Executor: Sendable {
         // Absent and null are the same fact, and a word asked about nothing
         // decides for itself what that means: `contains` says false rather
         // than failing.
-        case let .query(query):
+        case let .native(.query(query)):
             return try evaluate(
                 query,
                 of: callee,
@@ -829,7 +829,7 @@ public struct Executor: Sendable {
 
             return try callee.settling(returned: try read(body, in: &activation))
 
-        case .effect:
+        case .native(.effect):
             throw ExecutionError(
                 "this answers only by running, so it cannot be read as data here"
             )
@@ -971,10 +971,10 @@ public struct Executor: Sendable {
         let settled = try settled(callee, to: receiver, offering: arguments)
 
         switch callee.implementation {
-        case .query:
+        case .native(.query):
             return try answer(callee, for: receiver, with: settled)
 
-        case let .effect(effect):
+        case let .native(.effect(effect)):
             return try await run(
                 effect,
                 of: callee,

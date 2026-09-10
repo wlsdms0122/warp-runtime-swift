@@ -62,11 +62,8 @@ struct Judged: Sendable {
         case let .body(body, frame):
             self.implementation = .body(body, frame)
 
-        case let .query(query):
-            self.implementation = Self.native(.query(query))
-
-        case let .effect(effect):
-            self.implementation = Self.native(.effect(effect))
+        case let .native(word):
+            self.implementation = Self.native(word)
         }
     }
 
@@ -117,7 +114,7 @@ struct Judged: Sendable {
             guard let brought = supplied[label] else {
                 guard standing else { throw self.brought(nothing: document) }
 
-                return row(.query(UnbroughtWord(label)), of: origin, in: table)
+                return row(.native(.query(UnbroughtWord(label))), of: origin, in: table)
             }
 
             // A word declares its own purity, isolation, failing and the
@@ -135,7 +132,7 @@ struct Judged: Sendable {
                 throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row(brought.code, of: origin, in: table)
+            return row(.native(brought.word), of: origin, in: table)
         }
     }
 
