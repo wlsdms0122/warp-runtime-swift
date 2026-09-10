@@ -212,7 +212,7 @@ struct BakedTests {
                 supplying: [try counting(isolated: false)] + Module.standard
             )
         } throws: { error in
-            "\(error)".contains("and the word brought under that spelling declares otherwise")
+            "\(error)".contains("said about its isolation, and the word brought under")
         }
     }
 

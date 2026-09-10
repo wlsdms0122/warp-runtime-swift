@@ -44,13 +44,11 @@ struct Supplying: Sendable {
     // word that says something else brings a row judged against claims
     // nothing in this link makes.
     func word(behind judged: Judged, in document: Place.Document) throws -> Linked.Implementation {
-        let place = Place.procedure(judged.label.spelling, in: document)
-
         guard let word = words[judged.label] else {
             throw LinkError(
                 "'\(judged.label)' is implemented in native code and this link was handed none."
                     + " What a caller brings is declared where the run is assembled",
-                at: place
+                at: .procedure(judged.label.spelling, in: document)
             )
         }
 
@@ -59,11 +57,17 @@ struct Supplying: Sendable {
             judged.isolation == word.isolation,
             judged.failing == word.failing
         else {
+            let differing = [
+                judged.purity == word.purity ? nil : "purity",
+                judged.isolation == word.isolation ? nil : "isolation",
+                judged.failing == word.failing ? nil : "failing"
+            ].compactMap { axis in axis }
+
             throw LinkError(
-                "'\(judged.label)' was compiled against a word declaring itself"
-                    + " \(judged.purity), \(judged.isolation) and \(judged.failing),"
-                    + " and the word brought under that spelling declares otherwise",
-                at: place
+                "'\(judged.label)' stands on what the word a compile was handed said"
+                    + " about its \(differing.joined(separator: ", ")), and the word"
+                    + " brought under that spelling says otherwise",
+                at: .procedure(judged.label.spelling, in: document)
             )
         }
 
