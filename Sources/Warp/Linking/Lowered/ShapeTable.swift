@@ -51,6 +51,12 @@ final class ShapeTable: Sendable {
     // document declared as a contract at all.
     let satisfying: [Name: Set<Name>]
 
+    // Whether the claims behind that table were the whole list's. A document
+    // compiled against what stands before it reads a table built from those
+    // documents alone, and a claim it never saw may be what answers. Such a
+    // table says it cannot settle a contract rather than settling it wrongly.
+    let settled: Bool
+
     private let rows: [Name: Int]
     private let constraintRows: [Name: Int]
 
@@ -75,6 +81,7 @@ final class ShapeTable: Sendable {
         recordRows: [Int?],
         circling: [Int] = [],
         satisfying: [Name: Set<Name>] = [:],
+        settled: Bool = true,
         of linkage: Linkage
     ) {
         self.shapes = shapes
@@ -84,6 +91,7 @@ final class ShapeTable: Sendable {
         self.recordRows = recordRows
         self.circling = circling
         self.satisfying = satisfying
+        self.settled = settled
         self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
         self.constraintRows = Dictionary(
@@ -112,7 +120,7 @@ final class ShapeTable: Sendable {
     // is not a name yet, and asking this of one would settle here what the
     // whole list settles.
     func settles(contract name: Name, arrived type: Name?) -> Bool? {
-        guard let members = satisfying[name] else { return nil }
+        guard settled, let members = satisfying[name] else { return nil }
         guard let type else { return false }
 
         return members.contains(type)

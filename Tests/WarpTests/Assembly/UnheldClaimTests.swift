@@ -212,4 +212,80 @@ struct UnheldClaimTests {
                 && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
         }
     }
+
+    @Test("a constant folded before the claim arrives is answered by the list")
+    func aFoldedConstantIsAnsweredByTheList() throws {
+        // Given. A word bounded by a contract that answers without running, a
+        // constant handing it a type, and the claim in a document the program
+        // never names.
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: [
+                "app.count": Procedure(
+                    signature: Signature(
+                        receiver: "it",
+                        parameters: [
+                            "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                        ],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+        let typed = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                )
+            ]
+        )
+        let claiming = try Module(
+            claiming: ["bank.Account": ["app.Describable"]],
+            procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let program = try Module(
+            constants: [
+                "app.counted": .call(
+                    Call(
+                        receiver: .cast(
+                            .record(["balance": .literal(.int(7))]),
+                            as: .named("bank.Account"),
+                            optional: false
+                        ),
+                        selector: "app.count"
+                    )
+                )
+            ],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .reference([.key("app.counted")])
+                )
+            ]
+        )
+
+        // When / Then. Folding runs where the document is compiled, against
+        // the claims of what stood before it, and the claim is not among them.
+        // The pair is written down there and the list answers, so the order
+        // the caller listed them in decides nothing.
+        let modules = [typed, asking, program, claiming] + Module.standard
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(try Linker().compile(modules[origin], against: compiled))
+        }
+
+        #expect(throws: Never.self) { try Linker().link(compiled, entry: entryName) }
+        #expect(throws: Never.self) { try Linker().link(modules, entry: entryName) }
+    }
 }

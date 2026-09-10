@@ -61,7 +61,8 @@ extension Linker {
             claims: declaredSpaces.claims,
             contracts: declaredContracts,
             over: declaredTypes,
-            among: signatures
+            among: signatures,
+            whole: true
         )
 
         return Gathered(
@@ -83,7 +84,8 @@ extension Linker {
         claims: [Declared<Claim>],
         contracts: [Name: Declared<[Name: Signature]>],
         over declaredTypes: [Name: Declared<TypeExpression>],
-        among signatures: [Name: Declared<Signature>]
+        among signatures: [Name: Declared<Signature>],
+        whole: Bool
     ) throws -> (
         types: TypeTable,
         contractWords: [Name: ContractWord],
@@ -97,7 +99,10 @@ extension Linker {
             among: signatures,
             in: declaring
         )
-        let table = declaring.satisfying(witnessed.answering.mapValues { answering in Set(answering.keys) })
+        let table = declaring.satisfying(
+            witnessed.answering.mapValues { answering in Set(answering.keys) },
+            settled: whole
+        )
 
         // The words the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written

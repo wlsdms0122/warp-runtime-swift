@@ -186,7 +186,8 @@ public struct Linker: Sendable {
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures
+            among: signatures,
+            whole: false
         )
 
         var compiling = try Compiling(
@@ -609,7 +610,8 @@ public struct Linker: Sendable {
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures
+            among: signatures,
+            whole: true
         )
         let types = shaped.types
 

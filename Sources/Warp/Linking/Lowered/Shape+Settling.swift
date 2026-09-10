@@ -492,8 +492,17 @@ extension Shape {
     ) throws -> Value {
         // A contract is answered by the value's own name: what the link found
         // to satisfy it is what a value may arrive as.
+        //
+        // One-sided the way every judgment here is. A table that cannot say
+        // which types answer, which is what a document compiled against part
+        // of a list holds, lets the value pass: the pair was written down
+        // where the call was read, and the whole list answers for it.
         if case let .contract(name)? = bound {
-            guard table.settles(contract: name, arrived: value.nominal) == true else {
+            switch table.settles(contract: name, arrived: value.nominal) {
+            case true?, nil:
+                return value
+
+            case false?:
                 let arrived = value.nominal.map { held in "'\(held)'" } ?? "\(value.type)"
 
                 throw ArgumentError(
@@ -501,8 +510,6 @@ extension Shape {
                         + " does not answer every word '\(name)' asks"
                 )
             }
-
-            return value
         }
 
         guard case let .membership(constraint)? = bound, !assuming.contains(constraint) else { return value }
