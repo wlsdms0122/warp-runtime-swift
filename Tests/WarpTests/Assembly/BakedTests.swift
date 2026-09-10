@@ -92,6 +92,24 @@ struct BakedTests {
         }
     }
 
+    @Test("two artifacts declaring one name are refused where they meet")
+    func twoArtifactsDeclaringOneNameAreRefused() throws {
+        // Given. Two documents compiled apart, so neither compile saw the
+        // other's declarations.
+        let baked = try linker.compile(Module.standard)
+        let one = try linker.compile([try adding(1)], against: baked)
+        let two = try linker.compile([try adding(2)], against: baked)
+
+        // When / Then. The table a link makes has no answer for the name, so
+        // it is refused rather than answered by whichever was laid down last.
+        #expect {
+            try linker.link(baked + one + two, entry: entry)
+        } throws: { error in
+            "\(error)".contains("'app.add1' is declared by")
+                && "\(error)".contains("Two declarations of a name have no way to be told apart")
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
 

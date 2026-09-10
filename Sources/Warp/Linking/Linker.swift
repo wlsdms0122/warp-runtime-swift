@@ -599,7 +599,7 @@ public struct Linker: Sendable {
     public func link(_ compiled: [Compiled], entry: Name) throws -> Image {
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
-        let assembled = Assembled(compiled)
+        let assembled = try Assembled(compiled)
 
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.

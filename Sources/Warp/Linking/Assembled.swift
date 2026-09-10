@@ -44,7 +44,7 @@ struct Assembled: Sendable {
     let variables: [[(name: Name, value: Value)]]
 
     // MARK: - Initializer
-    init(_ documents: [Compiled]) {
+    init(_ documents: [Compiled]) throws {
         let held = documents.reduce(0) { held, document in held + document.table.count }
 
         var table: [Judged] = []
@@ -62,6 +62,22 @@ struct Assembled: Sendable {
             let start = table.count
 
             for (offset, name) in document.declared.enumerated() {
+                // A name two documents declare is a table with no answer for
+                // that name, so it is refused where the table is made rather
+                // than answered by whichever was laid down last. Documents
+                // compiled together are held to this already; documents
+                // compiled apart meet here for the first time.
+                if let taken = rows[name] {
+                    let first = origins[taken]
+
+                    throw LinkError(
+                        "'\(name)' is declared by \(documents[first].document.spelled(at: first))"
+                            + " and by \(document.document.spelled(at: origin))."
+                            + " Two declarations of a name have no way to be told apart",
+                        at: .procedure(name.spelling, in: document.document)
+                    )
+                }
+
                 rows[name] = start + offset
             }
 

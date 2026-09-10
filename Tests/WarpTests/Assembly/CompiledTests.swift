@@ -157,7 +157,7 @@ struct CompiledTests {
         let compiled = try compiled([top, middle, bottom])
 
         func purity(of declared: Name) throws -> Purity {
-            try Assembled(compiled).table[#require(Assembled(compiled).rows[declared])].purity
+            try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].purity
         }
 
         // Then. The whole chain answers by the run, and what reaches none of
@@ -445,7 +445,7 @@ struct CompiledTests {
         let number = try called(in: code(of: "b.asks", in: compiled))
 
         #expect(number == 0)
-        #expect(number != Assembled(compiled).rows["a.answers"])
+        #expect(try number != Assembled(compiled).rows["a.answers"])
 
         // And. The link answers with the row.
         let image = try linker.link(compiled, entry: entryName)
@@ -469,7 +469,7 @@ struct CompiledTests {
         let beside = try compiled([ahead] + sut + Module.standard)
 
         // Then. The rows moved and the number the body carries did not.
-        #expect(Assembled(alone).rows["a.answers"] != Assembled(beside).rows["a.answers"])
+        #expect(try Assembled(alone).rows["a.answers"] != Assembled(beside).rows["a.answers"])
         #expect(
             try called(in: code(of: "b.asks", in: alone))
                 == called(in: code(of: "b.asks", in: beside))
@@ -493,7 +493,7 @@ struct CompiledTests {
 
         // Then. The rows moved, and the block the document holds did not: the
         // same spellings in the same order, and its closures behind them.
-        #expect(Assembled(alone).rows["b.asks"] != Assembled(beside).rows["b.asks"])
+        #expect(try Assembled(alone).rows["b.asks"] != Assembled(beside).rows["b.asks"])
         #expect(try block(holding: "b.asks", in: alone) == block(holding: "b.asks", in: beside))
     }
 
@@ -760,7 +760,7 @@ struct CompiledTests {
 
     // What a declaration's row holds, whichever table it was read out of.
     private func code(of declared: Name, in compiled: [Compiled]) throws -> Linked.Implementation {
-        let assembled = Assembled(compiled)
+        let assembled = try Assembled(compiled)
 
         return try assembled.table[#require(assembled.rows[declared])].implementation
     }
