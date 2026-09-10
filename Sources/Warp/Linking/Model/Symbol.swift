@@ -19,10 +19,9 @@ struct Symbol: Sendable {
     // Which document this was written in.
     let document: Place.Document
 
-    // Which module declared it, by where its rows stand in the link. Rows are
-    // laid in the order each document's needs stand before it, so this is
-    // written when the link lays them and answers the caller's own count
-    // until then.
+    // Where this declaration's rows stand in the link, written when the link
+    // lays them. Until then it is where the module sits in the list this was
+    // read out of, which is what groups these back by module.
     let origin: Int
 
     // Where the caller put that module in the list it handed over. What a

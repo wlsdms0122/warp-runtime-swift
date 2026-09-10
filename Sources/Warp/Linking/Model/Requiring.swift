@@ -53,14 +53,14 @@ final class Requiring: @unchecked Sendable {
     // what a pair turned up by something other than settling one declaration
     // stands on.
     func folding<Answer>(_ place: Place, _ body: () throws -> Answer) rethrows -> Answer {
-        let held = lock.withLock {
-            let held = folding
+        let previous = lock.withLock {
+            let previous = folding
             folding = place
 
-            return held
+            return previous
         }
 
-        defer { lock.withLock { folding = held } }
+        defer { lock.withLock { folding = previous } }
 
         return try body()
     }
