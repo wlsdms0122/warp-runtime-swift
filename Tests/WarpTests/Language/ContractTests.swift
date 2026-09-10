@@ -221,8 +221,8 @@ struct ContractTests {
         }
     }
 
-    @Test("one type answers one contract once")
-    func twoDocumentsCannotClaimOnePair() throws {
+    @Test("two documents saying one type answers one contract is one claim")
+    func twoDocumentsClaimingOnePairIsOneClaim() throws {
         // Given. Two documents say the same type answers the same contract
         let held = try Module(
             types: ["bank.Account": .record(["balance": .int])],
@@ -246,11 +246,10 @@ struct ContractTests {
             procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
         )
 
-        // When / Then
-        #expect {
+        // When / Then. A claim holds nothing but the pair, so the second says
+        // what the first said and nothing is in question.
+        #expect(throws: Never.self) {
             try Linker().link([held, again] + Module.standard, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("One type answers one contract once")
         }
     }
 

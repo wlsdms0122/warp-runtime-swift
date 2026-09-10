@@ -127,34 +127,32 @@ extension Linker {
         }
 
         // What each document said one of its types, or another document's,
-        // answers. Gathered here with the rest so a pair two documents claim
-        // is refused where every other doubled declaration is, and handed on
-        // as a list, since a claim declares no name for a table to be keyed
-        // by.
-        var claimed: [Name: [Name: Declared<Claim>]] = [:]
+        // answers. Handed on as a list, since a claim declares no name for a
+        // table to be keyed by.
+        //
+        // A pair two documents claim is folded rather than refused. A claim
+        // holds nothing but the pair, so two of them cannot disagree, and two
+        // libraries each saying a true thing about a type and a contract they
+        // both know is not a collision to make an author resolve. This is
+        // where an inline body's symbol lands in every toolchain that emits
+        // one from more than one place: the second is the first.
+        var claimed: Set<Claim> = []
         var claims: [Declared<Claim>] = []
 
         for (origin, held) in documents.enumerated() {
             for (type, contracts) in held.claiming.sorted(by: { $0.key < $1.key }) {
                 for contract in contracts.sorted() {
-                    let declaration = Declared(
-                        Claim(type: type, contract: contract),
-                        at: .satisfies(type.spelling, in: held.document),
-                        of: origin
-                    )
+                    let claim = Claim(type: type, contract: contract)
 
-                    if let first = claimed[type]?[contract] {
-                        throw LinkError(
-                            "'\(type)' is said to answer '\(contract)' by"
-                                + " \(first.spelled) and by \(declaration.spelled)."
-                                + " One type answers one contract once",
-                            at: declaration.place
+                    guard claimed.insert(claim).inserted else { continue }
+
+                    claims.append(
+                        Declared(
+                            claim,
+                            at: .satisfies(type.spelling, in: held.document),
+                            of: origin
                         )
-                    }
-
-                    claimed[type, default: [:]][contract] = declaration
-
-                    claims.append(declaration)
+                    )
                 }
             }
         }
