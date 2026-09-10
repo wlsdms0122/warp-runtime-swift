@@ -164,7 +164,14 @@ public struct Draft: Sendable {
     // it is looked up by a different key and answered by more than one
     // document.
     var uses: Set<Reference> {
-        Set(sends.map(Reference.word)).union(mentions.map(Reference.shape))
+        uses(sending: sends)
+    }
+
+    // The same, over a list of sends already in hand. Reading the sends walks
+    // every expression this holds, and a caller that has walked them once has
+    // no reason to walk them again.
+    func uses(sending sent: Set<Name>) -> Set<Reference> {
+        Set(sent.map(Reference.word)).union(mentions.map(Reference.shape))
     }
 
     // The same two, when only the names are wanted. Read off the lists above

@@ -216,7 +216,7 @@ struct CatalogueTests {
             ]
         )
 
-        #expect(program.draft.walks.isEmpty)
+        #expect(program.walks.isEmpty)
         #expect(try Catalogue(Module.standard).closing([program]).count == 1)
     }
 

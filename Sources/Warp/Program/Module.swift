@@ -29,10 +29,12 @@ public struct Module: Sendable {
     // refused for is `Validator`'s to say.
     public let imports: Set<Name>
 
-    // The same fact said as lookups rather than as a grant: every word and
-    // shape this names and does not declare, and the bare spellings its paths
-    // step to. Read where the module is made, since a link asks each module it
-    // is handed for both and the text they are read off does not move.
+    // The same fact said as lookups rather than as a grant: the words this
+    // calls, every word and shape it names and does not declare, and the bare
+    // spellings its paths step to. Read where the module is made, since a link
+    // asks each module it is handed for them and the text they are read off
+    // does not move.
+    let sends: Set<Name>
     let uses: Set<Reference>
     let walks: Set<Name>
 
@@ -157,8 +159,11 @@ public struct Module: Sendable {
         self.variables = draft.variables
         self.procedures = draft.procedures
         self.identity = identity
-        self.imports = draft.imports ?? draft.sends.union(draft.walked)
-        self.uses = draft.uses
+        let sent = draft.sends
+
+        self.sends = sent
+        self.imports = draft.imports ?? sent.union(draft.walked)
+        self.uses = draft.uses(sending: sent)
         self.walks = draft.walks
         self.walkableWords = draft.walkableWords
         self.closures = draft.closures
@@ -184,10 +189,6 @@ public struct Module: Sendable {
             procedures: procedures
         )
     }
-
-    // MARK: - Internal
-    var sends: Set<Name> { draft.sends }
-
 
     // MARK: - Private
 }
