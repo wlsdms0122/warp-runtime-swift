@@ -66,16 +66,19 @@ struct Bench {
             }
 
             var links: [Duration] = []
+            var bakes: [Duration] = []
             var onces: [Duration] = []
 
             for _ in 0 ..< linkSamples {
                 links.append(try workload.link())
+                bakes.append(try workload.baked())
                 onces.append(try await workload.once())
             }
 
             measured[workload.name] = Measurement(
                 perRound: Self.nanoseconds(Self.fastest(samples)) / Double(rounds),
                 link: Self.nanoseconds(Self.fastest(links)),
+                baked: Self.nanoseconds(Self.fastest(bakes)),
                 once: Self.nanoseconds(Self.fastest(onces))
             )
         }
@@ -106,6 +109,7 @@ struct Bench {
     private struct Measurement {
         let perRound: Double
         let link: Double
+        let baked: Double
         let once: Double
     }
 
@@ -205,12 +209,12 @@ struct Bench {
 
         lines += against == nil
             ? [
-                "| workload | ns/round | minus loop | x loop | link us | once us |",
-                "|---|---|---|---|---|---|"
+                "| workload | ns/round | minus loop | x loop | link us | baked us | once us |",
+                "|---|---|---|---|---|---|---|"
             ]
             : [
-                "| workload | ns/round | moved | x loop | link us | moved |",
-                "|---|---|---|---|---|---|"
+                "| workload | ns/round | moved | x loop | link us | moved | baked us | moved |",
+                "|---|---|---|---|---|---|---|---|"
             ]
 
         for (name, measurement) in measured.sorted(by: { $0.key < $1.key }) {
@@ -218,18 +222,19 @@ struct Bench {
 
             guard let before = against?[name] else {
                 lines.append(String(
-                    format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f |",
+                    format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f | %.0f |",
                     name, measurement.perRound, measurement.perRound - loop, ratio,
-                    measurement.link / 1000, measurement.once / 1000
+                    measurement.link / 1000, measurement.baked / 1000, measurement.once / 1000
                 ))
 
                 continue
             }
 
             lines.append(String(
-                format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ |",
+                format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ | %.0f | %@ |",
                 name, measurement.perRound, Self.moved(measurement.perRound, from: before["ns/round"]),
-                ratio, measurement.link / 1000, Self.moved(measurement.link / 1000, from: before["link us"])
+                ratio, measurement.link / 1000, Self.moved(measurement.link / 1000, from: before["link us"]),
+                measurement.baked / 1000, Self.moved(measurement.baked / 1000, from: before["baked us"])
             ))
         }
 

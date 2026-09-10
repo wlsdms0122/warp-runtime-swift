@@ -45,6 +45,19 @@ struct Workload {
         try elapsed { _ = try Self.linked(module) }
     }
 
+    // The same link where the vocabulary was compiled once already, which is
+    // what a caller linking many documents against one vocabulary pays.
+    func baked() throws -> Duration {
+        try elapsed {
+            let linker = Linker()
+
+            _ = try linker.link(
+                try linker.compile([module], against: Self.vocabulary),
+                entry: "entry"
+            )
+        }
+    }
+
     // How long a document that arrives, links, runs one round and is dropped
     // takes. The two halves of the same measurement, timed together rather
     // than added, so nothing between them is left out.
@@ -55,6 +68,10 @@ struct Workload {
     }
 
     // MARK: - Private
+    // The standard vocabulary compiled once, the way a host that brings it
+    // compiles it once.
+    private static let vocabulary = try! Linker().compile(Module.standard)
+
     private static func linked(_ module: Module) throws -> Image {
         try Linker().link([module] + Module.standard, entry: "entry")
     }
