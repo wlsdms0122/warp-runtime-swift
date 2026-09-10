@@ -40,6 +40,10 @@ public struct Module: Sendable {
     // this document decides it.
     let walkableWords: Set<Name>
 
+    // How many closure literals each declaration wrote. A closure's number is
+    // the document's fact, so it is settled with the document.
+    let closures: [Name: Int]
+
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
@@ -157,6 +161,7 @@ public struct Module: Sendable {
         self.uses = draft.uses
         self.walks = draft.walks
         self.walkableWords = draft.walkableWords
+        self.closures = draft.closures
 
         try Validator().validate(self)
     }

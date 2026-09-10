@@ -431,7 +431,7 @@ public struct Linker: Sendable {
             imports: module.imports,
             walks: module.walks,
             declared: declared,
-            closures: module.draft.closures
+            closures: module.closures
         )
         let sending = Sending(
             numbering: numbering,
