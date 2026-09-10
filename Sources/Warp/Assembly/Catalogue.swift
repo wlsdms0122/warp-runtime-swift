@@ -156,6 +156,34 @@ public struct Catalogue: Sendable {
                 }
             }
 
+            // Which shapes the answer declares so far. A document leaning on a
+            // pair names both of them, so a claim about two shapes this list
+            // has is a claim this list may be leaning on, and the document
+            // making it has to stand in the link for the pair to be answered.
+            //
+            // A claim about two shapes nothing here pairs is brought as well.
+            // Which pairs are really leaned on is read off bodies against the
+            // signatures they call, which is a compile's answer and not a
+            // list's, and a table that guessed narrower would leave a link
+            // refusing a pair the host was willing to answer.
+            let named = closed.reduce(into: Set<Name>()) { names, module in
+                names.formUnion(module.draft.declaredShapes)
+            }
+
+            for (position, module) in modules.enumerated() {
+                let claiming = module.draft.claiming
+
+                guard
+                    claiming.contains(where: { type, contracts in
+                        named.contains(type) && contracts.contains(where: { named.contains($0) })
+                    })
+                else {
+                    continue
+                }
+
+                bring(position)
+            }
+
             // What each contract asks, read off the answer as this round found
             // it. Read once, so what this round follows is one list rather
             // than whatever the walk had brought by the time it reached each
