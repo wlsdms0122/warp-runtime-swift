@@ -65,25 +65,13 @@ public struct Name: Sendable, Hashable, Comparable {
     // into one character.
     public var unqualified: Name {
         let bytes = spelling.utf8
-        var end = bytes.endIndex
 
-        while end > bytes.startIndex, bytes[bytes.index(before: end)] == Name.dot {
-            end = bytes.index(before: end)
-        }
-
-        guard end > bytes.startIndex else { return self }
-
-        var start = end
-
-        while start > bytes.startIndex, bytes[bytes.index(before: start)] != Name.dot {
-            start = bytes.index(before: start)
-        }
-
-        guard start > bytes.startIndex || end < bytes.endIndex else { return self }
+        guard let last = Name.lastSegment(of: bytes) else { return self }
+        guard last.lowerBound > bytes.startIndex || last.upperBound < bytes.endIndex else { return self }
 
         // Cut in the view it was scanned in. A dot is a starter and combines
         // with nothing, so a segment of a spelling in normal form is normal.
-        return Name(normal: String(decoding: bytes[start ..< end], as: UTF8.self))
+        return Name(normal: String(decoding: bytes[last], as: UTF8.self))
     }
 
     // MARK: - Initializer
@@ -145,6 +133,30 @@ public struct Name: Sendable, Hashable, Comparable {
 
     // MARK: - Private
     private static let dot = UInt8(ascii: ".")
+
+    // Where the last segment of a dotted spelling stands, or nothing where
+    // the spelling holds no segment at all. Trailing dots stand for no
+    // segment, so what is looked for is the last stretch of bytes a dot does
+    // not end.
+    private static func lastSegment(
+        of bytes: String.UTF8View
+    ) -> Range<String.UTF8View.Index>? {
+        var end = bytes.endIndex
+
+        while end > bytes.startIndex, bytes[bytes.index(before: end)] == dot {
+            end = bytes.index(before: end)
+        }
+
+        guard end > bytes.startIndex else { return nil }
+
+        var start = end
+
+        while start > bytes.startIndex, bytes[bytes.index(before: start)] != dot {
+            start = bytes.index(before: start)
+        }
+
+        return start ..< end
+    }
 
     // Fowler-Noll-Vo, folded over the bytes once. What it is for is telling
     // two spellings apart before they are compared, so what it needs is to
