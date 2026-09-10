@@ -44,6 +44,19 @@ struct Compiling {
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
 
+    // The pairs this document's calls lean on, written down while its bodies
+    // are read. Whether a type answers a contract is read off the claims, and
+    // a claim may be written in a document this one never names, so a compile
+    // gathers what it leans on and the link holds it.
+    //
+    // One per document, since what leaves a compile is that document's own.
+    private(set) var requiring = Requiring()
+
+    // The document about to be read starts with nothing leaned on.
+    mutating func begin() {
+        requiring = Requiring()
+    }
+
     // Every judgment the compile asks and every row it builds reads the table
     // the run will read.
     var shapes: ShapeTable { types.shapes }
@@ -241,7 +254,8 @@ struct Compiling {
             isolated: isolated,
             failing: failing,
             contractWords: contractWords,
-            variables: variables
+            variables: variables,
+            requiring: requiring
         )
     }
 

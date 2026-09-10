@@ -66,6 +66,10 @@ struct TypeFrame: Sendable {
     // answers by the run's state, so purity is read against these.
     let variables: Set<Name>
 
+    // Where this walk writes down the pairs its calls lean on. Held by the
+    // frame because every surface that judges a call already has one.
+    let requiring: Requiring
+
     // MARK: - Initializer
     // MARK: - Public
     // The whole declaration, for the one call a path makes, and only where a

@@ -505,7 +505,9 @@ extension Linker {
                 receiver: site.received,
                 in: shapes
             ),
-            in: shapes
+            in: shapes,
+            requiring: frame.requiring,
+            at: site.place
         ) {
         case let .refusal(reason):
             throw LinkError(

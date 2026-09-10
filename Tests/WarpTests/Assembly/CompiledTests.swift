@@ -255,6 +255,125 @@ struct CompiledTests {
         #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
     }
 
+    // A type, a contract, a claim about the two in a third document, and a
+    // program handing the type where the contract is asked. The program names
+    // the type and the word it sends and has no reason to name the third, so
+    // the standing puts the claim on either side of it depending on the order
+    // the caller wrote the list in.
+    private func leaning() throws -> (typed: Module, asking: Module, claiming: Module, program: Module) {
+        (
+            typed: try Module(
+                types: ["bank.Account": .record(["balance": .int])],
+                procedures: [
+                    "bank.Account.describe": Procedure(
+                        signature: Signature(
+                            receiver: "of",
+                            parameters: ["of": Parameter(type: .named("bank.Account"))],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: .literal(.string("an account"))
+                    )
+                ]
+            ),
+            asking: try Module(
+                contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+                procedures: [
+                    "app.tell": Procedure(
+                        signature: Signature(
+                            receiver: "it",
+                            parameters: [
+                                "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                            ],
+                            returns: .string
+                        ),
+                        body: [],
+                        result: .call(
+                            Call(receiver: reference("it"), selector: "app.Describable.describe")
+                        )
+                    )
+                ]
+            ),
+            claiming: try Module(
+                claiming: ["bank.Account": ["app.Describable"]],
+                procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+            ),
+            program: try Module(
+                procedures: [
+                    entryName: Procedure(
+                        signature: Signature(returns: .string),
+                        body: [
+                            Statement(
+                                binding: .constant("account"),
+                                expression: .cast(
+                                    .record(["balance": .literal(.int(7))]),
+                                    as: .named("bank.Account"),
+                                    optional: false
+                                )
+                            )
+                        ],
+                        result: .call(Call(receiver: reference("account"), selector: "app.tell"))
+                    )
+                ]
+            )
+        )
+    }
+
+    // Each document compiled against the ones already compiled, in the order
+    // the graph says they stand.
+    private func incremental(_ modules: [Module]) throws {
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(try linker.compile(modules[origin], against: compiled))
+        }
+
+        _ = try linker.link(compiled, entry: entryName)
+    }
+
+    @Test("a claim answers a document that never names the one making it")
+    func aClaimAnswersADocumentThatDoesNotNameIt() throws {
+        // Given
+        let (typed, asking, claiming, program) = try leaning()
+
+        // When / Then. The whole graph, and each document on its own with the
+        // claim standing before the program and after it. Nothing in the
+        // program points at the claim, so the order the caller listed them in
+        // is what decides which side it lands on, and it decides nothing.
+        #expect(throws: Never.self) {
+            try linker.link([typed, asking, claiming, program] + Module.standard, entry: entryName)
+        }
+        #expect(throws: Never.self) {
+            try incremental([typed, asking, claiming, program] + Module.standard)
+        }
+        #expect(throws: Never.self) {
+            try incremental([typed, asking, program, claiming] + Module.standard)
+        }
+    }
+
+    @Test("a pair no claim answers is refused by the list and not by a compile")
+    func aPairNoClaimAnswersIsRefusedByTheList() throws {
+        // Given. The same, with nobody making the claim.
+        let (typed, asking, _, program) = try leaning()
+        let modules = [typed, asking, program] + Module.standard
+
+        // When. Compiled one at a time, which settles nothing about a claim.
+        var compiled: [Compiled] = []
+
+        #expect(throws: Never.self) {
+            for origin in try ModuleGraph(modules).standing {
+                compiled.append(try linker.compile(modules[origin], against: compiled))
+            }
+        }
+
+        // Then. The list refuses, naming the pair the program leaned on.
+        #expect {
+            try linker.link(compiled, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("no document in this link says 'bank.Account' answers it")
+        }
+    }
+
     @Test("a claim is answered by the whole list, not by what a document was compiled against")
     func aClaimIsBackedWhereTheListIsWhole() throws {
         // Given. The claim and the declaration that answers it in two

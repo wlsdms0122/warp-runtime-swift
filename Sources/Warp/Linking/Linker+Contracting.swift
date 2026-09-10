@@ -62,6 +62,29 @@ extension Linker {
         return gathered
     }
 
+    // Every pair a document leaned on, held to a claim that says it holds.
+    //
+    // A compile writes these down instead of judging them: which types answer
+    // a contract is read off the claims, and a claim may be written in a
+    // document the one leaning on it never names. So the question waits for
+    // the list that holds every claim there is.
+    func leaning(
+        _ requiring: [Claim: Place?],
+        on satisfying: [Name: Set<Name>],
+        of document: Place.Document
+    ) throws {
+        for claim in requiring.keys.sorted() {
+            guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
+
+            throw LinkError(
+                "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
+                    + " document in this link says '\(claim.type)' answers it."
+                    + " A type answers a contract because a document says so",
+                at: requiring[claim] ?? nil ?? Place(in: document)
+            )
+        }
+    }
+
     // Every claim held to what stands behind it.
     //
     // Asked where the whole list is in hand and nowhere else. Each of these

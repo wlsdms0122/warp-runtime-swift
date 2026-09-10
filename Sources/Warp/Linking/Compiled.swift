@@ -35,6 +35,14 @@ struct Compiled: Sendable, Declaring {
     // those are is a fact of the link rather than of this document.
     let claiming: [Name: Set<Name>]
 
+    // The pairs its bodies lean on: a type handed where a contract is asked.
+    // Unresolved here, the way a word this document sends and does not declare
+    // is unresolved. Which types answer a contract is read off the claims of
+    // the whole list, and a claim may be written in a document this one never
+    // names, so a compile writes down what it leaned on and the link answers
+    // for it.
+    let requiring: [Claim: Place?]
+
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.
     let declared: [Name]

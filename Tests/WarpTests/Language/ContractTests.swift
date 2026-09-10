@@ -73,7 +73,7 @@ struct ContractTests {
         #expect {
             try Linker().link([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("does not answer every word 'app.Describable' asks")
+            "\(error)".contains("no document in this link says 'bank.Plain' answers it")
         }
     }
 

@@ -1,0 +1,43 @@
+//
+//  Requiring.swift
+//  Warp
+//
+//  Created by JSilver
+//
+
+import Foundation
+
+// Where a compile writes down the pairs its calls lean on: a type handed where
+// a contract is asked.
+//
+// Held rather than returned. What is gathered here is seen deep inside the
+// reading of a body, and carrying it back up would put a step in every surface
+// that reads one. A surface that forgot the step would lose a pair rather than
+// refuse, and a lost pair is a call nothing holds to anything.
+//
+// One of these per document compiled, read back when the walk is done.
+final class Requiring: @unchecked Sendable {
+    // MARK: - Property
+    private let lock = NSLock()
+    private var held: [Claim: Place?] = [:]
+
+    // What the walk wrote down, and where each pair was leaned on. The first
+    // place, so a document with the same pair in a dozen bodies points at one
+    // of them rather than at whichever was read last.
+    var claims: [Claim: Place?] {
+        lock.withLock { held }
+    }
+
+    // MARK: - Initializer
+    init() {
+    }
+
+    // MARK: - Internal
+    func require(_ claim: Claim, at place: Place?) {
+        lock.withLock {
+            guard held.index(forKey: claim) == nil else { return }
+
+            held[claim] = place
+        }
+    }
+}

@@ -119,7 +119,9 @@ extension Linker {
     func constraintRefusal(
         mentions: [Name: Set<Name>],
         readings: [Name: Shape],
-        in shapes: ShapeTable
+        in shapes: ShapeTable,
+        requiring: Requiring,
+        at place: Place?
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             guard let reading = readings[parameter] else { continue }
@@ -130,6 +132,18 @@ extension Linker {
                 // admits is a set of shapes, what a contract asks is a set of
                 // words the reading's own type answers.
                 if shapes.satisfying[bound] != nil {
+                    // Which types answer a contract is read off the claims,
+                    // and a claim may be written in a document this one never
+                    // names. So a named reading is not judged here: the pair
+                    // is written down and held where the whole list is in
+                    // hand. What the shape alone settles is still settled
+                    // here, since no claim can change it.
+                    if let type = shapes.nominal(of: reading) {
+                        requiring.require(Claim(type: type, contract: bound), at: place)
+
+                        continue
+                    }
+
                     guard shapes.satisfies(contract: bound, reading: reading) else {
                         return "'\(parameter)' is read as \(reading.rendered(in: shapes)),"
                             + " which does not answer every word '\(bound)' asks"
@@ -169,7 +183,9 @@ extension Linker {
         over slots: [Slot],
         answering: Shape?,
         filledWith bound: Bound,
-        in shapes: ShapeTable
+        in shapes: ShapeTable,
+        requiring: Requiring,
+        at place: Place?
     ) -> Judgment {
         // A declaration with nothing to fill is read as the link lowered it.
         // Lowering it again per call site is the same answer paid for again,
@@ -193,7 +209,9 @@ extension Linker {
         if let refusal = constraintRefusal(
             mentions: mentions,
             readings: bound.readings,
-            in: shapes
+            in: shapes,
+            requiring: requiring,
+            at: place
         ) {
             return .refusal(refusal)
         }
@@ -811,7 +829,9 @@ extension Linker {
             over: slots,
             answering: frame.answer(reachedBy: key),
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
-            in: frame.shapes
+            in: frame.shapes,
+            requiring: frame.requiring,
+            at: nil
         ) {
         case let .refusal(reason):
             return .refused("\(walked.rendered) sends '\(key)': \(reason)")

@@ -113,6 +113,23 @@ final class ShapeTable: Sendable {
         return members.contains(type)
     }
 
+    // The name a reading stands for, where it stands for one. Only a named
+    // type has one: a parameter stands for whatever fills it, and a reading
+    // nothing can be said about stands for no name in particular. The wrappers
+    // are stepped through the way the contract judgment steps through them.
+    func nominal(of reading: Shape) -> Name? {
+        switch reading {
+        case let .named(row):
+            return labels[row]
+
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return nominal(of: inner)
+
+        default:
+            return nil
+        }
+    }
+
     // Whether a reading is of a type that answers a contract. One-sided the
     // way every judgment before the run is: only what is provably outside is
     // refused, and a reading nothing can be said about passes here and is

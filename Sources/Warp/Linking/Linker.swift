@@ -211,6 +211,8 @@ public struct Linker: Sendable {
     ) throws -> Compiled {
         let shapes = compiling.shapes
 
+        compiling.begin()
+
         // What this document declares and what its variables are called, in
         // the order the rows and the boxes stand in.
         let declared = holding.map(\.declared)
@@ -533,6 +535,7 @@ public struct Linker: Sendable {
             constraints: module.constraints,
             contracts: module.contracts,
             claiming: module.claiming,
+            requiring: compiling.requiring.claims,
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
@@ -617,6 +620,17 @@ public struct Linker: Sendable {
             contracts: declared.contracts,
             among: signatures
         ).types
+
+        // What each document leaned on, answered by every claim in the list.
+        // A compile wrote these down rather than judging them, since a claim
+        // it never named may be what answers.
+        for document in compiled {
+            try leaning(
+                document.requiring,
+                on: types.shapes.satisfying,
+                of: document.document
+            )
+        }
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
