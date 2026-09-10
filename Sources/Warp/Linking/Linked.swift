@@ -232,6 +232,15 @@ public final class Linked: Sendable {
         + " One is read where the link that made it is being read, which"
         + " for a judgment is the image's own types"
 
+    // Whether a native word reading its arguments under those names, in that
+    // order, reads what this row settles. The slots stand in the order a run
+    // hands the arguments over, so a word naming others reads an argument
+    // nobody sent it.
+    func reads(_ reading: [Name]) -> Bool {
+        slots.count == reading.count
+            && zip(slots, reading).allSatisfy { slot, read in slot.name == read }
+    }
+
     // Whether this row is a written body.
     public var isWritten: Bool {
         if case .body = implementation { return true }

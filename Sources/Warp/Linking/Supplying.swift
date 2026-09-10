@@ -26,6 +26,18 @@ public struct Supplying: Sendable {
         let word: Native
         let reading: [Name]
         let sending: [Name]
+
+        // MARK: - Property
+        // The word as a row runs it.
+        var code: Linked.Implementation {
+            switch word {
+            case let .query(query):
+                return .query(query)
+
+            case let .effect(effect):
+                return .effect(effect)
+            }
+        }
     }
 
     // MARK: - Property
