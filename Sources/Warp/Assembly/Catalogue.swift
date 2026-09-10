@@ -66,8 +66,13 @@ public struct Catalogue: Sendable {
                     continue
                 }
 
+                let noun = switch declaration.reference {
+                case .word: "word"
+                case .shape: "shape"
+                }
+
                 throw CatalogueError(
-                    "the \(declaration.reference.kind) '\(declaration.reference.name)' is declared by"
+                    "the \(noun) '\(declaration.reference.name)' is declared by"
                         + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
                         + " \(Place.Document.of(module).spelled(at: position)) in this"
                         + " catalogue, so there is no answer to which one supplies it."
