@@ -152,4 +152,64 @@ struct UnheldClaimTests {
         // it that nothing can answer refuses nobody.
         #expect(throws: Never.self) { try Linker().link(closed, entry: entryName) }
     }
+
+    @Test("an unheld claim refuses at the call that leaned on it")
+    func anUnheldClaimRefusesAtTheLeaningCall() throws {
+        // Given. The claim in one document with no word behind it, and the
+        // program that hands the type in another.
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: [
+                "app.tell": Procedure(
+                    signature: Signature(
+                        receiver: "it",
+                        parameters: [
+                            "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                        ],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .call(
+                        Call(receiver: .reference([.key("it")]), selector: "app.Describable.describe")
+                    )
+                )
+            ]
+        )
+        let typed = try Module(
+            types: ["bank.Plain": .record(["note": .string])],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let claiming = try Module(
+            claiming: ["bank.Plain": ["app.Describable"]],
+            procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .string),
+                    body: [
+                        Statement(
+                            binding: .constant("plain"),
+                            expression: .cast(
+                                .record(["note": .literal(.string("x"))]),
+                                as: .named("bank.Plain"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .call(Call(receiver: .reference([.key("plain")]), selector: "app.tell"))
+                )
+            ]
+        )
+
+        // When / Then. The refusal says why the claim did not hold and stands
+        // where the type was handed over, which is the document an author is
+        // reading.
+        #expect {
+            try Linker().link([asking, typed, claiming, program] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("procedures.app.main.result")
+                && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
+        }
+    }
 }

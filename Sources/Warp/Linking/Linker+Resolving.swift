@@ -88,7 +88,7 @@ extension Linker {
         types: TypeTable,
         contractWords: [Name: ContractWord],
         answering: Set<Name>,
-        unheld: [Claim: LinkError]
+        unheld: [Claim: String]
     ) {
         let witnessed = try witnesses(
             of: claims,

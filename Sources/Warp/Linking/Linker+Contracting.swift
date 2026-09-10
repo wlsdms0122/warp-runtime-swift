@@ -57,14 +57,14 @@ extension Linker {
         over types: [Name: Declared<TypeExpression>],
         among space: [Name: Declared<Signature>],
         in table: TypeTable
-    ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: LinkError]) {
+    ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
         // Every contract, answered or not. The entry is what says a name is a
         // contract at all, so a bound naming one no type answers stays a
         // different thing from a bound naming nothing.
         var gathered = contracts.keys.reduce(into: [Name: [Name: [Name: Name]]]()) { table, contract in
             table[contract] = [:]
         }
-        var unheld: [Claim: LinkError] = [:]
+        var unheld: [Claim: String] = [:]
 
         for claim in claims {
             let (type, contract) = (claim.held.type, claim.held.contract)
@@ -95,19 +95,16 @@ extension Linker {
     func leaning(
         _ requiring: [Claim: Place],
         on satisfying: [Name: Set<Name>],
-        unheld: [Claim: LinkError]
+        unheld: [Claim: String]
     ) throws {
         for (claim, place) in requiring.sorted(by: { $0.key < $1.key }) {
             guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
 
-            if let refusal = unheld[claim] {
-                throw refusal
-            }
-
             throw LinkError(
-                "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
-                    + " document in this link says '\(claim.type)' answers it."
-                    + " A type answers a contract because a document says so",
+                unheld[claim]
+                    ?? "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
+                        + " document in this link says '\(claim.type)' answers it."
+                        + " A type answers a contract because a document says so",
                 at: place
             )
         }
@@ -122,7 +119,10 @@ extension Linker {
     // reason it came to nothing where another document could still supply it.
     private enum Holding {
         case holds([Name: Name])
-        case waits(LinkError)
+
+        // The reason and not a refusal. Where a claim that did not hold is
+        // refused is the leaning call's, and this knows only why.
+        case waits(String)
     }
 
     private func holding(
@@ -135,41 +135,29 @@ extension Linker {
         let (type, contract) = (claim.held.type, claim.held.contract)
 
         guard types[type] != nil else {
+            let reason = "'\(type)' is not a type this link declares, and only a"
+                + " type answers a contract"
+
             // Declared as something else in this list, which no document
-            // arriving later can undo: one name has one declarer.
+            // arriving later can undo: one name has one declarer. Anything
+            // else waits, since the document declaring it may simply not be
+            // in this list.
             guard contracts[type] == nil, table.constraint(type) == nil else {
-                throw LinkError(
-                    "'\(type)' is not a type this link declares, and only a"
-                        + " type answers a contract",
-                    at: claim.place
-                )
+                throw LinkError(reason, at: claim.place)
             }
 
-            return .waits(
-                LinkError(
-                    "'\(type)' is not a type this link declares, and only a"
-                        + " type answers a contract",
-                    at: claim.place
-                )
-            )
+            return .waits("\(claim.spelled) says " + reason)
         }
 
         guard let asked = contracts[contract] else {
+            let reason = "'\(contract)' is not a contract this link declares,"
+                + " so there are no words for '\(type)' to answer"
+
             guard types[contract] == nil, table.constraint(contract) == nil else {
-                throw LinkError(
-                    "'\(contract)' is not a contract this link declares,"
-                        + " so there are no words for '\(type)' to answer",
-                    at: claim.place
-                )
+                throw LinkError(reason, at: claim.place)
             }
 
-            return .waits(
-                LinkError(
-                    "'\(contract)' is not a contract this link declares,"
-                        + " so there are no words for '\(type)' to answer",
-                    at: claim.place
-                )
-            )
+            return .waits("\(claim.spelled) says " + reason)
         }
 
         var answering: [Name: Name] = [:]
@@ -179,13 +167,10 @@ extension Linker {
 
             guard let witness = space[spelling] else {
                 return .waits(
-                    LinkError(
-                        "says '\(type)' answers '\(contract)', which asks '\(word)',"
-                            + " and nothing in this link declares '\(spelling)'."
-                            + " A contract's word is answered by a declaration named"
-                            + " for the type and the word",
-                        at: claim.place
-                    )
+                    "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
+                        + " '\(word)', and nothing in this link declares '\(spelling)'."
+                        + " A contract's word is answered by a declaration named"
+                        + " for the type and the word"
                 )
             }
 
@@ -200,7 +185,7 @@ extension Linker {
                     in: table
                 )
             } catch let refusal as LinkError {
-                return .waits(refusal)
+                return .waits("\(refusal)")
             }
 
             answering[word] = spelling
