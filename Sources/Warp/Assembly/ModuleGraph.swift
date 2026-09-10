@@ -58,10 +58,13 @@ public struct ModuleGraph: Sendable {
         for (position, module) in modules.enumerated() {
             let walkable = module.walkableWords
 
+            // In no order. Which module answers a reference is the order the
+            // caller handed the modules over, and inside one module no two of
+            // these are the same reference, so nothing here reads an order.
             let declared = module.declaredWords.map(Reference.word)
                 + module.declaredShapes.map(Reference.shape)
 
-            for reference in declared.sorted() {
+            for reference in declared {
                 guard declares[reference] == nil else { continue }
 
                 declares[reference] = position
