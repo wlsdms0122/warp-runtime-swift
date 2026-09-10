@@ -28,12 +28,7 @@ public struct Signature: Sendable, Equatable {
     // is a claim, so a declaration nobody wrote stays distinguishable from one
     // somebody wrote. Nothing is checked either way; they differ in what they
     // say.
-    //
-    // Settable only from here, so `answering(_:)` changes this one field of a
-    // copy instead of naming every field to keep it. A listing that keeps
-    // fields by naming them loses a new one silently, and the initializer's
-    // defaults mean nothing would say so.
-    public private(set) var returns: TypeExpression?
+    public let returns: TypeExpression?
 
     // The parameters in the order arguments stand in, settled where the
     // declaration is written. A dictionary keeps no order, and every reading
