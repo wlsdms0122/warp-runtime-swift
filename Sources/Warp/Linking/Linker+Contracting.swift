@@ -78,11 +78,11 @@ extension Linker {
     // pair is written down and something behind it is wrong, which is a
     // different thing to fix from nobody having written it.
     func leaning(
-        _ requiring: [Claim: Place],
+        _ leaned: [Claim: Place],
         on satisfying: [Name: Set<Name>],
         unheld: [Claim: String]
     ) throws {
-        for (claim, place) in requiring.sorted(by: { $0.key < $1.key }) {
+        for (claim, place) in leaned.sorted(by: { $0.key < $1.key }) {
             guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
 
             throw LinkError(

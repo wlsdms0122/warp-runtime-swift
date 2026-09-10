@@ -40,7 +40,7 @@ struct Compiled: Sendable, Declaring {
     // is unresolved. Which types answer a contract is read off the claims of
     // the whole list, and a claim may be written in a document this one never
     // names.
-    let requiring: [Claim: Place]
+    let leaned: [Claim: Place]
 
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.

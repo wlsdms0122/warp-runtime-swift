@@ -551,7 +551,7 @@ public struct Linker: Sendable {
             constraints: module.constraints,
             contracts: module.contracts,
             claiming: module.claiming,
-            requiring: requiring.claims,
+            leaned: requiring.claims,
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
@@ -632,7 +632,7 @@ public struct Linker: Sendable {
         // What each document leaned on, answered by every claim in the list.
         for document in compiled {
             try leaning(
-                document.requiring,
+                document.leaned,
                 on: types.shapes.satisfying,
                 unheld: shaped.unheld
             )
