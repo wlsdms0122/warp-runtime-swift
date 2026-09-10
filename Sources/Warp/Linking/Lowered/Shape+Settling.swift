@@ -493,7 +493,7 @@ extension Shape {
         // A contract is answered by the value's own name: what the link found
         // to satisfy it is what a value may arrive as.
         if case let .contract(name)? = bound {
-            guard table.answering(contract: name, arrived: value.nominal) == true else {
+            guard table.settles(contract: name, arrived: value.nominal) == true else {
                 let arrived = value.nominal.map { held in "'\(held)'" } ?? "\(value.type)"
 
                 throw ArgumentError(

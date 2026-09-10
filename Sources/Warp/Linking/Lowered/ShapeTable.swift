@@ -111,7 +111,7 @@ final class ShapeTable: Sendable {
     // For a value already in hand and nothing else. A reading before the run
     // is not a name yet, and asking this of one would settle here what the
     // whole list settles.
-    func answering(contract name: Name, arrived type: Name?) -> Bool? {
+    func settles(contract name: Name, arrived type: Name?) -> Bool? {
         guard let members = satisfying[name] else { return nil }
         guard let type else { return false }
 
