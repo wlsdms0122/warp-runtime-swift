@@ -28,53 +28,34 @@ public enum Implementation: Sendable {
     case effect(any Effect)
 
     // MARK: - Property
-    // Whether this answers without running. For a body it is not knowable from
-    // the case alone (what it calls decides) so the linker computes it and this
-    // says only what a native declares about itself.
+    // The word behind this where it is written in native code, which is what
+    // declares its own purity, isolation and failing. Nil for a body, whose
+    // claims are what its code turns out to do.
+    var native: Native? {
+        switch self {
+        case .body:
+            return nil
+
+        case let .query(query):
+            return .query(query)
+
+        case let .effect(effect):
+            return .effect(effect)
+        }
+    }
+
+    // What a native declares about itself, in the answers a linker works out
+    // for a body. Nil where nothing was declared, which is what a body is.
     public var isNativelyPure: Bool? {
-        switch self {
-        case .query:
-            return true
-
-        case .effect:
-            return false
-
-        case .body:
-            return nil
-        }
+        native.map { word in word.purity == .pure }
     }
 
-    // Whether this touches no name another body could touch at the same time.
-    // A native says so about itself; for a body what it writes and what it
-    // calls decide, so the linker works it out and this answers only for the
-    // two that declare.
     public var isNativelyIsolated: Bool? {
-        switch self {
-        case let .query(query):
-            return query.isolated
-
-        case let .effect(effect):
-            return effect.isolated
-
-        case .body:
-            return nil
-        }
+        native.map { word in word.isolation == .isolated }
     }
 
-    // What may come out of this when the work goes wrong. A native says so
-    // about itself; for a body what it casts, calls and rescues decides, so
-    // the linker works it out and this answers only for the two that declare.
     public var nativelyFailing: Failing? {
-        switch self {
-        case let .query(query):
-            return query.failing
-
-        case let .effect(effect):
-            return effect.failing
-
-        case .body:
-            return nil
-        }
+        native?.failing
     }
 
     // The places a native word reads its arguments at, with the name each

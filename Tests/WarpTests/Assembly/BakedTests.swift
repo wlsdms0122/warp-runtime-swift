@@ -196,8 +196,41 @@ struct BakedTests {
         }
     }
 
+    @Test("a word brought under a spelling declares what the row was compiled against")
+    func aBroughtWordDeclaresWhatWasCompiledAgainst() throws {
+        // Given. A document compiled against a word saying it touches nothing
+        // shared.
+        let baked = try linker.compile([try counting(isolated: true)] + Module.standard)
+
+        // When / Then. Linking with a word of the same spelling saying it
+        // touches something shared judges the row against a claim nothing in
+        // the link makes.
+        #expect {
+            try linker.link(
+                baked,
+                entry: "app.counted",
+                supplying: [try counting(isolated: false)] + Module.standard
+            )
+        } throws: { error in
+            "\(error)".contains("and the word brought under that spelling declares otherwise")
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
+
+    // A document declaring one native word, which says whether it touches
+    // anything shared.
+    private func counting(isolated: Bool) throws -> Module {
+        try Module(
+            procedures: [
+                "app.counted": Procedure(
+                    signature: Signature(returns: .int),
+                    implementation: .query(CountingQuery(isolated: isolated))
+                )
+            ]
+        )
+    }
 
     // A document adding a number to what it is sent, through the vocabulary.
     private func adding(_ number: Int, called name: Name = "app.add1") throws -> Module {
@@ -220,4 +253,20 @@ struct BakedTests {
             ]
         )
     }
+}
+
+// A word answering a number, which says whether it touches anything shared.
+private struct CountingQuery: Query {
+    typealias Parameters = NoParameters
+
+    // MARK: - Property
+    let isolated: Bool
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        .int(1)
+    }
+
+    // MARK: - Private
 }

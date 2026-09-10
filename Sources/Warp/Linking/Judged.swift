@@ -81,7 +81,7 @@ struct Judged: Sendable {
             implementation = .body(body, frame)
 
         case .native:
-            implementation = try supplied.word(label, in: document)
+            implementation = try supplied.word(behind: self, in: document)
         }
 
         return Linked(
