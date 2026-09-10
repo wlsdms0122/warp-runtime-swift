@@ -86,15 +86,6 @@ enum Native: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
-    private var kind: Any.Type {
-        switch self {
-        case let .query(query):
-            return type(of: query)
-
-        case let .effect(effect):
-            return type(of: effect)
-        }
-    }
     // Generic, so the word's own parameter type has a name here. Handing an
     // existential to a generic function opens it.
     private func places<W: Word>(of word: W) -> [(position: Int, name: Name)] {

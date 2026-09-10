@@ -463,7 +463,6 @@ public struct Validator: Sendable {
             }
 
             try reads(procedure, at: place)
-        try sends(procedure, at: place)
 
         guard let block = procedure.block else { return }
 
