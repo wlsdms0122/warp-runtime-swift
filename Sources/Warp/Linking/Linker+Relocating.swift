@@ -213,12 +213,17 @@ struct Relocating {
     // contract reads the row the link found answering it, over the parameters
     // that row takes, so every row is made to stand here rather than as the
     // walk reaches it.
-    init(_ assembled: Assembled, types: TypeTable) {
+    init(_ assembled: Assembled, types: TypeTable, supplied: Supplying) throws {
         let shapes = types.shapes
 
         self.init(
-            table: zip(assembled.table, assembled.origins).map { judged, origin in
-                judged.lowered(in: shapes, of: origin)
+            table: try zip(assembled.table, assembled.origins).map { judged, origin in
+                try judged.lowered(
+                    in: shapes,
+                    of: origin,
+                    supplied: supplied,
+                    at: assembled.documents[origin]
+                )
             },
             rows: assembled.rows,
             words: assembled.words,

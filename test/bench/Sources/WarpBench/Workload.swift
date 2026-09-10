@@ -52,8 +52,9 @@ struct Workload {
             let linker = Linker()
 
             _ = try linker.link(
-                Self.vocabulary + (try linker.compile([module], against: Self.vocabulary)),
-                entry: "entry"
+                Self.vocabulary + (try linker.compile([module], against: Self.vocabulary, supplying: Module.standard)),
+                entry: "entry",
+                supplying: Module.standard
             )
         }
     }

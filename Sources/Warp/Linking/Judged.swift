@@ -19,6 +19,15 @@ import Foundation
 // block landed, so a document reused in another link carries nothing it would
 // have to be corrected about.
 struct Judged: Sendable {
+    // How a declaration answers, as its own document settled it. A written
+    // body is lowered code with its frame layout; a native is this row's
+    // spelling and the claims standing beside it, and the code a run calls
+    // comes from the host.
+    enum Implementation: Sendable {
+        case body(Body, Frame)
+        case native
+    }
+
     // MARK: - Property
     let label: Name
     let signature: Signature
@@ -31,7 +40,7 @@ struct Judged: Sendable {
     // own code carries.
     let sends: [Int]
 
-    let implementation: Linked.Implementation
+    let implementation: Implementation
 
     // MARK: - Initializer
     // What of a row its document settled. What is left behind is a reading of
@@ -43,15 +52,39 @@ struct Judged: Sendable {
         self.isolation = row.isolation
         self.failing = row.failing
         self.sends = row.sends
-        self.implementation = row.implementation
+
+        if case let .body(body, frame) = row.implementation {
+            self.implementation = .body(body, frame)
+        } else {
+            self.implementation = .native
+        }
     }
 
     // MARK: - Public
     // This declaration as a row of the table given, standing at the position
     // its block landed at. Compiling and linking both call this, each against
     // its own table, which is what makes the two readings one.
-    func lowered(in table: ShapeTable, of origin: Int) -> Linked {
-        Linked(
+    //
+    // A native row is joined to the code the host brought under its spelling,
+    // which is the one thing a document settled that the document does not
+    // hold.
+    func lowered(
+        in table: ShapeTable,
+        of origin: Int,
+        supplied: Supplying,
+        at document: Place.Document
+    ) throws -> Linked {
+        let implementation: Linked.Implementation
+
+        switch self.implementation {
+        case let .body(body, frame):
+            implementation = .body(body, frame)
+
+        case .native:
+            implementation = try supplied.word(label, in: document)
+        }
+
+        return Linked(
             label: label,
             origin: origin,
             signature: signature,

@@ -72,7 +72,8 @@ struct Compiling {
         types: TypeTable,
         contractWords: [Name: ContractWord],
         answering: Set<Name>,
-        naming documents: [Place.Document]
+        naming documents: [Place.Document],
+        supplied: Supplying
     ) throws {
         self.types = types
         self.contractWords = contractWords
@@ -87,7 +88,12 @@ struct Compiling {
         for (origin, document) in compiled.enumerated() {
             let standing = document.shapeNumbering.rows(in: types.shapes)
             let rows = try document.table.map { judged -> Linked in
-                let row = judged.lowered(in: types.shapes, of: origin)
+                let row = try judged.lowered(
+                    in: types.shapes,
+                    of: origin,
+                    supplied: supplied,
+                    at: document.document
+                )
 
                 return try row.shaped { shape in
                     try standing.read(shape, at: .procedure(row.label.spelling, in: document.document))

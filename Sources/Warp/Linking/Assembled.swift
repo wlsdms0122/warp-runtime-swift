@@ -17,6 +17,9 @@ struct Assembled: Sendable {
     // MARK: - Property
     let table: [Judged]
 
+    // Which document each block came out of, for a refusal that names one.
+    let documents: [Place.Document]
+
     // Which document each row's block came from, stamped as the blocks
     // were laid down. A row does not say it, so this is where it is said.
     let origins: [Int]
@@ -94,6 +97,7 @@ struct Assembled: Sendable {
         }
 
         self.table = table
+        self.documents = documents.map(\.document)
         self.origins = origins
         self.rows = rows
         self.words = documents.map { document in

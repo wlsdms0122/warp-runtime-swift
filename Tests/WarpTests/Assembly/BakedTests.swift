@@ -24,8 +24,9 @@ struct BakedTests {
 
         // When. The document that arrives is the only one compiled.
         let image = try linker.link(
-            baked + (try linker.compile([arriving], against: baked)),
-            entry: entry
+            baked + (try linker.compile([arriving], against: baked, supplying: Module.standard)),
+            entry: entry,
+            supplying: Module.standard
         )
 
         // Then. It runs, and answers what the same world linked whole answers.
@@ -61,9 +62,10 @@ struct BakedTests {
         let baked = try linker.compile(Module.standard)
         let compiled = try linker.compile(
             [reaching, try adding(1, called: "app.add1")],
-            against: baked
+            against: baked,
+            supplying: Module.standard
         )
-        let image = try linker.link(baked + compiled, entry: "app.twice")
+        let image = try linker.link(baked + compiled, entry: "app.twice", supplying: Module.standard)
 
         // Then.
         #expect(try await Executor().run(image, arguments: ["value": .int(40)]) == .int(42))
@@ -86,7 +88,11 @@ struct BakedTests {
 
         // When / Then.
         #expect {
-            try linker.compile([arriving], against: try linker.compile(Module.standard))
+            try linker.compile(
+                [arriving],
+                against: try linker.compile(Module.standard),
+                supplying: Module.standard
+            )
         } throws: { error in
             "\(error)".contains("'app.missing', which no module in this link declares")
         }
@@ -97,13 +103,13 @@ struct BakedTests {
         // Given. Two documents compiled apart, so neither compile saw the
         // other's declarations.
         let baked = try linker.compile(Module.standard)
-        let one = try linker.compile([try adding(1)], against: baked)
-        let two = try linker.compile([try adding(2)], against: baked)
+        let one = try linker.compile([try adding(1)], against: baked, supplying: Module.standard)
+        let two = try linker.compile([try adding(2)], against: baked, supplying: Module.standard)
 
         // When / Then. The table a link makes has no answer for the name, so
         // it is refused rather than answered by whichever was laid down last.
         #expect {
-            try linker.link(baked + one + two, entry: entry)
+            try linker.link(baked + one + two, entry: entry, supplying: Module.standard)
         } throws: { error in
             "\(error)".contains("'app.add1' is declared by")
                 && "\(error)".contains("Two declarations of a name have no way to be told apart")
@@ -121,7 +127,7 @@ struct BakedTests {
 
         // When / Then. Two arriving documents colliding with each other.
         #expect {
-            try linker.compile([try adding(1), try adding(2)], against: baked)
+            try linker.compile([try adding(1), try adding(2)], against: baked, supplying: Module.standard)
         } throws: { error in
             "\(error)".contains(first) && "\(error)".contains(second)
         }
@@ -131,7 +137,8 @@ struct BakedTests {
         #expect {
             try linker.compile(
                 [try adding(2)],
-                against: baked + (try linker.compile([try adding(1)], against: baked))
+                against: baked + (try linker.compile([try adding(1)], against: baked, supplying: Module.standard)),
+                supplying: Module.standard
             )
         } throws: { error in
             "\(error)".contains(first) && "\(error)".contains(second)
@@ -147,14 +154,45 @@ struct BakedTests {
             identity: Identity([0x01, 0x02, 0x03])
         )
         let baked = try linker.compile(Module.standard)
-        let compiled = try linker.compile([arriving], against: baked)
+        let compiled = try linker.compile([arriving], against: baked, supplying: Module.standard)
 
         // When / Then. The same document handed over again is the same
         // document twice, whichever side it arrived on.
         #expect {
-            try linker.compile([arriving], against: baked + compiled)
+            try linker.compile([arriving], against: baked + compiled, supplying: Module.standard)
         } throws: { error in
             "\(error)".contains("this document was handed to the link twice")
+        }
+    }
+
+    @Test("a compiled document names its native words and holds none of their code")
+    func anArtifactHoldsNoNativeCode() throws {
+        // Given. The standard vocabulary, which is native the whole way down.
+        let baked = try linker.compile(Module.standard)
+
+        // Then. Every row it settled says the code is the host's.
+        for document in baked {
+            for row in document.table {
+                guard case .native = row.implementation else {
+                    Issue.record("\(row.label) carries code")
+                    continue
+                }
+            }
+        }
+    }
+
+    @Test("a link handed no native code is refused where the word was declared")
+    func aLinkWithoutNativeCodeIsRefused() throws {
+        // Given. A vocabulary compiled, and a document compiled against it.
+        let baked = try linker.compile(Module.standard)
+        let compiled = try linker.compile([try adding(1)], against: baked, supplying: Module.standard)
+
+        // When / Then. The artifacts alone say which words are native and
+        // nothing more, so a link brought none of the code cannot run them.
+        #expect {
+            try linker.link(baked + compiled, entry: entry, supplying: [])
+        } throws: { error in
+            "\(error)".contains("is implemented in native code and this link was handed none")
         }
     }
 

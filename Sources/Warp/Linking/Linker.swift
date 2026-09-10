@@ -63,7 +63,7 @@ public struct Linker: Sendable {
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: Name) throws -> Image {
-        try link(compile(modules), entry: entry)
+        try link(compile(modules), entry: entry, supplying: modules)
     }
 
     // Documents compiled and handed back, for a caller that means to link
@@ -84,7 +84,16 @@ public struct Linker: Sendable {
     // `compiled` is what the caller already holds, and the documents given
     // here are compiled against it. A word a document sends is answered by
     // either, and one that nothing here answers is refused where it is sent.
-    public func compile(_ modules: [Module], against compiled: [Compiled] = []) throws -> [Compiled] {
+    //
+    // `supplying` is the native code behind `compiled`. Folding a constant
+    // runs the words the documents behind it declared, and an artifact names
+    // its natives without holding them, so the modules that declared them come
+    // back here.
+    public func compile(
+        _ modules: [Module],
+        against compiled: [Compiled] = [],
+        supplying natives: [Module] = []
+    ) throws -> [Compiled] {
         try once(modules, against: compiled)
 
         // Every name held to one declarer before the standing is read.
@@ -100,7 +109,8 @@ public struct Linker: Sendable {
             at: standing,
             declaring: held,
             over: declared,
-            against: compiled
+            against: compiled,
+            supplied: Supplying(natives)
         )
 
         // Back in the order the documents were handed over. A document says
@@ -135,7 +145,8 @@ public struct Linker: Sendable {
             contracts: [Name: Declared<[Name: Signature]>],
             claims: [Declared<Claim>]
         ),
-        against compiled: [Compiled]
+        against compiled: [Compiled],
+        supplied: Supplying
     ) throws -> [Compiled] {
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
@@ -228,7 +239,8 @@ public struct Linker: Sendable {
             types: shaped.types,
             contractWords: shaped.contractWords,
             answering: shaped.answering,
-            naming: documents.map(\.document)
+            naming: documents.map(\.document),
+            supplied: supplied
         )
 
         return try laying.indices.map { offset in
@@ -599,7 +611,14 @@ public struct Linker: Sendable {
     // Which row a run starts from, and which declarations it reaches. Nothing
     // is judged and nothing runs: every declaration stands judged already, and
     // the answer is read off the call graph the judgment gathered.
-    public func link(_ compiled: [Compiled], entry: Name) throws -> Image {
+    // `supplying` is the native code the documents named. An artifact says
+    // which of its words are native and holds none of the code, so the modules
+    // that declared them are handed over beside the artifacts.
+    public func link(
+        _ compiled: [Compiled],
+        entry: Name,
+        supplying natives: [Module]
+    ) throws -> Image {
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
         let assembled = try Assembled(compiled)
@@ -672,7 +691,7 @@ public struct Linker: Sendable {
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let relocating = Relocating(assembled, types: types)
+        let relocating = try Relocating(assembled, types: types, supplied: Supplying(natives))
         let linked = try relocating.linked()
 
         return Image(
