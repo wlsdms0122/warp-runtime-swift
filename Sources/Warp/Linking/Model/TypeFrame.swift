@@ -66,12 +66,34 @@ struct TypeFrame: Sendable {
     // answers by the run's state, so purity is read against these.
     let variables: Set<Name>
 
-    // Where this walk writes down the pairs its calls lean on. Held by the
-    // frame because every surface that judges a call already has one.
-    let requiring: Requiring
+    // Where this walk writes down the pairs its calls lean on, and nothing
+    // where the walk is a probe. Held by the frame because every surface that
+    // judges a call already has one, and a probe is handed a frame with none
+    // rather than a rule to remember.
+    let requiring: Requiring?
 
     // MARK: - Initializer
     // MARK: - Public
+    // The same frame for a walk that reads rather than judges. A loop reads
+    // its body until the names settle and a declaration with no `returns` is
+    // read once for its answer, and what such a walk concludes is not what the
+    // document says.
+    var probing: TypeFrame {
+        TypeFrame(
+            types: types,
+            linked: linked,
+            rows: rows,
+            answers: answers,
+            words: words,
+            pure: pure,
+            isolated: isolated,
+            failing: failing,
+            contractWords: contractWords,
+            variables: variables,
+            requiring: nil
+        )
+    }
+
     // The whole declaration, for the one call a path makes, and only where a
     // path may make it. There is no way to ask what a name answers without
     // asking whether a path may call it. A softer question was how a word
