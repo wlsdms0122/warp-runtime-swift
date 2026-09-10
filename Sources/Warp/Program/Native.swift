@@ -81,31 +81,55 @@ enum Native: Sendable {
     // later saying something else reads and sends at other places than the
     // row stands on.
     var reading: [Name] {
-        parameters.sorted { left, right in left.position < right.position }.map(\.name)
+        let word = ObjectIdentifier(kind)
+
+        if let held = Self.lock.withLock({ Self.read[word] }) { return held }
+
+        let places = parameters.sorted { left, right in left.position < right.position }.map(\.name)
+
+        Self.lock.withLock { Self.read[word] = places }
+
+        return places
     }
 
     var sending: [Name] {
-        imports.sorted { left, right in left.position < right.position }.map(\.selector)
+        let word = ObjectIdentifier(kind)
+
+        if let held = Self.lock.withLock({ Self.sent[word] }) { return held }
+
+        let places = imports.sorted { left, right in left.position < right.position }.map(\.selector)
+
+        Self.lock.withLock { Self.sent[word] = places }
+
+        return places
     }
 
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
+    // What a word's type says about its own places, read once for each type.
+    // `allCases` builds its array again on every read and answers the same
+    // thing every time, and a link asks once for every row it lays.
+    private nonisolated(unsafe) static var read: [ObjectIdentifier: [Name]] = [:]
+    private nonisolated(unsafe) static var sent: [ObjectIdentifier: [Name]] = [:]
+    private static let lock = NSLock()
+
+    private var kind: Any.Type {
+        switch self {
+        case let .query(query):
+            return type(of: query)
+
+        case let .effect(effect):
+            return type(of: effect)
+        }
+    }
     // Generic, so the word's own parameter type has a name here. Handing an
     // existential to a generic function opens it.
-    private func places(of word: some Word) -> [(position: Int, name: Name)] {
-        places(of: type(of: word))
-    }
-
-    private func places<W: Word>(of word: W.Type) -> [(position: Int, name: Name)] {
+    private func places<W: Word>(of word: W) -> [(position: Int, name: Name)] {
         W.Parameters.allCases.map { key in (position: key.position, name: key.name) }
     }
 
-    private func sends(of word: some Word) -> [(position: Int, selector: Name)] {
-        sends(of: type(of: word))
-    }
-
-    private func sends<W: Word>(of word: W.Type) -> [(position: Int, selector: Name)] {
+    private func sends<W: Word>(of word: W) -> [(position: Int, selector: Name)] {
         W.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
     }
 }
