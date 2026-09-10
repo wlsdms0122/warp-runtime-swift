@@ -56,22 +56,11 @@ extension Linker {
             Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
         }
 
-        // Every claim held to what stands behind it. Here rather than inside
-        // the shaping, because this is one of the two places the whole list is
-        // in hand, and the sentence each of these refusals makes is about the
-        // link.
-        try backing(
-            declaredSpaces.claims,
-            asking: declaredContracts,
-            over: declaredTypes,
-            among: signatures,
-            in: declaring
-        )
-
         let shaped = try self.shaped(
             declaring,
             claims: declaredSpaces.claims,
             contracts: declaredContracts,
+            over: declaredTypes,
             among: signatures
         )
 
@@ -93,10 +82,22 @@ extension Linker {
         _ declaring: TypeTable,
         claims: [Declared<Claim>],
         contracts: [Name: Declared<[Name: Signature]>],
+        over declaredTypes: [Name: Declared<TypeExpression>],
         among signatures: [Name: Declared<Signature>]
-    ) throws -> (types: TypeTable, contractWords: [Name: ContractWord], answering: Set<Name>) {
-        let witnessed = witnesses(of: claims, asking: contracts)
-        let table = declaring.satisfying(witnessed.mapValues { answering in Set(answering.keys) })
+    ) throws -> (
+        types: TypeTable,
+        contractWords: [Name: ContractWord],
+        answering: Set<Name>,
+        unheld: [Claim: LinkError]
+    ) {
+        let witnessed = try witnesses(
+            of: claims,
+            asking: contracts,
+            over: declaredTypes,
+            among: signatures,
+            in: declaring
+        )
+        let table = declaring.satisfying(witnessed.answering.mapValues { answering in Set(answering.keys) })
 
         // The words the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
@@ -128,7 +129,8 @@ extension Linker {
         return (
             types: table,
             contractWords: contractWords,
-            answering: Set(witnessed.values.flatMap { answering in answering.values.flatMap(\.values) })
+            answering: Set(witnessed.answering.values.flatMap { answering in answering.values.flatMap(\.values) }),
+            unheld: witnessed.unheld
         )
     }
 

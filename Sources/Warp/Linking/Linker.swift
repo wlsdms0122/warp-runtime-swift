@@ -185,6 +185,7 @@ public struct Linker: Sendable {
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
+            over: declared.types,
             among: signatures
         )
 
@@ -603,29 +604,24 @@ public struct Linker: Sendable {
             )
         }
 
-        // The other place the whole list is in hand. A document compiled
-        // against part of one was never asked to answer for a claim the rest
-        // of the list backs, so this is where every claim is held to it.
-        try backing(
-            declared.claims,
-            asking: declared.contracts,
-            over: declared.types,
-            among: signatures,
-            in: declaring
-        )
-
-        let types = try shaped(
+        let shaped = try shaped(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
+            over: declared.types,
             among: signatures
-        ).types
+        )
+        let types = shaped.types
 
         // What each document leaned on, answered by every claim in the list.
         // A compile wrote these down rather than judging them, since a claim
         // it never named may be what answers.
         for document in compiled {
-            try leaning(document.requiring, on: types.shapes.satisfying)
+            try leaning(
+                document.requiring,
+                on: types.shapes.satisfying,
+                unheld: shaped.unheld
+            )
         }
 
         // The documents' own numbers turned into this link's rows, and the

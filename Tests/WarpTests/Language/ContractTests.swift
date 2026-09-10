@@ -147,8 +147,7 @@ struct ContractTests {
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             claiming: ["bank.Account": ["app.Describable"]],
-            procedures: [
-                entryName: Procedure(body: [], result: .literal(.null)),
+            procedures: leaning(on: "bank.Account", holding: ["balance": .literal(.int(1))]).merging([
                 "bank.Account.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
@@ -158,7 +157,7 @@ struct ContractTests {
                     body: [],
                     result: .literal(.int(1))
                 )
-            ]
+            ]) { _, added in added }
         )
 
         // When / Then
@@ -211,7 +210,7 @@ struct ContractTests {
             types: ["bank.Plain": .record(["note": .string])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             claiming: ["bank.Plain": ["app.Describable"]],
-            procedures: [entryName: Procedure(body: [], result: .literal(.null))]
+            procedures: leaning(on: "bank.Plain", holding: ["note": .literal(.string("x"))])
         )
 
         // When / Then
@@ -373,6 +372,37 @@ struct ContractTests {
     // MARK: - Private
     // Two types that describe themselves, a contract asking for it, and a
     // generic word standing between the caller and both.
+    // A word bounded by the contract, and an entry that hands the type to it.
+    // A claim is held where a document leans on the pair: a list is assembled
+    // from what a host was willing to supply, so one of its documents claiming
+    // something the list cannot make good on refuses only the program that
+    // hands that type where that contract is asked.
+    private func leaning(on type: Name, holding fields: [Name: Warp.Expression]) -> [Name: Procedure] {
+        [
+            "app.tell": Procedure(
+                signature: Signature(
+                    receiver: "it",
+                    parameters: [
+                        "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                    ],
+                    returns: .string
+                ),
+                body: [],
+                result: .call(Call(receiver: reference("it"), selector: "app.Describable.describe"))
+            ),
+            entryName: Procedure(
+                signature: Signature(returns: .string),
+                body: [
+                    Statement(
+                        binding: .constant("held"),
+                        expression: .cast(.record(fields), as: .named(type), optional: false)
+                    )
+                ],
+                result: .call(Call(receiver: reference("held"), selector: "app.tell"))
+            )
+        ]
+    }
+
     private func describing(
         types extra: [Name: TypeExpression] = [:],
         words added: [Name: Procedure] = [:],
