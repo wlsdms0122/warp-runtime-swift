@@ -37,14 +37,6 @@ import Foundation
 extension Linker {
     // MARK: - Internal
     // For each contract, which declaration answers each of its words, keyed by
-    // the type that satisfies it. The run reads a row out of this by the
-    // receiver's own name, so what is gathered here is the whole of what a
-    // call the link cannot settle will need.
-    //
-    // Read off the claims alone. Which declaration answers a word is the
-    // spelling the type's name and the word's make, and that spelling is
-    // known from the claim whether or not the declaration has arrived.
-    // For each contract, which declaration answers each of its words, keyed by
     // the type that satisfies it, and beside it the reason each claim that did
     // not hold does not.
     //
@@ -111,10 +103,6 @@ extension Linker {
     }
 
     // MARK: - Private
-    // One claim held to what stands behind it: the two names declared, every
-    // word the contract asks answered by a declaration named for the type and
-    // the word, and every one of those signatures the contract's with the
-    // receiver filled in by the type itself.
     // What a claim came to: the word behind each one the contract asks, or the
     // reason it came to nothing where another document could still supply it.
     private enum Holding {
@@ -125,6 +113,10 @@ extension Linker {
         case waits(String)
     }
 
+    // One claim held to what stands behind it: the two names declared, every
+    // word the contract asks answered by a declaration named for the type and
+    // the word, and every one of those signatures the contract's with the
+    // receiver filled in by the type itself.
     private func holding(
         _ claim: Declared<Claim>,
         asking contracts: [Name: Declared<[Name: Signature]>],
