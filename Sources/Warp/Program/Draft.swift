@@ -151,6 +151,22 @@ public struct Draft: Sendable {
             }
     }
 
+    // The two together, by the reference a link resolves to each. Read off the
+    // lists above rather than gathered again, so what a document declares is
+    // said in one place whichever side asks.
+    func declarations(in document: Place.Document) -> [(reference: Reference, place: Place)] {
+        words(in: document).map { declared in (.word(declared.name), declared.place) }
+            + shapes(in: document).map { declared in (.shape(declared.name), declared.place) }
+    }
+
+    // Everything this leans on another document for, the same way. A path's
+    // steps are not in here: a step names a word by its last segment alone, so
+    // it is looked up by a different key and answered by more than one
+    // document.
+    var uses: Set<Reference> {
+        Set(sends.map(Reference.word)).union(mentions.map(Reference.shape))
+    }
+
     // The same two, when only the names are wanted. Read off the lists above
     // rather than gathered again, so what counts as a word and what counts as
     // a shape is said in one place.

@@ -31,8 +31,9 @@ public struct Catalogue: Sendable {
     // MARK: - Property
     private let modules: [Module]
 
-    // Which module declares each name, by the spelling a call writes.
-    private let words: [Name: Int]
+    // Which module declares each reference. One table, since every one of
+    // them answers the same question and the kind rides on the reference.
+    private let declares: [Reference: Int]
 
     // Which modules declare a word a path could reach, under the last segment
     // alone, which is how a path names one.
@@ -44,8 +45,6 @@ public struct Catalogue: Sendable {
     // both.
     private let walked: [Name: [Int]]
 
-    private let shapes: [Name: Int]
-
     // MARK: - Initializer
     // Two modules declaring one name is refused here, because a table that
     // holds the name twice cannot answer the one question this is asked. That
@@ -53,36 +52,30 @@ public struct Catalogue: Sendable {
     // link refuses such a pair only when both are in it, and a host may well
     // hold two modules it never puts in one graph.
     public init(_ modules: [Module]) throws {
-        // Each space walked whole before the next, so which collision is
-        // reported is a fact of the list the host wrote and of nothing else.
-        func claimed(_ space: Space) throws -> [Name: Int] {
-            var table: [Name: Int] = [:]
+        // Walked in reference order, so which collision is reported is a fact
+        // of the list the host wrote and of nothing else.
+        var declares: [Reference: Int] = [:]
 
-            for (position, module) in modules.enumerated() {
-                let declarations = space.declarations(of: module.draft, in: .of(module))
+        for (position, module) in modules.enumerated() {
+            let declarations = module.draft.declarations(in: .of(module))
 
-                for declaration in declarations.sorted(by: { $0.name < $1.name }) {
-                    guard let first = table[declaration.name] else {
-                        table[declaration.name] = position
+            for declaration in declarations.sorted(by: { $0.reference < $1.reference }) {
+                guard let first = declares[declaration.reference] else {
+                    declares[declaration.reference] = position
 
-                        continue
-                    }
-
-                    throw CatalogueError(
-                        "the \(space.spelled) '\(declaration.name)' is declared by"
-                            + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
-                            + " \(Place.Document.of(module).spelled(at: position)) in this"
-                            + " catalogue, so there is no answer to which one supplies it."
-                            + " A catalogue names each declaration once",
-                        at: declaration.place
-                    )
+                    continue
                 }
+
+                throw CatalogueError(
+                    "the \(declaration.reference.spelled) '\(declaration.reference.name)' is declared by"
+                        + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
+                        + " \(Place.Document.of(module).spelled(at: position)) in this"
+                        + " catalogue, so there is no answer to which one supplies it."
+                        + " A catalogue names each declaration once",
+                    at: declaration.place
+                )
             }
-
-            return table
         }
-
-        let words = try claimed(.word)
 
         // Which of them a path could reach, gathered before the tables so the
         // walked spellings are drawn from the same declarations.
@@ -91,19 +84,18 @@ public struct Catalogue: Sendable {
         }
 
         self.modules = modules
-        self.words = words
-        self.shapes = try claimed(.shape)
+        self.declares = declares
 
         // Gathered, not claimed. Two candidates for one segment is not a
         // question this table fails to answer: it is a question whose answer
         // is the link's, and the link has what it takes to give it. Refusing
         // here would be that rule copied and made stricter than the original,
         // which refuses only what really is reachable twice.
-        self.walked = words
+        self.walked = declares
             .reduce(into: [Name: [Int]]()) { table, entry in
-                guard walkable.contains(entry.key) else { return }
+                guard case let .word(name) = entry.key, walkable.contains(name) else { return }
 
-                table[entry.key.unqualified, default: []].append(entry.value)
+                table[name.unqualified, default: []].append(entry.value)
             }
             .mapValues { positions in positions.sorted() }
     }
@@ -155,16 +147,12 @@ public struct Catalogue: Sendable {
                 let draft = closed[index].draft
                 index += 1
 
-                for name in draft.sends.sorted() {
-                    bring(words[name])
+                for used in draft.uses.sorted() {
+                    bring(declares[used])
                 }
 
                 for name in draft.walks.sorted() {
                     bring(walked[name] ?? [])
-                }
-
-                for name in draft.mentions.sorted() {
-                    bring(shapes[name])
                 }
             }
 
@@ -192,7 +180,7 @@ public struct Catalogue: Sendable {
                 for (type, contracts) in module.claiming.sorted(by: { $0.key < $1.key }) {
                     for contract in contracts.sorted() {
                         for word in (asked[contract] ?? []).sorted() {
-                            bring(words[ContractWord.spelling(of: type, word: word)])
+                            bring(declares[.word(ContractWord.spelling(of: type, word: word))])
                         }
                     }
                 }

@@ -43,29 +43,28 @@ public struct ModuleGraph: Sendable {
 
     // MARK: - Initializer
     public init(_ modules: [Module]) throws {
-        // Which module declares each name, by the spelling that reaches it.
-        // Three tables because a name is looked up three ways, the same three
-        // a catalogue closes a list of modules on.
-        var words: [Name: Int] = [:]
+        // Which module declares each reference. One table, since every one of
+        // them answers the same question; the kind rides on the reference, so
+        // a word and a shape spelled alike stay two rows.
+        //
+        // A path's step is the exception and keeps its own table: it names a
+        // word by its last segment alone, so the key is different and the
+        // answer is a list.
+        var declares: [Reference: Int] = [:]
         var walked: [Name: [Int]] = [:]
-        var shapes: [Name: Int] = [:]
 
         for (position, module) in modules.enumerated() {
             let draft = module.draft
             let walkable = draft.walkableWords
 
-            for name in draft.declaredWords.sorted() {
-                guard words[name] == nil else { continue }
+            for declared in draft.declarations(in: .assembled).sorted(by: { $0.reference < $1.reference }) {
+                guard declares[declared.reference] == nil else { continue }
 
-                words[name] = position
+                declares[declared.reference] = position
 
-                guard walkable.contains(name) else { continue }
+                guard case let .word(name) = declared.reference, walkable.contains(name) else { continue }
 
                 walked[name.unqualified, default: []].append(position)
-            }
-
-            for name in draft.declaredShapes.sorted() where shapes[name] == nil {
-                shapes[name] = position
             }
         }
 
@@ -81,18 +80,14 @@ public struct ModuleGraph: Sendable {
                 reached.append((declaring, name))
             }
 
-            for name in draft.sends.sorted() {
-                need(name, of: words[name])
+            for used in draft.uses.sorted() {
+                need(used.name, of: declares[used])
             }
 
             for name in draft.walks.sorted() {
                 for declaring in walked[name] ?? [] {
                     need(name, of: declaring)
                 }
-            }
-
-            for name in draft.mentions.sorted() {
-                need(name, of: shapes[name])
             }
 
             return reached
