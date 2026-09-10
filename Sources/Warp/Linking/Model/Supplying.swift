@@ -28,7 +28,9 @@ public struct Supplying: Sendable {
 
         for module in modules {
             for (name, procedure) in module.procedures {
-                words[name] = procedure.implementation.native
+                guard let word = procedure.implementation.native else { continue }
+
+                words[name] = word
             }
         }
 
