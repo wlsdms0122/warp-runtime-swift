@@ -87,14 +87,21 @@ public struct Linker: Sendable {
     public func compile(_ modules: [Module], against compiled: [Compiled] = []) throws -> [Compiled] {
         try once(modules)
 
-        // Held to one declarer apiece before the standing is read. Standing
-        // reads a name as whichever document declared it, and where two
-        // declare one name that reading is arbitrary: it can put a document in
-        // its own reach and call the pair a ring. The doubled name is the
-        // defect, so it is the refusal an author gets.
-        let declaring = try symbols(of: modules)
+        // Every name held to one declarer before the standing is read.
+        // Standing reads a name as whichever document declared it, and where
+        // two declare one name that reading is arbitrary: it can put a
+        // document in its own reach and call the pair a ring. The doubled name
+        // is the defect, so it is the refusal an author gets.
+        let held = try symbols(of: modules)
+        let declared = try declared(in: compiled + modules)
         let standing = try ModuleGraph(modules).standing
-        let laid = try compile(modules, at: standing, declaring: declaring, against: compiled)
+        let laid = try compile(
+            modules,
+            at: standing,
+            declaring: held,
+            over: declared,
+            against: compiled
+        )
 
         // Back in the order the documents were handed over. A document says
         // nothing about where it stands, so the order a link reads them in is
@@ -122,11 +129,16 @@ public struct Linker: Sendable {
         _ modules: [Module],
         at standing: [Int],
         declaring symbols: [Symbol],
+        over declared: (
+            types: [Name: Declared<TypeExpression>],
+            constraints: [Name: Declared<[TypeExpression]>],
+            contracts: [Name: Declared<[Name: Signature]>],
+            claims: [Declared<Claim>]
+        ),
         against compiled: [Compiled]
     ) throws -> [Compiled] {
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
-        let declared = try declared(in: documents)
 
         let declaring = try types(
             declared: declared.types,
