@@ -35,6 +35,12 @@ public struct Signature: Sendable, Equatable {
     // defaults mean nothing would say so.
     public private(set) var returns: TypeExpression?
 
+    // The parameters in the order arguments stand in, settled where the
+    // declaration is written. A dictionary keeps no order, and every reading
+    // of a call runs over this one, so working it out again at each reading
+    // is the same list built as many times as it is read.
+    public let ordered: [(name: Name, parameter: Parameter)]
+
     // MARK: - Initializer
     public init(
         receiver: Name? = nil,
@@ -44,6 +50,9 @@ public struct Signature: Sendable, Equatable {
         self.receiver = receiver
         self.parameters = parameters
         self.returns = returns
+        self.ordered = parameters
+            .sorted { left, right in left.key < right.key }
+            .map { entry in (name: entry.key, parameter: entry.value) }
     }
 
     // A native word's declaration, read off the word itself. What it takes is
@@ -171,11 +180,12 @@ public struct Signature: Sendable, Equatable {
         return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
     }
 
-    // The parameters in the order arguments stand in.
-    public var ordered: [(name: Name, parameter: Parameter)] {
-        parameters
-            .sorted { left, right in left.key < right.key }
-            .map { entry in (name: entry.key, parameter: entry.value) }
+    // Two declarations are one where they take and answer the same, which the
+    // order says nothing more about: it is the parameters' own names sorted.
+    public static func == (lhs: Signature, rhs: Signature) -> Bool {
+        lhs.receiver == rhs.receiver
+            && lhs.returns == rhs.returns
+            && lhs.parameters == rhs.parameters
     }
 
     // MARK: - Internal
