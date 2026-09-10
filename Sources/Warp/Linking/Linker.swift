@@ -325,8 +325,6 @@ public struct Linker: Sendable {
             var answer = (procedure: declaration, calls: [CallSite]())
 
             if let block = declaration.block {
-                requiring.folding(symbol.place)
-
                 // A body not yet lowered stands as its refusal, so a word
                 // folding through a word is refused as the circle it is.
                 let folding = Folding(
@@ -533,7 +531,7 @@ public struct Linker: Sendable {
         let stepped = Set(words.values)
 
         for symbol in holding where stepped.contains(symbol.declared) {
-            _ = try resolved(symbol)
+            try requiring.folding(symbol.place) { _ = try resolved(symbol) }
         }
 
         compiling.foldable()
@@ -543,24 +541,26 @@ public struct Linker: Sendable {
         // whether or not this entry walks that way, so which declarations
         // are judged is not a question the entry answers.
         for symbol in holding {
-            let (procedure, gathered) = try resolved(symbol)
+            try requiring.folding(symbol.place) {
+                let (procedure, gathered) = try resolved(symbol)
 
-            calls[symbol.declared] = gathered.map { call in call.callee }
+                calls[symbol.declared] = gathered.map { call in call.callee }
 
-            // A constant answer is knowable from the text, so it is held to
-            // the declaration here, the way a constant argument is. An
-            // answer only a run can produce is settled at the boundary
-            // instead.
-            if let returns = procedure.signature.returns,
-               let answer = procedure.block?.result?.constantValue {
-                do {
-                    _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
-                } catch {
-                    throw LinkError(
-                        "answers \(answer.type), and its"
-                            + " declaration promises \(returns): \(error)",
-                        at: symbol.place.part(.result)
-                    )
+                // A constant answer is knowable from the text, so it is held to
+                // the declaration here, the way a constant argument is. An
+                // answer only a run can produce is settled at the boundary
+                // instead.
+                if let returns = procedure.signature.returns,
+                   let answer = procedure.block?.result?.constantValue {
+                    do {
+                        _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
+                    } catch {
+                        throw LinkError(
+                            "answers \(answer.type), and its"
+                                + " declaration promises \(returns): \(error)",
+                            at: symbol.place.part(.result)
+                        )
+                    }
                 }
             }
         }

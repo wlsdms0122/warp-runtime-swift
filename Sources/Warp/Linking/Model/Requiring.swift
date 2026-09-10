@@ -44,11 +44,25 @@ final class Requiring: @unchecked Sendable {
         }
     }
 
-    // What is being folded from here on. A fold runs past the text, so what it
+    // What is settled inside `body`. A fold runs past the text, so what it
     // turns up says only which declaration was being settled, and that is what
     // this answers.
-    func folding(_ place: Place) {
-        lock.withLock { folding = place }
+    //
+    // Scoped rather than set, so a walk that leaves early leaves the answer as
+    // it found it. Outside every scope the answer is the document, which is
+    // what a pair turned up by something other than settling one declaration
+    // stands on.
+    func folding<Answer>(_ place: Place, _ body: () throws -> Answer) rethrows -> Answer {
+        let held = lock.withLock {
+            let held = folding
+            folding = place
+
+            return held
+        }
+
+        defer { lock.withLock { folding = held } }
+
+        return try body()
     }
 
     func claims(of origin: Int) -> [Claim: Place] {

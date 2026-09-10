@@ -315,42 +315,39 @@ extension Linker {
         // needs comes before it, and asking again is a second chance to ask
         // a different table.
         for (name, expression) in try order(module.constants, in: module) {
-            // A constant's dots are judged before it settles, the way a
-            // body's are: the settled neighbours' types are the
-            // environment, so an absent field or a needless `?.` refuses
-            // here by the one rule, and carries its own place.
-            let (judged, calls) = try resolvedSites(
-                in: expression,
-                at: .constant(name.spelling, in: .of(module)),
-                in: known.mapValues { value in type(of: value, in: frame.shapes) },
-                with: frame,
-                folding: nil,
-                writing: requiring
-            )
+            let place = Place.constant(name.spelling, in: .of(module))
 
-            // A closure a constant holds runs later, so evaluating the
-            // constant proves nothing about the sends inside it. They pass
-            // the same gate every gathered call does.
-            try checked(calls, in: frame, writing: requiring)
-
-            requiring.folding(.constant(name.spelling, in: .of(module)))
-
-            do {
-                known[name] = try Folding(
-                    constants: known,
-                    origin: origin,
-                    in: answered,
-                    shapes: frame.shapes
-                ).read(
-                    judged,
-                    as: name,
-                    writing: &lowering,
-                    at: .constant(name.spelling, in: .of(module))
+            try requiring.folding(place) {
+                // A constant's dots are judged before it settles, the way a
+                // body's are: the settled neighbours' types are the
+                // environment, so an absent field or a needless `?.` refuses
+                // here by the one rule, and carries its own place.
+                let (judged, calls) = try resolvedSites(
+                    in: expression,
+                    at: place,
+                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
+                    with: frame,
+                    folding: nil,
+                    writing: requiring
                 )
-            } catch let refused as LinkError {
-                throw refused
-            } catch {
-                throw LinkError("\(error)", at: .constant(name.spelling, in: .of(module)))
+
+                // A closure a constant holds runs later, so evaluating the
+                // constant proves nothing about the sends inside it. They pass
+                // the same gate every gathered call does.
+                try checked(calls, in: frame, writing: requiring)
+
+                do {
+                    known[name] = try Folding(
+                        constants: known,
+                        origin: origin,
+                        in: answered,
+                        shapes: frame.shapes
+                    ).read(judged, as: name, writing: &lowering, at: place)
+                } catch let refused as LinkError {
+                    throw refused
+                } catch {
+                    throw LinkError("\(error)", at: place)
+                }
             }
         }
 
@@ -375,35 +372,32 @@ extension Linker {
         var started: [Name: Value] = [:]
 
         for (name, expression) in module.variables.sorted { $0.key < $1.key } {
-            let (judged, calls) = try resolvedSites(
-                in: expression,
-                at: .variable(name.spelling, in: .of(module)),
-                in: known.mapValues { value in type(of: value, in: frame.shapes) },
-                with: frame,
-                folding: nil,
-                writing: requiring
-            )
+            let place = Place.variable(name.spelling, in: .of(module))
 
-            try checked(calls, in: frame, writing: requiring)
-
-            requiring.folding(.variable(name.spelling, in: .of(module)))
-
-            do {
-                started[name] = try Folding(
-                    constants: known,
-                    origin: origin,
-                    in: answered,
-                    shapes: frame.shapes
-                ).read(
-                    judged,
-                    as: name,
-                    writing: &lowering,
-                    at: .variable(name.spelling, in: .of(module))
+            try requiring.folding(place) {
+                let (judged, calls) = try resolvedSites(
+                    in: expression,
+                    at: place,
+                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
+                    with: frame,
+                    folding: nil,
+                    writing: requiring
                 )
-            } catch let refused as LinkError {
-                throw refused
-            } catch {
-                throw LinkError("\(error)", at: .variable(name.spelling, in: .of(module)))
+
+                try checked(calls, in: frame, writing: requiring)
+
+                do {
+                    started[name] = try Folding(
+                        constants: known,
+                        origin: origin,
+                        in: answered,
+                        shapes: frame.shapes
+                    ).read(judged, as: name, writing: &lowering, at: place)
+                } catch let refused as LinkError {
+                    throw refused
+                } catch {
+                    throw LinkError("\(error)", at: place)
+                }
             }
         }
 

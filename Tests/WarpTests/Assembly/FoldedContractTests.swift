@@ -74,6 +74,63 @@ struct FoldedContractTests {
         }
     }
 
+    // Two constants leaning on two pairs, settled one after the other. The
+    // refusal the list makes stands where the pair was folded, which is the
+    // constant that handed it and not whichever was settled last.
+    @Test("a deferred pair stands where it was folded, not where the walk ended")
+    func aDeferredPairStandsWhereItWasFolded() throws {
+        let asking = try Module(
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            procedures: [
+                "app.count": Procedure(
+                    signature: Signature(
+                        receiver: "it",
+                        parameters: ["it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                "app.giveEarly": Procedure(
+                    signature: Signature(returns: .any),
+                    body: [],
+                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("zed.Plain"), optional: false)
+                ),
+                "app.giveLate": Procedure(
+                    signature: Signature(returns: .any),
+                    body: [],
+                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("bank.Plain"), optional: false)
+                )
+            ]
+        )
+        let typed = try Module(
+            types: ["bank.Plain": .record(["note": .string]), "zed.Plain": .record(["note": .string])],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        // `app.aaa` settles first and `app.zzz` last, and the pair the list
+        // reports first is `bank.Plain`, which `app.zzz` handed.
+        let program = try Module(
+            constants: [
+                "app.aaa": .call(Call(receiver: .call(Call(selector: "app.giveEarly")), selector: "app.count")),
+                "app.zzz": .call(Call(receiver: .call(Call(selector: "app.giveLate")), selector: "app.count"))
+            ],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .reference([.key("app.zzz")])
+                )
+            ]
+        )
+
+        #expect {
+            try Linker().link([asking, typed, program] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("constants.app.zzz:")
+                && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+        }
+    }
+
     // A word answering `any` hands a named record where a contract is asked,
     // and the reading says nothing about what arrives, so nothing is written
     // down where the call is read.
