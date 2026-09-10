@@ -250,7 +250,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
             guard let signature else { return word }
 
             let written = signature.ordered
-                .map { name, parameter in "\(name): \(parameter.declared.rendered)" }
+                .map { taken in "\(taken.name): \(taken.parameter.declared.rendered)" }
 
             // Rendered as what it accepts, because a message is about what would
             // have fit. Which half was written is a fact about the source rather

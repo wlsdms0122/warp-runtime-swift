@@ -62,13 +62,13 @@ extension TypeExpression {
 
         case let .procedure(signature, purity, isolation):
             return .procedure(
-                parameters: signature?.ordered.map { name, parameter in
-                    let shape = parameter.declared.lowered(in: table)
+                parameters: signature?.ordered.map { taken in
+                    let shape = taken.parameter.declared.lowered(in: table)
 
                     return (
-                        name: name,
+                        name: taken.name,
                         shape: shape,
-                        mustBeGiven: shape.mustBeGiven(default: parameter.default, in: table)
+                        mustBeGiven: shape.mustBeGiven(default: taken.parameter.default, in: table)
                     )
                 },
                 returns: signature?.returns?.lowered(in: table),

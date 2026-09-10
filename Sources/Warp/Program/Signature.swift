@@ -34,7 +34,7 @@ public struct Signature: Sendable, Equatable {
     // declaration is written. A dictionary keeps no order, and every reading
     // of a call runs over this one, so working it out again at each reading
     // is the same list built as many times as it is read.
-    public let ordered: [(name: Name, parameter: Parameter)]
+    public let ordered: [Taken]
 
     // MARK: - Initializer
     public init(
@@ -47,7 +47,7 @@ public struct Signature: Sendable, Equatable {
         self.returns = returns
         self.ordered = parameters
             .sorted { left, right in left.key < right.key }
-            .map { entry in (name: entry.key, parameter: entry.value) }
+            .map { entry in Taken(name: entry.key, parameter: entry.value) }
     }
 
     // A native word's declaration, read off the word itself. What it takes is
@@ -90,13 +90,13 @@ public struct Signature: Sendable, Equatable {
     // takes one. Read off the order the parameters stand in and nothing else,
     // so what a lowering does to their shapes cannot move it.
     var receiverPosition: Int? {
-        receiver.flatMap { name in ordered.firstIndex { held in held.name == name } }
+        receiver.flatMap { name in ordered.firstIndex { taken in taken.name == name } }
     }
 
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
     func lowered(in table: ShapeTable) -> [Slot] {
-        ordered.map { name, parameter in parameter.lowered(named: name, in: table) }
+        ordered.map { taken in taken.parameter.lowered(named: taken.name, in: table) }
     }
 
     // The same, with what a call put in the type parameters written in. The
@@ -104,7 +104,7 @@ public struct Signature: Sendable, Equatable {
     // because what a call read is a shape and a declaration is a document's
     // spelling.
     func lowered(in table: ShapeTable, filling bound: [Name: Shape]) -> [Slot] {
-        ordered.map { name, parameter in parameter.lowered(named: name, in: table, filling: bound) }
+        ordered.map { taken in taken.parameter.lowered(named: taken.name, in: table, filling: bound) }
     }
 
     // Whether something declared this way may stand where this is required.
@@ -173,14 +173,6 @@ public struct Signature: Sendable, Equatable {
         let slots = lowered(in: types.shapes)
 
         return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
-    }
-
-    // Two declarations are one where they take and answer the same, which the
-    // order says nothing more about: it is the parameters' own names sorted.
-    public static func == (lhs: Signature, rhs: Signature) -> Bool {
-        lhs.receiver == rhs.receiver
-            && lhs.returns == rhs.returns
-            && lhs.parameters == rhs.parameters
     }
 
     // MARK: - Internal
