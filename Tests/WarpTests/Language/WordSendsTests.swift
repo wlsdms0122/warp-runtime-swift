@@ -131,6 +131,22 @@ struct WordSendsTests {
         }
     }
 
+    @Test("a word whose sends stand apart is refused where the module is made")
+    func aWordSendingFromScatteredPlacesIsRefused() {
+        // Given / When / Then. A run reaches a sent word by the place the word
+        // names it at, so a place nothing stands at reaches nothing.
+        #expect(throws: ValidationError.self) {
+            try Module(
+                procedures: [
+                    "app.scattered": Procedure(
+                        signature: Signature(returns: .int),
+                        implementation: .query(ScatteredQuery())
+                    )
+                ]
+            )
+        }
+    }
+
     // MARK: - Private
 }
 
@@ -309,4 +325,34 @@ private extension Module {
             )
         ]
     )
+}
+
+
+// Sending two words, the second standing at a place nothing before it does.
+private struct ScatteredQuery: Query {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case first = 0
+        case apart = 5
+
+        var selector: Name {
+            switch self {
+            case .first:
+                return "std.math.plus"
+
+            case .apart:
+                return "std.math.minus"
+            }
+        }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        try question.send(.first)
+    }
+
+    // MARK: - Private
 }

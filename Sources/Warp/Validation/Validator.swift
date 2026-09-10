@@ -192,6 +192,7 @@ public struct Validator: Sendable {
         }
 
         try reads(procedure, at: place)
+        try sends(procedure, at: place)
 
         guard let block = procedure.block else { return }
 
@@ -229,6 +230,23 @@ public struct Validator: Sendable {
                     + " with \(declared.map(\.spelling)). A word reads its"
                     + " arguments at the places its own keys stand at",
                 at: place.part(.parameters)
+            )
+        }
+    }
+
+    // A native word sends the words it declares, at the places it names them
+    // at, and a run reaches one by that place. The places are one word to a
+    // place from the first or a place a word names reaches nothing.
+    private func sends(_ procedure: Procedure, at place: Place) throws {
+        guard let keys = procedure.implementation.nativeImports else { return }
+
+        let sent = keys.sorted { left, right in left.position < right.position }
+
+        guard sent.map(\.position) == Array(sent.indices) else {
+            throw ValidationError(
+                "this word sends words standing at \(sent.map(\.position)), which is"
+                    + " not one word to a place from the first",
+                at: place.part(.imports)
             )
         }
     }
@@ -445,6 +463,7 @@ public struct Validator: Sendable {
             }
 
             try reads(procedure, at: place)
+        try sends(procedure, at: place)
 
         guard let block = procedure.block else { return }
 
