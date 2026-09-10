@@ -21,9 +21,15 @@ import Foundation
 // it cannot be. What such a walk concludes is not what the document says, and
 // a pair it left here would hold the link to a call the document never makes.
 //
-// Withheld rather than ignored, so the surfaces that judge take one of these
+// Withheld rather than ignored, so a surface reading a body takes one of these
 // or nothing and a probe has none to write to. Nothing here knows which walk
 // is which.
+//
+// The pass that holds a body's gathered calls to their declarations writes
+// here too, and it is handed one without asking what kind of walk it was. It
+// is right to: a probe's calls never reach it. A walk that rewrites gathers a
+// loop's rounds by walking them again rather than taking the probe's, and a
+// walk that does not rewrite has its calls dropped where it is asked for.
 //
 // One of these per document compiled, read back when the walk is done.
 final class Requiring: @unchecked Sendable {

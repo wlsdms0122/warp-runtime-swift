@@ -188,6 +188,12 @@ public struct Catalogue: Sendable {
             // Bringing one this list cannot make good on costs nothing: a
             // claim whose words are missing puts its type under no contract
             // and refuses only the program that leans on the pair.
+            //
+            // What it does cost is the link's size, and the price is a
+            // catalogue's claims about names the answer already holds. A host
+            // whose catalogue claims widely about a common vocabulary hands
+            // every link the same crowd, and the way out is a link asking a
+            // compile which pairs were leaned on and closing again on those.
             for (position, module) in modules.enumerated() {
                 let claiming = module.draft.claiming
 
