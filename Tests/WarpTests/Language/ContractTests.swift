@@ -221,6 +221,70 @@ struct ContractTests {
         }
     }
 
+    @Test("a document declaring neither the type nor the contract may claim the pair")
+    func aThirdDocumentMayClaimThePair() throws {
+        // Given. Two libraries that know nothing of each other, and a third
+        // that says one's type answers the other's contract and writes the
+        // word that answers it.
+        let charting = try Module(
+            contracts: ["chart.Plottable": ["height": Signature(returns: .int)]],
+            procedures: [
+                "chart.draw": Procedure(
+                    signature: Signature(
+                        receiver: "it",
+                        parameters: [
+                            "it": Parameter(type: .parameter(name: "T", constraint: "chart.Plottable"))
+                        ],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .call(Call(receiver: reference("it"), selector: "chart.Plottable.height"))
+                )
+            ]
+        )
+        let banking = try Module(
+            types: ["bank.Account": .record(["balance": .int])],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let adapting = try Module(
+            claiming: ["bank.Account": ["chart.Plottable"]],
+            procedures: [
+                "bank.Account.height": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .reference([.key("of"), .key("balance")])
+                )
+            ]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("account"),
+                            expression: .cast(
+                                .record(["balance": .literal(.int(7))]),
+                                as: .named("bank.Account"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .call(Call(receiver: reference("account"), selector: "chart.draw"))
+                )
+            ]
+        )
+
+        // When / Then
+        let modules = [charting, banking, adapting, program] + Module.standard
+
+        #expect(throws: Never.self) { try Linker().link(modules, entry: entryName) }
+    }
+
     @Test("two documents saying one type answers one contract is one claim")
     func twoDocumentsClaimingOnePairIsOneClaim() throws {
         // Given. Two documents say the same type answers the same contract
