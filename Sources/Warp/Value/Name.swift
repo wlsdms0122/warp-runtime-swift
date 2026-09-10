@@ -76,26 +76,13 @@ public struct Name: Sendable, Hashable, Comparable {
     // into one character.
     public var unqualified: Name {
         let bytes = spelling.utf8
-        var end = bytes.endIndex
 
-        while true {
-            let (segment, rest) = Name.segment(of: bytes, endingAt: end)
+        guard let last = Name.lastSegment(of: bytes) else { return self }
+        guard last.lowerBound > bytes.startIndex || last.upperBound < bytes.endIndex else { return self }
 
-            guard segment.isEmpty else {
-                guard segment.lowerBound > bytes.startIndex || segment.upperBound < bytes.endIndex else {
-                    return self
-                }
-
-                // Cut in the view it was scanned in. A dot is a starter and
-                // combines with nothing, so a segment of a spelling in normal
-                // form is normal.
-                return Name(normal: String(decoding: bytes[segment], as: UTF8.self))
-            }
-
-            guard let rest else { return self }
-
-            end = rest
-        }
+        // Cut in the view it was scanned in. A dot is a starter and combines
+        // with nothing, so a segment of a spelling in normal form is normal.
+        return Name(normal: String(decoding: bytes[last], as: UTF8.self))
     }
 
     // MARK: - Initializer
@@ -167,6 +154,22 @@ public struct Name: Sendable, Hashable, Comparable {
     // including where the scalar after it combines with it into one character.
     // A dot at either end stands for an empty segment, which is no identifier
     // and no name.
+    // The last segment a dot does not end, or nothing where the spelling holds
+    // no such segment. A spelling of dots alone is every reader's `self`.
+    private static func lastSegment(of bytes: String.UTF8View) -> Range<String.UTF8View.Index>? {
+        var end = bytes.endIndex
+
+        while true {
+            let (segment, rest) = Name.segment(of: bytes, endingAt: end)
+
+            if !segment.isEmpty { return segment }
+
+            guard let rest else { return nil }
+
+            end = rest
+        }
+    }
+
     private static func segment(
         of bytes: String.UTF8View,
         endingAt end: String.UTF8View.Index
