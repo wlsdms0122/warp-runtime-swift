@@ -55,11 +55,26 @@ public struct Name: Sendable, Hashable, Comparable {
     // A dotted name is where a declaration sits, and the last segment is what
     // it is called.
     public var unqualified: Name {
-        guard let last = spelling.split(separator: ".").last else { return self }
+        let bytes = spelling.utf8
+        var end = bytes.endIndex
+
+        while end > bytes.startIndex, bytes[bytes.index(before: end)] == Name.dot {
+            end = bytes.index(before: end)
+        }
+
+        guard end > bytes.startIndex else { return self }
+
+        var start = end
+
+        while start > bytes.startIndex, bytes[bytes.index(before: start)] != Name.dot {
+            start = bytes.index(before: start)
+        }
+
+        guard start > bytes.startIndex || end < bytes.endIndex else { return self }
 
         // A dot is a starter and combines with nothing, so what stands
         // either side of one is normal wherever the whole is.
-        return Name(normal: String(last))
+        return Name(normal: String(spelling[start ..< end]))
     }
 
     // MARK: - Initializer
@@ -118,6 +133,8 @@ public struct Name: Sendable, Hashable, Comparable {
     }
 
     // MARK: - Private
+    private static let dot = UInt8(ascii: ".")
+
     // Two spellings ordered by their bytes: negative, zero or positive the
     // way `memcmp` answers, with the shorter first where one is a prefix of
     // the other. Both orders a name is read in come through here, over the
