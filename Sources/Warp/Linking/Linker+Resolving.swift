@@ -86,7 +86,7 @@ extension Linker {
         over declaredTypes: [Name: Declared<TypeExpression>],
         among signatures: [Name: Declared<Signature>],
         whole: Bool,
-        unsettled: (ledger: Requiring, at: Place)? = nil
+        unsettled: Requiring? = nil
     ) throws -> (
         types: TypeTable,
         contractWords: [Name: ContractWord],

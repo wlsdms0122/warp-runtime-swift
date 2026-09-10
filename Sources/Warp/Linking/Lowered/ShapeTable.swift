@@ -57,11 +57,10 @@ final class ShapeTable: Sendable {
     // answers nothing about a contract.
     let settled: Bool
 
-    // Where a value this table cannot settle is written down, and the place
-    // the writing stands at, so the pair goes to the list that can answer it.
-    // Nothing at the run, where the table is the whole list's and settles
-    // everything it is asked.
-    let unsettled: (ledger: Requiring, at: Place)?
+    // Where a value this table cannot settle is written down, so the pair goes
+    // to the list that can answer it. Nothing at the run, where the table is
+    // the whole list's and settles everything it is asked.
+    let unsettled: Requiring?
 
     private let rows: [Name: Int]
     private let constraintRows: [Name: Int]
@@ -88,7 +87,7 @@ final class ShapeTable: Sendable {
         circling: [Int] = [],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
-        unsettled: (ledger: Requiring, at: Place)? = nil,
+        unsettled: Requiring? = nil,
         of linkage: Linkage
     ) {
         self.shapes = shapes
@@ -108,24 +107,6 @@ final class ShapeTable: Sendable {
     }
 
     // MARK: - Public
-    // The same table, writing what it cannot settle into a ledger. Folding
-    // runs a body where the document is compiled, so what it hands over is
-    // held to the list the same way a call read in text is.
-    func writing(_ ledger: Requiring, at place: Place) -> ShapeTable {
-        ShapeTable(
-            shapes: shapes,
-            constraints: constraints,
-            labels: labels,
-            constraintLabels: constraintLabels,
-            recordRows: recordRows,
-            circling: circling,
-            satisfying: satisfying,
-            settled: settled,
-            unsettled: (ledger, place),
-            of: linkage
-        )
-    }
-
     // The row a spelling declares, or nil where nothing declares it. For
     // lowering a document's type and for a record that arrived under an
     // alias; the run reads rows by number otherwise.

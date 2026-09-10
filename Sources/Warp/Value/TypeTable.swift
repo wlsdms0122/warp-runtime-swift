@@ -69,7 +69,7 @@ public struct TypeTable: Sendable {
         contracts: [Name: [Name: Signature]] = [:],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
-        unsettled: (ledger: Requiring, at: Place)? = nil,
+        unsettled: Requiring? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) {
@@ -98,7 +98,7 @@ public struct TypeTable: Sendable {
     func satisfying(
         _ satisfying: [Name: Set<Name>],
         settled: Bool,
-        unsettled: (ledger: Requiring, at: Place)? = nil
+        unsettled: Requiring? = nil
     ) -> TypeTable {
         TypeTable(
             types: types,

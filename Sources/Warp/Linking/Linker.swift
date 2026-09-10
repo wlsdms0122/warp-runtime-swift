@@ -238,7 +238,7 @@ public struct Linker: Sendable {
             over: declared.types,
             among: signatures,
             whole: false,
-            unsettled: (requiring, Place(in: .of(module)))
+            unsettled: requiring
         )
 
         var compiling = try Compiling(
@@ -263,6 +263,8 @@ public struct Linker: Sendable {
         in compiling: inout Compiling,
         writing requiring: Requiring
     ) throws -> Compiled {
+        requiring.laying(origin, at: Place(in: .of(module)))
+
         let shapes = compiling.shapes
 
         // What this document declares and what its variables are called, in
@@ -590,7 +592,7 @@ public struct Linker: Sendable {
             constraints: module.constraints,
             contracts: module.contracts,
             claiming: module.claiming,
-            leaned: requiring.claims,
+            leaned: requiring.claims(of: origin),
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },

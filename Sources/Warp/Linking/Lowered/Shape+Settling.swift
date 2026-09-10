@@ -511,7 +511,7 @@ extension Shape {
                     )
                 }
 
-                unsettled.ledger.require(Claim(type: type, contract: name), at: unsettled.at)
+                unsettled.require(folded: Claim(type: type, contract: name))
 
                 return value
 
