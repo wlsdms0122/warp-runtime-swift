@@ -43,16 +43,18 @@ public struct Name: Sendable, Hashable, Comparable {
     // on whose tables were newer. A name outside this set is quoted where a
     // key stands, and is no type's name. ASCII is its own normal form.
     public var isIdentifier: Bool {
-        Name.isIdentifier(spelling)
+        Name.isIdentifier(spelling.utf8[...])
     }
 
     // Whether this is spelled the way a declaration, a notation's prefix and a
     // record's name all spell one: identifiers joined by dots, and not a
     // scalar's word.
     public var isDeclarable: Bool {
-        Name.scalarWords[spelling] == nil
-            && spelling.split(separator: ".", omittingEmptySubsequences: false).allSatisfy { segment in
-                Name.isIdentifier(String(segment))
+        let bytes = spelling.utf8
+
+        return Name.scalarWords[spelling] == nil
+            && Name.segments(of: bytes).allSatisfy { segment in
+                Name.isIdentifier(bytes[segment])
             }
     }
 
@@ -66,7 +68,7 @@ public struct Name: Sendable, Hashable, Comparable {
     public var unqualified: Name {
         let bytes = spelling.utf8
 
-        guard let last = Name.lastSegment(of: bytes) else { return self }
+        guard let last = Name.segments(of: bytes).last(where: { segment in !segment.isEmpty }) else { return self }
         guard last.lowerBound > bytes.startIndex || last.upperBound < bytes.endIndex else { return self }
 
         // Cut in the view it was scanned in. A dot is a starter and combines
@@ -134,28 +136,31 @@ public struct Name: Sendable, Hashable, Comparable {
     // MARK: - Private
     private static let dot = UInt8(ascii: ".")
 
-    // Where the last segment of a dotted spelling stands, or nothing where
-    // the spelling holds no segment at all. Trailing dots stand for no
-    // segment, so what is looked for is the last stretch of bytes a dot does
-    // not end.
-    private static func lastSegment(
-        of bytes: String.UTF8View
-    ) -> Range<String.UTF8View.Index>? {
-        var end = bytes.endIndex
+    // Where each segment of a dotted spelling stands, in the order they are
+    // written. Every reading of a name reads its bytes, and where a name
+    // breaks into segments is one of those readings: a dot is a dot wherever
+    // it stands, including where the scalar after it combines with it into
+    // one character.
+    //
+    // A dot at either end stands for an empty segment, which is no
+    // identifier and no name.
+    private static func segments(of bytes: String.UTF8View) -> [Range<String.UTF8View.Index>] {
+        var found: [Range<String.UTF8View.Index>] = []
+        var start = bytes.startIndex
+        var at = bytes.startIndex
 
-        while end > bytes.startIndex, bytes[bytes.index(before: end)] == dot {
-            end = bytes.index(before: end)
+        while at < bytes.endIndex {
+            if bytes[at] == dot {
+                found.append(start ..< at)
+                start = bytes.index(after: at)
+            }
+
+            at = bytes.index(after: at)
         }
 
-        guard end > bytes.startIndex else { return nil }
+        found.append(start ..< bytes.endIndex)
 
-        var start = end
-
-        while start > bytes.startIndex, bytes[bytes.index(before: start)] != dot {
-            start = bytes.index(before: start)
-        }
-
-        return start ..< end
+        return found
     }
 
     // Fowler-Noll-Vo, folded over the bytes once. What it is for is telling
@@ -209,15 +214,18 @@ public struct Name: Sendable, Hashable, Comparable {
         return spelling.withUTF8 { bytes in read(UnsafeRawBufferPointer(bytes)) }
     }
 
-    private static func isIdentifier(_ spelling: String) -> Bool {
-        func word(_ character: Character, first: Bool) -> Bool {
-            character.isASCII
-                && (character.isLetter || character == "_" || (!first && character.isNumber))
+    private static func isIdentifier(_ bytes: String.UTF8View.SubSequence) -> Bool {
+        func letter(_ byte: UInt8) -> Bool {
+            (byte >= 0x41 && byte <= 0x5A) || (byte >= 0x61 && byte <= 0x7A) || byte == 0x5F
         }
 
-        guard let first = spelling.first, word(first, first: true) else { return false }
+        func digit(_ byte: UInt8) -> Bool {
+            byte >= 0x30 && byte <= 0x39
+        }
 
-        return spelling.allSatisfy { character in word(character, first: false) }
+        guard let first = bytes.first, letter(first) else { return false }
+
+        return bytes.allSatisfy { byte in letter(byte) || digit(byte) }
     }
 }
 
