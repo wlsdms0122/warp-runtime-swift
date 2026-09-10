@@ -48,14 +48,6 @@ struct Compiling {
     // are read. Whether a type answers a contract is read off the claims, and
     // a claim may be written in a document this one never names, so a compile
     // gathers what it leans on and the link holds it.
-    //
-    // One per document, since what leaves a compile is that document's own.
-    private(set) var requiring = Requiring()
-
-    // The document about to be read starts with nothing leaned on.
-    mutating func begin() {
-        requiring = Requiring()
-    }
 
     // Every judgment the compile asks and every row it builds reads the table
     // the run will read.
@@ -243,7 +235,11 @@ struct Compiling {
 
     // One document's reading. What a path may walk to is the document's own,
     // so a frame is made for the document whose body is being read.
-    func frame(stepping words: [Name: Name], reading variables: Set<Name>) -> TypeFrame {
+    func frame(
+        stepping words: [Name: Name],
+        reading variables: Set<Name>,
+        writing requiring: Requiring
+    ) -> TypeFrame {
         TypeFrame(
             types: types,
             linked: lowering.table,

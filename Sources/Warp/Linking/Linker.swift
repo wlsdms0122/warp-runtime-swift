@@ -213,8 +213,6 @@ public struct Linker: Sendable {
     ) throws -> Compiled {
         let shapes = compiling.shapes
 
-        compiling.begin()
-
         // What this document declares and what its variables are called, in
         // the order the rows and the boxes stand in.
         let declared = holding.map(\.declared)
@@ -234,8 +232,12 @@ public struct Linker: Sendable {
 
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.
+        // What this document leans on, made here so its life is one document
+        // by construction rather than by a reset somebody has to remember.
+        let requiring = Requiring()
+
         func frame() -> TypeFrame {
-            compiling.frame(stepping: reached, reading: reading)
+            compiling.frame(stepping: reached, reading: reading, writing: requiring)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -537,7 +539,7 @@ public struct Linker: Sendable {
             constraints: module.constraints,
             contracts: module.contracts,
             claiming: module.claiming,
-            requiring: compiling.requiring.claims,
+            requiring: requiring.claims,
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },

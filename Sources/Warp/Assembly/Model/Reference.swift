@@ -58,5 +58,4 @@ enum Reference: Hashable, Sendable, Comparable {
         case let .word(name), let .shape(name): name
         }
     }
-
 }

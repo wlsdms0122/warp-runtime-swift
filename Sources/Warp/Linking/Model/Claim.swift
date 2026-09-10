@@ -17,7 +17,6 @@ struct Claim: Hashable, Comparable, Sendable {
     let type: Name
     let contract: Name
 
-    // MARK: - Initializer
     // MARK: - Internal
     // Ordered so a set of them reads back the same way every time. The type
     // first, since that is the key an author wrote the claim under.

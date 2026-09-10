@@ -177,7 +177,7 @@ extension Linker {
                 word: word,
                 in: table
             ) {
-                return .waits("'\(spelling)' " + reason)
+                return .waits("\(witness.spelled) declares '\(spelling)', which " + reason)
             }
 
             answering[word] = spelling
