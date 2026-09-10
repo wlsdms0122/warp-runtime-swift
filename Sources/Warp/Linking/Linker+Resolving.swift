@@ -84,8 +84,12 @@ extension Linker {
     // Refused here rather than left to the collision, because the collision has
     // nothing to say: both sides of its sentence are the same document, and the
     // fix is not a spelling but a caller holding what it already had.
-    func once(_ modules: [Module]) throws {
-        var held: Set<Identity> = []
+    //
+    // What the caller already compiled counts: those documents are in this
+    // link too, and handing one over again is the same document twice however
+    // it arrived.
+    func once(_ modules: [Module], against compiled: [Compiled] = []) throws {
+        var held = Set(compiled.compactMap { document in document.document.identity })
 
         for module in modules {
             guard let identity = module.identity else { continue }

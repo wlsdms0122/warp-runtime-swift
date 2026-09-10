@@ -85,7 +85,7 @@ public struct Linker: Sendable {
     // here are compiled against it. A word a document sends is answered by
     // either, and one that nothing here answers is refused where it is sent.
     public func compile(_ modules: [Module], against compiled: [Compiled] = []) throws -> [Compiled] {
-        try once(modules)
+        try once(modules, against: compiled)
 
         // Every name held to one declarer before the standing is read.
         // Standing reads a name as whichever document declared it, and where

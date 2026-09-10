@@ -138,6 +138,26 @@ struct BakedTests {
         }
     }
 
+    @Test("a document already compiled is not handed over again")
+    func aCompiledDocumentIsNotHandedOverAgain() throws {
+        // Given. A document with an identity, so two copies of it are one
+        // document, compiled once.
+        let arriving = try Module(
+            try Module(procedures: [:]).draft,
+            identity: Identity([0x01, 0x02, 0x03])
+        )
+        let baked = try linker.compile(Module.standard)
+        let compiled = try linker.compile([arriving], against: baked)
+
+        // When / Then. The same document handed over again is the same
+        // document twice, whichever side it arrived on.
+        #expect {
+            try linker.compile([arriving], against: baked + compiled)
+        } throws: { error in
+            "\(error)".contains("this document was handed to the link twice")
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
 
