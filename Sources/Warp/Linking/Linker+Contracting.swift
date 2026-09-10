@@ -166,21 +166,18 @@ extension Linker {
                 )
             }
 
-            do {
-                try answers(
-                    signature,
-                    as: witness.held,
-                    receiving: type,
-                    at: witness.place,
-                    of: contract,
-                    word: word,
-                    in: table
-                )
-            } catch let refusal as LinkError {
-                // The reason and not the refusal. A refusal renders its own
-                // place, and this one stands at the declaration while the
-                // sentence it ends up in stands where the pair was leaned on.
-                return .waits("'\(spelling)' " + refusal.message)
+            // The reason and not a refusal. Where this is refused is the
+            // leaning call's, and a refusal made here would carry the
+            // declaration's place into a sentence that stands somewhere else.
+            if let reason = answers(
+                signature,
+                as: witness.held,
+                receiving: type,
+                of: contract,
+                word: word,
+                in: table
+            ) {
+                return .waits("'\(spelling)' " + reason)
             }
 
             answering[word] = spelling
@@ -192,59 +189,46 @@ extension Linker {
     // One declaration held to one word of a contract.
     //
     // The claim says the declaration was meant to answer, so a signature that
-    // misses is refused rather than leaving the type quietly outside. The
-    // refusal stands on the declaration: what has to change is the signature,
-    // and the claim naming it is right about what it was for.
+    // misses is a reason the claim does not hold rather than the type quietly
+    // standing outside. A reason and not a refusal: what has to change is this
+    // signature, and where that is said is wherever the pair was leaned on.
     private func answers(
         _ asked: Signature,
         as given: Signature,
         receiving type: Name,
-        at place: Place,
         of contract: Name,
         word: Name,
         in table: TypeTable
-    ) throws {
+    ) -> String? {
         guard let receiver = given.receiver, let held = given.parameters[receiver] else {
-            throw LinkError(
-                "is named for '\(type)' and the word '\(word)' that"
+            return "is named for '\(type)' and the word '\(word)' that"
                     + " '\(contract)' asks, and takes no receiver. A contract's"
-                    + " word is answered about the value it is sent to",
-                at: place
-            )
+                    + " word is answered about the value it is sent to"
         }
 
         guard held.declared.lowered(in: table.shapes)
             .same(TypeExpression.named(type).lowered(in: table.shapes), in: table.shapes)
         else {
-            throw LinkError(
-                "is named for '\(type)' and the word '\(word)' that '\(contract)'"
+            return "is named for '\(type)' and the word '\(word)' that '\(contract)'"
                     + " asks, and its receiver takes"
                     + " \(held.declared.rendered). A contract's word takes the"
-                    + " type that answers it",
-                at: place
-            )
+                    + " type that answers it"
         }
 
         for (name, parameter) in asked.parameters.sorted(by: { $0.key < $1.key }) {
             guard let filled = given.parameters[name] else {
-                throw LinkError(
-                    "is named for '\(type)' and the word '\(word)' that"
+                return "is named for '\(type)' and the word '\(word)' that"
                         + " '\(contract)' asks, and declares no '\(name)'."
-                        + " A call written against the contract hands that name",
-                    at: place
-                )
+                        + " A call written against the contract hands that name"
             }
 
             guard filled.declared.lowered(in: table.shapes)
                 .same(parameter.declared.lowered(in: table.shapes), in: table.shapes)
             else {
-                throw LinkError(
-                    "is named for '\(type)' and the word '\(word)' that"
+                return "is named for '\(type)' and the word '\(word)' that"
                         + " '\(contract)' asks, and takes '\(name)' as"
                         + " \(filled.declared.rendered) where the contract"
-                        + " writes \(parameter.declared.rendered)",
-                    at: place
-                )
+                        + " writes \(parameter.declared.rendered)"
             }
         }
 
@@ -256,27 +240,23 @@ extension Linker {
                 parameter.default != nil
                     || parameter.declared.lowered(in: table.shapes).declaresNull(in: table.shapes)
             else {
-                throw LinkError(
-                    "is named for '\(type)' and the word '\(word)' that"
+                return "is named for '\(type)' and the word '\(word)' that"
                         + " '\(contract)' asks, and requires '\(name)', which"
                         + " the contract does not name. Nothing calling through"
-                        + " the contract could fill it",
-                    at: place
-                )
+                        + " the contract could fill it"
             }
         }
 
-        guard let answer = asked.returns else { return }
+        guard let answer = asked.returns else { return nil }
 
         guard answer.lowered(in: table.shapes)
             .accepts((given.returns ?? .any).lowered(in: table.shapes), in: table.shapes)
         else {
-            throw LinkError(
-                "is named for '\(type)' and the word '\(word)' that '\(contract)'"
+            return "is named for '\(type)' and the word '\(word)' that '\(contract)'"
                     + " asks, and answers \((given.returns ?? .any).rendered)"
-                    + " where the contract writes \(answer.rendered)",
-                at: place
-            )
+                    + " where the contract writes \(answer.rendered)"
         }
+
+        return nil
     }
 }
