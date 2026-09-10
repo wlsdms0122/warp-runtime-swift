@@ -439,4 +439,27 @@ struct CatalogueTests {
             try linker.link(closed + Module.standard, entry: entryName)
         }
     }
+
+    @Test("a document's word collides before its shape")
+    func aWordCollidesBeforeAShape() throws {
+        // Given. One document declaring a word and a type, and a second
+        // declaring both of the same names. The catalogue has two answers for
+        // each and reports the first it walks into.
+        let first = try Module(
+            types: ["a.Shape": .record(["x": .int])],
+            procedures: ["a.word": Procedure(body: [], result: .literal(.null))]
+        )
+        let second = try Module(
+            types: ["a.Shape": .record(["x": .int])],
+            procedures: ["a.word": Procedure(body: [], result: .literal(.null))]
+        )
+
+        // When / Then. Words stand before shapes, so the word is the one an
+        // author is told about.
+        #expect {
+            try Catalogue([first, second])
+        } throws: { error in
+            "\(error)".contains("the word 'a.word' is declared by")
+        }
+    }
 }

@@ -52,8 +52,9 @@ public struct Catalogue: Sendable {
     // link refuses such a pair only when both are in it, and a host may well
     // hold two modules it never puts in one graph.
     public init(_ modules: [Module]) throws {
-        // Walked in reference order, so which collision is reported is a fact
-        // of the list the host wrote and of nothing else.
+        // One document at a time, in the order the host listed them, and each
+        // document's declarations in reference order. So which collision is
+        // reported is the host's list and then the document's own text.
         var declares: [Reference: Int] = [:]
 
         for (position, module) in modules.enumerated() {
