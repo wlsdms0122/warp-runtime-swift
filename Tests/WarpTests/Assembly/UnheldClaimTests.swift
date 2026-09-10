@@ -282,10 +282,10 @@ struct UnheldClaimTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Module.standard))
+            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
-        #expect(throws: Never.self) { try Linker().link(compiled, entry: entryName, supplying: Module.standard) }
+        #expect(throws: Never.self) { try Linker().link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
         #expect(throws: Never.self) { try Linker().link(modules, entry: entryName) }
     }
 }

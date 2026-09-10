@@ -63,7 +63,7 @@ public struct Linker: Sendable {
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
     public func link(_ modules: [Module], entry: Name) throws -> Image {
-        try link(compile(modules), entry: entry, supplying: modules)
+        try link(compile(modules), entry: entry, supplying: Supplying(modules))
     }
 
     // Documents compiled and handed back, for a caller that means to link
@@ -92,7 +92,7 @@ public struct Linker: Sendable {
     public func compile(
         _ modules: [Module],
         against compiled: [Compiled] = [],
-        supplying natives: [Module] = []
+        supplying natives: Supplying = Supplying([])
     ) throws -> [Compiled] {
         try once(modules, against: compiled)
 
@@ -110,7 +110,7 @@ public struct Linker: Sendable {
             declaring: held,
             over: declared,
             against: compiled,
-            supplied: Supplying(natives)
+            supplied: natives
         )
 
         // Back in the order the documents were handed over. A document says
@@ -617,7 +617,7 @@ public struct Linker: Sendable {
     public func link(
         _ compiled: [Compiled],
         entry: Name,
-        supplying natives: [Module]
+        supplying natives: Supplying
     ) throws -> Image {
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
@@ -691,7 +691,7 @@ public struct Linker: Sendable {
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let relocating = try Relocating(assembled, types: types, supplied: Supplying(natives))
+        let relocating = try Relocating(assembled, types: types, supplied: natives)
         let linked = try relocating.linked()
 
         return Image(

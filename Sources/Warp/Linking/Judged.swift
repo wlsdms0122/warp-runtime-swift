@@ -53,9 +53,11 @@ struct Judged: Sendable {
         self.failing = row.failing
         self.sends = row.sends
 
-        if case let .body(body, frame) = row.implementation {
+        switch row.implementation {
+        case let .body(body, frame):
             self.implementation = .body(body, frame)
-        } else {
+
+        case .query, .effect:
             self.implementation = .native
         }
     }
@@ -81,7 +83,23 @@ struct Judged: Sendable {
             implementation = .body(body, frame)
 
         case .native:
-            implementation = try supplied.word(behind: self, in: document)
+            guard let word = supplied[label] else { throw brought(nothing: document) }
+
+            // A word declares its own purity, isolation and failing, and this
+            // row carries what the word a compile was handed declared. A host
+            // bringing a word saying something else brings a row judged
+            // against claims nothing in this link makes.
+            guard purity == word.purity, isolation == word.isolation, failing == word.failing else {
+                throw brought(otherwise: word, in: document)
+            }
+
+            switch word {
+            case let .query(query):
+                implementation = .query(query)
+
+            case let .effect(effect):
+                implementation = .effect(effect)
+            }
         }
 
         return Linked(
@@ -98,4 +116,29 @@ struct Judged: Sendable {
     }
 
     // MARK: - Private
+    // A row whose document left it to native code, and a link that brought
+    // none. It is refused here rather than where the call is made: what a
+    // caller brings is a statement about the whole run.
+    private func brought(nothing document: Place.Document) -> LinkError {
+        LinkError(
+            "'\(label)' is implemented in native code and this link was handed none."
+                + " What a caller brings is declared where the run is assembled",
+            at: .procedure(label.spelling, in: document)
+        )
+    }
+
+    private func brought(otherwise word: Native, in document: Place.Document) -> LinkError {
+        let differing = [
+            purity == word.purity ? nil : "purity",
+            isolation == word.isolation ? nil : "isolation",
+            failing == word.failing ? nil : "failing"
+        ].compactMap { axis in axis }
+
+        return LinkError(
+            "'\(label)' stands on what the word a compile was handed said about its"
+                + " \(differing.joined(separator: ", ")), and the word brought under"
+                + " that spelling says otherwise",
+            at: .procedure(label.spelling, in: document)
+        )
+    }
 }

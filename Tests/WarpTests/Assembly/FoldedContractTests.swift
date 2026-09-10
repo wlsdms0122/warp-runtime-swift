@@ -61,7 +61,7 @@ struct FoldedContractTests {
             var compiled: [Compiled] = []
 
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Module.standard))
+                compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
             "\(error)".contains("string does not answer every word 'app.Describable' asks")
@@ -150,7 +150,7 @@ struct FoldedContractTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Module.standard))
+            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. The pair the fold handed over is answered by the list, which
@@ -158,7 +158,7 @@ struct FoldedContractTests {
         // declaration was being settled when the fold turned it up.
         for link in [compiled, try Linker().compile(modules)] {
             #expect {
-                try Linker().link(link, entry: entryName, supplying: Module.standard)
+                try Linker().link(link, entry: entryName, supplying: Supplying(Module.standard))
             } throws: { error in
                 "\(error)".contains("constants.app.counted:")
                     && "\(error)".contains("no document in this link says 'bank.Plain' answers it")

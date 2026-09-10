@@ -35,8 +35,8 @@ struct CompiledTests {
         let compiled = try compiled([sut] + Module.standard)
 
         // Then. Each image starts where it was asked to.
-        #expect(try linker.link(compiled, entry: "app.here", supplying: Module.standard).start == Assembled(compiled).rows["app.here"])
-        #expect(try linker.link(compiled, entry: "app.there", supplying: Module.standard).start == Assembled(compiled).rows["app.there"])
+        #expect(try linker.link(compiled, entry: "app.here", supplying: Supplying(Module.standard)).start == Assembled(compiled).rows["app.here"])
+        #expect(try linker.link(compiled, entry: "app.there", supplying: Supplying(Module.standard)).start == Assembled(compiled).rows["app.there"])
     }
 
     @Test("what a document says holds whichever entry a caller names")
@@ -68,7 +68,7 @@ struct CompiledTests {
             ]
         )
 
-        let image = try linker.link(try compiled([sut] + Module.standard), entry: entryName, supplying: Module.standard)
+        let image = try linker.link(try compiled([sut] + Module.standard), entry: entryName, supplying: Supplying(Module.standard))
 
         #expect(image.reached.contains(entryName))
         #expect(!image.reached.contains("app.aside"))
@@ -83,7 +83,7 @@ struct CompiledTests {
         let compiled = try compiled([sut] + Module.standard)
 
         #expect(throws: LinkError.self) {
-            try linker.link(compiled, entry: "app.nowhere", supplying: Module.standard)
+            try linker.link(compiled, entry: "app.nowhere", supplying: Supplying(Module.standard))
         }
     }
 
@@ -214,7 +214,7 @@ struct CompiledTests {
         let held = try Module(types: ["a.Held": .int], procedures: [:])
 
         // When.
-        let shapes = try linker.link(compiled([naming, held]), entry: entryName, supplying: Module.standard).types.shapes
+        let shapes = try linker.link(compiled([naming, held]), entry: entryName, supplying: Supplying(Module.standard)).types.shapes
 
         // Then. Each document's rows are a run of their own, in name order
         // inside it, laid down in the order the caller handed the documents
@@ -242,7 +242,7 @@ struct CompiledTests {
         #expect(compiledCall.calls.isEmpty)
 
         // And. Linking fills one call for every type that answers.
-        let image = try linker.link(compiled, entry: entryName, supplying: Module.standard)
+        let image = try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
         let linkedCall = try dispatch(in: code(of: "app.tell", in: image))
 
         #expect(Set(linkedCall.calls.keys) == ["bank.Account", "bank.Card"])
@@ -325,10 +325,10 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Module.standard))
+            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
-        _ = try linker.link(compiled, entry: entryName, supplying: Module.standard)
+        _ = try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
     }
 
     @Test("a claim answers a document that never names the one making it")
@@ -362,13 +362,13 @@ struct CompiledTests {
 
         #expect(throws: Never.self) {
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Module.standard))
+                compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         }
 
         // Then. The list refuses, naming the pair the program leaned on.
         #expect {
-            try linker.link(compiled, entry: entryName, supplying: Module.standard)
+            try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
         } throws: { error in
             "\(error)".contains("no document in this link says 'bank.Account' answers it")
         }
@@ -423,12 +423,12 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Module.standard))
+            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. It links, and refusing a claim as unanswered is the whole
         // list's to do rather than a compile's.
-        #expect(throws: Never.self) { try linker.link(compiled, entry: entryName, supplying: Module.standard) }
+        #expect(throws: Never.self) { try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
         #expect(throws: Never.self) { try linker.link(modules, entry: entryName) }
     }
 
@@ -448,7 +448,7 @@ struct CompiledTests {
         #expect(try number != Assembled(compiled).rows["a.answers"])
 
         // And. The link answers with the row.
-        let image = try linker.link(compiled, entry: entryName, supplying: Module.standard)
+        let image = try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
 
         #expect(try called(in: code(of: "b.asks", in: image)) == image.rows["a.answers"])
     }
@@ -511,7 +511,7 @@ struct CompiledTests {
         #expect(number == 0)
 
         // And. The link answers with the row of its own table.
-        let image = try linker.link(compiled, entry: entryName, supplying: Module.standard)
+        let image = try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
 
         #expect(
             try cast(in: code(of: entryName, in: image)).row
@@ -537,8 +537,8 @@ struct CompiledTests {
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
-            try linker.link(alone, entry: entryName, supplying: Module.standard).types.shapes.row(named: "bank.Account")
-                != linker.link(beside, entry: entryName, supplying: Module.standard).types.shapes.row(named: "bank.Account")
+            try linker.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
+                != linker.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
         )
         #expect(
             try cast(in: code(of: entryName, in: alone)).row
@@ -575,8 +575,8 @@ struct CompiledTests {
 
         // And. The row it stands on moved and the number did not.
         #expect(
-            try linker.link(alone, entry: entryName, supplying: Module.standard).types.shapes.row(named: "bank.Account")
-                != linker.link(beside, entry: entryName, supplying: Module.standard).types.shapes.row(named: "bank.Account")
+            try linker.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
+                != linker.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
         )
         #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
     }
@@ -623,12 +623,12 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Module.standard))
+            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. The image runs to what the whole graph compiled at once
         // answers.
-        let image = try linker.link(compiled, entry: entryName, supplying: Module.standard)
+        let image = try linker.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
 
         #expect(try await Executor(environment: nil).run(image, arguments: [:]) == .int(7))
         #expect(try await run(modules, vocabulary: []) == .int(7))
@@ -681,7 +681,7 @@ struct CompiledTests {
         // Then. Two declarations of a name have no way to be told apart,
         // whether the link reads them together or one after the other.
         #expect(throws: LinkError.self) {
-            try linker.compile([second], against: compiled, supplying: Module.standard)
+            try linker.compile([second], against: compiled, supplying: Supplying(Module.standard))
         }
     }
 

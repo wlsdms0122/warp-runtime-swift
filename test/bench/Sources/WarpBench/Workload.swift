@@ -52,9 +52,9 @@ struct Workload {
             let linker = Linker()
 
             _ = try linker.link(
-                Self.vocabulary + (try linker.compile([module], against: Self.vocabulary, supplying: Module.standard)),
+                Self.vocabulary + (try linker.compile([module], against: Self.vocabulary, supplying: Self.brought)),
                 entry: "entry",
-                supplying: Module.standard
+                supplying: Self.brought
             )
         }
     }
@@ -72,6 +72,10 @@ struct Workload {
     // The standard vocabulary compiled once, the way a host that brings it
     // compiles it once.
     private static let vocabulary = try! Linker().compile(Module.standard)
+
+    // The native code behind that vocabulary, joined up once, the way a host
+    // that brings the same words every run holds them.
+    private static let brought = Supplying(Module.standard)
 
     private static func linked(_ module: Module) throws -> Image {
         try Linker().link([module] + Module.standard, entry: "entry")
