@@ -68,6 +68,17 @@ struct NormalFormTests {
         #expect(try Name("equal").unqualified == Name("equal"))
     }
 
+    // Names are read as bytes everywhere else, and this is the one reading
+    // where the two answers differ: a dot the scalar after it combines with is
+    // one character with it, and still two bytes.
+    @Test("a name is unqualified by its bytes, not by how they group")
+    func aDottedNameIsUnqualifiedByBytes() throws {
+        let combining = try Name("a.\u{0301}b")
+
+        #expect(combining.unqualified == Name("\u{0301}b"))
+        #expect(combining.spelling.count == 3)
+    }
+
     @Test("a type's name is identifiers joined by dots, and never a scalar's word")
     func aTypesNameIsDeclarable() throws {
         #expect(try Name("std.logic.Answer").isDeclarable)

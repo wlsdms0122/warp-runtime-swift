@@ -59,6 +59,10 @@ public struct Name: Sendable, Hashable, Comparable {
     // This name without whatever qualified it: `std.logic.equal` is `equal`.
     // A dotted name is where a declaration sits, and the last segment is what
     // it is called.
+    //
+    // Read as bytes, the way every other reading of a name is. A dot is a dot
+    // wherever it stands, including where the scalar after it combines with it
+    // into one character.
     public var unqualified: Name {
         let bytes = spelling.utf8
         var end = bytes.endIndex
@@ -77,9 +81,9 @@ public struct Name: Sendable, Hashable, Comparable {
 
         guard start > bytes.startIndex || end < bytes.endIndex else { return self }
 
-        // A dot is a starter and combines with nothing, so what stands
-        // either side of one is normal wherever the whole is.
-        return Name(normal: String(spelling[start ..< end]))
+        // Cut in the view it was scanned in. A dot is a starter and combines
+        // with nothing, so a segment of a spelling in normal form is normal.
+        return Name(normal: String(decoding: bytes[start ..< end], as: UTF8.self))
     }
 
     // MARK: - Initializer
