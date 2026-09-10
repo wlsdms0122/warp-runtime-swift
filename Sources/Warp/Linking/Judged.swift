@@ -114,7 +114,14 @@ struct Judged: Sendable {
             guard let brought = supplied[label] else {
                 guard standing else { throw self.brought(nothing: document) }
 
-                return row(.native(.query(UnbroughtWord(label))), of: origin, in: table)
+                // The door it answers through is the row's own: a native
+                // query is what a compile settled as pure, and a stand-in on
+                // the other door would be read the wrong way by a run.
+                return row(
+                    .native(purity == .pure ? .query(UnbroughtWord(label)) : .effect(UnbroughtEffect(label))),
+                    of: origin,
+                    in: table
+                )
             }
 
             // A word declares its own purity, isolation, failing and the
