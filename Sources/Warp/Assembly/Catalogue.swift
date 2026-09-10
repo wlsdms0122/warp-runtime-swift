@@ -58,24 +58,42 @@ public struct Catalogue: Sendable {
         var declares: [Reference: Int] = [:]
 
         for (position, module) in modules.enumerated() {
-            let declarations = module.draft.declarations(in: .of(module))
+            var collided: [(reference: Reference, first: Int)] = []
 
-            for declaration in declarations.sorted(by: { $0.reference < $1.reference }) {
-                guard let first = declares[declaration.reference] else {
-                    declares[declaration.reference] = position
+            for reference in module.declaredWords.map(Reference.word)
+                + module.declaredShapes.map(Reference.shape) {
+                guard let first = declares[reference] else {
+                    declares[reference] = position
 
                     continue
                 }
 
-                throw CatalogueError(
-                    "the \(declaration.reference.noun) '\(declaration.reference.name)' is declared by"
-                        + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
-                        + " \(Place.Document.of(module).spelled(at: position)) in this"
-                        + " catalogue, so there is no answer to which one supplies it."
-                        + " A catalogue names each declaration once",
-                    at: declaration.place
-                )
+                collided.append((reference, first))
             }
+
+            // In reference order, which is why they are gathered rather than
+            // thrown on as they are met: a catalogue that holds meets none of
+            // them, and ordering what is never there is ordering nothing.
+            guard let held = collided.min(by: { one, other in one.reference < other.reference }) else {
+                continue
+            }
+
+            // Where it was written, read off the document here alone. A
+            // catalogue that holds throws none of these, and a declaration's
+            // place is what a refusal wants and nothing else does.
+            let place = module.draft
+                .declarations(in: .of(module))
+                .first { declared in declared.reference == held.reference }?
+                .place
+
+            throw CatalogueError(
+                "the \(held.reference.noun) '\(held.reference.name)' is declared by"
+                    + " \(Place.Document.of(modules[held.first]).spelled(at: held.first)) and by"
+                    + " \(Place.Document.of(module).spelled(at: position)) in this"
+                    + " catalogue, so there is no answer to which one supplies it."
+                    + " A catalogue names each declaration once",
+                at: place ?? Place(in: .of(module))
+            )
         }
 
         // Which of them a path could reach, gathered before the tables so the
