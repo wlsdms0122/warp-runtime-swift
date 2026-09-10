@@ -175,6 +175,15 @@ public struct Signature: Sendable, Equatable {
         return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
     }
 
+    // Two declarations are one where they take and answer the same. The order
+    // is those same parameters sorted, so reading it here would compare what
+    // was just compared.
+    public static func == (left: Signature, right: Signature) -> Bool {
+        left.receiver == right.receiver
+            && left.returns == right.returns
+            && left.parameters == right.parameters
+    }
+
     // MARK: - Internal
     // Every declared name this signature reaches, through what it takes and
     // what it answers.
