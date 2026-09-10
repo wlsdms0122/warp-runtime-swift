@@ -51,10 +51,11 @@ final class ShapeTable: Sendable {
     // document declared as a contract at all.
     let satisfying: [Name: Set<Name>]
 
-    // Whether the claims above are the whole list's. A document compiled
-    // against what stands before it reads a table built from those documents
-    // alone, and a claim it never saw may be what answers, so such a table
-    // answers nothing about a contract.
+    // Whether the claims above are the whole list's. A table a compile reads
+    // is built from the documents standing so far, and a claim it never saw
+    // may be what answers, so it says nothing about a contract and writes the
+    // pair down instead. A table with nowhere to write is the link's, which
+    // has every claim there is.
     let settled: Bool
 
     // Where a value this table cannot settle is written down, so the pair goes

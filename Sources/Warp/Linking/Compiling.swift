@@ -61,35 +61,8 @@ struct Compiling {
     private var loweredRows: [Int] = []
 
     // MARK: - Initializer
-    init(_ gathered: Gathered, naming documents: [Place.Document]) {
-        self.init(
-            types: gathered.types,
-            contractWords: gathered.contractWords,
-            answering: gathered.answering,
-            naming: documents
-        )
-    }
-
-    private init(
-        types: TypeTable,
-        contractWords: [Name: ContractWord],
-        answering: Set<Name>,
-        naming documents: [Place.Document]
-    ) {
-        self.types = types
-        self.contractWords = contractWords
-        self.answering = answering
-        self.documents = documents
-        self.lowering = Lowering(
-            documents: documents.count,
-            contractWords: contractWords,
-            shapes: types.shapes
-        )
-    }
-
     // What a caller already had compiled, laid down the way the walk lays a
-    // document it just compiled. A document arriving here says nothing about
-    // how it was made, so what the two ways build is one accumulator.
+    // document it just compiled.
     //
     // The rows keep the numbers their documents gave their calls, which is
     // what `named` answers, and their shapes are read as this link's rows:
@@ -101,11 +74,14 @@ struct Compiling {
         answering: Set<Name>,
         naming documents: [Place.Document]
     ) throws {
-        self.init(
-            types: types,
+        self.types = types
+        self.contractWords = contractWords
+        self.answering = answering
+        self.documents = documents
+        self.lowering = Lowering(
+            documents: documents.count,
             contractWords: contractWords,
-            answering: answering,
-            naming: documents
+            shapes: types.shapes
         )
 
         for (origin, document) in compiled.enumerated() {

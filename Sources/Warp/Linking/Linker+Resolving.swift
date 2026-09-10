@@ -13,67 +13,6 @@ import Foundation
 // in the order they read each other.
 extension Linker {
     // MARK: - Internal
-    // What only the whole list answers, read once for a compile that is then
-    // told rather than reading the list again.
-    //
-    // The spellings are held to being declared once before the standing is
-    // read. Standing reads a name as whichever document declared it, and where
-    // two declare one name that reading is arbitrary: it can put a document in
-    // its own reach and call the pair a ring. The doubled name is the defect,
-    // so it is the refusal an author gets.
-    func gathering(of modules: [Module]) throws -> Gathered {
-        try once(modules)
-
-        let symbols = try self.symbols(of: modules)
-        let declaredSpaces = try declared(in: modules)
-        let (declaredTypes, declaredConstraints, declaredContracts) = (
-            declaredSpaces.types,
-            declaredSpaces.constraints,
-            declaredSpaces.contracts
-        )
-        let standing = try ModuleGraph(modules).standing
-
-        let declaring = try self.types(
-            declared: declaredTypes,
-            constraints: declaredConstraints,
-            contracts: declaredContracts,
-            of: modules,
-            standing: standing,
-            numbered: Linkage()
-        )
-
-        // Every shape each document names, held to being one the list
-        // declares. Before the satisfaction, because a name nobody declared is
-        // the more basic defect and a signature holding one would be refused
-        // here for missing a word instead.
-        try judge(modules, in: declaring)
-
-        let space = symbols.reduce(into: [Name: Symbol]()) { table, symbol in
-            table[symbol.declared] = symbol
-        }
-
-        let signatures = space.mapValues { symbol in
-            Declared(symbol.procedure.signature, at: symbol.place, of: symbol.origin)
-        }
-
-        let shaped = try self.shaped(
-            declaring,
-            claims: declaredSpaces.claims,
-            contracts: declaredContracts,
-            over: declaredTypes,
-            among: signatures,
-            whole: true
-        )
-
-        return Gathered(
-            standing: standing,
-            symbols: symbols,
-            types: shaped.types,
-            contractWords: shaped.contractWords,
-            answering: shaped.answering
-        )
-    }
-
     // Which types answer which contracts, read off what the documents claimed.
     //
     // The table is remade holding the answer. Its rows are numbered from the
@@ -85,7 +24,6 @@ extension Linker {
         contracts: [Name: Declared<[Name: Signature]>],
         over declaredTypes: [Name: Declared<TypeExpression>],
         among signatures: [Name: Declared<Signature>],
-        whole: Bool,
         unsettled: Requiring? = nil
     ) throws -> (
         types: TypeTable,
@@ -102,7 +40,6 @@ extension Linker {
         )
         let table = declaring.satisfying(
             witnessed.answering.mapValues { answering in Set(answering.keys) },
-            settled: whole,
             unsettled: unsettled
         )
 

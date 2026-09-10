@@ -19,7 +19,6 @@ extension ShapeTable {
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
         satisfying: [Name: Set<Name>] = [:],
-        settled: Bool = true,
         unsettled: Requiring? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
@@ -35,7 +34,7 @@ extension ShapeTable {
                 constraintLabels: [],
                 recordRows: [],
                 satisfying: satisfying,
-                settled: settled,
+                settled: unsettled == nil,
                 unsettled: unsettled,
                 of: linkage
             )
@@ -102,7 +101,7 @@ extension ShapeTable {
             recordRows: recordRows,
             circling: circling,
             satisfying: satisfying,
-            settled: settled,
+            settled: unsettled == nil,
             unsettled: unsettled,
             of: linkage
         )

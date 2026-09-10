@@ -108,62 +108,16 @@ public struct Linker: Sendable {
         return ordered
     }
 
-    // MARK: - Internal
-    // Everything the documents settle on their own. No entry reaches in here:
-    // what a document says has to hold whichever declaration a run starts
-    // from.
+    // Documents laid down one at a time, in the order `standing` gives, each
+    // against the ones already compiled and the ones laid before it.
     //
-    // What the whole list answered is handed over rather than read again. A
-    // document has no say in any of it.
-    func compile(_ modules: [Module], in gathered: Gathered) throws -> [Compiled] {
-        // What each document declares, in name order, which is the order its
-        // rows stand in.
-        let held = gathered.symbols.reduce(into: [Int: [Symbol]]()) { table, symbol in
-            table[symbol.origin, default: []].append(symbol)
-        }
-
-        var compiling = Compiling(
-            gathered,
-            naming: modules.map { module in Place.Document.of(module) }
-        )
-
-        // One document at a time, in the order each one's needs stand before
-        // it. What a document reads of another is settled before it is read:
-        // the documents it reaches stand behind it, and its own rows are the
-        // stand-ins their refusal makes until it lowers them.
-        let compiled = try gathered.standing.map { origin in
-            try compile(
-                modules[origin],
-                at: origin,
-                declaring: held[origin] ?? [],
-                in: &compiling,
-                writing: Requiring()
-            )
-        }
-
-        // Back in the order the documents were handed over. The standing says
-        // which one to compile next and nothing about which one this is.
-        var ordered = compiled
-
-        for (position, origin) in gathered.standing.enumerated() {
-            ordered[origin] = compiled[position]
-        }
-
-        return ordered
-    }
-
-    // One document compiled against documents already compiled, which is what
-    // a caller holding a cache of them has.
+    // What only the whole list answers is read once, here: the shape spaces of
+    // a link are its documents' together, and documents handed over already
+    // compiled were not in the ones the others were compiled against.
     //
-    // The order is the caller's statement: what is handed over stands before
-    // this document, in the order it was handed over. A compile of the whole
-    // graph works that order out from the imports and refuses a ring; here it
-    // arrives already worked out, and a caller that hands over the wrong order
-    // is handing over a document that was never compiled against these.
-    //
-    // What the list answers is read again, since the shape spaces of a link
-    // are its documents' together and this document was not in the ones the
-    // others were compiled against.
+    // The ledger is the compile's rather than each document's. A fold runs
+    // bodies of the documents behind it and what it turns up belongs to the
+    // one being laid down, which is what the ledger is told.
     func compile(
         _ modules: [Module],
         at standing: [Int],
@@ -253,7 +207,6 @@ public struct Linker: Sendable {
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
-            whole: false,
             unsettled: requiring
         )
 
@@ -689,8 +642,7 @@ public struct Linker: Sendable {
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures,
-            whole: true
+            among: signatures
         )
         let types = shaped.types
 
