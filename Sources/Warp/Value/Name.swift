@@ -112,10 +112,8 @@ public struct Name: Sendable, Hashable, Comparable {
 
     // Hashed over the same bytes `==` reads, in one pass.
     public func hash(into hasher: inout Hasher) {
-        var spelling = spelling
-
-        spelling.withUTF8 { bytes in
-            hasher.combine(bytes: UnsafeRawBufferPointer(bytes))
+        Name.withBytes(spelling) { bytes in
+            hasher.combine(bytes: bytes)
         }
     }
 
@@ -125,11 +123,8 @@ public struct Name: Sendable, Hashable, Comparable {
     // the other. Both orders a name is read in come through here, over the
     // whole buffer at once rather than a byte at a time.
     private static func compared(_ left: String, _ right: String) -> Int {
-        var left = left
-        var right = right
-
-        return left.withUTF8 { first in
-            right.withUTF8 { second in
+        withBytes(left) { first in
+            withBytes(right) { second in
                 let shared = Swift.min(first.count, second.count)
 
                 guard let head = first.baseAddress, let other = second.baseAddress, shared > 0 else {
@@ -141,6 +136,22 @@ public struct Name: Sendable, Hashable, Comparable {
                 return ordered != 0 ? Int(ordered) : first.count - second.count
             }
         }
+    }
+
+    // A spelling as the bytes both readings of a name run over. Held as
+    // written wherever it is already contiguous, which every spelling this
+    // package builds is; a spelling that arrived as something else is made
+    // contiguous on a copy, which is the one case that costs anything.
+    private static func withBytes<T>(_ spelling: String, _ read: (UnsafeRawBufferPointer) -> T) -> T {
+        let held = spelling.utf8.withContiguousStorageIfAvailable { bytes in
+            read(UnsafeRawBufferPointer(bytes))
+        }
+
+        if let held { return held }
+
+        var spelling = spelling
+
+        return spelling.withUTF8 { bytes in read(UnsafeRawBufferPointer(bytes)) }
     }
 
     private static func isIdentifier(_ spelling: String) -> Bool {
