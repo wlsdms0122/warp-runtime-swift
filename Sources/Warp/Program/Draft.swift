@@ -112,14 +112,6 @@ public struct Draft: Sendable {
         return held
     }
 
-    var walks: Set<Name> {
-        read().walks
-    }
-
-    var closures: [Name: Int] {
-        read().closures
-    }
-
     // MARK: - Internal
     // What this declares in the word space, each under the place it was
     // written at. A contract's word is one of them, by the spelling a call
