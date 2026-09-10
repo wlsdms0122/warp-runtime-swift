@@ -103,7 +103,7 @@ extension Linker {
     // Every declaration under the spelling it was declared by. Two modules
     // cannot both declare one spelling, for the same reason two `.c` files
     // cannot both define a symbol.
-    func symbols(of modules: [Module]) throws -> [Symbol] {
+    func symbols(of modules: [Module], after held: Int = 0) throws -> [Symbol] {
         var symbols: [Symbol] = []
 
         // The declaration that took each name, rather than only that the name
@@ -121,7 +121,7 @@ extension Linker {
                     declared: name,
                     document: .of(module),
                     origin: origin,
-                    position: origin,
+                    handed: held + origin,
                     procedure: procedure
                 )
 

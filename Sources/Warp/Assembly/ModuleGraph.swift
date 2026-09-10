@@ -42,7 +42,9 @@ public struct ModuleGraph: Sendable {
     private let given: [Module]
 
     // MARK: - Initializer
-    public init(_ modules: [Module]) throws {
+    // `held` is how many documents stand in the link before these, so a
+    // refusal counts the list the caller handed over rather than this array.
+    public init(_ modules: [Module], after held: Int = 0) throws {
         // Which module declares each reference. One table, since every one of
         // them answers the same question; the kind rides on the reference, so
         // a word and a shape spelled alike stay two rows.
@@ -110,7 +112,7 @@ public struct ModuleGraph: Sendable {
 
                 throw ModuleGraphError(
                     "these modules need each other, so there is no order to compile them in:"
-                        + " \(ring.map { step in "\(Place.Document.of(modules[step.position]).spelled(at: step.position)) needs '\(step.name)'" }.joined(separator: ", then "))."
+                        + " \(ring.map { step in "\(Place.Document.of(modules[step.position]).spelled(at: held + step.position)) needs '\(step.name)'" }.joined(separator: ", then "))."
                         + " A module is compiled against what it needs, so what it needs stands first",
                     at: Place(in: .of(modules[position]))
                 )

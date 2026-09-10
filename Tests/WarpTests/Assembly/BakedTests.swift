@@ -110,6 +110,34 @@ struct BakedTests {
         }
     }
 
+    @Test("a refusal counts the list the caller handed over")
+    func aRefusalCountsTheCallersList() throws {
+        // Given. A vocabulary already compiled, so what arrives stands after
+        // it. The two arriving documents are the vocabulary's count and one
+        // past it.
+        let baked = try linker.compile(Module.standard)
+        let first = "the module at \(baked.count) in this link"
+        let second = "the module at \(baked.count + 1) in this link"
+
+        // When / Then. Two arriving documents colliding with each other.
+        #expect {
+            try linker.compile([try adding(1), try adding(2)], against: baked)
+        } throws: { error in
+            "\(error)".contains(first) && "\(error)".contains(second)
+        }
+
+        // And one colliding with a document already compiled, which counts
+        // from the same place.
+        #expect {
+            try linker.compile(
+                [try adding(2)],
+                against: baked + (try linker.compile([try adding(1)], against: baked))
+            )
+        } throws: { error in
+            "\(error)".contains(first) && "\(error)".contains(second)
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
 

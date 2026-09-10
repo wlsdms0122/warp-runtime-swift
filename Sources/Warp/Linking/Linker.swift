@@ -92,9 +92,9 @@ public struct Linker: Sendable {
         // two declare one name that reading is arbitrary: it can put a
         // document in its own reach and call the pair a ring. The doubled name
         // is the defect, so it is the refusal an author gets.
-        let held = try symbols(of: modules)
+        let held = try symbols(of: modules, after: compiled.count)
         let declared = try declared(in: compiled + modules)
-        let standing = try ModuleGraph(modules).standing
+        let standing = try ModuleGraph(modules, after: compiled.count).standing
         let laid = try compile(
             modules,
             at: standing,
@@ -184,7 +184,7 @@ public struct Linker: Sendable {
                     declared: symbol.declared,
                     document: symbol.document,
                     origin: compiled.count + offset,
-                    position: compiled.count + position,
+                    handed: symbol.handed,
                     procedure: symbol.procedure
                 )
             }
@@ -204,7 +204,7 @@ public struct Linker: Sendable {
                 signatures[symbol.declared] = Declared(
                     symbol.procedure.signature,
                     at: symbol.place,
-                    of: symbol.position
+                    of: symbol.handed
                 )
             }
         }
