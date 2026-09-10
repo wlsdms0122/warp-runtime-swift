@@ -70,17 +70,16 @@ extension Linker {
     // the list that holds every claim there is.
     func leaning(
         _ requiring: [Claim: Place],
-        on satisfying: [Name: Set<Name>],
-        of document: Place.Document
+        on satisfying: [Name: Set<Name>]
     ) throws {
-        for claim in requiring.keys.sorted() {
+        for (claim, place) in requiring.sorted(by: { $0.key < $1.key }) {
             guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
 
             throw LinkError(
                 "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
                     + " document in this link says '\(claim.type)' answers it."
                     + " A type answers a contract because a document says so",
-                at: requiring[claim] ?? Place(in: document)
+                at: place
             )
         }
     }

@@ -625,11 +625,7 @@ public struct Linker: Sendable {
         // A compile wrote these down rather than judging them, since a claim
         // it never named may be what answers.
         for document in compiled {
-            try leaning(
-                document.requiring,
-                on: types.shapes.satisfying,
-                of: document.document
-            )
+            try leaning(document.requiring, on: types.shapes.satisfying)
         }
 
         // The documents' own numbers turned into this link's rows, and the
