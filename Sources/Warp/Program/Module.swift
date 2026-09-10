@@ -172,12 +172,12 @@ public struct Module: Sendable {
         self.sends = reading.sends
         self.imports = draft.imports ?? reading.sends.union(draft.walked)
         self.uses = Set(reading.sends.map(Reference.word))
-            .union(draft.mentions.map(Reference.shape))
+            .union(reading.mentions.map(Reference.shape))
         self.walks = reading.walks
         self.walkableWords = draft.walkableWords
         self.closures = reading.closures
-        self.declaredWords = draft.declaredWords
-        self.declaredShapes = draft.declaredShapes
+        self.declaredWords = reading.declaredWords
+        self.declaredShapes = reading.declaredShapes
 
         try Validator().validate(self)
     }

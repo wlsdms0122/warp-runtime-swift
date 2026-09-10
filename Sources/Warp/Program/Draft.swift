@@ -159,11 +159,11 @@ public struct Draft: Sendable {
     // rather than gathered again, so what counts as a word and what counts as
     // a shape is said in one place.
     var declaredWords: Set<Name> {
-        Set(words(in: .assembled).map(\.name))
+        read().declaredWords
     }
 
     var declaredShapes: Set<Name> {
-        Set(shapes(in: .assembled).map(\.name))
+        read().declaredShapes
     }
 
     // The words a path could reach, as far as this document decides it. A
@@ -197,58 +197,28 @@ public struct Draft: Sendable {
 
     // The shapes this names and does not itself declare.
     var mentions: Set<Name> {
-        var mentioned: Set<Name> = []
-
-        for type in types.values {
-            mentioned.formUnion(type.mentions)
-        }
-
-        for members in constraints.values {
-            for member in members {
-                mentioned.formUnion(member.mentions)
-            }
-        }
-
-        for words in contracts.values {
-            for signature in words.values {
-                mentioned.formUnion(signature.mentions)
-            }
-        }
-
-        // A claim names two shapes, and both are mentions like any other: the
-        // type it is about and the contract it says that type answers. The
-        // link reads the contract's words to hold the claim to them, so a
-        // document making one stands behind the document that wrote it.
-        for (type, contracts) in claiming {
-            mentioned.insert(type)
-            mentioned.formUnion(contracts)
-        }
-
-        for procedure in procedures.values {
-            mentioned.formUnion(procedure.signature.mentions)
-
-            guard let block = procedure.block else { continue }
-
-            mentioned.formUnion(mentions(buried: block))
-        }
-
-        for held in Array(constants.values) + Array(variables.values) {
-            mentioned.formUnion(mentions(buried: held))
-        }
-
-        return mentioned.subtracting(declaredShapes)
+        read().mentions
     }
 
-    // What one walk over a document's text answers: the words it sends, the
-    // bare spellings its paths step to, and how many closures each of its
-    // declarations wrote.
+    // What reading a document once answers: what it declares, what it leans on
+    // another document for, and how many closures each of its declarations
+    // wrote.
     //
-    // These three and no more, because these three are what the walk itself
-    // answers. What a document names in a type is read off its declarations
-    // instead, and a value made of both would make asking for one of these
-    // walk the text twice.
+    // One value rather than one question at a time, because every one of these
+    // is answered by walking the same text and the same tables. Asking for them
+    // apart walks the document once for each.
     struct Reading: Sendable {
         let sends: Set<Name>
+
+        // The shapes this names and does not itself declare. Read off the
+        // declarations and off the bodies alike: a local binding says what it
+        // holds, a cast asks for a shape, and a closure literal writes a
+        // signature of its own.
+        let mentions: Set<Name>
+
+        // What this declares, by the name a link resolves to it.
+        let declaredWords: Set<Name>
+        let declaredShapes: Set<Name>
 
         // The bare spellings a path in here steps to.
         //
@@ -295,6 +265,9 @@ public struct Draft: Sendable {
     // once and read by every link it stands in, and this is where that reading
     // happens.
     func read() -> Reading {
+        let declaredWords = Set(words(in: .assembled).map(\.name))
+        let declaredShapes = Set(shapes(in: .assembled).map(\.name))
+
         // A native word's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A
         // list that missed them would understate what the module does, which
@@ -305,6 +278,7 @@ public struct Draft: Sendable {
             }
         )
         var stepped: Set<Name> = []
+        var named: Set<Name> = []
         var counts: [Name: Int] = [:]
 
         // The head names something in scope rather than a step onto it, so
@@ -329,26 +303,65 @@ public struct Draft: Sendable {
         func fold(_ name: Name, _ held: some Burying) {
             var written = 0
 
-            for expression in held.buried {
-                switch expression {
-                case let .call(call):
-                    sent.insert(call.selector)
+            for found in held.found {
+                switch found {
+                case let .statement(statement):
+                    guard let declared = statement.binding?.declared else { continue }
 
-                case let .reference(path):
-                    step(path)
+                    named.formUnion(declared.mentions)
 
-                case .closure:
-                    written += 1
+                case let .expression(expression):
+                    switch expression {
+                    case let .call(call):
+                        sent.insert(call.selector)
 
-                default:
-                    break
+                    case let .reference(path):
+                        step(path)
+
+                    case let .cast(_, type, _):
+                        named.formUnion(type.mentions)
+
+                    case let .closure(procedure):
+                        written += 1
+                        named.formUnion(procedure.signature.mentions)
+
+                    default:
+                        break
+                    }
                 }
             }
 
             counts[name] = written
         }
 
+        for type in types.values {
+            named.formUnion(type.mentions)
+        }
+
+        for members in constraints.values {
+            for member in members {
+                named.formUnion(member.mentions)
+            }
+        }
+
+        for words in contracts.values {
+            for signature in words.values {
+                named.formUnion(signature.mentions)
+            }
+        }
+
+        // A claim names two shapes, and both are mentions like any other: the
+        // type it is about and the contract it says that type answers. The
+        // link reads the contract's words to hold the claim to them, so a
+        // document making one stands behind the document that wrote it.
+        for (type, contracts) in claiming {
+            named.insert(type)
+            named.formUnion(contracts)
+        }
+
         for (name, procedure) in procedures {
+            named.formUnion(procedure.signature.mentions)
+
             guard let block = procedure.block else { continue }
 
             fold(name, block)
@@ -364,6 +377,9 @@ public struct Draft: Sendable {
 
         return Reading(
             sends: sent.subtracting(declaredWords),
+            mentions: named.subtracting(declaredShapes),
+            declaredWords: declaredWords,
+            declaredShapes: declaredShapes,
             walks: stepped,
             closures: counts
         )
