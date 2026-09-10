@@ -44,11 +44,6 @@ struct Compiling {
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
 
-    // The pairs this document's calls lean on, written down while its bodies
-    // are read. Whether a type answers a contract is read off the claims, and
-    // a claim may be written in a document this one never names, so a compile
-    // gathers what it leans on and the link holds it.
-
     // Every judgment the compile asks and every row it builds reads the table
     // the run will read.
     var shapes: ShapeTable { types.shapes }

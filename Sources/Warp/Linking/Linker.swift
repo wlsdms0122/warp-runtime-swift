@@ -230,12 +230,11 @@ public struct Linker: Sendable {
         var variables: [Name: Value] = [:]
         var calls: [Name: [Name]] = [:]
 
-        // One document's reading. What a path may walk to is the document's
-        // own, so the frame is made for the document being read.
-        // What this document leans on. One per document, which is why it
-        // stands here rather than beside the tables a compile grows.
+        // What this document leans on, and one per document.
         let requiring = Requiring()
 
+        // One document's reading. What a path may walk to is the document's
+        // own, so the frame is made for the document being read.
         func frame() -> TypeFrame {
             compiling.frame(stepping: reached, reading: reading, writing: requiring)
         }

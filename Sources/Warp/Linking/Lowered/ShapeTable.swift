@@ -119,8 +119,12 @@ final class ShapeTable: Sendable {
     // For a value already in hand and nothing else: a reading before the run
     // is not a name yet.
     func settles(contract name: Name, arrived type: Name?) -> Bool? {
-        guard settled, let members = satisfying[name] else { return nil }
+        guard let members = satisfying[name] else { return nil }
+
+        // A value wearing no name answers no contract, and no claim anywhere
+        // changes that, so a partial table settles this one too.
         guard let type else { return false }
+        guard settled else { return nil }
 
         return members.contains(type)
     }
