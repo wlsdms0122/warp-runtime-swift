@@ -34,6 +34,10 @@ public struct Module: Sendable {
     // spellings its paths step to. Read where the module is made, since a link
     // asks each module it is handed for them and the text they are read off
     // does not move.
+    //
+    // A path's steps are not among the uses: a step names a word by its last
+    // segment alone, so it is looked up by a different key and answered by
+    // more than one document.
     let sends: Set<Name>
     let uses: Set<Reference>
     let walks: Set<Name>
@@ -51,7 +55,6 @@ public struct Module: Sendable {
     // draft, and every other reader wants the names alone.
     let declaredWords: Set<Name>
     let declaredShapes: Set<Name>
-
 
     // Shapes this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
@@ -170,7 +173,8 @@ public struct Module: Sendable {
 
         self.sends = reading.sends
         self.imports = draft.imports ?? reading.sends.union(draft.walked)
-        self.uses = reading.uses
+        self.uses = Set(reading.sends.map(Reference.word))
+            .union(draft.mentions.map(Reference.shape))
         self.walks = reading.walks
         self.walkableWords = draft.walkableWords
         self.closures = reading.closures

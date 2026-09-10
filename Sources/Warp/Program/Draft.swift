@@ -143,14 +143,6 @@ public struct Draft: Sendable {
             + shapes(in: document).map { declared in (.shape(declared.name), declared.place) }
     }
 
-    // Everything this leans on another document for, the same way. A path's
-    // steps are not in here: a step names a word by its last segment alone, so
-    // it is looked up by a different key and answered by more than one
-    // document.
-    var uses: Set<Reference> {
-        read().uses
-    }
-
     // The same two, when only the names are wanted. Read off the lists above
     // rather than gathered again, so what counts as a word and what counts as
     // a shape is said in one place.
@@ -274,11 +266,16 @@ public struct Draft: Sendable {
         read().closures
     }
 
-    // What one walk over a document's text answers: what it leans on, and how
-    // many closures each of its declarations wrote.
+    // What one walk over a document's text answers: the words it sends, the
+    // bare spellings its paths step to, and how many closures each of its
+    // declarations wrote.
+    //
+    // These three and no more, because these three are what the walk itself
+    // answers. What a document names in a type is read off its declarations
+    // instead, and a value made of both would make asking for one of these
+    // walk the text twice.
     struct Reading: Sendable {
         let sends: Set<Name>
-        let uses: Set<Reference>
         let walks: Set<Name>
         let closures: [Name: Int]
     }
@@ -300,7 +297,7 @@ public struct Draft: Sendable {
                 procedure.implementation.nativeImports?.map(\.selector) ?? []
             }
         )
-        var walked: Set<Name> = []
+        var stepped: Set<Name> = []
         var counts: [Name: Int] = [:]
 
         // The head names something in scope rather than a step onto it, so
@@ -311,7 +308,7 @@ public struct Draft: Sendable {
             for segment in path.dropFirst() {
                 switch segment {
                 case let .key(name, _), let .word(name, _):
-                    walked.insert(name)
+                    stepped.insert(name)
 
                 case let .indexRef(inner, _):
                     step(inner)
@@ -322,7 +319,7 @@ public struct Draft: Sendable {
             }
         }
 
-        func read(_ name: Name, _ held: some Burying) {
+        func fold(_ name: Name, _ held: some Burying) {
             var written = 0
 
             for expression in held.buried {
@@ -347,23 +344,20 @@ public struct Draft: Sendable {
         for (name, procedure) in procedures {
             guard let block = procedure.block else { continue }
 
-            read(name, block)
+            fold(name, block)
         }
 
         for (name, expression) in constants {
-            read(name, expression)
+            fold(name, expression)
         }
 
         for (name, expression) in variables {
-            read(name, expression)
+            fold(name, expression)
         }
 
-        let sends = sent.subtracting(declaredWords)
-
         return Reading(
-            sends: sends,
-            uses: Set(sends.map(Reference.word)).union(mentions.map(Reference.shape)),
-            walks: walked,
+            sends: sent.subtracting(declaredWords),
+            walks: stepped,
             closures: counts
         )
     }
