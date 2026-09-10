@@ -15,11 +15,15 @@ import Foundation
 // that reads one. A surface that forgot the step would lose a pair rather than
 // refuse, and a lost pair is a call nothing holds to anything.
 //
-// Written to under the judging ask alone. A reading walk is a probe: a loop
-// reads its body until the names settle, and a declaration with no `returns`
-// is read once for its answer and thrown away if it cannot be. What such a
-// walk concludes is not what the document says, and a pair it left here would
-// hold the link to a call the document never makes.
+// Handed to a walk that is judging and withheld from one that is reading. A
+// reading walk is a probe: a loop reads its body until the names settle, and a
+// declaration with no `returns` is read once for its answer and thrown away if
+// it cannot be. What such a walk concludes is not what the document says, and
+// a pair it left here would hold the link to a call the document never makes.
+//
+// Withheld rather than ignored, so the surfaces that judge take one of these
+// or nothing and a probe has none to write to. Nothing here knows which walk
+// is which.
 //
 // One of these per document compiled, read back when the walk is done.
 final class Requiring: @unchecked Sendable {
@@ -41,9 +45,7 @@ final class Requiring: @unchecked Sendable {
     }
 
     // MARK: - Internal
-    func require(_ claim: Claim, at place: Place, when ask: Linker.Ask) {
-        guard case .judging = ask else { return }
-
+    func require(_ claim: Claim, at place: Place) {
         lock.withLock {
             guard held[claim] == nil else { return }
 

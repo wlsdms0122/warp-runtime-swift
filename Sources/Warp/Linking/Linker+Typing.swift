@@ -120,9 +120,8 @@ extension Linker {
         mentions: [Name: Set<Name>],
         readings: [Name: Shape],
         in shapes: ShapeTable,
-        requiring: Requiring,
-        at place: Place,
-        when ask: Ask
+        requiring: Requiring?,
+        at place: Place
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             guard let reading = readings[parameter] else { continue }
@@ -135,7 +134,7 @@ extension Linker {
                 if shapes.satisfying[bound] != nil {
                     switch shapes.answering(contract: bound, reading: reading) {
                     case let .leansOn(type):
-                        requiring.require(Claim(type: type, contract: bound), at: place, when: ask)
+                        requiring?.require(Claim(type: type, contract: bound), at: place)
 
                     case .settled(true):
                         break
@@ -180,9 +179,8 @@ extension Linker {
         answering: Shape?,
         filledWith bound: Bound,
         in shapes: ShapeTable,
-        requiring: Requiring,
-        at place: Place,
-        when ask: Ask
+        requiring: Requiring?,
+        at place: Place
     ) -> Judgment {
         // A declaration with nothing to fill is read as the link lowered it.
         // Lowering it again per call site is the same answer paid for again,
@@ -208,8 +206,7 @@ extension Linker {
             readings: bound.readings,
             in: shapes,
             requiring: requiring,
-            at: place,
-            when: ask
+            at: place
         ) {
             return .refusal(refusal)
         }
@@ -330,12 +327,12 @@ extension Linker {
         in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
-        when ask: Ask
+        writing requiring: Requiring?
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
         guard case let .key(head, _)? = path.first, var current = environment[head] else {
-            return asWritten(path, in: environment, with: frame, at: place, when: ask)
+            return asWritten(path, in: environment, with: frame, at: place, writing: requiring)
         }
 
         // A box stands in the environment marked as one; what is read out of
@@ -434,7 +431,7 @@ extension Linker {
                 // `held.count`), and the field it lands on is the same field
                 // either way.
                 if let reached = current.reaching([segment] + rest()) {
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, when: ask) {
+                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -448,7 +445,7 @@ extension Linker {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, when: ask) {
+                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -469,7 +466,7 @@ extension Linker {
                         break
                     }
 
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, when: ask) {
+                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -526,7 +523,7 @@ extension Linker {
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
             case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: frame, at: place, when: ask) {
+                switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -544,7 +541,7 @@ extension Linker {
             // Bytes are an array of bytes in a compact spelling, so an index
             // reads one. A `byte`, the range `std` names.
             case let (.indexRef(inner, optionally), .bytes):
-                switch indexReference(inner, in: environment, with: frame, at: place, when: ask) {
+                switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -610,7 +607,7 @@ extension Linker {
             case let (.key(key, _), _), let (.word(key, _), _):
                 if let refusal = needless(.word(key)) { return refusal }
 
-                switch reached(key, on: current, walked: walked, with: frame, at: place, when: ask) {
+                switch reached(key, on: current, walked: walked, with: frame, at: place, writing: requiring) {
                 case let .answers(answered):
                     current = answered
                     resolved.append(.word(key, optional: segment.optional))
@@ -635,7 +632,7 @@ extension Linker {
         in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
-        when ask: Ask
+        writing requiring: Requiring?
     ) -> PathReading {
         var judged: [PathSegment] = []
 
@@ -646,7 +643,7 @@ extension Linker {
                 continue
             }
 
-            switch indexReference(inner, in: environment, with: frame, at: place, when: ask) {
+            switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
             case let .refused(reason):
                 return .refused(reason)
 
@@ -675,9 +672,9 @@ extension Linker {
         in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
-        when ask: Ask
+        writing requiring: Requiring?
     ) -> IndexReading {
-        switch reading(of: inner, in: environment, with: frame, at: place, when: ask) {
+        switch reading(of: inner, in: environment, with: frame, at: place, writing: requiring) {
         case let .refused(reason):
             return .refused(reason)
 
@@ -777,6 +774,15 @@ extension Linker {
     // the call is judged exactly as a written call is (reachability,
     // acceptance, then the judgment every call shares) and the walk goes on
     // with what the word answers, the receiver's reading filled in.
+    // The ledger a walk writes what it leans on into, which is none where the
+    // walk is a probe. Asked here rather than inside the ledger, since what
+    // kind of walk this is is the walk's own fact.
+    private func ledger(of frame: TypeFrame, under ask: Ask) -> Requiring? {
+        guard case .judging = ask else { return nil }
+
+        return frame.requiring
+    }
+
     private enum WordReach {
         case answers(Shape)
         case refused(String)
@@ -788,7 +794,7 @@ extension Linker {
         walked: [PathSegment],
         with frame: TypeFrame,
         at place: Place,
-        when ask: Ask
+        writing requiring: Requiring?
     ) -> WordReach {
         guard let signature = frame.signature(reachedBy: key) else {
             return .refused(
@@ -836,9 +842,8 @@ extension Linker {
             answering: frame.answer(reachedBy: key),
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
             in: frame.shapes,
-            requiring: frame.requiring,
-            at: place,
-            when: ask
+            requiring: requiring,
+            at: place
         ) {
         case let .refusal(reason):
             return .refused("\(walked.rendered) sends '\(key)': \(reason)")
@@ -934,7 +939,7 @@ extension Linker {
     // or repeated. One walk under two asks, so the rules cannot drift a copy at
     // a time, and so a body is read once, where a walk per question would
     // compound arm by arm into an exponential reading of nothing new.
-    enum Ask {
+    private enum Ask {
         // Judging carries which module the body being judged was declared
         // in, where it was declared in one; a constant's expression has no
         // module to read its variables by.
@@ -1039,7 +1044,7 @@ extension Linker {
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
-            switch reading(of: path, in: environment, with: frame, at: place, when: ask) {
+            switch reading(of: path, in: environment, with: frame, at: place, writing: ledger(of: frame, under: ask)) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
 
@@ -1787,10 +1792,9 @@ extension Linker {
 
         switch frame.shapes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
-            frame.requiring.require(
+            ledger(of: frame, under: ask)?.require(
                 Claim(type: type, contract: asked.contract),
-                at: place.part(.receiver),
-                when: ask
+                at: place.part(.receiver)
             )
 
         case .settled(true):
@@ -2472,7 +2476,7 @@ extension Linker {
         in environment: [Name: Shape],
         with frame: TypeFrame,
         at place: Place,
-        when ask: Ask
+        writing requiring: Requiring?
     ) -> Writable {
         guard case let .key(head, _)? = path.first, let box = environment[head] else {
             return .refused("writes '\(path.rendered)', and its head is not a name here")
@@ -2501,7 +2505,7 @@ extension Linker {
             }
 
             if case let .indexRef(inner, _) = segment {
-                if case let .refused(reason) = indexReference(inner, in: environment, with: frame, at: place, when: ask) {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
                     return .refused(reason)
                 }
             }
@@ -2609,7 +2613,7 @@ extension Linker {
                 continue
             }
 
-            if case let .refused(reason) = writable(path, in: environment, with: frame, at: place, when: ask) {
+            if case let .refused(reason) = writable(path, in: environment, with: frame, at: place, writing: ledger(of: frame, under: ask)) {
                 try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
         }
@@ -2657,7 +2661,7 @@ extension Linker {
         if path.count == 1, let fixed {
             slot = fixed
         } else {
-            switch writable(path, in: environment, with: frame, at: place, when: ask) {
+            switch writable(path, in: environment, with: frame, at: place, writing: ledger(of: frame, under: ask)) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
                 return
