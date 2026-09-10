@@ -16,8 +16,13 @@ import Foundation
 // and no reserved name.
 public struct Module: Sendable {
     // MARK: - Property
+    // The document this was made from. What a module declares is what its
+    // document declared, so it is held rather than copied out field by field:
+    // a listing that names them one at a time loses a new one silently.
+    private let source: Draft
+
     // Metadata only. Which document a thing came out of is `identity`.
-    public let description: String?
+    public var description: String? { source.description }
 
     // The words this module sends and does not declare. Everything else here is
     // what the module declares; this is what it asks of whatever it is linked
@@ -60,13 +65,13 @@ public struct Module: Sendable {
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
     // what kind of thing the name stands for.
-    public let types: [Name: TypeExpression]
+    public var types: [Name: TypeExpression] { source.types }
 
     // Constraints this module declares: a name bound to the types a bounded
     // parameter under that name admits. Declared the same way a type is and
     // kept apart from the types, because nothing is ever *of* a constraint. It
     // bounds `some T`, and a slot cannot declare it directly.
-    public let constraints: [Name: [TypeExpression]]
+    public var constraints: [Name: [TypeExpression]] { source.constraints }
 
     // Contracts this module declares: a name bound to the words a value must
     // answer to stand under it.
@@ -75,28 +80,28 @@ public struct Module: Sendable {
     // questions. A constraint is a closed set of shapes and a value of one is
     // one of them; a contract is an open set, and what puts a type in it is
     // that it declares the words. Only one of those can be judged by listing.
-    public let contracts: [Name: [Name: Signature]]
+    public var contracts: [Name: [Name: Signature]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a
     // contract because a document says it does, and this is where one says it.
     // Which declarations back the claim is the link's to find and to hold the
     // claim to.
-    public let claiming: [Name: Set<Name>]
+    public var claiming: [Name: Set<Name>] { source.claiming }
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
     // question, so exporting one would need a second name table in path
     // position. Where a declared spelling cannot be told from drilling into a
     // record.
-    public let constants: [Name: Expression]
+    public var constants: [Name: Expression] { source.constants }
 
     // Names bound to boxes this module's procedures share for one run. Private
     // to the module the way a constant is, and for the same reason: a name is
     // a scope question. Another module changes one only through a procedure
     // declared beside it.
-    public let variables: [Name: Expression]
+    public var variables: [Name: Expression] { source.variables }
 
-    public let procedures: [Name: Procedure]
+    public var procedures: [Name: Procedure] { source.procedures }
 
     // Which document this was read out of, where it was read out of one.
     //
@@ -160,14 +165,7 @@ public struct Module: Sendable {
     // it: a draft is what a document declares, and which document that was is
     // the reader's to say.
     public init(_ draft: Draft, identity: Identity? = nil) throws {
-        self.description = draft.description
-        self.types = draft.types
-        self.constraints = draft.constraints
-        self.contracts = draft.contracts
-        self.claiming = draft.claiming
-        self.constants = draft.constants
-        self.variables = draft.variables
-        self.procedures = draft.procedures
+        self.source = draft
         self.identity = identity
         let reading = draft.read()
 
@@ -190,17 +188,7 @@ public struct Module: Sendable {
     // written by one call, and `imports` here is the resolved list rather than
     // the claim, since by now the two are the same.
     public var draft: Draft {
-        Draft(
-            description: description,
-            imports: imports,
-            types: types,
-            constraints: constraints,
-            contracts: contracts,
-            claiming: claiming,
-            constants: constants,
-            variables: variables,
-            procedures: procedures
-        )
+        source.resolving(imports)
     }
 
     // MARK: - Private

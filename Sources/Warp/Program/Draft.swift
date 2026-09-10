@@ -23,7 +23,9 @@ public struct Draft: Sendable {
 
     // What the document said it imports, and nil where it said nothing. A
     // module resolves this; here it is still only what was written.
-    public let imports: Set<Name>?
+    // Settable only from here, so `resolving(_:)` changes this one field of a
+    // copy instead of naming every field to keep it.
+    public private(set) var imports: Set<Name>?
 
     // Which declarations the bare steps in this document's paths mean. What
     // the text says it uses is read off it, and a path names only the last
@@ -98,6 +100,24 @@ public struct Draft: Sendable {
     // about to allow.
     public var sends: Set<Name> {
         read().sends
+    }
+
+    // The same document with the imports it turned out to have. A module
+    // settles them from what the text sends and walks, and a writing of that
+    // module takes the settled list.
+    public func resolving(_ imports: Set<Name>) -> Draft {
+        var held = self
+        held.imports = imports
+
+        return held
+    }
+
+    var walks: Set<Name> {
+        read().walks
+    }
+
+    var closures: [Name: Int] {
+        read().closures
     }
 
     // MARK: - Internal
@@ -183,28 +203,6 @@ public struct Draft: Sendable {
         )
     }
 
-    // The bare spellings a path in here steps to.
-    //
-    // A path reaches a word by its last segment alone, so what it needs is
-    // spelled differently from what a call needs and is looked up in a
-    // different table. `sends` does not hold these, and rightly: it discloses
-    // what the program can touch, and a path reaches only words that answer
-    // without running.
-    //
-    // Wider than the truth on purpose. Whether `user.count` steps to a field
-    // or to a word is settled by the type the step stands on, which is a fact
-    // of the link and not of this text, so every step that could be a word is
-    // one here. A reader of this list may look for a word nobody needed; one
-    // narrowed by guessing would miss a word somebody did.
-    //
-    // What this document declares is not taken out, unlike the other two. A
-    // bare step is answered from every declaration in the link rather than
-    // from the document holding the path, so a document declaring a word by
-    // that spelling has not thereby answered its own step.
-    var walks: Set<Name> {
-        read().walks
-    }
-
     // The shapes this names and does not itself declare.
     var mentions: Set<Name> {
         var mentioned: Set<Name> = []
@@ -249,23 +247,6 @@ public struct Draft: Sendable {
         return mentioned.subtracting(declaredShapes)
     }
 
-    // How many closure literals each declaration wrote, at whatever depth. A
-    // closure inside a closure counts with the rest: what the number tells
-    // apart is which of its declaration's closures this is, and nesting does
-    // not change that.
-    //
-    // A constant and a variable are expressions like a body, so a closure
-    // written in one is the document's the way a closure written in a body is.
-    // The same three the document is read over everywhere else.
-    //
-    // Read off the document so a closure's number is the document's fact. The
-    // link lowers the words before the rest, and which declarations are words
-    // depends on the whole graph, so a count taken while lowering would move
-    // when an unrelated module joins.
-    var closures: [Name: Int] {
-        read().closures
-    }
-
     // What one walk over a document's text answers: the words it sends, the
     // bare spellings its paths step to, and how many closures each of its
     // declarations wrote.
@@ -276,7 +257,41 @@ public struct Draft: Sendable {
     // walk the text twice.
     struct Reading: Sendable {
         let sends: Set<Name>
+
+        // The bare spellings a path in here steps to.
+        //
+        // A path reaches a word by its last segment alone, so what it needs is
+        // spelled differently from what a call needs and is looked up in a
+        // different table. `sends` does not hold these, and rightly: it
+        // discloses what the program can touch, and a path reaches only words
+        // that answer without running.
+        //
+        // Wider than the truth on purpose. Whether `user.count` steps to a
+        // field or to a word is settled by the type the step stands on, which
+        // is a fact of the link and not of this text, so every step that could
+        // be a word is one here. A reader of this list may look for a word
+        // nobody needed; one narrowed by guessing would miss a word somebody
+        // did.
+        //
+        // What this document declares is not taken out, unlike the sends. A
+        // bare step is answered from every declaration in the link rather than
+        // from the document holding the path, so a document declaring a word
+        // by that spelling has not thereby answered its own step.
         let walks: Set<Name>
+
+        // How many closure literals each declaration wrote, at whatever depth.
+        // A closure inside a closure counts with the rest: what the number
+        // tells apart is which of its declaration's closures this is, and
+        // nesting does not change that.
+        //
+        // A constant and a variable are expressions like a body, so a closure
+        // written in one is the document's the way a closure written in a body
+        // is. The same three the document is read over everywhere else.
+        //
+        // Read off the document so a closure's number is the document's fact.
+        // The link lowers the words before the rest, and which declarations
+        // are words depends on the whole graph, so a count taken while
+        // lowering would move when an unrelated module joins.
         let closures: [Name: Int]
     }
 
