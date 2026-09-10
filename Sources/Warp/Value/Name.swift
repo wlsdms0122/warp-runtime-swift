@@ -52,10 +52,19 @@ public struct Name: Sendable, Hashable, Comparable {
     public var isDeclarable: Bool {
         let bytes = spelling.utf8
 
-        return Name.scalarWords[spelling] == nil
-            && Name.segments(of: bytes).allSatisfy { segment in
-                Name.isIdentifier(bytes[segment])
-            }
+        guard Name.scalarWords[spelling] == nil else { return false }
+
+        var end: String.UTF8View.Index? = bytes.endIndex
+
+        while let at = end {
+            let (segment, rest) = Name.segment(of: bytes, endingAt: at)
+
+            guard Name.isIdentifier(bytes[segment]) else { return false }
+
+            end = rest
+        }
+
+        return true
     }
 
     // This name without whatever qualified it: `std.logic.equal` is `equal`.
@@ -67,13 +76,26 @@ public struct Name: Sendable, Hashable, Comparable {
     // into one character.
     public var unqualified: Name {
         let bytes = spelling.utf8
+        var end = bytes.endIndex
 
-        guard let last = Name.segments(of: bytes).last(where: { segment in !segment.isEmpty }) else { return self }
-        guard last.lowerBound > bytes.startIndex || last.upperBound < bytes.endIndex else { return self }
+        while true {
+            let (segment, rest) = Name.segment(of: bytes, endingAt: end)
 
-        // Cut in the view it was scanned in. A dot is a starter and combines
-        // with nothing, so a segment of a spelling in normal form is normal.
-        return Name(normal: String(decoding: bytes[last], as: UTF8.self))
+            guard segment.isEmpty else {
+                guard segment.lowerBound > bytes.startIndex || segment.upperBound < bytes.endIndex else {
+                    return self
+                }
+
+                // Cut in the view it was scanned in. A dot is a starter and
+                // combines with nothing, so a segment of a spelling in normal
+                // form is normal.
+                return Name(normal: String(decoding: bytes[segment], as: UTF8.self))
+            }
+
+            guard let rest else { return self }
+
+            end = rest
+        }
     }
 
     // MARK: - Initializer
@@ -136,31 +158,28 @@ public struct Name: Sendable, Hashable, Comparable {
     // MARK: - Private
     private static let dot = UInt8(ascii: ".")
 
-    // Where each segment of a dotted spelling stands, in the order they are
-    // written. Every reading of a name reads its bytes, and where a name
-    // breaks into segments is one of those readings: a dot is a dot wherever
-    // it stands, including where the scalar after it combines with it into
-    // one character.
+    // The segment of a dotted spelling ending where the caller says, beside
+    // where the one before it ends. Nothing where that segment is the first,
+    // so a caller steps from the end until it stops.
     //
-    // A dot at either end stands for an empty segment, which is no
-    // identifier and no name.
-    private static func segments(of bytes: String.UTF8View) -> [Range<String.UTF8View.Index>] {
-        var found: [Range<String.UTF8View.Index>] = []
-        var start = bytes.startIndex
-        var at = bytes.startIndex
+    // Every reading of a name reads its bytes, and where a name breaks into
+    // segments is one of those readings: a dot is a dot wherever it stands,
+    // including where the scalar after it combines with it into one character.
+    // A dot at either end stands for an empty segment, which is no identifier
+    // and no name.
+    private static func segment(
+        of bytes: String.UTF8View,
+        endingAt end: String.UTF8View.Index
+    ) -> (segment: Range<String.UTF8View.Index>, rest: String.UTF8View.Index?) {
+        var start = end
 
-        while at < bytes.endIndex {
-            if bytes[at] == dot {
-                found.append(start ..< at)
-                start = bytes.index(after: at)
-            }
-
-            at = bytes.index(after: at)
+        while start > bytes.startIndex, bytes[bytes.index(before: start)] != dot {
+            start = bytes.index(before: start)
         }
 
-        found.append(start ..< bytes.endIndex)
+        guard start > bytes.startIndex else { return (start ..< end, nil) }
 
-        return found
+        return (start ..< end, bytes.index(before: start))
     }
 
     // Fowler-Noll-Vo, folded over the bytes once. What it is for is telling
