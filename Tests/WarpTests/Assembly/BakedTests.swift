@@ -246,6 +246,52 @@ struct BakedTests {
         }
     }
 
+    @Test("a compile handed no native code stands the words it never folds")
+    func aCompileStandsWhatItNeverFolds() throws {
+        // Given. A vocabulary compiled, and a document whose bodies call it
+        // but whose constants fold through nothing.
+        let baked = try linker.compile(Module.standard)
+
+        // When / Then. What a compile runs is what it folds, so a document
+        // folding nothing needs no code behind the words it calls.
+        #expect(throws: Never.self) {
+            try linker.compile([try adding(1)], against: baked, supplying: .none)
+        }
+    }
+
+    @Test("a constant folding through a word no code was brought for is refused")
+    func aFoldThroughAnUnbroughtWordIsRefused() throws {
+        // Given. A vocabulary compiled, and a document whose constant runs one
+        // of its words.
+        let baked = try linker.compile(Module.standard)
+        let arriving = try Module(
+            imports: ["std.math.plus"],
+            constants: [
+                "app.two": .call(
+                    Call(
+                        selector: "std.math.plus",
+                        arguments: ["of": .literal(.int(1)), "value": .literal(.int(1))]
+                    )
+                )
+            ],
+            procedures: [
+                "app.main": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: reference("app.two")
+                )
+            ]
+        )
+
+        // When / Then.
+        #expect {
+            try linker.compile([arriving], against: baked, supplying: .none)
+        } throws: { error in
+            "\(error)".contains("'std.math.plus' is implemented in native code")
+                && "\(error)".contains("this compile was handed none")
+        }
+    }
+
     // MARK: - Private
     private var entry: Name { "app.add1" }
 

@@ -88,7 +88,7 @@ struct Compiling {
         for (origin, document) in compiled.enumerated() {
             let standing = document.shapeNumbering.rows(in: types.shapes)
             let rows = try document.table.map { judged -> Linked in
-                let row = try judged.lowered(
+                let row = try judged.folding(
                     in: types.shapes,
                     of: origin,
                     supplied: supplied,

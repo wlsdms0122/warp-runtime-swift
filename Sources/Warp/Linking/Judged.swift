@@ -84,12 +84,41 @@ struct Judged: Sendable {
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
+        try lowered(in: table, of: origin, supplied: supplied, at: document, standing: false)
+    }
+
+    // The same, where a row the supply brings no code for stands as the
+    // refusal it earns instead of stopping here. A compile runs a word only
+    // where it folds a constant through it, so what it never folds it never
+    // needed; a link states what the whole run may call, and asks for all of
+    // it.
+    func folding(
+        in table: ShapeTable,
+        of origin: Int,
+        supplied: Supplying,
+        at document: Place.Document
+    ) throws -> Linked {
+        try lowered(in: table, of: origin, supplied: supplied, at: document, standing: true)
+    }
+
+    // MARK: - Private
+    private func lowered(
+        in table: ShapeTable,
+        of origin: Int,
+        supplied: Supplying,
+        at document: Place.Document,
+        standing: Bool
+    ) throws -> Linked {
         switch implementation {
         case let .body(body, frame):
             return row(.body(body, frame), of: origin, in: table)
 
         case let .native(sending):
-            guard let brought = supplied[label] else { throw self.brought(nothing: document) }
+            guard let brought = supplied[label] else {
+                guard standing else { throw self.brought(nothing: document) }
+
+                return row(.query(UnbroughtWord(label)), of: origin, in: table)
+            }
 
             // A word declares its own purity, isolation, failing and the
             // places it sends at, and the module bringing it declares what it
@@ -110,7 +139,6 @@ struct Judged: Sendable {
         }
     }
 
-    // MARK: - Private
     private func row(
         _ implementation: Linked.Implementation,
         of origin: Int,
