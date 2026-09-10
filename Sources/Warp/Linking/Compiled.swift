@@ -17,7 +17,7 @@ import Foundation
 // Which declaration a run starts from is not here either, so an entry names
 // nothing in this and one document compiled once answers every entry asked
 // of it.
-struct Compiled: Sendable, Declaring {
+public struct Compiled: Sendable, Declaring {
     // Which document this is, so a refusal a link makes about it says
     // where the words are.
     let document: Place.Document

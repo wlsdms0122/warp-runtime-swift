@@ -66,6 +66,45 @@ public struct Linker: Sendable {
         try link(compile(modules, in: gathering(of: modules)), entry: entry)
     }
 
+    // Documents compiled and handed back, for a caller that means to link
+    // them more than once.
+    //
+    // A link does two things: it works out what each document says, and it
+    // lays the documents down together. The first is a function of the
+    // document and of what it reaches, so a caller holding the answer can hand
+    // it over instead of asking for it again. The vocabulary a host brings is
+    // the same documents every run, and this is how it stops paying for them
+    // every run.
+    //
+    // The order is worked out here. What a document reaches is read off the
+    // words it sends, the spellings its paths step to and the shapes its
+    // signatures name, none of which a caller wrote down, so a caller has
+    // nothing to sort by.
+    //
+    // `compiled` is what the caller already holds, and the documents given
+    // here are compiled against it. A word a document sends is answered by
+    // either, and one that nothing here answers is refused where it is sent.
+    public func compile(_ modules: [Module], against compiled: [Compiled] = []) throws -> [Compiled] {
+        try once(modules)
+
+        let standing = try ModuleGraph(modules).standing
+        var laid = compiled
+
+        for origin in standing {
+            laid.append(try compile(modules[origin], against: laid))
+        }
+
+        // Back in the order the documents were handed over, past the ones the
+        // caller already had. A document says nothing about where it stands.
+        var ordered = Array(laid.dropFirst(compiled.count))
+
+        for (position, origin) in standing.enumerated() {
+            ordered[origin] = laid[compiled.count + position]
+        }
+
+        return compiled + ordered
+    }
+
     // MARK: - Internal
     // Everything the documents settle on their own. No entry reaches in here:
     // what a document says has to hold whichever declaration a run starts
@@ -566,7 +605,7 @@ public struct Linker: Sendable {
     // Which row a run starts from, and which declarations it reaches. Nothing
     // is judged and nothing runs: every declaration stands judged already, and
     // the answer is read off the call graph the judgment gathered.
-    func link(_ compiled: [Compiled], entry: Name) throws -> Image {
+    public func link(_ compiled: [Compiled], entry: Name) throws -> Image {
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
         let assembled = Assembled(compiled)
