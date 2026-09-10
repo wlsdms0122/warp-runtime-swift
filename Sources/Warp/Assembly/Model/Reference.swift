@@ -32,8 +32,10 @@ enum Reference: Hashable, Sendable, Comparable {
         }
     }
 
-    // What a sentence calls this kind where it names one.
-    var spelled: String {
+    // The noun for this kind, where a sentence names one. Not `spelled`: that
+    // word is what a place or a declaration answers with the phrase a reader
+    // sees, and this is the kind rather than the thing.
+    var kind: String {
         switch self {
         case .word: "word"
         case .shape: "shape"

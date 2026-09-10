@@ -67,7 +67,7 @@ public struct Catalogue: Sendable {
                 }
 
                 throw CatalogueError(
-                    "the \(declaration.reference.spelled) '\(declaration.reference.name)' is declared by"
+                    "the \(declaration.reference.kind) '\(declaration.reference.name)' is declared by"
                         + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
                         + " \(Place.Document.of(module).spelled(at: position)) in this"
                         + " catalogue, so there is no answer to which one supplies it."
