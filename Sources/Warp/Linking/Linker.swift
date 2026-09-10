@@ -246,7 +246,7 @@ public struct Linker: Sendable {
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.
         func frame() -> TypeFrame {
-            compiling.frame(stepping: reached, reading: reading, writing: requiring)
+            compiling.frame(stepping: reached, reading: reading)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -312,7 +312,8 @@ public struct Linker: Sendable {
                     in: opening(declaration.signature),
                     with: frame(),
                     folding: folding,
-                    origin: origin
+                    origin: origin,
+                    writing: requiring
                 )
 
                 answer = (
@@ -327,7 +328,7 @@ public struct Linker: Sendable {
 
             resolvedBodies[symbol.declared] = answer
 
-            try checked(answer.calls, in: frame())
+            try checked(answer.calls, in: frame(), writing: requiring)
 
             // Read off the body the link is about to lower, so what is proven
             // is what runs. The environment is the one the body was judged in.
@@ -448,6 +449,7 @@ public struct Linker: Sendable {
             at: origin,
             folding: compiling.folding(),
             writing: &compiling.lowering,
+            leaning: requiring,
             in: frame()
         )
 
@@ -457,6 +459,7 @@ public struct Linker: Sendable {
             beside: constants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
+            leaning: requiring,
             in: frame()
         )
 

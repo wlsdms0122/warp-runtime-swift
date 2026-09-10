@@ -12,9 +12,9 @@ import Foundation
 // one kept, so a document handing the same pair in a dozen bodies points at
 // one of them.
 //
-// A walk that reads a body rather than judging it is handed no ledger at all,
-// which is `TypeFrame.probing`. What such a walk concludes is not what the
-// document says.
+// A walk that reads a body rather than judging it has none of these: the ask
+// it walks under carries the ledger, and reading carries no ask that holds
+// one. What such a walk concludes is not what the document says.
 final class Requiring: @unchecked Sendable {
     // MARK: - Property
     // A `TypeFrame` is `Sendable` and this rides one.

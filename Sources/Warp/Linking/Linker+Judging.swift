@@ -16,7 +16,7 @@ extension Linker {
     // The one gate every gathered call passes, wherever its body sits. A
     // procedure, a word, a constant's closure. The call carries the declaration
     // the walk found for it, and is judged against that.
-    func checked(_ calls: [CallSite], in frame: TypeFrame) throws {
+    func checked(_ calls: [CallSite], in frame: TypeFrame, writing requiring: Requiring) throws {
         for call in calls {
             guard let callee = frame.declared(call.callee) else {
                 throw LinkError.unjudged(
@@ -25,7 +25,7 @@ extension Linker {
                 )
             }
 
-            try check(call, against: callee, with: frame)
+            try check(call, against: callee, with: frame, writing: requiring)
         }
     }
 
@@ -462,7 +462,8 @@ extension Linker {
     private func check(
         _ site: CallSite,
         against callee: Linked,
-        with frame: TypeFrame
+        with frame: TypeFrame,
+        writing requiring: Requiring
     ) throws {
         let call = site.call
         let shapes = frame.shapes
@@ -506,7 +507,7 @@ extension Linker {
                 in: shapes
             ),
             in: shapes,
-            requiring: frame.requiring,
+            requiring: requiring,
             at: site.place
         ) {
         case let .refusal(reason):

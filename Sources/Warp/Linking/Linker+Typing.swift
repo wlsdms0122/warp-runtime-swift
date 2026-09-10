@@ -58,7 +58,7 @@ extension Linker {
             block: block,
             at: place,
             in: environment,
-            with: frame.probing,
+            with: frame,
             ask: .reading
         )
 
@@ -75,14 +75,15 @@ extension Linker {
         in environment: [Name: Shape],
         with frame: TypeFrame,
         folding: Folding?,
-        origin: Int? = nil
+        origin: Int? = nil,
+        writing requiring: Requiring
     ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
             block: block,
             at: place,
             in: environment,
             with: frame,
-            ask: .judging(folding: folding, origin: origin)
+            ask: .judging(folding: folding, origin: origin, writing: requiring)
         )
 
         return (inner.block, inner.calls)
@@ -94,14 +95,15 @@ extension Linker {
         at place: Place,
         in environment: [Name: Shape],
         with frame: TypeFrame,
-        folding: Folding?
+        folding: Folding?,
+        writing requiring: Requiring
     ) throws -> (Expression, [CallSite]) {
         let inner = try inspected(
             expression,
             at: place,
             in: environment,
             with: frame,
-            ask: .judging(folding: folding)
+            ask: .judging(folding: folding, writing: requiring)
         )
 
         return (inner.rewritten, inner.calls)
@@ -326,12 +328,13 @@ extension Linker {
         of path: [PathSegment],
         in environment: [Name: Shape],
         with frame: TypeFrame,
-        at place: Place
+        at place: Place,
+        writing requiring: Requiring?
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
         guard case let .key(head, _)? = path.first, var current = environment[head] else {
-            return asWritten(path, in: environment, with: frame, at: place)
+            return asWritten(path, in: environment, with: frame, at: place, writing: requiring)
         }
 
         // A box stands in the environment marked as one; what is read out of
@@ -430,7 +433,7 @@ extension Linker {
                 // `held.count`), and the field it lands on is the same field
                 // either way.
                 if let reached = current.reaching([segment] + rest()) {
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place) {
+                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -444,7 +447,7 @@ extension Linker {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place) {
+                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -465,7 +468,7 @@ extension Linker {
                         break
                     }
 
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place) {
+                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -522,7 +525,7 @@ extension Linker {
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
             case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: frame, at: place) {
+                switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -540,7 +543,7 @@ extension Linker {
             // Bytes are an array of bytes in a compact spelling, so an index
             // reads one. A `byte`, the range `std` names.
             case let (.indexRef(inner, optionally), .bytes):
-                switch indexReference(inner, in: environment, with: frame, at: place) {
+                switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -606,7 +609,7 @@ extension Linker {
             case let (.key(key, _), _), let (.word(key, _), _):
                 if let refusal = needless(.word(key)) { return refusal }
 
-                switch reached(key, on: current, walked: walked, with: frame, at: place) {
+                switch reached(key, on: current, walked: walked, with: frame, at: place, writing: requiring) {
                 case let .answers(answered):
                     current = answered
                     resolved.append(.word(key, optional: segment.optional))
@@ -630,7 +633,8 @@ extension Linker {
         _ segments: [PathSegment],
         in environment: [Name: Shape],
         with frame: TypeFrame,
-        at place: Place
+        at place: Place,
+        writing requiring: Requiring?
     ) -> PathReading {
         var judged: [PathSegment] = []
 
@@ -641,7 +645,7 @@ extension Linker {
                 continue
             }
 
-            switch indexReference(inner, in: environment, with: frame, at: place) {
+            switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
             case let .refused(reason):
                 return .refused(reason)
 
@@ -669,9 +673,10 @@ extension Linker {
         _ inner: [PathSegment],
         in environment: [Name: Shape],
         with frame: TypeFrame,
-        at place: Place
+        at place: Place,
+        writing requiring: Requiring?
     ) -> IndexReading {
-        switch reading(of: inner, in: environment, with: frame, at: place) {
+        switch reading(of: inner, in: environment, with: frame, at: place, writing: requiring) {
         case let .refused(reason):
             return .refused(reason)
 
@@ -781,7 +786,8 @@ extension Linker {
         on current: Shape,
         walked: [PathSegment],
         with frame: TypeFrame,
-        at place: Place
+        at place: Place,
+        writing requiring: Requiring?
     ) -> WordReach {
         guard let signature = frame.signature(reachedBy: key) else {
             return .refused(
@@ -829,7 +835,7 @@ extension Linker {
             answering: frame.answer(reachedBy: key),
             filledWith: Bound(readings: readings, disagreeing: disagreeing),
             in: frame.shapes,
-            requiring: frame.requiring,
+            requiring: requiring,
             at: place
         ) {
         case let .refusal(reason):
@@ -930,8 +936,16 @@ extension Linker {
         // Judging carries which module the body being judged was declared
         // in, where it was declared in one; a constant's expression has no
         // module to read its variables by.
-        case judging(folding: Folding?, origin: Int? = nil)
+        case judging(folding: Folding?, origin: Int? = nil, writing: Requiring? = nil)
         case reading
+
+        // Where a walk writes down the pairs its calls lean on. A walk that
+        // reads rather than judges has none, so a probe cannot write.
+        var requiring: Requiring? {
+            guard case let .judging(_, _, requiring) = self else { return nil }
+
+            return requiring
+        }
 
         // Whether this ask keeps what the walk rebuilds. Reading reads a body
         // out of place or more than once, so it hands the expression back as
@@ -1031,14 +1045,14 @@ extension Linker {
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
-            switch reading(of: path, in: environment, with: frame, at: place) {
+            switch reading(of: path, in: environment, with: frame, at: place, writing: ask.requiring) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
 
                 return Inspection(rewritten: expression, reading: .any)
 
             case let .reads(resolved, read):
-                guard case let .judging(folding, _) = ask else {
+                guard case let .judging(folding, _, _) = ask else {
                     return Inspection(rewritten: expression, reading: read)
                 }
 
@@ -1291,7 +1305,7 @@ extension Linker {
 
             var reading: Set<Name> = []
 
-            if case .judging(_, _?) = ask {
+            if case .judging(_, _?, _) = ask {
                 reading = frame.variables
             }
 
@@ -1626,7 +1640,7 @@ extension Linker {
                     body.body,
                     at: place.part(.body),
                     in: entry,
-                    with: frame.probing,
+                    with: frame,
                     ask: .reading
                 )
 
@@ -1779,7 +1793,7 @@ extension Linker {
 
         switch frame.shapes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
-            frame.requiring?.require(
+            ask.requiring?.require(
                 Claim(type: type, contract: asked.contract),
                 at: place.part(.receiver)
             )
@@ -2462,7 +2476,8 @@ extension Linker {
         _ path: [PathSegment],
         in environment: [Name: Shape],
         with frame: TypeFrame,
-        at place: Place
+        at place: Place,
+        writing requiring: Requiring?
     ) -> Writable {
         guard case let .key(head, _)? = path.first, let box = environment[head] else {
             return .refused("writes '\(path.rendered)', and its head is not a name here")
@@ -2491,7 +2506,7 @@ extension Linker {
             }
 
             if case let .indexRef(inner, _) = segment {
-                if case let .refused(reason) = indexReference(inner, in: environment, with: frame, at: place) {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
                     return .refused(reason)
                 }
             }
@@ -2599,7 +2614,7 @@ extension Linker {
                 continue
             }
 
-            if case let .refused(reason) = writable(path, in: environment, with: frame, at: at) {
+            if case let .refused(reason) = writable(path, in: environment, with: frame, at: at, writing: ask.requiring) {
                 try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
         }
@@ -2647,7 +2662,7 @@ extension Linker {
         if path.count == 1, let fixed {
             slot = fixed
         } else {
-            switch writable(path, in: environment, with: frame, at: place) {
+            switch writable(path, in: environment, with: frame, at: place, writing: ask.requiring) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
                 return

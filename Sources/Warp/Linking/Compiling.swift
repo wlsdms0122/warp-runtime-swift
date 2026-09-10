@@ -230,11 +230,7 @@ struct Compiling {
 
     // One document's reading. What a path may walk to is the document's own,
     // so a frame is made for the document whose body is being read.
-    func frame(
-        stepping words: [Name: Name],
-        reading variables: Set<Name>,
-        writing requiring: Requiring
-    ) -> TypeFrame {
+    func frame(stepping words: [Name: Name], reading variables: Set<Name>) -> TypeFrame {
         TypeFrame(
             types: types,
             linked: lowering.table,
@@ -245,8 +241,7 @@ struct Compiling {
             isolated: isolated,
             failing: failing,
             contractWords: contractWords,
-            variables: variables,
-            requiring: requiring
+            variables: variables
         )
     }
 

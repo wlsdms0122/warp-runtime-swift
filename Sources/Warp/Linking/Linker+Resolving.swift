@@ -358,6 +358,7 @@ extension Linker {
         at origin: Int,
         folding answered: Answered,
         writing lowering: inout Lowering,
+        leaning requiring: Requiring,
         in frame: TypeFrame
     ) throws -> [Name: Value] {
         // Folding runs what it reads, and running reads rows. A lowered body
@@ -385,13 +386,14 @@ extension Linker {
                 at: .constant(name.spelling, in: .of(module)),
                 in: known.mapValues { value in type(of: value, in: frame.shapes) },
                 with: frame,
-                folding: nil
+                folding: nil,
+                writing: requiring
             )
 
             // A closure a constant holds runs later, so evaluating the
             // constant proves nothing about the sends inside it. They pass
             // the same gate every gathered call does.
-            try checked(calls, in: frame)
+            try checked(calls, in: frame, writing: requiring)
 
             do {
                 known[name] = try Folding(
@@ -425,6 +427,7 @@ extension Linker {
         beside known: [Name: Value],
         folding answered: Answered,
         writing lowering: inout Lowering,
+        leaning requiring: Requiring,
         in frame: TypeFrame
     ) throws -> [Name: Value] {
         guard !module.variables.isEmpty else { return [:] }
@@ -437,10 +440,11 @@ extension Linker {
                 at: .variable(name.spelling, in: .of(module)),
                 in: known.mapValues { value in type(of: value, in: frame.shapes) },
                 with: frame,
-                folding: nil
+                folding: nil,
+                writing: requiring
             )
 
-            try checked(calls, in: frame)
+            try checked(calls, in: frame, writing: requiring)
 
             do {
                 started[name] = try Folding(
