@@ -24,7 +24,7 @@ struct BakedTests {
 
         // When. The document that arrives is the only one compiled.
         let image = try linker.link(
-            try linker.compile([arriving], against: baked),
+            baked + (try linker.compile([arriving], against: baked)),
             entry: entry
         )
 
@@ -58,11 +58,12 @@ struct BakedTests {
         )
 
         // When.
+        let baked = try linker.compile(Module.standard)
         let compiled = try linker.compile(
             [reaching, try adding(1, called: "app.add1")],
-            against: try linker.compile(Module.standard)
+            against: baked
         )
-        let image = try linker.link(compiled, entry: "app.twice")
+        let image = try linker.link(baked + compiled, entry: "app.twice")
 
         // Then.
         #expect(try await Executor().run(image, arguments: ["value": .int(40)]) == .int(42))

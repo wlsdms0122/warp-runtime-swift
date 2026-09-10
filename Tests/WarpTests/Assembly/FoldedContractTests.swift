@@ -61,7 +61,7 @@ struct FoldedContractTests {
             var compiled: [Compiled] = []
 
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(try Linker().compile(modules[origin], against: compiled))
+                compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled))
             }
         } throws: { error in
             "\(error)".contains("string does not answer every word 'app.Describable' asks")
@@ -93,7 +93,7 @@ struct FoldedContractTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(try Linker().compile(modules[origin], against: compiled))
+            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled))
         }
 
         // Then. The pair the fold handed over is answered by the list, which

@@ -325,7 +325,7 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(try linker.compile(modules[origin], against: compiled))
+            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled))
         }
 
         _ = try linker.link(compiled, entry: entryName)
@@ -362,7 +362,7 @@ struct CompiledTests {
 
         #expect(throws: Never.self) {
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(try linker.compile(modules[origin], against: compiled))
+                compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled))
             }
         }
 
@@ -423,7 +423,7 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(try linker.compile(modules[origin], against: compiled))
+            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled))
         }
 
         // Then. It links, and refusing a claim as unanswered is the whole
@@ -623,7 +623,7 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(try linker.compile(modules[origin], against: compiled))
+            compiled.append(contentsOf: try linker.compile([modules[origin]], against: compiled))
         }
 
         // Then. The image runs to what the whole graph compiled at once
@@ -676,12 +676,12 @@ struct CompiledTests {
         )
 
         // When. The first is compiled, the second against it.
-        let compiled = [try linker.compile(first, against: [])]
+        let compiled = try linker.compile([first])
 
         // Then. Two declarations of a name have no way to be told apart,
         // whether the link reads them together or one after the other.
         #expect(throws: LinkError.self) {
-            try linker.compile(second, against: compiled)
+            try linker.compile([second], against: compiled)
         }
     }
 

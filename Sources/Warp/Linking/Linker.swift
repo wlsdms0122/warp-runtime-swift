@@ -88,21 +88,18 @@ public struct Linker: Sendable {
         try once(modules)
 
         let standing = try ModuleGraph(modules).standing
-        var laid = compiled
+        let laid = try compile(modules, at: standing, against: compiled)
 
-        for origin in standing {
-            laid.append(try compile(modules[origin], against: laid))
-        }
-
-        // Back in the order the documents were handed over, past the ones the
-        // caller already had. A document says nothing about where it stands.
-        var ordered = Array(laid.dropFirst(compiled.count))
+        // Back in the order the documents were handed over. A document says
+        // nothing about where it stands, so the order a link reads them in is
+        // the caller's.
+        var ordered = laid
 
         for (position, origin) in standing.enumerated() {
-            ordered[origin] = laid[compiled.count + position]
+            ordered[origin] = laid[position]
         }
 
-        return compiled + ordered
+        return ordered
     }
 
     // MARK: - Internal
@@ -161,9 +158,9 @@ public struct Linker: Sendable {
     // What the list answers is read again, since the shape spaces of a link
     // are its documents' together and this document was not in the ones the
     // others were compiled against.
-    func compile(_ module: Module, against compiled: [Compiled]) throws -> Compiled {
-        let origin = compiled.count
-        let documents: [any Declaring] = compiled + [module]
+    func compile(_ modules: [Module], at standing: [Int], against compiled: [Compiled]) throws -> [Compiled] {
+        let laying = standing.map { position in modules[position] }
+        let documents: [any Declaring] = compiled + laying
         let declared = try declared(in: documents)
 
         let declaring = try types(
@@ -175,19 +172,17 @@ public struct Linker: Sendable {
             numbered: Linkage()
         )
 
-        try judge([module], in: declaring)
+        try judge(laying, in: declaring)
 
-        // Every declaration this document is compiled beside, by the spelling
-        // it was declared by: what the documents behind it left on their rows,
-        // and what it wrote itself. A name two of them declare is refused
-        // here, for the same reason two `.c` files cannot both define a
-        // symbol.
+        // Every declaration these documents are compiled beside, by the
+        // spelling it was declared by: what the documents behind them left on
+        // their rows, and what they wrote themselves. A name two of them
+        // declare is refused here, for the same reason two `.c` files cannot
+        // both define a symbol.
         //
         // Refused rather than taken as the caller's statement, which the order
         // is: a doubled spelling is not a question of which document to read
-        // first, it is a table with no answer for that name. A ring and a
-        // document handed over twice are the order's, and this is handed an
-        // order that was worked out already.
+        // first, it is a table with no answer for that name.
         var signatures: [Name: Declared<Signature>] = [:]
 
         for (position, document) in compiled.enumerated() {
@@ -200,34 +195,38 @@ public struct Linker: Sendable {
             }
         }
 
-        let symbols = try self.symbols(of: [module]).map { symbol in
-            Symbol(
-                declared: symbol.declared,
-                document: symbol.document,
-                origin: origin,
-                procedure: symbol.procedure
-            )
-        }
-
-        for symbol in symbols {
-            if let first = signatures[symbol.declared] {
-                throw LinkError(
-                    "'\(symbol.declared)' is declared by \(first.spelled), which this"
-                        + " document is compiled against, and by \(symbol.spelled)."
-                        + " Two declarations of a name have no way to be told apart",
-                    at: symbol.place
+        let holding = try laying.enumerated().map { offset, module in
+            try self.symbols(of: [module]).map { symbol in
+                Symbol(
+                    declared: symbol.declared,
+                    document: symbol.document,
+                    origin: compiled.count + offset,
+                    procedure: symbol.procedure
                 )
             }
-
-            signatures[symbol.declared] = Declared(
-                symbol.procedure.signature,
-                at: symbol.place,
-                of: origin
-            )
         }
 
-        // The document's own ledger, woven into the table its rows are built
-        // from. A body folded here runs against a table that cannot settle a
+        for symbols in holding {
+            for symbol in symbols {
+                if let first = signatures[symbol.declared] {
+                    throw LinkError(
+                        "'\(symbol.declared)' is declared by \(first.spelled) and by"
+                            + " \(symbol.spelled). Two declarations of a name have no way"
+                            + " to be told apart",
+                        at: symbol.place
+                    )
+                }
+
+                signatures[symbol.declared] = Declared(
+                    symbol.procedure.signature,
+                    at: symbol.place,
+                    of: symbol.origin
+                )
+            }
+        }
+
+        // The compile's ledger, woven into the table its rows are built from.
+        // A body folded here runs against a table that cannot settle a
         // contract, and what it hands over is written here rather than passed
         // over.
         let requiring = Requiring()
@@ -249,7 +248,15 @@ public struct Linker: Sendable {
             naming: documents.map(\.document)
         )
 
-        return try compile(module, at: origin, declaring: symbols, in: &compiling, writing: requiring)
+        return try laying.indices.map { offset in
+            try compile(
+                laying[offset],
+                at: compiled.count + offset,
+                declaring: holding[offset],
+                in: &compiling,
+                writing: requiring
+            )
+        }
     }
 
     // One document compiled against what stands before it, and what it proves

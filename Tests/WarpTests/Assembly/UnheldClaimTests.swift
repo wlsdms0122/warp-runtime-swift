@@ -282,7 +282,7 @@ struct UnheldClaimTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(try Linker().compile(modules[origin], against: compiled))
+            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled))
         }
 
         #expect(throws: Never.self) { try Linker().link(compiled, entry: entryName) }
