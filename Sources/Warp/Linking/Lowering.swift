@@ -499,7 +499,7 @@ struct Lowering {
             let inner = Slots(origin: slots.origin, variables: slots.variables, outer: (slots, scope))
             var innerScope = Names()
 
-            for name in procedure.signature.parameters.keys.sorted() {
+            for name in procedure.signature.ordered {
                 innerScope.slots[name] = inner.allocateParameter(name)
             }
 

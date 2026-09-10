@@ -35,6 +35,20 @@ public struct Signature: Sendable, Equatable {
     // say.
     public let returns: TypeExpression?
 
+    // Which of two parameters stands first among the arguments a call writes.
+    // A document writes parameters as a record, so a declaration says which
+    // ones there are and nothing about their order. This is the rule that
+    // gives them one, and every place that puts a declaration's parameters in
+    // order asks it.
+    static func stands(_ left: Name, before right: Name) -> Bool {
+        left < right
+    }
+
+    // The declared names in that order.
+    var ordered: [Name] {
+        parameters.keys.sorted(by: Signature.stands)
+    }
+
     // MARK: - Initializer
     public init(
         receiver: Name? = nil,
@@ -92,7 +106,7 @@ public struct Signature: Sendable, Equatable {
     func lowered(in table: ShapeTable) -> [Slot] {
         var slots = parameters.map { name, parameter in parameter.lowered(named: name, in: table) }
 
-        slots.sort { left, right in left.name < right.name }
+        slots.sort { left, right in Signature.stands(left.name, before: right.name) }
 
         return slots
     }
@@ -104,7 +118,7 @@ public struct Signature: Sendable, Equatable {
     func lowered(in table: ShapeTable, filling bound: [Name: Shape]) -> [Slot] {
         var slots = parameters.map { name, parameter in parameter.lowered(named: name, in: table, filling: bound) }
 
-        slots.sort { left, right in left.name < right.name }
+        slots.sort { left, right in Signature.stands(left.name, before: right.name) }
 
         return slots
     }

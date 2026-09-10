@@ -71,7 +71,7 @@ extension TypeExpression {
                         mustBeGiven: shape.mustBeGiven(default: parameter.default, in: table)
                     )
                 }
-                .sorted { left, right in left.name < right.name },
+                .sorted { left, right in Signature.stands(left.name, before: right.name) },
                 returns: signature?.returns?.lowered(in: table),
                 purity: purity,
                 isolation: isolation
