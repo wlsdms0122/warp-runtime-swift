@@ -39,8 +39,7 @@ struct Compiled: Sendable, Declaring {
     // Unresolved here, the way a word this document sends and does not declare
     // is unresolved. Which types answer a contract is read off the claims of
     // the whole list, and a claim may be written in a document this one never
-    // names, so a compile writes down what it leaned on and the link answers
-    // for it.
+    // names.
     let requiring: [Claim: Place]
 
     // The declared spellings, in the order their rows stand. A row past

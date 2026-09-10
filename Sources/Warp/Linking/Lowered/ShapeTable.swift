@@ -51,10 +51,10 @@ final class ShapeTable: Sendable {
     // document declared as a contract at all.
     let satisfying: [Name: Set<Name>]
 
-    // Whether the claims behind that table were the whole list's. A document
-    // compiled against what stands before it reads a table built from those
-    // documents alone, and a claim it never saw may be what answers. Such a
-    // table says it cannot settle a contract rather than settling it wrongly.
+    // Whether the claims above are the whole list's. A document compiled
+    // against what stands before it reads a table built from those documents
+    // alone, and a claim it never saw may be what answers, so such a table
+    // answers nothing about a contract.
     let settled: Bool
 
     private let rows: [Name: Int]
@@ -116,9 +116,8 @@ final class ShapeTable: Sendable {
     // constraint answers nil: what an undeclared name means is the asking
     // surface's.
     //
-    // For a value already in hand and nothing else. A reading before the run
-    // is not a name yet, and asking this of one would settle here what the
-    // whole list settles.
+    // For a value already in hand and nothing else: a reading before the run
+    // is not a name yet.
     func settles(contract name: Name, arrived type: Name?) -> Bool? {
         guard settled, let members = satisfying[name] else { return nil }
         guard let type else { return false }
@@ -126,16 +125,10 @@ final class ShapeTable: Sendable {
         return members.contains(type)
     }
 
-    // What a reading standing where a contract is asked comes to.
-    //
-    // Two answers, not a yes and a no. What the shape alone settles is settled
-    // here, and a named type settles nothing: which types answer a contract is
-    // read off the claims, and a claim may be written in a document the one
-    // asking never names. So the name comes back instead of a verdict and the
-    // asker writes it down.
-    //
-    // One machine, so a surface added later cannot judge a named reading here
-    // and reach the old answer.
+    // What a reading standing where a contract is asked comes to. What the
+    // shape alone settles is settled here; a named type settles nothing,
+    // since which types answer a contract is read off the claims of the whole
+    // list, so the name comes back and the asker writes it down.
     enum Answering {
         case settled(Bool)
         case leansOn(Name)

@@ -19,17 +19,12 @@ import Foundation
 // until some document says otherwise, so what a link declares does not decide
 // what an unrelated document may call things.
 //
-// A claim that does not hold puts its type under no contract, and what happens
-// then depends on whether another document could put it right.
-//
-// A name declared as a membership is not going to become a contract: one name
-// has one declarer, so nothing added later changes that answer, and the claim
-// is refused where it is written. A word that is missing is a different thing
-// entirely, since the document declaring it may simply not be in this list. A
-// list is assembled from what a host was willing to supply, and one of its
-// documents saying something this list cannot make good on says nothing about
-// a program that never handed that type where that contract was asked. So that
-// reason waits beside the claim for whoever leans on the pair.
+// A claim that does not hold puts its type under no contract, and where that
+// is refused turns on whether another document could put it right. A name this
+// list declares as a membership never becomes a contract, so the claim is
+// refused where it is written. A word nothing declares may be in a document
+// this list does not hold, so that reason waits beside the claim and is said
+// to whoever leans on the pair.
 //
 // Every claim is read, not the reached ones, the way purity is worked out over
 // every declaration. A slot bounded by a contract may be filled by a type no
@@ -40,9 +35,8 @@ extension Linker {
     // the type that satisfies it, and beside it the reason each claim that did
     // not hold does not.
     //
-    // The run reads a row out of the first by the receiver's own name, so what
-    // is gathered there is the whole of what a call the link cannot settle
-    // will need, and a type standing in it has every word behind it.
+    // The run reads a row out of the first by the receiver's own name, and a
+    // type standing in it has every word behind it.
     func witnesses(
         of claims: [Declared<Claim>],
         asking contracts: [Name: Declared<[Name: Signature]>],
@@ -78,11 +72,10 @@ extension Linker {
     //
     // A compile writes these down instead of judging them: which types answer
     // a contract is read off the claims, and a claim may be written in a
-    // document the one leaning on it never names. So the question waits for
-    // the list that holds every claim there is.
+    // document the one leaning on it never names.
     //
     // A claim that was made and did not hold answers with its own reason. The
-    // author wrote the pair down and something behind it is wrong, which is a
+    // pair is written down and something behind it is wrong, which is a
     // different thing to fix from nobody having written it.
     func leaning(
         _ requiring: [Claim: Place],
@@ -108,8 +101,8 @@ extension Linker {
     private enum Holding {
         case holds([Name: Name])
 
-        // The reason and not a refusal. Where a claim that did not hold is
-        // refused is the leaning call's, and this knows only why.
+        // The reason, not a refusal: this does not know the place a refusal
+        // would stand at.
         case waits(String)
     }
 
@@ -130,10 +123,8 @@ extension Linker {
             let reason = "'\(type)' is not a type this link declares, and only a"
                 + " type answers a contract"
 
-            // Declared as something else in this list, which no document
-            // arriving later can undo: one name has one declarer. Anything
-            // else waits, since the document declaring it may simply not be
-            // in this list.
+            // Declared as something else here, which no document arriving
+            // later undoes: one name has one declarer.
             guard contracts[type] == nil, table.constraint(type) == nil else {
                 throw LinkError(reason, at: claim.place)
             }
@@ -166,9 +157,8 @@ extension Linker {
                 )
             }
 
-            // The reason and not a refusal. Where this is refused is the
-            // leaning call's, and a refusal made here would carry the
-            // declaration's place into a sentence that stands somewhere else.
+            // The reason and not a refusal: a refusal renders its own place,
+            // and this sentence stands where the pair was leaned on.
             if let reason = answers(
                 signature,
                 as: witness.held,
@@ -190,8 +180,7 @@ extension Linker {
     //
     // The claim says the declaration was meant to answer, so a signature that
     // misses is a reason the claim does not hold rather than the type quietly
-    // standing outside. A reason and not a refusal: what has to change is this
-    // signature, and where that is said is wherever the pair was leaned on.
+    // standing outside. What has to change is this signature.
     private func answers(
         _ asked: Signature,
         as given: Signature,

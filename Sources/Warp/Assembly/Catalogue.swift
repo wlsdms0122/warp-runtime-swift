@@ -183,18 +183,12 @@ public struct Catalogue: Sendable {
             // A claim about two shapes nothing here pairs is brought as well.
             // Which pairs are really leaned on is read off bodies against the
             // signatures they call, which is a compile's answer and not a
-            // list's, and a table that guessed narrower would leave a link
-            // refusing a pair the host was willing to answer.
+            // list's.
             //
-            // Bringing one this list cannot make good on costs nothing: a
-            // claim whose words are missing puts its type under no contract
-            // and refuses only the program that leans on the pair.
-            //
-            // What it does cost is the link's size, and the price is a
-            // catalogue's claims about names the answer already holds. A host
-            // whose catalogue claims widely about a common vocabulary hands
-            // every link the same crowd, and the way out is a link asking a
-            // compile which pairs were leaned on and closing again on those.
+            // What that costs is the link's size: a host claiming widely about
+            // a common vocabulary hands every link the same crowd. What it
+            // does not cost is a refusal, since a claim whose words are
+            // missing puts its type under no contract.
             for (position, module) in modules.enumerated() {
                 let claiming = module.draft.claiming
 

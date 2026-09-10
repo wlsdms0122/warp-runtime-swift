@@ -7,41 +7,20 @@
 
 import Foundation
 
-// Where a compile writes down the pairs its calls lean on: a type handed where
-// a contract is asked.
+// The pairs one document's calls lean on: a type handed where a contract is
+// asked, and the place it was handed. The first place a pair is seen at is the
+// one kept, so a document handing the same pair in a dozen bodies points at
+// one of them.
 //
-// Held rather than returned. What is gathered here is seen deep inside the
-// reading of a body, and carrying it back up would put a step in every surface
-// that reads one. A surface that forgot the step would lose a pair rather than
-// refuse, and a lost pair is a call nothing holds to anything.
-//
-// Handed to a walk that is judging and withheld from one that is reading. A
-// reading walk is a probe: a loop reads its body until the names settle, and a
-// declaration with no `returns` is read once for its answer and thrown away if
-// it cannot be. What such a walk concludes is not what the document says, and
-// a pair it left here would hold the link to a call the document never makes.
-//
-// Withheld rather than ignored, so a surface reading a body takes one of these
-// or nothing and a probe has none to write to. Nothing here knows which walk
-// is which.
-//
-// The pass that holds a body's gathered calls to their declarations writes
-// here too, and it is handed one without asking what kind of walk it was. It
-// is right to: a probe's calls never reach it. A walk that rewrites gathers a
-// loop's rounds by walking them again rather than taking the probe's, and a
-// walk that does not rewrite has its calls dropped where it is asked for.
-//
-// One of these per document compiled, read back when the walk is done.
+// A walk that reads a body rather than judging it is handed no ledger at all,
+// which is `TypeFrame.probing`. What such a walk concludes is not what the
+// document says.
 final class Requiring: @unchecked Sendable {
     // MARK: - Property
-    // A frame is `Sendable` and this rides one, so what makes that true is
-    // said here rather than assumed of the one walk that writes.
+    // A `TypeFrame` is `Sendable` and this rides one.
     private let lock = NSLock()
     private var held: [Claim: Place] = [:]
 
-    // What the walk wrote down, and where each pair was leaned on. The first
-    // place, so a document with the same pair in a dozen bodies points at one
-    // of them rather than at whichever was read last.
     var claims: [Claim: Place] {
         lock.withLock { held }
     }

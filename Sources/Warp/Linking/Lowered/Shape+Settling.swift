@@ -494,9 +494,8 @@ extension Shape {
         // to satisfy it is what a value may arrive as.
         //
         // One-sided the way every judgment here is. A table that cannot say
-        // which types answer, which is what a document compiled against part
-        // of a list holds, lets the value pass: the pair was written down
-        // where the call was read, and the whole list answers for it.
+        // which types answer lets the value pass, and the pair it was handed
+        // for is written down where the call was read.
         if case let .contract(name)? = bound {
             switch table.settles(contract: name, arrived: value.nominal) {
             case true?, nil:

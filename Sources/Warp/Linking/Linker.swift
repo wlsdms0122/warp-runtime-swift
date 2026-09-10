@@ -232,8 +232,8 @@ public struct Linker: Sendable {
 
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.
-        // What this document leans on, made here so its life is one document
-        // by construction rather than by a reset somebody has to remember.
+        // What this document leans on. One per document, which is why it
+        // stands here rather than beside the tables a compile grows.
         let requiring = Requiring()
 
         func frame() -> TypeFrame {
@@ -618,8 +618,6 @@ public struct Linker: Sendable {
         let types = shaped.types
 
         // What each document leaned on, answered by every claim in the list.
-        // A compile wrote these down rather than judging them, since a claim
-        // it never named may be what answers.
         for document in compiled {
             try leaning(
                 document.requiring,

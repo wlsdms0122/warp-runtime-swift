@@ -130,12 +130,9 @@ extension Linker {
         // answers. Handed on as a list, since a claim declares no name for a
         // table to be keyed by.
         //
-        // A pair two documents claim is folded rather than refused. A claim
-        // holds nothing but the pair, so two of them cannot disagree, and two
-        // libraries each saying a true thing about a type and a contract they
-        // both know is not a collision to make an author resolve. This is
-        // where an inline body's symbol lands in every toolchain that emits
-        // one from more than one place: the second is the first.
+        // A pair two documents claim is one claim. A claim holds nothing but
+        // the pair, so two of them cannot disagree, and the second says what
+        // the first said.
         var claimed: Set<Claim> = []
         var claims: [Declared<Claim>] = []
 

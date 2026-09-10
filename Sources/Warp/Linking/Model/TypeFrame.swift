@@ -67,17 +67,15 @@ struct TypeFrame: Sendable {
     let variables: Set<Name>
 
     // Where this walk writes down the pairs its calls lean on, and nothing
-    // where the walk is a probe. Held by the frame because every surface that
-    // judges a call already has one, and a probe is handed a frame with none
-    // rather than a rule to remember.
+    // where the walk reads rather than judges.
     let requiring: Requiring?
 
     // MARK: - Initializer
     // MARK: - Public
-    // The same frame for a walk that reads rather than judges. A loop reads
-    // its body until the names settle and a declaration with no `returns` is
-    // read once for its answer, and what such a walk concludes is not what the
-    // document says.
+    // The same frame with no ledger, for a walk that reads rather than judges.
+    // A loop reads its body until the names settle and a declaration with no
+    // `returns` is read once for its answer, and what such a walk concludes is
+    // not what the document says.
     var probing: TypeFrame {
         TypeFrame(
             types: types,
