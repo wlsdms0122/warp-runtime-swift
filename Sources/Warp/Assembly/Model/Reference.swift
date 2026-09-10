@@ -24,6 +24,16 @@ enum Reference: Hashable, Sendable, Comparable {
     case shape(Name)
 
     // MARK: - Internal
+    // What a sentence calls this kind where it names one. Not `spelled`: that
+    // word is what a place or a declaration answers with the phrase a reader
+    // sees, and this is the kind rather than the thing.
+    var noun: String {
+        switch self {
+        case .word: "word"
+        case .shape: "shape"
+        }
+    }
+
     // The name itself, for the tables and sentences that want it without the
     // kind.
     var name: Name {

@@ -66,13 +66,8 @@ public struct Catalogue: Sendable {
                     continue
                 }
 
-                let noun = switch declaration.reference {
-                case .word: "word"
-                case .shape: "shape"
-                }
-
                 throw CatalogueError(
-                    "the \(noun) '\(declaration.reference.name)' is declared by"
+                    "the \(declaration.reference.noun) '\(declaration.reference.name)' is declared by"
                         + " \(Place.Document.of(modules[first]).spelled(at: first)) and by"
                         + " \(Place.Document.of(module).spelled(at: position)) in this"
                         + " catalogue, so there is no answer to which one supplies it."
@@ -181,7 +176,11 @@ public struct Catalogue: Sendable {
             // has is a claim this list may be leaning on, and the document
             // making it has to stand in the link for the pair to be answered.
             let named = closed.reduce(into: Set<Name>()) { names, module in
-                names.formUnion(module.draft.declaredShapes)
+                for declared in module.draft.declarations(in: .assembled) {
+                    guard case let .shape(name) = declared.reference else { continue }
+
+                    names.insert(name)
+                }
             }
 
             // A claim about two shapes nothing here pairs is brought as well.
