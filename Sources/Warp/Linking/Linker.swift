@@ -90,7 +90,13 @@ public struct Linker: Sendable {
         // the documents it reaches stand behind it, and its own rows are the
         // stand-ins their refusal makes until it lowers them.
         let compiled = try gathered.standing.map { origin in
-            try compile(modules[origin], at: origin, declaring: held[origin] ?? [], in: &compiling)
+            try compile(
+                modules[origin],
+                at: origin,
+                declaring: held[origin] ?? [],
+                in: &compiling,
+                writing: Requiring()
+            )
         }
 
         // Back in the order the documents were handed over. The standing says
@@ -181,13 +187,19 @@ public struct Linker: Sendable {
             )
         }
 
+        // The document's own ledger, woven into the table its rows are built
+        // from. A body folded here runs against a table that cannot settle a
+        // contract, and what it hands over is written here rather than passed
+        // over.
+        let requiring = Requiring()
         let shaped = try self.shaped(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
-            whole: false
+            whole: false,
+            unsettled: (requiring, Place(in: .of(module)))
         )
 
         var compiling = try Compiling(
@@ -198,7 +210,7 @@ public struct Linker: Sendable {
             naming: documents.map(\.document)
         )
 
-        return try compile(module, at: origin, declaring: symbols, in: &compiling)
+        return try compile(module, at: origin, declaring: symbols, in: &compiling, writing: requiring)
     }
 
     // One document compiled against what stands before it, and what it proves
@@ -209,7 +221,8 @@ public struct Linker: Sendable {
         _ module: Module,
         at origin: Int,
         declaring holding: [Symbol],
-        in compiling: inout Compiling
+        in compiling: inout Compiling,
+        writing requiring: Requiring
     ) throws -> Compiled {
         let shapes = compiling.shapes
 
@@ -229,9 +242,6 @@ public struct Linker: Sendable {
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
         var calls: [Name: [Name]] = [:]
-
-        // What this document leans on, and one per document.
-        let requiring = Requiring()
 
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.

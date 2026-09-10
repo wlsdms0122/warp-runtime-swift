@@ -493,12 +493,26 @@ extension Shape {
         // A contract is answered by the value's own name: what the link found
         // to satisfy it is what a value may arrive as.
         //
-        // One-sided the way every judgment here is. A table that cannot say
-        // which types answer lets the value pass, and the pair it was handed
-        // for is written down where the call was read.
+        // A table that cannot say which types answer writes the pair down and
+        // lets the value pass, so the list that holds every claim answers for
+        // it. Where there is nowhere to write, there is nothing to wait for
+        // and the value is held to what this table knows.
         if case let .contract(name)? = bound {
             switch table.settles(contract: name, arrived: value.nominal) {
-            case true?, nil:
+            case true?:
+                return value
+
+            case nil:
+                guard let type = value.nominal, let unsettled = table.unsettled else {
+                    throw ArgumentError(
+                        "\(path()): expected \(rendered(in: table)), and"
+                            + " \(value.nominal.map { held in "'\(held)'" } ?? "\(value.type)")"
+                            + " does not answer every word '\(name)' asks"
+                    )
+                }
+
+                unsettled.ledger.require(Claim(type: type, contract: name), at: unsettled.at)
+
                 return value
 
             case false?:

@@ -69,6 +69,7 @@ public struct TypeTable: Sendable {
         contracts: [Name: [Name: Signature]] = [:],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
+        unsettled: (ledger: Requiring, at: Place)? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) {
@@ -82,6 +83,7 @@ public struct TypeTable: Sendable {
             constraints: constraints,
             satisfying: satisfying,
             settled: settled,
+            unsettled: unsettled,
             standing: standing,
             of: linkage
         )
@@ -93,13 +95,18 @@ public struct TypeTable: Sendable {
     // after this table is first built, so the table is remade rather than
     // holding an answer it did not have. The rows are numbered from the
     // declarations alone, so they are the rows the first table had.
-    func satisfying(_ satisfying: [Name: Set<Name>], settled: Bool) -> TypeTable {
+    func satisfying(
+        _ satisfying: [Name: Set<Name>],
+        settled: Bool,
+        unsettled: (ledger: Requiring, at: Place)? = nil
+    ) -> TypeTable {
         TypeTable(
             types: types,
             constraints: constraints,
             contracts: contracts,
             satisfying: satisfying,
             settled: settled,
+            unsettled: unsettled,
             standing: standing,
             of: linkage
         )

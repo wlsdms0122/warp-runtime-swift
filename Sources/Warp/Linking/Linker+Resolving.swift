@@ -85,7 +85,8 @@ extension Linker {
         contracts: [Name: Declared<[Name: Signature]>],
         over declaredTypes: [Name: Declared<TypeExpression>],
         among signatures: [Name: Declared<Signature>],
-        whole: Bool
+        whole: Bool,
+        unsettled: (ledger: Requiring, at: Place)? = nil
     ) throws -> (
         types: TypeTable,
         contractWords: [Name: ContractWord],
@@ -101,7 +102,8 @@ extension Linker {
         )
         let table = declaring.satisfying(
             witnessed.answering.mapValues { answering in Set(answering.keys) },
-            settled: whole
+            settled: whole,
+            unsettled: unsettled
         )
 
         // The words the contracts ask, under the spellings a call writes to

@@ -73,4 +73,41 @@ struct FoldedContractTests {
             "\(error)".contains("string does not answer every word 'app.Describable' asks")
         }
     }
+
+    // A word answering `any` hands a named record where a contract is asked,
+    // and the reading says nothing about what arrives, so nothing is written
+    // down where the call is read.
+    @Test("a value wearing a name is written down where the table cannot settle")
+    func aNamedValueIsWrittenDown() throws {
+        let typed = try Module(
+            types: ["bank.Plain": .record(["note": .string])],
+            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+        let modules = try documents(
+            returning: .any,
+            giving: .cast(.record(["note": .literal(.string("x"))]), as: .named("bank.Plain"), optional: false)
+        ) + [typed] + Module.standard
+
+        // When. Each document compiled against the ones before it, so the
+        // table folding runs against cannot say which types answer.
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(try Linker().compile(modules[origin], against: compiled))
+        }
+
+        // Then. The pair the fold handed over is answered by the list, which
+        // is the same answer the whole graph gives.
+        #expect {
+            try Linker().link(compiled, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+        }
+
+        #expect {
+            try Linker().link(modules, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("'bank.Plain' does not answer every word 'app.Describable' asks")
+        }
+    }
 }
