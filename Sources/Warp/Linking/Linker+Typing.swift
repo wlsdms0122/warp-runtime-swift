@@ -1778,10 +1778,15 @@ extension Linker {
             ask: ask
         )
 
-        guard frame.shapes.satisfies(
-            contract: asked.contract,
-            reading: receiver.reading
-        ) else {
+        // A named receiver is written down rather than judged, the same way a
+        // bound one is: which types answer a contract is read off the claims,
+        // and a claim may be written in a document this one never names.
+        if let type = frame.shapes.nominal(of: receiver.reading) {
+            frame.requiring.require(
+                Claim(type: type, contract: asked.contract),
+                at: place.part(.receiver)
+            )
+        } else if !frame.shapes.satisfies(contract: asked.contract, reading: receiver.reading) {
             throw LinkError(
                 "sends '\(call.selector)' to \(receiver.reading.rendered(in: frame.shapes)),"
                     + " which does not answer every word '\(asked.contract)' asks",
