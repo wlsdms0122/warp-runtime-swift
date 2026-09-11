@@ -39,11 +39,12 @@ import Foundation
 // entirely, because a closure's callee is a run-time fact.
 //
 // Two stages, and the entry names nothing in the first. Compiling settles
-// everything the documents say on their own: resolving (`Builder+Resolving`),
-// the facts nobody declared (`Builder+Deriving`, `Builder+Isolating`), judging
-// (`Builder+Judging`, `Builder+Typing`) and lowering (`Lowering`). It runs the
-// words a constant calls, which is what folding is. Linking takes what that
-// answered and one name to start from, and runs nothing.
+// everything a document says against the interfaces it reaches: resolving
+// (`Builder+Resolving`), the facts nobody declared (`Builder+Deriving`,
+// `Builder+Isolating`), judging (`Builder+Judging`, `Builder+Typing`) and
+// lowering (`Lowering`). It runs the words a constant calls, which is what
+// folding is. Linking takes what that answered and one name to start from,
+// judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // MARK: - Initializer
@@ -51,9 +52,7 @@ public struct Builder: Sendable {
     }
 
     // MARK: - Public
-    // Compiling and then linking, which is what building is. The second
-    // judgement, and the one a module cannot make about itself: a module is
-    // checked against itself, an image is checked across every module given.
+    // Compiling and then linking, which is what building is.
     //
     // What to build is the caller's statement (the whole graph at once) and
     // `entry` names which declaration this run starts from. There is no
@@ -615,8 +614,13 @@ public struct Builder: Sendable {
     }
 
     // Which row a run starts from, and which declarations it reaches. Nothing
-    // is judged and nothing runs: every declaration stands judged already, and
-    // the answer is read off the call graph the judgment gathered.
+    // runs here: every declaration stands compiled already, and the answer is
+    // read off the call graph the compile gathered.
+    //
+    // What is judged here is what no document could answer about itself, and
+    // is the second judgement for that reason: the entry names a declaration,
+    // every claimed type answers the contract it is claimed under, and every
+    // constraint a document leaned on is held by some document beside it.
     // `supplying` is the native code the documents named. An artifact says
     // which of its words are native and holds none of the code, so the modules
     // that declared them are handed over beside the artifacts.
