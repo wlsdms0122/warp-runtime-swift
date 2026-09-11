@@ -126,23 +126,27 @@ public struct Builder: Sendable {
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
-        let types = try shaped(
+        let shaped = try shaped(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures(of: compiled)
-        ).types
+        )
 
-        var answers: [Name: Shape] = [:]
-        var rows: [[Linked]] = []
+        var compiling = Compiling(
+            types: shaped.types,
+            contractWords: shaped.contractWords,
+            answering: shaped.answering,
+            naming: compiled.map(\.document)
+        )
 
         for (origin, document) in compiled.enumerated() {
-            let standing = document.shapeNumbering.rows(in: types.shapes)
+            let standing = document.shapeNumbering.rows(in: shaped.types.shapes)
 
-            rows.append(try document.table.map { judged -> Linked in
+            let rows = try document.table.map { judged -> Linked in
                 let row = try judged.folding(
-                    in: types.shapes,
+                    in: shaped.types.shapes,
                     of: origin,
                     supplied: natives,
                     at: document.document
@@ -151,17 +155,48 @@ public struct Builder: Sendable {
                 return try row.shaped { shape in
                     try standing.read(shape, at: .procedure(row.label.spelling, in: document.document))
                 }
-            })
+            }
+
+            compiling.hold(
+                origin,
+                standing: Array(rows.prefix(document.declared.count)),
+                closures: Array(rows.dropFirst(document.declared.count)),
+                numbering: document.numbering,
+                variables: document.variables.map(\.name)
+            )
+
+            // Read off what the document settled rather than off the rows it
+            // was laid down as. A row is a declaration lowered against a
+            // link's shapes, and none of these three is a shape: they are what
+            // the document proved about its own body, carried over as it
+            // wrote them.
+            for judged in document.table.prefix(document.declared.count) {
+                if judged.purity == .pure { compiling.pure.insert(judged.label) }
+                if judged.isolation == .isolated { compiling.isolated.insert(judged.label) }
+
+                compiling.failing[judged.label] = judged.failing
+            }
 
             for (declared, answer) in document.answers {
-                answers[declared] = try standing.read(
+                compiling.answers[declared] = try standing.read(
                     answer,
                     at: .procedure(declared.spelling, in: document.document)
                 )
             }
         }
 
-        return Laid(compiled: compiled, rows: rows, answers: answers, linkage: linkage)
+        // Said after every block stands, since a path steps to a declaration
+        // of another document as readily as to one of its own.
+        for (origin, document) in compiled.enumerated() {
+            compiling.steps(
+                origin,
+                to: document.words.compactMapValues { declared in compiling.lowering.rows[declared] }
+            )
+        }
+
+        compiling.foldable()
+
+        return Laid(compiled: compiled, compiling: compiling, linkage: linkage)
     }
 
     // Every declaration a compiled document made, under the spelling it was
@@ -316,8 +351,8 @@ public struct Builder: Sendable {
             unsettled: requiring
         )
 
-        var compiling = try Compiling(
-            laid,
+        var compiling = Compiling(
+            laid.compiling,
             types: shaped.types,
             contractWords: shaped.contractWords,
             answering: shaped.answering,

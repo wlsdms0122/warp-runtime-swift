@@ -61,68 +61,58 @@ struct Compiling {
     private var loweredRows: [Int] = []
 
     // MARK: - Initializer
-    // What a caller already had compiled, taken as `Laid` made it.
-    //
-    // The rows are not made here. What a document is compiled against is the
-    // same rows however many documents are compiled against it, so they are
-    // made once and handed over (`Laid`). What is left here is putting them
-    // where this compile's walk reads them.
-    //
-    // The rows keep the numbers their documents gave their calls, which is
-    // what `named` answers, and their shapes are read as this link's rows:
-    // folding runs these bodies, and running reads a shape where it stands.
+    // Nothing laid down yet.
     init(
-        _ laid: Laid,
         types: TypeTable,
         contractWords: [Name: ContractWord],
         answering: Set<Name>,
         naming documents: [Place.Document]
-    ) throws {
+    ) {
         self.types = types
         self.contractWords = contractWords
         self.answering = answering
         self.documents = documents
-        self.answers = laid.answers
         self.lowering = Lowering(
             documents: documents.count,
             contractWords: contractWords,
             shapes: types.shapes
         )
+    }
 
-        for (origin, laid) in zip(laid.compiled, laid.rows).enumerated() {
-            let (document, made) = laid
-            let rows = made.map { row in Linked(row, in: types.shapes) }
+    // The same documents, read against the table a compile laying more
+    // beside them is asking with.
+    //
+    // Nothing here is worked out again. What a document proved about its own
+    // bodies is what it wrote, and where its rows stand is where its
+    // documents stand, neither of which a document laid after them moves. The
+    // rows are read against this compile's table, which is what says what it
+    // has worked out and what it is still owed.
+    init(
+        _ laid: Compiling,
+        types: TypeTable,
+        contractWords: [Name: ContractWord],
+        answering: Set<Name>,
+        naming documents: [Place.Document]
+    ) {
+        self.types = types
+        self.contractWords = contractWords
+        self.answering = answering
+        self.documents = documents
+        self.lowering = Lowering(
+            laid.lowering,
+            documents: documents.count,
+            contractWords: contractWords,
+            shapes: types.shapes
+        )
+        self.pure = laid.pure
+        self.isolated = laid.isolated
+        self.failing = laid.failing
+        self.answers = laid.answers
+        self.named = laid.named
 
-            hold(
-                origin,
-                standing: Array(rows.prefix(document.declared.count)),
-                closures: Array(rows.dropFirst(document.declared.count)),
-                numbering: document.numbering,
-                variables: document.variables.map(\.name)
-            )
-
-            // Read off what the document settled rather than off the rows it
-            // was laid down as. A row is a declaration lowered against this
-            // link's shapes, and none of these three is a shape: they are what
-            // the document proved about its own body, carried over as it
-            // wrote them.
-            for judged in document.table.prefix(document.declared.count) {
-                if judged.purity == .pure { pure.insert(judged.label) }
-                if judged.isolation == .isolated { isolated.insert(judged.label) }
-
-                failing[judged.label] = judged.failing
-            }
-        }
-
-        // Said after every block stands, since a path steps to a declaration
-        // of another document as readily as to one of its own.
-        for (origin, document) in laid.compiled.enumerated() {
-            steps(origin, to: document.words.compactMapValues { declared in lowering.rows[declared] })
-        }
-
-        // Every body handed over is lowered already, so all of them are
+        // Every body laid down is lowered already, so all of them are
         // something the next document may fold through.
-        foldable()
+        self.foldingRows = lowering.table
     }
 
     // MARK: - Public

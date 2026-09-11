@@ -78,6 +78,29 @@ struct Lowering {
         self.shapes = shapes
     }
 
+    // The same lowering read against the table a compile laying more
+    // documents beside these is asking with. Where a row stands and what
+    // number reaches it are the documents' own and move for nothing laid
+    // after them, so only the rows are read again.
+    init(
+        _ laid: Lowering,
+        documents: Int,
+        contractWords: [Name: ContractWord],
+        shapes: ShapeTable
+    ) {
+        self.table = laid.table.map { row in Linked(row, in: shapes) }
+        self.rows = laid.rows
+        self.words = laid.words
+            + [[Name: Int]](repeating: [:], count: documents - laid.words.count)
+        self.numbering = laid.numbering
+        self.variables = laid.variables
+        self.contractWords = contractWords
+        self.shapes = shapes
+        self.standing = laid.standing
+        self.closureRows = laid.closureRows
+        self.written = laid.written
+    }
+
     // A lowering standing on tables something else holds: an expression
     // folded beside a document's bodies rather than into a row of its own.
     init(
