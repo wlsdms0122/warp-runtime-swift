@@ -49,8 +49,7 @@ struct Fanout {
         self.modules = modules
         self.compiled = Vocabulary.compiled + (try Builder().compile(
             modules,
-            against: Vocabulary.compiled,
-            supplying: Vocabulary.brought
+            against: Vocabulary.laid
         ))
     }
 
@@ -61,11 +60,7 @@ struct Fanout {
 
         return try elapsed {
             _ = try builder.link(
-                Vocabulary.compiled + builder.compile(
-                    modules,
-                    against: Vocabulary.compiled,
-                    supplying: Vocabulary.brought
-                ),
+                Vocabulary.compiled + builder.compile(modules, against: Vocabulary.laid),
                 entry: entry,
                 supplying: Vocabulary.brought
             )
@@ -77,7 +72,7 @@ struct Fanout {
         let builder = Builder()
 
         return try elapsed {
-            _ = try builder.compile(modules, against: Vocabulary.compiled, supplying: Vocabulary.brought)
+            _ = try builder.compile(modules, against: Vocabulary.laid)
         }
     }
 
@@ -87,7 +82,7 @@ struct Fanout {
 
         return try elapsed {
             for module in modules {
-                _ = try builder.compile([module], against: Vocabulary.compiled, supplying: Vocabulary.brought)
+                _ = try builder.compile([module], against: Vocabulary.laid)
             }
         }
     }

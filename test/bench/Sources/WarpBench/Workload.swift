@@ -59,18 +59,15 @@ struct Workload {
         try elapsed { _ = try Self.built(module) }
     }
 
-    // The same build where the vocabulary was compiled once already, which is
-    // what a caller building many documents against one vocabulary pays.
+    // The same build where the vocabulary was compiled and laid down already,
+    // which is what a caller building many documents against one vocabulary
+    // pays.
     func baked() throws -> Duration {
         try elapsed {
             let builder = Builder()
 
             _ = try builder.link(
-                Vocabulary.compiled + (try builder.compile(
-                    [module],
-                    against: Vocabulary.compiled,
-                    supplying: Vocabulary.brought
-                )),
+                Vocabulary.compiled + (try builder.compile([module], against: Vocabulary.laid)),
                 entry: "entry",
                 supplying: Vocabulary.brought
             )
