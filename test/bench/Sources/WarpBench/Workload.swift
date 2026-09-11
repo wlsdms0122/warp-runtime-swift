@@ -12,14 +12,20 @@ import WarpStandard
 
 // One program from `program/`, linked once and run as many times as asked.
 //
-// Both halves are timed. `time(rounds:)` is the cost of running an image the
-// way a caller runs one, and `link()` is the cost of making that image. A
-// document arrives while the program is running, so the link is run time too:
-// work moved out of the run and into the link shows as a gain on one figure
-// and a loss on the other, and a document that runs once pays both.
+// Every act a caller pays for is timed apart. `load()` is what the text costs
+// to become a module, `link()` what that module costs to become an image, and
+// `time(rounds:)` what running the image costs. A document arrives while the
+// program is running, so the first two are run time too: work moved out of the
+// run and into the link shows as a gain on one figure and a loss on the other,
+// and a document that runs once pays all three.
 struct Workload {
     // MARK: - Property
     let name: String
+
+    // The document as it arrives, kept so that arriving can be timed. A host
+    // is handed text and reads a module out of it, and that reading is work
+    // no other figure here carries.
+    private let text: String
 
     private let module: Module
     private let image: Image
@@ -29,6 +35,7 @@ struct Workload {
         let text = try String(contentsOf: url, encoding: .utf8)
 
         self.name = url.deletingPathExtension().lastPathComponent
+        self.text = text
         self.module = try Loader().load(try TextEncoding.value(from: text), identity: nil)
         self.image = try Self.linked(module)
     }
@@ -38,6 +45,13 @@ struct Workload {
     // computed so that no round can be skipped.
     func time(rounds: Int) async throws -> Duration {
         try await elapsed { _ = try await Executor().run(image, arguments: ["rounds": .int(rounds)]) }
+    }
+
+    // How long this document costs to arrive: its text read as a value, and
+    // that value read as a module. Nothing can be linked until this is paid,
+    // and a caller that is handed documents often pays it every time.
+    func load() throws -> Duration {
+        try elapsed { _ = try Loader().load(try TextEncoding.value(from: text), identity: nil) }
     }
 
     // How long one link of this module takes.
@@ -59,9 +73,9 @@ struct Workload {
         }
     }
 
-    // How long a document that arrives, links, runs one round and is dropped
-    // takes. The two halves of the same measurement, timed together rather
-    // than added, so nothing between them is left out.
+    // How long a module that links, runs one round and is dropped takes. The
+    // two halves of the same measurement, timed together rather than added, so
+    // nothing between them is left out. What arriving costs is `load()`.
     func once() async throws -> Duration {
         try await elapsed {
             _ = try await Executor().run(try Self.linked(module), arguments: ["rounds": .int(1)])
