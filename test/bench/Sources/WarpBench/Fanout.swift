@@ -34,12 +34,24 @@ struct Fanout {
     private let modules: [Module]
     private let entry: Name
 
+    // The same documents already compiled, which is what `link()` is handed.
+    // What that door times is the laying down, so settling the documents again
+    // for every sample would only be time spent outside the clock.
+    private let compiled: [Compiled]
+
     // MARK: - Initializer
     init(_ dealing: Dealing) throws {
-        self.entry = try Self.word(0)
-        self.modules = try (0 ..< dealing.documents).map { document in
+        let modules = try (0 ..< dealing.documents).map { document in
             try Self.document(dealing.held(by: document))
         }
+
+        self.entry = try Self.word(0)
+        self.modules = modules
+        self.compiled = Vocabulary.compiled + (try Builder().compile(
+            modules,
+            against: Vocabulary.compiled,
+            supplying: Vocabulary.brought
+        ))
     }
 
     // MARK: - Public
@@ -82,15 +94,8 @@ struct Fanout {
 
     // How long laying the compiled documents down together takes.
     func link() throws -> Duration {
-        let builder = Builder()
-        let compiled = Vocabulary.compiled + (try builder.compile(
-            modules,
-            against: Vocabulary.compiled,
-            supplying: Vocabulary.brought
-        ))
-
-        return try elapsed {
-            _ = try builder.link(compiled, entry: entry, supplying: Vocabulary.brought)
+        try elapsed {
+            _ = try Builder().link(compiled, entry: entry, supplying: Vocabulary.brought)
         }
     }
 
