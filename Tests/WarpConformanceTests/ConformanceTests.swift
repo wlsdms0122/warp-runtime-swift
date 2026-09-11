@@ -64,7 +64,7 @@ struct ConformanceTests {
     }
 
     // How far a case got before it was refused. The stage is part of the answer:
-    // stopping at a run what another implementation stops at a link means
+    // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async -> Case.Stage? {
         let linker = Linker()
@@ -81,7 +81,7 @@ struct ConformanceTests {
         do {
             image = try linker.link([module] + Module.standard, entry: "entry")
         } catch {
-            return .link
+            return .build
         }
 
         do {
@@ -115,7 +115,7 @@ struct Case: Sendable, CustomStringConvertible {
 
     enum Stage: String, Sendable {
         case load
-        case link
+        case build
         case run
     }
 
