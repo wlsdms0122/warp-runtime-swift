@@ -51,6 +51,13 @@ struct ConformanceTests {
 
         #expect(sut.count >= 10)
         #expect(Set(sut.map(\.name)).count == sut.count)
+
+        // A case is found by its name: a diff names the file and a failure names
+        // the case, and a reader who has one goes looking for the other. Where
+        // the two drift apart the case is still asked and still nobody finds it.
+        let adrift = sut.filter { one in one.name != one.file }.map { one in "\(one.file) says '\(one.name)'" }
+
+        #expect(adrift.isEmpty, "a case is named what its file is: \(adrift.joined(separator: ", "))")
     }
 
     // MARK: - Public
@@ -126,6 +133,10 @@ struct Case: Sendable, CustomStringConvertible {
 
     // MARK: - Property
     let name: String
+
+    // The file this was read from, without the suffix every case wears.
+    let file: String
+
     let note: String
     let program: Value
     let arguments: [Name: Value]
@@ -134,7 +145,9 @@ struct Case: Sendable, CustomStringConvertible {
     var description: String { name }
 
     // MARK: - Initializer
-    init(from written: Value) throws {
+    init(from written: Value, in file: String) throws {
+        self.file = file
+
         // The version first, and before the shape, for the reason a document
         // reads its own first: a later case may say something this runner has
         // no name for, and "I am too old for this" is a different answer from
@@ -246,7 +259,10 @@ struct Case: Sendable, CustomStringConvertible {
             .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
 
         return try files.map { file in
-            try Case(from: try TextEncoding.value(from: try Data(contentsOf: file)))
+            try Case(
+                from: try TextEncoding.value(from: try Data(contentsOf: file)),
+                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
+            )
         }
     }
 
