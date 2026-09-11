@@ -9,8 +9,13 @@ import Foundation
 
 extension ShapeTable {
     // The declarations as the run reads them. A link says which order its rows
-    // stand in, so a document's types take a run of rows the way its
-    // declarations do; where nothing says, the declared spellings order them.
+    // stand in, so a document's types and its memberships each take a run of
+    // rows the way its declarations do; where nothing says, the declared
+    // spellings order them.
+    //
+    // Both spaces read the order from the same place. A run that stands where
+    // its document does is a run a later document cannot move, which is what
+    // lets a document already lowered keep the numbers it was lowered with.
     // Either way a row is a row of one table and nothing a link concludes
     // reads one to decide what to say. A name that names itself through a
     // chain of names stands for no shape and lowers to the shape every
@@ -21,6 +26,7 @@ extension ShapeTable {
         satisfying: [Name: Set<Name>] = [:],
         unsettled: Requiring? = nil,
         standing: [Name]? = nil,
+        constraintStanding: [Name]? = nil,
         of linkage: Linkage
     ) -> ShapeTable {
         // A table of its own even where nothing is declared: a body carried
@@ -41,7 +47,7 @@ extension ShapeTable {
         }
 
         let labels = standing ?? types.keys.sorted()
-        let constraintLabels = constraints.keys.sorted()
+        let constraintLabels = constraintStanding ?? constraints.keys.sorted()
 
         // The index first, so a declaration naming another lowers against
         // rows that already exist whichever is declared first.

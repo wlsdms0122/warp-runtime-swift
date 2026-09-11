@@ -163,14 +163,17 @@ extension Builder {
         standing: [Int],
         numbered linkage: Linkage
     ) throws -> TypeTable {
-        // A document's types take a run of shape rows the way its declarations
-        // take a run of table rows, in the standing order, so a document's
-        // shapes are behind the shapes it names.
+        // A document's types and its memberships each take a run of shape rows
+        // the way its declarations take a run of table rows, in the standing
+        // order, so a document's shapes are behind the shapes it names.
         let table = TypeTable(
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
             contracts: contracts.mapValues(\.held),
             standing: standing.flatMap { position in documents[position].types.keys.sorted() },
+            constraintStanding: standing.flatMap { position in
+                documents[position].constraints.keys.sorted()
+            },
             of: linkage
         )
 

@@ -41,10 +41,11 @@ public struct TypeTable: Sendable {
     // body already holds.
     private let linkage: Linkage
 
-    // The order the rows stand in, where a link said one. Kept for the same
-    // reason the linkage is: remaking the table has to hand back the rows a
-    // body already holds.
+    // The order the rows of each space stand in, where a link said one. Kept
+    // for the same reason the linkage is: remaking the table has to hand back
+    // the rows a body already holds.
     private let standing: [Name]?
+    private let constraintStanding: [Name]?
 
     // A table declaring nothing, for a judgment asked with no declarations
     // behind it.
@@ -70,12 +71,14 @@ public struct TypeTable: Sendable {
         satisfying: [Name: Set<Name>] = [:],
         unsettled: Requiring? = nil,
         standing: [Name]? = nil,
+        constraintStanding: [Name]? = nil,
         of linkage: Linkage
     ) {
         self.types = types
         self.constraints = constraints
         self.contracts = contracts
         self.standing = standing
+        self.constraintStanding = constraintStanding
         self.linkage = linkage
         self.shapes = ShapeTable.lowering(
             types,
@@ -83,6 +86,7 @@ public struct TypeTable: Sendable {
             satisfying: satisfying,
             unsettled: unsettled,
             standing: standing,
+            constraintStanding: constraintStanding,
             of: linkage
         )
     }
@@ -104,6 +108,7 @@ public struct TypeTable: Sendable {
             satisfying: satisfying,
             unsettled: unsettled,
             standing: standing,
+            constraintStanding: constraintStanding,
             of: linkage
         )
     }
