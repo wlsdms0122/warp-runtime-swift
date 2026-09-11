@@ -218,7 +218,7 @@ public struct Validator: Sendable {
     private func reads(_ procedure: Procedure, at place: Place) throws {
         guard let keys = procedure.implementation.nativeParameters else { return }
 
-        let declared = procedure.signature.ordered
+        let declared = procedure.signature.names
         let read = keys.sorted { left, right in left.position < right.position }
 
         guard

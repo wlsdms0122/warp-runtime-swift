@@ -249,9 +249,11 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
             guard let signature else { return word }
 
-            let written = signature.parameters
-                .sorted { left, right in Signature.stands(left.key, before: right.key) }
-                .map { entry in "\(entry.key): \(entry.value.declared.rendered)" }
+            let written = signature.ordered(
+                { name, parameter in (name: name, declared: parameter.declared.rendered) },
+                standing: { taken in taken.name }
+            )
+            .map { taken in "\(taken.name): \(taken.declared)" }
 
             // Rendered as what it accepts, because a message is about what would
             // have fit. Which half was written is a fact about the source rather

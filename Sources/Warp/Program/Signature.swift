@@ -35,18 +35,28 @@ public struct Signature: Sendable, Equatable {
     // say.
     public let returns: TypeExpression?
 
-    // Which of two parameters stands first among the arguments a call writes.
-    // A document writes parameters as a record, so a declaration says which
-    // ones there are and nothing about their order. This is the rule that
-    // gives them one, and every place that puts a declaration's parameters in
-    // order asks it.
-    static func stands(_ left: Name, before right: Name) -> Bool {
-        left < right
+    // The parameters in the order arguments stand in, each read as whatever
+    // the caller makes of it. A document writes them as a record, so the
+    // declaration says which parameters there are and nothing about their
+    // order; the order is the declared names sorted, and this is the one place
+    // that says so.
+    //
+    // What each one is made into comes first because that is what the caller
+    // came for, and `standing` says where to find the name on it. Made before
+    // they are put in order, so nothing is built twice: one list, sorted where
+    // it stands.
+    func ordered<T>(_ make: (Name, Parameter) -> T, standing name: (T) -> Name) -> [T] {
+        var made = parameters.map(make)
+
+        made.sort { left, right in name(left) < name(right) }
+
+        return made
     }
 
-    // The declared names in that order.
-    var ordered: [Name] {
-        parameters.keys.sorted(by: Signature.stands)
+    // The declared names in that order, for a reader that wants the names and
+    // nothing made of them.
+    var names: [Name] {
+        ordered({ name, _ in name }, standing: { name in name })
     }
 
     // MARK: - Initializer
@@ -98,17 +108,11 @@ public struct Signature: Sendable, Equatable {
 
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
-    //
-    // Ordered after they are lowered rather than before. A slot carries the
-    // name it stands under, so the order is there to be put in place on the
-    // slots themselves, and a declaration never builds a second list to hold
-    // what a dictionary holds already.
     func lowered(in table: ShapeTable) -> [Slot] {
-        var slots = parameters.map { name, parameter in parameter.lowered(named: name, in: table) }
-
-        slots.sort { left, right in Signature.stands(left.name, before: right.name) }
-
-        return slots
+        ordered(
+            { name, parameter in parameter.lowered(named: name, in: table) },
+            standing: { slot in slot.name }
+        )
     }
 
     // The same, with what a call put in the type parameters written in. The
@@ -116,11 +120,10 @@ public struct Signature: Sendable, Equatable {
     // because what a call read is a shape and a declaration is a document's
     // spelling.
     func lowered(in table: ShapeTable, filling bound: [Name: Shape]) -> [Slot] {
-        var slots = parameters.map { name, parameter in parameter.lowered(named: name, in: table, filling: bound) }
-
-        slots.sort { left, right in Signature.stands(left.name, before: right.name) }
-
-        return slots
+        ordered(
+            { name, parameter in parameter.lowered(named: name, in: table, filling: bound) },
+            standing: { slot in slot.name }
+        )
     }
 
     // Whether something declared this way may stand where this is required.
