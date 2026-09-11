@@ -99,6 +99,94 @@ public struct Builder: Sendable {
         against compiled: [Compiled],
         supplying natives: Supplying
     ) throws -> [Compiled] {
+        try compile(modules, against: try lay(compiled, supplying: natives))
+    }
+
+    // Documents already compiled, with the rows they stand as made once, so a
+    // caller compiling against them more than once pays for that once.
+    //
+    // What it costs is every declaration behind the one being compiled: its
+    // signature lowered into slots, and for a native the host's word joined to
+    // it under its spelling. A host brings the same vocabulary every run, and
+    // this is where it stops turning it into rows every time.
+    public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
+        guard !compiled.isEmpty else { return .none }
+
+        let linkage = Linkage()
+        let declared = try declared(in: compiled)
+        let declaring = try types(
+            declared: declared.types,
+            constraints: declared.constraints,
+            contracts: declared.contracts,
+            of: compiled,
+            standing: Array(compiled.indices),
+            numbered: linkage
+        )
+
+        // Which types answer which contracts among these documents. A row
+        // whose signature names a contract lowers against that reading, so it
+        // is worked out here rather than left to the compile that asks.
+        var signatures: [Name: Declared<Signature>] = [:]
+
+        for (position, document) in compiled.enumerated() {
+            for (offset, name) in document.declared.enumerated() {
+                signatures[name] = Declared(
+                    document.table[offset].signature,
+                    at: .procedure(name.spelling, in: document.document),
+                    of: position
+                )
+            }
+        }
+
+        let types = try shaped(
+            declaring,
+            claims: declared.claims,
+            contracts: declared.contracts,
+            over: declared.types,
+            among: signatures
+        ).types
+
+        var answers: [Name: Shape] = [:]
+        var rows: [[Linked]] = []
+
+        for (origin, document) in compiled.enumerated() {
+            let standing = document.shapeNumbering.rows(in: types.shapes)
+
+            rows.append(try document.table.map { judged -> Linked in
+                let row = try judged.folding(
+                    in: types.shapes,
+                    of: origin,
+                    supplied: natives,
+                    at: document.document
+                )
+
+                return try row.shaped { shape in
+                    try standing.read(shape, at: .procedure(row.label.spelling, in: document.document))
+                }
+            })
+
+            for (declared, answer) in document.answers {
+                answers[declared] = try standing.read(
+                    answer,
+                    at: .procedure(declared.spelling, in: document.document)
+                )
+            }
+        }
+
+        return Laid(
+            compiled: compiled,
+            rows: rows,
+            answers: answers,
+            linkage: linkage,
+            supplied: natives
+        )
+    }
+
+    // The same, against documents a caller already laid down.
+    public func compile(_ modules: [Module], against laid: Laid) throws -> [Compiled] {
+        let compiled = laid.compiled
+        let natives = laid.supplied
+
         try once(modules, against: compiled)
 
         // Every name held to one declarer before the standing is read.
@@ -109,22 +197,21 @@ public struct Builder: Sendable {
         let held = try symbols(of: modules, after: compiled.count)
         let declared = try declared(in: compiled + modules)
         let standing = try ModuleGraph(modules, after: compiled.count).standing
-        let laid = try compile(
+        let lowered = try compile(
             modules,
             at: standing,
             declaring: held,
             over: declared,
-            against: compiled,
-            supplied: natives
+            against: laid
         )
 
         // Back in the order the documents were handed over. A document says
         // nothing about where it stands, so the order a link reads them in is
         // the caller's.
-        var ordered = laid
+        var ordered = lowered
 
         for (position, origin) in standing.enumerated() {
-            ordered[origin] = laid[position]
+            ordered[origin] = lowered[position]
         }
 
         return ordered
@@ -150,9 +237,9 @@ public struct Builder: Sendable {
             contracts: [Name: Declared<[Name: Signature]>],
             claims: [Declared<Claim>]
         ),
-        against compiled: [Compiled],
-        supplied: Supplying
+        against laid: Laid
     ) throws -> [Compiled] {
+        let compiled = laid.compiled
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
 
@@ -162,7 +249,7 @@ public struct Builder: Sendable {
             contracts: declared.contracts,
             of: documents,
             standing: Array(documents.indices),
-            numbered: Linkage()
+            numbered: laid.linkage
         )
 
         try judge(laying, in: declaring)
@@ -240,12 +327,11 @@ public struct Builder: Sendable {
         )
 
         var compiling = try Compiling(
-            compiled,
+            laid,
             types: shaped.types,
             contractWords: shaped.contractWords,
             answering: shaped.answering,
-            naming: documents.map(\.document),
-            supplied: supplied
+            naming: documents.map(\.document)
         )
 
         return try laying.indices.map { offset in

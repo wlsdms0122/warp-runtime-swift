@@ -61,44 +61,36 @@ struct Compiling {
     private var loweredRows: [Int] = []
 
     // MARK: - Initializer
-    // What a caller already had compiled, laid down the way the walk lays a
-    // document it just compiled.
+    // What a caller already had compiled, taken as `Laid` made it.
+    //
+    // The rows are not made here. What a document is compiled against is the
+    // same rows however many documents are compiled against it, so they are
+    // made once and handed over (`Laid`). What is left here is putting them
+    // where this compile's walk reads them.
     //
     // The rows keep the numbers their documents gave their calls, which is
     // what `named` answers, and their shapes are read as this link's rows:
     // folding runs these bodies, and running reads a shape where it stands.
     init(
-        _ compiled: [Compiled],
+        _ laid: Laid,
         types: TypeTable,
         contractWords: [Name: ContractWord],
         answering: Set<Name>,
-        naming documents: [Place.Document],
-        supplied: Supplying
+        naming documents: [Place.Document]
     ) throws {
         self.types = types
         self.contractWords = contractWords
         self.answering = answering
         self.documents = documents
+        self.answers = laid.answers
         self.lowering = Lowering(
             documents: documents.count,
             contractWords: contractWords,
             shapes: types.shapes
         )
 
-        for (origin, document) in compiled.enumerated() {
-            let standing = document.shapeNumbering.rows(in: types.shapes)
-            let rows = try document.table.map { judged -> Linked in
-                let row = try judged.folding(
-                    in: types.shapes,
-                    of: origin,
-                    supplied: supplied,
-                    at: document.document
-                )
-
-                return try row.shaped { shape in
-                    try standing.read(shape, at: .procedure(row.label.spelling, in: document.document))
-                }
-            }
+        for (origin, document) in laid.compiled.enumerated() {
+            let rows = laid.rows[origin].map { row in Linked(row, in: types.shapes) }
 
             hold(
                 origin,
@@ -119,18 +111,11 @@ struct Compiling {
 
                 failing[judged.label] = judged.failing
             }
-
-            for (declared, answer) in document.answers {
-                answers[declared] = try standing.read(
-                    answer,
-                    at: .procedure(declared.spelling, in: document.document)
-                )
-            }
         }
 
         // Said after every block stands, since a path steps to a declaration
         // of another document as readily as to one of its own.
-        for (origin, document) in compiled.enumerated() {
+        for (origin, document) in laid.compiled.enumerated() {
             steps(origin, to: document.words.compactMapValues { declared in lowering.rows[declared] })
         }
 

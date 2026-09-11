@@ -101,6 +101,29 @@ public final class Linked: Sendable {
         self.implementation = implementation
     }
 
+    // The same row read against another table. A compile that lays more
+    // documents beside the one this came out of numbers their shapes past the
+    // ones here and moves none of them, so the slots stand as they are and are
+    // carried over rather than lowered a second time. What changes is the
+    // table the row settles a call against, which is the one the compile is
+    // asking with: its rows carry what that compile has worked out and what it
+    // is still owed.
+    init(_ row: Linked, in table: ShapeTable) {
+        self.label = row.label
+        self.origin = row.origin
+        self.signature = row.signature
+        self.receiverPosition = row.receiverPosition
+        self.purity = row.purity
+        self.isolation = row.isolation
+        self.slots = row.slots
+        self.returns = row.returns
+        self.failing = row.failing
+        self.table = table
+        self.isDerivable = row.isDerivable
+        self.sends = row.sends
+        self.implementation = row.implementation
+    }
+
     // The same row holding different code. What a row lowered from its
     // signature is the signature's, and neither lowering a body nor answering
     // the numbers in one touches the signature, so the slots are carried over
