@@ -9,7 +9,7 @@ import Foundation
 
 // What a slot requires of a procedure that stands in it.
 //
-// The runtime knows which procedures answer without running (the linker works
+// The runtime knows which procedures answer without running (the builder works
 // it out for bodies and a native declares it) but until this, nothing could
 // *ask* for one. A word that runs its argument inside a condition or a path
 // needs an argument that can be run there, and `procedure` alone does not say

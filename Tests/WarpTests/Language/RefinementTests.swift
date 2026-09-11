@@ -19,7 +19,7 @@ import Testing
 @Suite("A range is a condition on a number, and it says which number")
 struct RefinementTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Test
     @Test("a fraction range judges fractions, and the whole numbers it widens")
@@ -105,7 +105,7 @@ struct RefinementTests {
         )
 
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -132,7 +132,7 @@ struct RefinementTests {
         )
 
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }

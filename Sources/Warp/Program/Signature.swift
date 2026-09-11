@@ -90,7 +90,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // The returned value, checked against what was declared. Run time rather
-    // than link time because what a body computes is not a thing the linker can
+    // than link time because what a body computes is not a thing the builder can
     // read off the text, but a declaration that only ever describes is a
     // declaration nothing keeps, so it is checked where the fact exists.
     public func settling(returned value: Value, in types: TypeTable = .empty) throws -> Value {

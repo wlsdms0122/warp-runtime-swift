@@ -56,9 +56,9 @@ struct ConformanceTests {
     // MARK: - Public
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
-        let linker = Linker()
+        let builder = Builder()
         let module = try Loader().load(sut.program, identity: nil)
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
     }
@@ -67,7 +67,7 @@ struct ConformanceTests {
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async -> Case.Stage? {
-        let linker = Linker()
+        let builder = Builder()
         let module: Module
 
         do {
@@ -79,7 +79,7 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try linker.link([module] + Module.standard, entry: "entry")
+            image = try builder.build([module] + Module.standard, entry: "entry")
         } catch {
             return .build
         }

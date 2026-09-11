@@ -1,5 +1,5 @@
 //
-//  Linker+Typing.swift
+//  Builder+Typing.swift
 //  Warp
 //
 //  Created by JSilver on 8/17/26.
@@ -30,7 +30,7 @@ import Foundation
 // sends) and the decision is written into the path as a `word` segment. A run
 // reads the spelling and never asks the value, which is the point: the same
 // path means the same thing on every run.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
     // are the only names declared before the first statement.
@@ -2505,7 +2505,7 @@ extension Linker {
     }
 }
 
-extension Linker {
+extension Builder {
     // Where a write lands, or why it lands nowhere.
     enum Writable {
         case reaches(Shape)

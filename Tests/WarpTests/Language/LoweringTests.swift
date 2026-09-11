@@ -14,7 +14,7 @@ import Testing
 @Suite("The link lowers a body into slots and rows")
 struct LoweringTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -40,7 +40,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard case let .body(_, layout) = image.entry.implementation else {
@@ -78,7 +78,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(1), .int(2)]))
@@ -104,7 +104,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -162,7 +162,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -213,7 +213,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -248,7 +248,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(image["app.tally"]?.purity != .pure)
@@ -278,7 +278,7 @@ struct LoweringTests {
         )
 
         // When / Then
-        let image = try linker.link([sut] + Module.standard, entry: "entry")
+        let image = try builder.build([sut] + Module.standard, entry: "entry")
 
         #expect(try await Executor().run(image) == .int(1))
     }
@@ -324,7 +324,7 @@ struct LoweringTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([sut] + Module.standard, entry: "entry")
+            try builder.build([sut] + Module.standard, entry: "entry")
         }
     }
 
@@ -365,10 +365,10 @@ struct LoweringTests {
         // When / Then. The unnamed record is refused, and the same record held
         // as a `Tag` stands
         #expect(throws: LinkError.self) {
-            try linker.link([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
+            try builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
         }
 
-        let image = try linker.link(
+        let image = try builder.build(
             [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard,
             entry: "entry"
         )
@@ -400,7 +400,7 @@ struct LoweringTests {
 
         // When / Then
         #expect {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("runs after the link")
         }
@@ -426,7 +426,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .int(5))

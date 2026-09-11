@@ -354,7 +354,7 @@ struct LeaveTests {
 
         // When / Then
         #expect {
-            try Linker().link(
+            try Builder().build(
                 [try loader.loadDocument(sut)] + Module.standard,
                 entry: entryName
             )
@@ -500,7 +500,7 @@ struct LeaveTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [Name: Value] = [:]) async throws -> Value {
-        let image = try Linker().link(
+        let image = try Builder().build(
             [module] + Module.standard + [.testing],
             entry: entryName
         )

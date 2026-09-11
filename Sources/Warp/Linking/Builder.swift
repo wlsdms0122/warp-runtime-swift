@@ -1,5 +1,5 @@
 //
-//  Linker.swift
+//  Builder.swift
 //  Warp
 //
 //  Created by JSilver on 8/16/26.
@@ -10,9 +10,9 @@ import Foundation
 // Takes every module this run was given and one name to start from, and answers
 // with an image, or refuses.
 //
-// A link is handed its whole module graph at once. The words a program can call are
-// the words the caller put in front of it, so what to link is the caller's
-// statement and joining the names up is this. A module's `imports` says what it
+// A build is handed its whole module graph at once. The words a program can
+// call are the words the caller put in front of it, so what to build is the
+// caller's statement and joining the names up is this. A module's `imports` says what it
 // asks for and never where to find it, and the entry is an argument rather than
 // a name written into a document.
 //
@@ -39,37 +39,37 @@ import Foundation
 // entirely, because a closure's callee is a run-time fact.
 //
 // Two stages, and the entry names nothing in the first. Compiling settles
-// everything the documents say on their own: resolving (`Linker+Resolving`),
-// the facts nobody declared (`Linker+Deriving`, `Linker+Isolating`), judging
-// (`Linker+Judging`, `Linker+Typing`) and lowering (`Lowering`). It runs the
+// everything the documents say on their own: resolving (`Builder+Resolving`),
+// the facts nobody declared (`Builder+Deriving`, `Builder+Isolating`), judging
+// (`Builder+Judging`, `Builder+Typing`) and lowering (`Lowering`). It runs the
 // words a constant calls, which is what folding is. Linking takes what that
 // answered and one name to start from, and runs nothing.
-public struct Linker: Sendable {
+public struct Builder: Sendable {
     // MARK: - Property
     // MARK: - Initializer
     public init() {
     }
 
     // MARK: - Public
-    // The second judgement, and the one a module cannot make about itself: a
-    // module is checked against itself, an image is checked across every module
-    // given.
+    // Compiling and then linking, which is what building is. The second
+    // judgement, and the one a module cannot make about itself: a module is
+    // checked against itself, an image is checked across every module given.
     //
-    // What to link is the caller's statement (the whole graph at once) and
+    // What to build is the caller's statement (the whole graph at once) and
     // `entry` names which declaration this run starts from. There is no
     // default: guessing which procedure was meant would be an opinion nobody
     // gave.
     //
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
-    public func link(_ modules: [Module], entry: Name) throws -> Image {
+    public func build(_ modules: [Module], entry: Name) throws -> Image {
         try link(compile(modules), entry: entry, supplying: Supplying(modules))
     }
 
-    // Documents compiled and handed back, for a caller that means to link
+    // Documents compiled and handed back, for a caller that means to build
     // them more than once.
     //
-    // A link does two things: it works out what each document says, and it
+    // A build does two things: it works out what each document says, and it
     // lays the documents down together. The first is a function of the
     // document and of what it reaches, so a caller holding the answer can hand
     // it over instead of asking for it again. The vocabulary a host brings is
@@ -281,7 +281,7 @@ public struct Linker: Sendable {
         let boxes = module.variables.keys.sorted()
         let reading = Set(module.variables.keys)
 
-        // What the link read off this document's bodies whose declarations
+        // What the build read off this document's bodies whose declarations
         // wrote no `returns`, and which declaration each bare spelling its
         // paths step to reaches.
         var read: [Name: Shape] = [:]
@@ -380,7 +380,7 @@ public struct Linker: Sendable {
 
             try checked(answer.calls, in: frame(), writing: requiring)
 
-            // Read off the body the link is about to lower, so what is proven
+            // Read off the body the build is about to lower, so what is proven
             // is what runs. The environment is the one the body was judged in.
             if let rewritten = answer.procedure.block {
                 try consumed(

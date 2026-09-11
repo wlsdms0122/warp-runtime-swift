@@ -17,7 +17,7 @@ import WarpStandard
 @Suite("What the link knows a name holds")
 struct InferenceTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -55,7 +55,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -91,7 +91,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -138,7 +138,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -179,7 +179,7 @@ struct InferenceTests {
 
         // When / Then. Refused as the nullable it is
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("holds int?")
         }
@@ -297,7 +297,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -342,7 +342,7 @@ struct InferenceTests {
         // When / Then. `task.done` is a bool, and the walk read that from the
         // shape rather than from the value
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -382,7 +382,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -427,7 +427,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -476,7 +476,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a declared answer is checked against what the body actually names")
@@ -524,7 +524,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("what a map answers is typed by the closure it was given")
@@ -578,7 +578,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -630,7 +630,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -655,7 +655,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -680,7 +680,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -705,7 +705,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a dot on any is refused, because any declares nothing to read")
@@ -729,7 +729,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("declares nothing")
         }
@@ -761,7 +761,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no module in this link declares")
         }
@@ -793,7 +793,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("`any` is the absence of one")
         }
@@ -827,7 +827,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a cast between two shapes that name themselves does not chase them forever")
@@ -859,7 +859,7 @@ struct InferenceTests {
 
         // When / Then. It terminates; whether it refuses as needless is the
         // sameness rule's business, not this one's
-        _ = try? linker.link([sut] + Module.standard, entry: entryName)
+        _ = try? builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
@@ -883,7 +883,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no value is both")
         }
@@ -923,7 +923,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("already is")
         }
@@ -955,7 +955,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no value is")
         }
@@ -997,7 +997,7 @@ struct InferenceTests {
 
         // When / Then. The second says nothing the first did not
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("already is")
         }
@@ -1029,7 +1029,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no module in this link declares")
         }
@@ -1054,7 +1054,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a nullable and null share null, so a cast between them stands")
@@ -1076,7 +1076,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("two nullables share null, so a cast between them stands")
@@ -1101,7 +1101,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a dictionary and a record are one shape read two ways, so a cast between them stands")
@@ -1130,7 +1130,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("the reading a cast hands on is the name the author wrote")
@@ -1171,7 +1171,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("already is")
         }
@@ -1205,7 +1205,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a cast between shapes no value is both is refused")
@@ -1229,7 +1229,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no value is both")
         }
@@ -1324,7 +1324,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a cast is not called needless where what it reads holds any inside")
@@ -1355,7 +1355,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a cast keeps the name the author wrote, not the shape it stands for")
@@ -1386,7 +1386,7 @@ struct InferenceTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         guard
@@ -1430,7 +1430,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a field the record does not declare is refused, ?. or not")
@@ -1456,7 +1456,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("does not declare")
         }
@@ -1479,7 +1479,7 @@ struct InferenceTests {
         )
 
         #expect {
-            try linker.link([optional] + Module.standard, entry: entryName)
+            try builder.build([optional] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("does not declare")
         }
@@ -1546,7 +1546,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1595,7 +1595,7 @@ struct InferenceTests {
         )
 
         // When / Then. Links, because `b` is an int by the time it is read
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("a rescue reads what the body may have written before it failed")
@@ -1646,7 +1646,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1698,7 +1698,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1751,7 +1751,7 @@ struct InferenceTests {
 
         // When / Then. `a` reads `string?` after enough rounds
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1814,7 +1814,7 @@ struct InferenceTests {
         // When / Then. `held` reads `string?`, and the plain string slot says
         // so
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1865,7 +1865,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
     @Test("an arm that refuses does not cost the arm that writes its say")
@@ -1916,7 +1916,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1955,7 +1955,7 @@ struct InferenceTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -2001,7 +2001,7 @@ struct InferenceTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("never finishes")
         }

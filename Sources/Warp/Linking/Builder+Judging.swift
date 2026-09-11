@@ -1,5 +1,5 @@
 //
-//  Linker+Judging.swift
+//  Builder+Judging.swift
 //  Warp
 //
 //  Created by JSilver
@@ -10,8 +10,8 @@ import Foundation
 // What the link refuses about a declaration on its own: a type mention that
 // resolves to nothing, a parameter no call could fit, a constraint no value
 // satisfies, and a call site whose arguments do not answer what the callee
-// asked. The walk through a body is `Linker+Typing`.
-extension Linker {
+// asked. The walk through a body is `Builder+Typing`.
+extension Builder {
     // MARK: - Internal
     // The one gate every gathered call passes, wherever its body sits. A
     // procedure, a word, a constant's closure. The call carries the declaration

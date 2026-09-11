@@ -21,7 +21,7 @@ struct WordSendsTests {
     @Test("a word answers through the word it declared it sends")
     func aWordReachesWhatItDeclared() async throws {
         // Given
-        let image = try Linker().link(
+        let image = try Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
@@ -39,7 +39,7 @@ struct WordSendsTests {
     @Test("an effect reaches a word that runs")
     func anEffectReachesAWordThatRuns() async throws {
         // Given
-        let image = try Linker().link(
+        let image = try Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(receiver: .literal(.string("hi")), selector: "app.announce"))
@@ -58,7 +58,7 @@ struct WordSendsTests {
     func anUndeclaredSendIsRefused() {
         // Given / When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.strayed],
                 entry: "entry"
             )
@@ -70,7 +70,7 @@ struct WordSendsTests {
         // Given. `app.shouting` claims it answers without running and sends
         // `app.shout`, which does not
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.contradicting, .shouting],
                 entry: "entry"
             )
@@ -83,7 +83,7 @@ struct WordSendsTests {
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.claiming, .ticketing],
                 entry: "entry"
             )
@@ -93,7 +93,7 @@ struct WordSendsTests {
     @Test("a word that says it touches shared state may send one that does")
     func aSharedWordSendingSharedStateStands() async throws {
         // Given
-        let image = try Linker().link(
+        let image = try Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.counted"))

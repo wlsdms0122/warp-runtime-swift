@@ -1,5 +1,5 @@
 //
-//  Linker+Consuming.swift
+//  Builder+Consuming.swift
 //  Warp
 //
 //  Created by JSilver
@@ -18,7 +18,7 @@ import Foundation
 // value a closure captured, a value moved inside a loop round or an attempt.
 // Each of those is a place where "how many times" is not a fact the text shows,
 // and a proof that admits one of them is not a proof.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     // Whether values of this type are handed on once, through the names it may
     // hide behind. A chain of names is finite: the link refused one that comes

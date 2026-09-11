@@ -116,7 +116,7 @@ struct CallTests {
         )
 
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
                 entry: "entry"
             )

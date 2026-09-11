@@ -21,7 +21,7 @@ struct SwiftAuthoringTests {
     @Test("hello world needs no front end")
     func helloWorld() async throws {
         // Given
-        let linker = Linker()
+        let builder = Builder()
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("greet"), expression: .literal(.string("hello, world")))
@@ -30,7 +30,7 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try linker.link(
+        let image = try builder.build(
             [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
@@ -43,7 +43,7 @@ struct SwiftAuthoringTests {
     @Test("control flow and the signature are reachable from Swift alone")
     func controlFlow() async throws {
         // Given
-        let linker = Linker()
+        let builder = Builder()
         let index = Expression.reference([.key("counted"), .key("index")])
         let procedure = Procedure(
             signature: Signature(parameters: ["rounds": Parameter(type: .int)]),
@@ -81,7 +81,7 @@ struct SwiftAuthoringTests {
 
         // When Comparing is a word, so this links the bundle that declares one.
         // The control flow beside it needs nothing.
-        let image = try linker.link(
+        let image = try builder.build(
             [try Module(procedures: ["entry": procedure]), .logic],
             entry: "entry"
         )
@@ -97,7 +97,7 @@ struct SwiftAuthoringTests {
     @Test("a native effect needs no decoder to run")
     func hostEffectWithoutDecoder() async throws {
         // Given
-        let linker = Linker()
+        let builder = Builder()
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("shout"), expression: .call(
@@ -112,7 +112,7 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try linker.link(
+        let image = try builder.build(
             [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
@@ -126,7 +126,7 @@ struct SwiftAuthoringTests {
     func oneCallingShape() async throws {
         // Given. Three selectors that are answered in three different places,
         // written identically. Where each is found is the runtime's business.
-        let linker = Linker()
+        let builder = Builder()
         let procedure = Procedure(
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
@@ -161,7 +161,7 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try linker.link(
+        let image = try builder.build(
             [try Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
             entry: "speak"
         )

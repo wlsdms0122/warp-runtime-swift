@@ -17,7 +17,7 @@ import WarpStandard
 @Suite("What a bounded type parameter admits")
 struct ConstraintTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -41,7 +41,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -67,7 +67,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -162,7 +162,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'Scalar' does not admit")
         }
@@ -192,7 +192,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("names 'Sortable', which no module in this link declares")
         }
@@ -225,7 +225,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("One parameter takes one constraint")
         }
@@ -264,7 +264,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'Scalar' does not admit")
         }
@@ -287,7 +287,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("both a type and a constraint")
@@ -311,7 +311,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -341,7 +341,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("A type parameter lives in a signature")
         }
@@ -372,7 +372,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("A type parameter lives in a signature")
         }
@@ -401,7 +401,7 @@ struct ConstraintTests {
 
             // When / Then
             #expect {
-                try linker.link([sut] + Module.standard, entry: entryName)
+                try builder.build([sut] + Module.standard, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("through nothing but names")
             }
@@ -420,7 +420,7 @@ struct ConstraintTests {
         )
 
         #expect(throws: Never.self) {
-            try linker.link([tree] + Module.standard, entry: entryName)
+            try builder.build([tree] + Module.standard, entry: entryName)
         }
     }
 
@@ -442,7 +442,7 @@ struct ConstraintTests {
 
             // When / Then
             #expect {
-                try linker.link([sut] + Module.standard, entry: entryName)
+                try builder.build([sut] + Module.standard, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("a member is a concrete shape")
             }
@@ -477,7 +477,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("oneOf admits nothing")
         }
@@ -506,7 +506,7 @@ struct ConstraintTests {
 
         for dead in ["1", "1e0", "1.50", "1e-5"] {
             #expect("\(dead)") {
-                try linker.link([module(oneOf: ["2.0", dead])] + Module.standard, entry: entryName)
+                try builder.build([module(oneOf: ["2.0", dead])] + Module.standard, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("'\(dead)'")
             }
@@ -515,7 +515,7 @@ struct ConstraintTests {
         // The spellings a document itself writes are alive. The exponent form
         // included, sign and padding and all.
         #expect(throws: Never.self) {
-            try linker.link([module(oneOf: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
+            try builder.build([module(oneOf: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
         }
     }
 
@@ -596,7 +596,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("a member is a concrete shape")
         }
@@ -637,7 +637,7 @@ struct ConstraintTests {
         )
 
         #expect(throws: Never.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -660,7 +660,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -709,7 +709,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("is read as int and as string")
         }
@@ -738,7 +738,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("no word by that name")
         }
@@ -765,7 +765,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("which 'std.Numeric' does not admit")
         }
@@ -792,7 +792,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("does not declare")
@@ -821,7 +821,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("both in front and by name")
         }
@@ -854,7 +854,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("names 'Nope', which no module in this link declares")
         }
@@ -884,7 +884,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("receiver names 'of'")
         }
@@ -1025,7 +1025,7 @@ struct ConstraintTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 }

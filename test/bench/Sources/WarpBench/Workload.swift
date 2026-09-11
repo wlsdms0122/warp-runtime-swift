@@ -37,7 +37,7 @@ struct Workload {
         self.name = url.deletingPathExtension().lastPathComponent
         self.text = text
         self.module = try Loader().load(try TextEncoding.value(from: text), identity: nil)
-        self.image = try Self.linked(module)
+        self.image = try Self.built(module)
     }
 
     // MARK: - Public
@@ -54,44 +54,44 @@ struct Workload {
         try elapsed { _ = try Loader().load(try TextEncoding.value(from: text), identity: nil) }
     }
 
-    // How long one link of this module takes.
-    func link() throws -> Duration {
-        try elapsed { _ = try Self.linked(module) }
+    // How long one build of this module takes.
+    func build() throws -> Duration {
+        try elapsed { _ = try Self.built(module) }
     }
 
-    // The same link where the vocabulary was compiled once already, which is
-    // what a caller linking many documents against one vocabulary pays.
+    // The same build where the vocabulary was compiled once already, which is
+    // what a caller building many documents against one vocabulary pays.
     func baked() throws -> Duration {
         try elapsed {
-            let linker = Linker()
+            let builder = Builder()
 
-            _ = try linker.link(
-                Self.vocabulary + (try linker.compile([module], against: Self.vocabulary, supplying: Self.brought)),
+            _ = try builder.link(
+                Self.vocabulary + (try builder.compile([module], against: Self.vocabulary, supplying: Self.brought)),
                 entry: "entry",
                 supplying: Self.brought
             )
         }
     }
 
-    // How long a module that links, runs one round and is dropped takes. The
+    // How long a module that builds, runs one round and is dropped takes. The
     // two halves of the same measurement, timed together rather than added, so
     // nothing between them is left out. What arriving costs is `load()`.
     func once() async throws -> Duration {
         try await elapsed {
-            _ = try await Executor().run(try Self.linked(module), arguments: ["rounds": .int(1)])
+            _ = try await Executor().run(try Self.built(module), arguments: ["rounds": .int(1)])
         }
     }
 
     // MARK: - Private
     // The standard vocabulary compiled once, the way a host that brings it
     // compiles it once.
-    private static let vocabulary = try! Linker().compile(Module.standard)
+    private static let vocabulary = try! Builder().compile(Module.standard)
 
     // The native code behind that vocabulary, joined up once, the way a host
     // that brings the same words every run holds them.
     private static let brought = try! Supplying(Module.standard)
 
-    private static func linked(_ module: Module) throws -> Image {
-        try Linker().link([module] + Module.standard, entry: "entry")
+    private static func built(_ module: Module) throws -> Image {
+        try Builder().build([module] + Module.standard, entry: "entry")
     }
 }

@@ -33,7 +33,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try Linker().link([sut, .shouting] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut, .shouting] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.isolation == .isolated)
@@ -58,7 +58,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try Linker().link([sut, .ticketing] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
 
         // Then. The word itself, and the body one hop away from it
         #expect(image["app.ticket"]?.isolation == .unstated)
@@ -109,7 +109,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try Linker().link([sut, .ticketing] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.purity == .pure)

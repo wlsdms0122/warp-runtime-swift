@@ -9,10 +9,10 @@ import Foundation
 
 // Runs every program under `program/` and prints two tables. The first is
 // nanoseconds per round and how that compares to the loop alone, beside what
-// the same program costs to arrive as text, to link, and to link and run one
-// round and be dropped. The second is the cost of linking a chain of words as
+// the same program costs to arrive as text, to build, and to build and run one
+// round and be dropped. The second is the cost of building a chain of words as
 // the chain grows, once with the words spread one to a document and once with
-// all of them in one, so that a figure says which of the two a link is paying
+// all of them in one, so that a figure says which of the two a build is paying
 // for.
 //
 // Usage: `WarpBench [rounds] [repeats] [--against <table>]`. Rounds default to
@@ -33,9 +33,9 @@ struct Bench {
     private static let defaultRepeats = 3
     private static let warmupRounds = 1_000
 
-    // A link and a single round are one measurement each rather than a rate,
+    // A build and a single round are one measurement each rather than a rate,
     // so they are sampled many times and the fastest reported.
-    private static let linkSamples = 201
+    private static let buildSamples = 201
     private static let baseline = "loop"
 
     // Doubling rather than stepping: what the second table is read for is the
@@ -66,13 +66,13 @@ struct Bench {
             }
 
             var loads: [Duration] = []
-            var links: [Duration] = []
+            var builds: [Duration] = []
             var bakes: [Duration] = []
             var onces: [Duration] = []
 
-            for _ in 0 ..< linkSamples {
+            for _ in 0 ..< buildSamples {
                 loads.append(try workload.load())
-                links.append(try workload.link())
+                builds.append(try workload.build())
                 bakes.append(try workload.baked())
                 onces.append(try await workload.once())
             }
@@ -80,7 +80,7 @@ struct Bench {
             measured[workload.name] = Measurement(
                 perRound: Self.nanoseconds(Self.fastest(samples)) / Double(rounds),
                 load: Self.nanoseconds(Self.fastest(loads)),
-                link: Self.nanoseconds(Self.fastest(links)),
+                build: Self.nanoseconds(Self.fastest(builds)),
                 baked: Self.nanoseconds(Self.fastest(bakes)),
                 once: Self.nanoseconds(Self.fastest(onces))
             )
@@ -93,8 +93,8 @@ struct Bench {
             let apart = try Chain(of: count, across: count)
             let together = try Chain(of: count, across: 1)
 
-            spread[apart.words] = try Self.linking(apart)
-            gathered[together.words] = try Self.linking(together)
+            spread[apart.words] = try Self.building(apart)
+            gathered[together.words] = try Self.building(together)
         }
 
         print(Self.table(
@@ -112,7 +112,7 @@ struct Bench {
     private struct Measurement {
         let perRound: Double
         let load: Double
-        let link: Double
+        let build: Double
         let baked: Double
         let once: Double
     }
@@ -131,17 +131,17 @@ struct Bench {
         return try files.map(Workload.init(reading:))
     }
 
-    // Nanoseconds the fastest of many links of one world took.
-    private static func linking(_ chain: Chain) throws -> Double {
-        _ = try chain.link()
+    // Nanoseconds the fastest of many builds of one world took.
+    private static func building(_ chain: Chain) throws -> Double {
+        _ = try chain.build()
 
-        var links: [Duration] = []
+        var builds: [Duration] = []
 
-        for _ in 0 ..< linkSamples {
-            links.append(try chain.link())
+        for _ in 0 ..< buildSamples {
+            builds.append(try chain.build())
         }
 
-        return Self.nanoseconds(Self.fastest(links))
+        return Self.nanoseconds(Self.fastest(builds))
     }
 
     private static func fastest(_ samples: [Duration]) -> Duration {
@@ -208,16 +208,16 @@ struct Bench {
     ) -> String {
         let loop = measured[baseline]?.perRound ?? 0
         let heading = "rounds \(rounds), fastest of \(repeats);"
-            + " load, link, baked and once are the fastest of \(linkSamples)"
+            + " load, build, baked and once are the fastest of \(buildSamples)"
         var lines = [against == nil ? heading : heading + "; against \(path ?? "")", ""]
 
         lines += against == nil
             ? [
-                "| workload | ns/round | minus loop | x loop | load us | link us | baked us | once us |",
+                "| workload | ns/round | minus loop | x loop | load us | build us | baked us | once us |",
                 "|---|---|---|---|---|---|---|---|"
             ]
             : [
-                "| workload | ns/round | moved | x loop | load us | moved | link us | moved | baked us | moved |",
+                "| workload | ns/round | moved | x loop | load us | moved | build us | moved | baked us | moved |",
                 "|---|---|---|---|---|---|---|---|---|---|"
             ]
 
@@ -228,7 +228,7 @@ struct Bench {
                 lines.append(String(
                     format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f | %.0f | %.0f |",
                     name, measurement.perRound, measurement.perRound - loop, ratio,
-                    measurement.load / 1000, measurement.link / 1000,
+                    measurement.load / 1000, measurement.build / 1000,
                     measurement.baked / 1000, measurement.once / 1000
                 ))
 
@@ -240,7 +240,7 @@ struct Bench {
                 name, measurement.perRound, Self.moved(measurement.perRound, from: before["ns/round"]),
                 ratio,
                 measurement.load / 1000, Self.moved(measurement.load / 1000, from: before["load us"]),
-                measurement.link / 1000, Self.moved(measurement.link / 1000, from: before["link us"]),
+                measurement.build / 1000, Self.moved(measurement.build / 1000, from: before["build us"]),
                 measurement.baked / 1000, Self.moved(measurement.baked / 1000, from: before["baked us"])
             ))
         }
@@ -248,7 +248,7 @@ struct Bench {
         return lines.joined(separator: "\n")
     }
 
-    // What linking a chain of words costs, once with the words dealt one to a
+    // What building a chain of words costs, once with the words dealt one to a
     // document and once with all of them in a single document.
     //
     // Beside each total, what one more word adds: the standard vocabulary is in
@@ -257,8 +257,8 @@ struct Bench {
     //
     // The two series carry the same words, the same bodies and the same names,
     // and differ only in how many documents hold them. A column that climbs on
-    // both is a link growing with the words it was given; one that climbs only
-    // where the words are spread is a link growing with the documents.
+    // both is a build growing with the words it was given; one that climbs only
+    // where the words are spread is a build growing with the documents.
     private static func table(
         spread: [Int: Double],
         gathered: [Int: Double],
@@ -273,8 +273,8 @@ struct Bench {
         else { return "" }
 
         var lines = [
-            "linking a chain of words, each calling the one in front of it;"
-                + " spread one to a document and gathered into one; fastest of \(linkSamples)",
+            "building a chain of words, each calling the one in front of it;"
+                + " spread one to a document and gathered into one; fastest of \(buildSamples)",
             "",
             against == nil
                 ? "| words | spread us | spread each | gathered us | gathered each |"
@@ -310,9 +310,9 @@ struct Bench {
     }
 
     // Microseconds each word past the smallest chain added, where any did.
-    private static func each(_ link: Double, over base: Double, from smallest: Int, to count: Int) -> String {
+    private static func each(_ build: Double, over base: Double, from smallest: Int, to count: Int) -> String {
         guard count > smallest else { return "" }
 
-        return String(format: "%.1f", (link - base) / Double(count - smallest) / 1000)
+        return String(format: "%.1f", (build - base) / Double(count - smallest) / 1000)
     }
 }

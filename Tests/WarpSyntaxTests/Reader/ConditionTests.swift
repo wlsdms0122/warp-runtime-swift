@@ -142,7 +142,7 @@ struct ConditionTests {
         // decoding would make the notation hold the vocabulary; it is checked
         // where names resolve.
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard,
                 entry: entryName
             )

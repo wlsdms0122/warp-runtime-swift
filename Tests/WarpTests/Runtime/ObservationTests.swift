@@ -19,7 +19,7 @@ import WarpStandard
 @Suite("What a run reports while it runs")
 struct ObservationTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -40,7 +40,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -77,7 +77,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -114,7 +114,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -158,7 +158,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -189,7 +189,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -224,7 +224,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         await #expect(throws: Aborted.self) {
@@ -255,7 +255,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
 
         _ = try? await Executor(observer: observer).run(image)
 
@@ -303,7 +303,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
         let answer = try await Executor(observer: observer).run(image)
 
         // Then
@@ -324,7 +324,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then

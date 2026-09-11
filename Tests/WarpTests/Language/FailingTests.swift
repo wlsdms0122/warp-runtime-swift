@@ -39,7 +39,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.failing == .these([]))
@@ -65,7 +65,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image["app.reach"]?.failing == .these(["aborted"]))
@@ -86,7 +86,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then. The optional spelling reads the mismatch as null instead
         #expect(image[entryName]?.failing == .these(["cast_refused"]))
@@ -121,7 +121,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.failing == .these(["cast_refused"]))
@@ -150,7 +150,7 @@ struct FailingTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("attempts a body that cannot fail")
         }
@@ -181,7 +181,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then. The rescue caught an unknown, and what is left is the rescue's
         #expect(image[entryName]?.failing == .these([]))

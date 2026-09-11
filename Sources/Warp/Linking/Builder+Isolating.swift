@@ -1,5 +1,5 @@
 //
-//  Linker+Isolating.swift
+//  Builder+Isolating.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -12,7 +12,7 @@ import Foundation
 // isolated, and one is struck when its body writes a name it did not declare,
 // hands one in place, calls a value, or calls a declaration that was struck,
 // until nothing more is struck.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     func isolated(
         among symbols: [Symbol],

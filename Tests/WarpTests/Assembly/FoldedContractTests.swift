@@ -61,14 +61,14 @@ struct FoldedContractTests {
             var compiled: [Compiled] = []
 
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+                compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
             "\(error)".contains("string does not answer every word 'app.Describable' asks")
         }
 
         #expect {
-            try Linker().link(modules, entry: entryName)
+            try Builder().build(modules, entry: entryName)
         } throws: { error in
             "\(error)".contains("string does not answer every word 'app.Describable' asks")
         }
@@ -124,7 +124,7 @@ struct FoldedContractTests {
         )
 
         #expect {
-            try Linker().link([asking, typed, program] + Module.standard, entry: entryName)
+            try Builder().build([asking, typed, program] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("constants.app.zzz:")
                 && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
@@ -150,15 +150,15 @@ struct FoldedContractTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. The pair the fold handed over is answered by the list, which
         // is the same answer the whole graph gives, and both say which
         // declaration was being settled when the fold turned it up.
-        for link in [compiled, try Linker().compile(modules)] {
+        for link in [compiled, try Builder().compile(modules)] {
             #expect {
-                try Linker().link(link, entry: entryName, supplying: Supplying(Module.standard))
+                try Builder().link(link, entry: entryName, supplying: Supplying(Module.standard))
             } throws: { error in
                 "\(error)".contains("constants.app.counted:")
                     && "\(error)".contains("no document in this link says 'bank.Plain' answers it")

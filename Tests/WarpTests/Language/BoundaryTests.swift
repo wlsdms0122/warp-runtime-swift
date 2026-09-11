@@ -25,7 +25,7 @@ import WarpStandard
 @Suite("The standard vocabulary at its edges")
 struct BoundaryTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -52,7 +52,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("'N' is read as")
         }
@@ -96,7 +96,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -152,7 +152,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("'Element' is read as")
                 && "\(error)".contains("int")
@@ -195,7 +195,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -226,7 +226,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -254,7 +254,7 @@ struct BoundaryTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try linker.link([module] + Module.standard, entry: "entry")
+            try builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -353,6 +353,6 @@ struct BoundaryTests {
         )
 
         return try await Executor()
-            .run(try linker.link([module] + Module.standard, entry: "entry"))
+            .run(try builder.build([module] + Module.standard, entry: "entry"))
     }
 }

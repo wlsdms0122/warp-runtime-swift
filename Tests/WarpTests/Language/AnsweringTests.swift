@@ -24,7 +24,7 @@ import WarpStandard
 @Suite("An answer nobody wrote is read off the body")
 struct AnsweringTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -130,11 +130,11 @@ struct AnsweringTests {
         }
 
         // When / Then. One way out, and the dot is judged against it
-        _ = try linker.link([module(leaving: false)] + Module.standard, entry: entryName)
+        _ = try builder.build([module(leaving: false)] + Module.standard, entry: entryName)
 
         // Two, and what holds both says nothing about a field
         #expect {
-            try linker.link([module(leaving: true)] + Module.standard, entry: entryName)
+            try builder.build([module(leaving: true)] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("which declares nothing")
         }
@@ -161,7 +161,7 @@ struct AnsweringTests {
         )
 
         // When / Then. Nothing is claimed, so nothing is refused
-        _ = try linker.link([sut] + Module.standard, entry: entryName)
+        _ = try builder.build([sut] + Module.standard, entry: entryName)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
         // like at a call site. Where the same shape with the circle broken
@@ -188,10 +188,10 @@ struct AnsweringTests {
         }
 
         #expect(throws: LinkError.self) {
-            try linker.link([reading(circling: true)] + Module.standard, entry: entryName)
+            try builder.build([reading(circling: true)] + Module.standard, entry: entryName)
         }
 
-        _ = try linker.link([reading(circling: false)] + Module.standard, entry: entryName)
+        _ = try builder.build([reading(circling: false)] + Module.standard, entry: entryName)
     }
 
     @Test("an answer naming a type parameter is filled at the call, or fills with nothing")
@@ -230,14 +230,14 @@ struct AnsweringTests {
 
         // When / Then. The parameter itself: filled with what the call put
         // there, so the caller reads that record and is held to it
-        _ = try linker.link(
+        _ = try builder.build(
             [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
                 + Module.standard,
             entry: entryName
         )
 
         #expect {
-            try linker.link(
+            try builder.build(
                 [module(reading: [.key("said"), .key("missing")], answering: [.key("of")])]
                     + Module.standard,
                 entry: entryName
@@ -249,7 +249,7 @@ struct AnsweringTests {
         // And a field of it: a name only `peek` could read, which no call
         // fills, so the caller reads `any` and the dot is refused
         #expect {
-            try linker.link(
+            try builder.build(
                 [module(
                     reading: [.key("said"), .key("inner")],
                     answering: [.key("of"), .key("inner")]
@@ -274,7 +274,7 @@ struct AnsweringTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image.entry.signature.returns == nil)

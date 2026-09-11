@@ -15,7 +15,7 @@ import Testing
 @Suite("A declaration may be sent to something")
 struct ReceiverTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -96,7 +96,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try linker.link([written] + Module.standard, entry: entryName)
+        let image = try builder.build([written] + Module.standard, entry: entryName)
 
         // Then. One table, and what separates them is only how each is written
         let shout = try #require(image["shout"])
@@ -111,7 +111,7 @@ struct ReceiverTests {
     @Test("a call sends its receiver even where the parameter is required")
     func receiverSuppliesItsParameter() async throws {
         // Given. The receiver is written on the other side of the dot, so the
-        // linker must not read its parameter as one nobody supplied
+        // builder must not read its parameter as one nobody supplied
         let sut = try Module(
             walked: ["std.collection.count"],
             procedures: [
@@ -173,7 +173,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
 
         // Then. `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
@@ -211,7 +211,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard, entry: entryName)
+        let image = try builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image["label"]?.purity == .pure)
@@ -306,7 +306,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
 
         // Then
         #expect(image["summarize"]?.purity != .pure)
@@ -324,7 +324,7 @@ struct ReceiverTests {
         )
 
         #expect {
-            try linker.link([reaching] + Module.standard + [.failing], entry: entryName)
+            try builder.build([reaching] + Module.standard + [.failing], entry: entryName)
         } throws: { error in
             "\(error)".contains("summarize")
         }
@@ -365,7 +365,7 @@ struct ReceiverTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard + [.failing], entry: entryName)
+            try builder.build([sut] + Module.standard + [.failing], entry: entryName)
         }
     }
 

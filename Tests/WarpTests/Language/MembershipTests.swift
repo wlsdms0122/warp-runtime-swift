@@ -63,7 +63,7 @@ struct MembershipTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -89,7 +89,7 @@ struct MembershipTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -115,10 +115,10 @@ struct MembershipTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try Linker().link([try module(reading: .string)] + Module.standard, entry: entryName)
+            try Builder().build([try module(reading: .string)] + Module.standard, entry: entryName)
         }
         #expect(throws: LinkError.self) {
-            try Linker().link([try module(reading: .int)] + Module.standard, entry: entryName)
+            try Builder().build([try module(reading: .int)] + Module.standard, entry: entryName)
         }
     }
 

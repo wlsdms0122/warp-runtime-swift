@@ -81,7 +81,7 @@ func run(
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
-    let image = try Linker().link(modules + vocabulary, entry: entry)
+    let image = try Builder().build(modules + vocabulary, entry: entry)
 
     return try await Executor(environment: environment).run(image, arguments: arguments)
 }

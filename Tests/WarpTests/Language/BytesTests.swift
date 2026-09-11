@@ -17,7 +17,7 @@ import WarpStandard
 @Suite
 struct BytesTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
     private let entryName: Name = "entry"
 
     // MARK: - Test
@@ -383,7 +383,7 @@ struct BytesTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 

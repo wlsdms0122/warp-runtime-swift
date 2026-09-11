@@ -1,6 +1,6 @@
-rounds 200000, fastest of 3; link and once are the fastest of 201
+rounds 200000, fastest of 3; build and once are the fastest of 201
 
-| workload | ns/round | minus loop | x loop | link us | baked us | once us |
+| workload | ns/round | minus loop | x loop | build us | baked us | once us |
 |---|---|---|---|---|---|---|
 | box | 3353 | 2367 | 3.40 | 800 | 355 | 811 |
 | call | 1837 | 851 | 1.86 | 768 | 328 | 779 |

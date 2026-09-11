@@ -11,7 +11,7 @@ import Warp
 // Calling a value that is a procedure.
 //
 // Beside `call:` rather than folded into it, because the two ask different
-// questions. `call:` names a symbol, and the linker answers it before anything
+// questions. `call:` names a symbol, and the builder answers it before anything
 // runs; this names an expression, and only a run can say what it holds. Writing
 // both as one word would hide which of those an author had written.
 //

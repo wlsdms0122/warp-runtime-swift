@@ -47,14 +47,14 @@ struct Chain {
     }
 
     // MARK: - Public
-    // How long one link of this world takes.
-    func link() throws -> Duration {
-        try elapsed { _ = try Linker().link(world, entry: entry) }
+    // How long one build of this world takes.
+    func build() throws -> Duration {
+        try elapsed { _ = try Builder().build(world, entry: entry) }
     }
 
     // MARK: - Private
     private enum Refusal: Error {
-        // A chain of no words holds nothing to start a link from.
+        // A chain of no words holds nothing to start a build from.
         case wordless
 
         // Fewer documents than one, or more documents than there are words to

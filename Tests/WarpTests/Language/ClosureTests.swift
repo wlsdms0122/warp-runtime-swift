@@ -95,11 +95,11 @@ struct ClosureTests {
         // When / Then
         if fits {
             #expect(throws: Never.self) {
-                try Linker().link([sut] + Module.standard, entry: entryName)
+                try Builder().build([sut] + Module.standard, entry: entryName)
             }
         } else {
             #expect(throws: LinkError.self) {
-                try Linker().link([sut] + Module.standard, entry: entryName)
+                try Builder().build([sut] + Module.standard, entry: entryName)
             }
         }
     }
@@ -156,7 +156,7 @@ struct ClosureTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -203,7 +203,7 @@ struct ClosureTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link([sut, .shouting] + Module.standard, entry: entryName)
+            try Builder().build([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 

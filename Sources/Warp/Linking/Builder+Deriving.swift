@@ -1,5 +1,5 @@
 //
-//  Linker+Deriving.swift
+//  Builder+Deriving.swift
 //  Warp
 //
 //  Created by JSilver
@@ -11,7 +11,7 @@ import Foundation
 // declaration is pure until its body shows otherwise and derivable until its
 // signature does, and both answers are the whole link's rather than any one
 // body's, so a path may reach a word the call graph never mentions.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     // Which of these answer without running. A native says so about itself; a
     // body cannot, so it is read off what it calls.

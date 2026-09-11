@@ -16,7 +16,7 @@ import Testing
 @Suite("The standard vocabulary")
 struct StandardTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -40,11 +40,11 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut, .math, .text, .foundation], entry: entryName)
+            try builder.build([sut, .math, .text, .foundation], entry: entryName)
         }
 
         #expect(throws: Never.self) {
-            try linker.link([sut, .collection, .foundation], entry: entryName)
+            try builder.build([sut, .collection, .foundation], entry: entryName)
         }
     }
 
@@ -243,7 +243,7 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut, .shouting] + Module.standard, entry: entryName)
+            try builder.build([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 
@@ -828,7 +828,7 @@ struct StandardTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -1028,7 +1028,7 @@ struct StandardTests {
 
         // When / Then. The conditional holds a string, and `wants` declares an int
         #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 }

@@ -14,7 +14,7 @@ import Testing
 @Suite("Types lower to shapes the run reads by row")
 struct ShapeTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     private let types = TypeTable(
         types: [
@@ -141,7 +141,7 @@ struct ShapeTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
         let row = try #require(image["std.math.lessThan"])
         let ordered = try #require(image.shapes.constraintRow(named: "std.Comparable"))
 
@@ -181,7 +181,7 @@ struct ShapeTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: "entry")
+        let image = try builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
@@ -303,7 +303,7 @@ struct ShapeTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("through nothing but names")
         }
@@ -343,8 +343,8 @@ struct ShapeTests {
                 )
             ]
         )
-        let made = try await Executor().run(try linker.link([maker] + Module.standard, entry: "entry"))
-        let taking = try linker.link([taker] + Module.standard, entry: "entry")
+        let made = try await Executor().run(try builder.build([maker] + Module.standard, entry: "entry"))
+        let taking = try builder.build([taker] + Module.standard, entry: "entry")
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -375,8 +375,8 @@ struct ShapeTests {
                 )
             ]
         )
-        let made = try await Executor().run(try linker.link([maker], entry: "entry"))
-        let taking = try linker.link([taker], entry: "entry")
+        let made = try await Executor().run(try builder.build([maker], entry: "entry"))
+        let taking = try builder.build([taker], entry: "entry")
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -397,7 +397,7 @@ struct ShapeTests {
                 )
             ]
         )
-        let made = try await Executor().run(try linker.link([maker] + Module.standard, entry: "entry"))
+        let made = try await Executor().run(try builder.build([maker] + Module.standard, entry: "entry"))
 
         // When / Then
         #expect {

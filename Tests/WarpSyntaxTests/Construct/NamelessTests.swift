@@ -190,7 +190,7 @@ struct NamelessTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [Name: Value] = [:]) async throws -> Value {
-        let image = try Linker().link([module] + Module.standard, entry: "entry")
+        let image = try Builder().build([module] + Module.standard, entry: "entry")
 
         return try await Executor().run(image, arguments: arguments)
     }

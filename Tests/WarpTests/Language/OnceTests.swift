@@ -31,7 +31,7 @@ struct OnceTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -47,7 +47,7 @@ struct OnceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("still holds 'handle' where it ends")
         }
@@ -68,7 +68,7 @@ struct OnceTests {
         // When / Then. The second send reads a name that holds nothing, which
         // is what the reading walk calls it before this one is asked
         #expect(throws: LinkError.self) {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -95,7 +95,7 @@ struct OnceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("in one arm and not in the other")
         }
@@ -126,7 +126,7 @@ struct OnceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("inside a loop, which happens no fixed number of times")
         }
@@ -148,7 +148,7 @@ struct OnceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("does not take a value written `once`")
         }
@@ -174,7 +174,7 @@ struct OnceTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -193,7 +193,7 @@ struct OnceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a declared type is handed on once")
         }
@@ -213,7 +213,7 @@ struct OnceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("carries 'app.Handle' inside another shape")
         }

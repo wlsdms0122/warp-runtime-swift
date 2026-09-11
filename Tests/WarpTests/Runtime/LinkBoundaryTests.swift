@@ -28,11 +28,11 @@ struct LinkBoundaryTests {
         // Given. Two links declaring different sets of type names. Names are
         // numbered in the order they sort, so one more name ahead of `Thing`
         // moves what its number stands for
-        let mine = try Linker().link(
+        let mine = try Builder().build(
             try world(declaring: ["app.Thing": .record(["a": .int])]),
             entry: "entry"
         )
-        let theirs = try Linker().link(
+        let theirs = try Builder().build(
             try world(declaring: [
                 "app.Alpha": .record(["z": .string]),
                 "app.Thing": .record(["a": .int])

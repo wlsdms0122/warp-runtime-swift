@@ -16,7 +16,7 @@ import Testing
 @Suite
 struct RangeTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
     private let entryName: Name = "entry"
 
     // MARK: - Test
@@ -119,7 +119,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("outside int(0...255)")
         }
@@ -147,7 +147,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("outside int(0...255)")
         }
@@ -170,7 +170,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -201,7 +201,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try linker.link([module(oneOf: ["300", "999"])] + Module.standard, entry: entryName)
+            try builder.build([module(oneOf: ["300", "999"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }
@@ -209,7 +209,7 @@ struct RangeTests {
         // A live candidate does not excuse a dead one: `300` is a member no
         // call could ever match, and the refusal names it.
         #expect {
-            try linker.link([module(oneOf: ["0", "300"])] + Module.standard, entry: entryName)
+            try builder.build([module(oneOf: ["0", "300"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'300'")
         }
@@ -218,7 +218,7 @@ struct RangeTests {
         // numbers that already have one, so neither is a candidate an int slot
         // can spell. The oneOf admits nothing and refuses.
         #expect {
-            try linker.link([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
+            try builder.build([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("admits nothing")
         }

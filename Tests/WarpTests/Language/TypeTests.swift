@@ -138,7 +138,7 @@ struct TypeTests {
         #expect(settled["value"] == .int(1))
     }
 
-    @Test("the linker refuses a signature that names a shape nobody declared")
+    @Test("the builder refuses a signature that names a shape nobody declared")
     func unknownTypeIsALinkError() throws {
         // Given
         let sut = try Module(
@@ -154,7 +154,7 @@ struct TypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link([sut], entry: "entry")
+            try Builder().build([sut], entry: "entry")
         }
     }
 
@@ -169,7 +169,7 @@ struct TypeTests {
     @Test("a call handed to a parameter it cannot fit is refused at link")
     func mismatchedCallIsALinkError() {
         // Given. Nothing runs here. Both sides are declarations, and a
-        // declaration is text, so this is the half of checking the linker can
+        // declaration is text, so this is the half of checking the builder can
         // do
         let counts = Procedure(
             signature: Signature(returns: .int),
@@ -196,7 +196,7 @@ struct TypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -230,7 +230,7 @@ struct TypeTests {
 
         // When / Then
         #expect {
-            try Linker().link(
+            try Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -245,7 +245,7 @@ struct TypeTests {
             result: .call(Call(selector: "counts"))
         )
 
-        _ = try Linker().link(
+        _ = try Builder().build(
             [try Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
             entry: "entry"
         )

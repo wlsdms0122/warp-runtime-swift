@@ -1,5 +1,5 @@
 //
-//  Linker+Contracting.swift
+//  Builder+Contracting.swift
 //  Warp
 //
 //  Created by JSilver
@@ -29,7 +29,7 @@ import Foundation
 // Every claim is read, not the reached ones, the way purity is worked out over
 // every declaration. A slot bounded by a contract may be filled by a type no
 // call in this link mentions.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     // For each contract, which declaration answers each of its words, keyed by
     // the type that satisfies it, and beside it the reason each claim that did

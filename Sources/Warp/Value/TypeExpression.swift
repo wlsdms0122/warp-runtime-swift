@@ -24,7 +24,7 @@ import Foundation
 public indirect enum TypeExpression: Sendable, Equatable {
     // Nothing ever *is* `any`. It is what a declaration says when it accepts
     // whatever it is handed. `contains` compares elements of any shape, and
-    // declaring `string` there would be a lie the linker would then enforce.
+    // declaring `string` there would be a lie the builder would then enforce.
     case any
 
     // The other end of `any`. No value is ever of this type, which is how a
@@ -81,7 +81,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // reason.
     //
     // Purity and isolation are requirements rather than claims. A declaration
-    // never states its own (the linker derives both from what a body does) so
+    // never states its own (the builder derives both from what a body does) so
     // what is written here is what a slot asks of whatever fills it.
     case procedure(Signature?, Purity = .unstated, Isolation = .unstated)
 
@@ -463,7 +463,7 @@ extension TypeExpression {
     // was declared, and `any` on the right is accepted by anything because
     // nothing is known. An undeclared answer cannot be proven wrong.
     //
-    // This is the half of checking the linker can do. What a body computes is
+    // This is the half of checking the builder can do. What a body computes is
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
     public func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {

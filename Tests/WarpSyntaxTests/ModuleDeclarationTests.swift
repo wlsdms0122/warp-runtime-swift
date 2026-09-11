@@ -75,7 +75,7 @@ struct ModuleDeclarationTests {
 
         // When / Then
         #expect {
-            try Linker().link([caller, library], entry: "caller.entry")
+            try Builder().build([caller, library], entry: "caller.entry")
         } throws: { error in
             "\(error)".contains("sends 'greet', which no module in this link declares")
         }
@@ -161,7 +161,7 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .string("https://example.com/api"))
 
         #expect(throws: LinkError.self) {
-            try Linker().link([cyclic], entry: entryName)
+            try Builder().build([cyclic], entry: entryName)
         }
     }
 

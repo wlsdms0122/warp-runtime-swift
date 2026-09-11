@@ -151,7 +151,7 @@ struct SignatureTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link([spec] + Module.standard, entry: entryName)
+            try Builder().build([spec] + Module.standard, entry: entryName)
         }
     }
 

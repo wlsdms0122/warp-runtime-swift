@@ -205,7 +205,7 @@ public struct Loader: Sendable {
     // is what they typed) and this is where a stage that has no document of its
     // own gets it.
     //
-    //     let image = try loader.reading { try Linker().link(modules, entry: "greet") }
+    //     let image = try loader.reading { try Builder().build(modules, entry: "greet") }
     //
     // The reading path takes it on its own; a link is the stage that does not,
     // because what to link is the caller's statement and the modules in it may

@@ -1,5 +1,5 @@
 //
-//  Linker+Resolving.swift
+//  Builder+Resolving.swift
 //  Warp
 //
 //  Created by JSilver
@@ -11,7 +11,7 @@ import Foundation
 // gathered under their declared spellings, the type and constraint tables the
 // judgments read against, and the module-level constants and variables settled
 // in the order they read each other.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     // Which types answer which contracts, read off what the documents claimed.
     //

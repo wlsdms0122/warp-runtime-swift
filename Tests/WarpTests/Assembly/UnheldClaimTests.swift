@@ -76,7 +76,7 @@ struct UnheldClaimTests {
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
         #expect(closed.contains { module in module.claiming.isEmpty == false })
-        #expect(throws: Never.self) { try Linker().link(closed, entry: entryName) }
+        #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
     }
 
     @Test("a good claim beside an unheld one in the same document")
@@ -150,7 +150,7 @@ struct UnheldClaimTests {
 
         // Then. The pair the program leans on is answered, and the one beside
         // it that nothing can answer refuses nobody.
-        #expect(throws: Never.self) { try Linker().link(closed, entry: entryName) }
+        #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
     }
 
     @Test("an unheld claim refuses at the call that leaned on it")
@@ -206,7 +206,7 @@ struct UnheldClaimTests {
         // where the type was handed over, which is the document an author is
         // reading.
         #expect {
-            try Linker().link([asking, typed, claiming, program] + Module.standard, entry: entryName)
+            try Builder().build([asking, typed, claiming, program] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("procedures.app.main.result")
                 && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
@@ -282,10 +282,10 @@ struct UnheldClaimTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try Linker().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
-        #expect(throws: Never.self) { try Linker().link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
-        #expect(throws: Never.self) { try Linker().link(modules, entry: entryName) }
+        #expect(throws: Never.self) { try Builder().link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
+        #expect(throws: Never.self) { try Builder().build(modules, entry: entryName) }
     }
 }

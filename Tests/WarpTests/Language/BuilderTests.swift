@@ -1,5 +1,5 @@
 //
-//  LinkerTests.swift
+//  BuilderTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/16/26.
@@ -12,9 +12,9 @@ import Testing
 // Linking, asked the way a caller asks it: modules loaded from documents, handed
 // over as a set, and one name to start from.
 @Suite
-struct LinkerTests {
+struct BuilderTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -31,7 +31,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "constants.greeting")
@@ -61,7 +61,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.count")
@@ -90,7 +90,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.mode")
@@ -132,7 +132,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -156,7 +156,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("null") == true)
@@ -192,7 +192,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -215,7 +215,7 @@ struct LinkerTests {
 
         // When / Then
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -451,7 +451,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         }
     }
 
@@ -479,7 +479,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         }
     }
 
@@ -505,7 +505,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         }
     }
 
@@ -545,7 +545,7 @@ struct LinkerTests {
         )
 
         // When
-        let image = try linker.link([caller, middle, leaf], entry: "caller")
+        let image = try builder.build([caller, middle, leaf], entry: "caller")
 
         // Then
         #expect(image.reached == ["caller", "middle", "leaf"])
@@ -578,10 +578,10 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([caller], entry: "caller")
+            try builder.build([caller], entry: "caller")
         }
         #expect(throws: Never.self) {
-            try linker.link([caller, leaf], entry: "caller")
+            try builder.build([caller, leaf], entry: "caller")
         }
     }
 
@@ -612,7 +612,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([left, right], entry: "shared")
+            try builder.build([left, right], entry: "shared")
         }
     }
 
@@ -632,7 +632,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "absent")
+            try builder.build([sut], entry: "absent")
         }
     }
 
@@ -686,7 +686,7 @@ struct LinkerTests {
         )
 
         // When
-        let image = try linker.link([sut], entry: "loopy")
+        let image = try builder.build([sut], entry: "loopy")
 
         // Then
         #expect(image.reached == ["loopy"])
@@ -722,7 +722,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         }
     }
 
@@ -753,7 +753,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         }
     }
 
@@ -792,7 +792,7 @@ struct LinkerTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         }
     }
 
@@ -834,7 +834,7 @@ struct LinkerTests {
         )
 
         // When / Then
-        _ = try linker.link([sut], entry: "caller")
+        _ = try builder.build([sut], entry: "caller")
     }
 
     @Test("a body that settles an answer is held to it, declared or not")
@@ -867,7 +867,7 @@ struct LinkerTests {
 
         // When / Then
         #expect {
-            try linker.link([sut], entry: "caller")
+            try builder.build([sut], entry: "caller")
         } throws: { error in
             error is LinkError && "\(error)".contains("holds null where int is declared")
         }
@@ -888,7 +888,7 @@ struct LinkerTests {
         )
 
         // When
-        let image = try linker.link([sut], entry: "alone")
+        let image = try builder.build([sut], entry: "alone")
 
         // Then
         #expect(image.reached == ["alone"])
@@ -916,7 +916,7 @@ struct LinkerTests {
         )
 
         let error = #expect(throws: LinkError.self) {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message == "sends 'plus', which no module in this link declares")
@@ -946,6 +946,6 @@ struct LinkerTests {
         )
 
         // When / Then
-        _ = try linker.link([sut] + Module.standard, entry: "caller")
+        _ = try builder.build([sut] + Module.standard, entry: "caller")
     }
 }

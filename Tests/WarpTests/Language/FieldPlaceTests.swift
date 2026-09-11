@@ -16,7 +16,7 @@ import Testing
 @Suite("A field the link laid out is read by its place")
 struct FieldPlaceTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -115,7 +115,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let image = try linker.link([module] + Module.standard, entry: entryName)
+        let image = try builder.build([module] + Module.standard, entry: entryName)
 
         // Then
         #expect(try steps(of: image) == [.field(1, "y", optional: false)])
@@ -271,7 +271,7 @@ struct FieldPlaceTests {
     // The steps of the path a body answers with, which is where these tests
     // read what the link lowered.
     private func resultSteps(of procedure: Procedure) throws -> [Step] {
-        let image = try linker.link(
+        let image = try builder.build(
             [try Module(procedures: [entryName: procedure])] + Module.standard,
             entry: entryName
         )

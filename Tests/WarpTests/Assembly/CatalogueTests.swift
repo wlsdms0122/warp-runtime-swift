@@ -20,7 +20,7 @@ import WarpStandard
 @Suite("A catalogue closes the modules a link is handed")
 struct CatalogueTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Initializer
     // MARK: - Test
@@ -44,7 +44,7 @@ struct CatalogueTests {
 
         // Then. The link has both, and it links.
         #expect(closed.count == 2)
-        #expect(try linker.link(closed, entry: entryName).rows[entryName] != nil)
+        #expect(try builder.build(closed, entry: entryName).rows[entryName] != nil)
     }
 
     @Test("a word a body sends brings the module that declares it")
@@ -71,7 +71,7 @@ struct CatalogueTests {
         // Then. `math` came for the word, and `foundation` came after it for
         // the constraint `math`'s own signatures mention.
         #expect(closed.count == 3)
-        #expect(try linker.link(closed, entry: entryName).rows["std.math.plus"] != nil)
+        #expect(try builder.build(closed, entry: entryName).rows["std.math.plus"] != nil)
     }
 
     @Test("supply handed over as well as held is supply standing twice")
@@ -95,7 +95,7 @@ struct CatalogueTests {
         // Then. The link says so, rather than the catalogue quietly keeping
         // one of them.
         #expect(closed.count == 3)
-        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("a word a path steps to brings the module that declares it")
@@ -123,7 +123,7 @@ struct CatalogueTests {
         let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. The module declaring the word came, and the link is satisfied.
-        #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("a caller cannot supply a granted word to a granted module")
@@ -150,7 +150,7 @@ struct CatalogueTests {
         // Then. The link meets both and refuses, rather than binding
         // `lib.run` to the word the program wrote.
         #expect(closed.count == 3)
-        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("a name the catalogue does not declare is left to the link")
@@ -170,7 +170,7 @@ struct CatalogueTests {
 
         // Then. What comes back is what was asked for, and the refusal is the link's.
         #expect(closed.count == 1)
-        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("the caller listing one module twice is not quietly folded")
@@ -182,7 +182,7 @@ struct CatalogueTests {
 
         // Then. Both copies stand, and the link says what is wrong with that.
         #expect(closed.count == 2)
-        #expect(throws: LinkError.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("two modules declaring one name leave the catalogue no answer")
@@ -251,7 +251,7 @@ struct CatalogueTests {
         let closed = try Catalogue([holder] + Module.standard).closing([program])
 
         #expect(closed.count == 3)
-        #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("the standard vocabulary is a catalogue")
@@ -280,7 +280,7 @@ struct CatalogueTests {
         let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. Whatever came, the link is satisfied by it.
-        #expect(throws: Never.self) { try linker.link(closed, entry: entryName) }
+        #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("a claim brings the documents that answer it")
@@ -332,7 +332,7 @@ struct CatalogueTests {
         // refuse a program that says nothing about the contract at all
         #expect(closed.count == 4)
         #expect(throws: Never.self) {
-            try linker.link(closed + Module.standard, entry: entryName)
+            try builder.build(closed + Module.standard, entry: entryName)
         }
     }
 
@@ -380,7 +380,7 @@ struct CatalogueTests {
         // Then
         #expect(closed.count == 3)
         #expect(throws: Never.self) {
-            try linker.link(closed + Module.standard, entry: entryName)
+            try builder.build(closed + Module.standard, entry: entryName)
         }
     }
 
@@ -436,7 +436,7 @@ struct CatalogueTests {
         // Then. The answer came, and so did the type its signature names
         #expect(closed.count == 5)
         #expect(throws: Never.self) {
-            try linker.link(closed + Module.standard, entry: entryName)
+            try builder.build(closed + Module.standard, entry: entryName)
         }
     }
 

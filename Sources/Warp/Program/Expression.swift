@@ -47,7 +47,7 @@ public indirect enum Expression: Sendable {
     case closure(Procedure)
 
     // Calling a value rather than a name. `call` asks a table and a call graph
-    // what a selector means, and the linker settles that before any run; this
+    // what a selector means, and the builder settles that before any run; this
     // asks the value in hand, and only a run can. Two spellings because they are
     // two questions: fusing them would mean a local name could quietly stand in
     // for a linked one, and linking would stop being a promise.
@@ -123,7 +123,7 @@ public indirect enum Expression: Sendable {
 
     // The value of an expression that needs no scope. Nil the moment any part
     // must resolve at run time. Load-time gates (an atom validating its literal
-    // operand, the linker judging a constant argument) use this to judge what
+    // operand, the builder judging a constant argument) use this to judge what
     // can be judged before any run.
     public var constantValue: Value? {
         switch self {

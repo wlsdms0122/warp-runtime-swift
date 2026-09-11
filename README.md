@@ -36,7 +36,7 @@ let greet = Procedure(
     result: .reference([.key("greeting")])
 )
 
-let image = try Linker().link(
+let image = try Builder().build(
     [try Module(procedures: ["hello.greet": greet])] + Module.standard,
     entry: "hello.greet"
 )
@@ -76,7 +76,7 @@ let module = try Loader().load(                        // tree → module, or re
     document,
     identity: try Identity.of(document)                // which document, for refusals
 )
-let image = try Linker().link([module] + Module.standard, entry: "entry")
+let image = try Builder().build([module] + Module.standard, entry: "entry")
 let answer = try await Executor().run(image)
 ```
 
@@ -86,9 +86,9 @@ The stages and what each one checks are the specification's, not this file's.
 
 ## Compiling and linking
 
-The specification names three stages a refusal can come from: `load`, `link`
-and `run`. `load` is `Loader` and `run` is `Executor`. The middle one is a
-**build**, and a build is compiling and linking, the same two an ordinary
+The specification names three stages a refusal can come from: `load`, `build`
+and `run`. `load` is `Loader` and `run` is `Executor`. The middle one is
+`Builder`, and a build is compiling and linking, the same two an ordinary
 toolchain has.
 
 | | what it answers | what varies |
@@ -102,9 +102,11 @@ link, and resolving those numbers to rows of a table is the link's work. That is
 why one compile answers every entry asked of it: which declaration a run starts
 from is not a fact about the documents.
 
-`Linker` performs the whole build today and a caller sees one door,
-`Linker.link(_ modules:entry:)`. Compiling takes the whole set of modules at
-once, and the table a compile is read against is its own.
+`Builder` has a door for each: `build(_ modules:entry:)` is the two together,
+and `compile(_ modules:)` and `link(_ compiled:entry:supplying:)` are the
+halves, for a caller holding what one compile answered. Compiling takes the
+whole set of modules at once, and the table a compile is read against is its
+own.
 
 `Loader` reads the canonical document and nothing else by default. Which
 construct words exist is a `ConstructRegistry`; a host may register its own

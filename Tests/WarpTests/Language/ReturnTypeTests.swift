@@ -15,7 +15,7 @@ import Testing
 @Suite("What a procedure returns")
 struct ReturnTypeTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -38,7 +38,7 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try linker.link([sut], entry: entryName)
+        let image = try builder.build([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then. Settled to the declared representation, not merely waved past
@@ -58,7 +58,7 @@ struct ReturnTypeTests {
 
         await #expect(throws: (any Error).self) {
             try await Executor()
-                .run(try linker.link([narrowing], entry: entryName))
+                .run(try builder.build([narrowing], entry: entryName))
         }
     }
 
@@ -83,7 +83,7 @@ struct ReturnTypeTests {
         // When / Then. The body and the declaration beside it are one
         // document's text, so nothing has to run to find them disagreeing
         #expect(throws: LinkError.self) {
-            try linker.link([sut], entry: entryName)
+            try builder.build([sut], entry: entryName)
         }
     }
 
@@ -115,7 +115,7 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try linker.link([sut], entry: entryName)
+        let image = try builder.build([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then
@@ -141,7 +141,7 @@ struct ReturnTypeTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            _ = try linker.link([sut], entry: entryName)
+            _ = try builder.build([sut], entry: entryName)
         }
     }
 }

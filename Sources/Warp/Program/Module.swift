@@ -10,7 +10,7 @@ import Foundation
 // What one document declares, and nothing about running.
 //
 // A module is not a procedure and cannot be run. It becomes runnable only when a
-// linker is handed it together with the others and told which name to start
+// builder is handed it together with the others and told which name to start
 // from. Which declaration that is stays an argument to linking rather than a
 // property one of them carries, so there is no marking to put on a declaration
 // and no reserved name.

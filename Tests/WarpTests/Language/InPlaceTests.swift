@@ -38,7 +38,7 @@ struct InPlaceTests {
             ]
         )
 
-        let image = try Linker().link([sut] + Module.standard, entry: entryName)
+        let image = try Builder().build([sut] + Module.standard, entry: entryName)
 
         // When
         let first = try await Executor().run(image)
@@ -273,7 +273,7 @@ struct InPlaceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("first")
         }
@@ -304,7 +304,7 @@ struct InPlaceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("first")
         }
@@ -341,7 +341,7 @@ struct InPlaceTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try Linker().link([sut, other] + Module.standard, entry: entryName)
+            try Builder().build([sut, other] + Module.standard, entry: entryName)
         }
     }
 
@@ -356,7 +356,7 @@ struct InPlaceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a parameter is handed a variable in place")
         }
@@ -378,7 +378,7 @@ struct InPlaceTests {
 
         // When / Then
         #expect {
-            try Linker().link([sut] + Module.standard, entry: entryName)
+            try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a field of a declared type is written through")
         }

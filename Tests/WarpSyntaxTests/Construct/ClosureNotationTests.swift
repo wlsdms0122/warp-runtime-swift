@@ -207,7 +207,7 @@ struct ClosureNotationTests {
 
         // When / Then
         #expect(throws: LinkError.self) {
-            try Linker().link(
+            try Builder().build(
                 [try loader.loadDocument(fixture)] + Module.standard,
                 entry: entryName
             )
@@ -246,7 +246,7 @@ struct ClosureNotationTests {
         ]
 
         // When / Then
-        _ = try Linker().link(
+        _ = try Builder().build(
             [try loader.loadDocument(fixture)] + Module.standard,
             entry: entryName
         )

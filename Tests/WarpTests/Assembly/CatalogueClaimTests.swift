@@ -73,6 +73,6 @@ struct CatalogueClaimTests {
         // Then. The claim stands in the link, so the pair the program leans on
         // is answered.
         #expect(closed.contains { module in module.claiming.isEmpty == false })
-        #expect(throws: Never.self) { try Linker().link(closed, entry: entryName) }
+        #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
     }
 }

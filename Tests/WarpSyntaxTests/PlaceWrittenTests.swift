@@ -100,7 +100,7 @@ struct PlaceWrittenTests {
 
         // When
         let error = #expect(throws: LinkError.self) {
-            try loader.reading { try Linker().link([module], entry: entryName) }
+            try loader.reading { try Builder().build([module], entry: entryName) }
         }
 
         // Then. `call` is the word the author wrote, and `call` is what the
@@ -109,7 +109,7 @@ struct PlaceWrittenTests {
 
         // And unasked, the language answers in its own words
         let untranslated = #expect(throws: LinkError.self) {
-            try Linker().link([module], entry: entryName)
+            try Builder().build([module], entry: entryName)
         }
 
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")

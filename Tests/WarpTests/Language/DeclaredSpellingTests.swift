@@ -17,7 +17,7 @@ import WarpStandard
 @Suite("A type name is its declared spelling")
 struct DeclaredSpellingTests {
     // MARK: - Property
-    private let linker = Linker()
+    private let builder = Builder()
 
     // MARK: - Lifecycle
     // MARK: - Test
@@ -52,7 +52,7 @@ struct DeclaredSpellingTests {
         )
 
         // When
-        let image = try linker.link([sut, store] + Module.standard, entry: entryName)
+        let image = try builder.build([sut, store] + Module.standard, entry: entryName)
 
         // Then. The declaration is under the declared spelling alone
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
@@ -115,7 +115,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         #expect {
-            try linker.link([sut, one, two], entry: entryName)
+            try builder.build([sut, one, two], entry: entryName)
         } throws: { error in
             error is LinkError
                 && "\(error)".contains("names type 'Limit', which no module in this link declares")
@@ -172,7 +172,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         #expect {
-            try linker.link([one, two], entry: entryName)
+            try builder.build([one, two], entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("declared more than once")
         }
@@ -230,7 +230,7 @@ struct DeclaredSpellingTests {
 
         // When / Then
         #expect {
-            try linker.link([sut] + Module.standard, entry: entryName)
+            try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -317,7 +317,7 @@ struct DeclaredSpellingTests {
         // caller listed the modules cannot change the conclusion
         for modules in [[membership, shape], [shape, membership]] {
             #expect {
-                try linker.link(modules, entry: entryName)
+                try builder.build(modules, entry: entryName)
             } throws: { error in
                 error is LinkError && "\(error)".contains("both a type and a constraint")
             }
@@ -379,7 +379,7 @@ struct DeclaredSpellingTests {
         )
 
         #expect {
-            try linker.link([arithmetic] + Module.standard, entry: entryName)
+            try builder.build([arithmetic] + Module.standard, entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -429,13 +429,13 @@ struct DeclaredSpellingTests {
         // When / Then, without the foundation the constraint name resolves to
         // nothing, and the declaration that mentions it is refused
         #expect {
-            try linker.link([sut, .collection], entry: entryName)
+            try builder.build([sut, .collection], entry: entryName)
         } throws: { error in
             error is LinkError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
         }
 
         #expect(throws: Never.self) {
-            try linker.link([sut, .collection, .foundation], entry: entryName)
+            try builder.build([sut, .collection, .foundation], entry: entryName)
         }
     }
 }

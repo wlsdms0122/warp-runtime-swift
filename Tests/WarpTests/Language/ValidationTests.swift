@@ -455,7 +455,7 @@ struct ValidationTests {
 
         // And the link agrees the two spellings are one declaration
         #expect(throws: Never.self) {
-            try Linker().link([sut], entry: "wallet.pay")
+            try Builder().build([sut], entry: "wallet.pay")
         }
     }
 

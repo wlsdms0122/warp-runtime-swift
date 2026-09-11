@@ -1,5 +1,5 @@
 //
-//  Linker+Declaring.swift
+//  Builder+Declaring.swift
 //  Warp
 //
 //  Created by JSilver on 8/23/26.
@@ -11,7 +11,7 @@ import Foundation
 // procedure names are: the standard bundles declare `std.Numeric` under that
 // key, and a document declaring a bare `Numeric` of its own declares a
 // different name.
-extension Linker {
+extension Builder {
     // The three spaces gathered whole, here and nowhere else, so the uniqueness
     // this pass refuses on is the same fact the tables are built from: each
     // table is filled as its space is walked. A mention nothing declares is

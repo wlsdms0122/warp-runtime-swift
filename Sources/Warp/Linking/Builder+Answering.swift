@@ -1,5 +1,5 @@
 //
-//  Linker+Answering.swift
+//  Builder+Answering.swift
 //  Warp
 //
 //  Created by JSilver
@@ -27,7 +27,7 @@ import Foundation
 // as `any`: an answer worked out from itself is not one the text states, and a
 // guess there would be a refusal an author cannot act on. Writing `returns` is
 // what says more, and it removes the circle by saying it.
-extension Linker {
+extension Builder {
     // MARK: - Internal
     // A declaration whose answer nobody wrote, with what it takes to read one
     // off the body: the body itself, the names in scope before its first
