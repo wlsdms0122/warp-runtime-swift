@@ -1695,7 +1695,7 @@ extension Builder {
             if !converged {
                 try refuse(
                     "the names this loop writes never settle"
-                        + " into one reading, so the link cannot say what"
+                        + " into one reading, so the build cannot say what"
                         + " they hold",
                     at: place,
                     when: ask

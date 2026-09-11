@@ -95,7 +95,7 @@ extension Builder {
             guard let identity = module.identity else { continue }
             guard held.insert(identity).inserted else {
                 throw BuildError(
-                    "this document was handed to the link twice. A link states"
+                    "this document was handed to the build twice. A build states"
                         + " its whole graph once, so a document already in it is"
                         + " not something to add",
                     at: Place(in: .of(module))

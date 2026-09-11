@@ -402,7 +402,7 @@ struct LoweringTests {
         #expect {
             try builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
-            "\(error)".contains("runs after the link")
+            "\(error)".contains("runs after the build")
         }
     }
 

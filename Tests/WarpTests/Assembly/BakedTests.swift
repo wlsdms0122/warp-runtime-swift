@@ -161,7 +161,7 @@ struct BakedTests {
         #expect {
             try builder.compile([arriving], against: baked + compiled, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("this document was handed to the link twice")
+            "\(error)".contains("this document was handed to the build twice")
         }
     }
 

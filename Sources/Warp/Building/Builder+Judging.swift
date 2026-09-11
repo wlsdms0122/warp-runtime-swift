@@ -145,7 +145,7 @@ extension Builder {
         // way a declaration is built and a host assembling one is another.
         case let .reading(of, path):
             throw BuildError(
-                "writes `\(type.rendered)`, which is a shape the link"
+                "writes `\(type.rendered)`, which is a shape the build"
                     + " read out of a body. A declaration says what a call fills,"
                     + " and `\(([PathSegment.key(of)] + path).rendered)` is a path"
                     + " only that body can read",
