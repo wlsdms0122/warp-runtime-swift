@@ -39,3 +39,6 @@ struct Declared<Held> {
     // MARK: - Public
     // MARK: - Private
 }
+
+extension Declared: Sendable where Held: Sendable {
+}

@@ -33,6 +33,12 @@ public struct Laid: Sendable {
     // bodies, and where every number those bodies carry stands.
     let compiling: Compiling
 
+    // Every declaration these documents made, under the spelling it was
+    // declared by. What a document laid beside them declares is held against
+    // this, and a spelling already in it is a spelling that document cannot
+    // take.
+    let signatures: [Name: Declared<Signature>]
+
     // The link these rows are numbered against. A compile against them
     // numbers the documents it lays beside them into the same one.
     let linkage: Linkage
@@ -42,6 +48,7 @@ public struct Laid: Sendable {
     static let none = Laid(
         compiled: [],
         compiling: Compiling(types: .empty, contractWords: [:], answering: [], naming: []),
+        signatures: [:],
         linkage: Linkage()
     )
 }

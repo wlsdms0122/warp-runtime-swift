@@ -126,12 +126,13 @@ public struct Builder: Sendable {
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
+        let signatures = signatures(of: compiled)
         let shaped = try shaped(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures(of: compiled)
+            among: signatures
         )
 
         var compiling = Compiling(
@@ -196,7 +197,12 @@ public struct Builder: Sendable {
 
         compiling.foldable()
 
-        return Laid(compiled: compiled, compiling: compiling, linkage: linkage)
+        return Laid(
+            compiled: compiled,
+            compiling: compiling,
+            signatures: signatures,
+            linkage: linkage
+        )
     }
 
     // Every declaration a compiled document made, under the spelling it was
@@ -298,7 +304,7 @@ public struct Builder: Sendable {
         // Refused rather than taken as the caller's statement, which the order
         // is: a doubled spelling is not a question of which document to read
         // first, it is a table with no answer for that name.
-        var signatures = signatures(of: compiled)
+        var signatures = laid.signatures
 
         // The declarations of each document laid down, under the row it will
         // take here. What a document declares is its own; where the rows stand
