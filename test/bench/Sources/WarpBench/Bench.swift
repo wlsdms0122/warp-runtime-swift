@@ -45,10 +45,13 @@ struct Bench {
     // neighbours.
     private static let chainCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
-    // One count of words dealt into more and more documents. The word count is
-    // the largest of these, so the widest spread is one word to a document.
-    private static let fanoutWords = 256
+    // One count of words dealt into more and more documents, doubling for the
+    // same reason the chain's counts do.
     private static let documentCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+
+    // As many words as the most documents, so the widest spread is one word to
+    // a document.
+    private static let fanoutWords = documentCounts.reduce(1, max)
 
     // MARK: - Initializer
     // MARK: - Public
@@ -93,6 +96,17 @@ struct Bench {
             )
         }
 
+        // Each table printed where it is finished rather than all three at the
+        // end, so that a world further down refusing does not take the tables
+        // already measured with it.
+        print(Self.table(
+            measured,
+            against: printed?["workload"],
+            from: against,
+            rounds: rounds,
+            repeats: repeats
+        ))
+
         var spread: [Int: Double] = [:]
         var gathered: [Int: Double] = [:]
 
@@ -104,13 +118,16 @@ struct Bench {
             gathered[together.words] = try Self.fastest(Chain(together).build)
         }
 
-        var costs: [Int: Halves] = [:]
+        print("")
+        print(Self.table(spread: spread, gathered: gathered, against: printed?["words"]))
+
+        var costs: [Int: Cost] = [:]
 
         for count in documentCounts {
             let dealing = try Dealing(of: fanoutWords, across: count)
             let fanout = try Fanout(dealing)
 
-            costs[dealing.documents] = Halves(
+            costs[dealing.documents] = Cost(
                 build: try Self.fastest(fanout.build),
                 compile: try Self.fastest(fanout.compile),
                 alone: try Self.fastest(fanout.alone),
@@ -118,15 +135,6 @@ struct Bench {
             )
         }
 
-        print(Self.table(
-            measured,
-            against: printed?["workload"],
-            from: against,
-            rounds: rounds,
-            repeats: repeats
-        ))
-        print("")
-        print(Self.table(spread: spread, gathered: gathered, against: printed?["words"]))
         print("")
         print(Self.table(costs, of: fanoutWords, against: printed?["documents"]))
     }
@@ -140,9 +148,8 @@ struct Bench {
         let once: Double
     }
 
-    // What one world of fanned-out words costs, by the half of the build that
-    // paid for it.
-    private struct Halves {
+    // What one world of fanned-out words costs, by the door that was asked.
+    private struct Cost {
         let build: Double
         let compile: Double
         let alone: Double
@@ -358,7 +365,7 @@ struct Bench {
     // is a floor rather than a forecast, since it charges nothing for handing
     // the documents out or for taking the answers back.
     private static func table(
-        _ costs: [Int: Halves],
+        _ costs: [Int: Cost],
         of words: Int,
         against: [String: [String: Double]]?
     ) -> String {
