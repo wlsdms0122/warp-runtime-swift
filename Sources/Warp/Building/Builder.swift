@@ -126,24 +126,12 @@ public struct Builder: Sendable {
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
-        var signatures: [Name: Declared<Signature>] = [:]
-
-        for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() {
-                signatures[name] = Declared(
-                    document.table[offset].signature,
-                    at: .procedure(name.spelling, in: document.document),
-                    of: position
-                )
-            }
-        }
-
         let types = try shaped(
             declaring,
             claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
-            among: signatures
+            among: signatures(of: compiled)
         ).types
 
         var answers: [Name: Shape] = [:]
@@ -180,6 +168,25 @@ public struct Builder: Sendable {
             linkage: linkage,
             supplied: natives
         )
+    }
+
+    // Every declaration a compiled document made, under the spelling it was
+    // declared by and at the place it was written. What a document declares is
+    // its own; where it stands among the documents is the caller's order.
+    private func signatures(of compiled: [Compiled]) -> [Name: Declared<Signature>] {
+        var signatures: [Name: Declared<Signature>] = [:]
+
+        for (position, document) in compiled.enumerated() {
+            for (offset, name) in document.declared.enumerated() {
+                signatures[name] = Declared(
+                    document.table[offset].signature,
+                    at: .procedure(name.spelling, in: document.document),
+                    of: position
+                )
+            }
+        }
+
+        return signatures
     }
 
     // The same, against documents a caller already laid down.
@@ -263,17 +270,7 @@ public struct Builder: Sendable {
         // Refused rather than taken as the caller's statement, which the order
         // is: a doubled spelling is not a question of which document to read
         // first, it is a table with no answer for that name.
-        var signatures: [Name: Declared<Signature>] = [:]
-
-        for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() {
-                signatures[name] = Declared(
-                    document.table[offset].signature,
-                    at: .procedure(name.spelling, in: document.document),
-                    of: position
-                )
-            }
-        }
+        var signatures = signatures(of: compiled)
 
         // The declarations of each document laid down, under the row it will
         // take here. What a document declares is its own; where the rows stand
