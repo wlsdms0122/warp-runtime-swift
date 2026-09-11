@@ -115,8 +115,8 @@ struct Case: Sendable, CustomStringConvertible {
     // Which shapes a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
-    static let version = 1
-    static let earliest = 1
+    static let version = 2
+    static let earliest = 2
 
     static let versionKey: Name = "test"
 
