@@ -108,11 +108,16 @@ struct Compiling {
                 variables: document.variables.map(\.name)
             )
 
-            for row in rows.prefix(document.declared.count) {
-                if row.purity == .pure { pure.insert(row.label) }
-                if row.isolation == .isolated { isolated.insert(row.label) }
+            // Read off what the document settled rather than off the rows it
+            // was laid down as. A row is a declaration lowered against this
+            // link's shapes, and none of these three is a shape: they are what
+            // the document proved about its own body, carried over as it
+            // wrote them.
+            for judged in document.table.prefix(document.declared.count) {
+                if judged.purity == .pure { pure.insert(judged.label) }
+                if judged.isolation == .isolated { isolated.insert(judged.label) }
 
-                failing[row.label] = row.failing
+                failing[judged.label] = judged.failing
             }
 
             for (declared, answer) in document.answers {
