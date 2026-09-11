@@ -159,14 +159,14 @@ public struct Builder: Sendable {
                 }
             }
 
-            let read = try document.answers.reduce(into: [Name: Shape]()) { read, answer in
+            let answered = try document.answers.reduce(into: [Name: Shape]()) { read, answer in
                 read[answer.key] = try standing.read(
                     answer.value,
                     at: .procedure(answer.key.spelling, in: document.document)
                 )
             }
 
-            compiling.lay(document, at: origin, standing: rows, answering: read)
+            compiling.lay(document, at: origin, rows: rows, answering: answered)
         }
 
         // Said after every block stands, since a path steps to a declaration
@@ -193,7 +193,9 @@ public struct Builder: Sendable {
         var signatures: [Name: Declared<Signature>] = [:]
 
         for (position, document) in compiled.enumerated() {
-            for (offset, name) in document.declared.enumerated() {
+            for offset in document.standing {
+                let name = document.declared[offset]
+
                 signatures[name] = Declared(
                     document.table[offset].signature,
                     at: .procedure(name.spelling, in: document.document),

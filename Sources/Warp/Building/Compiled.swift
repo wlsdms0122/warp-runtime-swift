@@ -48,6 +48,14 @@ public struct Compiled: Sendable, Declaring {
 
     let table: [Judged]
 
+    // Where this document's declarations stand among its rows, and where the
+    // closures its bodies lifted stand behind them. Every list of this
+    // document's rows is cut by these, so nothing cuts them apart, and a list
+    // that is not this document's rows is refused by the subscript rather than
+    // quietly cut short.
+    var standing: Range<Int> { 0 ..< declared.count }
+    var lifted: Range<Int> { declared.count ..< table.count }
+
     // What each declaration calls, beside the spelling it was declared
     // by. Read off the bodies as they were judged, so what a link walks is
     // what was proved rather than what a second reading of the same text

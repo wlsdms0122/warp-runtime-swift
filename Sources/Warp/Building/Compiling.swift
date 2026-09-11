@@ -135,9 +135,8 @@ struct Compiling {
     // One document already compiled laid down, as the document itself wrote
     // it.
     //
-    // Its rows and what it settled are cut at one boundary, which is how many
-    // declarations it made: what comes after that on either is the closures
-    // its bodies lifted. The cut is made here so the two cannot be cut apart.
+    // Its rows and what it settled are cut by where the document says its
+    // declarations stand, which is the one place that boundary is drawn.
     //
     // What it proved about its own bodies and what the build read off one that
     // declared no answer are read off what it settled rather than off the rows
@@ -146,20 +145,18 @@ struct Compiling {
     mutating func lay(
         _ document: Compiled,
         at origin: Int,
-        standing rows: [Linked],
+        rows: [Linked],
         answering read: [Name: Shape]
     ) {
-        let declared = document.declared.count
-
         hold(
             origin,
-            standing: Array(rows.prefix(declared)),
-            closures: Array(rows.dropFirst(declared)),
+            standing: Array(rows[document.standing]),
+            closures: Array(rows[document.lifted]),
             numbering: document.numbering,
             variables: document.variables.map(\.name)
         )
 
-        for judged in document.table.prefix(declared) {
+        for judged in document.table[document.standing] {
             if judged.purity == .pure { pure.insert(judged.label) }
             if judged.isolation == .isolated { isolated.insert(judged.label) }
 
