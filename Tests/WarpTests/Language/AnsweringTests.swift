@@ -18,7 +18,7 @@ import WarpStandard
 // asked to write down a shape the body already states.
 //
 // So the body is read, in the call graph's order. What the author wrote stays
-// what the image carries (this is the link's own reading, not a promise anybody
+// what the image carries (this is the build's own reading, not a promise anybody
 // made) and where the reading would have to come from itself, it says `any`
 // rather than guessing.
 @Suite("An answer nobody wrote is read off the body")
@@ -136,7 +136,7 @@ struct AnsweringTests {
         #expect {
             try builder.build([module(leaving: true)] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("which declares nothing")
+            error is BuildError && "\(error)".contains("which declares nothing")
         }
     }
 
@@ -187,7 +187,7 @@ struct AnsweringTests {
             )
         }
 
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([reading(circling: true)] + Module.standard, entry: entryName)
         }
 
@@ -243,7 +243,7 @@ struct AnsweringTests {
                 entry: entryName
             )
         } throws: { error in
-            error is LinkError && "\(error)".contains("does not declare")
+            error is BuildError && "\(error)".contains("does not declare")
         }
 
         // And a field of it: a name only `peek` could read, which no call
@@ -257,13 +257,13 @@ struct AnsweringTests {
                 entry: entryName
             )
         } throws: { error in
-            error is LinkError && "\(error)".contains("which declares nothing")
+            error is BuildError && "\(error)".contains("which declares nothing")
         }
     }
 
     @Test("what the author wrote is what the image carries")
     func theDeclarationIsNotRewritten() throws {
-        // Given. The reading is the link's own note to itself. A declaration is
+        // Given. The reading is the build's own note to itself. A declaration is
         // a promise, and one read off a body is not a promise anybody made:
         // writing it back would make the boundary check a shape nobody wrote,
         // and would put it in a document the writer hands back.

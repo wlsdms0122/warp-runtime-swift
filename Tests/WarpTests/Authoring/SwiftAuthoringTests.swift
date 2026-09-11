@@ -150,7 +150,7 @@ struct SwiftAuthoringTests {
             ])
         )
         // A second declaration, in the same module. A call names a symbol, and
-        // which module declared it is the linker's business.
+        // which module declared it is the builder's business.
         let echo = Procedure(
             signature: Signature(
                 parameters: ["word": Parameter(type: .string)],

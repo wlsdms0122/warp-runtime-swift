@@ -85,7 +85,7 @@ extension Builder {
         let promised = returns.lowered(in: table)
 
         guard promised.accepts(read, in: table) else {
-            throw LinkError(
+            throw BuildError(
                 "answers \(read.rendered(in: table)), and its"
                     + " declaration promises \(returns)",
                 at: place.part(resulting ? .result : .returns)
@@ -758,7 +758,7 @@ extension Builder {
             do {
                 settled = try folding.read(inner, at: place)
             } catch {
-                throw LinkError("reading constant '\(head)': \(error)", at: place)
+                throw BuildError("reading constant '\(head)': \(error)", at: place)
             }
 
             // The mark rides the fold: which element is read settles now,
@@ -773,14 +773,14 @@ extension Builder {
                     return .index(word, optional: optionally)
 
                 case .notANumber, .fractional:
-                    throw LinkError(
+                    throw BuildError(
                         "index reference \(inner.rendered)"
                             + " is not a whole number",
                         at: place
                     )
 
                 case .pastTheWord:
-                    throw LinkError(
+                    throw BuildError(
                         "index reference \(inner.rendered)"
                             + " indexes past the end of any array",
                         at: place
@@ -788,7 +788,7 @@ extension Builder {
                 }
 
             default:
-                throw LinkError(
+                throw BuildError(
                     "index reference \(inner.rendered) is"
                         + " \(settled.type), expected int",
                     at: place
@@ -1011,7 +1011,7 @@ extension Builder {
     ) throws {
         guard case .judging = ask else { return }
 
-        throw LinkError(reason(), at: place)
+        throw BuildError(reason(), at: place)
     }
 
     // One walk's answers: the expression with every dot's meaning written
@@ -1114,7 +1114,7 @@ extension Builder {
 
                     return Inspection(rewritten: .literal(value), reading: type(of: value, in: frame.shapes))
                 } catch {
-                    throw LinkError("reading constant '\(head)': \(error)", at: place)
+                    throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }
             }
 
@@ -1327,7 +1327,7 @@ extension Builder {
                     guard let held = environment[name]?.fieldUnwrapped.inoutUnwrapped else { continue }
 
                     guard held.accepts(write.type, in: frame.shapes) else {
-                        throw LinkError(
+                        throw BuildError(
                             "writes '\(name)', which it captured, as"
                                 + " \(write.type.rendered(in: frame.shapes)). The body it captured"
                                 + " from holds it as \(held.rendered(in: frame.shapes))",
@@ -1402,12 +1402,12 @@ extension Builder {
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
             if callee.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.part(.callee))
+                throw BuildError(Expression.constructInOperand, at: place.part(.callee))
             }
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key })
             where argument.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
+                throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             let called = try inspected(
@@ -1502,7 +1502,7 @@ extension Builder {
             // be refused first for what the dot reads, which is not what the
             // author got wrong.
             guard let callee = frame.declared(call.selector) else {
-                throw LinkError(
+                throw BuildError(
                     "sends '\(call.selector)', which no module in this link declares",
                     at: place
                 )
@@ -1512,12 +1512,12 @@ extension Builder {
             // ask to ask. Named one by one, because a loop over the values
             // alone reports the third operand from the place the first was.
             if call.receiver?.holdsConstruct == true {
-                throw LinkError(Expression.constructInOperand, at: place.part(.receiver))
+                throw BuildError(Expression.constructInOperand, at: place.part(.receiver))
             }
 
             for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key })
             where argument.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
+                throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             var receiver: Inspection?
@@ -1816,7 +1816,7 @@ extension Builder {
         ask: Ask
     ) throws -> Inspection {
         guard let written = call.receiver else {
-            throw LinkError(
+            throw BuildError(
                 "sends '\(call.selector)' with nothing in front of it."
                     + " A contract's word is answered about the value it is"
                     + " sent to, so there is nothing here to answer it",
@@ -1825,7 +1825,7 @@ extension Builder {
         }
 
         if written.holdsConstruct {
-            throw LinkError(Expression.constructInOperand, at: place.part(.receiver))
+            throw BuildError(Expression.constructInOperand, at: place.part(.receiver))
         }
 
         let receiver = try inspected(
@@ -1847,7 +1847,7 @@ extension Builder {
             break
 
         case .settled(false):
-            throw LinkError(
+            throw BuildError(
                 "sends '\(call.selector)' to \(receiver.reading.rendered(in: frame.shapes)),"
                     + " which does not answer every word '\(asked.contract)' asks",
                 at: place.part(.receiver)
@@ -1859,7 +1859,7 @@ extension Builder {
 
         for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
             guard let parameter = asked.signature.parameters[name] else {
-                throw LinkError(
+                throw BuildError(
                     "sends '\(call.selector)' with '\(name)', which"
                         + " '\(asked.contract)' does not name",
                     at: place.argument(name.spelling)
@@ -1867,7 +1867,7 @@ extension Builder {
             }
 
             if argument.holdsConstruct {
-                throw LinkError(Expression.constructInOperand, at: place.argument(name.spelling))
+                throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             let inner = try inspected(
@@ -1879,7 +1879,7 @@ extension Builder {
             )
 
             guard parameter.declared.lowered(in: frame.shapes).accepts(inner.reading, in: frame.shapes) else {
-                throw LinkError(
+                throw BuildError(
                     "hands \(inner.reading.rendered(in: frame.shapes)) where '\(asked.contract)'"
                         + " writes \(parameter.declared.rendered)",
                     at: place.argument(name.spelling)
@@ -1896,7 +1896,7 @@ extension Builder {
                 parameter.default != nil
                     || parameter.declared.lowered(in: frame.shapes).declaresNull(in: frame.shapes)
             else {
-                throw LinkError(
+                throw BuildError(
                     "sends '\(call.selector)' without '\(name)', which"
                         + " '\(asked.contract)' asks for",
                     at: place.part(.arguments)

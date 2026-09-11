@@ -171,8 +171,8 @@ struct Judged: Sendable {
     // A row whose document left it to native code, and a link that brought
     // none. It is refused here rather than where the call is made: what a
     // caller brings is a statement about the whole run.
-    private func brought(nothing document: Place.Document) -> LinkError {
-        LinkError(
+    private func brought(nothing document: Place.Document) -> BuildError {
+        BuildError(
             "'\(label)' is implemented in native code and this link was handed none."
                 + " What a caller brings is declared where the run is assembled",
             at: .procedure(label.spelling, in: document)
@@ -183,7 +183,7 @@ struct Judged: Sendable {
         otherwise brought: Supplying.Brought,
         sending: [Name],
         in document: Place.Document
-    ) -> LinkError {
+    ) -> BuildError {
         let differing = [
             purity == brought.word.purity ? nil : "purity",
             isolation == brought.word.isolation ? nil : "isolation",
@@ -192,7 +192,7 @@ struct Judged: Sendable {
             sending == brought.sending ? nil : "sends"
         ].compactMap { axis in axis }
 
-        return LinkError(
+        return BuildError(
             "'\(label)' stands on what the word a compile was handed said about its"
                 + " \(differing.joined(separator: ", ")), and the word brought under"
                 + " that spelling says otherwise",

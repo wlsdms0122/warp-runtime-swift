@@ -139,7 +139,7 @@ struct TypeTests {
     }
 
     @Test("the builder refuses a signature that names a shape nobody declared")
-    func unknownTypeIsALinkError() throws {
+    func unknownTypeIsABuildError() throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -153,7 +153,7 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut], entry: "entry")
         }
     }
@@ -167,7 +167,7 @@ struct TypeTests {
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at link")
-    func mismatchedCallIsALinkError() {
+    func mismatchedCallIsABuildError() {
         // Given. Nothing runs here. Both sides are declarations, and a
         // declaration is text, so this is the half of checking the builder can
         // do
@@ -195,7 +195,7 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
@@ -206,7 +206,7 @@ struct TypeTests {
     @Test("an undeclared answer is read off the body, and held to the same rule")
     func undeclaredAnswerIsReadOffTheBody() throws {
         // Given. `counts` declares nothing, and its body answers a whole
-        // number. The declaration stays as the author left it; what the link
+        // number. The declaration stays as the author left it; what the build
         // reads a call as is what the body hands back, so the same disagreement
         // a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
@@ -235,7 +235,7 @@ struct TypeTests {
                 entry: "entry"
             )
         } throws: { error in
-            error is LinkError && "\(error)".contains("holds int where string is declared")
+            error is BuildError && "\(error)".contains("holds int where string is declared")
         }
 
         // And a body whose answer nothing can be read from says nothing. An

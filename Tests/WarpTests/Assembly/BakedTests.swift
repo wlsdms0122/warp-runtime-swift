@@ -204,7 +204,7 @@ struct BakedTests {
 
         // When / Then. Linking with a word of the same spelling saying it
         // touches something shared judges the row against a claim nothing in
-        // the link makes.
+        // the build makes.
         #expect {
             try builder.link(
                 baked,

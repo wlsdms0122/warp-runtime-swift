@@ -65,7 +65,7 @@ extension Builder {
 
         guard let stranded = left.live.sorted().first else { return }
 
-        throw LinkError(
+        throw BuildError(
             "still holds '\(stranded)' where it ends. A value written `once` is"
                 + " handed on, and a body that reaches its end holding one has"
                 + " dropped it",
@@ -344,8 +344,8 @@ extension Builder {
             }
         }
 
-        private func refusal(_ said: String) -> LinkError {
-            LinkError(said, at: place)
+        private func refusal(_ said: String) -> BuildError {
+            BuildError(said, at: place)
         }
     }
 }

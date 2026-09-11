@@ -9,11 +9,11 @@ import Foundation
 import Testing
 @testable import Warp
 
-// Where a path's field is found. The link lays out every record it proved, so
+// Where a path's field is found. The build lays out every record it proved, so
 // a field of one is lowered to the place it stands in and the run reads that
-// place. What the link did not lay out is read by name, and the two answer the
+// place. What the build did not lay out is read by name, and the two answer the
 // same thing.
-@Suite("A field the link laid out is read by its place")
+@Suite("A field the build laid out is read by its place")
 struct FieldPlaceTests {
     // MARK: - Property
     private let builder = Builder()
@@ -22,7 +22,7 @@ struct FieldPlaceTests {
     // MARK: - Test
     @Test("a declared record's field is lowered to its place")
     func aDeclaredFieldIsLoweredToItsPlace() throws {
-        // Given. The parameter says what it holds, so the link lays it out and
+        // Given. The parameter says what it holds, so the build lays it out and
         // the position is the layout's.
         let sut = try Procedure(
             signature: Signature(
@@ -41,7 +41,7 @@ struct FieldPlaceTests {
 
     @Test("a field of a record literal is lowered to its place")
     func aLiteralFieldIsLoweredToItsPlace() throws {
-        // Given. Nothing was declared, and the link still laid the literal out
+        // Given. Nothing was declared, and the build still laid the literal out
         let sut = Procedure(
             body: [
                 Statement(
@@ -77,7 +77,7 @@ struct FieldPlaceTests {
         #expect(steps == [.key("a", optional: false)])
     }
 
-    @Test("a place is read at every depth the link laid out")
+    @Test("a place is read at every depth the build laid out")
     func nestedFieldsAreLoweredToTheirPlaces() throws {
         // Given
         let sut = try Procedure(
@@ -124,7 +124,7 @@ struct FieldPlaceTests {
     @Test("a value carrying more than the slot declares is read at the slot's places")
     func aWiderValueSettlesToTheDeclaredLayout() async throws {
         // Given. The argument holds a field the slot does not declare. Settling
-        // builds it on the slot's layout, so the place the link lowered is the
+        // builds it on the slot's layout, so the place the build lowered is the
         // place the field stands in.
         let sut = try Procedure(
             signature: Signature(
@@ -184,7 +184,7 @@ struct FieldPlaceTests {
     @Test("a write to a box that said nothing stands as it was handed")
     func anUndeclaredBoxTakesWhatItWasHanded() async throws {
         // Given. Nothing was declared, so there is nothing for a write to
-        // settle to and nothing the link laid out
+        // settle to and nothing the build laid out
         let sut = Procedure(
             signature: Signature(parameters: ["given": Parameter(type: .dictionary(.int))]),
             body: [
@@ -242,7 +242,7 @@ struct FieldPlaceTests {
 
     @Test("a place and a name answer the same field")
     func bothWaysAnswerTheSameField() async throws {
-        // Given. One reads a shape the link laid out and one a dictionary,
+        // Given. One reads a shape the build laid out and one a dictionary,
         // whose keys are the value's
         let laid = try Procedure(
             signature: Signature(
@@ -269,7 +269,7 @@ struct FieldPlaceTests {
 
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests
-    // read what the link lowered.
+    // read what the build lowered.
     private func resultSteps(of procedure: Procedure) throws -> [Step] {
         let image = try builder.build(
             [try Module(procedures: [entryName: procedure])] + Module.standard,

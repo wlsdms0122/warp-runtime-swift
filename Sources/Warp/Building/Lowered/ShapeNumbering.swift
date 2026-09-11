@@ -61,7 +61,7 @@ struct ShapeNumbering: Sendable {
             in place: Place
         ) throws -> Int {
             guard answers.indices.contains(number) else {
-                throw LinkError.unjudged(
+                throw BuildError.unjudged(
                     "a shape standing at \(number), which its document never numbered",
                     at: place
                 )
@@ -72,13 +72,13 @@ struct ShapeNumbering: Sendable {
                 return row
 
             case let .unfound(name):
-                throw LinkError(
+                throw BuildError(
                     "'\(name)' is \(what) here, and no module in this link declares it",
                     at: place
                 )
 
             case .unnumbered:
-                throw LinkError.unjudged(
+                throw BuildError.unjudged(
                     "a shape standing at \(number), which its document never numbered",
                     at: place
                 )

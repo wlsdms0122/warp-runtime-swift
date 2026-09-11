@@ -138,10 +138,10 @@ struct SignatureTests {
         }
     }
 
-    @Test("a default failing its own gate is judged at the link")
+    @Test("a default failing its own gate is judged at the build")
     func defaultFailingOwnGateIsALinkRefusal() throws {
         // Given. The declaration is judged where declared type names resolve,
-        // so the document reads fine and the link refuses it
+        // so the document reads fine and the build refuses it
         let spec = try Loader.testing.loadProcedure([
             "parameters": [
                 "mode": ["type": "string", "oneOf": ["fast", "slow"], "default": "medium"]
@@ -150,7 +150,7 @@ struct SignatureTests {
         ])
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([spec] + Module.standard, entry: entryName)
         }
     }

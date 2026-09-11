@@ -52,7 +52,7 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
     }
 
-    @Test("a bare name for another module's word is refused at the link")
+    @Test("a bare name for another module's word is refused at the build")
     func aBareNameForAnotherModulesWordIsRefused() throws {
         // Given
         let caller = try loader.loadDocument([
@@ -160,14 +160,14 @@ struct ModuleDeclarationTests {
 
         #expect(outputs["result"] == .string("https://example.com/api"))
 
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([cyclic], entry: entryName)
         }
     }
 
     @Test("a statement may not reintroduce a name the module bound")
     func constantsCannotBeShadowed() {
-        // Given. Linking folds a reference to a constant into its value, so a
+        // Given. Compiling folds a reference to a constant into its value, so a
         // second reading of the same spelling could never be true
         let fixture: Value = [
             "const": ["limit": 3],

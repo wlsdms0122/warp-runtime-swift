@@ -240,9 +240,9 @@ struct ExecutorTests {
             ]
         )
 
-        // When / Then. A rescue cannot disguise what the link already refused,
+        // When / Then. A rescue cannot disguise what the build already refused,
         // because there is no run for it to be part of
-        await #expect(throws: LinkError.self) {
+        await #expect(throws: BuildError.self) {
             try await run(spec, arguments: ["n": .int(1)])
         }
     }

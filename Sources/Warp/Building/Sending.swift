@@ -27,13 +27,13 @@ struct Sending {
     // MARK: - Property
     private let numbering: Numbering
 
-    // Which declarations answer without running, where the link has worked it
+    // Which declarations answer without running, where the build has worked it
     // out. Nil where nothing has: a folding table stands before the purity
     // pass, and a claim it cannot check it does not make.
     private let pure: Set<Name>?
 
     // Which declarations touch nothing another body could touch at the same
-    // time, where the link has worked it out.
+    // time, where the build has worked it out.
     private let isolated: Set<Name>?
 
     // MARK: - Initializer
@@ -55,7 +55,7 @@ struct Sending {
         let ordered = sends.sorted { left, right in left.position < right.position }
 
         guard ordered.map(\.position) == Array(ordered.indices) else {
-            throw LinkError(
+            throw BuildError(
                 "'\(label)' sends words standing at \(ordered.map(\.position)), which is"
                     + " not one word to a place from the first",
                 at: Place.procedure(label.spelling, in: .assembled).part(.imports)
@@ -64,14 +64,14 @@ struct Sending {
 
         return try ordered.map { send in
             guard let stands = numbering.call(send.selector) else {
-                throw LinkError(
+                throw BuildError(
                     "'\(label)' sends '\(send.selector)', and its document never asked for it",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)
                 )
             }
 
             guard !answersWithoutRunning || !answersOnlyByRunning(send.selector) else {
-                throw LinkError(
+                throw BuildError(
                     "'\(label)' answers without running and sends '\(send.selector)',"
                         + " which answers only by running",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)
@@ -79,7 +79,7 @@ struct Sending {
             }
 
             guard !touchesNothingShared || !touchesSomethingShared(send.selector) else {
-                throw LinkError(
+                throw BuildError(
                     "'\(label)' says it touches no name another body could touch at"
                         + " the same time, and sends '\(send.selector)', which does",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)

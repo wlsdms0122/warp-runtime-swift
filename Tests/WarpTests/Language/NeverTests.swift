@@ -11,7 +11,7 @@ import Testing
 
 // A statement typed `never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call
-// is the link's to refuse, because only the link knows what the word declares.
+// is the build's to refuse, because only the build knows what the word declares.
 // One rule, two places, each catching what only it can see.
 @Suite("What never finishes binds nothing")
 struct NeverTests {
@@ -223,7 +223,7 @@ struct NeverTests {
 
     @Test("a body that ends by leaving still carries its judged dots")
     func aLeavingBodyKeepsItsJudgedDots() async throws {
-        // Given. `items.count` is a word call the link spells into the path,
+        // Given. `items.count` is a word call the build spells into the path,
         // and the spelling must reach the image whether the body finishes or
         // leaves
         let sut = Procedure(
@@ -251,8 +251,8 @@ struct NeverTests {
         // declines at the start runs no round and answers, whatever the rounds
         // would have done. So the result is not "after" the body the way a
         // plain block's is, and a body no run comes back from (here a word only
-        // the link knows declares never) leaves the loop answerable still. The
-        // reader refuses the leaves it can see; this is the shape only the link
+        // the build knows declares never) leaves the loop answerable still. The
+        // reader refuses the leaves it can see; this is the shape only the build
         // sees, and the run keeps it
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),

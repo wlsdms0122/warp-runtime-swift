@@ -19,7 +19,7 @@ extension Builder {
     func checked(_ calls: [CallSite], in frame: TypeFrame, writing requiring: Requiring) throws {
         for call in calls {
             guard let callee = frame.declared(call.callee) else {
-                throw LinkError.unjudged(
+                throw BuildError.unjudged(
                     "a call to '\(call.callee)', which has no row",
                     at: call.place
                 )
@@ -88,7 +88,7 @@ extension Builder {
         try judgeConstraints(of: signature, at: place, in: table)
 
         if let receiver = signature.receiver, signature.parameters[receiver] == nil {
-            throw LinkError(
+            throw BuildError(
                 "receiver names '\(receiver)', which this"
                     + " signature does not declare",
                 at: place
@@ -110,7 +110,7 @@ extension Builder {
         try mentioned(in: named, at: place, parameterized: true, resolve: table)
 
         if let refusal = named.resolved(in: table).unreadableClaim {
-            throw LinkError(refusal, at: place)
+            throw BuildError(refusal, at: place)
         }
     }
 
@@ -144,7 +144,7 @@ extension Builder {
         // refused here rather than left to the reader, because a reader is one
         // way a declaration is built and a host assembling one is another.
         case let .reading(of, path):
-            throw LinkError(
+            throw BuildError(
                 "writes `\(type.rendered)`, which is a shape the link"
                     + " read out of a body. A declaration says what a call fills,"
                     + " and `\(([PathSegment.key(of)] + path).rendered)` is a path"
@@ -157,7 +157,7 @@ extension Builder {
         // is a slot no call could ever fit, the way an empty `oneOf` is.
         case let .ranged(refinement):
             if refinement.saysNothing {
-                throw LinkError(
+                throw BuildError(
                     "writes `\(type.rendered)` with neither bound."
                         + " A range that says nothing is spelled"
                         + " `\(refinement.kind.rendered)`",
@@ -166,7 +166,7 @@ extension Builder {
             }
 
             if refinement.admitsNothing {
-                throw LinkError(
+                throw BuildError(
                     "writes `\(type.rendered)`, which admits nothing."
                         + " No \(refinement.kind.rendered) is inside it",
                     at: place
@@ -177,7 +177,7 @@ extension Builder {
 
         case .parameter:
             guard parameterized else {
-                throw LinkError(
+                throw BuildError(
                     "writes `\(type.rendered)`, and nothing here is"
                         + " filled by a call. A type parameter lives in a signature",
                     at: place
@@ -216,7 +216,7 @@ extension Builder {
         // a value of one of its members.
         case let .named(name):
             guard table.resolve(name) != nil || table.constraint(name) != nil else {
-                throw LinkError(
+                throw BuildError(
                     "names type '\(name)', which no module in this"
                         + " link declares",
                     at: place
@@ -228,7 +228,7 @@ extension Builder {
             // another shape there is no name to follow, and what the shape
             // does with what it carries is not something the link can read.
             guard !nested || !handedOnce(.named(name), in: table) else {
-                throw LinkError(
+                throw BuildError(
                     "carries '\(name)' inside another shape, and a value written"
                         + " `once` is followed by the name that holds it."
                         + " Nothing follows one inside a list, a record or"
@@ -254,7 +254,7 @@ extension Builder {
 
             switch resolved {
             case .any, .null, .never, .parameter, .nullable:
-                throw LinkError(
+                throw BuildError(
                     "writes `?` on \(inner.rendered), which"
                         + " stands for `\(resolved.rendered)`. A `?` says"
                         + " nothing there, the same rule the spelling"
@@ -289,14 +289,14 @@ extension Builder {
             }
 
         case .inout:
-            throw LinkError(
+            throw BuildError(
                 "writes `\(type.rendered)`, and only a parameter is handed a"
                     + " variable in place. `inout` is written on a parameter's type",
                 at: place
             )
 
         case .variable:
-            throw LinkError(
+            throw BuildError(
                 "writes `\(type.rendered)`, and only a field of a declared type"
                     + " is written through. `var` is written on a field in `types`",
                 at: place
@@ -307,7 +307,7 @@ extension Builder {
         // the word would be claiming it for a shape nothing declared it of.
         case let .once(inner):
             guard declaring else {
-                throw LinkError(
+                throw BuildError(
                     "writes `\(type.rendered)`, and only a declared type is"
                         + " handed on once. `once` is written on a type in `types`,"
                         + " and a slot naming that type carries it",
@@ -346,14 +346,14 @@ extension Builder {
             }
 
             if dead.count == allowed.count {
-                throw LinkError(
+                throw BuildError(
                     "oneOf admits nothing, so no call could ever fit",
                     at: place
                 )
             }
 
             if let first = dead.first {
-                throw LinkError(
+                throw BuildError(
                     "oneOf lists '\(first)', which"
                         + " \(parameter.declared.rendered) does not admit."
                         + " No call could ever match it",
@@ -371,7 +371,7 @@ extension Builder {
         // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
             guard parameter.oneOf == nil, shape.settles(.null, in: table.shapes) else {
-                throw LinkError(
+                throw BuildError(
                     "its default is not a value it takes: null",
                     at: place
                 )
@@ -383,7 +383,7 @@ extension Builder {
         do {
             _ = try parameter.checking(fallback, called: name, in: table)
         } catch {
-            throw LinkError(
+            throw BuildError(
                 "its default is not a value it takes: \(error)",
                 at: place
             )
@@ -432,7 +432,7 @@ extension Builder {
 
         for (parameter, names) in bounds.sorted { $0.key < $1.key } {
             guard names.count <= 1 else {
-                throw LinkError(
+                throw BuildError(
                     "`some \(parameter)` is bounded by"
                         + " \(names.sorted().map(\.spelling).joined(separator: " and "))."
                         + " One parameter takes one constraint",
@@ -451,7 +451,7 @@ extension Builder {
                 continue
             }
 
-            throw LinkError(
+            throw BuildError(
                 "`some \(parameter)` names '\(bound)', which no module in this"
                     + " link declares as a membership or a contract",
                 at: place
@@ -472,7 +472,7 @@ extension Builder {
         // the dot and again by name is refused before either is read, since
         // the one by name would be neither read nor run.
         if let receiver = callee.signature.receiver, call.receiver != nil, call.arguments[receiver] != nil {
-            throw LinkError(
+            throw BuildError(
                 "sending '\(call.selector)' with '\(receiver)' both in front and by name",
                 at: site.place.part(.arguments)
             )
@@ -511,7 +511,7 @@ extension Builder {
             at: site.place
         ) {
         case let .refusal(reason):
-            throw LinkError(
+            throw BuildError(
                 "sending '\(call.selector)': \(reason)",
                 at: site.place
             )
@@ -531,7 +531,7 @@ extension Builder {
             .sorted()
 
         guard undeclared.isEmpty else {
-            throw LinkError(
+            throw BuildError(
                 "sending '\(call.selector)' with"
                     + " \(undeclared.map(\.spelling).joined(separator: ", ")), which it does not declare",
                 at: site.place.part(.arguments)
@@ -549,7 +549,7 @@ extension Builder {
             .sorted()
 
         guard missing.isEmpty else {
-            throw LinkError(
+            throw BuildError(
                 "sending '\(call.selector)' without"
                     + " \(missing.map(\.spelling).joined(separator: ", ")), which it requires",
                 at: site.place.part(.arguments)
@@ -565,7 +565,7 @@ extension Builder {
             do {
                 _ = try slot.taking(constant, in: shapes)
             } catch {
-                throw LinkError(
+                throw BuildError(
                     "sending '\(call.selector)': \(error)",
                     at: site.place.argument(name.spelling)
                 )
@@ -590,7 +590,7 @@ extension Builder {
             do {
                 try validate(query, given: constants)
             } catch {
-                throw LinkError(
+                throw BuildError(
                     "sending '\(call.selector)': \(error)",
                     at: site.place.part(.arguments)
                 )
@@ -609,7 +609,7 @@ extension Builder {
 
             guard !slot.shape.accepts(written, in: shapes) else { continue }
 
-            throw LinkError(
+            throw BuildError(
                 "sending '\(call.selector)' with \(name),"
                     + " which holds \(written.rendered(in: shapes))"
                     + " where \(slot.shape.rendered(in: shapes)) is declared",
@@ -625,7 +625,7 @@ extension Builder {
             let slot = slot(name)
         {
             guard slot.shape.accepts(written, in: shapes) else {
-                throw LinkError(
+                throw BuildError(
                     "sending '\(call.selector)' to \(written.rendered(in: shapes)),"
                         + " where \(slot.shape.rendered(in: shapes)) is declared",
                     at: site.place.part(.receiver)

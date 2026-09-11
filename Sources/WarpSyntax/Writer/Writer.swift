@@ -212,7 +212,7 @@ public struct Writer: Sendable {
         case let .reading(of, path):
             throw WritingError(
                 "`some \(([PathSegment.key(of)] + path).rendered)` is a shape"
-                    + " the link read out of a body,"
+                    + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"
             )

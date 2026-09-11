@@ -293,7 +293,7 @@ extension Builder {
                 table[one.row].origin < table[other.row].origin
             }
 
-            throw LinkError(
+            throw BuildError(
                 "\(contested.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
                     + " than one module this document may walk to. '\(word)' by"
                     + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."

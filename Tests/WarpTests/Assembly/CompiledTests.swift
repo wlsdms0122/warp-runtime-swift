@@ -54,7 +54,7 @@ struct CompiledTests {
         )
 
         // When / Then. Compiling refuses, and no entry was named to refuse it.
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try compiled([sut] + Module.standard)
         }
     }
@@ -82,7 +82,7 @@ struct CompiledTests {
 
         let compiled = try compiled([sut] + Module.standard)
 
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.link(compiled, entry: "app.nowhere", supplying: Supplying(Module.standard))
         }
     }
@@ -546,7 +546,7 @@ struct CompiledTests {
         )
     }
 
-    @Test("an answer the link read carries the number its own document gave")
+    @Test("an answer the build read carries the number its own document gave")
     func aReadAnswerCarriesTheDocumentsOwnShapeNumber() throws {
         // Given. A declaration writing no `returns`, whose body answers a type
         // its document declares.
@@ -679,8 +679,8 @@ struct CompiledTests {
         let compiled = try builder.compile([first])
 
         // Then. Two declarations of a name have no way to be told apart,
-        // whether the link reads them together or one after the other.
-        #expect(throws: LinkError.self) {
+        // whether the build reads them together or one after the other.
+        #expect(throws: BuildError.self) {
             try builder.compile([second], against: compiled, supplying: Supplying(Module.standard))
         }
     }
@@ -735,7 +735,7 @@ struct CompiledTests {
     // What a compile read off the body of a declaration that wrote no answer.
     private func answer(of declared: Name, in compiled: [Compiled]) throws -> Shape {
         guard let read = compiled.compactMap({ document in document.answers[declared] }).first else {
-            throw LinkError("nothing read an answer for '\(declared)'", at: nil)
+            throw BuildError("nothing read an answer for '\(declared)'", at: nil)
         }
 
         return read
@@ -765,7 +765,7 @@ struct CompiledTests {
         guard
             case let .body(body, _) = try assembled.table[#require(assembled.rows[declared])].implementation
         else {
-            throw LinkError("'\(declared)' holds no written body", at: nil)
+            throw BuildError("'\(declared)' holds no written body", at: nil)
         }
 
         return body
@@ -773,7 +773,7 @@ struct CompiledTests {
 
     private func code(of declared: Name, in image: Image) throws -> Body {
         guard case let .body(body, _) = try image.linked[#require(image.rows[declared])].implementation else {
-            throw LinkError("'\(declared)' holds no written body", at: nil)
+            throw BuildError("'\(declared)' holds no written body", at: nil)
         }
 
         return body
@@ -782,7 +782,7 @@ struct CompiledTests {
     // The shape the cast in a row's result stands on.
     private func cast(in body: Body) throws -> Shape {
         guard case let .cast(_, shape, _)? = body.result else {
-            throw LinkError("the entry holds no cast", at: nil)
+            throw BuildError("the entry holds no cast", at: nil)
         }
 
         return shape
@@ -810,7 +810,7 @@ struct CompiledTests {
     // The call through a contract a row's result holds.
     private func dispatch(in body: Body) throws -> DispatchOperation {
         guard case let .dispatch(dispatch)? = body.result else {
-            throw LinkError("'app.tell' holds no call through a contract", at: nil)
+            throw BuildError("'app.tell' holds no call through a contract", at: nil)
         }
 
         return dispatch
@@ -906,7 +906,7 @@ struct CompiledTests {
     // The number the call in a row's result carries.
     private func called(in body: Body) throws -> Int {
         guard case let .call(call)? = body.result else {
-            throw LinkError("'b.asks' holds no call", at: nil)
+            throw BuildError("'b.asks' holds no call", at: nil)
         }
 
         return call.procedure

@@ -210,7 +210,7 @@ public struct Builder: Sendable {
         for symbols in holding {
             for symbol in symbols {
                 if let first = signatures[symbol.declared] {
-                    throw LinkError(
+                    throw BuildError(
                         "'\(symbol.declared)' is declared by \(first.spelled) and by"
                             + " \(symbol.spelled). Two declarations of a name have no way"
                             + " to be told apart",
@@ -300,7 +300,7 @@ public struct Builder: Sendable {
 
         func row(of symbol: Symbol) throws -> Int {
             guard let row = compiling.lowering.rows[symbol.declared] else {
-                throw LinkError("'\(symbol.declared)' has no row in the table", at: symbol.place)
+                throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
             }
 
             return row
@@ -573,7 +573,7 @@ public struct Builder: Sendable {
                     do {
                         _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
                     } catch {
-                        throw LinkError(
+                        throw BuildError(
                             "answers \(answer.type), and its"
                                 + " declaration promises \(returns): \(error)",
                             at: symbol.place.part(.result)
@@ -632,7 +632,7 @@ public struct Builder: Sendable {
         // A name is its declared spelling and nothing else, so the entry is
         // looked up as the caller wrote it.
         guard let start = assembled.rows[entry] else {
-            throw LinkError(
+            throw BuildError(
                 "entry '\(entry)' is not declared by any module in this link."
                     + " A name is its declared spelling. Declared:"
                     + " \(assembled.rows.keys.sorted().map(\.spelling).joined(separator: ", "))",

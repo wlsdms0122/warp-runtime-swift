@@ -11,7 +11,7 @@ import Warp
 // Calling a procedure by name.
 //
 // A call names a symbol, never a document. Naming the document would write a
-// linkage fact into the call site; which module declared it is the linker's
+// linkage fact into the call site; which module declared it is the builder's
 // business.
 //
 // It is a construct key rather than the bare name a native word is written

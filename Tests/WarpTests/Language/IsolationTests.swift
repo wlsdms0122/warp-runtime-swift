@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// Isolation is derived for a body and declared by a native word. The link can
+// Isolation is derived for a body and declared by a native word. The build can
 // read what a body writes and calls; it cannot read what a word keeps in the
 // host language, so the word says. A word that says nothing is isolated, and
 // one that holds state says otherwise and takes its callers with it.

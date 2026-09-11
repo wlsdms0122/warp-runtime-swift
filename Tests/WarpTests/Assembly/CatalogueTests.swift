@@ -42,7 +42,7 @@ struct CatalogueTests {
         // When.
         let closed = try Catalogue([shapes]).closing([users])
 
-        // Then. The link has both, and it links.
+        // Then. The build has both, and it links.
         #expect(closed.count == 2)
         #expect(try builder.build(closed, entry: entryName).rows[entryName] != nil)
     }
@@ -92,10 +92,10 @@ struct CatalogueTests {
         // twice.
         let closed = try Catalogue([shapes]).closing([users, shapes])
 
-        // Then. The link says so, rather than the catalogue quietly keeping
+        // Then. The build says so, rather than the catalogue quietly keeping
         // one of them.
         #expect(closed.count == 3)
-        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
+        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("a word a path steps to brings the module that declares it")
@@ -122,7 +122,7 @@ struct CatalogueTests {
         // When.
         let closed = try Catalogue(Module.standard).closing([program])
 
-        // Then. The module declaring the word came, and the link is satisfied.
+        // Then. The module declaring the word came, and the build is satisfied.
         #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
     }
 
@@ -147,13 +147,13 @@ struct CatalogueTests {
         // brought whatever else declares it.
         let closed = try Catalogue([real, supplier]).closing([program])
 
-        // Then. The link meets both and refuses, rather than binding
+        // Then. The build meets both and refuses, rather than binding
         // `lib.run` to the word the program wrote.
         #expect(closed.count == 3)
-        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
+        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
 
-    @Test("a name the catalogue does not declare is left to the link")
+    @Test("a name the catalogue does not declare is left to the build")
     func anUndeclaredNameIsLeftToTheLink() throws {
         let users = try Module(
             procedures: [
@@ -168,9 +168,9 @@ struct CatalogueTests {
         // When. Nothing in the catalogue declares `Age`.
         let closed = try Catalogue([]).closing([users])
 
-        // Then. What comes back is what was asked for, and the refusal is the link's.
+        // Then. What comes back is what was asked for, and the refusal is the build's.
         #expect(closed.count == 1)
-        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
+        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("the caller listing one module twice is not quietly folded")
@@ -180,9 +180,9 @@ struct CatalogueTests {
         // When.
         let closed = try Catalogue([]).closing([shapes, shapes])
 
-        // Then. Both copies stand, and the link says what is wrong with that.
+        // Then. Both copies stand, and the build says what is wrong with that.
         #expect(closed.count == 2)
-        #expect(throws: LinkError.self) { try builder.build(closed, entry: entryName) }
+        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("two modules declaring one name leave the catalogue no answer")
@@ -279,7 +279,7 @@ struct CatalogueTests {
         // When.
         let closed = try Catalogue(Module.standard).closing([program])
 
-        // Then. Whatever came, the link is satisfied by it.
+        // Then. Whatever came, the build is satisfied by it.
         #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
     }
 

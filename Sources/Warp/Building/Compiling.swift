@@ -12,7 +12,7 @@ import Foundation
 //
 // A document is compiled against the seven things it asks of what stands
 // before it: what a declaration takes and answers, whether it is pure,
-// isolated and failing, what the link read off a body that declared no
+// isolated and failing, what the build read off a body that declared no
 // answer, and a body it can run while folding a constant. All seven are here,
 // and a document reaches nothing else outside itself.
 //
@@ -35,7 +35,7 @@ struct Compiling {
     var isolated: Set<Name> = []
     var failing: [Name: Failing] = [:]
 
-    // What the link read off a body whose declaration wrote no `returns`.
+    // What the build read off a body whose declaration wrote no `returns`.
     // Only those: what a declaration wrote is on its row already, and a table
     // holding every spelling would hash every declared name to say what the
     // row says.
@@ -168,7 +168,7 @@ struct Compiling {
         )
     }
 
-    // A shape the link read off a body rather than out of a signature, held to
+    // A shape the build read off a body rather than out of a signature, held to
     // the document that wrote the body: the rows it stands on are numbered
     // beside the ones that document's bodies stand on.
     mutating func read(_ answer: Shape, as declared: Name, of origin: Int) {

@@ -46,7 +46,7 @@ extension Builder {
                 // Read before written. Written first, the entry that says what
                 // this collides with is the one this call overwrote.
                 if let first = declaredTypes[name] {
-                    throw LinkError(
+                    throw BuildError(
                         "type '\(name)' is declared more than once in this link, by"
                             + " \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
@@ -66,7 +66,7 @@ extension Builder {
                 )
 
                 if let declared = declaredTypes[name] {
-                    throw LinkError(
+                    throw BuildError(
                         "'\(name)' is declared as both a type and a constraint in"
                             + " this link, as a type by \(declared.spelled) and as a"
                             + " constraint by \(declaration.spelled). One name cannot"
@@ -76,7 +76,7 @@ extension Builder {
                 }
 
                 if let first = declaredConstraints[name] {
-                    throw LinkError(
+                    throw BuildError(
                         "constraint '\(name)' is declared more than once in this"
                             + " link, by \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
@@ -96,7 +96,7 @@ extension Builder {
                 )
 
                 if let declared = declaredTypes[name]?.spelled ?? declaredConstraints[name]?.spelled {
-                    throw LinkError(
+                    throw BuildError(
                         "'\(name)' is declared as a contract in this link and as"
                             + " something else by \(declared). One name"
                             + " cannot stand for two of a shape, a membership and"
@@ -106,7 +106,7 @@ extension Builder {
                 }
 
                 if let first = declaredContracts[name] {
-                    throw LinkError(
+                    throw BuildError(
                         "contract '\(name)' is declared more than once in this"
                             + " link, by \(first.spelled) and \(declaration.spelled)",
                         at: declaration.place
@@ -114,7 +114,7 @@ extension Builder {
                 }
 
                 guard !words.isEmpty else {
-                    throw LinkError(
+                    throw BuildError(
                         "asks nothing, so every type satisfies it. A contract is"
                             + " the words a value answers, and one with no words"
                             + " says nothing a slot could lean on",

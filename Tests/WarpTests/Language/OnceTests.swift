@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // A value handed on exactly once. What the type says is that the values of it
-// are given away: to a word, or as the body's answer. What the link proves is
+// are given away: to a word, or as the body's answer. What the build proves is
 // that every way through a body does that once, which is what "this resource
 // is closed exactly once" comes to.
 @Suite("A value handed on once")
@@ -67,7 +67,7 @@ struct OnceTests {
 
         // When / Then. The second send reads a name that holds nothing, which
         // is what the reading walk calls it before this one is asked
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }

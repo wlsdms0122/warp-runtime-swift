@@ -107,7 +107,7 @@ struct RefinementTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
@@ -134,7 +134,7 @@ struct RefinementTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
@@ -236,7 +236,7 @@ struct RefinementTests {
         let unbounded = TypeExpression.Refinement.fraction(from: 0)
         let infinite = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
 
-        // Then. Both are ranges the link takes, and only one is a document's
+        // Then. Both are ranges the build takes, and only one is a document's
         #expect(!unbounded.admitsNothing)
         #expect(!infinite.admitsNothing)
         #expect(unbounded.spellable)

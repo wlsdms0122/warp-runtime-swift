@@ -109,9 +109,9 @@ struct PlaceTests {
         #expect(error?.description.hasPrefix("procedures.entry.body.held[0].reference: ") == true)
     }
 
-    @Test("what the link refuses is placed the way what the load refuses is")
+    @Test("what the build refuses is placed the way what the load refuses is")
     func bothStagesSpellOnePlace() throws {
-        // Given. One document, refused at the link: the two stages walk the
+        // Given. One document, refused at the build: the two stages walk the
         // same text and an author reading both should not have to learn two
         // spellings of where they are.
         let sut = try Module(
@@ -123,7 +123,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -131,7 +131,7 @@ struct PlaceTests {
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
-    @Test("the link narrows to the argument it refused, not to the call holding it")
+    @Test("the build narrows to the argument it refused, not to the call holding it")
     func aLinkRefusalNarrowsToTheArgument() throws {
         // Given. A call written with several arguments, one of which holds what
         // the declaration does not take. Reported from the call, an author is
@@ -160,7 +160,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -208,7 +208,7 @@ struct PlaceTests {
             )
         }
 
-        let link = #expect(throws: LinkError.self) {
+        let link = #expect(throws: BuildError.self) {
             try Builder().build([linked] + Module.standard, entry: entryName)
         }
 
@@ -262,14 +262,14 @@ struct PlaceTests {
             try Validator().validate(module(sending: "helper", with: reference("missing")))
         }
 
-        let bound = #expect(throws: LinkError.self) {
+        let bound = #expect(throws: BuildError.self) {
             try Builder().build(
                 [module(sending: "nowhere", with: .literal(.int(1)))] + Module.standard,
                 entry: entryName
             )
         }
 
-        let typed = #expect(throws: LinkError.self) {
+        let typed = #expect(throws: BuildError.self) {
             try Builder().build(
                 [module(
                     sending: "helper",
@@ -314,7 +314,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: "wallet.entry")
         }
 
@@ -388,7 +388,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -408,7 +408,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -464,7 +464,7 @@ struct PlaceTests {
     @Test("both stages point at the statement that leaves, not at what follows it")
     func theLeaveRuleIsPlacedOnTheLeavingStatement() throws {
         // Given. The one rule both stages hold: the load catches the leaves the
-        // text shows, the link catches the word that declares `never`. What an
+        // text shows, the build catches the word that declares `never`. What an
         // author has to change is the statement that ends the body, so that is
         // where each of them says it is.
         let declared = try Module(
@@ -499,7 +499,7 @@ struct PlaceTests {
             )
         }
 
-        let link = #expect(throws: LinkError.self) {
+        let link = #expect(throws: BuildError.self) {
             try Builder().build([declared] + Module.standard, entry: entryName)
         }
 
@@ -527,7 +527,7 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([held, sent, caller] + Module.standard, entry: entryName)
         }
 
@@ -553,7 +553,7 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([module, module, caller] + Module.standard, entry: entryName)
         }
 
@@ -576,7 +576,7 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([held, sent, caller] + Module.standard, entry: entryName)
         }
 
@@ -597,7 +597,7 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([shape, membership, caller] + Module.standard, entry: entryName)
         }
 
@@ -619,7 +619,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -645,7 +645,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -676,7 +676,7 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
 
@@ -698,7 +698,7 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build([declaring(), declaring(), caller] + Module.standard, entry: entryName)
         }
 
@@ -755,7 +755,7 @@ struct PlaceTests {
         // Handed over in an order the names do not sort in, since the tables
         // behind this are built in name order and the second declaration is
         // the second the caller handed over.
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try Builder().build(
                 [shipping, catalog, pricing, caller] + Module.standard,
                 entry: entryName

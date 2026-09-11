@@ -72,7 +72,7 @@ struct ReferenceLookupTests {
         }
     }
 
-    @Test("count derives where the link spelled a word")
+    @Test("count derives where the build spelled a word")
     func countDerivesFromWordSegments() {
         #expect(sut.lookup([.key("items"), .word("count")]) == .found(.int(3)))
         #expect(sut.lookup([.key("name"), .word("count")]) == .found(.int(4)))
@@ -81,7 +81,7 @@ struct ReferenceLookupTests {
 
     @Test("a key segment reads data alone, and never derives")
     func keySegmentDoesNotDerive() {
-        // Then. The value has no say: a `key` the link left as a read is a
+        // Then. The value has no say: a `key` the build left as a read is a
         // read, even where a word by that name would have answered
         guard case .unfit = sut.lookup([.key("items"), .key("count")]) else {
             Issue.record("expected unfit for a key on an array")

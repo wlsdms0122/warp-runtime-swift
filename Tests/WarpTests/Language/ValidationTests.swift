@@ -19,7 +19,7 @@ struct ValidationTests {
     // MARK: - Test
     @Test("a name the module bound is not introduced again at any depth")
     func aBoundNameIsNotIntroducedAgainAtAnyDepth() {
-        // Given. Linking folds a constant wherever its name is read, so a name
+        // Given. Compiling folds a constant wherever its name is read, so a name
         // introduced under that spelling would never be the one that answers.
         // The rule is the whole body's: a sub scope is where a reader is least
         // able to see that the name was already taken.
@@ -432,7 +432,7 @@ struct ValidationTests {
         #expect(sut.imports.isEmpty)
     }
 
-    @Test("a module calling its own by the name the link knows it by imports nothing")
+    @Test("a module calling its own by the name the build knows it by imports nothing")
     func aSiblingCallIsNotAnImport() throws {
         // Given. A module calls a sibling by its declared spelling, and a
         // spelling this document declares is not an import. The honest empty
@@ -453,7 +453,7 @@ struct ValidationTests {
         // Then
         #expect(sut.imports.isEmpty)
 
-        // And the link agrees the two spellings are one declaration
+        // And the build agrees the two spellings are one declaration
         #expect(throws: Never.self) {
             try Builder().build([sut], entry: "wallet.pay")
         }

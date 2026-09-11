@@ -206,7 +206,7 @@ struct ClosureNotationTests {
         ]
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try loader.loadDocument(fixture)] + Module.standard,
                 entry: entryName

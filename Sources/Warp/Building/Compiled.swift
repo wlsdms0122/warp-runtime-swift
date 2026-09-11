@@ -18,7 +18,7 @@ import Foundation
 // nothing in this and one document compiled once answers every entry asked
 // of it.
 public struct Compiled: Sendable, Declaring {
-    // Which document this is, so a refusal a link makes about it says
+    // Which document this is, so a refusal a build makes about it says
     // where the words are.
     let document: Place.Document
 
@@ -54,7 +54,7 @@ public struct Compiled: Sendable, Declaring {
     // would find.
     let calls: [[Name]]
 
-    // What the link read off a body whose declaration wrote no `returns`,
+    // What the build read off a body whose declaration wrote no `returns`,
     // by the spelling it was declared under and in this document's own
     // shape numbers. A declaration that wrote its answer is not here:
     // what an author wrote stands on the row.

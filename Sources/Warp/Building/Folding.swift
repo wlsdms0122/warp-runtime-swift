@@ -134,7 +134,7 @@ struct Folding {
     // nothing this document holds and is refused where it is lowered.
     func read(_ expression: Expression, at place: Place = .given(Folding.assembled.spelling)) throws -> Value {
         guard let numbering = answered.numbering(of: origin) else {
-            throw LinkError.unjudged("an expression in a document that numbered nothing", at: place)
+            throw BuildError.unjudged("an expression in a document that numbered nothing", at: place)
         }
 
         var lowering = Lowering(

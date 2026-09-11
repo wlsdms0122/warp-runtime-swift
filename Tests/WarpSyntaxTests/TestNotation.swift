@@ -27,7 +27,7 @@ struct TestConditions: ConditionSpelling {
     // that is not is the expression it is.
     let keys: Set<Name> = [subjectKey]
 
-    // What the table stands in for, and so what this spelling owes the link.
+    // What the table stands in for, and so what this spelling owes the build.
     var vocabulary: Set<Name> { Set(Self.words.values) }
 
     // The word a condition is spelled with, and the declaration it names.

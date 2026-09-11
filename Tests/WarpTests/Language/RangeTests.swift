@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // `int(0...255)`. A range is a slot's condition on a number, not a new kind. It
-// is judged where `oneOf` is: at the link for what the text shows, at the
+// is judged where `oneOf` is: at the build for what the text shows, at the
 // boundary for what only the run can see. What the condition may say is
 // `RefinementTests`'; this suite is where a whole range is judged.
 @Suite
@@ -95,9 +95,9 @@ struct RangeTests {
         }
     }
 
-    @Test("a constant argument is judged at the link")
+    @Test("a constant argument is judged at the build")
     func aConstantArgumentIsJudgedAtTheLink() throws {
-        // Given. The argument is text, so the miss is the link's to see
+        // Given. The argument is text, so the miss is the build's to see
         let sut = try Module(
             procedures: [
                 "paint": Procedure(
@@ -121,11 +121,11 @@ struct RangeTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("outside int(0...255)")
+            error is BuildError && "\(error)".contains("outside int(0...255)")
         }
     }
 
-    @Test("a default outside its own range refuses at the link")
+    @Test("a default outside its own range refuses at the build")
     func aDefaultOutsideTheRangeRefuses() throws {
         // Given
         let sut = try Module(
@@ -149,7 +149,7 @@ struct RangeTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("outside int(0...255)")
+            error is BuildError && "\(error)".contains("outside int(0...255)")
         }
     }
 
@@ -172,7 +172,7 @@ struct RangeTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
@@ -203,7 +203,7 @@ struct RangeTests {
         #expect {
             try builder.build([module(oneOf: ["300", "999"])] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
 
         // A live candidate does not excuse a dead one: `300` is a member no
@@ -211,7 +211,7 @@ struct RangeTests {
         #expect {
             try builder.build([module(oneOf: ["0", "300"])] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("'300'")
+            error is BuildError && "\(error)".contains("'300'")
         }
 
         // One value, one spelling: `+1` and `007` are second spellings of
@@ -220,7 +220,7 @@ struct RangeTests {
         #expect {
             try builder.build([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("admits nothing")
+            error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 

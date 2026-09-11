@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// A procedure value carries its row, and a row is numbered by the link that
+// A procedure value carries its row, and a row is numbered by the build that
 // made it. The two facts together are why a run holds one to the link it came
 // from: the number means a declaration of that link and nothing about any
 // other, so a row read where it was not made reads whatever stands at its

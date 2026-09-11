@@ -73,7 +73,7 @@ struct Assembled: Sendable {
                 if let taken = rows[name] {
                     let first = origins[taken]
 
-                    throw LinkError(
+                    throw BuildError(
                         "'\(name)' is declared by \(documents[first].document.spelled(at: first))"
                             + " and by \(document.document.spelled(at: origin))."
                             + " Two declarations of a name have no way to be told apart",

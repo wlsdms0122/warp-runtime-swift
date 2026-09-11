@@ -9,9 +9,9 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What the link writes into a body: which slot a name gets, which cells a
+// What the build writes into a body: which slot a name gets, which cells a
 // closure takes, when a loop puts a round back, and where an argument stands.
-@Suite("The link lowers a body into slots and rows")
+@Suite("The build lowers a body into slots and rows")
 struct LoweringTests {
     // MARK: - Property
     private let builder = Builder()
@@ -364,7 +364,7 @@ struct LoweringTests {
 
         // When / Then. The unnamed record is refused, and the same record held
         // as a `Tag` stands
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
         }
 

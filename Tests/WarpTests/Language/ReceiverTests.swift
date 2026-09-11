@@ -221,7 +221,7 @@ struct ReceiverTests {
     @Test("a procedure someone wrote is reachable from a path")
     func writtenProcedureIsReachableFromAPath() async throws {
         // Given. This is what unifying bought. `summarize` is a body, not
-        // native, and `${tasks.summarize}` reaches it because the link proved
+        // native, and `${tasks.summarize}` reaches it because the build proved
         // it answers without running.
         let sut = try Module(
             walked: ["std.collection.count"],
@@ -364,7 +364,7 @@ struct ReceiverTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard + [.failing], entry: entryName)
         }
     }

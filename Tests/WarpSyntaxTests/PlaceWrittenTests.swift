@@ -99,7 +99,7 @@ struct PlaceWrittenTests {
         ], importing: ["nowhere"])
 
         // When
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try loader.reading { try Builder().build([module], entry: entryName) }
         }
 
@@ -108,7 +108,7 @@ struct PlaceWrittenTests {
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
         // And unasked, the language answers in its own words
-        let untranslated = #expect(throws: LinkError.self) {
+        let untranslated = #expect(throws: BuildError.self) {
             try Builder().build([module], entry: entryName)
         }
 

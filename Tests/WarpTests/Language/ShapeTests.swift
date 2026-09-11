@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What the link leaves the run to read types by: rows for names, one judge
+// What the build leaves the run to read types by: rows for names, one judge
 // over shapes, and a document's type reaching it through a door.
 @Suite("Types lower to shapes the run reads by row")
 struct ShapeTests {
@@ -263,7 +263,7 @@ struct ShapeTests {
 
     @Test("a name that reaches itself under a wrapper is a circle, and the value judge says so")
     func aCircleUnderAWrapperIsRefusedNotChased() {
-        // Given: a table built by hand, which the link's refusals never saw
+        // Given: a table built by hand, which the build's refusals never saw
         let table = TypeTable(
             types: [
                 "app.M": .nullable(.named("app.M")),
@@ -292,7 +292,7 @@ struct ShapeTests {
         #expect(TypeExpression.named("app.T").declaresNull(in: table))
     }
 
-    @Test("the link refuses a chain of names that comes back on itself under a wrapper")
+    @Test("the build refuses a chain of names that comes back on itself under a wrapper")
     func theLinkRefusesACircleUnderAWrapper() throws {
         // Given
         let sut = try Module(
@@ -305,7 +305,7 @@ struct ShapeTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("through nothing but names")
+            error is BuildError && "\(error)".contains("through nothing but names")
         }
     }
 

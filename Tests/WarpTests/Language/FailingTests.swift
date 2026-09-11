@@ -11,7 +11,7 @@ import Testing
 import WarpStandard
 
 // What a body may fail with, before it runs. A native word says what it raises
-// and a body is read off what it casts, calls and rescues, so the link can
+// and a body is read off what it casts, calls and rescues, so the build can
 // answer what the whole program may fail with and can tell an author their
 // rescue is a body no run reaches.
 @Suite("What may come out of a body")

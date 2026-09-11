@@ -11,10 +11,10 @@ import Testing
 import WarpStandard
 
 // An author binds a call to a name and passes the name, so a declared answer
-// only reaches the next call site if the link knows what that name holds. These
+// only reaches the next call site if the build knows what that name holds. These
 // are the places knowing it turns two declarations into a refusal before
 // anything runs.
-@Suite("What the link knows a name holds")
+@Suite("What the build knows a name holds")
 struct InferenceTests {
     // MARK: - Property
     private let builder = Builder()
@@ -90,7 +90,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -137,7 +137,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -296,7 +296,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -341,7 +341,7 @@ struct InferenceTests {
 
         // When / Then. `task.done` is a bool, and the walk read that from the
         // shape rather than from the value
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -381,7 +381,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -426,7 +426,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -577,7 +577,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -629,7 +629,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -654,7 +654,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -679,7 +679,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -731,11 +731,11 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("declares nothing")
+            error is BuildError && "\(error)".contains("declares nothing")
         }
     }
 
-    @Test("a cast naming a type nothing declares refuses at the link")
+    @Test("a cast naming a type nothing declares refuses at the build")
     func aCastNamingNothingIsRefused() throws {
         // Given. `as?` says the author expected the value might not be that
         // shape. A name nothing declares is not that, and letting it reach the
@@ -763,7 +763,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("no module in this link declares")
+            error is BuildError && "\(error)".contains("no module in this link declares")
         }
     }
 
@@ -795,7 +795,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("`any` is the absence of one")
+            error is BuildError && "\(error)".contains("`any` is the absence of one")
         }
     }
 
@@ -885,7 +885,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("no value is both")
+            error is BuildError && "\(error)".contains("no value is both")
         }
     }
 
@@ -925,7 +925,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("already is")
+            error is BuildError && "\(error)".contains("already is")
         }
     }
 
@@ -957,7 +957,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("no value is")
+            error is BuildError && "\(error)".contains("no value is")
         }
     }
 
@@ -999,7 +999,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("already is")
+            error is BuildError && "\(error)".contains("already is")
         }
     }
 
@@ -1031,13 +1031,13 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("no module in this link declares")
+            error is BuildError && "\(error)".contains("no module in this link declares")
         }
     }
 
     @Test("an int may become a double, so a cast onto double stands")
     func aCastOntoDoubleStands() throws {
-        // Given. The one widening the language has. Refusing it at the link
+        // Given. The one widening the language has. Refusing it at the build
         // would refuse a cast that settles on every run
         let sut = try Module(
             procedures: [
@@ -1173,13 +1173,13 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("already is")
+            error is BuildError && "\(error)".contains("already is")
         }
     }
 
     @Test("a cast onto a type that names itself does not chase the name forever")
     func aCastOntoARecursiveTypeTerminates() throws {
-        // Given. A type may name itself, and the link's own guarantee that name
+        // Given. A type may name itself, and the build's own guarantee that name
         // chains are finite covers walks that follow names alone. This walk
         // goes into fields too, so it carries its own guard
         let sut = try Module(
@@ -1231,7 +1231,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("no value is both")
+            error is BuildError && "\(error)".contains("no value is both")
         }
     }
 
@@ -1271,10 +1271,10 @@ struct InferenceTests {
 
     @Test("a constant folded before any run may hold a cast")
     func aConstantMayHoldACast() async throws {
-        // Given. The link calls a cast pure, so the pure evaluator has to be
+        // Given. The build calls a cast pure, so the pure evaluator has to be
         // able to read one. A module constant is folded through that evaluator
         // before anything runs, so a cast in one is where the two would
-        // disagree if only the link believed it
+        // disagree if only the build believed it
         let sut = try Module(
             constants: [
                 "counted": .cast(
@@ -1360,7 +1360,7 @@ struct InferenceTests {
 
     @Test("a cast keeps the name the author wrote, not the shape it stands for")
     func aCastKeepsItsName() throws {
-        // Given. The link walks a declared name through to judge it, and what
+        // Given. The build walks a declared name through to judge it, and what
         // it writes back is what was written: a refusal and a document both
         // read the author's spelling
         let sut = try Module(
@@ -1394,7 +1394,7 @@ struct InferenceTests {
             let read = body.instructions.first(where: { instruction in instruction.label == "read" }),
             case let .cast(_, type, _) = read.code
         else {
-            Issue.record("the cast did not survive the link")
+            Issue.record("the cast did not survive the build")
 
             return
         }
@@ -1458,7 +1458,7 @@ struct InferenceTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("does not declare")
+            error is BuildError && "\(error)".contains("does not declare")
         }
 
         // The optional spelling changes nothing a declaration settled.
@@ -1481,7 +1481,7 @@ struct InferenceTests {
         #expect {
             try builder.build([optional] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("does not declare")
+            error is BuildError && "\(error)".contains("does not declare")
         }
     }
 
@@ -1545,7 +1545,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1645,7 +1645,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1697,7 +1697,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1750,7 +1750,7 @@ struct InferenceTests {
         )
 
         // When / Then. `a` reads `string?` after enough rounds
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1813,7 +1813,7 @@ struct InferenceTests {
 
         // When / Then. `held` reads `string?`, and the plain string slot says
         // so
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1915,7 +1915,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1954,7 +1954,7 @@ struct InferenceTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -1962,7 +1962,7 @@ struct InferenceTests {
     @Test("a name on a call that never finishes is refused at link")
     func refusingBodySaysNothingAboutItsAnswer() throws {
         // Given. `gives_up` declares never, so a name on its call promises a
-        // binding that cannot happen. The link refuses the name where the
+        // binding that cannot happen. The build refuses the name where the
         // signature is known, rather than inventing a type for the binding
         let sut = try Module(
             procedures: [

@@ -85,7 +85,7 @@ extension Builder {
         for (claim, place) in leaned.sorted(by: { $0.key < $1.key }) {
             guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
 
-            throw LinkError(
+            throw BuildError(
                 unheld[claim]
                     ?? "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
                         + " document in this link says '\(claim.type)' answers it."
@@ -126,7 +126,7 @@ extension Builder {
             // Declared as something else here, which no document arriving
             // later undoes: one name has one declarer.
             guard contracts[type] == nil, table.constraint(type) == nil else {
-                throw LinkError(reason, at: claim.place)
+                throw BuildError(reason, at: claim.place)
             }
 
             return .waits("\(claim.spelled) says " + reason)
@@ -137,7 +137,7 @@ extension Builder {
                 + " so there are no words for '\(type)' to answer"
 
             guard types[contract] == nil, table.constraint(contract) == nil else {
-                throw LinkError(reason, at: claim.place)
+                throw BuildError(reason, at: claim.place)
             }
 
             return .waits("\(claim.spelled) says " + reason)

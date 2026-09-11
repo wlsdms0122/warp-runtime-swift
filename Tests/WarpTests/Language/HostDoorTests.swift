@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 
-@Suite("A host settles a value against a declaration the link holds")
+@Suite("A host settles a value against a declaration the build holds")
 struct HostDoorTests {
     // MARK: - Test
     @Test("settling against a declared type builds the value on that type's layout")
@@ -31,7 +31,7 @@ struct HostDoorTests {
         #expect(record.names == ["balance"])
     }
 
-    @Test("a declaration the link does not have refuses")
+    @Test("a declaration the build does not have refuses")
     func anUndeclaredNameIsRefused() throws {
         // Given
         let image = try Builder().build([sut], entry: "entry")
@@ -86,7 +86,7 @@ struct HostDoorTests {
 
     @Test("a layout a host builds carries no name of its own")
     func aHostBuiltLayoutHasNoName() throws {
-        // Given. A name says a declaration, and a declaration is the link's
+        // Given. A name says a declaration, and a declaration is the build's
         let layout = try Layout(fields: ["balance"])
 
         // When

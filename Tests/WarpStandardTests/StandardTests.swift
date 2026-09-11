@@ -39,7 +39,7 @@ struct StandardTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut, .math, .text, .foundation], entry: entryName)
         }
 
@@ -242,7 +242,7 @@ struct StandardTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
@@ -799,7 +799,7 @@ struct StandardTests {
         #expect(outputs["result"] == .string("a / B / c"))
     }
 
-    @Test("what a word answers is declared, so the link reads it")
+    @Test("what a word answers is declared, so the build reads it")
     func standardAnswersAreDeclared() throws {
         // Given. `count` declares that it answers an int, and `split` declares
         // that it is sent a string
@@ -827,7 +827,7 @@ struct StandardTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -836,7 +836,7 @@ struct StandardTests {
     func bytesDoNotOrder() async throws {
         // Given. Bytes are an opaque value: equal or not, counted, and nothing
         // else. `Comparable` does not admit them, and a literal is a reading
-        // the link can judge, so the refusal lands before the run.
+        // the build can judge, so the refusal lands before the run.
         let sut = Warp.Expression.call(
             Call(
                 receiver: .literal(.bytes([0x01])),
@@ -849,7 +849,7 @@ struct StandardTests {
         await #expect {
             try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], result: reference("probe"))
         } throws: { error in
-            error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
+            error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
         }
     }
 
@@ -1027,7 +1027,7 @@ struct StandardTests {
         )
 
         // When / Then. The conditional holds a string, and `wants` declares an int
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }

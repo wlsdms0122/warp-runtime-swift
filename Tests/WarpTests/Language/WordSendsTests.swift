@@ -9,10 +9,10 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What a native word sending another word answers, and what the link refuses
+// What a native word sending another word answers, and what the build refuses
 // before anything runs. A word declares the words it sends the way it declares
-// the arguments it reads, so both are the link's to resolve.
-@Suite("A word sends a word the link resolved")
+// the arguments it reads, so both are the build's to resolve.
+@Suite("A word sends a word the build resolved")
 struct WordSendsTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -54,10 +54,10 @@ struct WordSendsTests {
         #expect(answer == .string("HI"))
     }
 
-    @Test("a word sending a spelling nothing declares is refused at the link")
+    @Test("a word sending a spelling nothing declares is refused at the build")
     func anUndeclaredSendIsRefused() {
         // Given / When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.strayed],
                 entry: "entry"
@@ -69,7 +69,7 @@ struct WordSendsTests {
     func aQuerySendingAnEffectIsRefused() {
         // Given. `app.shouting` claims it answers without running and sends
         // `app.shout`, which does not
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.contradicting, .shouting],
                 entry: "entry"
@@ -82,7 +82,7 @@ struct WordSendsTests {
         // Given / When / Then. `app.counting` says it touches nothing shared
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.claiming, .ticketing],
                 entry: "entry"
@@ -152,7 +152,7 @@ struct WordSendsTests {
 
 // MARK: - Words a test brings
 // Doubling by sending the word that multiplies, rather than multiplying here.
-// What it sends is its own declaration, so the link resolves the row and this
+// What it sends is its own declaration, so the build resolves the row and this
 // reads it.
 private struct TwiceQuery: Query {
     enum Parameters: Int, ParameterSet {

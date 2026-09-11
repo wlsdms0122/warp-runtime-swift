@@ -61,7 +61,7 @@ extension Builder {
             let declared = signatures[spelling],
             let asked = contractWords[spelling]
         {
-            throw LinkError(
+            throw BuildError(
                 "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
                     + " of '\(asked.contract)', so there is no answer to which one a"
                     + " call reaches. A contract's word and a declaration cannot take"
@@ -94,7 +94,7 @@ extension Builder {
         for module in modules {
             guard let identity = module.identity else { continue }
             guard held.insert(identity).inserted else {
-                throw LinkError(
+                throw BuildError(
                     "this document was handed to the link twice. A link states"
                         + " its whole graph once, so a document already in it is"
                         + " not something to add",
@@ -130,7 +130,7 @@ extension Builder {
                 )
 
                 if let first = claimed[name] {
-                    throw LinkError(
+                    throw BuildError(
                         "'\(name)' is declared more than once in this link, by"
                             + " \(first.spelled) and \(symbol.spelled). Two declarations"
                             + " of a name have no way to be told apart",
@@ -185,7 +185,7 @@ extension Builder {
         for label in table.shapes.circling.map({ row in table.shapes.labels[row] }).sorted() {
             guard let declaration = declared[label] else { continue }
 
-            throw LinkError(
+            throw BuildError(
                 "reaches itself through nothing but names, and a name"
                     + " that only names names never reaches a shape",
                 at: declaration.place
@@ -196,7 +196,7 @@ extension Builder {
             let admitted = declaration.held
 
             guard !admitted.isEmpty else {
-                throw LinkError(
+                throw BuildError(
                     "admits nothing, so no parameter it"
                         + " bounds could ever be filled",
                     at: declaration.place
@@ -220,7 +220,7 @@ extension Builder {
 
                 switch resolved {
                 case .parameter, .any, .never:
-                    throw LinkError(
+                    throw BuildError(
                         "a member is a concrete shape."
                             + " `\(member.rendered)` says nothing a"
                             + " membership could hold",
@@ -347,10 +347,10 @@ extension Builder {
                         in: answered,
                         shapes: frame.shapes
                     ).read(judged, as: name, writing: &lowering, at: place)
-                } catch let refused as LinkError {
+                } catch let refused as BuildError {
                     throw refused
                 } catch {
-                    throw LinkError("\(error)", at: place)
+                    throw BuildError("\(error)", at: place)
                 }
             }
         }
@@ -397,10 +397,10 @@ extension Builder {
                         in: answered,
                         shapes: frame.shapes
                     ).read(judged, as: name, writing: &lowering, at: place)
-                } catch let refused as LinkError {
+                } catch let refused as BuildError {
                     throw refused
                 } catch {
-                    throw LinkError("\(error)", at: place)
+                    throw BuildError("\(error)", at: place)
                 }
             }
         }
@@ -432,7 +432,7 @@ extension Builder {
             if let met = walking.firstIndex(of: name) {
                 let circle = walking[met...].sorted()
 
-                throw LinkError(
+                throw BuildError(
                     "constants \(circle.map(\.spelling).joined(separator: ", ")) name each other in a"
                         + " circle. A constant may name another declared beside it, but"
                         + " not one that names it back",

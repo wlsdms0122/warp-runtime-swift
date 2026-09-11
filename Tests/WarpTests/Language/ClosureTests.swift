@@ -98,7 +98,7 @@ struct ClosureTests {
                 try Builder().build([sut] + Module.standard, entry: entryName)
             }
         } else {
-            #expect(throws: LinkError.self) {
+            #expect(throws: BuildError.self) {
                 try Builder().build([sut] + Module.standard, entry: entryName)
             }
         }
@@ -202,7 +202,7 @@ struct ClosureTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut, .shouting] + Module.standard, entry: entryName)
         }
     }

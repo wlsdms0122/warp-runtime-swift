@@ -79,7 +79,7 @@ struct VocabularyTests {
         ], importing: ["std.collection.count"])
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut], entry: entryName)
         }
     }
@@ -102,7 +102,7 @@ struct VocabularyTests {
         ], importing: ["rival.count", "std.collection.count"])
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard + [rival], entry: entryName)
         }
     }

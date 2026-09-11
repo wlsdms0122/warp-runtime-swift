@@ -82,7 +82,7 @@ struct ReturnTypeTests {
 
         // When / Then. The body and the declaration beside it are one
         // document's text, so nothing has to run to find them disagreeing
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: entryName)
         }
     }
@@ -123,7 +123,7 @@ struct ReturnTypeTests {
     }
 
     @Test("an answer naming a shape nobody declared is refused at link")
-    func unknownReturnTypeIsALinkError() throws {
+    func unknownReturnTypeIsABuildError() throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -140,7 +140,7 @@ struct ReturnTypeTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             _ = try builder.build([sut], entry: entryName)
         }
     }

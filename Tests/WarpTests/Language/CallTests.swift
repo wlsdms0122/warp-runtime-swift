@@ -115,7 +115,7 @@ struct CallTests {
             ]
         )
 
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
                 entry: "entry"
@@ -143,7 +143,7 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: LinkError.self) {
+        await #expect(throws: BuildError.self) {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         }
     }
@@ -159,7 +159,7 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: LinkError.self) {
+        await #expect(throws: BuildError.self) {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         }
     }
@@ -178,7 +178,7 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: LinkError.self) {
+        await #expect(throws: BuildError.self) {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         }
     }
@@ -192,7 +192,7 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: LinkError.self) {
+        await #expect(throws: BuildError.self) {
             try await run(sut)
         }
     }
@@ -217,7 +217,7 @@ struct CallTests {
         )
 
         // When / Then
-        await #expect(throws: LinkError.self) {
+        await #expect(throws: BuildError.self) {
             try await run(sut)
         }
     }

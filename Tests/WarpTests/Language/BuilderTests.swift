@@ -30,7 +30,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -60,7 +60,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -89,7 +89,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -131,7 +131,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -155,7 +155,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -191,7 +191,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -214,7 +214,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 
@@ -450,7 +450,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "caller")
         }
     }
@@ -478,7 +478,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "caller")
         }
     }
@@ -504,7 +504,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "caller")
         }
     }
@@ -512,7 +512,7 @@ struct BuilderTests {
     @Test("names resolve across every module in the link, flat")
     func symbolsResolveAcrossModules() throws {
         // Given. No module says anything about the others; what to link is the
-        // caller's statement and joining the names up is the linker's work
+        // caller's statement and joining the names up is the builder's work
         let caller = try Module(
             procedures: [
                 "caller": Procedure(
@@ -577,7 +577,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([caller], entry: "caller")
         }
         #expect(throws: Never.self) {
@@ -611,7 +611,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([left, right], entry: "shared")
         }
     }
@@ -631,7 +631,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "absent")
         }
     }
@@ -721,7 +721,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "caller")
         }
     }
@@ -752,7 +752,7 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "caller")
         }
     }
@@ -791,12 +791,12 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut], entry: "caller")
         }
     }
 
-    @Test("what no body settles is not something the link can be wrong about")
+    @Test("what no body settles is not something the build can be wrong about")
     func anAnswerNothingSettlesIsNotJudged() throws {
         // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
@@ -841,7 +841,7 @@ struct BuilderTests {
     func anAnswerReadOffABodyIsJudged() throws {
         // Given. The same shape, with a body whose answer the text does settle:
         // a body with no result hands back null, and null is not a whole
-        // number. What the declaration says stays what it says; what the link
+        // number. What the declaration says stays what it says; what the build
         // reads a call as is what the body hands back.
         let sut = try Module(
             procedures: [
@@ -869,7 +869,7 @@ struct BuilderTests {
         #expect {
             try builder.build([sut], entry: "caller")
         } throws: { error in
-            error is LinkError && "\(error)".contains("holds null where int is declared")
+            error is BuildError && "\(error)".contains("holds null where int is declared")
         }
     }
 
@@ -915,7 +915,7 @@ struct BuilderTests {
             ]
         )
 
-        let error = #expect(throws: LinkError.self) {
+        let error = #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
 

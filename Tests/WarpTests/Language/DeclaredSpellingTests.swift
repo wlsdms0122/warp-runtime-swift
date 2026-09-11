@@ -117,7 +117,7 @@ struct DeclaredSpellingTests {
         #expect {
             try builder.build([sut, one, two], entry: entryName)
         } throws: { error in
-            error is LinkError
+            error is BuildError
                 && "\(error)".contains("names type 'Limit', which no module in this link declares")
         }
     }
@@ -174,7 +174,7 @@ struct DeclaredSpellingTests {
         #expect {
             try builder.build([one, two], entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("declared more than once")
+            error is BuildError && "\(error)".contains("declared more than once")
         }
     }
 
@@ -211,10 +211,10 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("sorting what Comparable does not admit refuses at the link")
+    @Test("sorting what Comparable does not admit refuses at the build")
     func sortingTheUnorderableRefuses() throws {
         // Given. `sorted` is bounded by the shared ground's `Comparable`, and
-        // booleans are a reading the link can see
+        // booleans are a reading the build can see
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -232,7 +232,7 @@ struct DeclaredSpellingTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("'std.Comparable' does not admit")
+            error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
         }
     }
 
@@ -313,13 +313,13 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then. The link sees its whole graph at once, so the order the
+        // When / Then. The build sees its whole graph at once, so the order the
         // caller listed the modules cannot change the conclusion
         for modules in [[membership, shape], [shape, membership]] {
             #expect {
                 try builder.build(modules, entry: entryName)
             } throws: { error in
-                error is LinkError && "\(error)".contains("both a type and a constraint")
+                error is BuildError && "\(error)".contains("both a type and a constraint")
             }
         }
     }
@@ -381,7 +381,7 @@ struct DeclaredSpellingTests {
         #expect {
             try builder.build([arithmetic] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("'std.Numeric' does not admit")
+            error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
         }
     }
 
@@ -431,7 +431,7 @@ struct DeclaredSpellingTests {
         #expect {
             try builder.build([sut, .collection], entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
+            error is BuildError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
         }
 
         #expect(throws: Never.self) {

@@ -53,7 +53,7 @@ extension Lowering {
             }
         }
 
-        // What the link read off a body, in the numbers of the document that
+        // What the build read off a body, in the numbers of the document that
         // body came out of. Read against the same numbering the bodies are, so
         // a call judged against one of these reads the shape its document
         // stands on.
@@ -66,7 +66,7 @@ extension Lowering {
 
     // MARK: - Private
     // One shape written as the numbers its document gave the rows it stands
-    // on. A row the document never numbered is the link having lowered
+    // on. A row the document never numbered is the build having lowered
     // something it did not read, which is this pass's own mistake.
     private func renumbered(
         _ shape: Shape,
@@ -76,7 +76,7 @@ extension Lowering {
         try shape.renumbered(
             type: { number in
                 guard let stands = place.types[number] else {
-                    throw LinkError.unjudged(
+                    throw BuildError.unjudged(
                         "type \'\(shapes.labels[number])\', which its document never numbered",
                         at: Place.procedure(label.spelling, in: .assembled)
                     )
@@ -86,7 +86,7 @@ extension Lowering {
             },
             membership: { number in
                 guard let stands = place.memberships[number] else {
-                    throw LinkError.unjudged(
+                    throw BuildError.unjudged(
                         "membership \'\(shapes.constraintLabels[number])\',"
                             + " which its document never numbered",
                         at: Place.procedure(label.spelling, in: .assembled)

@@ -78,7 +78,7 @@ struct NullableTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("holds int?")
+            error is BuildError && "\(error)".contains("holds int?")
         }
     }
 
@@ -113,7 +113,7 @@ struct NullableTests {
     @Test("a name that is statically null is not read through")
     func aStaticNullRefusesTheRead() throws {
         // Given. The binding holds null and nothing else, so every dot after it
-        // reads through null and the link says so
+        // reads through null and the build says so
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -130,7 +130,7 @@ struct NullableTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("reads through null")
+            error is BuildError && "\(error)".contains("reads through null")
         }
     }
 
@@ -162,7 +162,7 @@ struct NullableTests {
     @Test("a nullable parameter takes null without leaning on a default")
     func aNullableParameterTakesNullByType() async throws {
         // Given. `T?` says null is a value, so the boundary lets it in the way
-        // the link does: no `default: null` crutch required
+        // the build does: no `default: null` crutch required
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -226,7 +226,7 @@ struct NullableTests {
                     ),
                     body: [
                         // The written call omits `limit`; the type answers the
-                        // omission with null, so the link takes the call.
+                        // omission with null, so the build takes the call.
                         Statement(binding: .constant("called"), expression: .call(Call(
                                 selector: "labelled",
                                 arguments: ["of": .reference([.key("word")])]
@@ -262,7 +262,7 @@ struct NullableTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("does not declare")
+            error is BuildError && "\(error)".contains("does not declare")
         }
 
         // And a `?.` that could not have read past anything refuses on a
@@ -282,7 +282,7 @@ struct NullableTests {
         #expect {
             try builder.build([needless] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("never null")
+            error is BuildError && "\(error)".contains("never null")
         }
     }
 
@@ -308,7 +308,7 @@ struct NullableTests {
         #expect {
             try builder.build([hidingAny] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("writes `?`")
+            error is BuildError && "\(error)".contains("writes `?`")
         }
 
         // And a nullable behind the name (`B = int?`, then `B?`) is the doubled
@@ -331,7 +331,7 @@ struct NullableTests {
         #expect {
             try builder.build([hidingNullable] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("writes `?`")
+            error is BuildError && "\(error)".contains("writes `?`")
         }
     }
 
@@ -390,7 +390,7 @@ struct NullableTests {
         #expect {
             try builder.build([onAField] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("read with `.`")
+            error is BuildError && "\(error)".contains("read with `.`")
         }
 
         // A word's receiver is proven non-null by the time the call is
@@ -411,7 +411,7 @@ struct NullableTests {
         #expect {
             try builder.build([onAWord] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("never null")
+            error is BuildError && "\(error)".contains("never null")
         }
     }
 
@@ -437,7 +437,7 @@ struct NullableTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError
+            error is BuildError
                 && "\(error)".contains("Absence is read with `?[`")
         }
     }
@@ -494,7 +494,7 @@ struct NullableTests {
         }
     }
 
-    @Test("a needless optional index is refused at the link")
+    @Test("a needless optional index is refused at the build")
     func aNeedlessOptionalIndexRefuses() throws {
         // Given. The array is proven non-null, so `?[` claims an absence the
         // types rule out, the way a needless `?.` does
@@ -519,7 +519,7 @@ struct NullableTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("never null")
+            error is BuildError && "\(error)".contains("never null")
         }
     }
 
@@ -595,7 +595,7 @@ struct NullableTests {
 }
 
 // The dot judged behind an index reference. The walk continues through `[i]`
-// the way it does through `[0]`, so nothing after one escapes the link.
+// the way it does through `[0]`, so nothing after one escapes the build.
 @Suite
 struct IndexReferenceJudgmentTests {
     // MARK: - Property
@@ -637,7 +637,7 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("native words alone")
+            error is BuildError && "\(error)".contains("native words alone")
         }
     }
 
@@ -667,7 +667,7 @@ struct IndexReferenceJudgmentTests {
             ]
         )
 
-        // When / Then. Folded at the link to the value the resolved body
+        // When / Then. Folded at the build to the value the resolved body
         // answers
         #expect(try await run(sut) == .int(2))
     }
@@ -731,7 +731,7 @@ struct IndexReferenceJudgmentTests {
 
     @Test("a closure parameter may not take a constant's name")
     func aClosureParameterDoesNotShadowAConstant() throws {
-        // Given. Linking folds a constant wherever its name is read, so a
+        // Given. Compiling folds a constant wherever its name is read, so a
         // closure parameter under that name would never be the one that
         // answers; refused where the top-level signature's is
         let procedure = Procedure(
@@ -793,7 +793,7 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("loudly")
+            error is BuildError && "\(error)".contains("loudly")
         }
     }
 
@@ -866,10 +866,10 @@ struct IndexReferenceJudgmentTests {
         )
     }
 
-    @Test("an undeclared field behind an index reference refuses at the link")
+    @Test("an undeclared field behind an index reference refuses at the build")
     func anUndeclaredFieldBehindAnIndexReferenceRefuses() throws {
         // Given. The element type is known whatever the index is, so the absent
-        // field is the link's to refuse
+        // field is the build's to refuse
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -893,14 +893,14 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("does not declare")
+            error is BuildError && "\(error)".contains("does not declare")
         }
     }
 
-    @Test("an index reference that provably is not a number refuses at the link")
+    @Test("an index reference that provably is not a number refuses at the build")
     func anIndexReferenceReadingIsJudged() throws {
         // Given. `name` is text, and an index is a whole number; the text
-        // proves the defect, so the link refuses it
+        // proves the defect, so the build refuses it
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -920,14 +920,14 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("expected int")
+            error is BuildError && "\(error)".contains("expected int")
         }
     }
 
     @Test("a pure body nobody reaches still has its sends checked")
     func anUnreachedPureBodyIsChecked() throws {
         // Given. `shout` is derivable, so its body lands in the image and runs
-        // whenever a path reaches it; a call it writes wrongly is the link's to
+        // whenever a path reaches it; a call it writes wrongly is the build's to
         // refuse whether or not the entry ever mentions it
         let sut = try Module(
             procedures: [
@@ -958,7 +958,7 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("loudly")
+            error is BuildError && "\(error)".contains("loudly")
         }
     }
 
@@ -984,12 +984,12 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("only an array is indexed")
+            error is BuildError && "\(error)".contains("only an array is indexed")
         }
     }
 }
 
-// A dot on a type parameter. The shape is the call's fact, so the link leaves
+// A dot on a type parameter. The shape is the call's fact, so the build leaves
 // the segments as written rather than judging on nothing.
 @Suite
 struct ParameterReceiverTests {
@@ -1124,7 +1124,7 @@ struct ParameterReceiverTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("which declares nothing")
+            error is BuildError && "\(error)".contains("which declares nothing")
         }
     }
 
@@ -1297,7 +1297,7 @@ struct ParameterReceiverTests {
     @Test("a shape read out of a body is not a declaration anybody can write")
     func aReadingIsRefusedWhereADeclarationGoes() throws {
         // Given. A declaration assembled in the host claiming what only a walk
-        // produces. No document spells one, and the link refuses it where it
+        // produces. No document spells one, and the build refuses it where it
         // was written rather than letting it stand: a declaration says what a
         // call fills, and nothing fills a path only one body can read.
         //
@@ -1320,7 +1320,7 @@ struct ParameterReceiverTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is LinkError && "\(error)".contains("read out of a body")
+            error is BuildError && "\(error)".contains("read out of a body")
         }
     }
 }

@@ -57,7 +57,7 @@ public struct Supplying: Sendable {
                 guard let word = procedure.implementation.native else { continue }
 
                 guard !words.keys.contains(name) else {
-                    throw LinkError(
+                    throw BuildError(
                         "'\(name)' is brought by two of the modules handed over."
                             + " Two words under one spelling have no way to be told apart",
                         at: .procedure(name.spelling, in: .of(module))

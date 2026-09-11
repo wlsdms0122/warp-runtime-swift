@@ -372,25 +372,25 @@ struct Relocating {
             return row
 
         case let .unfound(.sent(declared)):
-            throw LinkError(
+            throw BuildError(
                 "'\(declared)' is called here, and no module in this link declares it",
                 at: standing.place
             )
 
         case let .unfound(.walked(spelling)):
-            throw LinkError(
+            throw BuildError(
                 "'\(spelling)' is walked here, and no path in this link may reach it",
                 at: standing.place
             )
 
         case let .unfound(.closure(written)):
-            throw LinkError.unjudged(
-                "closure \(written) of this document, which the link lowered no row for",
+            throw BuildError.unjudged(
+                "closure \(written) of this document, which the build lowered no row for",
                 at: standing.place
             )
 
         case .unnumbered:
-            throw LinkError.unjudged(
+            throw BuildError.unjudged(
                 "a call standing at \(number), which its document never numbered",
                 at: standing.place
             )
@@ -578,7 +578,7 @@ struct Relocating {
         let spelling = ContractWord.spelling(of: dispatch.contract, word: dispatch.word)
 
         guard let asked = contractWords[spelling] else {
-            throw LinkError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
+            throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 
         let receiver = try filled(dispatch.receiver, in: standing)
@@ -599,7 +599,7 @@ struct Relocating {
             arguments: arguments,
             calls: try asked.answering.reduce(into: [Name: CallOperation]()) { calls, entry in
                 guard let row = rows[entry.value] else {
-                    throw LinkError.unjudged(
+                    throw BuildError.unjudged(
                         "'\(entry.value)' answering '\(spelling)', which has no row",
                         at: standing.place
                     )

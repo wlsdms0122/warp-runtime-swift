@@ -13,10 +13,10 @@ import WarpStandard
 // One program from `program/`, linked once and run as many times as asked.
 //
 // Every act a caller pays for is timed apart. `load()` is what the text costs
-// to become a module, `link()` what that module costs to become an image, and
+// to become a module, `build()` what that module costs to become an image, and
 // `time(rounds:)` what running the image costs. A document arrives while the
 // program is running, so the first two are run time too: work moved out of the
-// run and into the link shows as a gain on one figure and a loss on the other,
+// run and into the build shows as a gain on one figure and a loss on the other,
 // and a document that runs once pays all three.
 struct Workload {
     // MARK: - Property

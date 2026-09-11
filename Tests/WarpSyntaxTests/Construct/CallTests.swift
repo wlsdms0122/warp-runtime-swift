@@ -78,7 +78,7 @@ struct CallTests {
 
         // When / Then. Nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut], entry: "caller")
         }
     }

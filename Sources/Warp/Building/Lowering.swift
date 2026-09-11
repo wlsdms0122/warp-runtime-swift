@@ -7,11 +7,11 @@
 
 import Foundation
 
-// Writes what the link proved into a body. Every name becomes the slot the
+// Writes what the build proved into a body. Every name becomes the slot the
 // frame holds it in, every selector the row it names, every path word the
 // row it sends, every argument the position of its parameter. Nothing is
-// judged here: a name this walk cannot place is a body the link let through
-// unjudged, and is refused as the link's own mistake.
+// judged here: a name this walk cannot place is a body the build let through
+// unjudged, and is refused as the build's own mistake.
 //
 // The table has one row per procedure. A closure literal is a procedure the
 // document wrote inside another, so it is lifted out into a row of its own and
@@ -32,7 +32,7 @@ struct Lowering {
 
     // Where each document's calls are numbered from. A body carries these
     // numbers rather than the rows above, so a document lowers the same way
-    // whatever else the link was handed.
+    // whatever else the build was handed.
     private(set) var numbering: [Int: Numbering] = [:]
 
     // Each document's variables by name, in the order a run makes their boxes.
@@ -126,7 +126,7 @@ struct Lowering {
         }
     }
 
-    // A shape the link read off a body rather than out of a signature. It is
+    // A shape the build read off a body rather than out of a signature. It is
     // written into no body, so what it stands on is noted here: its document
     // numbers it beside the shapes its bodies stand on.
     mutating func stands(on shape: Shape, of origin: Int) {
@@ -221,9 +221,9 @@ struct Lowering {
         private var variableSlots: [Name: Int] = [:]
         private var capturedSlots: [Name: Int] = [:]
 
-        // What the link proved stands in a slot, for the slots it proved
+        // What the build proved stands in a slot, for the slots it proved
         // anything about. A path reads its head here, so a field of a shape
-        // the link laid out is lowered to the place it stands in.
+        // the build laid out is lowered to the place it stands in.
         private var held: [Int: Shape] = [:]
 
         // The declarations the shapes written into this body stand on, by the
@@ -280,7 +280,7 @@ struct Lowering {
             return names.count - 1
         }
 
-        // A slot holds what the link proved, and holds nothing where it
+        // A slot holds what the build proved, and holds nothing where it
         // proved nothing.
         func hold(_ slot: Int, _ shape: Shape?) {
             held[slot] = shape
@@ -413,7 +413,7 @@ struct Lowering {
         return instructions
     }
 
-    // What lowered code stands as, for the readings the link can prove
+    // What lowered code stands as, for the readings the build can prove
     // without judging anything: a record literal stands on the layout this
     // walk made for it, a call on what its row answers, a cast on what it
     // casts to, and a path on what it reaches. Nil everywhere else, which
@@ -624,7 +624,7 @@ struct Lowering {
 
         case let .call(call):
             // A selector naming a contract's word names no row. Which row
-            // answers is the receiver's, so every one the link found is
+            // answers is the receiver's, so every one the build found is
             // lowered here and the run picks by the name it reads.
             if let asked = contractWords[call.selector] {
                 return .dispatch(
@@ -760,7 +760,7 @@ struct Lowering {
         // A mark on the head expects a name to be missing, which is not
         // absence but a reading gone wrong.
         if let refusal = path.markedHead {
-            throw LinkError(refusal, at: place)
+            throw BuildError(refusal, at: place)
         }
 
         guard case let .key(head, _)? = path.first else {
@@ -771,9 +771,9 @@ struct Lowering {
             throw unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
         }
 
-        // What stands where the walk is, so a field of a shape the link laid
+        // What stands where the walk is, so a field of a shape the build laid
         // out is lowered to the place it stands in. It runs out as soon as the
-        // walk reaches something the link did not prove, and every step from
+        // walk reaches something the build did not prove, and every step from
         // there reads by name.
         var reached = slots.shape(of: slot)
 
@@ -844,7 +844,7 @@ struct Lowering {
     // What the link should have refused before lowering and did not. Not a
     // sentence for an author to act on: it names the judgment that was
     // skipped, for whoever reads the link.
-    private func unjudged(_ what: String, at place: Place) -> LinkError {
-        LinkError("the link lowered \(what) without judging it", at: place)
+    private func unjudged(_ what: String, at place: Place) -> BuildError {
+        BuildError("the link lowered \(what) without judging it", at: place)
     }
 }

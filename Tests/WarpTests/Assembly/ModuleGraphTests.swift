@@ -127,7 +127,7 @@ struct ModuleGraphTests {
         #expect(try ModuleGraph([alone]).modules.count == 1)
     }
 
-    @Test("a name no module here declares is left to the link")
+    @Test("a name no module here declares is left to the build")
     func anUndeclaredNeedIsNotRefused() throws {
         let program = try Module(
             procedures: [

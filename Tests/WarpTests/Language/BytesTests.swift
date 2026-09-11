@@ -170,7 +170,7 @@ struct BytesTests {
         }
     }
 
-    @Test("the equation is read at the link, by the elements")
+    @Test("the equation is read at the build, by the elements")
     func acceptanceReadsTheElements() {
         #expect(TypeExpression.array(.int).accepts(.bytes))
         #expect(TypeExpression.array(.any).accepts(.bytes))
@@ -184,7 +184,7 @@ struct BytesTests {
 
     @Test("an index reads one byte out as the int it is")
     func anIndexReadsAByte() async throws {
-        // Given. The path is judged at the link, drilled at the run
+        // Given. The path is judged at the build, drilled at the run
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -364,7 +364,7 @@ struct BytesTests {
         }
     }
 
-    @Test("an encoding the words do not name refuses at the link")
+    @Test("an encoding the words do not name refuses at the build")
     func anUnknownEncodingRefuses() throws {
         // Given. The oneOf names the encodings, and a constant is judged at the
         // link
@@ -382,7 +382,7 @@ struct BytesTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -463,9 +463,9 @@ struct BytesTests {
         )
     }
 
-    @Test("a bytes literal fills an array slot at the link, and crosses it whole")
+    @Test("a bytes literal fills an array slot at the build, and crosses it whole")
     func aBytesConstantFillsAnArraySlot() async throws {
-        // Given. The equation is read at the link, and the boundary has nothing
+        // Given. The equation is read at the build, and the boundary has nothing
         // to settle: the slot asked for an array and bytes are one
         let sut = try Module(
             procedures: [

@@ -141,7 +141,7 @@ struct ConditionTests {
         // When / Then. The pattern compiles before any run. Checking it while
         // decoding would make the notation hold the vocabulary; it is checked
         // where names resolve.
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build(
                 [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard,
                 entry: entryName

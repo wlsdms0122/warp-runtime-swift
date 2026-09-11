@@ -209,7 +209,7 @@ struct EnvelopeTests {
     func constantsSendWordsToo() throws {
         // Given. A constant is an expression, and understating what a program
         // imports is worse than saying nothing: a caller decides from this list
-        // what to allow, and would then be refused at the link by a word the
+        // what to allow, and would then be refused at the build by a word the
         // list never mentioned.
         let constant: Value = [
             "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
@@ -315,8 +315,8 @@ struct EnvelopeTests {
         // Then
         #expect(module.imports.isEmpty)
 
-        // And the link still holds it to that. The word has to be there
-        #expect(throws: LinkError.self) {
+        // And the build still holds it to that. The word has to be there
+        #expect(throws: BuildError.self) {
             try Builder().build([module], entry: entryName)
         }
     }

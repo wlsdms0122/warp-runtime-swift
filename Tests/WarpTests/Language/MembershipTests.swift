@@ -11,7 +11,7 @@ import Testing
 
 // A declared membership standing as a type. `A or B` is written the one way
 // the language writes a set of shapes, by declaring it and naming it, so a
-// slot saying "either of these" says something the link can hold to, where it
+// slot saying "either of these" says something the build can hold to, where it
 // used to have to say `any` and mean nothing.
 @Suite("A membership as a type")
 struct MembershipTests {
@@ -43,7 +43,7 @@ struct MembershipTests {
         #expect(try await run(sut) == .string("a"))
     }
 
-    @Test("what the membership does not admit refuses at the link")
+    @Test("what the membership does not admit refuses at the build")
     func anOutsiderRefuses() throws {
         // Given
         let sut = try Module(
@@ -62,7 +62,7 @@ struct MembershipTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -88,7 +88,7 @@ struct MembershipTests {
         )
 
         // When / Then
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
@@ -117,7 +117,7 @@ struct MembershipTests {
         #expect(throws: Never.self) {
             try Builder().build([try module(reading: .string)] + Module.standard, entry: entryName)
         }
-        #expect(throws: LinkError.self) {
+        #expect(throws: BuildError.self) {
             try Builder().build([try module(reading: .int)] + Module.standard, entry: entryName)
         }
     }
