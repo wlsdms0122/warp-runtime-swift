@@ -89,7 +89,8 @@ struct ReceiverTests {
                     body: [
                         Statement(binding: .constant("loud"), expression: .reference([.key("of")])
                         )
-                    ]
+                    ],
+                    result: .reference([.key("loud")])
                 )
             ]
         )

@@ -77,7 +77,7 @@ extension Linker {
         folding: Folding?,
         origin: Int? = nil,
         writing requiring: Requiring
-    ) throws -> (block: Block, calls: [CallSite]) {
+    ) throws -> (block: Block, calls: [CallSite], reading: Shape) {
         let inner = try inspected(
             block: block,
             at: place,
@@ -86,7 +86,7 @@ extension Linker {
             ask: .judging(folding: folding, origin: origin, writing: requiring)
         )
 
-        return (inner.block, inner.calls)
+        return (inner.block, inner.calls, join(inner.flow.answered, inner.reading))
     }
 
     // The expression form. A constant's body is one rather than a block.

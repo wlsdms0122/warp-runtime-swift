@@ -268,7 +268,8 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.int(1))
                         )
-                    ]
+                    ],
+                    result: .reference([.key("done")])
                 ),
                 "entry": Procedure(
                     body: [
@@ -490,7 +491,8 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.int(1))
                         )
-                    ]
+                    ],
+                    result: .reference([.key("done")])
                 ),
                 "entry": Procedure(
                     signature: Signature(

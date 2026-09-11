@@ -62,8 +62,8 @@ struct ReturnTypeTests {
         }
     }
 
-    @Test("a body that answers something else fails")
-    func wrongReturnFails() async throws {
+    @Test("a body that answers something else is refused where both are written")
+    func wrongReturnFails() throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -74,16 +74,16 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3))
                         )
-                    ]
+                    ],
+                    result: .reference([.key("counted")])
                 )
             ]
         )
 
-        // When / Then
-        let image = try linker.link([sut], entry: entryName)
-
-        await #expect(throws: ArgumentError.self) {
-            try await Executor().run(image)
+        // When / Then. The body and the declaration beside it are one
+        // document's text, so nothing has to run to find them disagreeing
+        #expect(throws: LinkError.self) {
+            try linker.link([sut], entry: entryName)
         }
     }
 
