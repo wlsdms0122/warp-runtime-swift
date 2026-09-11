@@ -323,7 +323,7 @@ public struct Linker: Sendable {
 
         // One declaration resolves once, whichever table asks. The frontier for
         // a reached body, the derivable tables for a body a path may run.
-        var resolvedBodies: [Name: (procedure: Procedure, calls: [CallSite], reading: Shape?)] = [:]
+        var resolvedBodies: [Name: (procedure: Procedure, calls: [CallSite])] = [:]
 
         // A declaration, bound and dot-judged: selectors resolve to declared
         // spellings, every dot in the body is spelled as what the types say it
@@ -335,12 +335,12 @@ public struct Linker: Sendable {
         // this body in the image, the body runs, so the frontier's promise
         // (callee declared, arguments taken) is kept per body rather than per
         // reachability.
-        func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite], reading: Shape?) {
+        func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite]) {
             if let done = resolvedBodies[symbol.declared] { return done }
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite](), reading: Shape?.none)
+            var answer = (procedure: declaration, calls: [CallSite]())
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a word
@@ -355,10 +355,11 @@ public struct Linker: Sendable {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, read) = try resolvedSites(
+                let (rewritten, gathered) = try resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
+                    answering: declaration.signature.returns,
                     with: frame(),
                     folding: folding,
                     origin: origin,
@@ -371,8 +372,7 @@ public struct Linker: Sendable {
                         signature: declaration.signature,
                         implementation: .body(rewritten)
                     ),
-                    calls: gathered,
-                    reading: read
+                    calls: gathered
                 )
             }
 
@@ -561,39 +561,23 @@ public struct Linker: Sendable {
         // are judged is not a question the entry answers.
         for symbol in holding {
             try requiring.folding(symbol.place) {
-                let (procedure, gathered, read) = try resolved(symbol)
+                let (procedure, gathered) = try resolved(symbol)
 
                 calls[symbol.declared] = gathered.map { call in call.callee }
 
-                // What the declaration promises, held to what its body can
-                // answer. Both are this document's text, so the question is
-                // this document's to settle. The reading is the one the body
-                // was judged by, so nothing is walked twice. A reading that
-                // opens to `any`, which is what applying a value reaches,
-                // stands here and is settled at the boundary.
-                if let returns = procedure.signature.returns, let read {
-                    let promised = returns.lowered(in: shapes)
-
-                    guard promised.accepts(read, in: shapes) else {
+                // A constant answer is a value and not only a shape, so it is
+                // held to what the declaration admits as well as to what it
+                // reads as, the way a constant argument is.
+                if let returns = procedure.signature.returns,
+                   let answer = procedure.block?.result?.constantValue {
+                    do {
+                        _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
+                    } catch {
                         throw LinkError(
-                            "answers \(read.rendered(in: shapes)), and its"
-                                + " declaration promises \(returns)",
+                            "answers \(answer.type), and its"
+                                + " declaration promises \(returns): \(error)",
                             at: symbol.place.part(.result)
                         )
-                    }
-
-                    // A constant answer is a value and not only a shape, so it
-                    // is held to what the declaration admits as well.
-                    if let answer = procedure.block?.result?.constantValue {
-                        do {
-                            _ = try promised.settling(answer, at: "answer", in: shapes)
-                        } catch {
-                            throw LinkError(
-                                "answers \(answer.type), and its"
-                                    + " declaration promises \(returns): \(error)",
-                                at: symbol.place.part(.result)
-                            )
-                        }
                     }
                 }
             }

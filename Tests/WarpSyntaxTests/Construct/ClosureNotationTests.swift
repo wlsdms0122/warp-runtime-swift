@@ -229,7 +229,8 @@ struct ClosureNotationTests {
                                     "body": [
                                         "closure": [
                                             "returns": "string",
-                                            "body": [["let": "said", "value": "hi"]]
+                                            "body": [["let": "said", "value": "hi"]],
+                                            "result": ["ref": "said"]
                                         ]
                                     ]
                                 ]

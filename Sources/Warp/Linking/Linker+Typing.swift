@@ -65,6 +65,34 @@ extension Linker {
         return join(walked.flow.answered, walked.reading)
     }
 
+    // What a body answers, held to the `returns` written beside it. A
+    // declaration and a closure literal each write both in one document, so
+    // each asks here rather than working the question out again further on.
+    //
+    // A reading that opens to `any`, which is what applying a value reaches,
+    // stands and is settled where the value arrives. The refusal stands where
+    // the author can act on it: at the `result` when one is written, and at
+    // the `returns` when the body answers nothing at all.
+    func held(
+        _ read: Shape,
+        to returns: TypeExpression?,
+        resulting: Bool,
+        at place: Place,
+        in table: ShapeTable
+    ) throws {
+        guard let returns else { return }
+
+        let promised = returns.lowered(in: table)
+
+        guard promised.accepts(read, in: table) else {
+            throw LinkError(
+                "answers \(read.rendered(in: table)), and its"
+                    + " declaration promises \(returns)",
+                at: place.part(resulting ? .result : .returns)
+            )
+        }
+    }
+
     // A block with every dot judged and every call gathered, each site carrying
     // what was in scope where it was written. Statements are read in order
     // because that is what a body means. A name holds what the statement before
@@ -73,11 +101,12 @@ extension Linker {
         in block: Block,
         at place: Place,
         in environment: [Name: Shape],
+        answering returns: TypeExpression?,
         with frame: TypeFrame,
         folding: Folding?,
         origin: Int? = nil,
         writing requiring: Requiring
-    ) throws -> (block: Block, calls: [CallSite], reading: Shape) {
+    ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
             block: block,
             at: place,
@@ -86,7 +115,15 @@ extension Linker {
             ask: .judging(folding: folding, origin: origin, writing: requiring)
         )
 
-        return (inner.block, inner.calls, join(inner.flow.answered, inner.reading))
+        try held(
+            join(inner.flow.answered, inner.reading),
+            to: returns,
+            resulting: block.result != nil,
+            at: place,
+            in: frame.shapes
+        )
+
+        return (inner.block, inner.calls)
     }
 
     // The expression form. A constant's body is one rather than a block.
@@ -1298,6 +1335,14 @@ extension Linker {
                         )
                     }
                 }
+
+                try held(
+                    join(inner.flow.answered, inner.reading),
+                    to: procedure.signature.returns,
+                    resulting: written.result != nil,
+                    at: place.part(.closure),
+                    in: frame.shapes
+                )
 
                 body = inner.block
                 calls = inner.calls
