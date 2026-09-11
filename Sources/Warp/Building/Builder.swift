@@ -123,10 +123,11 @@ public struct Builder: Sendable {
             numbered: linkage
         )
 
+        let signatures = signatures(of: compiled)
+
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
-        let signatures = signatures(of: compiled)
         let shaped = try shaped(
             declaring,
             claims: declared.claims,
@@ -158,32 +159,20 @@ public struct Builder: Sendable {
                 }
             }
 
-            compiling.hold(
+            compiling.laid(
                 origin,
                 standing: Array(rows.prefix(document.declared.count)),
                 closures: Array(rows.dropFirst(document.declared.count)),
                 numbering: document.numbering,
-                variables: document.variables.map(\.name)
+                variables: document.variables.map(\.name),
+                proving: document.table.prefix(document.declared.count),
+                answering: try document.answers.reduce(into: [Name: Shape]()) { read, answer in
+                    read[answer.key] = try standing.read(
+                        answer.value,
+                        at: .procedure(answer.key.spelling, in: document.document)
+                    )
+                }
             )
-
-            // Read off what the document settled rather than off the rows it
-            // was laid down as. A row is a declaration lowered against a
-            // link's shapes, and none of these three is a shape: they are what
-            // the document proved about its own body, carried over as it
-            // wrote them.
-            for judged in document.table.prefix(document.declared.count) {
-                if judged.purity == .pure { compiling.pure.insert(judged.label) }
-                if judged.isolation == .isolated { compiling.isolated.insert(judged.label) }
-
-                compiling.failing[judged.label] = judged.failing
-            }
-
-            for (declared, answer) in document.answers {
-                compiling.answers[declared] = try standing.read(
-                    answer,
-                    at: .procedure(declared.spelling, in: document.document)
-                )
-            }
         }
 
         // Said after every block stands, since a path steps to a declaration
@@ -195,11 +184,9 @@ public struct Builder: Sendable {
             )
         }
 
-        compiling.foldable()
-
         return Laid(
             compiled: compiled,
-            compiling: compiling,
+            carried: compiling.carried,
             signatures: signatures,
             linkage: linkage
         )
@@ -358,7 +345,7 @@ public struct Builder: Sendable {
         )
 
         var compiling = Compiling(
-            laid.compiling,
+            laid.carried,
             types: shaped.types,
             contractWords: shaped.contractWords,
             answering: shaped.answering,

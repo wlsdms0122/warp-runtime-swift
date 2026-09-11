@@ -78,27 +78,25 @@ struct Lowering {
         self.shapes = shapes
     }
 
-    // The same lowering read against the table a compile laying more
-    // documents beside these is asking with. Where a row stands and what
-    // number reaches it are the documents' own and move for nothing laid
-    // after them, so only the rows are read again.
+    // The documents already laid down, read against the table this compile is
+    // asking with. Where a row stands and what number reaches it are the
+    // documents' own and move for nothing laid after them, so only the rows
+    // are read again.
     init(
-        _ laid: Lowering,
+        _ carried: Carried,
         documents: Int,
         contractWords: [Name: ContractWord],
         shapes: ShapeTable
     ) {
-        self.table = laid.table.map { row in Linked(row, in: shapes) }
-        self.rows = laid.rows
-        self.words = laid.words
-            + [[Name: Int]](repeating: [:], count: documents - laid.words.count)
-        self.numbering = laid.numbering
-        self.variables = laid.variables
+        self.table = carried.table.map { row in Linked(row, in: shapes) }
+        self.rows = carried.rows
+        self.words = carried.words
+            + [[Name: Int]](repeating: [:], count: documents - carried.words.count)
+        self.numbering = carried.numbering
+        self.variables = carried.variables
+        self.closureRows = carried.closureRows
         self.contractWords = contractWords
         self.shapes = shapes
-        self.standing = laid.standing
-        self.closureRows = laid.closureRows
-        self.written = laid.written
     }
 
     // A lowering standing on tables something else holds: an expression

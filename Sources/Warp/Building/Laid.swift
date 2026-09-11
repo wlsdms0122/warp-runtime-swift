@@ -29,9 +29,8 @@ public struct Laid: Sendable {
     // MARK: - Property
     public let compiled: [Compiled]
 
-    // The documents laid down: their rows, what each proved about its own
-    // bodies, and where every number those bodies carry stands.
-    let compiling: Compiling
+    // What these documents leave the ones compiled after them.
+    let carried: Carried
 
     // Every declaration these documents made, under the spelling it was
     // declared by. What a document laid beside them declares is held against
@@ -47,7 +46,7 @@ public struct Laid: Sendable {
     // against.
     static let none = Laid(
         compiled: [],
-        compiling: Compiling(types: .empty, contractWords: [:], answering: [], naming: []),
+        carried: .none,
         signatures: [:],
         linkage: Linkage()
     )

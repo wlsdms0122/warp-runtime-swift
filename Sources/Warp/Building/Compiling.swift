@@ -79,16 +79,15 @@ struct Compiling {
         )
     }
 
-    // The same documents, read against the table a compile laying more
-    // beside them is asking with.
+    // The documents already laid down, read against the table this compile is
+    // asking with.
     //
-    // Nothing here is worked out again. What a document proved about its own
-    // bodies is what it wrote, and where its rows stand is where its
-    // documents stand, neither of which a document laid after them moves. The
-    // rows are read against this compile's table, which is what says what it
-    // has worked out and what it is still owed.
+    // Nothing here is worked out again. `Carried` is what those documents
+    // left and holds nothing read against a table, so the only thing this
+    // compile brings is the table itself: its rows carry what it has worked
+    // out and what it is still owed.
     init(
-        _ laid: Compiling,
+        _ carried: Carried,
         types: TypeTable,
         contractWords: [Name: ContractWord],
         answering: Set<Name>,
@@ -99,16 +98,16 @@ struct Compiling {
         self.answering = answering
         self.documents = documents
         self.lowering = Lowering(
-            laid.lowering,
+            carried,
             documents: documents.count,
             contractWords: contractWords,
             shapes: types.shapes
         )
-        self.pure = laid.pure
-        self.isolated = laid.isolated
-        self.failing = laid.failing
-        self.answers = laid.answers
-        self.named = laid.named
+        self.pure = carried.pure
+        self.isolated = carried.isolated
+        self.failing = carried.failing
+        self.answers = carried.answers
+        self.named = carried.named
 
         // Every body laid down is lowered already, so all of them are
         // something the next document may fold through.
@@ -116,6 +115,55 @@ struct Compiling {
     }
 
     // MARK: - Public
+    // What a compile laying more documents beside these takes from them.
+    var carried: Carried {
+        Carried(
+            table: lowering.table,
+            rows: lowering.rows,
+            words: lowering.words,
+            named: named,
+            numbering: lowering.numbering,
+            closureRows: lowering.closureRows,
+            variables: lowering.variables,
+            pure: pure,
+            isolated: isolated,
+            failing: failing,
+            answers: answers
+        )
+    }
+
+    // One document already compiled laid down, as the document itself wrote
+    // it. What it proved about its own bodies and what the build read off one
+    // that declared no answer are read off what it settled rather than off
+    // the rows it stands as: a row is a declaration lowered against a link's
+    // shapes, and none of those is a shape.
+    mutating func laid(
+        _ origin: Int,
+        standing block: [Linked],
+        closures lifted: [Linked],
+        numbering: Numbering,
+        variables ordered: [Name],
+        proving judged: some Sequence<Judged>,
+        answering read: [Name: Shape]
+    ) {
+        hold(
+            origin,
+            standing: block,
+            closures: lifted,
+            numbering: numbering,
+            variables: ordered
+        )
+
+        for judgement in judged {
+            if judgement.purity == .pure { pure.insert(judgement.label) }
+            if judgement.isolation == .isolated { isolated.insert(judgement.label) }
+
+            failing[judgement.label] = judgement.failing
+        }
+
+        answers.merge(read) { _, answer in answer }
+    }
+
     // One document laid down: its declarations take the rows after the ones
     // already here, and its numbering says what the bodies it lowers are
     // written with.
