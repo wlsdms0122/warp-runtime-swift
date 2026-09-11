@@ -7,13 +7,15 @@
 
 import Foundation
 
-// Runs every program under `program/` and prints two tables. The first is
+// Runs every program under `program/` and prints three tables. The first is
 // nanoseconds per round and how that compares to the loop alone, beside what
 // the same program costs to arrive as text, to build, and to build and run one
 // round and be dropped. The second is the cost of building a chain of words as
 // the chain grows, once with the words spread one to a document and once with
 // all of them in one, so that a figure says which of the two a build is paying
-// for.
+// for. The third holds one count of words and deals them into more and more
+// documents, timing the two halves of the build apart, so that what a build
+// could spread across cores is a figure rather than an estimate.
 //
 // Usage: `WarpBench [rounds] [repeats] [--against <table>]`. Rounds default to
 // a million, repeats to three; the reported figure is the fastest repeat. Every
@@ -42,6 +44,11 @@ struct Bench {
     // shape of the curve, and a shape shows over a range rather than between
     // neighbours.
     private static let chainCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+
+    // One count of words dealt into more and more documents. The word count is
+    // the largest of these, so the widest spread is one word to a document.
+    private static let fanoutWords = 256
+    private static let documentCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
     // MARK: - Initializer
     // MARK: - Public
@@ -93,8 +100,21 @@ struct Bench {
             let apart = try Chain(of: count, across: count)
             let together = try Chain(of: count, across: 1)
 
-            spread[apart.words] = try Self.building(apart)
-            gathered[together.words] = try Self.building(together)
+            spread[apart.words] = try Self.fastest(apart.build)
+            gathered[together.words] = try Self.fastest(together.build)
+        }
+
+        var halves: [Int: Halves] = [:]
+
+        for count in documentCounts {
+            let fanout = try Fanout(of: fanoutWords, across: count)
+
+            halves[count] = Halves(
+                build: try Self.fastest(fanout.build),
+                compile: try Self.fastest(fanout.compile),
+                alone: try Self.fastest(fanout.alone),
+                link: try Self.fastest(fanout.link)
+            )
         }
 
         print(Self.table(
@@ -106,6 +126,8 @@ struct Bench {
         ))
         print("")
         print(Self.table(spread: spread, gathered: gathered, against: printed?["words"]))
+        print("")
+        print(Self.table(halves, of: fanoutWords, against: printed?["documents"]))
     }
 
     // MARK: - Private
@@ -115,6 +137,15 @@ struct Bench {
         let build: Double
         let baked: Double
         let once: Double
+    }
+
+    // What one world of fanned-out words costs, by the half of the build that
+    // paid for it.
+    private struct Halves {
+        let build: Double
+        let compile: Double
+        let alone: Double
+        let link: Double
     }
 
     private static func workloads() throws -> [Workload] {
@@ -131,17 +162,18 @@ struct Bench {
         return try files.map(Workload.init(reading:))
     }
 
-    // Nanoseconds the fastest of many builds of one world took.
-    private static func building(_ chain: Chain) throws -> Double {
-        _ = try chain.build()
+    // Nanoseconds the fastest of many samples of one act took. Warmed up once
+    // first, so that whatever the first call alone pays is out of the samples.
+    private static func fastest(_ act: () throws -> Duration) throws -> Double {
+        _ = try act()
 
-        var builds: [Duration] = []
+        var samples: [Duration] = []
 
         for _ in 0 ..< buildSamples {
-            builds.append(try chain.build())
+            samples.append(try act())
         }
 
-        return Self.nanoseconds(Self.fastest(builds))
+        return Self.nanoseconds(Self.fastest(samples))
     }
 
     private static func fastest(_ samples: [Duration]) -> Duration {
@@ -303,6 +335,74 @@ struct Bench {
                 format: " %@ | %@ |",
                 Self.moved(apart / 1000, from: against["\(count)"]?["spread us"]),
                 Self.moved(together / 1000, from: against["\(count)"]?["gathered us"])
+            ))
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    // What one count of words costs to build as it is dealt into more and more
+    // documents, with the two halves of the build timed apart.
+    //
+    // The words, the bodies and the names are the same in every row, and none
+    // of them calls another, so nothing here grows with the count except what
+    // having more documents costs. `compile` is the documents settled together
+    // and `alone` the same documents settled one at a time, which is what a
+    // build that handed each to its own core would have to do: the gap between
+    // them is what a compile stops sharing once they are split. `link` lays
+    // them down together and no spreading takes it away.
+    //
+    // `spread` is what the row would cost on as many cores as it has documents
+    // and nothing else changed: one document's compile, and then the link. It
+    // is a floor rather than a forecast, since it charges nothing for handing
+    // the documents out or for taking the answers back.
+    private static func table(
+        _ halves: [Int: Halves],
+        of words: Int,
+        against: [String: [String: Double]]?
+    ) -> String {
+        var lines = [
+            "building \(words) words that call nothing, dealt into documents,"
+                + " against a vocabulary compiled once; fastest of \(buildSamples)",
+            "",
+            "`alone` is the documents compiled one at a time rather than together."
+                + " `spread` is one document's share of that plus the link, which is"
+                + " what the row costs on as many cores as it has documents and"
+                + " nothing charged for handing them out; `x` is `build` over it.",
+            "",
+            against == nil
+                ? "| documents | build us | compile us | alone us | link us | spread us | x |"
+                : "| documents | build us | moved | compile us | moved | alone us | moved"
+                    + " | link us | moved | spread us | x |",
+            against == nil ? "|---|---|---|---|---|---|---|" : "|---|---|---|---|---|---|---|---|---|---|---|"
+        ]
+
+        for count in halves.keys.sorted() {
+            guard let half = halves[count] else { continue }
+
+            let spread = half.alone / Double(count) + half.link
+            let figures = String(
+                format: "| %d | %.0f | %.0f | %.0f | %.0f | %.0f | %.2f |",
+                count, half.build / 1000, half.compile / 1000, half.alone / 1000,
+                half.link / 1000, spread / 1000, spread > 0 ? half.build / spread : 0
+            )
+
+            guard let against else {
+                lines.append(figures)
+
+                continue
+            }
+
+            let before = against["\(count)"]
+
+            lines.append(String(
+                format: "| %d | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %.2f |",
+                count,
+                half.build / 1000, Self.moved(half.build / 1000, from: before?["build us"]),
+                half.compile / 1000, Self.moved(half.compile / 1000, from: before?["compile us"]),
+                half.alone / 1000, Self.moved(half.alone / 1000, from: before?["alone us"]),
+                half.link / 1000, Self.moved(half.link / 1000, from: before?["link us"]),
+                spread / 1000, spread > 0 ? half.build / spread : 0
             ))
         }
 
