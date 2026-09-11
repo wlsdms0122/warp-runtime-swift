@@ -493,7 +493,7 @@ struct Lowering {
 
         case let .closure(procedure):
             guard let block = procedure.block else {
-                throw unjudged("a closure with no body", at: place)
+                throw BuildError.unjudged("a closure with no body", at: place)
             }
 
             let inner = Slots(origin: slots.origin, variables: slots.variables, outer: (slots, scope))
@@ -521,7 +521,7 @@ struct Lowering {
             } else if let given = held.closure(count, of: label) {
                 stands = given
             } else {
-                throw unjudged("a closure in a declaration whose document numbered none", at: place)
+                throw BuildError.unjudged("a closure in a declaration whose document numbered none", at: place)
             }
 
             table.append(
@@ -654,13 +654,13 @@ struct Lowering {
         at place: Place
     ) throws -> DispatchOperation {
         guard let written = call.receiver else {
-            throw unjudged("a call to '\(call.selector)' with nothing in front of it", at: place)
+            throw BuildError.unjudged("a call to '\(call.selector)' with nothing in front of it", at: place)
         }
 
         let receiver = try lower(written, in: scope, on: slots, label: label, at: place)
 
         if let stray = call.arguments.keys.first(where: { name in asked.signature.parameters[name] == nil }) {
-            throw unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
+            throw BuildError.unjudged("an argument '\(stray)' that '\(call.selector)' does not declare", at: place)
         }
 
         // The receiver is dropped from the arguments: it is read once here,
@@ -725,13 +725,13 @@ struct Lowering {
         at place: Place
     ) throws -> CallOperation {
         guard let row = rows[call.selector] else {
-            throw unjudged("a call to '\(call.selector)', which has no row", at: place)
+            throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)
         }
 
         let callee = table[row]
 
         guard let stands = numbered(slots.origin).call(call.selector) else {
-            throw unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
+            throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
         }
 
         return try CallOperation(
@@ -764,11 +764,11 @@ struct Lowering {
         }
 
         guard case let .key(head, _)? = path.first else {
-            throw unjudged("a path '\(path.rendered)' with no name at its head", at: place)
+            throw BuildError.unjudged("a path '\(path.rendered)' with no name at its head", at: place)
         }
 
         guard let slot = slots.slot(of: head, in: scope) else {
-            throw unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
+            throw BuildError.unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
         }
 
         // What stands where the walk is, so a field of a shape the build laid
@@ -806,7 +806,7 @@ struct Lowering {
                     let row = words[slots.origin][name],
                     let stands = numbered(slots.origin).word(name)
                 else {
-                    throw unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
+                    throw BuildError.unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
                 }
 
                 reached = table[row].returns
@@ -841,10 +841,4 @@ struct Lowering {
         numbering[origin] ?? Numbering(imports: [], walks: [], declared: [])
     }
 
-    // What the link should have refused before lowering and did not. Not a
-    // sentence for an author to act on: it names the judgment that was
-    // skipped, for whoever reads the link.
-    private func unjudged(_ what: String, at place: Place) -> BuildError {
-        BuildError("the link lowered \(what) without judging it", at: place)
-    }
 }
