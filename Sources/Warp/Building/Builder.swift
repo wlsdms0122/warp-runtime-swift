@@ -159,20 +159,14 @@ public struct Builder: Sendable {
                 }
             }
 
-            compiling.laid(
-                origin,
-                standing: Array(rows.prefix(document.declared.count)),
-                closures: Array(rows.dropFirst(document.declared.count)),
-                numbering: document.numbering,
-                variables: document.variables.map(\.name),
-                proving: document.table.prefix(document.declared.count),
-                answering: try document.answers.reduce(into: [Name: Shape]()) { read, answer in
-                    read[answer.key] = try standing.read(
-                        answer.value,
-                        at: .procedure(answer.key.spelling, in: document.document)
-                    )
-                }
-            )
+            let read = try document.answers.reduce(into: [Name: Shape]()) { read, answer in
+                read[answer.key] = try standing.read(
+                    answer.value,
+                    at: .procedure(answer.key.spelling, in: document.document)
+                )
+            }
+
+            compiling.lay(document, at: origin, standing: rows, answering: read)
         }
 
         // Said after every block stands, since a path steps to a declaration

@@ -133,32 +133,37 @@ struct Compiling {
     }
 
     // One document already compiled laid down, as the document itself wrote
-    // it. What it proved about its own bodies and what the build read off one
-    // that declared no answer are read off what it settled rather than off
-    // the rows it stands as: a row is a declaration lowered against a link's
-    // shapes, and none of those is a shape.
-    mutating func laid(
-        _ origin: Int,
-        standing block: [Linked],
-        closures lifted: [Linked],
-        numbering: Numbering,
-        variables ordered: [Name],
-        proving judged: some Sequence<Judged>,
+    // it.
+    //
+    // Its rows and what it settled are cut at one boundary, which is how many
+    // declarations it made: what comes after that on either is the closures
+    // its bodies lifted. The cut is made here so the two cannot be cut apart.
+    //
+    // What it proved about its own bodies and what the build read off one that
+    // declared no answer are read off what it settled rather than off the rows
+    // it stands as. A row is a declaration lowered against a link's shapes,
+    // and none of those is a shape.
+    mutating func lay(
+        _ document: Compiled,
+        at origin: Int,
+        standing rows: [Linked],
         answering read: [Name: Shape]
     ) {
+        let declared = document.declared.count
+
         hold(
             origin,
-            standing: block,
-            closures: lifted,
-            numbering: numbering,
-            variables: ordered
+            standing: Array(rows.prefix(declared)),
+            closures: Array(rows.dropFirst(declared)),
+            numbering: document.numbering,
+            variables: document.variables.map(\.name)
         )
 
-        for judgement in judged {
-            if judgement.purity == .pure { pure.insert(judgement.label) }
-            if judgement.isolation == .isolated { isolated.insert(judgement.label) }
+        for judged in document.table.prefix(declared) {
+            if judged.purity == .pure { pure.insert(judged.label) }
+            if judged.isolation == .isolated { isolated.insert(judged.label) }
 
-            failing[judgement.label] = judgement.failing
+            failing[judged.label] = judged.failing
         }
 
         answers.merge(read) { _, answer in answer }
