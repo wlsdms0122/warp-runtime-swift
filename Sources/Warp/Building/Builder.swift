@@ -144,7 +144,7 @@ public struct Builder: Sendable {
         )
 
         for (origin, document) in compiled.enumerated() {
-            let standing = document.shapeNumbering.rows(in: shaped.types.shapes)
+            let numbered = document.shapeNumbering.rows(in: shaped.types.shapes)
 
             let rows = try document.table.map { judged -> Linked in
                 let row = try judged.folding(
@@ -155,12 +155,12 @@ public struct Builder: Sendable {
                 )
 
                 return try row.shaped { shape in
-                    try standing.read(shape, at: .procedure(row.label.spelling, in: document.document))
+                    try numbered.read(shape, at: .procedure(row.label.spelling, in: document.document))
                 }
             }
 
             let answered = try document.answers.reduce(into: [Name: Shape]()) { read, answer in
-                read[answer.key] = try standing.read(
+                read[answer.key] = try numbered.read(
                     answer.value,
                     at: .procedure(answer.key.spelling, in: document.document)
                 )
@@ -193,9 +193,7 @@ public struct Builder: Sendable {
         var signatures: [Name: Declared<Signature>] = [:]
 
         for (position, document) in compiled.enumerated() {
-            for offset in document.standing {
-                let name = document.declared[offset]
-
+            for (offset, name) in document.declared.enumerated() {
                 signatures[name] = Declared(
                     document.table[offset].signature,
                     at: .procedure(name.spelling, in: document.document),

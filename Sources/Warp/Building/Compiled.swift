@@ -51,8 +51,7 @@ public struct Compiled: Sendable, Declaring {
     // Where this document's declarations stand among its rows, and where the
     // closures its bodies lifted stand behind them. Every list of this
     // document's rows is cut by these, so nothing cuts them apart, and a list
-    // that is not this document's rows is refused by the subscript rather than
-    // quietly cut short.
+    // of some other length traps where it is read.
     var standing: Range<Int> { 0 ..< declared.count }
     var lifted: Range<Int> { declared.count ..< table.count }
 

@@ -64,9 +64,7 @@ struct Assembled: Sendable {
         for (origin, document) in documents.enumerated() {
             let start = table.count
 
-            for offset in document.standing {
-                let name = document.declared[offset]
-
+            for (offset, name) in document.declared.enumerated() {
                 // A name two documents declare is a table with no answer for
                 // that name, so it is refused where the table is made rather
                 // than answered by whichever was laid down last. Documents
@@ -91,9 +89,7 @@ struct Assembled: Sendable {
             table.append(contentsOf: document.table)
             origins.append(contentsOf: [Int](repeating: origin, count: document.table.count))
             calls.append(contentsOf: document.calls)
-            calls.append(
-                contentsOf: [[Name]](repeating: [], count: document.table.count - document.calls.count)
-            )
+            calls.append(contentsOf: [[Name]](repeating: [], count: document.lifted.count))
         }
 
         self.table = table
