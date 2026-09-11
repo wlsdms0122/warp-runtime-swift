@@ -31,22 +31,14 @@ import WarpStandard
 // world where that line is what is being measured.
 struct Fanout {
     // MARK: - Property
-    let words: Int
-    let documents: Int
-
     private let modules: [Module]
     private let entry: Name
 
     // MARK: - Initializer
-    init(of words: Int, across documents: Int) throws {
-        guard words > 0 else { throw Refusal.wordless }
-        guard 1 ... words ~= documents else { throw Refusal.undealable }
-
-        self.words = words
-        self.documents = documents
+    init(_ dealing: Dealing) throws {
         self.entry = try Self.word(0)
-        self.modules = try (0 ..< documents).map { document in
-            try Self.document(Self.held(by: document, of: words, across: documents))
+        self.modules = try (0 ..< dealing.documents).map { document in
+            try Self.document(dealing.held(by: document))
         }
     }
 
@@ -103,24 +95,9 @@ struct Fanout {
     }
 
     // MARK: - Private
-    private enum Refusal: Error {
-        // A world of no words holds nothing to start a build from.
-        case wordless
-
-        // Fewer documents than one, or more documents than there are words to
-        // put in them: either way a document is left with nothing.
-        case undealable
-    }
-
     private static func word(_ number: Int) throws -> Name { try Name("fanout.word\(number)") }
 
     private static func shape(_ number: Int) throws -> Name { try Name("fanout.Word\(number)") }
-
-    // The run of words a document holds, so that every document holds as near
-    // the same count as the counts divide into.
-    private static func held(by document: Int, of words: Int, across documents: Int) -> Range<Int> {
-        (document * words / documents) ..< ((document + 1) * words / documents)
-    }
 
     // One document: a type for each word it holds, and each word standing on
     // its own type and answering what it was sent. It imports nothing, which is

@@ -17,32 +17,25 @@ import WarpStandard
 // words and deal them into fewer documents: a link has the same bodies to lower
 // and the same names to place, and only the documents are fewer.
 //
-// A chain rather than words that ignore each other: dealt one to a document,
-// the last document depends on every document in front of it, so the dependency
-// closures sum to the square of the count while a set that shares nothing keeps
-// them at one. That is the count a separate compile carries per document.
+// A chain rather than `Fanout`'s words that ignore each other: dealt one to a
+// document, the last document depends on every document in front of it, so the
+// dependency closures sum to the square of the count while a set that shares
+// nothing keeps them at one. That is the count a separate compile carries per
+// document.
 //
 // The standard vocabulary is linked in the way every other workload links it.
 // A document that arrives alone still pays for it, so the counts say when a
 // world's own words overtake what one always costs.
 struct Chain {
     // MARK: - Property
-    let words: Int
-    let documents: Int
-
     private let world: [Module]
     private let entry: Name
 
     // MARK: - Initializer
-    init(of words: Int, across documents: Int) throws {
-        guard words > 0 else { throw Refusal.wordless }
-        guard 1 ... words ~= documents else { throw Refusal.undealable }
-
-        self.words = words
-        self.documents = documents
-        self.entry = try Self.step(words - 1)
-        self.world = try (0 ..< documents).map { document in
-            try Self.document(Self.held(by: document, of: words, across: documents))
+    init(_ dealing: Dealing) throws {
+        self.entry = try Self.step(dealing.words - 1)
+        self.world = try (0 ..< dealing.documents).map { document in
+            try Self.document(dealing.held(by: document))
         } + Module.standard
     }
 
@@ -53,28 +46,14 @@ struct Chain {
     }
 
     // MARK: - Private
-    private enum Refusal: Error {
-        // A chain of no words holds nothing to start a build from.
-        case wordless
-
-        // Fewer documents than one, or more documents than there are words to
-        // put in them: either way a document is left with nothing.
-        case undealable
-    }
-
     private static func step(_ number: Int) throws -> Name { try Name("chain.step\(number)") }
 
     private static func shape(_ number: Int) throws -> Name { try Name("chain.Step\(number)") }
 
-    // The run of words a document holds. Dealt in runs rather than one at a
-    // time round the documents, so a document sends exactly one word it does
-    // not declare however many documents there are.
-    private static func held(by document: Int, of words: Int, across documents: Int) -> Range<Int> {
-        (document * words / documents) ..< ((document + 1) * words / documents)
-    }
-
     // One document: a type for each word it holds, and each word standing on
     // its own type and handing what it was sent to the word in front of it.
+    // Holding a run leaves a document sending exactly one word it does not
+    // declare, however many documents the words were dealt into.
     // What a word adds is a written body and the type it names, which is what a
     // link pays for a word somebody wrote.
     private static func document(_ held: Range<Int>) throws -> Module {

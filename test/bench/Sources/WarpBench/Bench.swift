@@ -97,19 +97,20 @@ struct Bench {
         var gathered: [Int: Double] = [:]
 
         for count in chainCounts {
-            let apart = try Chain(of: count, across: count)
-            let together = try Chain(of: count, across: 1)
+            let apart = try Dealing(of: count, across: count)
+            let together = try Dealing(of: count, across: 1)
 
-            spread[apart.words] = try Self.fastest(apart.build)
-            gathered[together.words] = try Self.fastest(together.build)
+            spread[apart.words] = try Self.fastest(Chain(apart).build)
+            gathered[together.words] = try Self.fastest(Chain(together).build)
         }
 
-        var halves: [Int: Halves] = [:]
+        var costs: [Int: Halves] = [:]
 
         for count in documentCounts {
-            let fanout = try Fanout(of: fanoutWords, across: count)
+            let dealing = try Dealing(of: fanoutWords, across: count)
+            let fanout = try Fanout(dealing)
 
-            halves[count] = Halves(
+            costs[dealing.documents] = Halves(
                 build: try Self.fastest(fanout.build),
                 compile: try Self.fastest(fanout.compile),
                 alone: try Self.fastest(fanout.alone),
@@ -127,7 +128,7 @@ struct Bench {
         print("")
         print(Self.table(spread: spread, gathered: gathered, against: printed?["words"]))
         print("")
-        print(Self.table(halves, of: fanoutWords, against: printed?["documents"]))
+        print(Self.table(costs, of: fanoutWords, against: printed?["documents"]))
     }
 
     // MARK: - Private
@@ -357,7 +358,7 @@ struct Bench {
     // is a floor rather than a forecast, since it charges nothing for handing
     // the documents out or for taking the answers back.
     private static func table(
-        _ halves: [Int: Halves],
+        _ costs: [Int: Halves],
         of words: Int,
         against: [String: [String: Double]]?
     ) -> String {
@@ -377,14 +378,14 @@ struct Bench {
             against == nil ? "|---|---|---|---|---|---|---|" : "|---|---|---|---|---|---|---|---|---|---|---|"
         ]
 
-        for count in halves.keys.sorted() {
-            guard let half = halves[count] else { continue }
+        for count in costs.keys.sorted() {
+            guard let cost = costs[count] else { continue }
 
-            let spread = half.alone / Double(count) + half.link
+            let spread = cost.alone / Double(count) + cost.link
             let figures = String(
                 format: "| %d | %.0f | %.0f | %.0f | %.0f | %.0f | %.2f |",
-                count, half.build / 1000, half.compile / 1000, half.alone / 1000,
-                half.link / 1000, spread / 1000, spread > 0 ? half.build / spread : 0
+                count, cost.build / 1000, cost.compile / 1000, cost.alone / 1000,
+                cost.link / 1000, spread / 1000, spread > 0 ? cost.build / spread : 0
             )
 
             guard let against else {
@@ -398,11 +399,11 @@ struct Bench {
             lines.append(String(
                 format: "| %d | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %.2f |",
                 count,
-                half.build / 1000, Self.moved(half.build / 1000, from: before?["build us"]),
-                half.compile / 1000, Self.moved(half.compile / 1000, from: before?["compile us"]),
-                half.alone / 1000, Self.moved(half.alone / 1000, from: before?["alone us"]),
-                half.link / 1000, Self.moved(half.link / 1000, from: before?["link us"]),
-                spread / 1000, spread > 0 ? half.build / spread : 0
+                cost.build / 1000, Self.moved(cost.build / 1000, from: before?["build us"]),
+                cost.compile / 1000, Self.moved(cost.compile / 1000, from: before?["compile us"]),
+                cost.alone / 1000, Self.moved(cost.alone / 1000, from: before?["alone us"]),
+                cost.link / 1000, Self.moved(cost.link / 1000, from: before?["link us"]),
+                spread / 1000, spread > 0 ? cost.build / spread : 0
             ))
         }
 
