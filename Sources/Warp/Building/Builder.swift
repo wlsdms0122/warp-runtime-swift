@@ -161,13 +161,7 @@ public struct Builder: Sendable {
             }
         }
 
-        return Laid(
-            compiled: compiled,
-            rows: rows,
-            answers: answers,
-            linkage: linkage,
-            supplied: natives
-        )
+        return Laid(compiled: compiled, rows: rows, answers: answers, linkage: linkage)
     }
 
     // Every declaration a compiled document made, under the spelling it was
@@ -192,7 +186,6 @@ public struct Builder: Sendable {
     // The same, against documents a caller already laid down.
     public func compile(_ modules: [Module], against laid: Laid) throws -> [Compiled] {
         let compiled = laid.compiled
-        let natives = laid.supplied
 
         try once(modules, against: compiled)
 

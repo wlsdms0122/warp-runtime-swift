@@ -19,9 +19,13 @@ import Foundation
 // shape spaces number by the order their documents stand, so a document laid
 // down later takes numbers past these and moves none of them. That is what
 // lets rows made here stand in a compile that puts more documents beside them.
+//
+// The natives among them are joined to the host's words here, since making a
+// row is what joining is. The documents laid beside them later are joined at
+// the link, which is where a build states every word its run may call.
 public struct Laid: Sendable {
     // MARK: - Property
-    let compiled: [Compiled]
+    public let compiled: [Compiled]
 
     // Each document's rows: its declarations in the order their rows stand,
     // then the closures its bodies lifted.
@@ -35,11 +39,7 @@ public struct Laid: Sendable {
     // numbers the documents it lays beside them into the same one.
     let linkage: Linkage
 
-    // The code the natives among them were joined to, kept so a compile
-    // against them joins the documents it lays to the same words.
-    let supplied: Supplying
-
     // Nothing laid down, for a build that was handed no documents to compile
     // against.
-    static let none = Laid(compiled: [], rows: [], answers: [:], linkage: Linkage(), supplied: .none)
+    static let none = Laid(compiled: [], rows: [], answers: [:], linkage: Linkage())
 }

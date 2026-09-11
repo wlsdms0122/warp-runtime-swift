@@ -89,8 +89,9 @@ struct Compiling {
             shapes: types.shapes
         )
 
-        for (origin, document) in laid.compiled.enumerated() {
-            let rows = laid.rows[origin].map { row in Linked(row, in: types.shapes) }
+        for (origin, laid) in zip(laid.compiled, laid.rows).enumerated() {
+            let (document, made) = laid
+            let rows = made.map { row in Linked(row, in: types.shapes) }
 
             hold(
                 origin,
