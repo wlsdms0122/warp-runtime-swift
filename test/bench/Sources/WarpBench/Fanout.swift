@@ -47,7 +47,7 @@ struct Fanout {
 
         self.entry = try Self.word(0)
         self.modules = modules
-        self.compiled = Vocabulary.compiled + (try Builder().compile(
+        self.compiled = Vocabulary.laid.compiled + (try Builder().compile(
             modules,
             against: Vocabulary.laid
         ))
@@ -60,7 +60,7 @@ struct Fanout {
 
         return try elapsed {
             _ = try builder.link(
-                Vocabulary.compiled + builder.compile(modules, against: Vocabulary.laid),
+                Vocabulary.laid.compiled + builder.compile(modules, against: Vocabulary.laid),
                 entry: entry,
                 supplying: Vocabulary.brought
             )

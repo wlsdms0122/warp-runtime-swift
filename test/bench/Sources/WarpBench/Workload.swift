@@ -67,7 +67,7 @@ struct Workload {
             let builder = Builder()
 
             _ = try builder.link(
-                Vocabulary.compiled + (try builder.compile([module], against: Vocabulary.laid)),
+                Vocabulary.laid.compiled + (try builder.compile([module], against: Vocabulary.laid)),
                 entry: "entry",
                 supplying: Vocabulary.brought
             )
