@@ -66,9 +66,13 @@ struct Workload {
             let builder = Builder()
 
             _ = try builder.link(
-                Self.vocabulary + (try builder.compile([module], against: Self.vocabulary, supplying: Self.brought)),
+                Vocabulary.compiled + (try builder.compile(
+                    [module],
+                    against: Vocabulary.compiled,
+                    supplying: Vocabulary.brought
+                )),
                 entry: "entry",
-                supplying: Self.brought
+                supplying: Vocabulary.brought
             )
         }
     }
@@ -83,14 +87,6 @@ struct Workload {
     }
 
     // MARK: - Private
-    // The standard vocabulary compiled once, the way a host that brings it
-    // compiles it once.
-    private static let vocabulary = try! Builder().compile(Module.standard)
-
-    // The native code behind that vocabulary, joined up once, the way a host
-    // that brings the same words every run holds them.
-    private static let brought = try! Supplying(Module.standard)
-
     private static func built(_ module: Module) throws -> Image {
         try Builder().build([module] + Module.standard, entry: "entry")
     }
