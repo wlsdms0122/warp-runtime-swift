@@ -33,6 +33,25 @@ struct ExpressionFormTests {
         #expect(validates(reference))
     }
 
+    @Test("a value the document named is data, and keeps the name")
+    func aNamedRecordStaysALiteral() throws {
+        // Given. A record standing under a name is a value of that type, not a
+        // form the notation reserved
+        let written = try TextEncoding.value(from: "warpt 1\nbank.Money { amount 7 }\n")
+
+        // When
+        let read = try loader.expression(from: written)
+
+        // Then
+        guard case let .literal(carried) = read else {
+            Issue.record("expected a literal, got \(read)")
+
+            return
+        }
+
+        #expect(carried == written)
+    }
+
     @Test("a bytes value decodes as a bytes literal, and numbers stay numbers")
     func bytesDecodeAsBytes() throws {
         // Given. The one binary kind crosses the Value bridge whole; an array

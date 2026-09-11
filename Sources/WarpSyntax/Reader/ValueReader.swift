@@ -16,6 +16,15 @@ public struct ValueReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
+        // A value that came over the bridge is already the answer. Working it
+        // out instead asks the value whether it is each kind in turn, and
+        // every kind it is not is a refusal built to be thrown away.
+        if let bridged = decoder as? ValueDecoder {
+            self.value = bridged.value
+
+            return
+        }
+
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
@@ -28,21 +37,6 @@ public struct ValueReader: Decodable {
             self.value = .bool(bool)
 
             return
-        }
-
-        // Across the Value bridge a numeral keeps its kind: the bridge holds
-        // the `Value` itself, so a fraction that happens to be whole is known
-        // to be a fraction rather than re-guessed from its spelling.
-        if let bridged = decoder as? ValueDecoder {
-            switch bridged.value {
-            case .int, .double:
-                self.value = bridged.value
-
-                return
-
-            default:
-                break
-            }
         }
 
         if let integer = try? container.decode(Int.self) {
@@ -67,19 +61,6 @@ public struct ValueReader: Decodable {
 
         if let string = try? container.decode(String.self) {
             self.value = .string(string)
-
-            return
-        }
-
-        // Bytes come over whole, as `Data`, and only across the Value bridge,
-        // which answers `Data` for the bytes kind alone. A foreign decoder is
-        // never asked, because its own `Data` reading walks an unkeyed list of
-        // small numbers and would quietly turn an array of them into bytes.
-        // What the writer puts out is no part of that: it writes bytes as the
-        // array they are, and a carrier that has no compact spelling gives that
-        // array back as an array.
-        if decoder is ValueDecoder, let data = try? container.decode(Data.self) {
-            self.value = .bytes([UInt8](data))
 
             return
         }
