@@ -24,8 +24,12 @@ public struct CastRefused: RecoverableFailure {
     // MARK: - Property
     public let message: String
 
-    // The shape the cast named, spelled the way the author wrote it.
-    public let shape: String
+    // The type the cast named, spelled the way the author wrote it.
+    public let expected: String
+
+    // The kind the value arrived as. The other half of the fact: what was
+    // asked for is knowable from the text, and what came is not.
+    public let actual: String
 
     public let trace: Trace?
 
@@ -35,19 +39,22 @@ public struct CastRefused: RecoverableFailure {
     // it where it derives what a cast may fail with.
     public static let word = "cast_refused"
 
-    // The shape that was named rides in the payload's box, for a rescue that
-    // wants to say which cast it was.
-    public var details: [Name: Value] { ["shape": .string(shape)] }
+    // Both halves ride in the payload's box, so a rescue can say which cast
+    // it was and branch on what turned up.
+    public var details: [Name: Value] {
+        ["expected": .string(expected), "actual": .string(actual)]
+    }
 
     // MARK: - Initializer
-    public init(_ message: String, shape: String, trace: Trace? = nil) {
+    public init(_ message: String, expected: String, actual: String, trace: Trace? = nil) {
         self.message = message
-        self.shape = shape
+        self.expected = expected
+        self.actual = actual
         self.trace = trace
     }
 
     // MARK: - Public
     public func tracing(_ trace: Trace) -> CastRefused {
-        CastRefused(message, shape: shape, trace: trace)
+        CastRefused(message, expected: expected, actual: actual, trace: trace)
     }
 }

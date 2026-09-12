@@ -55,7 +55,11 @@ extension LoweredType {
                 // boundary: a cast is the author expecting a shape of data
                 // that came from outside, and being wrong about that is what
                 // the world does. An `attempt` catches it.
-                throw CastRefused(mismatch.message, shape: rendered(in: table))
+                throw CastRefused(
+                    mismatch.message,
+                    expected: rendered(in: table),
+                    actual: "\(value.type)"
+                )
             }
 
             return .null
