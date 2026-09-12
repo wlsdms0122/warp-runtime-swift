@@ -565,37 +565,6 @@ public struct Executor: Sendable {
         }
     }
 
-    // The material both fan-out shapes walk. Whether the pieces run one after
-    // another or all at once, what they walk has to be an array, and it fails to
-    // be one in the same way.
-    private func array(
-        of material: Operation,
-        naming element: Name,
-        in activation: inout Activation,
-        at trace: Trace
-    ) async throws -> AnyRandomAccessCollection<Value> {
-        let resolved = try await evaluate(material, in: &activation, at: trace)
-
-        // What is iterated is whatever has elements, the one projection that
-        // owns the bytes equation, so `each` walks bytes the way an index
-        // reads them.
-        guard let elements = resolved.elements else {
-            guard case let .local(address) = material else {
-                throw ExecutionError(
-                    "the material of iteration '\(element)' resolved to"
-                        + " \(resolved.type), expected array"
-                )
-            }
-
-            throw ReferenceUnfit(
-                path: spelled(address, in: activation),
-                reason: "iteration material is \(resolved.type), expected array"
-            )
-        }
-
-        return elements
-    }
-
     private func attempt(
         _ body: Body,
         rescue: Body,
