@@ -14,7 +14,7 @@ struct RoundedQuery: Query {
     typealias Parameters = NumberReceiver
 
     // MARK: - Property
-    private let whole = WholeNumber("rounded")
+    private let integer = IntegerConversion("rounded")
 
     // MARK: - Initializer
     // MARK: - Public
@@ -24,7 +24,7 @@ struct RoundedQuery: Query {
             return .int(number)
 
         case let .double(real):
-            return .int(try whole.of(real.rounded(), from: real))
+            return .int(try integer.of(real.rounded(), from: real))
 
         default:
             return nil

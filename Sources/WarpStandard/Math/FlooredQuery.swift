@@ -15,7 +15,7 @@ struct FlooredQuery: Query {
     typealias Parameters = NumberReceiver
 
     // MARK: - Property
-    private let whole = WholeNumber("floored")
+    private let integer = IntegerConversion("floored")
 
     // MARK: - Initializer
     // MARK: - Public
@@ -25,7 +25,7 @@ struct FlooredQuery: Query {
             return .int(number)
 
         case let .double(real):
-            return .int(try whole.of(real.rounded(.down), from: real))
+            return .int(try integer.of(real.rounded(.down), from: real))
 
         default:
             return nil

@@ -1,5 +1,5 @@
 //
-//  WholeNumber.swift
+//  IntegerConversion.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/19/26.
@@ -11,7 +11,7 @@ import Warp
 // A fraction read back as a machine word, after it was rounded. `int` is the
 // machine word, so a fraction whose whole part is past it has no int to answer.
 // That stops the run the way arithmetic off the word's edge does.
-struct WholeNumber: Sendable {
+struct IntegerConversion: Sendable {
     // MARK: - Property
     private let word: String
 
