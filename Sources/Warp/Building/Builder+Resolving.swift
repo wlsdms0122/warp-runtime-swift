@@ -306,11 +306,15 @@ extension Builder {
             .sorted { one, other in one.0 < other.0 }
 
         for (name, members, module) in declared {
-            let handed = members.filter { member in Builder.handedOnce(member, in: table) }
+            let (handed, rest) = members.reduce(into: ([TypeExpression](), [TypeExpression]())) { split, member in
+                if Builder.handedOnce(member, in: table) {
+                    split.0.append(member)
+                } else {
+                    split.1.append(member)
+                }
+            }
 
-            guard !handed.isEmpty, handed.count != members.count else { continue }
-
-            let rest = members.filter { member in !Builder.handedOnce(member, in: table) }
+            guard !handed.isEmpty, !rest.isEmpty else { continue }
 
             throw BuildError(
                 "admits \(handed.map(\.rendered).sorted().joined(separator: " and ")),"

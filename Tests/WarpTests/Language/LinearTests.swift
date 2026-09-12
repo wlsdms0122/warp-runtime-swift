@@ -728,23 +728,100 @@ struct LinearTests {
         }
     }
 
-    @Test("a membership that names itself is asked once and answered")
-    func aRingOfMembershipsIsNotAskedForever() throws {
-        // Given. A membership whose member is itself. What a ring says about
-        // itself is what the question started with, so the walk stops rather
-        // than asking down it
+    @Test("two memberships that name each other are all of one thing or not")
+    func aRingOfMembershipsAnswersAsItStood() throws {
+        // Given. Every leaf here is handed on once, and the ring between them
+        // says nothing new. A ring answered as "not one" would make each of
+        // these read as mixing one with something else, which is the opposite
+        // of what they are
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
                 Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
             ],
             result: .literal(.null),
-            constraints: ["app.Ring": [.named("app.Ring")]]
+            constraints: [
+                "app.A": [.named("app.Handle"), .named("app.B")],
+                "app.B": [.named("app.Handle"), .named("app.A")]
+            ]
         )
 
         // When / Then
         #expect(throws: Never.self) {
             try Builder().build([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a cast that may answer nothing still answers one where it succeeds")
+    func anOptionalCastCarriesTheObligation() throws {
+        // Given. `as?` reads a failure as null; it does not make the value it
+        // answers on success any less an obligation
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("held"),
+                    expression: .cast(reference("payload"), as: .named("app.Handle"), optional: true)
+                )
+            ],
+            result: .literal(.null),
+            taking: ["payload": Parameter(type: .any)]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("still holds 'held' where it ends")
+        }
+    }
+
+    @Test("a declaration whose body answers one writes what it answers")
+    func anUnwrittenReturnsRefuses() throws {
+        // Given. What a declaration answers is read off its body where nobody
+        // wrote `returns`, and the mark is not something a reading keeps, so
+        // the caller would bind an obligation nothing told it about
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(),
+                    body: [],
+                    result: .call(Call(selector: "app.open"))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("does not write `returns`")
+        }
+    }
+
+    @Test("an attempt answers what either way through it answers")
+    func anAttemptIntoAListIsJudgedByBothWays() throws {
+        // Given. The reading of an attempt is the join of its body and its
+        // rescue, so an element that is one hands out what either hands out
+        let sut = try holding(
+            body: [],
+            result: .array([
+                .attempt(
+                    Block(body: [mayFail()], result: .call(Call(selector: "app.open"))),
+                    rescue: Block(body: [], result: .call(Call(selector: "app.open"))),
+                    failure: "tried"
+                )
+            ])
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("inside a list or a record")
         }
     }
 
@@ -934,13 +1011,18 @@ struct LinearTests {
         body: [Statement],
         result: Warp.Expression,
         constraints: [Name: [TypeExpression]] = [:],
+        taking parameters: [Name: Parameter] = [:],
         beside others: [Name: Procedure] = [:]
     ) throws -> Module {
         try Module(
             types: ["app.Handle": .linear(.record(["name": .string]))],
             constraints: constraints,
             procedures: [
-                entryName: Procedure(body: body, result: result),
+                entryName: Procedure(
+                    signature: Signature(parameters: parameters),
+                    body: body,
+                    result: result
+                ),
                 "app.open": Procedure(
                     signature: Signature(returns: .named("app.Handle")),
                     body: [],
