@@ -106,7 +106,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // is the value, and what it costs is that every body holding one has to
     // give it away on every way through. It is gone by the time anything is
     // lowered, because the whole of it is proven at the link.
-    case once(TypeExpression)
+    case linear(TypeExpression)
 
     // The declared type, or null. The one union the language has, and it is
     // null-only on purpose. `?.` answers this, and a parameter declaring it may
@@ -235,8 +235,8 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .inout(inner):
             return "inout \(inner.rendered)"
 
-        case let .once(inner):
-            return "once \(inner.rendered)"
+        case let .linear(inner):
+            return "linear \(inner.rendered)"
 
         case let .procedure(signature, purity, isolation):
             let word = [

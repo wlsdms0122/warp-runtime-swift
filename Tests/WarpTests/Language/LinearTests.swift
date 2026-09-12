@@ -1,5 +1,5 @@
 //
-//  OnceTests.swift
+//  LinearTests.swift
 //  WarpTests
 //
 //  Created by JSilver
@@ -14,7 +14,7 @@ import Testing
 // that every way through a body does that once, which is what "this resource
 // is closed exactly once" comes to.
 @Suite("A value handed on once")
-struct OnceTests {
+struct LinearTests {
     // MARK: - Property
     // MARK: - Lifecycle
     // MARK: - Test
@@ -150,7 +150,7 @@ struct OnceTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("does not take a value written `once`")
+            "\(error)".contains("does not take a value written `linear`")
         }
     }
 
@@ -178,13 +178,13 @@ struct OnceTests {
         }
     }
 
-    @Test("`once` is written on a type and not on a slot")
+    @Test("`linear` is written on a type and not on a slot")
     func onceOutsideATypeRefuses() throws {
         // Given
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(parameters: ["it": Parameter(type: .once(.int))]),
+                    signature: Signature(parameters: ["it": Parameter(type: .linear(.int))]),
                     body: [],
                     result: .literal(.null)
                 )
@@ -205,7 +205,7 @@ struct OnceTests {
         // list handed each of them on
         let sut = try Module(
             types: [
-                "app.Handle": .once(.record(["name": .string])),
+                "app.Handle": .linear(.record(["name": .string])),
                 "app.Batch": .record(["held": .array(.named("app.Handle"))])
             ],
             procedures: [entryName: Procedure(body: [], result: .literal(.null))]
@@ -229,7 +229,7 @@ struct OnceTests {
         beside others: [Name: Procedure] = [:]
     ) throws -> Module {
         try Module(
-            types: ["app.Handle": .once(.record(["name": .string]))],
+            types: ["app.Handle": .linear(.record(["name": .string]))],
             procedures: [
                 entryName: Procedure(body: body, result: result),
                 "app.open": Procedure(

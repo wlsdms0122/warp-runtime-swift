@@ -90,7 +90,7 @@ extension TypeExpression {
 
         // The mark does not survive lowering. What it says is proven at the
         // link and there is nothing left for a run to keep.
-        case let .once(inner):
+        case let .linear(inner):
             return inner.lowered(in: table)
 
         // Types and memberships are two spaces and no name is in both, so a

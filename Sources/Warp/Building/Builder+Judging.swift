@@ -230,7 +230,7 @@ extension Builder {
             guard !nested || !handedOnce(.named(name), in: table) else {
                 throw BuildError(
                     "carries '\(name)' inside another shape, and a value written"
-                        + " `once` is followed by the name that holds it."
+                        + " `linear` is followed by the name that holds it."
                         + " Nothing follows one inside a list, a record or"
                         + " another declaration",
                     at: place
@@ -305,11 +305,11 @@ extension Builder {
         // Only a declared type is handed on once. The obligation rides with
         // the name, so a slot mentioning the name has it and a slot writing
         // the word would be claiming it for a shape nothing declared it of.
-        case let .once(inner):
+        case let .linear(inner):
             guard declaring else {
                 throw BuildError(
                     "writes `\(type.rendered)`, and only a declared type is"
-                        + " handed on once. `once` is written on a type in `types`,"
+                        + " handed on once. `linear` is written on a type in `types`,"
                         + " and a slot naming that type carries it",
                     at: place
                 )

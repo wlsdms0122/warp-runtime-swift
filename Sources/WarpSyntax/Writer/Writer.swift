@@ -263,8 +263,8 @@ public struct Writer: Sendable {
         // Written under its own key, which is where a record can carry it: the
         // shape a declared type is handed on once is usually written inline,
         // and there is no front of a record to write a word on.
-        case let .once(inner):
-            return .dictionary([try Name(TypeReader.onceKey): try value(of: inner)])
+        case let .linear(inner):
+            return .dictionary([try Name(TypeReader.linearKey): try value(of: inner)])
 
         case let .variable(inner), let .inout(inner):
             let word = type.isInout ? "inout" : "var"
@@ -381,8 +381,8 @@ public struct Writer: Sendable {
         case let .inout(inner):
             return .inout(stripped(inner))
 
-        case let .once(inner):
-            return .once(stripped(inner))
+        case let .linear(inner):
+            return .linear(stripped(inner))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return type

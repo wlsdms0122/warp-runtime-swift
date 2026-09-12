@@ -69,9 +69,9 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            key.stringValue == Self.onceKey
+            key.stringValue == Self.linearKey
         {
-            self.type = .once(try keyed.decode(TypeReader.self, forKey: key).type)
+            self.type = .linear(try keyed.decode(TypeReader.self, forKey: key).type)
 
             return
         }
@@ -93,7 +93,7 @@ public struct TypeReader: Decodable {
 
     // MARK: - Public
     // The one key a type handed on once is written under.
-    public static let onceKey = "once"
+    public static let linearKey = "linear"
 
     public static func parse(_ written: String) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: .whitespaces)

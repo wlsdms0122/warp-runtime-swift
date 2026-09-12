@@ -9,7 +9,7 @@ import Foundation
 
 // What a body does with the values it must hand on exactly once.
 //
-// A type written `once` says the values of it are handed on: given to a word,
+// A type written `linear` says the values of it are handed on: given to a word,
 // or answered. A body holding one has to do that on every way through, and may
 // not do it twice, and the link says so before anything runs. That is the whole
 // of what "this resource is closed exactly once" means here.
@@ -25,7 +25,7 @@ extension Builder {
     // back on itself before this is asked.
     func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
         switch type {
-        case .once:
+        case .linear:
             return true
 
         case let .named(name):
@@ -42,7 +42,7 @@ extension Builder {
     }
 
     // Every value a body must hand on, handed on once. The declaration's own
-    // slots are where such a value enters a body: `once` is a document's
+    // slots are where such a value enters a body: `linear` is a document's
     // spelling and a value the link folded is a value, never a promise.
     func consumed(
         _ block: Block,
@@ -66,7 +66,7 @@ extension Builder {
         guard let stranded = left.live.sorted().first else { return }
 
         throw BuildError(
-            "still holds '\(stranded)' where it ends. A value written `once` is"
+            "still holds '\(stranded)' where it ends. A value written `linear` is"
                 + " handed on, and a body that reaches its end holding one has"
                 + " dropped it",
             at: place
@@ -136,7 +136,7 @@ extension Builder {
                     guard held.moved.contains(head) else { return held }
 
                     throw refusal(
-                        "hands '\(head)' on a second time. A value written `once`"
+                        "hands '\(head)' on a second time. A value written `linear`"
                             + " is gone from the name that held it once it is given away"
                     )
                 }
@@ -286,7 +286,7 @@ extension Builder {
             guard let parameter, handedOnce(parameter.declared) else {
                 throw refusal(
                     "hands '\(head)' to '\(call.selector)', which does not take a"
-                        + " value written `once`. What takes one says so, and"
+                        + " value written `linear`. What takes one says so, and"
                         + " what says so is what may keep it"
                 )
             }
@@ -319,7 +319,7 @@ extension Builder {
 
         private func handedOnce(_ type: TypeExpression) -> Bool {
             switch type {
-            case .once:
+            case .linear:
                 return true
 
             case let .named(name):
