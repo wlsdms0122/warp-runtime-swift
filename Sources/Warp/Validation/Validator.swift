@@ -49,7 +49,7 @@ public struct Validator: Sendable {
             try validate(
                 expression,
                 visible: constants,
-                surroundings: .procedure(constants: constants),
+                scope: .procedure(constants: constants),
                 at: .constant(name.spelling, in: .of(module))
             )
         }
@@ -69,7 +69,7 @@ public struct Validator: Sendable {
             try validate(
                 expression,
                 visible: constants,
-                surroundings: .procedure(constants: constants),
+                scope: .procedure(constants: constants),
                 at: .variable(name.spelling, in: .of(module))
             )
         }
@@ -201,7 +201,7 @@ public struct Validator: Sendable {
             visible: bound.union(parameters),
             variables: variables.subtracting(parameters).union(handed),
             declared: parameters,
-            surroundings: .procedure(constants: bound),
+            scope: .procedure(constants: bound),
             at: place
         )
     }
@@ -254,7 +254,7 @@ public struct Validator: Sendable {
         visible startVisible: Set<Name>,
         variables startVariables: Set<Name> = [],
         declared startDeclared: Set<Name> = [],
-        surroundings: Surroundings = .procedure,
+        scope: Scope = .procedure,
         at place: Place
     ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
@@ -287,7 +287,7 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try introduced(name, beside: surroundings.constants, at: here)
+                    try introduced(name, beside: scope.constants, at: here)
 
                     guard !declared.contains(name) else {
                         throw ValidationError("duplicate statement id '\(name)'", at: here)
@@ -335,7 +335,7 @@ public struct Validator: Sendable {
                 statement.expression,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: here
             )
 
@@ -360,7 +360,7 @@ public struct Validator: Sendable {
         _ expression: Expression,
         visible: Set<Name>,
         variables: Set<Name> = [],
-        surroundings: Surroundings = .procedure,
+        scope: Scope = .procedure,
         at place: Place
     ) throws {
         switch expression {
@@ -382,7 +382,7 @@ public struct Validator: Sendable {
                 let here = place.index(position)
 
                 try refuseAnswerless(element, at: here)
-                try validate(element, visible: visible, variables: variables, surroundings: surroundings, at: here)
+                try validate(element, visible: visible, variables: variables, scope: scope, at: here)
             }
 
         case let .record(record):
@@ -392,7 +392,7 @@ public struct Validator: Sendable {
                     field,
                     visible: visible,
                     variables: variables,
-                    surroundings: surroundings,
+                    scope: scope,
                     at: place.key(name.spelling)
                 )
             }
@@ -406,7 +406,7 @@ public struct Validator: Sendable {
                 value,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.receiver)
             )
 
@@ -423,7 +423,7 @@ public struct Validator: Sendable {
         // `rounds` starts empty inside one, and reaching for an outer loop from
         // there is refused here rather than discovered at a run.
         case let .leave(leave):
-            try validate(leave, in: surroundings, at: place)
+            try validate(leave, in: scope, at: place)
 
             // What a `return` carries is an operand like any other. A name it
             // reads has to be visible where it was written, and a construct
@@ -437,7 +437,7 @@ public struct Validator: Sendable {
                 value,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place
             )
 
@@ -451,7 +451,7 @@ public struct Validator: Sendable {
                 try validate(
                     parameter,
                     of: procedure.signature,
-                    beside: surroundings.constants,
+                    beside: scope.constants,
                     at: inside.part(.parameters).key(parameter.spelling)
                 )
             }
@@ -465,7 +465,7 @@ public struct Validator: Sendable {
                 visible: visible.union(parameters),
                 variables: variables.subtracting(parameters),
                 declared: parameters,
-                surroundings: surroundings.enclosed,
+                scope: scope.enclosed,
                 at: inside
             )
 
@@ -475,7 +475,7 @@ public struct Validator: Sendable {
                 callee,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.callee)
             )
 
@@ -487,13 +487,13 @@ public struct Validator: Sendable {
                     argument,
                     visible: visible,
                     variables: variables,
-                    surroundings: surroundings,
+                    scope: scope,
                     at: here
                 )
             }
 
         case let .block(block):
-            try validate(block, visible: visible, variables: variables, surroundings: surroundings, at: place)
+            try validate(block, visible: visible, variables: variables, scope: scope, at: place)
 
         case let .conditional(condition, then, otherwise):
             try refuseConstructCondition(
@@ -504,14 +504,14 @@ public struct Validator: Sendable {
                 condition,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.condition(of: .conditional))
             )
             try validate(
                 then,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.then)
             )
 
@@ -520,7 +520,7 @@ public struct Validator: Sendable {
                     otherwise,
                     visible: visible,
                     variables: variables,
-                    surroundings: surroundings,
+                    scope: scope,
                     at: place.part(.otherwise)
                 )
             }
@@ -528,7 +528,7 @@ public struct Validator: Sendable {
         // The round state is bound before the condition is asked, which is what
         // lets `while` read how many rounds have passed.
         case let .loop(condition, body, round):
-            try introduced(round, beside: surroundings.constants, at: place)
+            try introduced(round, beside: scope.constants, at: place)
 
             let inner = visible.union([round])
 
@@ -537,26 +537,26 @@ public struct Validator: Sendable {
                 condition,
                 visible: inner,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.condition(of: .loop))
             )
             try validate(
                 body,
                 visible: inner,
                 variables: variables,
-                surroundings: surroundings.inside(round),
+                scope: scope.inside(round),
                 at: place
             )
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue, failure):
-            try introduced(failure, beside: surroundings.constants, at: place)
+            try introduced(failure, beside: scope.constants, at: place)
 
             try validate(
                 block,
                 visible: visible,
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place
             )
 
@@ -571,7 +571,7 @@ public struct Validator: Sendable {
                 rescue,
                 visible: visible.union([failure]),
                 variables: variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.rescue)
             )
 
@@ -582,7 +582,7 @@ public struct Validator: Sendable {
                     receiver,
                     visible: visible,
                     variables: variables,
-                    surroundings: surroundings,
+                    scope: scope,
                     at: place.part(.receiver)
                 )
             }
@@ -595,7 +595,7 @@ public struct Validator: Sendable {
                     argument,
                     visible: visible,
                     variables: variables,
-                    surroundings: surroundings,
+                    scope: scope,
                     at: here
                 )
             }
@@ -642,7 +642,7 @@ public struct Validator: Sendable {
         visible: Set<Name>,
         variables: Set<Name> = [],
         declared: Set<Name> = [],
-        surroundings: Surroundings = .procedure,
+        scope: Scope = .procedure,
         at place: Place
     ) throws {
         let inner = try validate(
@@ -650,7 +650,7 @@ public struct Validator: Sendable {
             visible: visible,
             variables: variables,
             declared: declared,
-            surroundings: surroundings,
+            scope: scope,
             at: place.part(.body)
         )
 
@@ -675,7 +675,7 @@ public struct Validator: Sendable {
                 result,
                 visible: inner.visible,
                 variables: inner.variables,
-                surroundings: surroundings,
+                scope: scope,
                 at: place.part(.result)
             )
         }
@@ -684,7 +684,7 @@ public struct Validator: Sendable {
     // What a leave may say, and where it may say it.
     private func validate(
         _ leave: Leave,
-        in surroundings: Surroundings,
+        in scope: Scope,
         at place: Place
     ) throws {
         guard leave.reach != .procedure else {
@@ -707,16 +707,16 @@ public struct Validator: Sendable {
             )
         }
 
-        guard let nearest = surroundings.rounds.last else {
+        guard let nearest = scope.rounds.last else {
             throw ValidationError("there is no loop here to leave", at: place)
         }
 
         guard let target = leave.target else { return }
 
-        guard surroundings.rounds.contains(target) else {
+        guard scope.rounds.contains(target) else {
             throw ValidationError(
                 "names '\(target)', which is not a loop around it."
-                    + " The ones here are \(surroundings.rounds.reversed().map(\.spelling).joined(separator: ", "));"
+                    + " The ones here are \(scope.rounds.reversed().map(\.spelling).joined(separator: ", "));"
                     + " the nearest is '\(nearest)'",
                 at: place
             )
@@ -779,7 +779,7 @@ public struct Validator: Sendable {
 // One value rather than a parameter each: a body checked without its loops
 // reads as a body outside any loop, so carrying the whole is the default and
 // every place that breaks it has to say so.
-private struct Surroundings: Sendable {
+private struct Scope: Sendable {
     // MARK: - Property
     // The loops around here, nearest last. A name reaches past the nearer ones,
     // and nothing here means there is no loop to end.
@@ -792,15 +792,15 @@ private struct Surroundings: Sendable {
     let constants: Set<Name>
 
     // A procedure's own body: no loop yet.
-    static let procedure = Surroundings(rounds: [], constants: [])
+    static let procedure = Scope(rounds: [], constants: [])
 
-    static func procedure(constants: Set<Name>) -> Surroundings {
-        Surroundings(rounds: [], constants: constants)
+    static func procedure(constants: Set<Name>) -> Scope {
+        Scope(rounds: [], constants: constants)
     }
 
     // MARK: - Public
-    func inside(_ round: Name) -> Surroundings {
-        Surroundings(rounds: rounds + [round], constants: constants)
+    func inside(_ round: Name) -> Scope {
+        Scope(rounds: rounds + [round], constants: constants)
     }
 
     // A procedure written inside another. It may be called anywhere and long
@@ -808,8 +808,8 @@ private struct Surroundings: Sendable {
     // runs, and its own answer is its own. What it captured it may write: a
     // variable's box is one thing under one name everywhere the name is
     // visible, and this body is one of those places.
-    var enclosed: Surroundings {
-        Surroundings(rounds: [], constants: constants)
+    var enclosed: Scope {
+        Scope(rounds: [], constants: constants)
     }
 
     // MARK: - Private

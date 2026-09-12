@@ -889,7 +889,7 @@ public struct Executor: Sendable {
     }
 
     // What a slot path holds. The head is never absent, since every slot is
-    // there from the frame's making; a hold whose surroundings changed under
+    // there from the frame's making; a hold whose scope changed under
     // it refuses, and every deeper absence is answered inside the walk.
     private func found(_ address: Address, in activation: Activation) throws -> Value {
         switch lookup(address, in: activation) {
