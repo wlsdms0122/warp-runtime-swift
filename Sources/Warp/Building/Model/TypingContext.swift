@@ -53,7 +53,7 @@ struct TypingContext: Sendable {
     // Every contract's words, under the spelling a call writes to reach one.
     // Beside the symbols rather than in them: a name here answers with no
     // declaration, and which declaration runs is the receiver's to say.
-    let contractWords: [Name: ContractWord]
+    let requirements: [Name: Requirement]
 
     // The variables of the document being read, by name. A body reading one
     // answers by the run's state, so purity is read against these.
@@ -80,7 +80,7 @@ struct TypingContext: Sendable {
     func slots(of selector: Name) -> [Slot] {
         if let row = rows[selector] { return linked[row].slots }
 
-        return contractWords[selector]?.slots ?? []
+        return requirements[selector]?.slots ?? []
     }
 
     // What it answers: what the link read off a body that declared none, else
@@ -89,7 +89,7 @@ struct TypingContext: Sendable {
         if let read = answers[selector] { return read }
         if let row = rows[selector] { return linked[row].returns }
 
-        return contractWords[selector]?.answers
+        return requirements[selector]?.answers
     }
 
     // A named type stands for what it was declared as. Inference walks into

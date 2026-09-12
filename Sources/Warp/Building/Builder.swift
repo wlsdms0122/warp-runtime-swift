@@ -137,7 +137,7 @@ public struct Builder: Sendable {
 
         var compiling = Compiling(
             types: shaped.types,
-            contractWords: shaped.contractWords,
+            requirements: shaped.requirements,
             naming: compiled.map(\.document)
         )
 
@@ -332,7 +332,7 @@ public struct Builder: Sendable {
         var compiling = Compiling(
             laid.carried,
             types: shaped.types,
-            contractWords: shaped.contractWords,
+            requirements: shaped.requirements,
             naming: documents.map(\.document)
         )
 

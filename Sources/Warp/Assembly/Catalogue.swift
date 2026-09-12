@@ -190,7 +190,7 @@ public struct Catalogue: Sendable {
                 for (type, contracts) in module.conformances.sorted(by: { $0.key < $1.key }) {
                     for contract in contracts.sorted() {
                         for word in (asked[contract] ?? []).sorted() {
-                            bring(declares[.word(ContractWord.spelling(of: type, word: word))])
+                            bring(declares[.word(Requirement.spelling(of: type, word: word))])
                         }
                     }
                 }

@@ -243,7 +243,7 @@ extension Builder {
         // one. A slot that does not say so would let the obligation go.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
             let signature = context.signature(of: call.selector)
-                ?? context.contractWords[call.selector]?.signature
+                ?? context.requirements[call.selector]?.signature
 
             var carried = held
 
@@ -300,7 +300,7 @@ extension Builder {
             switch expression {
             case let .call(call):
                 let signature = context.signature(of: call.selector)
-                    ?? context.contractWords[call.selector]?.signature
+                    ?? context.requirements[call.selector]?.signature
 
                 return signature?.returns.map(handedOnce) ?? false
 

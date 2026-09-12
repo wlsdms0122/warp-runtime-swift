@@ -1,5 +1,5 @@
 //
-//  ContractWord.swift
+//  Requirement.swift
 //  Warp
 //
 //  Created by JSilver
@@ -13,7 +13,7 @@ import Foundation
 // A call that writes it names no declaration. What answers it is decided by
 // the value it is sent to, which is why it is gathered apart from the symbols:
 // everything in that table is one declaration, and this is a table of them.
-struct ContractWord: Sendable {
+struct Requirement: Sendable {
     // MARK: - Property
     let contract: Name
     let word: Name
@@ -44,12 +44,12 @@ struct ContractWord: Sendable {
     // contract answers every one of its words by a declaration named for the
     // type and the word, so the table saying which types answer says the
     // whole of it.
-    static func table(in types: TypeTable) -> [Name: ContractWord] {
-        types.contracts.reduce(into: [Name: ContractWord]()) { table, entry in
+    static func table(in types: TypeTable) -> [Name: Requirement] {
+        types.contracts.reduce(into: [Name: Requirement]()) { table, entry in
             let answering = types.shapes.satisfying[entry.key] ?? []
 
             for (word, signature) in entry.value {
-                table[spelling(of: entry.key, word: word)] = ContractWord(
+                table[spelling(of: entry.key, word: word)] = Requirement(
                     contract: entry.key,
                     word: word,
                     signature: signature,

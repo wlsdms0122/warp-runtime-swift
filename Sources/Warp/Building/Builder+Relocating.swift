@@ -169,7 +169,7 @@ struct Relocating {
     // and has no entry here.
     private let shapeRows: [ShapeNumbering.Rows]
 
-    private let contractWords: [Name: ContractWord]
+    private let requirements: [Name: Requirement]
     private let shapes: ShapeTable
 
     // Which row each document's closures took. A closure is reached by a
@@ -183,7 +183,7 @@ struct Relocating {
         rows: [Name: Int],
         numbering: [Numbering],
         shapeNumbering: [ShapeNumbering],
-        contractWords: [Name: ContractWord],
+        requirements: [Name: Requirement],
         closures: [[Int]],
         shapes: ShapeTable
     ) {
@@ -192,7 +192,7 @@ struct Relocating {
         self.rows = rows
         self.numbering = numbering
         self.shapeRows = shapeNumbering.map { held in held.rows(in: shapes) }
-        self.contractWords = contractWords
+        self.requirements = requirements
         self.shapes = shapes
     }
 
@@ -215,7 +215,7 @@ struct Relocating {
             rows: assembled.rows,
             numbering: assembled.numbering,
             shapeNumbering: assembled.shapeNumbering,
-            contractWords: ContractWord.table(in: types),
+            requirements: Requirement.table(in: types),
             closures: assembled.closures,
             shapes: shapes
         )
@@ -547,9 +547,9 @@ struct Relocating {
     }
 
     private func filled(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
-        let spelling = ContractWord.spelling(of: dispatch.contract, word: dispatch.word)
+        let spelling = Requirement.spelling(of: dispatch.contract, word: dispatch.word)
 
-        guard let asked = contractWords[spelling] else {
+        guard let asked = requirements[spelling] else {
             throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 

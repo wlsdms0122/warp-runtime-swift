@@ -27,7 +27,7 @@ extension Builder {
         unsettled: Requiring? = nil
     ) throws -> (
         types: TypeTable,
-        contractWords: [Name: ContractWord],
+        requirements: [Name: Requirement],
         unheld: [Conformance: String]
     ) {
         let witnessed = try witnesses(
@@ -46,7 +46,7 @@ extension Builder {
         // reach them. Read off the table the satisfaction was just written
         // into, so what a call reaches and what a judgment reads are one
         // reading rather than two.
-        let contractWords = ContractWord.table(in: table)
+        let requirements = Requirement.table(in: table)
 
         // A contract's word and a declaration cannot take one spelling. A call
         // writing it lowers to the pick the contract makes, so the declaration
@@ -56,9 +56,9 @@ extension Builder {
         // In name order, so which collision is reported first is the text's
         // fact rather than a hash seed's.
         if
-            let spelling = contractWords.keys.sorted().first(where: { taken in signatures[taken] != nil }),
+            let spelling = requirements.keys.sorted().first(where: { taken in signatures[taken] != nil }),
             let declared = signatures[spelling],
-            let asked = contractWords[spelling]
+            let asked = requirements[spelling]
         {
             throw BuildError(
                 "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
@@ -71,7 +71,7 @@ extension Builder {
 
         return (
             types: table,
-            contractWords: contractWords,
+            requirements: requirements,
             unheld: witnessed.unheld
         )
     }

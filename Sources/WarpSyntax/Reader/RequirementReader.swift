@@ -1,5 +1,5 @@
 //
-//  ContractWordReader.swift
+//  RequirementReader.swift
 //  WarpSyntax
 //
 //  Created by JSilver
@@ -13,7 +13,7 @@ import Warp
 // No `receiver` and no `bounds`. The receiver is the type that satisfies the
 // contract, which is the whole point of the word being in one, and the bound a
 // type parameter carries is owned by the signature that declares it.
-public struct ContractWordReader: Decodable {
+public struct RequirementReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case returns

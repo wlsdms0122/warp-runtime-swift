@@ -146,7 +146,7 @@ extension Builder {
         var answering: [Name: Name] = [:]
 
         for (word, signature) in asked.held.sorted(by: { $0.key < $1.key }) {
-            let spelling = ContractWord.spelling(of: type, word: word)
+            let spelling = Requirement.spelling(of: type, word: word)
 
             guard let witness = space[spelling] else {
                 return .waits(

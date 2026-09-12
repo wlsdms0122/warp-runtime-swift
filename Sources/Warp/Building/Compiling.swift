@@ -24,7 +24,7 @@ struct Compiling {
     // MARK: - Property
     // What only the whole list answers, which a document has no say in.
     let types: TypeTable
-    let contractWords: [Name: ContractWord]
+    let requirements: [Name: Requirement]
 
     // Which document each position is, for a refusal that names one.
     let documents: [Place.Document]
@@ -63,14 +63,14 @@ struct Compiling {
     // Nothing laid down yet.
     init(
         types: TypeTable,
-        contractWords: [Name: ContractWord],
+        requirements: [Name: Requirement],
         naming documents: [Place.Document]
     ) {
         self.types = types
-        self.contractWords = contractWords
+        self.requirements = requirements
         self.documents = documents
         self.lowering = Lowering(
-            contractWords: contractWords,
+            requirements: requirements,
             shapes: types.shapes
         )
     }
@@ -85,15 +85,15 @@ struct Compiling {
     init(
         _ carried: Carried,
         types: TypeTable,
-        contractWords: [Name: ContractWord],
+        requirements: [Name: Requirement],
         naming documents: [Place.Document]
     ) {
         self.types = types
-        self.contractWords = contractWords
+        self.requirements = requirements
         self.documents = documents
         self.lowering = Lowering(
             carried,
-            contractWords: contractWords,
+            requirements: requirements,
             shapes: types.shapes
         )
         self.pure = carried.pure
@@ -271,7 +271,7 @@ struct Compiling {
             pure: pure,
             isolated: isolated,
             failing: failing,
-            contractWords: contractWords,
+            requirements: requirements,
             variables: variables
         )
     }

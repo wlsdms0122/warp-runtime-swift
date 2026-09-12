@@ -1367,7 +1367,7 @@ extension Builder {
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
         case let .call(call):
-            let signature = context.signature(of: call.selector) ?? context.contractWords[call.selector]?.signature
+            let signature = context.signature(of: call.selector) ?? context.requirements[call.selector]?.signature
 
             guard case .judging = ask else {
                 return Inspection(
@@ -1403,7 +1403,7 @@ extension Builder {
             // A call through a contract names no declaration. What answers it
             // is the receiver's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
-            if let asked = context.contractWords[call.selector] {
+            if let asked = context.requirements[call.selector] {
                 return try inspected(
                     contract: asked,
                     call: call,
@@ -1725,7 +1725,7 @@ extension Builder {
     // contract asked is the whole of the judgment, and which body runs is
     // decided at the run by the name the receiver wears.
     private func inspected(
-        contract asked: ContractWord,
+        contract asked: Requirement,
         call: Call,
         at place: Place,
         in environment: [Name: Shape],
