@@ -42,6 +42,11 @@ struct TypeFrame: Sendable {
     // declaration.
     let words: [Name: Name]
 
+    // The bare spellings two declarations of this document's reach answer, and
+    // which two. None of them is in `words`: a segment written with one means
+    // neither, and it is said where the segment stands.
+    let contested: [Name: [Name]]
+
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
     // decides whether it fits a slot asking for purity.

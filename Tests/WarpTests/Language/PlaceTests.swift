@@ -707,11 +707,13 @@ struct PlaceTests {
         #expect(error?.message.contains("the module at 1 in this link") == true)
     }
 
-    @Test("two words one path spelling could reach are refused at a declaration")
-    func aContestedPathWordIsPlacedAtADeclaration() throws {
+    @Test("two words one path spelling could reach are refused where the segment stands")
+    func aContestedPathWordIsPlacedWhereItIsWritten() throws {
         // Given. A path segment names no module, so no spelling an author could
-        // write would say which of these is meant. The fix is on a declaration,
-        // which makes a declaration the place to be sent to.
+        // write would say which of these is meant. The segment is what there
+        // is no answer for, which makes it the place to be sent to, and every
+        // declaration it could have meant is named so the fix may be made on
+        // one of them instead.
         func declaring(_ prefix: String, as identity: Identity) throws -> Module {
             try Module(
                 procedures: [
@@ -762,11 +764,15 @@ struct PlaceTests {
             )
         }
 
-        // Then. `catalog` is the second the caller handed over, whatever the
-        // three names sort as
-        #expect(error?.place?.rendered == "01/procedures.catalog.discounted")
+        // Then. The segment, in the document that wrote it
+        #expect(error?.place?.rendered == "procedures.entry.result")
 
-        // And every one of them is named, the first included
+        // And every one of them is named, the first included, in the order the
+        // caller handed the modules over: `catalog` is the second, whatever
+        // the three names sort as
+        #expect(
+            error?.message.contains("shipping.discounted, catalog.discounted, pricing.discounted") == true
+        )
         #expect(error?.message.contains("catalog.discounted") == true)
         #expect(error?.message.contains("pricing.discounted") == true)
         #expect(error?.message.contains("shipping.discounted") == true)

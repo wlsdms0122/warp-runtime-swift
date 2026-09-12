@@ -460,6 +460,57 @@ struct CompiledTests {
         }
     }
 
+    @Test("a segment reading a field is not the segment two declarations answer")
+    func aFieldReadIsNotAContestedWord() async throws {
+        // Given. The same two declarations, and a body reading a record field
+        // spelled the same. Which of the two a segment is reading is settled
+        // by the shape under it, so the text alone does not tell them apart.
+        let sut = try Module(
+            types: [
+                "bank.Account": .int,
+                "bank.Card": .string
+            ],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            claiming: [
+                "bank.Account": ["app.Describable"],
+                "bank.Card": ["app.Describable"]
+            ],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(returns: .string),
+                    body: [
+                        Statement(
+                            binding: .constant("row"),
+                            expression: .record(["describe": .literal(.string("a field"))])
+                        )
+                    ],
+                    result: .reference([.key("row"), .key("describe")])
+                ),
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                ),
+                "bank.Card.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Card"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("a card"))
+                )
+            ]
+        )
+
+        // When / Then. The field is there, so the segment reads it.
+        #expect(try await run(sut) == .string("a field"))
+    }
+
     @Test("a bare segment two declarations answer is refused where it is written")
     func aContestedSegmentIsRefusedWhereItIsWritten() throws {
         // Given. The same declarations, and a document writing the segment.
@@ -471,6 +522,62 @@ struct CompiledTests {
             try builder.build(sut + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("'describe' by bank.Account.describe, bank.Card.describe")
+        }
+    }
+
+    @Test("a declaration a document only calls by its whole name still contests a segment")
+    func aQualifiedCallContestsABareSegment() throws {
+        // Given. Two words sharing a bare spelling, one the document said it
+        // steps to and one it only calls by the whole name. What a path may
+        // reach is what the document declared or announced, and a call is an
+        // announcement.
+        let one = try Module(
+            procedures: [
+                "a.counted": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .int)],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+        let other = try Module(
+            procedures: [
+                "b.counted": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .string)],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(2))
+                )
+            ]
+        )
+        let sut = try Module(
+            walked: ["a.counted"],
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(parameters: ["of": Parameter(type: .int)], returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("other"),
+                            expression: .call(Call(receiver: .literal(.string("x")), selector: "b.counted"))
+                        )
+                    ],
+                    result: reference("of", "counted")
+                )
+            ]
+        )
+
+        // When / Then. Both are in reach, so the segment says neither.
+        #expect {
+            try builder.build([one, other, sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("'counted' by a.counted, b.counted")
         }
     }
 

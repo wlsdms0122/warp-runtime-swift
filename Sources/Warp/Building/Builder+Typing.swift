@@ -826,6 +826,20 @@ extension Builder {
         at place: Place,
         writing requiring: Requiring?
     ) -> WordReach {
+        // Two declarations of this document's reach answer this spelling, and
+        // a path segment names no module, so nothing written here says which
+        // one is meant. The fix is on a declaration, so the refusal names them
+        // all.
+        if let declarations = frame.contested[key] {
+            return .refused(
+                "\(walked.rendered) sends '\(key)', which is declared by more than one"
+                    + " module this document may walk to. '\(key)' by"
+                    + " \(declarations.map(\.spelling).joined(separator: ", "))."
+                    + " A path segment names no module, so there is no spelling that"
+                    + " would tell them apart"
+            )
+        }
+
         guard let signature = frame.signature(reachedBy: key) else {
             return .refused(
                 "\(walked.rendered) sends '\(key)' to \(current.rendered(in: frame.shapes)),"

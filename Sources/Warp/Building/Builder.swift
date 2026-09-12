@@ -381,6 +381,7 @@ public struct Builder: Sendable {
         // paths step to reaches.
         var read: [Name: Shape] = [:]
         var reached: [Name: Name] = [:]
+        var contested: [Name: [Name]] = [:]
 
         // What this document settled, and what each of its declarations calls.
         var constants: [Name: Value] = [:]
@@ -390,7 +391,7 @@ public struct Builder: Sendable {
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.
         func frame() -> TypeFrame {
-            compiling.frame(stepping: reached, reading: reading)
+            compiling.frame(stepping: reached, contested: contested, reading: reading)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -564,18 +565,18 @@ public struct Builder: Sendable {
         // the rows it just laid down. A row is the declaration lowered,
         // and whether a path may reach one is a question about the slots
         // it lowered to.
-        let words = try derivable(
+        let derived = derivable(
             for: module,
             declaring: declared,
-            naming: compiling.documents,
             pure: compiling.pure,
             reaching: compiling.lowering.rows,
             in: compiling.lowering.table
         )
 
-        reached = words
+        reached = derived.words
+        contested = derived.contested
 
-        compiling.steps(origin, to: words.compactMapValues { declared in compiling.lowering.rows[declared] })
+        compiling.steps(origin, to: derived.words.compactMapValues { declared in compiling.lowering.rows[declared] })
 
         // The bodies the documents behind this one lowered, which this one
         // may run.
@@ -620,7 +621,7 @@ public struct Builder: Sendable {
                     symbol: symbol,
                     block: block,
                     environment: opening(symbol.procedure.signature),
-                    sends: sent(in: block, reaching: words)
+                    sends: sent(in: block, reaching: derived.words)
                 )
             },
             reading: frame,
@@ -641,7 +642,7 @@ public struct Builder: Sendable {
         // declaration links stays a fact of its text rather than of who
         // happens to call it. In name order, so which mistake is reported
         // first is the text's fact too.
-        let stepped = Set(words.values)
+        let stepped = Set(derived.words.values)
 
         for symbol in holding where stepped.contains(symbol.declared) {
             try requiring.folding(symbol.place) { _ = try resolved(symbol) }
@@ -701,7 +702,7 @@ public struct Builder: Sendable {
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
             answers: shaped.answers,
-            words: words,
+            words: derived.words,
             numbering: numbering,
             shapeNumbering: shaped.numbering,
             variables: boxes.map { name in (name: name, value: variables[name] ?? .null) }

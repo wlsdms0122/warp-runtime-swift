@@ -234,11 +234,10 @@ extension Builder {
     func derivable(
         for module: Module,
         declaring declared: [Name],
-        naming documents: [Place.Document],
         pure: Set<Name>,
         reaching rows: [Name: Int],
         in table: [Linked]
-    ) throws -> [Name: Name] {
+    ) -> (words: [Name: Name], contested: [Name: [Name]]) {
         // What this document may walk to is what it declared and what it said
         // it imports, and nothing else in the link is something it could have
         // meant. A path names no module.
@@ -271,40 +270,23 @@ extension Builder {
             }
         }
 
-        // Refused where the segment is written and nowhere else. A contract's
-        // word is spelled for the type answering it, so a document naming two
-        // types that answer one contract holds two declarations no bare
-        // segment could tell apart and reaches both through the contract. What
-        // it never writes it is not answerable for.
+        // A bare segment that could mean two declarations means neither, so
+        // none of them is what it reaches. Which two is said where one is
+        // written: a segment reading a field and a segment calling a word are
+        // one spelling until a shape stands under it, and a document holding
+        // two declarations it never steps to is answerable for nothing.
         //
-        // The first name in sorted order, so which declaration an author is
-        // sent to does not change with the order a dictionary hands its keys
-        // back.
-        let written = contested.filter { word, _ in module.walks.contains(word) }
-
-        if let (word, declarations) = written.min(by: { one, other in one.key < other.key }) {
-            // In the order the caller handed the modules over, which is the
-            // order every collision refusal is read in: the second is the one
-            // that could not be added. Gathered in name order above, because
-            // that is the order the tables are built in, so the two are sorted
-            // apart here rather than one being made to serve for both.
-            let ranked = declarations.sorted { one, other in
-                table[one.row].origin < table[other.row].origin
+        // In the order the caller handed the modules over, which is the order
+        // every collision refusal is read in: the second is the one that could
+        // not be added.
+        return (
+            words: held.filter { word, _ in contested[word] == nil }
+                .mapValues { reached in reached.declared },
+            contested: contested.mapValues { declarations in
+                declarations
+                    .sorted { one, other in table[one.row].origin < table[other.row].origin }
+                    .map(\.declared)
             }
-
-            throw BuildError(
-                "\(written.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
-                    + " than one module this document may walk to. '\(word)' by"
-                    + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."
-                    + " A path segment names no module, so there is no spelling that"
-                    + " would tell them apart",
-                at: .procedure(
-                    ranked[1].declared.spelling,
-                    in: documents[table[ranked[1].row].origin]
-                )
-            )
-        }
-
-        return held.mapValues { reached in reached.declared }
+        )
     }
 }
