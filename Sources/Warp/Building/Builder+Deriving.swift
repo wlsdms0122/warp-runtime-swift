@@ -117,7 +117,7 @@ extension Builder {
         // spelling reads the same mismatch as null instead, so it raises
         // nothing.
         case let .cast(value, _, optional):
-            return read(value).joined(optional ? .these([]) : .these([CastRefused.word]))
+            return read(value).joined(optional ? .these([]) : .these([CastRefused.type]))
 
         case let .array(array):
             return array.reduce(Failing.these([])) { carried, element in carried.joined(read(element)) }

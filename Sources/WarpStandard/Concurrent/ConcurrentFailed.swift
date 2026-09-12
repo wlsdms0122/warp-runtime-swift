@@ -15,14 +15,14 @@ public struct ConcurrentFailed: RecoverableFailure {
     // MARK: - Property
     public let failures: [Name: String]
 
-    public var type: String { Self.word }
+    public var type: String { Self.type }
 
 
     // The procedure this failure names itself by, said once so a declaration can
 
     // read it where it says what it may fail with.
 
-    public static let word = "concurrent_failed"
+    public static let type = "concurrent_failed"
 
     public var details: [Name: Value] {
         ["failures": .dictionary(failures.mapValues(Value.string))]

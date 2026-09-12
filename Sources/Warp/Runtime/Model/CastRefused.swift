@@ -33,11 +33,11 @@ public struct CastRefused: RecoverableFailure {
 
     public let trace: Trace?
 
-    public var type: String { Self.word }
+    public var type: String { Self.type }
 
-    // The procedure this failure names itself by, said once so the link can read
-    // it where it derives what a cast may fail with.
-    public static let word = "cast_refused"
+    // What this failure names itself, said once so the link can read it where
+    // it derives what a cast may fail with.
+    public static let type = "cast_refused"
 
     // Both halves ride in the payload's box, so a rescue can say which cast
     // it was and branch on what turned up.

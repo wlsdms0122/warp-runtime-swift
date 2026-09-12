@@ -20,8 +20,8 @@ import Foundation
 // `payload` under the failed statement's id, so a rescue body can read what
 // went wrong through `<id>.message` and, under `<id>.details`, whatever else
 // that failure carries. The envelope is the same for every failure and what
-// rides inside it is the failing procedure's own. The runtime owns the mechanism,
-// the error owns the vocabulary.
+// rides inside it is the failing procedure's own. The runtime owns the
+// mechanism, the error owns the vocabulary.
 public protocol RecoverableFailure: WarpError {
     // What this failure names itself. `aborted`, `concurrent_failed`.
     var type: String { get }
@@ -41,7 +41,7 @@ public extension RecoverableFailure {
     // system keeps.
     //
     // What a failure carries rides in a box of its own rather than beside the
-    // envelope's names, so no failure can redefine the procedure naming what
+    // envelope's names, so no failure can redefine the field naming what
     // happened by adding a field.
     var payload: Value {
         .dictionary([

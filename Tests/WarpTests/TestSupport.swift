@@ -22,9 +22,9 @@ struct TestRecoverableFailure: RecoverableFailure {
     // MARK: - Property
     let message = "the world did not cooperate"
 
-    let type = TestRecoverableFailure.procedure
+    var type: String { Self.type }
 
-    static let procedure = "test"
+    static let type = "test"
 
     // MARK: - Initializer
     // MARK: - Public
@@ -52,7 +52,7 @@ struct FailEffect: Effect {
     }
 
     // MARK: - Property
-    let failing = Failing.these([TestRecoverableFailure.procedure])
+    let failing = Failing.these([TestRecoverableFailure.type])
 
     // MARK: - Initializer
     // MARK: - Public

@@ -52,7 +52,7 @@ struct MapEffect: Effect {
     }
 
     // MARK: - Property
-    let failing = Failing.these([ConcurrentFailed.word])
+    let failing = Failing.these([ConcurrentFailed.type])
 
     private let fanout = Fanout("std.concurrent.map")
 

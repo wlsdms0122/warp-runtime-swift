@@ -7,12 +7,12 @@
 
 import Foundation
 
-// What may come out of a body or a procedure when the work itself goes wrong: the
-// procedures a `RecoverableFailure` names itself by, which is what a rescue reads
-// as `type`.
+// What may come out of a body or a procedure when the work itself goes wrong:
+// the types a `RecoverableFailure` names itself by, which is what a rescue
+// reads as `type`.
 //
 // Derived for a body from what it casts, calls and rescues; declared by a
-// native procedure, which is the only one that can say. A procedure that says nothing
+// native procedure, which is the only one that can say. One that says nothing
 // leaves the question open, and every judgment reading this treats that as
 // "anything may come out".
 public enum Failing: Sendable, Equatable {

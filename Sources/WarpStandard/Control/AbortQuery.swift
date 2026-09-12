@@ -28,7 +28,7 @@ struct AbortQuery: Query {
     }
 
     // MARK: - Property
-    let failing = Failing.these([Aborted.word])
+    let failing = Failing.these([Aborted.type])
 
     // MARK: - Initializer
     // MARK: - Public

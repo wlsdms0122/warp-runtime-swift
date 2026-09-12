@@ -30,7 +30,7 @@ struct TestConditions: ConditionSpelling {
     // What the table stands in for, and so what this spelling owes the build.
     var vocabulary: Set<Name> { Set(Self.procedures.values) }
 
-    // The procedure a condition is spelled with, and the declaration it names.
+    // The key a condition is spelled with, and the declaration it names.
     static let procedures: [Name: Name] = [
         "equal": "std.logic.equal",
         "notEqual": "std.logic.notEqual",

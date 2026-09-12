@@ -205,7 +205,7 @@ extension LoweredType {
         // declare no numeric shape at all: the slot does not name one kind,
         // so a numeral is whichever kind's one spelling the text is.
         default:
-            if let procedure = Int(spelling: candidate) { return .int(procedure) }
+            if let whole = Int(spelling: candidate) { return .int(whole) }
 
             return Double(spelling: candidate).map(Value.double)
         }
