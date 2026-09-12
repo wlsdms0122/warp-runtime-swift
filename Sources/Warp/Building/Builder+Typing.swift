@@ -1450,6 +1450,19 @@ extension Builder {
                 )
             }
 
+            // Every operand of this call, judged before the walk splits on what
+            // the selector names: what a slot takes has nothing to do with
+            // whether the operand written into it is read or run. Named one by
+            // one, because a loop over the values alone reports the third
+            // operand from the place the first was.
+            if let written = call.receiver {
+                try held(written, asOperand: place.part(.receiver), given: context, when: ask)
+            }
+
+            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
+                try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
+            }
+
             // A call through a contract names no declaration. What answers it
             // is the receiver's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
@@ -1473,16 +1486,6 @@ extension Builder {
                     "sends '\(call.selector)', which no module in this link declares",
                     at: place
                 )
-            }
-
-            // Named one by one, because a loop over the values alone reports
-            // the third operand from the place the first was.
-            if let written = call.receiver {
-                try held(written, asOperand: place.part(.receiver), given: context, when: ask)
-            }
-
-            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-                try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
             }
 
             var receiver: Inspection?
@@ -1590,8 +1593,8 @@ extension Builder {
                 ask: ask
             )
 
-            try held(head.reading, asCondition: place.part(.condition(of: .conditional)), in: context, when: ask)
             try held(condition, asOperand: place.part(.condition(of: .conditional)), given: context, when: ask)
+            try held(head.reading, asCondition: place.part(.condition(of: .conditional)), in: context, when: ask)
 
             let inside = environment
 
@@ -1679,8 +1682,8 @@ extension Builder {
                 ask: ask
             )
 
-            try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
             try held(condition, asOperand: place.part(.condition(of: .loop)), given: context, when: ask)
+            try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
 
             let rounds = ask.rewrites
                 ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
@@ -1797,10 +1800,6 @@ extension Builder {
             )
         }
 
-        if written.holdsConstruct {
-            throw BuildError(Expression.constructInOperand, at: place.part(.receiver))
-        }
-
         let receiver = try inspected(
             written,
             at: place.part(.receiver),
@@ -1837,10 +1836,6 @@ extension Builder {
                         + " '\(asked.contract)' does not name",
                     at: place.argument(name.spelling)
                 )
-            }
-
-            if argument.holdsConstruct {
-                throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
             let inner = try inspected(
