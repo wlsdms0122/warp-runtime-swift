@@ -226,8 +226,7 @@ extension Builder {
     // Which declaration a path segment reaches, by the bare spelling it writes.
     // `x.count` names no module: the front end cannot know whether a trailing
     // segment is a field or a word, so this is the one name still answered at
-    // run time, and the one place an ambiguity has to be refused before the run
-    // rather than during it.
+    // run time.
     //
     // A selector needs no table of its own. `std.count` is resolved by the
     // declared spelling like every other call.
