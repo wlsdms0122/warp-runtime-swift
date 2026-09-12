@@ -64,10 +64,100 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
         let builder = Builder()
-        let module = try Loader().load(sut.program, identity: nil)
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try builder.build(try linked(sut), entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
+    }
+
+    // What the link is handed: the case's document, whatever vocabulary the
+    // case asked the runner to bring, and the standard bundles. The order is
+    // the caller's statement, which is what assembling a link is.
+    private func linked(_ sut: Case) throws -> [Module] {
+        let loader = Loader()
+        let module = try loader.load(sut.program, identity: nil)
+
+        guard let vocabulary = sut.vocabulary else { return [module] + Module.standard }
+
+        // The declarations go through the reader every document goes through,
+        // because they are declarations. What arrives is read as a body, and
+        // the implementation is swapped for the one the case described: a body
+        // is what a document can write and a host procedure is what it cannot.
+        let declared = try loader.load(vocabulary.module, identity: nil)
+
+        let brought = try Module(
+            types: declared.types,
+            constraints: declared.constraints,
+            contracts: declared.contracts,
+            claims: declared.claims,
+            procedures: Dictionary(
+                uniqueKeysWithValues: try vocabulary.procedures.map { one in
+                    guard let read = declared.procedures[one.name] else {
+                        throw ConformanceError("'\(one.name)' was asked for and did not read")
+                    }
+
+                    return (one.name, supplied(one, declaring: read.signature))
+                }
+            )
+        )
+
+        return [brought, module] + Module.standard
+    }
+
+    // The host's side of one asked-for procedure. Which door it answers through
+    // is the claim it makes: the one that answers without running is handed no
+    // way to reach outside, and the other is.
+    private func supplied(_ one: Case.Supplied, declaring signature: Signature) -> Procedure {
+        let failing = Failing.these(Set(one.failing))
+
+        switch (one.runs, signature.parameters.count) {
+        case (false, 0):
+            return Procedure(
+                signature: signature,
+                implementation: .query(
+                    SuppliedQuery<NoParameters>(answers: one.answers, isolated: one.isolated, failing: failing)
+                )
+            )
+
+        case (false, 1):
+            return Procedure(
+                signature: signature,
+                implementation: .query(
+                    SuppliedQuery<OneName>(answers: one.answers, isolated: one.isolated, failing: failing)
+                )
+            )
+
+        case (false, _):
+            return Procedure(
+                signature: signature,
+                implementation: .query(
+                    SuppliedQuery<TwoNames>(answers: one.answers, isolated: one.isolated, failing: failing)
+                )
+            )
+
+        case (true, 0):
+            return Procedure(
+                signature: signature,
+                implementation: .effect(
+                    SuppliedEffect<NoParameters>(answers: one.answers, isolated: one.isolated, failing: failing)
+                )
+            )
+
+        case (true, 1):
+            return Procedure(
+                signature: signature,
+                implementation: .effect(
+                    SuppliedEffect<OneName>(answers: one.answers, isolated: one.isolated, failing: failing)
+                )
+            )
+
+        case (true, _):
+            return Procedure(
+                signature: signature,
+                implementation: .effect(
+                    SuppliedEffect<TwoNames>(answers: one.answers, isolated: one.isolated, failing: failing)
+                )
+            )
+        }
     }
 
     // How far a case got before it was refused. The stage is part of the answer:
@@ -75,10 +165,10 @@ struct ConformanceTests {
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async -> Case.Stage? {
         let builder = Builder()
-        let module: Module
+        let modules: [Module]
 
         do {
-            module = try Loader().load(sut.program, identity: nil)
+            modules = try linked(sut)
         } catch {
             return .load
         }
@@ -86,7 +176,7 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try builder.build([module] + Module.standard, entry: "entry")
+            image = try builder.build(modules, entry: "entry")
         } catch {
             return .build
         }
@@ -115,7 +205,7 @@ struct Case: Sendable, CustomStringConvertible {
     // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
-    static let version = 2
+    static let version = 3
     static let earliest = 2
 
     static let versionKey: Name = "test"
@@ -131,6 +221,34 @@ struct Case: Sendable, CustomStringConvertible {
         case refuses(Stage)
     }
 
+    // One procedure a case asks for. Its declaration is written the way any
+    // procedure's is, so a runner reads it with the reader it already has; what
+    // is written beside it is what a body would otherwise have shown.
+    //
+    // The names it may declare are `of` and `value`, in that order, because a
+    // procedure the host answers reads its arguments at fixed places and a case
+    // cannot invent a place in someone else's runner.
+    struct Supplied: Sendable {
+        static let ownKeys: Set<Name> = ["answers", "runs", "isolated", "failing"]
+
+        let name: Name
+
+        // The declaration alone, ready for the reader every runner has.
+        let declaration: Value
+
+        // What it answers, whatever it is sent. A case asks about what a
+        // declaration permits, not about arithmetic, so one answer is enough.
+        let answers: Value
+
+        // Whether it reaches outside the run. One that does not is what a
+        // constant may settle from, what a `pure procedure` slot takes, and
+        // what an operand may call.
+        let runs: Bool
+
+        let isolated: Bool
+        let failing: [String]
+    }
+
     // MARK: - Property
     let name: String
 
@@ -141,6 +259,15 @@ struct Case: Sendable, CustomStringConvertible {
     let program: Value
     let arguments: [Name: Value]
     let expectation: Expectation
+
+    // The module this case asks the runner to bring, which is what a host does
+    // for every program: the document names what it needs and the code arrives
+    // at the link. A case cannot write host code, so it writes what the link
+    // needs to know about it, and every runner can build that much.
+    //
+    // Nil where the case asks for none. The declarations are held apart from
+    // the rest of the module because each carries keys a declaration does not.
+    let vocabulary: (module: Value, procedures: [Supplied])?
 
     var description: String { name }
 
@@ -210,6 +337,8 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("a case expects exactly one of `answers` or `refuses`")
         }
 
+        self.vocabulary = try Self.supplied(in: written["vocabulary"])
+
         switch held {
         case "refuses":
             guard case let .string(stage) = expected, let stage = Stage(rawValue: stage) else {
@@ -229,6 +358,67 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Public
+    private static func supplied(
+        in written: Value?
+    ) throws -> (module: Value, procedures: [Supplied])? {
+        guard let written else { return nil }
+
+        guard case let .dictionary(module) = written, case let .dictionary(entries)? = module["procedures"] else {
+            throw ConformanceError(
+                "the vocabulary a case asks for is a module, and a module declares procedures"
+            )
+        }
+
+        let procedures: [Supplied] = try entries.entries.map { entry in
+            guard case let .dictionary(record) = entry.value else {
+                throw ConformanceError("'\(entry.name)' is written the way a procedure is")
+            }
+
+            let declaration = Value.dictionary(
+                Dictionary(
+                    uniqueKeysWithValues: record.entries
+                        .filter { field in !Supplied.ownKeys.contains(field.name) }
+                        .map { field in (field.name, field.value) }
+                )
+            )
+
+            return Supplied(
+                name: entry.name,
+                declaration: declaration,
+                answers: record["answers"] ?? .null,
+                runs: record["runs"] == .bool(true),
+                isolated: record["isolated"] != .bool(false),
+                failing: {
+                    guard case let .array(named)? = record["failing"] else { return [] }
+
+                    return named.compactMap { held in
+                        guard case let .string(type) = held else { return nil }
+
+                        return type
+                    }
+                }()
+            )
+        }
+
+        // The module as the reader takes it: what the case wrote, with the
+        // declarations stripped of the keys that are the host's rather than the
+        // document's, and the two a module always says.
+        let stripped = Value.dictionary(
+            Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
+                .merging([
+                    "warp": .int(1),
+                    "imports": .array([]),
+                    "procedures": .dictionary(
+                        Dictionary(
+                            uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }
+                        )
+                    )
+                ]) { _, made in made }
+        )
+
+        return (module: stripped, procedures: procedures)
+    }
+
     // The cases live beside the specification they belong to rather than inside
     // this package, because they are not this implementation's. The day there
     // is a second implementation they move with `spec/` and this file stays.
@@ -274,5 +464,58 @@ struct ConformanceError: Error, CustomStringConvertible {
 
     init(_ description: String) {
         self.description = description
+    }
+}
+
+
+// The names a procedure a case asks for may declare, in the order a
+// declaration's names stand in. A case cannot invent a place in someone else's
+// runner, so the places are fixed here and the spec says which they are.
+enum OneName: Int, ParameterSet {
+    case of
+
+    var name: Name { "of" }
+
+    var declared: Parameter { Parameter(type: .any) }
+}
+
+enum TwoNames: Int, ParameterSet {
+    case of
+    case value
+
+    var name: Name {
+        switch self {
+        case .of:
+            return "of"
+
+        case .value:
+            return "value"
+        }
+    }
+
+    var declared: Parameter { Parameter(type: .any) }
+}
+
+// A procedure a case asked for that answers without running. What it answers is
+// the case's, and it is the same every time: a case asks what a declaration
+// permits, not what arithmetic does.
+struct SuppliedQuery<Parameters: ParameterSet>: Query {
+    let answers: Value
+    let isolated: Bool
+    let failing: Failing
+
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        answers
+    }
+}
+
+// The same, through the door that reaches outside the run.
+struct SuppliedEffect<Parameters: ParameterSet>: Effect {
+    let answers: Value
+    let isolated: Bool
+    let failing: Failing
+
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        answers
     }
 }
