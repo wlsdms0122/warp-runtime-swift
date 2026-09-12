@@ -30,7 +30,7 @@ public extension Place {
             steps.map { step in
                 switch step {
                 case let .part(part): .key(Self.key(of: part))
-                case let .construct(shape): .landmark(Self.key(of: shape, by: registry))
+                case let .construct(construct): .landmark(Self.key(of: construct, by: registry))
                 default: step
                 }
             },

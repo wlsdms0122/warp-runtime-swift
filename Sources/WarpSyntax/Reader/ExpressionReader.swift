@@ -272,14 +272,14 @@ public struct ExpressionReader: Decodable {
         if record.names.contains("call") {
             guard record.count == 1, let written = record["call"] else {
                 throw ExpressionFormError(
-                    "a record with `call` must be exactly { call: <message> }"
+                    "a record with `call` must be exactly { call: <call> }"
                         + " (found keys: \(record.names))"
                 )
             }
 
             guard let decoder else {
                 throw ExpressionFormError(
-                    "{ call: } cannot be read here. A message may carry bodies,"
+                    "{ call: } cannot be read here. A call may carry bodies,"
                         + " and this surface reads expressions alone"
                 )
             }

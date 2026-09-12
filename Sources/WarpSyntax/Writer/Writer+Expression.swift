@@ -125,7 +125,7 @@ public extension Writer {
             ])
 
         case let .call(call):
-            return .dictionary(["call": try message(of: call)])
+            return .dictionary(["call": try self.call(of: call)])
 
         // Everything left is a construct, and this notation spells constructs
         // in statement position only. Some of them need to be there (a loop and
@@ -134,7 +134,7 @@ public extension Writer {
         // expression grammar is a fixed set and they are not in it.
         default:
             throw WritingError(
-                "\(Self.shape(of: expression)) has no spelling where a value is wanted."
+                "\(Self.construct(of: expression)) has no spelling where a value is wanted."
                     + " This notation writes it as a statement"
             )
         }
@@ -156,7 +156,7 @@ public extension Writer {
     ) throws -> (Name, Value) {
         switch expression {
         case let .call(call):
-            return (try spelling(CallForm.self), try message(of: call))
+            return (try spelling(CallForm.self), try self.call(of: call))
 
         case let .apply(callee, arguments):
             var written: [Name: Value] = ["procedure": try value(of: callee)]
@@ -231,7 +231,7 @@ public extension Writer {
         }
     }
 
-    private func message(of call: Call) throws -> Value {
+    private func call(of call: Call) throws -> Value {
         var written: [Name: Value] = ["procedure": .string(call.selector.spelling)]
 
         if let receiver = call.receiver {
@@ -376,7 +376,7 @@ public extension Writer {
         }
     }
 
-    private static func shape(of expression: Expression) -> String {
+    private static func construct(of expression: Expression) -> String {
         switch expression {
         case .leave: "leaving"
         case .literal: "a literal"
@@ -389,7 +389,7 @@ public extension Writer {
         case .conditional: "a conditional"
         case .loop: "a loop"
         case .attempt: "an attempt"
-        case .call: "a message"
+        case .call: "a call"
         case .cast: "a cast"
         }
     }
