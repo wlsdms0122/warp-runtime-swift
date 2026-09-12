@@ -168,13 +168,8 @@ public struct Builder: Sendable {
             compiling.lay(document, at: origin, rows: rows, answering: answered)
         }
 
-        // Said after every block stands, since a path steps to a declaration
-        // of another document as readily as to one of its own.
-        for (origin, document) in compiled.enumerated() {
-            compiling.steps(
-                origin,
-                to: document.words.compactMapValues { declared in compiling.lowering.rows[declared] }
-            )
+        for origin in compiled.indices {
+            compiling.answering(origin)
         }
 
         return Laid(
@@ -377,20 +372,16 @@ public struct Builder: Sendable {
         let reading = Set(module.variables.keys)
 
         // What the build read off this document's bodies whose declarations
-        // wrote no `returns`, and which declaration each bare spelling its
-        // paths step to reaches.
+        // wrote no `returns`.
         var read: [Name: Shape] = [:]
-        var derived: (words: [Name: Name], contested: [Name: [Name]]) = ([:], [:])
 
         // What this document settled, and what each of its declarations calls.
         var constants: [Name: Value] = [:]
         var variables: [Name: Value] = [:]
         var calls: [Name: [Name]] = [:]
 
-        // One document's reading. What a path may walk to is the document's
-        // own, so the frame is made for the document being read.
         func frame() -> TypeFrame {
-            compiling.frame(stepping: derived.words, contested: derived.contested, reading: reading)
+            compiling.frame(reading: reading)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -416,8 +407,7 @@ public struct Builder: Sendable {
                 ) { _, variable in variable }
         }
 
-        // One declaration resolves once, whichever table asks. The frontier for
-        // a reached body, the derivable tables for a body a path may run.
+        // One declaration resolves once, whichever table asks.
         var resolvedBodies: [Name: (procedure: Procedure, calls: [CallSite])] = [:]
 
         // A declaration, bound and dot-judged: selectors resolve to declared
@@ -525,7 +515,6 @@ public struct Builder: Sendable {
         // else the caller put in the link.
         let numbering = Numbering(
             imports: module.imports,
-            walks: module.walks,
             declared: declared,
             closures: module.closures
         )
@@ -560,19 +549,7 @@ public struct Builder: Sendable {
             variables: boxes
         )
 
-        // Which declarations this document's paths may step to, read off
-        // the rows it just laid down. A row is the declaration lowered,
-        // and whether a path may reach one is a question about the slots
-        // it lowered to.
-        derived = derivable(
-            for: module,
-            declaring: declared,
-            pure: compiling.pure,
-            reaching: compiling.lowering.rows,
-            in: compiling.lowering.table
-        )
-
-        compiling.steps(origin, to: derived.words.compactMapValues { declared in compiling.lowering.rows[declared] })
+        compiling.answering(origin)
 
         // The bodies the documents behind this one lowered, which this one
         // may run.
@@ -617,7 +594,7 @@ public struct Builder: Sendable {
                     symbol: symbol,
                     block: block,
                     environment: opening(symbol.procedure.signature),
-                    sends: sent(in: block, reaching: derived.words)
+                    sends: sent(in: block)
                 )
             },
             reading: frame,
@@ -627,24 +604,6 @@ public struct Builder: Sendable {
                 compiling.read(answer, as: qualified, of: origin)
             }
         )
-
-        // The words this document declared first, and only the words: they
-        // are what every other body's folding executes, so they settle
-        // before anything folds through them. Their own constant paths
-        // meet the stand-ins (a word folding through a word is the circle
-        // the stand-ins refuse) and that is a fact of each word's own text,
-        // the same every link. Nothing else resolves here: checking a
-        // word's calls does not resolve the callees, so whether a
-        // declaration links stays a fact of its text rather than of who
-        // happens to call it. In name order, so which mistake is reported
-        // first is the text's fact too.
-        let stepped = Set(derived.words.values)
-
-        for symbol in holding where stepped.contains(symbol.declared) {
-            try requiring.folding(symbol.place) { _ = try resolved(symbol) }
-        }
-
-        compiling.foldable()
 
         // Every declaration this document makes, in name order, which is
         // the order its rows stand in. What a document says has to hold
@@ -698,7 +657,6 @@ public struct Builder: Sendable {
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
             answers: shaped.answers,
-            words: derived.words,
             numbering: numbering,
             shapeNumbering: shaped.numbering,
             variables: boxes.map { name in (name: name, value: variables[name] ?? .null) }

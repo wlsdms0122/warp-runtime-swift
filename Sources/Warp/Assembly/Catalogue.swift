@@ -23,10 +23,9 @@ import Foundation
 //
 // What a link needs is not what a document discloses. `imports` says what the
 // program can touch, which is the grant a caller reads before it allows
-// anything; a link needs that and also the words a path steps to and the
-// shapes a signature names, neither of which touches anything. So the needs
-// are read off the module here, in three spellings, and each is looked up in
-// the table it belongs to.
+// anything; a link needs that and also the shapes a signature names, which
+// touch nothing. So the needs are read off the module here, in both
+// spellings, and each is looked up in the table it belongs to.
 public struct Catalogue: Sendable {
     // MARK: - Property
     private let modules: [Module]
@@ -34,16 +33,6 @@ public struct Catalogue: Sendable {
     // Which module declares each reference. One table, since every one of
     // them answers the same question and the kind rides on the reference.
     private let declares: [Reference: Int]
-
-    // Which modules declare a word a path could reach, under the last segment
-    // alone, which is how a path names one.
-    //
-    // Narrowed to what a walk could arrive at, since a spelling no path can
-    // reach is a candidate for nothing. Not narrowed further: whether a
-    // written body answers without running is what it calls, so which of two
-    // candidates a path really reaches is the link's to say, and this stands
-    // both.
-    private let walked: [Name: [Int]]
 
     // MARK: - Initializer
     // Two modules declaring one name is refused here, because a table that
@@ -96,27 +85,8 @@ public struct Catalogue: Sendable {
             )
         }
 
-        // Which of them a path could reach, gathered before the tables so the
-        // walked spellings are drawn from the same declarations.
-        let walkable = modules.reduce(into: Set<Name>()) { names, module in
-            names.formUnion(module.walkableWords)
-        }
-
         self.modules = modules
         self.declares = declares
-
-        // Gathered, not claimed. Two candidates for one segment is not a
-        // question this table fails to answer: it is a question whose answer
-        // is the link's, and the link has what it takes to give it. Refusing
-        // here would be that rule copied and made stricter than the original,
-        // which refuses only what really is reachable twice.
-        self.walked = declares
-            .reduce(into: [Name: [Int]]()) { table, entry in
-                guard case let .word(name) = entry.key, walkable.contains(name) else { return }
-
-                table[name.unqualified, default: []].append(entry.value)
-            }
-            .mapValues { positions in positions.sorted() }
     }
 
     // MARK: - Public
@@ -168,10 +138,6 @@ public struct Catalogue: Sendable {
 
                 for used in module.uses.sorted() {
                     bring(declares[used])
-                }
-
-                for name in module.walks.sorted() {
-                    bring(walked[name] ?? [])
                 }
             }
 

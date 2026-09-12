@@ -44,14 +44,15 @@ struct VocabularyTests {
             "parameters": ["names": "array<string>"],
             "body": [
                 ["var": "verdict"],
+                ["let": "head", "value": ["call": ["procedure": "std.collection.first", "of": ["ref": "names"]]]],
                 [
                     "value": ["conditional": [
-                        "when": ["of": ["ref": "names.first"], "longerThan": 3],
+                        "when": ["of": ["ref": "head"], "longerThan": 3],
                         "then": [["set": "verdict", "value": "long"]]
                     ]
                 ]]
             ],
-            "result": ["result": ["ref": "verdict"], "head": ["ref": "names.first"]]
+            "result": ["result": ["ref": "verdict"], "head": ["ref": "head"]]
         ], importing: ["extra.longerThan", "std.collection.first"])
 
         // When
@@ -73,7 +74,6 @@ struct VocabularyTests {
         let sut = try loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
-                ["let": "how_many", "value": ["ref": "names.count"]],
                 ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]
             ]
         ], importing: ["std.collection.count"])
@@ -81,29 +81,6 @@ struct VocabularyTests {
         // When / Then
         #expect(throws: BuildError.self) {
             try Builder().build([sut], entry: entryName)
-        }
-    }
-
-    @Test("two modules declaring one path word is refused, because a path names no module")
-    func ambiguousDerivationRefused() throws {
-        // Given. `${x.count}` writes no module, so there is no spelling that
-        // would tell two of them apart
-        let rival = try Module(
-            procedures: [
-                "rival.count": Procedure(
-                    signature: Signature(of: FirstQuery.self, receiver: .of, returns: .int),
-                    implementation: .query(FirstQuery())
-                )
-            ]
-        )
-        let sut = try loader.loadProcedure([
-            "parameters": ["x": "array<string>"],
-            "body": [["let": "size", "value": ["ref": "x.count"]]]
-        ], importing: ["rival.count", "std.collection.count"])
-
-        // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard + [rival], entry: entryName)
         }
     }
 

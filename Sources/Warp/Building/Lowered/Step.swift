@@ -7,9 +7,8 @@
 
 import Foundation
 
-// A path segment as the run reads it. A word is the row it sends, kept
-// with the spelling the path wrote so a refusal reads back as written, and
-// an index written as a name is the slot path it reads the position from.
+// A path segment as the run reads it. An index written as a name is the slot
+// path it reads the position from.
 enum Step: Sendable {
     // A field of a record whose layout the link proved: the place it stands
     // in, beside the spelling the path wrote. The link reaches this where the
@@ -23,12 +22,11 @@ enum Step: Sendable {
 
     case index(Int, optional: Bool)
     case at(Address, optional: Bool)
-    case word(Int, Name, optional: Bool)
 
     var optional: Bool {
         switch self {
         case let .field(_, _, optional), let .key(_, optional), let .index(_, optional),
-            let .at(_, optional), let .word(_, _, optional):
+            let .at(_, optional):
             return optional
         }
     }

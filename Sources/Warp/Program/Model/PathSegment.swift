@@ -11,11 +11,9 @@ import Foundation
 // syntax (`a.b[0]`, whatever else) into these segments. The runtime never
 // re-parses text, so the surface grammar stays a frontend fact.
 //
-// A dot means what the link decided it means. A document writes `key` segments;
-// the link reads each against the type the walk has reached and rewrites the
-// ones that are sends into `word` segments, so by the time a run reads a path,
-// a `key` is only ever a field and a `word` is only ever a call, and the value
-// that arrives has no say in which.
+// A dot reads a name out of what the walk has reached, and only that. A word is
+// sent with a written call, which spells the declaration it means, so a path
+// never decides which declaration a bare name stands for.
 //
 // Optionality is one axis across every access, not a family of spellings: each
 // segment carries whether the author wrote it optional (`?.` on a name, `?[` on
@@ -23,7 +21,6 @@ import Foundation
 // refuses what an optional one reads as null.
 public enum PathSegment: Sendable, Equatable {
     case key(Name, optional: Bool)
-    case word(Name, optional: Bool)
     case index(Int, optional: Bool)
     case indexRef([PathSegment], optional: Bool)
 }
@@ -32,7 +29,6 @@ public extension PathSegment {
     // The plain spellings. Most segments are written without the mark, and a
     // construction site that says nothing about absence means it.
     static func key(_ name: Name) -> PathSegment { .key(name, optional: false) }
-    static func word(_ name: Name) -> PathSegment { .word(name, optional: false) }
     static func index(_ index: Int) -> PathSegment { .index(index, optional: false) }
     static func indexRef(_ path: [PathSegment]) -> PathSegment { .indexRef(path, optional: false) }
 
@@ -40,8 +36,7 @@ public extension PathSegment {
     // shares, however it is spelled.
     var optional: Bool {
         switch self {
-        case let .key(_, optional), let .word(_, optional),
-            let .index(_, optional), let .indexRef(_, optional):
+        case let .key(_, optional), let .index(_, optional), let .indexRef(_, optional):
             return optional
         }
     }
@@ -55,9 +50,6 @@ public extension PathSegment {
         case let .key(name, _):
             return .key(name)
 
-        case let .word(name, _):
-            return .word(name)
-
         case let .index(index, _):
             return .index(index)
 
@@ -70,7 +62,7 @@ public extension PathSegment {
     // position, not a name.
     var named: Name? {
         switch self {
-        case let .key(name, _), let .word(name, _):
+        case let .key(name, _):
             return name
 
         case .index, .indexRef:
@@ -82,7 +74,7 @@ public extension PathSegment {
     // every sentence that names the spelling asks instead of guessing.
     var mark: String {
         switch self {
-        case .key, .word:
+        case .key:
             return "?."
 
         case .index, .indexRef:
@@ -112,7 +104,6 @@ extension PathSegment {
     enum Landing {
         case field(Name)
         case entry
-        case word(Name)
         case element
     }
 
@@ -144,11 +135,6 @@ extension PathSegment {
             return "\(walked.rendered) writes `\(mark)` for '\(name)',"
                 + " which \(receiver) declares."
                 + " A field the type proves is read with `.`"
-
-        case let .word(name):
-            return "\(walked.rendered) writes `\(mark)` for '\(name)',"
-                + " and \(receiver) is never null."
-                + " A word that always answers is sent with `.`"
         }
     }
 
@@ -166,14 +152,12 @@ extension PathSegment {
 
 public extension Array where Element == PathSegment {
     // The canonical textual form. Diagnostics and encoding share one spelling.
-    // A `word` spells the way the `key` it was rewritten from did: the rewrite
-    // is the link's fact, and the author reads back what they wrote.
     var rendered: String {
         var rendered = ""
 
         for segment in self {
             switch segment {
-            case let .key(key, optional), let .word(key, optional):
+            case let .key(key, optional):
                 rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key.spelling
 
             case let .index(index, optional):

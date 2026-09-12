@@ -8,8 +8,8 @@
 import Foundation
 
 // Writes what the build proved into a body. Every name becomes the slot the
-// frame holds it in, every selector the row it names, every path word the
-// row it sends, every argument the position of its parameter. Nothing is
+// frame holds it in, every selector the row it names, every argument the
+// position of its parameter. Nothing is
 // judged here: a name this walk cannot place is a body the build let through
 // unjudged, and is refused as the build's own mistake.
 //
@@ -20,15 +20,14 @@ struct Lowering {
     // MARK: - Property
     private(set) var table: [Linked]
 
-    // Rows by declared spelling, and by the bare spelling a path word writes.
-    // Read for what a callee takes, which is what judging a call against it
-    // needs. What a body is written with is the document's own numbering.
+    // Rows by declared spelling. Read for what a callee takes, which is what
+    // judging a call against it needs. What a body is written with is the
+    // document's own numbering.
     //
     // Held here and nowhere else while a compile lays its documents down. A
     // second holder of a growing table makes every write to it copy the whole
     // thing.
     private(set) var rows: [Name: Int] = [:]
-    private(set) var words: [[Name: Int]]
 
     // Where each document's calls are numbered from. A body carries these
     // numbers rather than the rows above, so a document lowers the same way
@@ -73,7 +72,6 @@ struct Lowering {
         shapes: ShapeTable
     ) {
         self.table = table
-        self.words = [[Name: Int]](repeating: [:], count: documents)
         self.contractWords = contractWords
         self.shapes = shapes
     }
@@ -90,8 +88,6 @@ struct Lowering {
     ) {
         self.table = carried.table.map { row in Linked(row, in: shapes) }
         self.rows = carried.rows
-        self.words = carried.words
-            + [[Name: Int]](repeating: [:], count: documents - carried.words.count)
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
@@ -104,13 +100,11 @@ struct Lowering {
     init(
         table: [Linked],
         rows: [Name: Int],
-        words: [[Name: Int]],
         numbering: [Int: Numbering],
         shapes: ShapeTable
     ) {
         self.table = table
         self.rows = rows
-        self.words = words
         self.numbering = numbering
         self.contractWords = [:]
         self.shapes = shapes
@@ -156,12 +150,6 @@ struct Lowering {
         shape.standing(into: &stood.types, and: &stood.memberships)
 
         standing[origin] = stood
-    }
-
-    // Which row each bare spelling that document's paths step to reaches.
-    // Read off the rows, so it is said after they stand.
-    mutating func stepping(_ origin: Int, to reached: [Name: Int]) {
-        words[origin] = reached
     }
 
     // Lowers a declaration's body into its row.
@@ -457,9 +445,6 @@ struct Lowering {
 
                 case .index, .at:
                     return reached?.element(in: shapes)
-
-                case let .word(_, spelling, _):
-                    return words[slots.origin][spelling].map { row in table[row].returns } ?? nil
 
                 case .key:
                     return nil
@@ -822,17 +807,6 @@ struct Lowering {
 
                 return .at(address, optional: optional)
 
-            case let .word(name, optional):
-                guard
-                    let row = words[slots.origin][name],
-                    let stands = numbered(slots.origin).word(name)
-                else {
-                    throw BuildError.unjudged("a word '\(name)' in '\(path.rendered)' that no path may reach", at: place)
-                }
-
-                reached = table[row].returns
-
-                return .word(stands, name, optional: optional)
             }
         }
 
@@ -846,7 +820,6 @@ struct Lowering {
         guard case let .row(row) = numbered(slots.origin).row(
             number,
             rows: rows,
-            words: words[slots.origin],
             closures: closureRows[slots.origin] ?? []
         ) else {
             return nil
@@ -859,7 +832,7 @@ struct Lowering {
     // with nothing to number has none, and a call in a body it never held is
     // the link's own mistake.
     private func numbered(_ origin: Int) -> Numbering {
-        numbering[origin] ?? Numbering(imports: [], walks: [], declared: [])
+        numbering[origin] ?? Numbering(imports: [], declared: [])
     }
 
 }

@@ -82,25 +82,6 @@ struct CallTests {
         #expect(answer == .null)
     }
 
-    @Test("a trailing path segment that names no field is a call")
-    func trailingSegmentIsASend() async throws {
-        // Given. `${items.count}` is `obj.count`: the front end cannot know
-        // whether the last segment is a field or a word, so it does not decide
-        let sut = Warp.Expression.reference([.key("items"), .key("count")])
-
-        // When
-        let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe"),
-            walked: ["std.collection.count"],
-            arguments: ["items": .array([.int(1), .int(2), .int(3)])],
-            signature: Signature(parameters: ["items": Parameter(type: .array(.any))])
-        )
-
-        // Then
-        #expect(answer == .int(3))
-    }
-
     @Test("two declarations of one spelling are refused at link")
     func oneNameIsDeclaredOnce() throws {
         // Given / When / Then, which one runs must never be a link-order

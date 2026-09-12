@@ -56,12 +56,10 @@ struct Folding {
         ).shapes
         var table: [Linked] = []
         var rows: [Name: Int] = [:]
-        var words: [Name: Int] = [:]
 
         for (origin, module) in modules.enumerated() {
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 rows[name] = table.count
-                words[name.unqualified] = table.count
                 table.append(
                     Linked.standing(
                         label: name,
@@ -83,7 +81,7 @@ struct Folding {
         self.init(
             constants: bindings,
             origin: 0,
-            in: .unanswerable(table, rows: rows, words: words),
+            in: .unanswerable(table, rows: rows),
             shapes: shapes
         )
     }
@@ -140,7 +138,6 @@ struct Folding {
         var lowering = Lowering(
             table: answered.table,
             rows: answered.rows,
-            words: answered.words,
             numbering: [origin: numbering],
             shapes: shapes
         )

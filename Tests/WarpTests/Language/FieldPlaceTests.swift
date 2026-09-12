@@ -308,9 +308,6 @@ extension Step: Equatable {
         case let (.at(mine, myMark), .at(theirs, theirMark)):
             return mine.slot == theirs.slot && mine.steps == theirs.steps && myMark == theirMark
 
-        case let (.word(mine, myName, myMark), .word(theirs, theirName, theirMark)):
-            return mine == theirs && myName == theirName && myMark == theirMark
-
         default:
             return false
         }

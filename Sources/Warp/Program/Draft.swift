@@ -27,15 +27,6 @@ public struct Draft: Sendable {
     // copy instead of naming every field to keep it.
     public private(set) var imports: Set<Name>?
 
-    // Which declarations the bare steps in this document's paths mean. What
-    // the text says it uses is read off it, and a path names only the last
-    // segment, so that half of the reading cannot be finished from the text.
-    // Whoever built the draft finishes it here.
-    //
-    // Read only where the document said nothing about its imports: a document
-    // that states them states all of them.
-    public let walked: Set<Name>
-
     public let types: [Name: TypeExpression]
     public let constraints: [Name: [TypeExpression]]
 
@@ -70,7 +61,6 @@ public struct Draft: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        walked: Set<Name> = [],
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
@@ -81,7 +71,6 @@ public struct Draft: Sendable {
     ) {
         self.description = description
         self.imports = imports
-        self.walked = walked
         self.types = types
         self.constraints = constraints
         self.contracts = contracts
@@ -92,19 +81,15 @@ public struct Draft: Sendable {
     }
 
     // The words this declares and does not itself declare a procedure for.
-    //
-    // Sent, not reached. A path reaches words too (`x.count` is one) but only
-    // ones that answer without running, since that is the whole of what makes a
-    // path safe to walk. So this is everything the program can do that touches
-    // anything, and a caller reading it is reading the bounds of what it is
-    // about to allow.
+    // Everything the program can do that touches anything, and a caller
+    // reading it is reading the bounds of what it is about to allow.
     public var sends: Set<Name> {
         read().sends
     }
 
     // The same document with the imports it turned out to have. A module
-    // settles them from what the text sends and walks, and a writing of that
-    // module takes the settled list.
+    // settles them from what the text sends, and a writing of that module
+    // takes the settled list.
     public func resolving(_ imports: Set<Name>) -> Draft {
         var held = self
         held.imports = imports
@@ -166,35 +151,6 @@ public struct Draft: Sendable {
         read().declaredShapes
     }
 
-    // The words a path could reach, as far as this document decides it. A
-    // path sends to a receiver and reads an answer back, so a declaration
-    // without a receiver, or answering `never`, or stating that it runs, is
-    // reachable by no walk.
-    //
-    // The rest of the rule is the link's. Whether a written body answers
-    // without running is what it calls, and whether the other things a
-    // declaration asks for are required is read off the shapes. So this is
-    // every candidate and never a verdict: a spelling here may still turn out
-    // unreachable, and none that belongs is missing.
-    //
-    // A contract's word is not one. A path reaches a declaration, and the
-    // spelling that reaches a contract's word is the contract's own.
-    var walkableWords: Set<Name> {
-        Set(
-            procedures
-                .filter { _, procedure in
-                    guard procedure.implementation.isNativelyPure != false else { return false }
-
-                    let signature = procedure.signature
-
-                    guard let receiver = signature.receiver else { return false }
-
-                    return signature.parameters[receiver] != nil && signature.returns != .never
-                }
-                .keys
-        )
-    }
-
     // The shapes this names and does not itself declare.
     var mentions: Set<Name> {
         read().mentions
@@ -219,27 +175,6 @@ public struct Draft: Sendable {
         // What this declares, by the name a link resolves to it.
         let declaredWords: Set<Name>
         let declaredShapes: Set<Name>
-
-        // The bare spellings a path in here steps to.
-        //
-        // A path reaches a word by its last segment alone, so what it needs is
-        // spelled differently from what a call needs and is looked up in a
-        // different table. `sends` does not hold these, and rightly: it
-        // discloses what the program can touch, and a path reaches only words
-        // that answer without running.
-        //
-        // Wider than the truth on purpose. Whether `user.count` steps to a
-        // field or to a word is settled by the type the step stands on, which
-        // is a fact of the link and not of this text, so every step that could
-        // be a word is one here. A reader of this list may look for a word
-        // nobody needed; one narrowed by guessing would miss a word somebody
-        // did.
-        //
-        // What this document declares is not taken out, unlike the sends. A
-        // bare step is answered from every declaration in the link rather than
-        // from the document holding the path, so a document declaring a word
-        // by that spelling has not thereby answered its own step.
-        let walks: Set<Name>
 
         // How many closure literals each declaration wrote, at whatever depth.
         // A closure inside a closure counts with the rest: what the number
@@ -277,28 +212,8 @@ public struct Draft: Sendable {
                 procedure.implementation.nativeImports?.map(\.selector) ?? []
             }
         )
-        var stepped: Set<Name> = []
         var named: Set<Name> = []
         var counts: [Name: Int] = [:]
-
-        // The head names something in scope rather than a step onto it, so
-        // walking a path is walking everything after its head. An index's own
-        // path is read the same way the path holding it is, head and all, so
-        // it is walked by this same rule rather than by a second one.
-        func step(_ path: [PathSegment]) {
-            for segment in path.dropFirst() {
-                switch segment {
-                case let .key(name, _), let .word(name, _):
-                    stepped.insert(name)
-
-                case let .indexRef(inner, _):
-                    step(inner)
-
-                case .index:
-                    break
-                }
-            }
-        }
 
         func fold(_ name: Name, _ held: some Burying) {
             var written = 0
@@ -314,9 +229,6 @@ public struct Draft: Sendable {
                     switch expression {
                     case let .call(call):
                         sent.insert(call.selector)
-
-                    case let .reference(path):
-                        step(path)
 
                     case let .cast(_, type, _):
                         named.formUnion(type.mentions)
@@ -380,7 +292,6 @@ public struct Draft: Sendable {
             mentions: named.subtracting(declaredShapes),
             declaredWords: declaredWords,
             declaredShapes: declaredShapes,
-            walks: stepped,
             closures: counts
         )
     }

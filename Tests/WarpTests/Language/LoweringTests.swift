@@ -376,24 +376,22 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a word folding through a written word is refused whichever is declared first")
-    func aWordFoldingThroughAWordIsRefusedInAnyOrder() throws {
-        // Given. `app.zeta` reads a constant through `alpha`, a written word
-        // declared before it in name order; while the words settle every
-        // written body stands as its refusal, so the order is not the text's
+    @Test("a constant folding through a written word is refused whichever is declared first")
+    func aConstantFoldingThroughAWordIsRefusedInAnyOrder() throws {
+        // Given. `J` settles by calling `app.alpha`, a written word; while the
+        // constants settle every written body stands as its refusal, so the
+        // order is not the text's
         let module = try Module(
-            constants: ["K": .literal(.int(1))],
+            constants: [
+                "K": .literal(.int(1)),
+                "J": .call(Call(receiver: reference("K"), selector: "app.alpha"))
+            ],
             procedures: [
                 "entry": Procedure(body: [], result: .literal(.null)),
                 "app.alpha": Procedure(
                     signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("of")])
-                ),
-                "app.zeta": Procedure(
-                    signature: Signature(receiver: "of", parameters: ["of": Parameter(type: .int)], returns: .int),
-                    body: [],
-                    result: .reference([.key("K"), .key("alpha")])
                 )
             ]
         )

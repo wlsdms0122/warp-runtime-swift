@@ -134,31 +134,6 @@ struct NullableTests {
         }
     }
 
-    @Test("a word call through the optional dot unwraps the nullable")
-    func anOptionalWordOverANullable() async throws {
-        // Given. Text or null; `?.count` counts the text that arrived and
-        // answers null for the null
-        let sut = try Module(
-            walked: ["std.collection.count"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "word": Parameter(type: .nullable(.string), default: .null)
-                        ],
-                        returns: .nullable(.int)
-                    ),
-                    body: [],
-                    result: .reference([.key("word"), .key("count", optional: true)])
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(try await run(sut, arguments: ["word": .string("abc")]) == .int(3))
-        #expect(try await run(sut) == .null)
-    }
-
     @Test("a nullable parameter takes null without leaning on a default")
     func aNullableParameterTakesNullByType() async throws {
         // Given. `T?` says null is a value, so the boundary lets it in the way
@@ -201,10 +176,10 @@ struct NullableTests {
         }
     }
 
-    @Test("a written call may leave a nullable argument out, and a path may reach a word with one")
+    @Test("a written call may leave a nullable argument out")
     func mustBeGivenIsOneAnswer() async throws {
-        // Given. "must this be written" is one question: the call check, the
-        // boundary and path reachability all read the type's null
+        // Given. "must this be written" is one question: the call check and
+        // the boundary both read the type's null
         let sut = try Module(
             procedures: [
                 "labelled": Procedure(
@@ -233,9 +208,7 @@ struct NullableTests {
                             ))
                         )
                     ],
-                    // And the path reaches the same word: a `T?` slot needs
-                    // nothing written, so the word stays derivable.
-                    result: .reference([.key("called"), .key("labelled")])
+                    result: .reference([.key("called")])
                 )
             ]
         )
@@ -263,26 +236,6 @@ struct NullableTests {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("does not declare")
-        }
-
-        // And a `?.` that could not have read past anything refuses on a
-        // constant exactly as on any other name.
-        let needless = try Module(
-            walked: ["std.collection.count"],
-            constants: ["word": .literal(.string("hey"))],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(),
-                    body: [],
-                    result: .reference([.key("word"), .key("count", optional: true)])
-                )
-            ]
-        )
-
-        #expect {
-            try builder.build([needless] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("never null")
         }
     }
 
@@ -391,27 +344,6 @@ struct NullableTests {
             try builder.build([onAField] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("read with `.`")
-        }
-
-        // A word's receiver is proven non-null by the time the call is
-        // judged, so the same rule holds on the word surface.
-        let onAWord = try Module(
-            walked: ["std.collection.count"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: ["word": Parameter(type: .string)]
-                    ),
-                    body: [],
-                    result: .reference([.key("word"), .key("count", optional: true)])
-                )
-            ]
-        )
-
-        #expect {
-            try builder.build([onAWord] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("never null")
         }
     }
 
@@ -641,13 +573,12 @@ struct IndexReferenceJudgmentTests {
         }
     }
 
-    @Test("a body's constant path runs a written word, resolved")
+    @Test("a body's constant-headed call runs a written word, resolved")
     func aBodyFoldsThroughAWrittenWord() async throws {
         // Given. The constants are settled and the words resolved by the time a
-        // body folds, so a constant-headed path may run a written word: the
+        // body folds, so a constant-headed call may run a written word: the
         // circle the settling refuses is the constants' own
         let sut = try Module(
-            walked: ["std.collection.count"],
             constants: ["greeting": .literal(.string("hi"))],
             procedures: [
                 "shout": Procedure(
@@ -657,12 +588,12 @@ struct IndexReferenceJudgmentTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("of"), .key("count")])
+                    result: .call(Call(receiver: reference("of"), selector: "std.collection.count"))
                 ),
                 entryName: Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("greeting"), .key("shout")])
+                    result: .call(Call(receiver: reference("greeting"), selector: "shout"))
                 )
             ]
         )
@@ -674,7 +605,7 @@ struct IndexReferenceJudgmentTests {
 
     @Test("whether a body links is its own text's fact, whoever calls it")
     func linkabilityDoesNotDependOnCallers() async throws {
-        // Given. `helper` folds a constant path through a written word; a word
+        // Given. `helper` folds a constant-headed call through a written word; a word
         // (`loud`) that happens to call `helper` must not change what `helper`
         // means, because nothing about `helper`'s text changed
         let procedures: [Name: Procedure] = [
@@ -685,12 +616,12 @@ struct IndexReferenceJudgmentTests {
                     returns: .int
                 ),
                 body: [],
-                result: .reference([.key("of"), .key("count")])
+                result: .call(Call(receiver: reference("of"), selector: "std.collection.count"))
             ),
             "helper": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
-                result: .reference([.key("greeting"), .key("shout")])
+                result: .call(Call(receiver: reference("greeting"), selector: "shout"))
             ),
             "loud": Procedure(
                 signature: Signature(
@@ -709,7 +640,6 @@ struct IndexReferenceJudgmentTests {
         ]
 
         let sut = try Module(
-            walked: ["std.collection.count"],
             constants: ["greeting": .literal(.string("hi"))],
             procedures: procedures
         )
@@ -722,7 +652,6 @@ struct IndexReferenceJudgmentTests {
 
         #expect(
             try await run(try Module(
-                walked: ["std.collection.count"],
                 constants: ["greeting": .literal(.string("hi"))],
                 procedures: without
             )) == .int(2)
@@ -830,39 +759,6 @@ struct IndexReferenceJudgmentTests {
                     "names": .array([.int(1)])
                 ]
             ) == .string("b")
-        )
-    }
-
-    @Test("a word behind an index reference is judged and rewritten")
-    func aWordBehindAnIndexReferenceIsJudged() async throws {
-        // Given. `items[i].count` must mean what `items[0].count` means
-        let sut = try Module(
-            walked: ["std.collection.count"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "items": Parameter(type: .array(.string)),
-                            "i": Parameter(type: .int)
-                        ],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .reference([
-                        .key("items"),
-                        .indexRef([.key("i")]),
-                        .key("count")
-                    ])
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(
-            try await run(
-                sut,
-                arguments: ["items": .array([.string("abc")]), "i": .int(0)]
-            ) == .int(3)
         )
     }
 
@@ -1003,7 +899,6 @@ struct ParameterReceiverTests {
         // record carrying `count`, and the field wins because nothing here ever
         // judged the dot a word
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1036,7 +931,6 @@ struct ParameterReceiverTests {
         // shape the call decides, the way the parameter is, so the dot after it
         // stands as written and the call's value answers it
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1080,7 +974,6 @@ struct ParameterReceiverTests {
         // along with it. `some N: Comparable` proving `of.inner` comparable on
         // nothing but where it was read from.
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1141,7 +1034,6 @@ struct ParameterReceiverTests {
         // reason an author could see.
         func module(marking: Bool) throws -> Module {
             try Module(
-                walked: ["std.collection.count"],
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -1203,7 +1095,6 @@ struct ParameterReceiverTests {
         // was refused. The root is the parameter, so a name in between changes
         // nothing about where the walk landed.
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1252,7 +1143,6 @@ struct ParameterReceiverTests {
         // once, so they hold one shape, and the same field of it read through
         // either name is the same field.
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(

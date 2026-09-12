@@ -58,12 +58,6 @@ public final class Linked: Sendable {
     // so a run that is handed one asks whether it was made by the same link.
     let table: ShapeTable
 
-    // Whether a path segment may reach this: it takes a receiver, so there is
-    // something for the walk to send it to, and it needs nothing else. A row
-    // that answers `never` is reachable by neither: a path reads a value, and
-    // this one leaves instead of producing one.
-    let isDerivable: Bool
-
     // The rows this row's word sends, in the places the word names them at.
     // Empty for a body, whose sends are calls its own code carries.
     let sends: [Int]
@@ -96,7 +90,6 @@ public final class Linked: Sendable {
         self.returns = returns
         self.failing = failing
         self.table = table
-        self.isDerivable = slots.derivable(receiver: receiverPosition, returns: returns, in: table)
         self.sends = sends
         self.implementation = implementation
     }
@@ -119,7 +112,6 @@ public final class Linked: Sendable {
         self.returns = row.returns
         self.failing = row.failing
         self.table = table
-        self.isDerivable = row.isDerivable
         self.sends = row.sends
         self.implementation = row.implementation
     }
@@ -139,7 +131,6 @@ public final class Linked: Sendable {
         self.returns = row.returns
         self.failing = row.failing
         self.table = row.table
-        self.isDerivable = row.isDerivable
         self.sends = sends
         self.implementation = implementation
     }
@@ -193,27 +184,6 @@ public final class Linked: Sendable {
         skipping: (Int) -> Bool = { _ in false }
     ) throws -> [Value?] {
         try signature.settle(given, over: slots, offered: offered, skipping: skipping, in: table)
-    }
-
-    // This row reached by a path segment: the receiver and the arguments as
-    // its own boundary settles them, or nil where the row declines the shape
-    // it was sent to. Declining reads as absence, the same as a field never
-    // set, so the refusal is the answer rather than something to raise. A row
-    // that took the shape and then refused did not decline it, and that
-    // refusal is raised where the row is called.
-    func reaching(_ value: Value) -> (receiver: Value, arguments: [Value?])? {
-        guard
-            let receiver = try? settling(receiver: value),
-            let arguments = try? settle(
-                Array(repeating: nil, count: slots.count),
-                offered: false,
-                skipping: { position in position == self.receiverPosition }
-            )
-        else {
-            return nil
-        }
-
-        return (receiver, arguments)
     }
 
     // The receiver settled against the slot at this row's receiver

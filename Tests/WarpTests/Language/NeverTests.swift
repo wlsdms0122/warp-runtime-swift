@@ -221,11 +221,10 @@ struct NeverTests {
         #expect(try await run(sut) == .int(7))
     }
 
-    @Test("a body that ends by leaving still carries its judged dots")
-    func aLeavingBodyKeepsItsJudgedDots() async throws {
-        // Given. `items.count` is a word call the build spells into the path,
-        // and the spelling must reach the image whether the body finishes or
-        // leaves
+    @Test("a body that ends by leaving still carries its judged calls")
+    func aLeavingBodyKeepsItsJudgedCalls() async throws {
+        // Given. The call the build lowered must reach the image whether the
+        // body finishes or leaves
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])
@@ -234,7 +233,7 @@ struct NeverTests {
                     expression: .leave(
                         Leave(
                             reach: .procedure,
-                            value: .reference([.key("items"), .key("count")])
+                            value: .call(Call(receiver: reference("items"), selector: "std.collection.count"))
                         )
                     )
                 )
@@ -242,7 +241,7 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect(try await run(sut, walked: ["std.collection.count"]) == .int(2))
+        #expect(try await run(sut) == .int(2))
     }
 
     @Test("a loop whose rounds never finish still answers its result")

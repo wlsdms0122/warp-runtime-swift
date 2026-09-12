@@ -152,7 +152,10 @@ struct WriterTests {
                                         "value": ["call": [
                                             "of": ["ref": "walked"],
                                             "procedure": "std.math.plus",
-                                            "arguments": ["value": ["ref": "names[sized.index].count"]]
+                                            "arguments": ["value": ["call": [
+                                                "procedure": "std.collection.count",
+                                                "of": ["ref": "names[sized.index]"]
+                                            ]]]
                                         ]
                                     ]]
                                 ]

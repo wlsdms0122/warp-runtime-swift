@@ -98,34 +98,6 @@ struct CatalogueTests {
         #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
 
-    @Test("a word a path steps to brings the module that declares it")
-    func aWalkedWordBringsItsModule() throws {
-        // Given. Nothing is called: the body walks a path, and the last step
-        // is a word. A path writes only the last segment, so which declaration
-        // it means is what the document says.
-        let program = try Module(
-            walked: ["std.collection.count"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: ["items": Parameter(type: .array(.int))],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .reference([.key("items"), .key("count")])
-                )
-            ]
-        )
-
-        #expect(program.imports == ["std.collection.count"])
-
-        // When.
-        let closed = try Catalogue(Module.standard).closing([program])
-
-        // Then. The module declaring the word came, and the build is satisfied.
-        #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
-    }
-
     @Test("a caller cannot supply a granted word to a granted module")
     func aWantedModuleDoesNotStandInForTheCatalogue() throws {
         // Given. `supplier` sends a word the catalogue declares, and the
@@ -191,67 +163,6 @@ struct CatalogueTests {
         let theirs = try Module(types: ["Age": .string], procedures: [:])
 
         #expect(throws: CatalogueError.self) { try Catalogue([mine, theirs]) }
-    }
-
-    @Test("a name inside an index is read as the name it is, not as a step")
-    func anIndexNameIsNotAStep() throws {
-        // Given. `items[count]` names a parameter inside the brackets. The
-        // path steps onto nothing called `count`.
-        let program = try Module(
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "items": Parameter(type: .array(.int)),
-                            "count": Parameter(type: .int)
-                        ],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .reference([
-                        .key("items", optional: false),
-                        .indexRef([.key("count", optional: false)], optional: false)
-                    ])
-                )
-            ]
-        )
-
-        #expect(program.walks.isEmpty)
-        #expect(try Catalogue(Module.standard).closing([program]).count == 1)
-    }
-
-    @Test("a spelling no walk could arrive at is a candidate for nothing")
-    func anUnreachableSpellingIsNotACandidate() throws {
-        // Given. `holder` declares a word by a bare spelling the program
-        // walks, but declares no receiver, so no path can reach it.
-        let holder = try Module(
-            procedures: [
-                "lib.count": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(0))
-                )
-            ]
-        )
-        let program = try Module(
-            walked: ["std.collection.count"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: ["items": Parameter(type: .array(.int))],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .reference([.key("items"), .key("count")])
-                )
-            ]
-        )
-
-        // When / Then. It is not brought, and the word that can be reached is.
-        let closed = try Catalogue([holder] + Module.standard).closing([program])
-
-        #expect(closed.count == 3)
-        #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
     }
 
     @Test("the standard vocabulary is a catalogue")

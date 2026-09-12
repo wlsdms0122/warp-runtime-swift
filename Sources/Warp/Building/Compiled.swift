@@ -71,12 +71,6 @@ public struct Compiled: Sendable, Declaring {
     // without reading the body again.
     let answers: [Name: Shape]
 
-    // Which declaration each bare spelling a path in here steps to
-    // reaches. A path names only its last segment, and a document steps
-    // only to what it declared or named, so the reading is this
-    // document's.
-    let words: [Name: Name]
-
     // Where this document's lowered bodies number their calls and their
     // shapes from. A body carries the document's own numbers, so this is
     // what a link reads to turn them into rows.

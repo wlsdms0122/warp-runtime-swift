@@ -427,7 +427,7 @@ extension Builder {
                 // leave the one rule saying `[` may read what `.` may not.
                 if current == .any {
                     let reach = switch segment {
-                    case .key, .word: "reads a dot on"
+                    case .key: "reads a dot on"
                     case .index, .indexRef: "indexes into"
                     }
 
@@ -601,28 +601,6 @@ extension Builder {
                         + " and only an array is indexed"
                 )
 
-            // A dot on a shape with fields is a read, always. A word on one is
-            // written as a call. A field the shape does not declare is a defect
-            // the text shows, refused here rather than found at run, and so is
-            // a `?.` on one it does declare: the type proves the field is
-            // there, so the spelling that expects absence says nothing, unless
-            // it just read past the receiver's own null.
-            case let (.key(key, _), .record(fields)):
-                guard let field = fields[key] else {
-                    return .refused(
-                        "\(walked.rendered) names '\(key)',"
-                            + " which \(current.rendered(in: frame.shapes)) does not declare."
-                            + " A word is sent with a written call, and data"
-                            + " past the declaration is read by declaring it,"
-                            + " or through `dictionary<any>`"
-                    )
-                }
-
-                if let refusal = needless(.field(key)) { return refusal }
-
-                current = field.fieldUnwrapped
-                resolved.append(segment)
-
             // A dictionary holds entries of one shape under names that are
             // data, so which names are there is a run's fact. `?.` reads an
             // absent one as null, and the plain spelling refuses it at run. The
@@ -637,23 +615,27 @@ extension Builder {
                 current = entry
                 resolved.append(segment)
 
-            // A dot on a shape without fields is a word call, judged by the one
-            // machine every word call goes through, and the judgment is spelled
-            // into the path, so the run sends without asking. The same `?.`
-            // rule as a record's field: the receiver here is proven non-null,
-            // so an optional spelling that unwrapped nothing claims an absence
-            // the types rule out.
-            case let (.key(key, _), _), let (.word(key, _), _):
-                if let refusal = needless(.word(key)) { return refusal }
-
-                switch reached(key, on: current, walked: walked, with: frame, at: place, writing: requiring) {
-                case let .answers(answered):
-                    current = answered
-                    resolved.append(.word(key, optional: segment.optional))
-
-                case let .refused(reason):
-                    return .refused(reason)
+            // A dot reads a name the shape declares, so a shape that declares
+            // none has nothing here to read and a field a record does not
+            // declare is a defect the text shows, refused here rather than
+            // found at run. So is a `?.` on one it does declare: the type
+            // proves the field is there, so the spelling that expects absence
+            // says nothing, unless it just read past the receiver's own null.
+            case let (.key(key, _), _):
+                guard case let .record(fields) = current, let field = fields[key] else {
+                    return .refused(
+                        "\(walked.rendered) names '\(key)',"
+                            + " which \(current.rendered(in: frame.shapes)) does not declare."
+                            + " A word is sent with a written call, and data"
+                            + " past the declaration is read by declaring it,"
+                            + " or through `dictionary<any>`"
+                    )
                 }
+
+                if let refusal = needless(.field(key)) { return refusal }
+
+                current = field.fieldUnwrapped
+                resolved.append(segment)
             }
         }
 
@@ -806,94 +788,6 @@ extension Builder {
 
         default:
             return .nullable(type)
-        }
-    }
-
-    // A word call written as a path. The receiver fills the word's one slot, so
-    // the call is judged exactly as a written call is (reachability,
-    // acceptance, then the judgment every call shares) and the walk goes on
-    // with what the word answers, the receiver's reading filled in.
-    private enum WordReach {
-        case answers(Shape)
-        case refused(String)
-    }
-
-    private func reached(
-        _ key: Name,
-        on current: Shape,
-        walked: [PathSegment],
-        with frame: TypeFrame,
-        at place: Place,
-        writing requiring: Requiring?
-    ) -> WordReach {
-        // Two declarations of this document's reach answer this spelling, and
-        // a path segment names no module, so nothing written here says which
-        // one is meant. The fix is on a declaration, so the refusal names them
-        // all.
-        if let declarations = frame.contested[key] {
-            return .refused(
-                "\(walked.rendered) sends '\(key)', which is declared by more than one"
-                    + " module this document may walk to:"
-                    + " \(declarations.map(\.spelling).joined(separator: ", "))."
-                    + " A path segment names no module, so there is no spelling that"
-                    + " would tell them apart"
-            )
-        }
-
-        guard let signature = frame.signature(reachedBy: key) else {
-            return .refused(
-                "\(walked.rendered) sends '\(key)' to \(current.rendered(in: frame.shapes)),"
-                    + " which has no such field and which no word by that"
-                    + " name is declared for"
-            )
-        }
-
-        // A name a walk may reach declares its receiver. That is what made it
-        // reachable. A signature here without one is the frame disagreeing with
-        // itself, said rather than passed over.
-        let slots = frame.slots(reachedBy: key)
-
-        guard
-            let name = signature.receiver,
-            let receiver = slots.first(where: { slot in slot.name == name })
-        else {
-            return .refused(
-                "\(walked.rendered) sends '\(key)', which names no parameter"
-                    + " for a path's receiver to fill"
-            )
-        }
-
-        guard receiver.shape.accepts(current, in: frame.shapes) else {
-            return .refused(
-                "\(walked.rendered) sends '\(key)' to \(current.rendered(in: frame.shapes)),"
-                    + " where \(receiver.shape.rendered(in: frame.shapes)) is declared"
-            )
-        }
-
-        var readings: [Name: Shape] = [:]
-        var disagreeing: [Name: Shape] = [:]
-
-        receiver.shape.binding(
-            against: current,
-            into: &readings,
-            disagreeing: &disagreeing,
-            in: frame.shapes
-        )
-
-        switch judged(
-            signature,
-            over: slots,
-            answering: frame.answer(reachedBy: key),
-            filledWith: Bound(readings: readings, disagreeing: disagreeing),
-            in: frame.shapes,
-            requiring: requiring,
-            at: place
-        ) {
-        case let .refusal(reason):
-            return .refused("\(walked.rendered) sends '\(key)': \(reason)")
-
-        case let .fits(_, returns):
-            return .answers(returns ?? .any)
         }
     }
 
@@ -2615,7 +2509,7 @@ extension Builder {
                         + " which has none"
                 )
 
-            case (.index, _), (.indexRef, _), (.word, _):
+            case (.index, _), (.indexRef, _):
                 return .refused(
                     "\(walked.rendered) writes an element into \(current.rendered(in: frame.shapes)),"
                         + " and only an array is written by position"

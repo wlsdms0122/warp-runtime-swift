@@ -39,17 +39,8 @@ public struct Module: Sendable {
     // spellings its paths step to. Read where the module is made, since a link
     // asks each module it is handed for them and the text they are read off
     // does not move.
-    //
-    // A path's steps are not among the uses: a step names a word by its last
-    // segment alone, so it is looked up by a different key and answered by
-    // more than one document.
     let sends: Set<Name>
     let uses: Set<Reference>
-    let walks: Set<Name>
-
-    // The words a path could reach among the ones this declares, as far as
-    // this document decides it.
-    let walkableWords: Set<Name>
 
     // How many closure literals each declaration wrote. A closure's number is
     // the document's fact, so it is settled with the document.
@@ -134,7 +125,6 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        walked: Set<Name> = [],
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
@@ -148,7 +138,6 @@ public struct Module: Sendable {
             Draft(
                 description: description,
                 imports: imports,
-                walked: walked,
                 types: types,
                 constraints: constraints,
                 contracts: contracts,
@@ -170,11 +159,9 @@ public struct Module: Sendable {
         let reading = draft.read()
 
         self.sends = reading.sends
-        self.imports = draft.imports ?? reading.sends.union(draft.walked)
+        self.imports = draft.imports ?? reading.sends
         self.uses = Set(reading.sends.map(Reference.word))
             .union(reading.mentions.map(Reference.shape))
-        self.walks = reading.walks
-        self.walkableWords = draft.walkableWords
         self.closures = reading.closures
         self.declaredWords = reading.declaredWords
         self.declaredShapes = reading.declaredShapes

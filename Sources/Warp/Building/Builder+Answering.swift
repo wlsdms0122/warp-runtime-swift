@@ -103,43 +103,14 @@ extension Builder {
         }
     }
 
-    // Which declarations a body may read an answer from. Every selector it
-    // sends, and every name a path writes that a walk could reach a word by. A
-    // path sends words too, and a word's answer is an answer like any other.
-    //
-    // Read off the one walk `Expression` owns, and read wide: a name gathered
-    // that turns out not to be a call only ever adds an edge, and an edge
-    // only ever turns a reading into `any`. Missing one would do the
-    // opposite.
-    func sent(in block: Block, reaching words: [Name: Name]) -> Set<Name> {
-        var sent: Set<Name> = []
+    // Which declarations a body may read an answer from: every selector it
+    // sends. Read off the one walk `Expression` owns.
+    func sent(in block: Block) -> Set<Name> {
+        block.buried.reduce(into: Set<Name>()) { sent, expression in
+            guard case let .call(call) = expression else { return }
 
-        func gather(_ path: [PathSegment]) {
-            for segment in path {
-                if let name = segment.named, let word = words[name] {
-                    sent.insert(word)
-                }
-
-                guard case let .indexRef(inner, _) = segment else { continue }
-
-                gather(inner)
-            }
+            sent.insert(call.selector)
         }
-
-        for expression in block.buried {
-            switch expression {
-            case let .call(call):
-                sent.insert(call.selector)
-
-            case let .reference(path):
-                gather(path)
-
-            default:
-                break
-            }
-        }
-
-        return sent
     }
 
 }

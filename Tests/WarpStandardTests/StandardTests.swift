@@ -714,48 +714,6 @@ struct StandardTests {
         #expect(try await run(sut, arguments: ["n": .int(30)])["result"] == .string("large"))
     }
 
-    @Test("a word that needs nothing is reachable from a path")
-    func nilaryWordsAreReachableFromPaths() async throws {
-        // Given
-        let sut = try Module(
-            walked: ["std.collection.first", "std.collection.last", "std.collection.reversed", "std.text.joined", "std.text.uppercased"],
-            procedures: [
-                "entry": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            "items": Parameter(type: .array(.string)),
-                            "name": Parameter(type: .string)
-                        ]
-                    ),
-                    body: [],
-                    result: .record([
-                            "back": .reference([.key("items"), .key("reversed")]),
-                            "head": .reference([.key("items"), .key("first")]),
-                            "loud": .reference([.key("name"), .key("uppercased")]),
-                            "tail": .reference([.key("items"), .key("last")]),
-                            "together": .reference([.key("items"), .key("joined")])
-                        ])
-                )
-            ]
-        )
-
-        // When
-        let outputs = try await run(
-            sut,
-            arguments: [
-                "name": .string("warp"),
-                "items": .array([.string("a"), .string("b")])
-            ]
-        )
-
-        // Then
-        #expect(outputs["loud"] == .string("WARP"))
-        #expect(outputs["head"] == .string("a"))
-        #expect(outputs["tail"] == .string("b"))
-        #expect(outputs["back"] == .array([.string("b"), .string("a")]))
-        #expect(outputs["together"] == .string("ab"))
-    }
-
     @Test("text words compose the way a document writes them")
     func textWordsCompose() async throws {
         // Given

@@ -21,9 +21,8 @@ import Foundation
 // The names each side needs of the other are what makes the ring, and neither
 // can be the one that goes first.
 //
-// What a module needs is read the way a link reads it: the words it calls, the
-// bare spellings its paths step to, and the shapes its signatures name. A name
-// nothing here declares is left alone: the link refuses it, and refusing here
+// What a module needs is read the way a link reads it: the words it calls and
+// the shapes its signatures name. A name nothing here declares is left alone: the link refuses it, and refusing here
 // would be a second copy of a rule that has to be right once.
 //
 // A name two modules declare is answered by whichever declared it first, which
@@ -48,16 +47,9 @@ public struct ModuleGraph: Sendable {
         // Which module declares each reference. One table, since every one of
         // them answers the same question; the kind rides on the reference, so
         // a word and a shape spelled alike stay two rows.
-        //
-        // A path's step is the exception and keeps its own table: it names a
-        // word by its last segment alone, so the key is different and the
-        // answer is a list.
         var declares: [Reference: Int] = [:]
-        var walked: [Name: [Int]] = [:]
 
         for (position, module) in modules.enumerated() {
-            let walkable = module.walkableWords
-
             // In no order. Which module answers a reference is the order the
             // caller handed the modules over, and inside one module no two of
             // these are the same reference, so nothing here reads an order.
@@ -68,10 +60,6 @@ public struct ModuleGraph: Sendable {
                 guard declares[reference] == nil else { continue }
 
                 declares[reference] = position
-
-                guard case let .word(name) = reference, walkable.contains(name) else { continue }
-
-                walked[name.unqualified, default: []].append(position)
             }
         }
 
@@ -88,12 +76,6 @@ public struct ModuleGraph: Sendable {
 
             for used in module.uses.sorted() {
                 need(used.name, of: declares[used])
-            }
-
-            for name in module.walks.sorted() {
-                for declaring in walked[name] ?? [] {
-                    need(name, of: declaring)
-                }
             }
 
             return reached

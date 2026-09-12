@@ -35,18 +35,6 @@ struct TypeFrame: Sendable {
     // table and by one language.
     var shapes: ShapeTable { types.shapes }
 
-    // Which declaration a path reaches under each bare spelling. The gate as
-    // well as the reading: a spelling is in here when a path of this document
-    // may step to it, and what it takes and answers is then read the way a
-    // selector's is, so the two spellings never disagree about one
-    // declaration.
-    let words: [Name: Name]
-
-    // The bare spellings two declarations of this document's reach answer, and
-    // which two. None of them is in `words`: a segment written with one means
-    // neither, and it is said where the segment stands.
-    let contested: [Name: [Name]]
-
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
     // decides whether it fits a slot asking for purity.
@@ -73,22 +61,10 @@ struct TypeFrame: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // The whole declaration, for the one call a path makes, and only where a
-    // path may make it. There is no way to ask what a name answers without
-    // asking whether a path may call it. A softer question was how a word
-    // nobody may reach got a type.
-    func signature(reachedBy name: Name) -> Signature? {
-        words[name].flatMap { declared in signature(of: declared) }
-    }
-
     // What a call is written against: the whole signature rather than what it
     // answers, because a declaration with a type parameter in it does not
     // answer anything until a call site fills it, and what fills it is read
     // from the arguments.
-    //
-    // By the resolved selector, and by that alone: the bare spelling a path
-    // writes is `signature(reachedBy:)`, because the two spellings ask two
-    // different questions.
     func signature(of selector: Name) -> Signature? {
         declared(selector)?.signature
     }
@@ -114,15 +90,6 @@ struct TypeFrame: Sendable {
         if let row = rows[selector] { return linked[row].returns }
 
         return contractWords[selector]?.answers
-    }
-
-    // The same two, under the spelling a path reaches a word by.
-    func slots(reachedBy name: Name) -> [Slot] {
-        words[name].map { declared in slots(of: declared) } ?? []
-    }
-
-    func answer(reachedBy name: Name) -> Shape? {
-        words[name].flatMap { declared in answer(of: declared) }
     }
 
     // A named type stands for what it was declared as. Inference walks into

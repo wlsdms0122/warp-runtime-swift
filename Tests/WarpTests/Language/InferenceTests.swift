@@ -351,7 +351,6 @@ struct InferenceTests {
         // Given. `${names.count}` is `count` sent to `names`, and `count`
         // declares that it answers an int
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -684,11 +683,10 @@ struct InferenceTests {
         }
     }
 
-    @Test("a path naming a word of the shape it reached is not refused")
-    func aWordReachedFromAPathIsAllowed() throws {
+    @Test("a call on the shape it reached is not refused")
+    func aWordCalledOnAReadingIsAllowed() throws {
         // Given
         let sut = try Module(
-            walked: ["std.collection.count"],
             procedures: [
                 "entry": Procedure(
                     signature: Signature(
@@ -697,7 +695,9 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("names"), .key("count")])
+                        Statement(
+                            binding: .constant("said"),
+                            expression: .call(Call(receiver: reference("names"), selector: "std.collection.count"))
                         )
                     ]
                 )

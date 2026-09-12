@@ -21,9 +21,7 @@ struct Carried: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
-    // Which row each bare spelling a document's paths step to reaches, and
-    // what each number of its own reaches with it.
-    let words: [[Name: Int]]
+    // Which row each number a document gave reaches.
     let named: [Int: [Int?]]
 
     // Where each document's calls are numbered from, which rows its closures
@@ -43,7 +41,6 @@ struct Carried: Sendable {
     static let none = Carried(
         table: [],
         rows: [:],
-        words: [],
         named: [:],
         numbering: [:],
         closureRows: [:],

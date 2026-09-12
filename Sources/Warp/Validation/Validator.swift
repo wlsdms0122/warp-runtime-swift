@@ -120,15 +120,9 @@ public struct Validator: Sendable {
     private func declared(_ module: Module) throws {
         let sends = module.sends
 
-        // A word a path steps to is named by its last segment alone, and which
-        // spellings a path could be stepping to is not settled until the types
-        // are. So an import stands on either of two grounds: the module calls
-        // it, or a path in it steps to that last segment.
-        let walked = module.walks
-
         let undisclosed = sends.subtracting(module.imports).sorted().map(\.spelling)
         let unspent = module.imports
-            .filter { name in !sends.contains(name) && !walked.contains(name.unqualified) }
+            .filter { name in !sends.contains(name) }
             .sorted()
             .map(\.spelling)
 
@@ -136,13 +130,13 @@ public struct Validator: Sendable {
 
         // The two differences and not the two lists. They are different
         // mistakes with different fixes (a word sent and not listed is the
-        // grant the list existed to disclose, and a word listed and neither
-        // called nor walked asks for one the program has no use for) and a
+        // grant the list existed to disclose, and a word listed and not called
+        // asks for one the program has no use for) and a
         // module sending thirty words would otherwise leave an author diffing
         // two of them by eye to find the one that moved.
         let said = [
             undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
-            unspent.isEmpty ? nil : "imports \(unspent), which it neither calls nor walks to"
+            unspent.isEmpty ? nil : "imports \(unspent), which it does not call"
         ]
 
         throw ValidationError(

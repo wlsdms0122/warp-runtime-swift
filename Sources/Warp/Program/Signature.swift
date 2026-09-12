@@ -136,25 +136,6 @@ public struct Signature: Sendable, Equatable {
         TypeExpression.procedure(self).accepts(.procedure(given), in: types)
     }
 
-    // Whether a path segment may reach this. It takes a receiver, so there is
-    // something for the walk to send it to, and it needs nothing else, so
-    // `x.count` supplies everything it asks for.
-    //
-    // A declaration that answers `never` is reachable by neither: a path reads a
-    // value, and this one leaves instead of producing one. Letting it in would
-    // put the word that must not be missable where a walk decides on its own
-    // whether to call it.
-    public func isDerivable(in types: TypeTable) -> Bool {
-        let table = types.shapes
-        let slots = lowered(in: table)
-
-        return slots.derivable(
-            receiver: slots.position(of: receiver),
-            returns: returns?.lowered(in: table),
-            in: table
-        )
-    }
-
     // The expression a call hands under a parameter's name: the argument
     // written under it, or the receiver where the parameter is the receiver
     // and the call wrote one in front. One rule, asked wherever a call is

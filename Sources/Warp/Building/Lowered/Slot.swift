@@ -146,21 +146,6 @@ extension Array where Element == Slot {
     func position(of receiver: Name?) -> Int? {
         receiver.flatMap { name in firstIndex { slot in slot.name == name } }
     }
-
-    // Whether a path segment may reach a declaration with these slots: it
-    // takes a receiver, so there is something for the walk to send it to,
-    // and it needs nothing else, so `x.count` supplies everything it asks
-    // for. One that answers `never` is reachable by neither: a path reads a
-    // value, and this one leaves instead of producing one. The link and the
-    // run ask this one rule.
-    func derivable(receiver position: Int?, returns: Shape?, in table: ShapeTable) -> Bool {
-        guard let position else { return false }
-        guard returns != .never else { return false }
-
-        return enumerated().allSatisfy { index, slot in
-            index == position || !slot.mustBeGiven(in: table)
-        }
-    }
 }
 
 extension Parameter {

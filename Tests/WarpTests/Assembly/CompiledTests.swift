@@ -374,213 +374,6 @@ struct CompiledTests {
         }
     }
 
-    // A document declaring two words one contract could be answered by, which
-    // claims both itself. Both are spelled for a type and the contract's word,
-    // so a bare segment reaches two declarations.
-    private func holding() throws -> Module {
-        try Module(
-            types: [
-                "bank.Account": .int,
-                "bank.Card": .string
-            ],
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            claiming: [
-                "bank.Account": ["app.Describable"],
-                "bank.Card": ["app.Describable"]
-            ],
-            procedures: [
-                entryName: Procedure(body: [], result: .literal(.null)),
-                "bank.anAccount": Procedure(
-                    signature: Signature(returns: .named("bank.Account")),
-                    body: [],
-                    result: .literal(.int(7))
-                ),
-                "bank.Account.describe": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
-                        returns: .string
-                    ),
-                    body: [],
-                    result: .literal(.string("an account"))
-                ),
-                "bank.Card.describe": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Card"))],
-                        returns: .string
-                    ),
-                    body: [],
-                    result: .literal(.string("a card"))
-                )
-            ]
-        )
-    }
-
-    // A document writing the bare segment both of those answer.
-    private func stepping() throws -> Module {
-        try Module(
-            walked: ["bank.Account.describe", "bank.Card.describe"],
-            procedures: [
-                "app.told": Procedure(
-                    signature: Signature(returns: .string),
-                    body: [
-                        Statement(
-                            binding: .constant("account"),
-                            expression: .call(Call(selector: "bank.anAccount"))
-                        )
-                    ],
-                    result: .reference([.key("account"), .key("describe")])
-                )
-            ]
-        )
-    }
-
-    @Test("what a bare segment reaches is not decided by any claim")
-    func aClaimDecidesNothingAboutWhatAPathReaches() throws {
-        // Given. The document claims both types itself, and a second one laid
-        // beside it claims the same pairs. Nothing here names that second one.
-        let sut = try holding()
-        let claiming = try Module(
-            claiming: [
-                "bank.Account": ["app.Describable"],
-                "bank.Card": ["app.Describable"]
-            ],
-            procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
-        )
-
-        // When / Then. Two declarations a bare segment could not tell apart,
-        // and no such segment is written, so there is nothing to answer for.
-        // Which claims stand where says nothing about that.
-        #expect(throws: Never.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
-        }
-        #expect(throws: Never.self) {
-            try builder.build([sut, claiming] + Module.standard, entry: entryName)
-        }
-    }
-
-    @Test("a segment reading a field is not the segment two declarations answer")
-    func aFieldReadIsNotAContestedWord() async throws {
-        // Given. The same two declarations, and a body reading a record field
-        // spelled the same. Which of the two a segment is reading is settled
-        // by the shape under it, so the text alone does not tell them apart.
-        let sut = try Module(
-            types: [
-                "bank.Account": .int,
-                "bank.Card": .string
-            ],
-            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            claiming: [
-                "bank.Account": ["app.Describable"],
-                "bank.Card": ["app.Describable"]
-            ],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(returns: .string),
-                    body: [
-                        Statement(
-                            binding: .constant("row"),
-                            expression: .record(["describe": .literal(.string("a field"))])
-                        )
-                    ],
-                    result: .reference([.key("row"), .key("describe")])
-                ),
-                "bank.Account.describe": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Account"))],
-                        returns: .string
-                    ),
-                    body: [],
-                    result: .literal(.string("an account"))
-                ),
-                "bank.Card.describe": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .named("bank.Card"))],
-                        returns: .string
-                    ),
-                    body: [],
-                    result: .literal(.string("a card"))
-                )
-            ]
-        )
-
-        // When / Then. The field is there, so the segment reads it.
-        #expect(try await run(sut) == .string("a field"))
-    }
-
-    @Test("a bare segment two declarations answer is refused where it is written")
-    func aContestedSegmentIsRefusedWhereItIsWritten() throws {
-        // Given. The same declarations, and a document writing the segment.
-        let sut = [try holding(), try stepping()]
-
-        // When / Then. The refusal names both declarations, and the claims
-        // standing beside them neither make it nor take it away.
-        #expect {
-            try builder.build(sut + Module.standard, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("may walk to: bank.Account.describe, bank.Card.describe")
-        }
-    }
-
-    @Test("a declaration a document only calls by its whole name still contests a segment")
-    func aQualifiedCallContestsABareSegment() throws {
-        // Given. Two words sharing a bare spelling, one the document said it
-        // steps to and one it only calls by the whole name. What a path may
-        // reach is what the document declared or announced, and a call is an
-        // announcement.
-        let one = try Module(
-            procedures: [
-                "a.counted": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .int)],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-        let other = try Module(
-            procedures: [
-                "b.counted": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: ["of": Parameter(type: .string)],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: .literal(.int(2))
-                )
-            ]
-        )
-        let sut = try Module(
-            walked: ["a.counted"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(parameters: ["of": Parameter(type: .int)], returns: .int),
-                    body: [
-                        Statement(
-                            binding: .constant("other"),
-                            expression: .call(Call(receiver: .literal(.string("x")), selector: "b.counted"))
-                        )
-                    ],
-                    result: reference("of", "counted")
-                )
-            ]
-        )
-
-        // When / Then. Both are in reach, so the segment says neither.
-        #expect {
-            try builder.build([one, other, sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            "\(error)".contains("may walk to: a.counted, b.counted")
-        }
-    }
-
     @Test("a claim is answered by the whole list, not by what a document was compiled against")
     func aClaimIsBackedWhereTheListIsWhole() throws {
         // Given. The claim and the declaration that answers it in two
@@ -851,7 +644,6 @@ struct CompiledTests {
             #expect(one.document == other.document)
             #expect(one.declared == other.declared)
             #expect(one.calls == other.calls)
-            #expect(one.words == other.words)
             #expect(one.answers == other.answers)
             #expect(one.shapeNumbering.types == other.shapeNumbering.types)
             #expect(one.shapeNumbering.memberships == other.shapeNumbering.memberships)
@@ -892,10 +684,10 @@ struct CompiledTests {
         }
     }
 
-    @Test("a path steps to a word of another document and reads what its body answers")
+    @Test("a path reads into what another document's body answers")
     func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
         // Given. A document declaring a word that writes no `returns`, and
-        // another whose path steps to it and then into what it answers.
+        // another calling it and then reading into what it answers.
         let answering = try Module(
             types: ["a.Held": .record(["count": .int])],
             procedures: [
@@ -914,22 +706,25 @@ struct CompiledTests {
             ]
         )
         let walking = try Module(
-            walked: ["a.first"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
                         parameters: ["items": Parameter(type: .array(.int))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .reference([.key("items"), .key("first"), .key("count")])
+                    body: [
+                        Statement(
+                            binding: .constant("held"),
+                            expression: .call(Call(receiver: reference("items"), selector: "a.first"))
+                        )
+                    ],
+                    result: .reference([.key("held"), .key("count")])
                 )
             ]
         )
 
-        // When / Then. The step into `count` is judged against what the word's
-        // body answers, which is a shape only the other document's reading
-        // knows.
+        // When / Then. The step into `count` is judged against what the call
+        // answers, which is a shape only the other document's reading knows.
         #expect(
             try await run(
                 [walking, answering],
@@ -1047,7 +842,6 @@ struct CompiledTests {
                 ]
             ),
             try Module(
-                walked: ["std.collection.last"],
                 types: [
                     "bank.Account": .record(["balance": .int]),
                     "bank.Card": .record(["last": .string])

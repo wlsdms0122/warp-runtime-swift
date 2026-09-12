@@ -20,9 +20,7 @@ enum Resolving: Sendable {
     case rows
 
     // What each document's numbers stand for, by the document and then by the
-    // number. A number the link found no row for stands as nothing: a document
-    // numbers every bare spelling its paths step to, and a step onto a field
-    // reaches no declaration, so a numbering holds names no body ever calls.
+    // number. A number the link found no row for stands as nothing.
     case documents([Int: [Int?]])
 
     // MARK: - Public

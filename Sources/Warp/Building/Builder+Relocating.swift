@@ -20,25 +20,19 @@ struct Answered: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
-    // By the document that reads them: what a bare spelling reaches is that
-    // document's reading, since a path may walk only to what its document
-    // named.
-    let words: [[Name: Int]]
-
     private let numbers: Numbers
 
     // MARK: - Initializer
-    private init(table: [Linked], rows: [Name: Int], words: [[Name: Int]], numbers: Numbers) {
+    private init(table: [Linked], rows: [Name: Int], numbers: Numbers) {
         self.table = table
         self.rows = rows
-        self.words = words
         self.numbers = numbers
     }
 
     // A table holding nothing a link could answer: rows built from native
     // words alone, which carry no lowered body and send nothing.
-    static func unanswerable(_ table: [Linked], rows: [Name: Int], words: [Name: Int]) -> Answered {
-        Answered(table: table, rows: rows, words: [words], numbers: .rows)
+    static func unanswerable(_ table: [Linked], rows: [Name: Int]) -> Answered {
+        Answered(table: table, rows: rows, numbers: .rows)
     }
 
     // A table as compiling left it, and where each document numbers from. The
@@ -48,7 +42,6 @@ struct Answered: Sendable {
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
-        words: [[Name: Int]],
         numbering: [Int: Numbering],
         named: [Int: [Int?]],
         closures: [Int: [Int]]
@@ -56,18 +49,14 @@ struct Answered: Sendable {
         Answered(
             table: table,
             rows: rows,
-            words: words,
             numbers: .documents(numbering, named: named, closures: closures)
         )
     }
 
     // Which row each of one document's numbers stands for, worked out once per
-    // number rather than once per body standing on one. A name this link has
-    // no row for stands as nothing rather than as a refusal: a document
-    // numbers every bare spelling its paths step to, and a step onto a field
-    // reaches no declaration.
-    static func answering(_ numbering: Numbering, rows: [Name: Int], words: [Name: Int]) -> [Int?] {
-        numbering.answers(rows: rows, words: words).map { answer -> Int? in
+    // number rather than once per body standing on one.
+    static func answering(_ numbering: Numbering, rows: [Name: Int]) -> [Int?] {
+        numbering.answers(rows: rows).map { answer -> Int? in
             guard case let .row(row) = answer else { return nil }
 
             return row
@@ -76,8 +65,8 @@ struct Answered: Sendable {
 
     // Made by `Relocating` alone, which is what keeps a table nobody answered
     // from standing as one whose numbers are rows.
-    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], words: [[Name: Int]]) -> Answered {
-        Answered(table: table, rows: rows, words: words, numbers: .rows)
+    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int]) -> Answered {
+        Answered(table: table, rows: rows, numbers: .rows)
     }
 
     // MARK: - Public
@@ -88,13 +77,12 @@ struct Answered: Sendable {
     func holding(_ table: [Linked], closures: [Int: [Int]]) -> Answered {
         switch numbers {
         case .rows:
-            return Answered(table: table, rows: rows, words: words, numbers: numbers)
+            return Answered(table: table, rows: rows, numbers: numbers)
 
         case let .documents(numbering, named, _):
             return Answered(
                 table: table,
                 rows: rows,
-                words: words,
                 numbers: .documents(numbering, named: named, closures: closures)
             )
         }
@@ -130,7 +118,7 @@ struct Answered: Sendable {
     func numbering(of origin: Int) -> Numbering? {
         switch numbers {
         case .rows:
-            return Numbering(rows: rows, words: words.indices.contains(origin) ? words[origin] : [:])
+            return Numbering(rows: rows)
 
         case let .documents(numbering, _, _):
             return numbering[origin]
@@ -169,7 +157,6 @@ struct Relocating {
     private let table: [Linked]
 
     private let rows: [Name: Int]
-    private let words: [[Name: Int]]
     private let numbering: [Numbering]
 
     // What each document's shape numbers turned out to be in this link.
@@ -192,7 +179,6 @@ struct Relocating {
     init(
         table: [Linked],
         rows: [Name: Int],
-        words: [[Name: Int]],
         numbering: [Numbering],
         shapeNumbering: [ShapeNumbering],
         contractWords: [Name: ContractWord],
@@ -202,7 +188,6 @@ struct Relocating {
         self.closures = closures
         self.table = table
         self.rows = rows
-        self.words = words
         self.numbering = numbering
         self.shapeRows = shapeNumbering.map { held in held.rows(in: shapes) }
         self.contractWords = contractWords
@@ -226,7 +211,6 @@ struct Relocating {
                 )
             },
             rows: assembled.rows,
-            words: assembled.words,
             numbering: assembled.numbering,
             shapeNumbering: assembled.shapeNumbering,
             contractWords: ContractWord.table(in: types),
@@ -239,11 +223,7 @@ struct Relocating {
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
     func linked() throws -> Answered {
-        Answered.relocated(
-            try table.map { row in try relocated(row) },
-            rows: rows,
-            words: words
-        )
+        Answered.relocated(try table.map { row in try relocated(row) }, rows: rows)
     }
 
     // What each document's variables start a run holding, read as this link's
@@ -365,7 +345,6 @@ struct Relocating {
         switch numbering[standing.origin].row(
             number,
             rows: rows,
-            words: words[standing.origin],
             closures: closures[standing.origin]
         ) {
         case let .row(row):
@@ -374,12 +353,6 @@ struct Relocating {
         case let .unfound(.sent(declared)):
             throw BuildError(
                 "'\(declared)' is called here, and no module in this link declares it",
-                at: standing.place
-            )
-
-        case let .unfound(.walked(spelling)):
-            throw BuildError(
-                "'\(spelling)' is walked here, and no path in this link may reach it",
                 at: standing.place
             )
 
@@ -555,15 +528,12 @@ struct Relocating {
         try standing.shapes.read(shape, at: standing.place)
     }
 
-    // A path with the rows its word steps stand for.
+    // A path with the rows the paths inside its index steps stand for.
     private func relocated(_ address: Address, in standing: Standing) throws -> Address {
         Address(
             slot: address.slot,
             steps: try address.steps.map { step in
                 switch step {
-                case let .word(number, spelling, optional):
-                    return .word(try row(number, in: standing), spelling, optional: optional)
-
                 case let .at(inner, optional):
                     return .at(try relocated(inner, in: standing), optional: optional)
 

@@ -249,18 +249,17 @@ struct RangeTests {
         }
     }
 
-    @Test("a dot on a range is a word call, the way it is on an int")
-    func aDotOnARangeSendsAWord() async throws {
-        // Given. A range's value has no fields; the dot reaches vocabulary
+    @Test("a range fills a word's receiver, the way an int does")
+    func aRangeFillsAWordsReceiver() async throws {
+        // Given. A range's value stands where the int it narrows stands
         let sut = try Module(
-            walked: ["std.math.absolute"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
                         parameters: ["level": Parameter(type: .ranged(.whole(from: -10, to: .through(10))))]
                     ),
                     body: [],
-                    result: reference("level", "absolute")
+                    result: .call(Call(receiver: reference("level"), selector: "std.math.absolute"))
                 )
             ]
         )

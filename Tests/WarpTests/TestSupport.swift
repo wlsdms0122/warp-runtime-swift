@@ -127,14 +127,12 @@ func run(
 func run(
     _ procedure: Procedure,
     beside others: [Name: Procedure] = [:],
-    walked: Set<Name> = [],
     arguments: [Name: Value] = [:],
     vocabulary: [Module] = Module.standard,
 ) async throws -> Value {
     try await run(
         [
             try Module(
-                walked: walked,
                 procedures: others.merging([entryName: procedure]) { _, new in new }
             )
         ],
@@ -149,7 +147,6 @@ func answer(
     of body: [Statement],
     result: Warp.Expression,
     beside others: [Name: Procedure] = [:],
-    walked: Set<Name> = [],
     arguments: [Name: Value] = [:],
     signature: Signature = Signature(),
     vocabulary: [Module] = Module.standard,
@@ -157,7 +154,6 @@ func answer(
     try await run(
         Procedure(signature: signature, body: body, result: result),
         beside: others,
-        walked: walked,
         arguments: arguments,
         vocabulary: vocabulary,
     )

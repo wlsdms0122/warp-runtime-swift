@@ -1052,12 +1052,10 @@ public struct Executor: Sendable {
         case unfit(String)
     }
 
-    // A dot means what its spelling says: the link judged every one and wrote
-    // the judgment into the step. A key reads a field and nothing else; a
-    // word sends and nothing else; the value that arrives decides neither.
-    // What may genuinely be absent, a missing entry or a null on the way, is
-    // read as null only where the author spelled `?.`, and refused everywhere
-    // else.
+    // A dot reads a name and nothing else, and the link judged every one and
+    // wrote the judgment into the step. What may genuinely be absent, a missing
+    // entry or a null on the way, is read as null only where the author spelled
+    // `?.`, and refused everywhere else.
     private func lookup(_ address: Address, in activation: Activation) -> Walk {
         let (slot, steps) = (address.slot, address.steps)
         var current: Value
@@ -1157,21 +1155,6 @@ public struct Executor: Sendable {
                 }
 
                 read = .found(next)
-
-            case let .word(number, key, _):
-                do {
-                    let sent = linked[try row(number, from: activation.origin)]
-
-                    guard let derived = try derive(sent, from: current) else {
-                        return .unfit(
-                            "\(walked().rendered) sends '\(key)', which does not take \(current.type)"
-                        )
-                    }
-
-                    read = .found(derived)
-                } catch {
-                    return .unfit("\(walked().rendered): \(error)")
-                }
             }
 
             switch read {
@@ -1204,21 +1187,6 @@ public struct Executor: Sendable {
         return .found(elements[elements.index(elements.startIndex, offsetBy: index)])
     }
 
-    // A path segment that names no field is a message: `items.count` sends
-    // `count` to what the path has reached so far. Only words that ask for
-    // nothing are reachable this way, because dot notation supplies no
-    // arguments, so the arguments a word does declare arrive from its own
-    // defaults, and the receiver is checked against what it declared.
-    //
-    // A word that declines the shape it was sent to reads as absence, the same
-    // as a field never set. A word that took the shape and then refused did not
-    // decline it, so that refusal is answered rather than swallowed.
-    private func derive(_ callee: Linked, from value: Value) throws -> Value? {
-        guard callee.isDerivable, let reached = callee.reaching(value) else { return nil }
-
-        return try answer(callee, for: reached.receiver, with: Settled(values: reached.arguments))
-    }
-
     // Every index reference read to a position: a write lands on one
     // position, and a hold is extended by positions.
     private func positioned(_ address: Address, in activation: Activation) throws -> [PathSegment] {
@@ -1239,9 +1207,6 @@ public struct Executor: Sendable {
                 }
 
                 return .index(index, optional: optional)
-
-            case let .word(_, name, optional):
-                return .word(name, optional: optional)
             }
         }
     }
@@ -1265,9 +1230,6 @@ public struct Executor: Sendable {
 
         case let .at(inner, optional):
             return .indexRef(spelled(inner, in: activation), optional: optional)
-
-        case let .word(_, name, optional):
-            return .word(name, optional: optional)
         }
     }
 }

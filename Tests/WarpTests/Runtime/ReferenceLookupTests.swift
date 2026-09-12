@@ -72,13 +72,6 @@ struct ReferenceLookupTests {
         }
     }
 
-    @Test("count derives where the build spelled a word")
-    func countDerivesFromWordSegments() {
-        #expect(sut.lookup([.key("items"), .word("count")]) == .found(.int(3)))
-        #expect(sut.lookup([.key("name"), .word("count")]) == .found(.int(4)))
-        #expect(sut.lookup([.key("step"), .word("count")]) == .found(.int(2)))
-    }
-
     @Test("a key segment reads data alone, and never derives")
     func keySegmentDoesNotDerive() {
         // Then. The value has no say: a `key` the build left as a read is a

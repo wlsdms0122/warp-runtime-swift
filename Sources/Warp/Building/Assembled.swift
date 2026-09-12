@@ -27,10 +27,6 @@ struct Assembled: Sendable {
     // Every declared spelling, by row.
     let rows: [Name: Int]
 
-    // Every bare spelling a path may step to, by the row it reaches, and
-    // by the document that steps to it.
-    let words: [[Name: Int]]
-
     // Which row each document's closures took, in the order that document
     // numbers them. A closure is a row like any other and no declared
     // spelling reaches it, so it stands here rather than in `rows`.
@@ -96,9 +92,6 @@ struct Assembled: Sendable {
         self.documents = documents.map(\.document)
         self.origins = origins
         self.rows = rows
-        self.words = documents.map { document in
-            document.words.compactMapValues { declared in rows[declared] }
-        }
         self.closures = closures
         self.calls = calls
         self.numbering = documents.map(\.numbering)

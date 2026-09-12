@@ -115,7 +115,6 @@ struct Compiling {
         Carried(
             table: lowering.table,
             rows: lowering.rows,
-            words: lowering.words,
             named: named,
             numbering: lowering.numbering,
             closureRows: lowering.closureRows,
@@ -180,17 +179,13 @@ struct Compiling {
         )
     }
 
-    // Which row each bare spelling this document's paths step to reaches, and
-    // what each number of its own reaches with it. A number of its own reaches
-    // a name it declared or one behind it, so the answer never moves after
-    // this.
-    mutating func steps(_ origin: Int, to reached: [Name: Int]) {
-        lowering.stepping(origin, to: reached)
-
+    // Which row each number this document gave stands for. A number of its own
+    // reaches a name it declared or one behind it, so the answer never moves
+    // after this.
+    mutating func answering(_ origin: Int) {
         named[origin] = Answered.answering(
-            lowering.numbering[origin] ?? Numbering(imports: [], walks: [], declared: []),
-            rows: lowering.rows,
-            words: lowering.words[origin]
+            lowering.numbering[origin] ?? Numbering(imports: [], declared: []),
+            rows: lowering.rows
         )
     }
 
@@ -218,7 +213,6 @@ struct Compiling {
         Answered.documents(
             foldingRows,
             rows: lowering.rows,
-            words: lowering.words,
             numbering: lowering.numbering,
             named: named,
             closures: lowering.closureRows
@@ -238,18 +232,12 @@ struct Compiling {
 
     // One document's reading. What a path may walk to is the document's own,
     // so a frame is made for the document whose body is being read.
-    func frame(
-        stepping words: [Name: Name],
-        contested: [Name: [Name]],
-        reading variables: Set<Name>
-    ) -> TypeFrame {
+    func frame(reading variables: Set<Name>) -> TypeFrame {
         TypeFrame(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,
             answers: answers,
-            words: words,
-            contested: contested,
             pure: pure,
             isolated: isolated,
             failing: failing,

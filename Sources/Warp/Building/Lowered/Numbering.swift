@@ -18,14 +18,11 @@ import Foundation
 // instead. Folding a constant lowers an expression and runs it there and then,
 // and code that never leaves has no link afterwards to answer it.
 struct Numbering: Sendable {
-    // One name a document looks for, and which table answers it. A call names
-    // a declaration by its declared spelling; a path names a word by its last
-    // step alone, and the two are looked up in different tables. A document's
-    // own declaration is looked for the same way an imported one is: the
-    // number is the document's, and which row it is stays the link's.
+    // One name a document looks for, by the declared spelling it writes. A
+    // document's own declaration is looked for the same way an imported one
+    // is: the number is the document's, and which row it is stays the link's.
     enum Reference: Sendable {
         case sent(Name)
-        case walked(Name)
 
         // A closure literal the document wrote, by which one it is. Lifting one
         // out leaves a procedure no declared spelling reaches, so the link
@@ -44,7 +41,6 @@ struct Numbering: Sendable {
     // MARK: - Property
     private let space: Space
     private let called: [Name: Int]
-    private let walked: [Name: Int]
 
     // Where each declaration's closures start, by the declaration. A closure
     // is the nth one its declaration wrote, and the declarations run in name
@@ -57,20 +53,18 @@ struct Numbering: Sendable {
     private let opening: Int
 
     // MARK: - Initializer
-    // A document's own. The imports, the bare spellings its paths step to, its
-    // own declarations, and the closures those declarations wrote, each in name
-    // order: the numbering is the document's fact and a set has no order to
-    // lend it.
+    // A document's own. The imports, its own declarations, and the closures
+    // those declarations wrote, each in name order: the numbering is the
+    // document's fact and a set has no order to lend it.
     //
     // `closures` says how many each of the document's names wrote, which is
     // read off the document rather than counted while lowering. Lowering runs the words
     // before the rest, and which declarations are words is a fact of the graph,
     // so a number counted in that order would move when an unrelated module
     // joins the link.
-    init(imports: Set<Name>, walks: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {
+    init(imports: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {
         let sent = imports.sorted()
-        let stepped = walks.sorted()
-        let opening = sent.count + stepped.count + declared.count
+        let opening = sent.count + declared.count
 
         // In name order, over whatever wrote one. A procedure, a constant and
         // a variable are all names the document declared, and a name holds one
@@ -87,22 +81,19 @@ struct Numbering: Sendable {
 
         space = .document(
             sent.map(Reference.sent)
-                + stepped.map(Reference.walked)
                 + declared.map(Reference.sent)
                 + (0..<written).map(Reference.closure)
         )
         called = Self.placed(sent, from: 0)
-            .merging(Self.placed(declared, from: sent.count + stepped.count)) { _, own in own }
-        walked = Self.placed(stepped, from: sent.count)
+            .merging(Self.placed(declared, from: sent.count)) { _, own in own }
         closing = starting
         self.opening = opening
     }
 
     // A table's own. The number a body carries here is the row.
-    init(rows: [Name: Int], words: [Name: Int]) {
+    init(rows: [Name: Int]) {
         space = .table
         called = rows
-        walked = words
         closing = [:]
         opening = 0
     }
@@ -128,7 +119,7 @@ struct Numbering: Sendable {
 
     // Which row of a link the number stands for, read from the tables that
     // link built.
-    func row(_ number: Int, rows: [Name: Int], words: [Name: Int], closures: [Int]) -> Answer {
+    func row(_ number: Int, rows: [Name: Int], closures: [Int]) -> Answer {
         guard case let .document(references) = space else { return .row(number) }
         guard references.indices.contains(number) else { return .unnumbered }
 
@@ -137,9 +128,6 @@ struct Numbering: Sendable {
         switch reference {
         case let .sent(declared):
             return rows[declared].map(Answer.row) ?? .unfound(reference)
-
-        case let .walked(spelling):
-            return words[spelling].map(Answer.row) ?? .unfound(reference)
 
         case let .closure(written):
             guard closures.indices.contains(written) else { return .unfound(reference) }
@@ -158,11 +146,11 @@ struct Numbering: Sendable {
     //
     // The names only. The closures run after them and a link answers those by
     // the rows they took, which is a list it already holds.
-    func answers(rows: [Name: Int], words: [Name: Int]) -> [Answer] {
+    func answers(rows: [Name: Int]) -> [Answer] {
         guard case .document = space else { return [] }
 
         return (0..<opening).map { number in
-            row(number, rows: rows, words: words, closures: [])
+            row(number, rows: rows, closures: [])
         }
     }
 
@@ -170,13 +158,6 @@ struct Numbering: Sendable {
     // declarations where it declared one, among what it looks for otherwise.
     func call(_ selector: Name) -> Int? {
         called[selector]
-    }
-
-    // Where a path stepping to this bare spelling stands. Never among a
-    // document's own: a bare step is answered from every declaration in the
-    // link, so a document declaring that spelling has not thereby answered it.
-    func word(_ spelling: Name) -> Int? {
-        walked[spelling]
     }
 
     // Where the nth closure a declaration wrote stands: the number its body
@@ -193,13 +174,11 @@ struct Numbering: Sendable {
     private init(
         space: Space,
         called: [Name: Int],
-        walked: [Name: Int],
         closing: [Name: Int],
         opening: Int
     ) {
         self.space = space
         self.called = called
-        self.walked = walked
         self.closing = closing
         self.opening = opening
     }

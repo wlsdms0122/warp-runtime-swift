@@ -641,143 +641,12 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a path fills a word's receiver and is judged like a call")
-    func aPathReceiverIsJudgedAtTheLink() throws {
-        // Given. `"abc".absolute` and `absolute(of: "abc")` mean the same call,
-        // so they refuse on the same surface
-        let sut = try Module(
-            walked: ["std.math.absolute"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: ["word": Parameter(type: .string)]
-                    ),
-                    body: [],
-                    result: .reference([.key("word"), .key("absolute")])
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
-        }
-    }
-
-    @Test("a path call refuses a parameter read two ways")
-    func aPathSendRefusesADisagreeingReading() throws {
-        // Given. The receiver's procedure shape fills one parameter twice, and
-        // a parameter read as a whole number and as text has no answer on the
-        // path surface any more than on the written one
-        let sut = try Module(
-            procedures: [
-                "summed": Procedure(
-                    signature: Signature(
-                        receiver: "of",
-                        parameters: [
-                            "of": Parameter(type: .procedure(Signature(
-                                parameters: [
-                                    "seed": Parameter(type: .parameter(name: "N", constraint: "std.Numeric"))
-                                ],
-                                returns: .parameter(name: "N", constraint: "std.Numeric")
-                            )))
-                        ],
-                        returns: .parameter(name: "N", constraint: "std.Numeric")
-                    ),
-                    body: [],
-                    result: .literal(.int(0))
-                ),
-                entryName: Procedure(
-                    signature: Signature(),
-                    body: [
-                        Statement(binding: .constant("pair"), expression: .closure(Procedure(
-                                signature: Signature(
-                                    parameters: ["seed": Parameter(type: .int)],
-                                    returns: .string
-                                ),
-                                body: [],
-                                result: .literal(.string("x"))
-                            ))
-                        )
-                    ],
-                    result: .reference([.key("pair"), .key("summed")])
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("is read as int and as string")
-        }
-    }
-
-    @Test("a path cannot reach a word that declares no receiver")
-    func aPathDoesNotReachAReceiverlessWord() throws {
-        // Given. A pure word without a receiver leaves a path nothing to fill,
-        // so the build refuses where the run would have found nothing
-        let sut = try Module(
-            procedures: [
-                "helper": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
-                ),
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: ["word": Parameter(type: .string)]
-                    ),
-                    body: [],
-                    result: .reference([.key("word"), .key("helper")])
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("no word by that name")
-        }
-    }
-
-    @Test("a word sent through a path is judged like a call")
-    func aWordOnAPathIsJudged() throws {
-        // Given. Text has no fields, so the name is a word, and the word's
-        // bounded receiver refuses the text's reading the way the written call
-        // would
-        let sut = try Module(
-            walked: ["std.math.absolute"],
-            procedures: [
-                entryName: Procedure(
-                    signature: Signature(),
-                    body: [
-                        Statement(binding: .constant("task"), expression: .literal(.string("a"))
-                        )
-                    ],
-                    result: .reference([.key("task"), .key("absolute")])
-                )
-            ]
-        )
-
-        // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("which 'std.Numeric' does not admit")
-        }
-    }
-
     @Test("a dot on a record is a read, and a word there is written as a call")
     func aDotOnARecordDoesNotReachAWord() throws {
         // Given. The record does not declare the name, and a shape with fields
         // reads fields alone: the word by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
-            walked: ["std.math.absolute"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(),
@@ -890,50 +759,11 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a declaration sharing a word's bare spelling does not shadow the path")
-    func aDeclarationDoesNotShadowAPathWord() async throws {
-        // Given. A module's bare `first` lives among the selectors and std's
-        // `first` among the path words; one spelling, two questions, two tables
-        let sut = try Module(
-            walked: ["std.collection.first"],
-            procedures: [
-                "first": Procedure(
-                    signature: Signature(
-                        parameters: ["value": Parameter(type: .int)],
-                        returns: .int
-                    ),
-                    body: [],
-                    result: reference("value")
-                ),
-                entryName: Procedure(
-                    signature: Signature(
-                        parameters: ["items": Parameter(type: .array(.string))],
-                        returns: .string
-                    ),
-                    body: [],
-                    result: .reference([.key("items"), .key("first")])
-                )
-            ]
-        )
-
-        // When
-        let answered = try await run(
-            sut,
-            arguments: ["items": .array([.string("a"), .string("b")])]
-        )
-
-        // Then
-        #expect(answered == .string("a"))
-    }
-
-    @Test("an effect's own resolver still derives a path's word")
-    func anEffectResolverDerivesWords() async throws {
+    @Test("an effect's own resolver reads the receiver it was handed")
+    func anEffectResolverReadsItsReceiver() async throws {
         // Given. A native word resolves its receiver through its invocation,
-        // which is the one door outside the executor's own resolvers. The
-        // receiver's path ends in a word, so a resolver assembled without the
-        // word table would read absence where the build approved a call.
+        // which is the one door outside the executor's own resolvers.
         let sut = try Module(
-            walked: ["std.collection.reversed"],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(
@@ -942,7 +772,7 @@ struct ConstraintTests {
                     ),
                     body: [],
                     result: .call(Call(
-                        receiver: .reference([.key("items"), .key("reversed")]),
+                        receiver: .call(Call(receiver: reference("items"), selector: "std.collection.reversed")),
                         selector: "std.concurrent.map",
                         arguments: [
                             "by": .closure(Procedure(

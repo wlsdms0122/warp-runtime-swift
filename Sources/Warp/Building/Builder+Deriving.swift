@@ -8,9 +8,8 @@
 import Foundation
 
 // The facts nobody declared, worked out over every declaration at once. A
-// declaration is pure until its body shows otherwise and derivable until its
-// signature does, and both answers are the whole link's rather than any one
-// body's, so a path may reach a word the call graph never mentions.
+// declaration is pure until its body shows otherwise, and the answer is the
+// whole link's rather than any one body's.
 extension Builder {
     // MARK: - Internal
     // Which of these answer without running. A native says so about itself; a
@@ -221,70 +220,5 @@ extension Builder {
         case .block, .conditional, .loop, .attempt:
             return false
         }
-    }
-
-    // Which declaration a path segment reaches, by the bare spelling it writes.
-    // `x.count` names no module: the front end cannot know whether a trailing
-    // segment is a field or a word, so this is the one name still answered at
-    // run time.
-    //
-    // A selector needs no table of its own. `std.count` is resolved by the
-    // declared spelling like every other call.
-    func derivable(
-        for module: Module,
-        declaring declared: [Name],
-        pure: Set<Name>,
-        reaching rows: [Name: Int],
-        in table: [Linked]
-    ) -> (words: [Name: Name], contested: [Name: [Name]]) {
-        // What this document may walk to is what it declared and what it said
-        // it imports, and nothing else in the link is something it could have
-        // meant. A path names no module.
-        //
-        // Read off the rows, since a row is the declaration lowered and
-        // whether a path may reach one is a question about the slots it
-        // lowered to. A name with no row is one nothing in this link declares,
-        // which the judgment that owns undeclared names refuses.
-        let reachable = (declared + module.imports.sorted()).compactMap { name in
-            rows[name].map { row in (declared: name, row: row) }
-        }
-
-        var held: [Name: (declared: Name, row: Int)] = [:]
-        // Every declaration that contests a name, and not only that one is
-        // contested. Nothing a path writes can tell them apart, so a refusal
-        // names all of them. A slot holding the latest collision would keep
-        // the newest two and drop whoever took the name first, so a third
-        // arrival hides the declaration the other two are colliding with.
-        var contested: [Name: [(declared: Name, row: Int)]] = [:]
-
-        for reached in reachable.sorted(by: { $0.declared < $1.declared }) {
-            guard pure.contains(reached.declared) else { continue }
-            guard table[reached.row].isDerivable else { continue }
-
-            // Only two words a path could both reach are ambiguous. A
-            // declaration a path cannot reach shares the link but not the
-            // question, so it is not competing for the name.
-            if let first = held.updateValue(reached, forKey: reached.declared.unqualified) {
-                contested[reached.declared.unqualified, default: [first]].append(reached)
-            }
-        }
-
-        // A bare segment that could mean two declarations means neither, so
-        // none of them is what it reaches. Which two is said where one is
-        // written: a segment reading a field and a segment calling a word are
-        // one spelling until a shape stands under it, and a document holding
-        // two declarations it never steps to is answerable for nothing.
-        //
-        // Named in the order the caller handed the modules over, which is the
-        // order every collision refusal is read in.
-        return (
-            words: held.filter { word, _ in contested[word] == nil }
-                .mapValues { reached in reached.declared },
-            contested: contested.mapValues { declarations in
-                declarations
-                    .sorted { one, other in table[one.row].origin < table[other.row].origin }
-                    .map(\.declared)
-            }
-        )
     }
 }
