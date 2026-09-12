@@ -173,7 +173,7 @@ extension Builder {
                 if loweredTypes.satisfying[bound] != nil {
                     switch loweredTypes.answering(contract: bound, reading: reading) {
                     case let .leansOn(type):
-                        fulfillment?.require(Conformance(type: type, contract: bound), at: place)
+                        fulfillment?.require(Claim(type: type, contract: bound), at: place)
 
                     case .settled(true):
                         break
@@ -1367,7 +1367,7 @@ extension Builder {
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
         case let .call(call):
-            let signature = context.signature(of: call.selector) ?? context.requirements[call.selector]?.signature
+            let signature = context.signature(of: call.selector) ?? context.contractWords[call.selector]?.signature
 
             guard case .judging = ask else {
                 return Inspection(
@@ -1403,7 +1403,7 @@ extension Builder {
             // A call through a contract names no declaration. What answers it
             // is the receiver's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
-            if let asked = context.requirements[call.selector] {
+            if let asked = context.contractWords[call.selector] {
                 return try inspected(
                     contract: asked,
                     call: call,
@@ -1725,7 +1725,7 @@ extension Builder {
     // contract asked is the whole of the judgment, and which body runs is
     // decided at the run by the name the receiver wears.
     private func inspected(
-        contract asked: Requirement,
+        contract asked: ContractWord,
         call: Call,
         at place: Place,
         in environment: [Name: LoweredType],
@@ -1756,7 +1756,7 @@ extension Builder {
         switch context.loweredTypes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
             ask.fulfillment?.require(
-                Conformance(type: type, contract: asked.contract),
+                Claim(type: type, contract: asked.contract),
                 at: place.part(.receiver)
             )
 

@@ -105,9 +105,9 @@ public struct Writer: Sendable {
             )
         }
 
-        if !draft.conformances.isEmpty {
+        if !draft.claims.isEmpty {
             written[ModuleReader.CodingKeys.satisfies.name] = .dictionary(
-                draft.conformances.mapValues { contracts in
+                draft.claims.mapValues { contracts in
                     .array(contracts.sorted().map { name in .string(name.spelling) })
                 }
             )

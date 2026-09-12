@@ -76,7 +76,7 @@ public struct Module: Sendable {
     // contract because a document says it does, and this is where one says it.
     // Which declarations back the claim is the link's to find and to hold the
     // claim to.
-    public var conformances: [Name: Set<Name>] { source.conformances }
+    public var claims: [Name: Set<Name>] { source.claims }
 
     // Names bound to values, settled at link and gone by run time. Private to
     // the module: a constant is read by writing its name, and a name is a scope
@@ -127,7 +127,7 @@ public struct Module: Sendable {
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
-        conformances: [Name: Set<Name>] = [:],
+        claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure],
@@ -140,7 +140,7 @@ public struct Module: Sendable {
                 types: types,
                 constraints: constraints,
                 contracts: contracts,
-                conformances: conformances,
+                claims: claims,
                 constants: constants,
                 variables: variables,
                 procedures: procedures

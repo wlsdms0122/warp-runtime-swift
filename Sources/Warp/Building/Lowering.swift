@@ -40,7 +40,7 @@ struct Lowering {
     // Every contract's words, under the spelling a call writes to reach one.
     // A selector in here names no row: it names the table of rows the run
     // picks from.
-    let requirements: [Name: Requirement]
+    let contractWords: [Name: ContractWord]
 
     // The declared types as the run reads them, for a cast's shape and a
     // closure's row.
@@ -67,11 +67,11 @@ struct Lowering {
     // MARK: - Initializer
     init(
         table: [Linked] = [],
-        requirements: [Name: Requirement] = [:],
+        contractWords: [Name: ContractWord] = [:],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = table
-        self.requirements = requirements
+        self.contractWords = contractWords
         self.loweredTypes = loweredTypes
     }
 
@@ -81,7 +81,7 @@ struct Lowering {
     // are read again.
     init(
         _ carried: Carried,
-        requirements: [Name: Requirement],
+        contractWords: [Name: ContractWord],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
@@ -89,7 +89,7 @@ struct Lowering {
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
-        self.requirements = requirements
+        self.contractWords = contractWords
         self.loweredTypes = loweredTypes
     }
 
@@ -104,7 +104,7 @@ struct Lowering {
         self.table = table
         self.rows = rows
         self.numbering = numbering
-        self.requirements = [:]
+        self.contractWords = [:]
         self.loweredTypes = loweredTypes
     }
 
@@ -630,7 +630,7 @@ struct Lowering {
             // A selector naming a contract's word names no row. Which row
             // answers is the receiver's, so every one the build found is
             // lowered here and the run picks by the name it reads.
-            if let asked = requirements[call.selector] {
+            if let asked = contractWords[call.selector] {
                 return .dispatch(
                     try lower(call, through: asked, in: scope, on: slots, label: label, at: place)
                 )
@@ -651,7 +651,7 @@ struct Lowering {
 
     private mutating func lower(
         _ call: Call,
-        through asked: Requirement,
+        through asked: ContractWord,
         in scope: Names,
         on slots: Slots,
         label: Name,

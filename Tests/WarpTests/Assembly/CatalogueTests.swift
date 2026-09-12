@@ -201,7 +201,7 @@ struct CatalogueTests {
         // program names the type and never the contract.
         let holding = try Module(
             types: ["bank.Account": .record(["balance": .int])],
-            conformances: ["bank.Account": ["app.Describable"]],
+            claims: ["bank.Account": ["app.Describable"]],
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
@@ -270,7 +270,7 @@ struct CatalogueTests {
         )
         let program = try Module(
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            conformances: ["bank.Account": ["app.Describable"]],
+            claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(
                     signature: Signature(returns: .named("bank.Account")),
@@ -303,7 +303,7 @@ struct CatalogueTests {
         // followed, so the answer only closes if the two take turns.
         let holding = try Module(
             types: ["bank.Account": .record(["balance": .int])],
-            conformances: ["bank.Account": ["app.Describable"]],
+            claims: ["bank.Account": ["app.Describable"]],
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(

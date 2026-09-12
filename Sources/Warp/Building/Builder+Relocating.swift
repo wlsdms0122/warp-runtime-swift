@@ -169,7 +169,7 @@ struct Relocating {
     // and has no entry here.
     private let shapeRows: [LoweredTypeNumbering.Rows]
 
-    private let requirements: [Name: Requirement]
+    private let contractWords: [Name: ContractWord]
     private let loweredTypes: LoweredTypeTable
 
     // Which row each document's closures took. A closure is reached by a
@@ -183,7 +183,7 @@ struct Relocating {
         rows: [Name: Int],
         numbering: [Numbering],
         shapeNumbering: [LoweredTypeNumbering],
-        requirements: [Name: Requirement],
+        contractWords: [Name: ContractWord],
         closures: [[Int]],
         loweredTypes: LoweredTypeTable
     ) {
@@ -192,7 +192,7 @@ struct Relocating {
         self.rows = rows
         self.numbering = numbering
         self.shapeRows = shapeNumbering.map { held in held.rows(in: loweredTypes) }
-        self.requirements = requirements
+        self.contractWords = contractWords
         self.loweredTypes = loweredTypes
     }
 
@@ -215,7 +215,7 @@ struct Relocating {
             rows: assembled.rows,
             numbering: assembled.numbering,
             shapeNumbering: assembled.shapeNumbering,
-            requirements: Requirement.table(in: types),
+            contractWords: ContractWord.table(in: types),
             closures: assembled.closures,
             loweredTypes: loweredTypes
         )
@@ -547,9 +547,9 @@ struct Relocating {
     }
 
     private func filled(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
-        let spelling = Requirement.spelling(of: dispatch.contract, word: dispatch.word)
+        let spelling = ContractWord.spelling(of: dispatch.contract, word: dispatch.word)
 
-        guard let asked = requirements[spelling] else {
+        guard let asked = contractWords[spelling] else {
             throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 

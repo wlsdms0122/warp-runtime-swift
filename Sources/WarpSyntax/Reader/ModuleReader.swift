@@ -70,9 +70,9 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.type),
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
                 .mapValues { members in members.map(\.type) },
-            contracts: try Self.record([String: RequirementReader].self, in: container, forKey: .contracts)
+            contracts: try Self.record([String: ContractWordReader].self, in: container, forKey: .contracts)
                 .mapValues { words in try words.mapValues(\.signature).named(at: []) },
-            conformances: try Self.record([String].self, in: container, forKey: .satisfies)
+            claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .mapValues { contracts in try Set(contracts).named(at: []) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),

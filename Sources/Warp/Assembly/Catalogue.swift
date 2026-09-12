@@ -168,10 +168,10 @@ public struct Catalogue: Sendable {
             // does not cost is a refusal, since a claim whose words are
             // missing puts its type under no contract.
             for (position, module) in modules.enumerated() {
-                let conformances = module.conformances
+                let claims = module.claims
 
                 guard
-                    conformances.contains(where: { type, contracts in
+                    claims.contains(where: { type, contracts in
                         named.contains(type) && contracts.contains(where: { named.contains($0) })
                     })
                 else {
@@ -187,10 +187,10 @@ public struct Catalogue: Sendable {
             // read above rather than off the draft, which cannot see another
             // document's contract.
             for module in closed {
-                for (type, contracts) in module.conformances.sorted(by: { $0.key < $1.key }) {
+                for (type, contracts) in module.claims.sorted(by: { $0.key < $1.key }) {
                     for contract in contracts.sorted() {
                         for word in (asked[contract] ?? []).sorted() {
-                            bring(declares[.word(Requirement.spelling(of: type, word: word))])
+                            bring(declares[.word(ContractWord.spelling(of: type, word: word))])
                         }
                     }
                 }

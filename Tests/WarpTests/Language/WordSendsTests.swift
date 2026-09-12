@@ -84,7 +84,7 @@ struct WordSendsTests {
         // calls
         #expect(throws: BuildError.self) {
             try Builder().build(
-                [try Module(procedures: ["entry": Procedure(body: [])])] + [.conformances, .ticketing],
+                [try Module(procedures: ["entry": Procedure(body: [])])] + [.claims, .ticketing],
                 entry: "entry"
             )
         }
@@ -308,7 +308,7 @@ private extension Module {
 
     // The same word under two claims: one says it touches nothing shared and
     // is refused for sending the ticketing word, and one says it does.
-    static let conformances = try! Module(
+    static let claims = try! Module(
         procedures: [
             "app.counted": Procedure(
                 signature: Signature(of: CountedQuery.self, returns: .int),

@@ -129,7 +129,7 @@ public struct Builder: Sendable {
         // is worked out here rather than left to the compile that asks.
         let lowered = try lowered(
             declaring,
-            conformances: declared.conformances,
+            claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures
@@ -137,7 +137,7 @@ public struct Builder: Sendable {
 
         var compiling = Compiling(
             types: lowered.types,
-            requirements: lowered.requirements,
+            contractWords: lowered.contractWords,
             naming: compiled.map(\.document)
         )
 
@@ -248,7 +248,7 @@ public struct Builder: Sendable {
             types: [Name: Placed<TypeExpression>],
             constraints: [Name: Placed<[TypeExpression]>],
             contracts: [Name: Placed<[Name: Signature]>],
-            conformances: [Placed<Conformance>]
+            claims: [Placed<Claim>]
         ),
         against laid: Laid
     ) throws -> [Compiled] {
@@ -322,7 +322,7 @@ public struct Builder: Sendable {
         let fulfillment = Fulfillment()
         let lowered = try self.lowered(
             declaring,
-            conformances: declared.conformances,
+            claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
@@ -332,7 +332,7 @@ public struct Builder: Sendable {
         var compiling = Compiling(
             laid.carried,
             types: lowered.types,
-            requirements: lowered.requirements,
+            contractWords: lowered.contractWords,
             naming: documents.map(\.document)
         )
 
@@ -648,8 +648,8 @@ public struct Builder: Sendable {
             types: module.types,
             constraints: module.constraints,
             contracts: module.contracts,
-            conformances: module.conformances,
-            leaned: fulfillment.conformances(of: origin),
+            claims: module.claims,
+            leaned: fulfillment.claims(of: origin),
             declared: declared,
             table: lowered.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
@@ -730,7 +730,7 @@ public struct Builder: Sendable {
 
         let lowered = try lowered(
             declaring,
-            conformances: declared.conformances,
+            claims: declared.claims,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures

@@ -146,7 +146,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            conformances: ["bank.Account": ["app.Describable"]],
+            claims: ["bank.Account": ["app.Describable"]],
             procedures: leaning(on: "bank.Account", holding: ["balance": .literal(.int(1))]).merging([
                 "bank.Account.describe": Procedure(
                     signature: Signature(
@@ -211,7 +211,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Plain": .record(["note": .string])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            conformances: ["bank.Plain": ["app.Describable"]],
+            claims: ["bank.Plain": ["app.Describable"]],
             procedures: leaning(on: "bank.Plain", holding: ["note": .literal(.string("x"))])
         )
 
@@ -249,7 +249,7 @@ struct ContractTests {
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let adapting = try Module(
-            conformances: ["bank.Account": ["chart.Plottable"]],
+            claims: ["bank.Account": ["chart.Plottable"]],
             procedures: [
                 "bank.Account.height": Procedure(
                     signature: Signature(
@@ -293,7 +293,7 @@ struct ContractTests {
         let held = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            conformances: ["bank.Account": ["app.Describable"]],
+            claims: ["bank.Account": ["app.Describable"]],
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.null)),
                 "bank.Account.describe": Procedure(
@@ -308,7 +308,7 @@ struct ContractTests {
             ]
         )
         let again = try Module(
-            conformances: ["bank.Account": ["app.Describable"]],
+            claims: ["bank.Account": ["app.Describable"]],
             procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
         )
 
@@ -325,7 +325,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["bank.Account": .record(["balance": .int])],
             constraints: ["app.Scalar": [.int, .string]],
-            conformances: ["bank.Account": ["app.Scalar"]],
+            claims: ["bank.Account": ["app.Scalar"]],
             procedures: [entryName: Procedure(body: [], result: .literal(.null))]
         )
 
@@ -417,7 +417,7 @@ struct ContractTests {
                 "bank.Card": .record(["last": .string])
             ].merging(extra) { _, added in added },
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
-            conformances: [
+            claims: [
                 "bank.Account": ["app.Describable"],
                 "bank.Card": ["app.Describable"]
             ],

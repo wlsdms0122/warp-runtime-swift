@@ -21,7 +21,7 @@ extension Builder {
         types: [Name: Placed<TypeExpression>],
         constraints: [Name: Placed<[TypeExpression]>],
         contracts: [Name: Placed<[Name: Signature]>],
-        conformances: [Placed<Conformance>]
+        claims: [Placed<Claim>]
     ) {
         // Where each name was written, gathered here and carried with what it
         // holds. This is where both halves of the joining are in hand. Anywhere
@@ -133,19 +133,19 @@ extension Builder {
         // A pair two documents claim is one claim. A claim holds nothing but
         // the pair, so two of them cannot disagree, and the second says what
         // the first said.
-        var claimed: Set<Conformance> = []
-        var conformances: [Placed<Conformance>] = []
+        var claimed: Set<Claim> = []
+        var claims: [Placed<Claim>] = []
 
         for (origin, held) in documents.enumerated() {
-            for (type, contracts) in held.conformances.sorted(by: { $0.key < $1.key }) {
+            for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
                 for contract in contracts.sorted() {
-                    let conformance = Conformance(type: type, contract: contract)
+                    let claim = Claim(type: type, contract: contract)
 
-                    guard claimed.insert(conformance).inserted else { continue }
+                    guard claimed.insert(claim).inserted else { continue }
 
-                    conformances.append(
+                    claims.append(
                         Placed(
-                            conformance,
+                            claim,
                             at: .satisfies(type.spelling, in: held.document),
                             of: origin
                         )
@@ -154,6 +154,6 @@ extension Builder {
             }
         }
 
-        return (declaredTypes, declaredConstraints, declaredContracts, conformances)
+        return (declaredTypes, declaredConstraints, declaredContracts, claims)
     }
 }
