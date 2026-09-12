@@ -35,10 +35,9 @@ public struct Module: Sendable {
     public let imports: Set<Name>
 
     // The same fact said as lookups rather than as a grant: the words this
-    // calls, every word and shape it names and does not declare, and the bare
-    // spellings its paths step to. Read where the module is made, since a link
-    // asks each module it is handed for them and the text they are read off
-    // does not move.
+    // calls, and every word and shape it names and does not declare. Read
+    // where the module is made, since a link asks each module it is handed for
+    // them and the text they are read off does not move.
     let sends: Set<Name>
     let uses: Set<Reference>
 

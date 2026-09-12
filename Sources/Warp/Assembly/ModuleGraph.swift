@@ -22,8 +22,9 @@ import Foundation
 // can be the one that goes first.
 //
 // What a module needs is read the way a link reads it: the words it calls and
-// the shapes its signatures name. A name nothing here declares is left alone: the link refuses it, and refusing here
-// would be a second copy of a rule that has to be right once.
+// the shapes its signatures name. A name nothing here declares is left alone:
+// the link refuses it, and refusing here would be a second copy of a rule that
+// has to be right once.
 //
 // A name two modules declare is answered by whichever declared it first, which
 // is arbitrary and can put a module in its own reach. Standing a graph is

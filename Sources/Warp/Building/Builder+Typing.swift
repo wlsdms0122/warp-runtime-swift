@@ -615,14 +615,13 @@ extension Builder {
                 current = entry
                 resolved.append(segment)
 
-            // A dot reads a name the shape declares, so a shape that declares
-            // none has nothing here to read and a field a record does not
-            // declare is a defect the text shows, refused here rather than
-            // found at run. So is a `?.` on one it does declare: the type
+            // A dot on a record reads the field it declares. A field it does
+            // not declare is a defect the text shows, refused here rather than
+            // found at run, and so is a `?.` on one it does declare: the type
             // proves the field is there, so the spelling that expects absence
             // says nothing, unless it just read past the receiver's own null.
-            case let (.key(key, _), _):
-                guard case let .record(fields) = current, let field = fields[key] else {
+            case let (.key(key, _), .record(fields)):
+                guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
                             + " which \(current.rendered(in: frame.shapes)) does not declare."
@@ -636,6 +635,16 @@ extension Builder {
 
                 current = field.fieldUnwrapped
                 resolved.append(segment)
+
+            // A shape with no fields has no name here to read. The word by
+            // this spelling is sent with a written call, which names the
+            // declaration it means.
+            case let (.key(key, _), _):
+                return .refused(
+                    "\(walked.rendered) names '\(key)',"
+                        + " and \(current.rendered(in: frame.shapes)) has no name there to read."
+                        + " A word by that spelling is sent with a written call"
+                )
             }
         }
 
@@ -647,7 +656,7 @@ extension Builder {
 
     // The segments a stopped walk hands back: as written, except that an index
     // reference is a path of its own and is judged wherever the outer walk
-    // stops. A word inside one would otherwise stay a key forever.
+    // stops.
     private func asWritten(
         _ segments: [PathSegment],
         in environment: [Name: Shape],

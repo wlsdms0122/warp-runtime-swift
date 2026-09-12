@@ -669,6 +669,33 @@ struct ConstraintTests {
         }
     }
 
+    @Test("a dot on a shape with no fields says to write the call")
+    func aDotOnAFieldlessShapeSaysToWriteTheCall() throws {
+        // Given. Text has no name to read, so the refusal names the one
+        // spelling that reaches the word: the written call
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    signature: Signature(),
+                    body: [
+                        Statement(binding: .constant("task"), expression: .literal(.string("a"))
+                        )
+                    ],
+                    result: .reference([.key("task"), .key("count")])
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try builder.build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("string has no name there to read")
+                && "\(error)".contains("sent with a written call")
+        }
+    }
+
     @Test("a receiver written in front and by name is refused")
     func aReceiverAndASameNamedArgumentAreOneSlot() throws {
         // Given. The dot writes the receiver and the arguments write `of`

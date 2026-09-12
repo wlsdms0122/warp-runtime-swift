@@ -9,9 +9,9 @@ import Foundation
 
 // Writes what the build proved into a body. Every name becomes the slot the
 // frame holds it in, every selector the row it names, every argument the
-// position of its parameter. Nothing is
-// judged here: a name this walk cannot place is a body the build let through
-// unjudged, and is refused as the build's own mistake.
+// position of its parameter. Nothing is judged here: a name this walk cannot
+// place is a body the build let through unjudged, and is refused as the
+// build's own mistake.
 //
 // The table has one row per procedure. A closure literal is a procedure the
 // document wrote inside another, so it is lifted out into a row of its own and

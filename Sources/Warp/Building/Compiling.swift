@@ -230,8 +230,8 @@ struct Compiling {
         loweredRows.removeAll(keepingCapacity: true)
     }
 
-    // One document's reading. What a path may walk to is the document's own,
-    // so a frame is made for the document whose body is being read.
+    // One document's reading. Which names hold boxes is the document's own, so
+    // a frame is made for the document whose body is being read.
     func frame(reading variables: Set<Name>) -> TypeFrame {
         TypeFrame(
             types: types,

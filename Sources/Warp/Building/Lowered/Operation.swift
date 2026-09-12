@@ -10,9 +10,8 @@ import Foundation
 // A body as the run reads it: the document's expression with every fact the
 // link proved written in. A name is the frame slot the link gave it, a
 // selector is the row of the linked table it named, and an argument stands at
-// the position of the parameter it fills.
-// What only a run can know, the shape of a value or the signature of a
-// closure value, is still asked at the run.
+// the position of the parameter it fills. What only a run can know, the shape
+// of a value or the signature of a closure value, is still asked at the run.
 indirect enum Operation: Sendable {
     case literal(Value)
 
