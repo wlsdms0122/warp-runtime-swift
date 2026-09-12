@@ -43,8 +43,8 @@ struct Folding {
     }
 
     // Against native words alone: every declaration of the modules by its
-    // spelling and by its last segment, a written body standing as the
-    // refusal it earns before it is lowered. What a constant settles from. A
+    // spelling, a written body standing as the refusal it earns before it is
+    // lowered. What a constant settles from. A
     // native's purity is its own; a written body is never run here, so its
     // purity is not asked.
     init(bindings: [Name: Value], natives modules: [Module]) {

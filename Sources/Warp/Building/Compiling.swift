@@ -70,7 +70,6 @@ struct Compiling {
         self.contractWords = contractWords
         self.documents = documents
         self.lowering = Lowering(
-            documents: documents.count,
             contractWords: contractWords,
             shapes: types.shapes
         )
@@ -94,7 +93,6 @@ struct Compiling {
         self.documents = documents
         self.lowering = Lowering(
             carried,
-            documents: documents.count,
             contractWords: contractWords,
             shapes: types.shapes
         )

@@ -66,7 +66,6 @@ struct Lowering {
 
     // MARK: - Initializer
     init(
-        documents: Int,
         table: [Linked] = [],
         contractWords: [Name: ContractWord] = [:],
         shapes: ShapeTable
@@ -82,7 +81,6 @@ struct Lowering {
     // are read again.
     init(
         _ carried: Carried,
-        documents: Int,
         contractWords: [Name: ContractWord],
         shapes: ShapeTable
     ) {

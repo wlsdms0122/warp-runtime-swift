@@ -24,8 +24,8 @@ import Foundation
 // What a link needs is not what a document discloses. `imports` says what the
 // program can touch, which is the grant a caller reads before it allows
 // anything; a link needs that and also the shapes a signature names, which
-// touch nothing. So the needs are read off the module here, in both
-// spellings, and each is looked up in the table it belongs to.
+// touch nothing. So the needs are read off the module here, in both spellings,
+// and one table answers them: the kind rides on the reference.
 public struct Catalogue: Sendable {
     // MARK: - Property
     private let modules: [Module]
@@ -113,12 +113,6 @@ public struct Catalogue: Sendable {
             guard let position, taken.insert(position).inserted else { return }
 
             closed.append(modules[position])
-        }
-
-        func bring(_ positions: [Int]) {
-            for position in positions {
-                bring(position)
-            }
         }
 
         // Two walks, until neither adds anything. Names first, then claims,
