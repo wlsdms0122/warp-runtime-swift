@@ -180,12 +180,12 @@ public struct Builder: Sendable {
     // Every declaration a compiled document made, under the spelling it was
     // declared by and at the place it was written. What a document declares is
     // its own; where it stands among the documents is the caller's order.
-    private func signatures(of compiled: [Compiled]) -> [Name: Declared<Signature>] {
-        var signatures: [Name: Declared<Signature>] = [:]
+    private func signatures(of compiled: [Compiled]) -> [Name: Placed<Signature>] {
+        var signatures: [Name: Placed<Signature>] = [:]
 
         for (position, document) in compiled.enumerated() {
             for (offset, name) in document.declared.enumerated() {
-                signatures[name] = Declared(
+                signatures[name] = Placed(
                     document.table[offset].signature,
                     at: .procedure(name.spelling, in: document.document),
                     of: position
@@ -245,10 +245,10 @@ public struct Builder: Sendable {
         at standing: [Int],
         declaring symbols: [Symbol],
         over declared: (
-            types: [Name: Declared<TypeExpression>],
-            constraints: [Name: Declared<[TypeExpression]>],
-            contracts: [Name: Declared<[Name: Signature]>],
-            claims: [Declared<Claim>]
+            types: [Name: Placed<TypeExpression>],
+            constraints: [Name: Placed<[TypeExpression]>],
+            contracts: [Name: Placed<[Name: Signature]>],
+            claims: [Placed<Claim>]
         ),
         against laid: Laid
     ) throws -> [Compiled] {
@@ -307,7 +307,7 @@ public struct Builder: Sendable {
                     )
                 }
 
-                signatures[symbol.declared] = Declared(
+                signatures[symbol.declared] = Placed(
                     symbol.procedure.signature,
                     at: symbol.place,
                     of: symbol.handed
@@ -718,10 +718,10 @@ public struct Builder: Sendable {
             standing: Array(compiled.indices),
             numbered: Linkage()
         )
-        let signatures = assembled.rows.reduce(into: [Name: Declared<Signature>]()) { table, entry in
+        let signatures = assembled.rows.reduce(into: [Name: Placed<Signature>]()) { table, entry in
             let origin = assembled.origins[entry.value]
 
-            table[entry.key] = Declared(
+            table[entry.key] = Placed(
                 assembled.table[entry.value].signature,
                 at: .procedure(entry.key.spelling, in: compiled[origin].document),
                 of: origin

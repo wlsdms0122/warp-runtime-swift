@@ -1,5 +1,5 @@
 //
-//  Declared.swift
+//  Placed.swift
 //  Warp
 //
 //  Created by JSilver
@@ -16,7 +16,7 @@ import Foundation
 // table keyed the same way is a keyspace nothing checks. A refusal that looked
 // its place up could miss, and a miss reads as a refusal with no place: the
 // error still says what is wrong and stops saying where.
-struct Declared<Held> {
+struct Placed<Held> {
     // MARK: - Property
     let held: Held
     let place: Place
@@ -40,5 +40,5 @@ struct Declared<Held> {
     // MARK: - Private
 }
 
-extension Declared: Sendable where Held: Sendable {
+extension Placed: Sendable where Held: Sendable {
 }

@@ -38,10 +38,10 @@ extension Builder {
     // The run reads a row out of the first by the receiver's own name, and a
     // type standing in it has every word behind it.
     func witnesses(
-        of claims: [Declared<Claim>],
-        asking contracts: [Name: Declared<[Name: Signature]>],
-        over types: [Name: Declared<TypeExpression>],
-        among space: [Name: Declared<Signature>],
+        of claims: [Placed<Claim>],
+        asking contracts: [Name: Placed<[Name: Signature]>],
+        over types: [Name: Placed<TypeExpression>],
+        among space: [Name: Placed<Signature>],
         in table: TypeTable
     ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
         // Every contract, answered or not. The entry is what says a name is a
@@ -111,10 +111,10 @@ extension Builder {
     // the word, and every one of those signatures the contract's with the
     // receiver filled in by the type itself.
     private func holding(
-        _ claim: Declared<Claim>,
-        asking contracts: [Name: Declared<[Name: Signature]>],
-        over types: [Name: Declared<TypeExpression>],
-        among space: [Name: Declared<Signature>],
+        _ claim: Placed<Claim>,
+        asking contracts: [Name: Placed<[Name: Signature]>],
+        over types: [Name: Placed<TypeExpression>],
+        among space: [Name: Placed<Signature>],
         in table: TypeTable
     ) throws -> Holding {
         let (type, contract) = (claim.held.type, claim.held.contract)

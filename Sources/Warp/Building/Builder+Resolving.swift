@@ -20,10 +20,10 @@ extension Builder {
     // shape.
     func shaped(
         _ declaring: TypeTable,
-        claims: [Declared<Claim>],
-        contracts: [Name: Declared<[Name: Signature]>],
-        over declaredTypes: [Name: Declared<TypeExpression>],
-        among signatures: [Name: Declared<Signature>],
+        claims: [Placed<Claim>],
+        contracts: [Name: Placed<[Name: Signature]>],
+        over declaredTypes: [Name: Placed<TypeExpression>],
+        among signatures: [Name: Placed<Signature>],
         unsettled: Requiring? = nil
     ) throws -> (
         types: TypeTable,
@@ -154,9 +154,9 @@ extension Builder {
     // what that fact was proved on. This judges content: what a declaration
     // holds, not what it is called.
     func types(
-        declared: [Name: Declared<TypeExpression>],
-        constraints members: [Name: Declared<[TypeExpression]>],
-        contracts: [Name: Declared<[Name: Signature]>],
+        declared: [Name: Placed<TypeExpression>],
+        constraints members: [Name: Placed<[TypeExpression]>],
+        contracts: [Name: Placed<[Name: Signature]>],
         of documents: [any Declaring],
         standing: [Int],
         numbered linkage: Linkage
