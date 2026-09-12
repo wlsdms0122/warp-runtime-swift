@@ -855,6 +855,57 @@ struct LinearTests {
         }
     }
 
+    @Test("an attempt does not drop what a body already handed out")
+    func anAttemptKeepsWhatWasHandedOut() throws {
+        // Given. What a body still holds dies with a way through that dies, and
+        // an attempt drops its body's way. What it has already handed out is
+        // not that kind of fact and does not die with it
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(),
+                    body: [
+                        Statement(
+                            binding: .constant("tried"),
+                            expression: .attempt(
+                                Block(
+                                    body: [
+                                        mayFail(),
+                                        Statement(
+                                            binding: .none,
+                                            expression: .leave(
+                                                Leave(
+                                                    reach: .procedure,
+                                                    value: .call(Call(selector: "app.open"))
+                                                )
+                                            )
+                                        )
+                                    ]
+                                ),
+                                rescue: Block(body: [
+                                    Statement(binding: .constant("seen"), expression: .literal(.int(1)))
+                                ]),
+                                failure: "why"
+                            )
+                        )
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("does not write `returns`")
+        }
+    }
+
     @Test("a `?` does not stand on a type handed on once")
     func aNullableOfOneRefuses() throws {
         // Given. The doubt and the mark say opposite things about the same

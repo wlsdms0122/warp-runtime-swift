@@ -1137,7 +1137,8 @@ extension Builder {
             )
             if optional, Builder.handedOnce(type, in: context.types) {
                 try refuse(
-                    "reads a value as '\(type.rendered)', \(Builder.doubtOverAnObligation)",
+                    "reads a value as '\(type.rendered)', which is handed on exactly"
+                        + " once, and may answer nothing. \(Builder.followedByAName)",
                     at: place,
                     when: ask
                 )

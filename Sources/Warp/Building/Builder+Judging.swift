@@ -13,6 +13,14 @@ import Foundation
 // asked. The walk through a body is `Builder+Typing`.
 extension Builder {
     // MARK: - Internal
+    // Why a doubt and an obligation do not stand over one value. Said once
+    // because the two doors that refuse it (a `?` written on a declared type,
+    // an `as?` reading one) refuse it for the one reason; what each of them is
+    // refusing is its own sentence, because the subjects differ.
+    static let followedByAName =
+        "A value handed on once is followed by a name that holds it on every way"
+            + " through"
+
     // The one gate every gathered call passes, wherever its body sits. A
     // native procedure, a written body, a constant's closure. The call carries the
     // the walk found for it, and is judged against that.
@@ -276,7 +284,8 @@ extension Builder {
             // there. So the mark and the doubt do not stand together.
             guard !Builder.handedOnce(inner, in: table) else {
                 throw BuildError(
-                    "writes `?` on \(inner.rendered), \(Builder.doubtOverAnObligation)",
+                    "writes `?` on \(inner.rendered), which is handed on exactly"
+                        + " once. \(Builder.followedByAName)",
                     at: place
                 )
             }

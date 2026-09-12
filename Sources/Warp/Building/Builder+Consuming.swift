@@ -21,15 +21,9 @@ import Foundation
 extension Builder {
     // MARK: - Internal
     // Whether values of this type are handed on once, through the names it may
-    // hide behind. A chain of names is finite: the link refused one that comes
-    // back on itself before this is asked.
-    // The two doors a doubt may be written over a value handed on once (a `?`
-    // on a declared type, an `as?` reading one) say the same thing, so they say
-    // it in the same words.
-    static let doubtOverAnObligation =
-        "which is handed on exactly once, and may answer nothing. A value handed"
-            + " on once is followed by a name that holds it on every way through"
-
+    // hide behind. The one door: what the walk below could not decide is folded
+    // to "not one" here and nowhere inside it, so the answer does not depend on
+    // how many wrappers a type was written under.
     static func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
         reaches(type, in: table, assuming: []) ?? false
     }
@@ -143,7 +137,7 @@ extension Builder {
         // `returns`, and the mark does not survive that reading. So a body
         // answering one is held to writing what it answers, or the caller
         // binding it would take an obligation nothing told it about.
-        if signature.returns == nil, left.handed {
+        if signature.returns == nil, walk.handsOut {
             throw BuildError(
                 "answers a value handed on exactly once and does not write"
                     + " `returns`. What a declaration answers is read off its body"
@@ -164,7 +158,7 @@ extension Builder {
     }
 
     // MARK: - Private
-    private struct Consuming {
+    private final class Consuming {
         // What a body is holding, and what it has already handed on. The two
         // are apart because they answer different refusals: one is a value
         // dropped, the other a value handed on twice, and a name that has
@@ -179,12 +173,6 @@ extension Builder {
             // that is all: the obligation stayed with whoever handed it over,
             // and a body cannot give away what it never took.
             var borrowed: Set<Name> = []
-
-            // Whether some way out of this body hands the caller an obligation.
-            // A body leaves by its result and by every `return` that carries a
-            // value, and the two are one answer, so the walk carries it rather
-            // than the caller asking each door separately.
-            var handed = false
 
             // How a name is being held, where it is one of these at all. One
             // reading, so every judgment about an operand is made from the
@@ -212,8 +200,7 @@ extension Builder {
                 Held(
                     live: live,
                     moved: moved.union(other.moved),
-                    borrowed: borrowed.union(other.borrowed),
-                    handed: handed || other.handed
+                    borrowed: borrowed.union(other.borrowed)
                 )
             }
         }
@@ -227,6 +214,20 @@ extension Builder {
 
         let context: TypingContext
         let place: Place
+
+        // Whether some way out of this body hands the caller an obligation.
+        //
+        // Not one of `Held`'s fields, and the difference is the point: what a
+        // body still holds dies with a way through that dies, and what it has
+        // already handed out does not. A walk that drops a way (an `attempt`
+        // drops its body's) would drop this with it, so it is kept where only
+        // setting it is possible.
+        private(set) var handsOut = false
+
+        init(context: TypingContext, place: Place) {
+            self.context = context
+            self.place = place
+        }
 
         // What is still held after this block. `guarded` is why a move is
         // refused here, and nil where one is allowed.
@@ -286,10 +287,11 @@ extension Builder {
         // procedure the way a `return` is, which an inner block's result is
         // not, so the one entry that knows which block this is says so.
         func answering(_ block: Block, held: Held) throws -> Held {
-            var left = try through(block, held: held, guarded: nil)
+            let left = try through(block, held: held, guarded: nil)
 
-            left.handed = left.handed
-                || block.result.map { result in carriesObligation(result, held: left) } == true
+            if let result = block.result, carriesObligation(result, held: left) {
+                handsOut = true
+            }
 
             return left
         }
@@ -421,15 +423,19 @@ extension Builder {
                     throw refusal(answered: name)
                 }
 
-                var carried = try leave.value.map { value in
+                let carried = try leave.value.map { value in
                     try moving(value, held: held, guarded: guarded)
                 } ?? held
 
                 // A `return` hands a value to the caller the way a result does,
                 // so it is asked the same question at the same moment: after
                 // the move, where a name that was handed on reads as gone.
-                if leave.reach == .procedure, let value = leave.value {
-                    carried.handed = carried.handed || carriesObligation(value, held: carried)
+                if
+                    leave.reach == .procedure,
+                    let value = leave.value,
+                    carriesObligation(value, held: carried)
+                {
+                    handsOut = true
                 }
 
                 guard let stranded = carried.live.sorted().first else { return carried }
