@@ -8,31 +8,31 @@
 import Foundation
 
 extension Int {
-    // How a fraction reads as a machine word. The failures are different
+    // How a fraction narrows to an int. The failures are different
     // facts. A fraction that is not a number holds no whole at all, digits
     // after the point are not a whole number, and a whole number past the
-    // word has an answer no int holds. Every judge that meets a fraction
+    // int's own edge has an answer no int holds. Every judge that meets a fraction
     // names the one that happened, so the reading lives in one place rather
     // than being re-derived beside each message.
-    public enum WordReading {
-        case word(Int)
+    public enum Narrowing {
+        case int(Int)
         case notANumber
         case fractional
-        case pastTheWord
+        case overflow
     }
 
-    public static func reading(_ fraction: Double) -> WordReading {
+    public static func reading(_ fraction: Double) -> Narrowing {
         guard !fraction.isNaN else { return .notANumber }
 
-        // Infinity has a whole part, and it is past every word. The overflow
+        // Infinity has a whole part, and it is past every int. The overflow
         // fact, not the no-number one.
-        guard fraction.isFinite else { return .pastTheWord }
+        guard fraction.isFinite else { return .overflow }
 
         guard fraction == fraction.rounded(.towardZero) else { return .fractional }
 
-        guard let word = Int(exactly: fraction) else { return .pastTheWord }
+        guard let whole = Int(exactly: fraction) else { return .overflow }
 
-        return .word(word)
+        return .int(whole)
     }
 
     // How a piece of text reads as a whole number's one spelling. The two
@@ -41,21 +41,21 @@ extension Int {
     // every reader of a spelled whole names the one that happened, so the
     // grammar lives here alone.
     public enum Spelled {
-        case word(Int)
+        case int(Int)
         case notOneSpelling
-        case pastTheWord
+        case overflow
     }
 
     public static func reading(spelling: String) -> Spelled {
         guard let number = Int(spelling) else {
             // The parse missed: either the grammar did too, or the grammar
             // held and only the word could not.
-            return wholeGrammar(spelling) ? .pastTheWord : .notOneSpelling
+            return wholeGrammar(spelling) ? .overflow : .notOneSpelling
         }
 
         guard String(number) == spelling else { return .notOneSpelling }
 
-        return .word(number)
+        return .int(number)
     }
 
     // One value, one spelling: a candidate written `+1` or `007` is a second
@@ -63,7 +63,7 @@ extension Int {
     // reproduce the text exactly. `Int.init(_:)` alone accepts the aliases.
     // Public because the document readers hold the same line.
     public init?(spelling: String) {
-        guard case let .word(number) = Int.reading(spelling: spelling) else { return nil }
+        guard case let .int(number) = Int.reading(spelling: spelling) else { return nil }
 
         self = number
     }

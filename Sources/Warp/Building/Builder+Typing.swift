@@ -760,8 +760,8 @@ extension Builder {
 
             case let .double(fraction):
                 switch Int.reading(fraction) {
-                case let .word(word):
-                    return .index(word, optional: optionally)
+                case let .int(whole):
+                    return .index(whole, optional: optionally)
 
                 case .notANumber, .fractional:
                     throw BuildError(
@@ -770,7 +770,7 @@ extension Builder {
                         at: place
                     )
 
-                case .pastTheWord:
+                case .overflow:
                     throw BuildError(
                         "index reference \(inner.rendered)"
                             + " indexes past the end of any array",

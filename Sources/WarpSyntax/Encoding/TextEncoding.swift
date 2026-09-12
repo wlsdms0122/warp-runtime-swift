@@ -411,13 +411,13 @@ public enum TextEncoding {
             // a number out of them.
             guard bare.contains(where: { character in ".eE".contains(character) }) else {
                 switch Int.reading(spelling: bare) {
-                case let .word(int):
+                case let .int(int):
                     return .int(int)
 
                 case .notOneSpelling:
                     throw refused("\(bare) is not a whole number's one writing")
 
-                case .pastTheWord:
+                case .overflow:
                     throw refused("\(bare) is a whole number past what an int holds")
                 }
             }

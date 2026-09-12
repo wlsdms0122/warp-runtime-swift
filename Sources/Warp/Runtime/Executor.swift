@@ -1078,13 +1078,13 @@ public struct Executor: Sendable {
 
                 case let .found(.double(double)):
                     switch Int.reading(double) {
-                    case let .word(index):
+                    case let .int(index):
                         read = indexed(current, at: index, walked: walked)
 
                     case .notANumber, .fractional:
                         return .unfit("index reference \(name()) is not a whole number")
 
-                    case .pastTheWord:
+                    case .overflow:
                         return .unfit(
                             "index reference \(name()) indexes past the end of any array"
                         )

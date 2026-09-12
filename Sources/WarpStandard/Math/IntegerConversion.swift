@@ -26,13 +26,13 @@ struct IntegerConversion: Sendable {
     // shares.
     func of(_ rounded: Double, from asked: Double) throws -> Int {
         switch Int.reading(rounded) {
-        case let .word(answered):
+        case let .int(answered):
             return answered
 
         case .notANumber:
             throw ExecutionError("\(asked) has no whole answer")
 
-        case .pastTheWord:
+        case .overflow:
             throw ExecutionError("\(word) of \(asked) overflows int")
 
         // The input already went through `rounded(_:)`, so digits after the

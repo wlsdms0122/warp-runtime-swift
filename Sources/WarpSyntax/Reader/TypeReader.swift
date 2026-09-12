@@ -379,7 +379,7 @@ public struct TypeReader: Decodable {
         guard !written.isEmpty else { return nil }
 
         switch Int.reading(spelling: String(written)) {
-        case let .word(number):
+        case let .int(number):
             return number
 
         case .notOneSpelling:
@@ -388,7 +388,7 @@ public struct TypeReader: Decodable {
                     + " which is not a whole number's one spelling"
             )
 
-        case .pastTheWord:
+        case .overflow:
             throw TypeFormError(
                 "type '\(text)' bounds a range with '\(written)',"
                     + " a whole number past what an int holds"
