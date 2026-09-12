@@ -271,6 +271,18 @@ extension Builder {
                 break
             }
 
+            // What a value handed on once needs is a name holding it on every way
+            // through, and a `?` says there is a way through where nothing is
+            // there. So the mark and the doubt do not stand together.
+            guard !Builder.handedOnce(inner, in: table) else {
+                throw BuildError(
+                    "writes `?` on \(inner.rendered), which is handed on exactly"
+                        + " once. A value handed on once is followed by a name that"
+                        + " holds it on every way through",
+                    at: place
+                )
+            }
+
             try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
 
         // A field written `var` is a fact about a declared type: a path may

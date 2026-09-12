@@ -752,10 +752,11 @@ struct LinearTests {
         }
     }
 
-    @Test("a cast that may answer nothing still answers one where it succeeds")
-    func anOptionalCastCarriesTheObligation() throws {
-        // Given. `as?` reads a failure as null; it does not make the value it
-        // answers on success any less an obligation
+    @Test("a cast that may answer nothing does not take one")
+    func anOptionalCastRefuses() throws {
+        // Given. What a value handed on once needs is a name that holds it on
+        // every way through, and a `?` says there is a way through where
+        // nothing is there. The mark and the doubt are refused together
         let sut = try holding(
             body: [
                 Statement(
@@ -771,7 +772,82 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("still holds 'held' where it ends")
+            "\(error)".contains("is handed on exactly once, and may answer nothing")
+        }
+    }
+
+    @Test("a return is a way out of a body too")
+    func aReturnAnswersLikeAResult() throws {
+        // Given. What a declaration answers is the join of its result and every
+        // `return` that carries a value, so the rule that holds one holds the
+        // other
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(),
+                    body: [
+                        Statement(
+                            binding: .none,
+                            expression: .conditional(
+                                .literal(.bool(true)),
+                                then: [
+                                    Statement(
+                                        binding: .none,
+                                        expression: .leave(
+                                            Leave(
+                                                reach: .procedure,
+                                                value: .call(Call(selector: "app.open"))
+                                            )
+                                        )
+                                    )
+                                ],
+                                else: nil
+                            )
+                        )
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("does not write `returns`")
+        }
+    }
+
+    @Test("a `?` does not stand on a type handed on once")
+    func aNullableOfOneRefuses() throws {
+        // Given. The doubt and the mark say opposite things about the same
+        // value, so a slot writing both says nothing a body could act on
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.maybe": Procedure(
+                    signature: Signature(
+                        parameters: ["of": Parameter(type: .nullable(.named("app.Handle")))]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("writes `?` on app.Handle, which is handed on exactly once")
         }
     }
 

@@ -50,7 +50,18 @@ extension Builder {
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return handedOnce(inner, in: table, assuming: assuming)
 
-        default:
+        // A nullable of one is refused where it is written, because "hand it on
+        // if it is there" is not something this language says. So nothing is
+        // one behind a `?`.
+        case .nullable:
+            return false
+
+        // None of these is one, and none of them carries one: a value handed on
+        // once is followed by the name that holds it, and a name does not go
+        // into a type. Said out loud rather than defaulted, the way the walk's
+        // own reading is.
+        case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes,
+            .ranged, .array, .dictionary, .record, .procedure, .reading:
             return false
         }
     }
@@ -64,13 +75,35 @@ extension Builder {
         in table: TypeTable,
         assuming: Set<Name>
     ) -> Bool {
-        guard !assuming.contains(name) else { return true }
+        guard let reached = reaches(membership: name, in: table, assuming: assuming) else { return false }
+
+        return reached
+    }
+
+    // The same question, answering nil where the walk only ever came back to a
+    // membership it was already inside. A ring says nothing new, so a ring of
+    // nothing else says nothing at all, and a membership no value can be is not
+    // one of these any more than an empty one is.
+    private static func reaches(
+        membership name: Name,
+        in table: TypeTable,
+        assuming: Set<Name>
+    ) -> Bool? {
+        guard !assuming.contains(name) else { return nil }
 
         guard let members = table.constraint(name), !members.isEmpty else { return false }
 
-        return members.allSatisfy { member in
-            handedOnce(member, in: table, assuming: assuming.union([name]))
+        let answers = members.compactMap { member -> Bool? in
+            guard case let .named(inner) = member, table.resolve(inner) == nil else {
+                return handedOnce(member, in: table, assuming: assuming.union([name]))
+            }
+
+            return reaches(membership: inner, in: table, assuming: assuming.union([name]))
         }
+
+        guard !answers.isEmpty else { return nil }
+
+        return answers.allSatisfy { answer in answer }
     }
 
     // Every value a body must hand on, handed on once. The declaration's own
@@ -110,11 +143,7 @@ extension Builder {
         // `returns`, and the mark does not survive that reading. So a body
         // answering one is held to writing what it answers, or the caller
         // binding it would take an obligation nothing told it about.
-        if
-            signature.returns == nil,
-            let result = block.result,
-            walk.answers(result, after: left)
-        {
+        if signature.returns == nil, walk.answers(block.result, after: left) {
             throw BuildError(
                 "answers a value handed on exactly once and does not write"
                     + " `returns`. What a declaration answers is read off its body"
@@ -135,7 +164,7 @@ extension Builder {
     }
 
     // MARK: - Private
-    private struct Consuming {
+    private final class Consuming {
         // What a body is holding, and what it has already handed on. The two
         // are apart because they answer different refusals: one is a value
         // dropped, the other a value handed on twice, and a name that has
@@ -182,8 +211,25 @@ extension Builder {
             }
         }
 
+        // What an expression hands out.
+        enum HandedOut {
+            case name(Name, Held.Holding)
+            case value
+            case nothing
+        }
+
         let context: TypingContext
         let place: Place
+
+        // Whether any way out of this body hands the caller an obligation. The
+        // walk records it rather than answering it, because the refusal it
+        // feeds is about the declaration and the walk is about the body.
+        private(set) var answered = false
+
+        init(context: TypingContext, place: Place) {
+            self.context = context
+            self.place = place
+        }
 
         // What is still held after this block. `guarded` is why a move is
         // refused here, and nil where one is allowed.
@@ -366,6 +412,17 @@ extension Builder {
                     throw refusal(answered: name)
                 }
 
+                // A `return` hands a value to the caller the way a result does,
+                // so what it hands out is asked here and read where the
+                // declaration is judged.
+                if
+                    leave.reach == .procedure,
+                    let value = leave.value,
+                    carriesObligation(value, held: held)
+                {
+                    answered = true
+                }
+
                 let carried = try leave.value.map { value in
                     try moving(value, held: held, guarded: guarded)
                 } ?? held
@@ -409,63 +466,36 @@ extension Builder {
         // and a name does not go into a type. So one still held may not be
         // written into either, the same rule a declared type is held to.
         private func carrying(_ expression: Expression, held: Held, guarded: String?) throws -> Held {
-            // A name written bare. One already given away is the walk's
-            // refusal and not this one, and one still held is this one.
-            if case let (name, holding)? = operand(expression, held: held) {
-                guard holding == .gone else { throw refusal(carried: name) }
+            switch handedOut(expression, held: held) {
+            case let .name(name, holding):
+                throw holding == .gone ? refusal(handedTwice: name) : refusal(carried: name)
 
-                return try moving(expression, held: held, guarded: guarded)
-            }
-
-            guard !carriesObligation(expression, held: held) else {
-                throw blamed(expression, held: held).map { name in refusal(carried: name) }
-                    ?? refusal(carriedValue: expression)
-            }
+            case .value:
+                throw refusal(carriedValue: expression)
 
             // A block runs its statements wherever it stands, and what they do
-            // with a name is the walk's business.
-            if case let .block(block) = expression {
+            // with a name is the walk's business even where the block hands
+            // nothing out.
+            case .nothing:
+                guard case let .block(block) = expression else {
+                    return try moving(expression, held: held, guarded: guarded)
+                }
+
                 let inside = try through(Block(body: block.body), held: held, guarded: guarded)
 
                 guard let result = block.result else { return inside }
 
                 return try carrying(result, held: inside, guarded: guarded)
             }
-
-            return try moving(expression, held: held, guarded: guarded)
         }
 
-        // The name to blame for an element that carries an obligation, where one
-        // holds it. A cast and a block hand out what they read, so the name to
-        // say is the one inside them; where nothing inside holds one, what says
-        // the value is an obligation is the element itself.
-        private func blamed(_ expression: Expression, held: Held) -> Name? {
-            switch expression {
-            case let .cast(value, _, _):
-                return blamed(value, held: held)
-
-            case let .block(block):
-                return block.result.flatMap { result in blamed(result, held: held) }
-
-            default:
-                guard case let (name, holding)? = operand(expression, held: held), holding != .gone else {
-                    return nil
-                }
-
-                return name
-            }
+        // Whether the body hands the caller an obligation, by its result or by
+        // any `return` in it. Asked from outside for the one refusal that is
+        // about the declaration rather than the body.
+        func answers(_ result: Expression?, after held: Held) -> Bool {
+            answered || result.map { written in carriesObligation(written, held: held) } == true
         }
 
-        // Whether the body's result hands out an obligation, asked from outside
-        // for the one refusal that is about the declaration rather than the
-        // walk.
-        func answers(_ result: Expression, after held: Held) -> Bool {
-            carriesObligation(result, held: held)
-        }
-
-        // The name an operand wrote and how the body is holding it, where the
-        // operand is a bare name at all. A path below the name reads a part of
-        // the value, which answers a value of its own.
         private func operand(_ expression: Expression, held: Held) -> (name: Name, holding: Held.Holding)? {
             guard
                 case let .reference(path) = expression,
@@ -533,13 +563,38 @@ extension Builder {
         // thought about must be a compile error here rather than an answer of
         // no: every hole this walk has had was a shape that fell through to
         // false and took an obligation with it.
-        private func carriesObligation(_ expression: Expression, held: Held) -> Bool {
+        // What this expression hands out, where that is an obligation at all.
+        //
+        // Said once, because the three questions this walk asks of a value are
+        // the same question about the same tree: may it stand in a list, whom
+        // does a refusal name, and does binding it take the obligation. Three
+        // walks over the shapes had to stay in step and nothing made them.
+        //
+        // No `default`: a shape nobody thought about must be a compile error
+        // here rather than an answer of no. Every hole this walk has had was a
+        // shape that fell through to false and took an obligation with it.
+        private func handedOut(_ expression: Expression, held: Held) -> HandedOut {
             switch expression {
             // A literal is data, a closure is a procedure, and a list or a
-            // record is neither: what a name may not go into cannot come out
-            // of one either.
-            case .literal, .closure, .array, .record:
-                return false
+            // record is neither: what a name may not go into cannot come out of
+            // one either. A conditional answers nothing and a leave never comes
+            // back. Which procedure a value is, is the run's answer, so nothing
+            // here says what calling it answers.
+            case .literal, .closure, .array, .record, .conditional, .leave, .apply:
+                return .nothing
+
+            // A bare name, as the body is holding it. A path below the name
+            // reads a part of the value and nothing rides out with it.
+            case let .reference(path):
+                guard
+                    let head = path.head,
+                    path.count == 1,
+                    let holding = held.holding(head)
+                else {
+                    return .nothing
+                }
+
+                return .name(head, holding)
 
             // What the declaration says it answers. One that wrote no `returns`
             // is read off its body, and the mark does not survive that reading,
@@ -548,38 +603,54 @@ extension Builder {
                 let signature = context.signature(of: call.selector)
                     ?? context.contractProcedures[call.selector]?.signature
 
-                return signature?.returns.map { returns in
+                guard
+                    let returns = signature?.returns,
                     Builder.handedOnce(returns, in: context.types)
-                } ?? false
+                else {
+                    return .nothing
+                }
 
-            // A cast says what it reads the value as, and that is the whole of
-            // what it says: a reading that may answer nothing is refused where
-            // it is written rather than carried half-obligated from here.
-            case let .cast(_, type, _):
-                return Builder.handedOnce(type, in: context.types)
+                return .value
 
-            // A bare name rebound to another, which is the move that just
-            // happened. A path below the name reads a part of the value.
-            case let .reference(path):
-                guard let head = path.head, path.count == 1 else { return false }
+            // A cast hands out what it read. Where that is nothing a name
+            // holds, the type it names is what says the value is one.
+            case let .cast(value, type, _):
+                switch handedOut(value, held: held) {
+                case .nothing:
+                    return Builder.handedOnce(type, in: context.types) ? .value : .nothing
 
-                return held.moved.contains(head)
+                case let answered:
+                    return answered
+                }
 
-            // Each of these answers what some inner expression answers.
+            // Each of these answers what some inner expression answers. An
+            // attempt answers by either way through it, and a value handed out
+            // by one of them is one the other cannot take back, so either is
+            // enough to say so.
             case let .block(block):
-                return block.result.map { result in carriesObligation(result, held: held) } ?? false
+                return block.result.map { result in handedOut(result, held: held) } ?? .nothing
 
             case let .loop(_, body, _):
-                return body.result.map { result in carriesObligation(result, held: held) } ?? false
+                return body.result.map { result in handedOut(result, held: held) } ?? .nothing
 
             case let .attempt(block, rescue, _):
-                return block.result.map { result in carriesObligation(result, held: held) } ?? false
-                    || rescue.result.map { result in carriesObligation(result, held: held) } ?? false
+                let attempted = block.result.map { result in handedOut(result, held: held) } ?? .nothing
 
-            // A conditional answers nothing and a leave never comes back, so
-            // neither hands a value out. Which procedure a value is, is the
-            // run's answer, so nothing here says what calling it answers.
-            case .conditional, .leave, .apply:
+                guard case .nothing = attempted else { return attempted }
+
+                return rescue.result.map { result in handedOut(result, held: held) } ?? .nothing
+            }
+        }
+
+        // Whether binding this expression's answer to a name takes an
+        // obligation with it. A name the body just handed on is one, and so is
+        // a value nothing holds.
+        private func carriesObligation(_ expression: Expression, held: Held) -> Bool {
+            switch handedOut(expression, held: held) {
+            case .value, .name(_, .gone):
+                return true
+
+            default:
                 return false
             }
         }
