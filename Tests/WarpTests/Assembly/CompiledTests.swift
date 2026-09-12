@@ -684,6 +684,42 @@ struct CompiledTests {
         }
     }
 
+    @Test("a document laid before the one it imports still answers its numbers")
+    func aDocumentLaidBeforeWhatItImportsIsAnswered() throws {
+        // Given. A document whose body sends a word another document declares.
+        let library = try Module(
+            procedures: [
+                "lib.twice": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .int)],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .call(Call(
+                        receiver: reference("of"),
+                        selector: "std.math.plus",
+                        arguments: ["value": reference("of")]
+                    ))
+                )
+            ]
+        )
+        let compiled = try builder.compile([library] + Module.standard)
+
+        // When. Laid first, so what it sends stands after it. A caller hands
+        // compiled documents over in whatever order it holds them, and nothing
+        // says that order is the standing one.
+        var reordered = compiled
+        reordered.swapAt(0, try #require(compiled.firstIndex { document in
+            document.declared.contains("lib.twice")
+        }))
+
+        let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
+
+        // Then. Every number it gave reaches a row.
+        #expect(laid.carried.named[0]?.allSatisfy { row in row != nil } == true)
+    }
+
     @Test("a path reads into what another document's body answers")
     func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
         // Given. A document declaring a word that writes no `returns`, and

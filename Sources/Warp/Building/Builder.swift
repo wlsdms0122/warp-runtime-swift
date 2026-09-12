@@ -168,9 +168,7 @@ public struct Builder: Sendable {
             compiling.lay(document, at: origin, rows: rows, answering: answered)
         }
 
-        for origin in compiled.indices {
-            compiling.answering(origin)
-        }
+        compiling.answering()
 
         return Laid(
             compiled: compiled,

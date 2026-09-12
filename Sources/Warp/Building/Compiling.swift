@@ -189,6 +189,14 @@ struct Compiling {
         )
     }
 
+    // The same for every document laid down, said once they all stand. This
+    // reads the rows whole and the documents arrive in the order the caller
+    // handed them over, so one of them may import a word another laid after it
+    // declares.
+    mutating func answering() {
+        for origin in documents.indices { answering(origin) }
+    }
+
     // A shape the build read off a body rather than out of a signature, held to
     // the document that wrote the body: the rows it stands on are numbered
     // beside the ones that document's bodies stand on.
