@@ -379,7 +379,7 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("No value of this type is one")
+            "\(error)".contains("No value of the type written here is")
         }
     }
 
@@ -561,10 +561,67 @@ struct LinearTests {
         }
     }
 
-    @Test("a slot says what it does with a type parameter, which the call may fill with one")
-    func aTypeParameterTakesAMark() throws {
-        // Given. What fills `some T` is the call's, so a value handed on once
-        // may arrive here and the slot has something to say about it
+    @Test("a value handed on once does not reach a list without a name, either")
+    func aFreshObligationDoesNotReachAList() throws {
+        // Given. The name check is not enough: nothing holds this one yet, and
+        // writing it straight into the list is the same loss
+        let sut = try holding(body: [], result: .array([.call(Call(selector: "app.open"))]))
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("writes a value handed on once inside a list or a record")
+        }
+    }
+
+    @Test("a block answers what its result answers, into a list as anywhere else")
+    func aBlockIntoAListIsJudgedByItsResult() throws {
+        // Given. An element that is a block hands out whatever its result hands
+        // out, so the element is judged by that rather than by its own shape
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+            ],
+            result: .array([.block(Block(body: [], result: reference("handle")))])
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries 'handle' inside a list or a record")
+        }
+    }
+
+    @Test("a block that answers one binds the obligation to the name it is bound to")
+    func aBlockAnswersAnObligation() throws {
+        // Given. `held` takes the obligation the block's result answers, so a
+        // body that never hands it on is refused for holding it
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("held"),
+                    expression: .block(Block(body: [], result: .call(Call(selector: "app.open"))))
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("still holds 'held' where it ends")
+        }
+    }
+
+    @Test("a slot does not say what it does with a type parameter")
+    func aTypeParameterTakesNoMark() throws {
+        // Given. What fills `some T` is the call's, so after this slot took the
+        // obligation there is no name for the build to follow it by: what the
+        // call answers is read off the declaration, and the declaration says
+        // `some T`. The proof would end here
         let sut = try holding(
             body: [
                 Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
@@ -584,8 +641,10 @@ struct LinearTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
+        #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("by naming the type that is one")
         }
     }
 

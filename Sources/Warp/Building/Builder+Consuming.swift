@@ -23,7 +23,7 @@ extension Builder {
     // Whether values of this type are handed on once, through the names it may
     // hide behind. A chain of names is finite: the link refused one that comes
     // back on itself before this is asked.
-    func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
+    static func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
         switch type {
         case .linear:
             return true
@@ -31,35 +31,10 @@ extension Builder {
         case let .named(name):
             guard let declared = table.resolve(name) else { return false }
 
-            return handedOnce(declared, in: table)
+            return Builder.handedOnce(declared, in: table)
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return handedOnce(inner, in: table)
-
-        default:
-            return false
-        }
-    }
-
-    // Whether a value handed on once could arrive here, which is a wider
-    // question than whether one certainly does. A type parameter is whatever
-    // the call fills it with, and a membership is whichever of its members
-    // arrived, so both may be one; a slot saying what it does with such a value
-    // is saying something there.
-    func mayBeHandedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
-        switch type {
-        case .linear, .parameter:
-            return true
-
-        case let .named(name):
-            if let declared = table.resolve(name) { return mayBeHandedOnce(declared, in: table) }
-
-            guard let members = table.constraint(name) else { return false }
-
-            return members.contains { member in mayBeHandedOnce(member, in: table) }
-
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return mayBeHandedOnce(inner, in: table)
+            return Builder.handedOnce(inner, in: table)
 
         default:
             return false
@@ -87,7 +62,7 @@ extension Builder {
         }
 
         guard !taken.isEmpty || !borrowed.isEmpty || context.types.types.values.contains(where: { type in
-            handedOnce(type, in: context.types)
+            Builder.handedOnce(type, in: context.types)
         }) else {
             return
         }
@@ -384,13 +359,31 @@ extension Builder {
         // and a name does not go into a type. So one still held may not be
         // written into either, the same rule a declared type is held to.
         private func carrying(_ expression: Expression, held: Held, guarded: String?) throws -> Held {
-            switch operand(expression, held: held)?.holding {
-            case .live?, .borrowed?:
-                throw refusal(carried: operand(expression, held: held)?.name ?? "")
+            // A block answers what its result answers, so the element is judged
+            // by that. The statements run first, and the result is read in what
+            // they left.
+            if case let .block(block) = expression {
+                let inside = try through(Block(body: block.body), held: held, guarded: guarded)
 
-            default:
-                return try moving(expression, held: held, guarded: guarded)
+                guard let result = block.result else { return inside }
+
+                return try carrying(result, held: inside, guarded: guarded)
             }
+
+            // A name still held, written bare.
+            if case let (name, holding)? = operand(expression, held: held), holding != .gone {
+                throw refusal(carried: name)
+            }
+
+            // And a value with an obligation on it that no name holds yet: a
+            // call that answers one, a cast that names one, a block that
+            // answers either. Asked of the expression rather than of a name,
+            // because that is what an element is.
+            guard !handedOnce(expression, held: held) else {
+                throw refusal(carriedValue: expression)
+            }
+
+            return try moving(expression, held: held, guarded: guarded)
         }
 
         // The name an operand wrote and how the body is holding it, where the
@@ -407,14 +400,6 @@ extension Builder {
             }
 
             return (head, holding)
-        }
-
-        // A second name for a borrowed value is a second name for the same
-        // borrow, and a box is not: a box outlives the call.
-        private func refuseKeeping(_ borrowed: Name, as binding: Statement.Binding?) throws {
-            guard case .variable = binding else { return }
-
-            throw refusal(kept: borrowed)
         }
 
         // One operand of a call, judged and then read. What the slot says it
@@ -474,33 +459,20 @@ extension Builder {
                 let signature = context.signature(of: call.selector)
                     ?? context.contractProcedures[call.selector]?.signature
 
-                return signature?.returns.map(handedOnce) ?? false
+                return signature?.returns.map { returns in Builder.handedOnce(returns, in: context.types) } ?? false
 
             case let .cast(_, type, optional):
-                return !optional && handedOnce(type)
+                return !optional && Builder.handedOnce(type, in: context.types)
 
             case let .reference(path):
                 guard let head = path.head, path.count == 1 else { return false }
 
                 return held.moved.contains(head)
 
-            default:
-                return false
-            }
-        }
-
-        private func handedOnce(_ type: TypeExpression) -> Bool {
-            switch type {
-            case .linear:
-                return true
-
-            case let .named(name):
-                guard let declared = context.types.resolve(name) else { return false }
-
-                return handedOnce(declared)
-
-            case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-                return handedOnce(inner)
+            // A block answers what its result answers, so what the result
+            // carries out the block carries out.
+            case let .block(block):
+                return block.result.map { result in handedOnce(result, held: held) } ?? false
 
             default:
                 return false
@@ -545,6 +517,15 @@ extension Builder {
                 "carries '\(name)' inside a list or a record, and a value written"
                     + " `linear` is followed by the name that holds it. Nothing"
                     + " follows one into a type"
+            )
+        }
+
+        private func refusal(carriedValue expression: Expression) -> BuildError {
+            refusal(
+                "writes a value handed on once inside a list or a record, and one"
+                    + " is followed by the name that holds it. Nothing follows one"
+                    + " into a type, so it is bound to a name and handed on from"
+                    + " there"
             )
         }
 

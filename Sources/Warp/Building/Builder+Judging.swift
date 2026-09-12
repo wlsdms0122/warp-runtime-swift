@@ -232,7 +232,7 @@ extension Builder {
             // it stands where a name can hold it and nowhere else. Inside
             // another type there is no name to follow, and what the type
             // does with what it carries is not something the link can read.
-            guard !nested || !handedOnce(.named(name), in: table) else {
+            guard !nested || !Builder.handedOnce(.named(name), in: table) else {
                 throw BuildError(
                     "carries '\(name)' inside another type, and a value written"
                         + " `linear` is followed by the name that holds it."
@@ -346,21 +346,22 @@ extension Builder {
         in table: TypeTable
     ) throws {
         switch declared {
-        // Asked the wider way round: a slot saying what it does with an
-        // obligation is saying something wherever one could arrive, and what
-        // a type parameter or a membership is filled with is the call's.
+        // The mark names the type, because that is what the build follows the
+        // value by. What fills a type parameter or a membership is the call's,
+        // so a body taking one there has no name to carry the obligation on
+        // and the proof would end at this slot.
         case .consuming, .borrowing:
-            guard !mayBeHandedOnce(declared.slotUnwrapped, in: table) else { return }
+            guard !Builder.handedOnce(declared.slotUnwrapped, in: table) else { return }
 
             throw BuildError(
-                "takes '\(declared.rendered)', and `consuming` and `borrowing` say"
-                    + " what a slot does with a value handed on once. No value of"
-                    + " this type is one",
+                "takes '\(declared.rendered)', and a slot says what it does with a"
+                    + " value handed on once by naming the type that is one. No"
+                    + " value of the type written here is",
                 at: place
             )
 
         default:
-            guard handedOnce(declared.slotUnwrapped, in: table) else { return }
+            guard Builder.handedOnce(declared.slotUnwrapped, in: table) else { return }
 
             throw BuildError(
                 "takes '\(declared.rendered)', which is handed on once, and says"

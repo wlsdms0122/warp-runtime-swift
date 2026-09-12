@@ -230,11 +230,10 @@ struct Case: Sendable, CustomStringConvertible {
     // A module the runner brings. The declarations are held apart from the rest
     // of it because each carries keys a declaration does not.
     struct Vocabulary: Sendable {
-        // The three a runner says for itself, whatever a case wrote: the
-        // version this module is read at, and that its declarations send
-        // nothing. A case writing one of them is refused rather than quietly
-        // overruled.
-        static let runnersKeys: Set<Name> = ["warp", "imports", "procedures"]
+        // What a runner says for itself: the version this module is read at,
+        // and that its declarations send nothing. A case writing either is
+        // refused rather than quietly overruled.
+        static let runnersKeys: Set<Name> = ["warp", "imports"]
 
         // The module as the reader takes it.
         let module: Value
@@ -381,9 +380,7 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        if let taken = module.names.first(where: { name in
-            name != "procedures" && Vocabulary.runnersKeys.contains(name)
-        }) {
+        if let taken = module.names.first(where: Vocabulary.runnersKeys.contains) {
             throw ConformanceError(
                 "the vocabulary a case asks for writes '\(taken)', which is the"
                     + " runner's to say. A case says what the module declares and"
