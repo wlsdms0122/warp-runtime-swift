@@ -571,7 +571,7 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("writes a value handed on once inside a list or a record")
+            "\(error)".contains("writes what 'app.open' answers inside a list or a record")
         }
     }
 
@@ -613,6 +613,94 @@ struct LinearTests {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("still holds 'held' where it ends")
+        }
+    }
+
+    @Test("a cast does not carry one into a list either")
+    func aCastDoesNotCarryOneIntoAList() throws {
+        // Given. A cast answers what it read, so the element is judged by that
+        // rather than by the cast's own shape
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+            ],
+            result: .array([.cast(reference("handle"), as: .named("app.Openable"), optional: false)]),
+            constraints: ["app.Openable": [.named("app.Handle")]]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries 'handle' inside a list or a record")
+        }
+    }
+
+    @Test("a name already given away is refused for that, not for the list it was written into")
+    func aGoneNameInAListSaysWhyItIsGone() throws {
+        // Given. The advice "bind it to a name and hand it on from there" has
+        // nowhere to land when the name already handed it on once
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .array([reference("handle")])
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("hands 'handle' on a second time")
+        }
+    }
+
+    @Test("a membership every member of which is handed on once is one")
+    func anAllLinearMembershipCarriesTheObligation() throws {
+        // Given. A body binding what such a procedure answers takes the
+        // obligation, and dropping it is refused like any other
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+            ],
+            result: .literal(.null),
+            constraints: ["app.Openable": [.named("app.Handle")]],
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(returns: .named("app.Openable")),
+                    body: [],
+                    result: .call(Call(selector: "app.open"))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("still holds 'held' where it ends")
+        }
+    }
+
+    @Test("a membership that mixes one with something else refuses")
+    func aMixedMembershipRefuses() throws {
+        // Given. A value of it would carry an obligation on some readings and
+        // not on others, and which it was is what a membership does not say
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            constraints: ["app.Openable": [.named("app.Handle"), .int]]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("beside members that are not")
         }
     }
 
@@ -801,10 +889,12 @@ struct LinearTests {
     private func holding(
         body: [Statement],
         result: Warp.Expression,
+        constraints: [Name: [TypeExpression]] = [:],
         beside others: [Name: Procedure] = [:]
     ) throws -> Module {
         try Module(
             types: ["app.Handle": .linear(.record(["name": .string]))],
+            constraints: constraints,
             procedures: [
                 entryName: Procedure(body: body, result: result),
                 "app.open": Procedure(

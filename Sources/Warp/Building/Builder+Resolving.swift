@@ -267,6 +267,24 @@ extension Builder {
     // table is what the whole link declared.
     func judge(_ modules: [Module], in table: TypeTable) throws {
         for module in modules {
+            // A membership is handed on once when every member is, so one that
+            // mixes has no answer: a value of it would carry an obligation on
+            // some readings and not on others, and which it was is exactly what
+            // a membership does not say.
+            for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
+                let handed = members.filter { member in Builder.handedOnce(member, in: table) }
+
+                guard !handed.isEmpty, handed.count != members.count else { continue }
+
+                throw BuildError(
+                    "admits \(handed.map(\.rendered).sorted().joined(separator: " and ")),"
+                        + " which is handed on exactly once, beside members that are"
+                        + " not. A value of a membership is followed the same way"
+                        + " whichever member it is",
+                    at: .constraint(name.spelling, in: .of(module))
+                )
+            }
+
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 

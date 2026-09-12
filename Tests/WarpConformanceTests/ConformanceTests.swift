@@ -95,7 +95,7 @@ struct ConformanceTests {
                         throw ConformanceError("'\(one.name)' was asked for and did not read")
                     }
 
-                    return (one.name, supplied(one, declaring: read.signature))
+                    return (one.name, try supplied(one, declaring: read.signature))
                 }
             )
         )
@@ -106,17 +106,17 @@ struct ConformanceTests {
     // The host's side of one asked-for procedure. Which door it answers through
     // is the claim it makes: the one that answers without running is handed no
     // way to reach outside, and the other is.
-    private func supplied(_ one: Case.Supplied, declaring signature: Signature) -> Procedure {
+    private func supplied(_ one: Case.Supplied, declaring signature: Signature) throws -> Procedure {
         Procedure(
             signature: signature,
-            implementation: door(one, reading: places(signature.parameters.count))
+            implementation: door(one, reading: try places(signature.parameters.count))
         )
     }
 
     // Which of the fixed place sets this declaration reads its arguments
     // through. A case declares `of` and `value` and nothing else, so the
     // arity picks one.
-    private func places(_ count: Int) -> any ParameterSet.Type {
+    private func places(_ count: Int) throws -> any ParameterSet.Type {
         switch count {
         case 0:
             return NoParameters.self
@@ -124,8 +124,14 @@ struct ConformanceTests {
         case 1:
             return OneName.self
 
-        default:
+        case 2:
             return TwoNames.self
+
+        default:
+            throw ConformanceError(
+                "a procedure a case asks for declares \(count) names, and the places"
+                    + " a case may name are `of` and `value`"
+            )
         }
     }
 
@@ -220,13 +226,6 @@ struct Case: Sendable, CustomStringConvertible {
         case refuses(Stage)
     }
 
-    // One procedure a case asks for. Its declaration is written the way any
-    // procedure's is, so a runner reads it with the reader it already has; what
-    // is written beside it is what a body would otherwise have shown.
-    //
-    // The names it may declare are `of` and `value`, in that order, because a
-    // procedure the host answers reads its arguments at fixed places and a case
-    // cannot invent a place in someone else's runner.
     // A module the runner brings. The declarations are held apart from the rest
     // of it because each carries keys a declaration does not.
     struct Vocabulary: Sendable {
@@ -241,6 +240,13 @@ struct Case: Sendable, CustomStringConvertible {
         let procedures: [Supplied]
     }
 
+    // One procedure a case asks for. Its declaration is written the way any
+    // procedure's is, so a runner reads it with the reader it already has; what
+    // is written beside it is what a body would otherwise have shown.
+    //
+    // The names it may declare are `of` and `value`, in that order, because a
+    // procedure the host answers reads its arguments at fixed places and a case
+    // cannot invent a place in someone else's runner.
     struct Supplied: Sendable {
         static let ownKeys: Set<Name> = ["answers", "runs", "isolated", "failing"]
 
@@ -276,10 +282,8 @@ struct Case: Sendable, CustomStringConvertible {
     // The module this case asks the runner to bring, which is what a host does
     // for every program: the document names what it needs and the code arrives
     // at the link. A case cannot write host code, so it writes what the link
-    // needs to know about it, and every runner can build that much.
-    //
-    // Nil where the case asks for none. The declarations are held apart from
-    // the rest of the module because each carries keys a declaration does not.
+    // needs to know about it, and every runner can build that much. Nil where
+    // the case asks for none.
     let vocabulary: Vocabulary?
 
     var description: String { name }
