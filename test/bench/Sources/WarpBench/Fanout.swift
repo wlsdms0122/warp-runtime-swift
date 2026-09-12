@@ -9,8 +9,8 @@ import Foundation
 import Warp
 import WarpStandard
 
-// Words that call nothing, dealt into a given number of documents, with the two
-// halves of a build timed apart.
+// Procedures that call nothing, dealt into a given number of documents, with
+// the two halves of a build timed apart.
 //
 // A build compiles and then links. Compiling settles what a document says
 // against what it reaches, and a procedure here reaches nothing outside the document

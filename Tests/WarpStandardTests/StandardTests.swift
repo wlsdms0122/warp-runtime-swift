@@ -279,7 +279,7 @@ struct StandardTests {
 
     @Test("arithmetic off the procedure's edge is a fault, not a wrap")
     func wholeArithmeticOverflowFaults() async throws {
-        // Given. Each of these falls off the edge of the machine word, and the
+        // Given. Each of these falls off the edge of the int, and the
         // language stops rather than answering a number the digits do not say
         let asks: [(Name, Value, Value)] = [
             ("std.math.times", .int(Int.max), .int(2)),
@@ -416,7 +416,7 @@ struct StandardTests {
 
     @Test("rounding and magnitude stop at the procedure's edge")
     func roundingPastTheIntFaults() async throws {
-        // Given. A fraction whose whole part is past the machine word has no
+        // Given. A fraction whose whole part is past the int has no
         // int to answer, and the procedure's own minimum has no magnitude the procedure
         // holds. The refusal names the overflow, not a missing whole answer.
         // The two reasons are different facts.

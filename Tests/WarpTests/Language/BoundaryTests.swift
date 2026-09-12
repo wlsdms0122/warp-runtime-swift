@@ -260,7 +260,7 @@ struct BoundaryTests {
 
     @Test("whole-number arithmetic faults at the procedure's edge")
     func wholeArithmeticFaultsPastTheInt() async throws {
-        // Given. `int` is the machine word: a sum past its edge has no int to
+        // Given. `int` is 64 bits: a sum past its edge has no int to
         // answer, and the language stops rather than wrapping or answering a
         // silent fraction.
         for (procedure, left, right) in [(Name, Int, Int)]([

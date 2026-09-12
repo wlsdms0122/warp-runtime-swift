@@ -25,11 +25,12 @@ let package = Package(
             name: "Warp"
         ),
         // The vocabulary a program sends to: arithmetic, text, collections,
-        // logic, control and running at once. Words on top of the language
+        // logic, control and running at once. Procedures on top of the language
         // rather than part of it, and the dependency graph is where that is
-        // said rather than claimed. `Value` belongs to the language, so a word
-        // here cannot ask for a representation of its own, and the language
-        // learns a word only through the contract a caller hands it.
+        // said rather than claimed. `Value` belongs to the language, so a
+        // procedure here cannot ask for a representation of its own, and the
+        // language learns a procedure only through the contract a caller hands
+        // it.
         .target(
             name: "WarpStandard",
             dependencies: [
