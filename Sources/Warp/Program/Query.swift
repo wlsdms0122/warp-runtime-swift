@@ -19,7 +19,7 @@ import Foundation
 // Answering nil means the word does not apply to that receiver's shape. It is
 // not a failure, and it reads as absent the same as a field that was never
 // set.
-public protocol Query: Word {
+public protocol Query: NativeProcedure {
     // Checks arguments that are already constant, at load. Type is the
     // signature's business; this is for what a type cannot say. That a regex
     // pattern compiles. An author typo surfaces before any run.

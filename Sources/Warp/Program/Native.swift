@@ -88,11 +88,11 @@ enum Native: Sendable {
     // MARK: - Private
     // Generic, so the word's own parameter type has a name here. Handing an
     // existential to a generic function opens it.
-    private func places<W: Word>(of word: W) -> [(position: Int, name: Name)] {
-        W.Parameters.allCases.map { key in (position: key.position, name: key.name) }
+    private func places<P: NativeProcedure>(of word: P) -> [(position: Int, name: Name)] {
+        P.Parameters.allCases.map { key in (position: key.position, name: key.name) }
     }
 
-    private func sends<W: Word>(of word: W) -> [(position: Int, selector: Name)] {
-        W.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
+    private func sends<P: NativeProcedure>(of word: P) -> [(position: Int, selector: Name)] {
+        P.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
     }
 }

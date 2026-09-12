@@ -11,7 +11,7 @@ import Foundation
 // body's do; what an effect has beyond a query is the way to write a variable
 // it was handed in place, to call a closure it was handed, and to reach the
 // environment.
-public struct Invocation<W: Word>: Sendable {
+public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Property
     public let selector: Name
 
@@ -72,12 +72,12 @@ public struct Invocation<W: Word>: Sendable {
     // What an argument holds, named by the word's own key. An argument nobody
     // wrote and one written as null are the same fact here, the same as they
     // are everywhere else.
-    public subscript(key: W.Parameters) -> Value {
+    public subscript(key: P.Parameters) -> Value {
         settled[key.position]
     }
 
     // What a parameter handed in place holds now.
-    public func held(_ key: W.Parameters) throws -> Value {
+    public func held(_ key: P.Parameters) throws -> Value {
         guard let hold = hold(of: key) else {
             throw ExecutionError(
                 "'\(selector)' reads '\(key.name)' in place, and it was not handed a variable"
@@ -91,7 +91,7 @@ public struct Invocation<W: Word>: Sendable {
     // declaring a parameter `inout` answers into the caller's variable this
     // way, and a word writing an argument that is not a path is a word the
     // link should have refused.
-    public func write(_ key: W.Parameters, _ value: Value) throws {
+    public func write(_ key: P.Parameters, _ value: Value) throws {
         guard let hold = hold(of: key) else {
             throw ExecutionError(
                 "'\(selector)' writes '\(key.name)' in place, and it was not handed a variable"
@@ -104,7 +104,7 @@ public struct Invocation<W: Word>: Sendable {
     // Nil for an argument that is absent or null, rather than the empty string
     // stringifying null would give: "unset" and "set to nothing" are different
     // instructions to a caller.
-    public func string(_ key: W.Parameters) -> String? {
+    public func string(_ key: P.Parameters) -> String? {
         switch self[key] {
         case .null:
             return nil
@@ -121,7 +121,7 @@ public struct Invocation<W: Word>: Sendable {
     // The label names which piece of this word's work the send is, the way it
     // does for a closure, so a refusal from inside says where it happened.
     public func send(
-        _ key: W.Imports,
+        _ key: P.Imports,
         to receiver: Value? = nil,
         offering arguments: [(name: Name, value: Value)] = [],
         piece label: String? = nil
@@ -155,7 +155,7 @@ public struct Invocation<W: Word>: Sendable {
     }
 
     // MARK: - Private
-    private func hold(of key: W.Parameters) -> Handle? {
+    private func hold(of key: P.Parameters) -> Handle? {
         holds.first { hold in hold.position == key.position }?.handle
     }
 }

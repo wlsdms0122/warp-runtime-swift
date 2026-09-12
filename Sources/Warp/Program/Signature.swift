@@ -73,15 +73,15 @@ public struct Signature: Sendable, Equatable {
     // A native word's declaration, read off the word itself. What it takes is
     // its own type's to say, so a registration names the word once and the
     // parameters come with it.
-    public init<W: Word>(
-        of word: W.Type,
-        receiver: W.Parameters? = nil,
+    public init<P: NativeProcedure>(
+        of word: P.Type,
+        receiver: P.Parameters? = nil,
         returns: TypeExpression? = nil
     ) {
         self.init(
             receiver: receiver?.name,
             parameters: Dictionary(
-                uniqueKeysWithValues: W.Parameters.allCases.map { key in
+                uniqueKeysWithValues: P.Parameters.allCases.map { key in
                     (key.name, key.declared)
                 }
             ),

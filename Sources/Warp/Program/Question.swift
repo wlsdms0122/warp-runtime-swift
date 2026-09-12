@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Question<W: Word>: Sendable {
+public struct Question<P: NativeProcedure>: Sendable {
     // The arguments a word reads: settled by the row a run sent, with the
     // run as the way back in for a word handed a procedure, or offered by
     // name where a caller asks the word directly, with no declaration and no
@@ -55,7 +55,7 @@ public struct Question<W: Word>: Sendable {
     // A settled question reads the place the key stands at, since the run
     // ordered the arguments by the declaration this key belongs to. An offered
     // one was asked with no declaration behind it, so there are only names.
-    public subscript(key: W.Parameters) -> Value {
+    public subscript(key: P.Parameters) -> Value {
         switch arguments {
         case let .settled(settled, _, _, _):
             return settled[key.position]
@@ -72,7 +72,7 @@ public struct Question<W: Word>: Sendable {
     // Synchronous, because a query answers without running and the link
     // refused a query declaring it sends anything that runs.
     public func send(
-        _ key: W.Imports,
+        _ key: P.Imports,
         to receiver: Value? = nil,
         offering arguments: [(name: Name, value: Value)] = []
     ) throws -> Value {

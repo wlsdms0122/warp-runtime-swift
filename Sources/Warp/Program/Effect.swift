@@ -15,6 +15,6 @@ import Foundation
 // An effect is declared, not embedded. The grammar stays closed. A module adds
 // vocabulary, never a new kind of expression, so nothing installed can quietly
 // redefine what `loop` means.
-public protocol Effect: Word {
+public protocol Effect: NativeProcedure {
     func run(_ invocation: Invocation<Self>) async throws -> Value
 }
