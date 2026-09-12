@@ -155,9 +155,9 @@ public struct Executor: Sendable {
             return try self.call(call, receiving: receiver, in: activation)
 
         // Running a body or reaching outside is async and may fail in a way an
-        // attempt can catch, so it belongs to `evaluate`. Reaching here means
-        // a construct was written where only data can be read: inside a
-        // condition, or among an effect's settled arguments.
+        // attempt can catch, so it belongs to `evaluate`. The build refuses one
+        // of these where data is read, so what is left here is the floor under
+        // that refusal rather than a way a run reaches.
         case .apply, .block, .conditional, .loop, .attempt, .leave:
             throw ExecutionError("this expression runs, so it cannot be read as data here")
         }
@@ -722,9 +722,11 @@ public struct Executor: Sendable {
         Settled(values: try callee.settle(given, offered: false, skipping: skipping.contains))
     }
 
-    // The pure half of a call. An effect or a body that runs answers only by
-    // running, so a condition that names one is refused here rather than
-    // quietly starting something in the middle of a comparison.
+    // The pure half of a call. What the build resolves to a declaration it
+    // refuses where data is read; what reaches here is a call through a
+    // contract, whose declaration the arriving value picks, so whether it
+    // answers without running is the value's fact and this is where it is
+    // asked.
     private func call(
         _ call: CallOperation,
         receiving handed: Value? = nil,
