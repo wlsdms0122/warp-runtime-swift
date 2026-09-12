@@ -69,7 +69,7 @@ public struct TypeTable: Sendable {
         constraints: [Name: [TypeExpression]],
         contracts: [Name: [Name: Signature]] = [:],
         satisfying: [Name: Set<Name>] = [:],
-        unsettled: Requiring? = nil,
+        unsettled: Fulfillment? = nil,
         standing: [Name]? = nil,
         constraintStanding: [Name]? = nil,
         of linkage: Linkage
@@ -99,7 +99,7 @@ public struct TypeTable: Sendable {
     // declarations alone, so they are the rows the first table had.
     func satisfying(
         _ satisfying: [Name: Set<Name>],
-        unsettled: Requiring? = nil
+        unsettled: Fulfillment? = nil
     ) -> TypeTable {
         TypeTable(
             types: types,

@@ -61,7 +61,7 @@ final class ShapeTable: Sendable {
     // Where a value this table cannot settle is written down, so the pair goes
     // to the list that can answer it. Nothing at the run, where the table is
     // the whole list's and settles everything it is asked.
-    let unsettled: Requiring?
+    let unsettled: Fulfillment?
 
     private let rows: [Name: Int]
     private let constraintRows: [Name: Int]
@@ -88,7 +88,7 @@ final class ShapeTable: Sendable {
         cycling: [Int] = [],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
-        unsettled: Requiring? = nil,
+        unsettled: Fulfillment? = nil,
         of linkage: Linkage
     ) {
         self.shapes = shapes

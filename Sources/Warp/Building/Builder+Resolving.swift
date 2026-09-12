@@ -24,7 +24,7 @@ extension Builder {
         contracts: [Name: Placed<[Name: Signature]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
         among signatures: [Name: Placed<Signature>],
-        unsettled: Requiring? = nil
+        unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
         requirements: [Name: Requirement],
@@ -301,7 +301,7 @@ extension Builder {
         at origin: Int,
         folding answered: Answered,
         writing lowering: inout Lowering,
-        leaning requiring: Requiring,
+        leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) throws -> [Name: Value] {
         // Folding runs what it reads, and running reads rows. A lowered body
@@ -322,7 +322,7 @@ extension Builder {
         for (name, expression) in try order(module.constants, in: module) {
             let place = Place.constant(name.spelling, in: .of(module))
 
-            try requiring.folding(place) {
+            try fulfillment.folding(place) {
                 // A constant's dots are judged before it settles, the way a
                 // body's are: the settled neighbours' types are the
                 // environment, so an absent field or a needless `?.` refuses
@@ -333,13 +333,13 @@ extension Builder {
                     in: known.mapValues { value in type(of: value, in: context.shapes) },
                     with: context,
                     folding: nil,
-                    writing: requiring
+                    writing: fulfillment
                 )
 
                 // A closure a constant holds runs later, so evaluating the
                 // constant proves nothing about the sends inside it. They pass
                 // the same gate every gathered call does.
-                try checked(calls, in: context, writing: requiring)
+                try checked(calls, in: context, writing: fulfillment)
 
                 do {
                     known[name] = try Folding(
@@ -369,7 +369,7 @@ extension Builder {
         beside known: [Name: Value],
         folding answered: Answered,
         writing lowering: inout Lowering,
-        leaning requiring: Requiring,
+        leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) throws -> [Name: Value] {
         guard !module.variables.isEmpty else { return [:] }
@@ -379,17 +379,17 @@ extension Builder {
         for (name, expression) in module.variables.sorted { $0.key < $1.key } {
             let place = Place.variable(name.spelling, in: .of(module))
 
-            try requiring.folding(place) {
+            try fulfillment.folding(place) {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: place,
                     in: known.mapValues { value in type(of: value, in: context.shapes) },
                     with: context,
                     folding: nil,
-                    writing: requiring
+                    writing: fulfillment
                 )
 
-                try checked(calls, in: context, writing: requiring)
+                try checked(calls, in: context, writing: fulfillment)
 
                 do {
                     started[name] = try Folding(

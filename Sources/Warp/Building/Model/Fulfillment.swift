@@ -1,5 +1,5 @@
 //
-//  Requiring.swift
+//  Fulfillment.swift
 //  Warp
 //
 //  Created by JSilver
@@ -21,7 +21,7 @@ import Foundation
 // A walk that reads a body rather than judging it writes none of these: the
 // ask it walks under carries the ledger, and reading carries no ask that holds
 // one. What such a walk concludes is not what the document says.
-final class Requiring: @unchecked Sendable {
+final class Fulfillment: @unchecked Sendable {
     // MARK: - Property
     // A `TypingContext` is `Sendable` and this rides one.
     private let lock = NSLock()

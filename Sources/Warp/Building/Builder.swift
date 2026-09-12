@@ -319,14 +319,14 @@ public struct Builder: Sendable {
         // A body folded here runs against a table that cannot settle a
         // contract, and what it hands over is written here rather than passed
         // over.
-        let requiring = Requiring()
+        let fulfillment = Fulfillment()
         let shaped = try self.shaped(
             declaring,
             conformances: declared.conformances,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
-            unsettled: requiring
+            unsettled: fulfillment
         )
 
         var compiling = Compiling(
@@ -342,7 +342,7 @@ public struct Builder: Sendable {
                 at: compiled.count + offset,
                 declaring: holding[offset],
                 in: &compiling,
-                writing: requiring
+                writing: fulfillment
             )
         }
     }
@@ -356,9 +356,9 @@ public struct Builder: Sendable {
         at origin: Int,
         declaring holding: [Symbol],
         in compiling: inout Compiling,
-        writing requiring: Requiring
+        writing fulfillment: Fulfillment
     ) throws -> Compiled {
-        requiring.laying(origin, at: Place(in: .of(module)))
+        fulfillment.laying(origin, at: Place(in: .of(module)))
 
         let shapes = compiling.shapes
 
@@ -445,7 +445,7 @@ public struct Builder: Sendable {
                     with: context(),
                     folding: folding,
                     origin: origin,
-                    writing: requiring
+                    writing: fulfillment
                 )
 
                 answer = (
@@ -460,7 +460,7 @@ public struct Builder: Sendable {
 
             resolvedBodies[symbol.declared] = answer
 
-            try checked(answer.calls, in: context(), writing: requiring)
+            try checked(answer.calls, in: context(), writing: fulfillment)
 
             // Read off the body the build is about to lower, so what is proven
             // is what runs. The environment is the one the body was judged in.
@@ -564,7 +564,7 @@ public struct Builder: Sendable {
             at: origin,
             folding: compiling.folding(),
             writing: &compiling.lowering,
-            leaning: requiring,
+            leaning: fulfillment,
             in: context()
         )
 
@@ -574,7 +574,7 @@ public struct Builder: Sendable {
             beside: constants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
-            leaning: requiring,
+            leaning: fulfillment,
             in: context()
         )
 
@@ -607,7 +607,7 @@ public struct Builder: Sendable {
         // whether or not this entry walks that way, so which declarations
         // are judged is not a question the entry answers.
         for symbol in holding {
-            try requiring.folding(symbol.place) {
+            try fulfillment.folding(symbol.place) {
                 let (procedure, gathered) = try resolved(symbol)
 
                 calls[symbol.declared] = gathered.map { call in call.callee }
@@ -649,7 +649,7 @@ public struct Builder: Sendable {
             constraints: module.constraints,
             contracts: module.contracts,
             conformances: module.conformances,
-            leaned: requiring.conformances(of: origin),
+            leaned: fulfillment.conformances(of: origin),
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },

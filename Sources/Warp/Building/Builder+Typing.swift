@@ -105,14 +105,14 @@ extension Builder {
         with context: TypingContext,
         folding: Folding?,
         origin: Int? = nil,
-        writing requiring: Requiring
+        writing fulfillment: Fulfillment
     ) throws -> (block: Block, calls: [CallSite]) {
         let inner = try inspected(
             block: block,
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, origin: origin, writing: requiring)
+            ask: .judging(folding: folding, origin: origin, writing: fulfillment)
         )
 
         try held(
@@ -133,14 +133,14 @@ extension Builder {
         in environment: [Name: Shape],
         with context: TypingContext,
         folding: Folding?,
-        writing requiring: Requiring
+        writing fulfillment: Fulfillment
     ) throws -> (Expression, [CallSite]) {
         let inner = try inspected(
             expression,
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, writing: requiring)
+            ask: .judging(folding: folding, writing: fulfillment)
         )
 
         return (inner.rewritten, inner.calls)
@@ -159,7 +159,7 @@ extension Builder {
         mentions: [Name: Set<Name>],
         readings: [Name: Shape],
         in shapes: ShapeTable,
-        requiring: Requiring?,
+        fulfillment: Fulfillment?,
         at place: Place
     ) -> String? {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
@@ -173,7 +173,7 @@ extension Builder {
                 if shapes.satisfying[bound] != nil {
                     switch shapes.answering(contract: bound, reading: reading) {
                     case let .leansOn(type):
-                        requiring?.require(Conformance(type: type, contract: bound), at: place)
+                        fulfillment?.require(Conformance(type: type, contract: bound), at: place)
 
                     case .settled(true):
                         break
@@ -218,7 +218,7 @@ extension Builder {
         answering: Shape?,
         filledWith bound: Bound,
         in shapes: ShapeTable,
-        requiring: Requiring?,
+        fulfillment: Fulfillment?,
         at place: Place
     ) -> Judgment {
         // A declaration with nothing to fill is read as the link lowered it.
@@ -244,7 +244,7 @@ extension Builder {
             mentions: mentions,
             readings: bound.readings,
             in: shapes,
-            requiring: requiring,
+            fulfillment: fulfillment,
             at: place
         ) {
             return .refusal(refusal)
@@ -366,12 +366,12 @@ extension Builder {
         in environment: [Name: Shape],
         with context: TypingContext,
         at place: Place,
-        writing requiring: Requiring?
+        writing fulfillment: Fulfillment?
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
         guard case let .key(head, _)? = path.first, var current = environment[head] else {
-            return asWritten(path, in: environment, with: context, at: place, writing: requiring)
+            return asWritten(path, in: environment, with: context, at: place, writing: fulfillment)
         }
 
         // A box stands in the environment marked as one; what is read out of
@@ -470,7 +470,7 @@ extension Builder {
                 // `held.count`), and the field it lands on is the same field
                 // either way.
                 if let reached = current.reaching([segment] + rest()) {
-                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: requiring) {
+                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -484,7 +484,7 @@ extension Builder {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: requiring) {
+                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -505,7 +505,7 @@ extension Builder {
                         break
                     }
 
-                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: requiring) {
+                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: fulfillment) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -562,7 +562,7 @@ extension Builder {
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
             case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
+                switch indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -580,7 +580,7 @@ extension Builder {
             // Bytes are an array of bytes in a compact spelling, so an index
             // reads one. A `byte`, the range `std` names.
             case let (.indexRef(inner, optionally), .bytes):
-                switch indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
+                switch indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -662,7 +662,7 @@ extension Builder {
         in environment: [Name: Shape],
         with context: TypingContext,
         at place: Place,
-        writing requiring: Requiring?
+        writing fulfillment: Fulfillment?
     ) -> PathReading {
         var judged: [PathSegment] = []
 
@@ -673,7 +673,7 @@ extension Builder {
                 continue
             }
 
-            switch indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
+            switch indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
             case let .refused(reason):
                 return .refused(reason)
 
@@ -702,9 +702,9 @@ extension Builder {
         in environment: [Name: Shape],
         with context: TypingContext,
         at place: Place,
-        writing requiring: Requiring?
+        writing fulfillment: Fulfillment?
     ) -> IndexReading {
-        switch reading(of: inner, in: environment, with: context, at: place, writing: requiring) {
+        switch reading(of: inner, in: environment, with: context, at: place, writing: fulfillment) {
         case let .refused(reason):
             return .refused(reason)
 
@@ -890,15 +890,15 @@ extension Builder {
         // Judging carries which module the body being judged was declared
         // in, where it was declared in one; a constant's expression has no
         // module to read its variables by.
-        case judging(folding: Folding?, origin: Int? = nil, writing: Requiring? = nil)
+        case judging(folding: Folding?, origin: Int? = nil, writing: Fulfillment? = nil)
         case reading
 
         // Where a walk writes down the pairs its calls lean on. A walk that
         // reads rather than judges has none, so a probe cannot write.
-        var requiring: Requiring? {
-            guard case let .judging(_, _, requiring) = self else { return nil }
+        var fulfillment: Fulfillment? {
+            guard case let .judging(_, _, fulfillment) = self else { return nil }
 
-            return requiring
+            return fulfillment
         }
 
         // Whether this ask keeps what the walk rebuilds. Reading reads a body
@@ -999,7 +999,7 @@ extension Builder {
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
-            switch reading(of: path, in: environment, with: context, at: place, writing: ask.requiring) {
+            switch reading(of: path, in: environment, with: context, at: place, writing: ask.fulfillment) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
 
@@ -1755,7 +1755,7 @@ extension Builder {
 
         switch context.shapes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
-            ask.requiring?.require(
+            ask.fulfillment?.require(
                 Conformance(type: type, contract: asked.contract),
                 at: place.part(.receiver)
             )
@@ -2439,7 +2439,7 @@ extension Builder {
         in environment: [Name: Shape],
         with context: TypingContext,
         at place: Place,
-        writing requiring: Requiring?
+        writing fulfillment: Fulfillment?
     ) -> Writable {
         guard case let .key(head, _)? = path.first, let box = environment[head] else {
             return .refused("writes '\(path.rendered)', and its head is not a name here")
@@ -2468,7 +2468,7 @@ extension Builder {
             }
 
             if case let .indexRef(inner, _) = segment {
-                if case let .refused(reason) = indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
                     return .refused(reason)
                 }
             }
@@ -2576,7 +2576,7 @@ extension Builder {
                 continue
             }
 
-            if case let .refused(reason) = writable(path, in: environment, with: context, at: at, writing: ask.requiring) {
+            if case let .refused(reason) = writable(path, in: environment, with: context, at: at, writing: ask.fulfillment) {
                 try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
         }
@@ -2624,7 +2624,7 @@ extension Builder {
         if path.count == 1, let fixed {
             slot = fixed
         } else {
-            switch writable(path, in: environment, with: context, at: place, writing: ask.requiring) {
+            switch writable(path, in: environment, with: context, at: place, writing: ask.fulfillment) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
                 return

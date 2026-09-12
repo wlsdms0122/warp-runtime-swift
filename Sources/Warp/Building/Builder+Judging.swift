@@ -16,7 +16,7 @@ extension Builder {
     // The one gate every gathered call passes, wherever its body sits. A
     // procedure, a word, a constant's closure. The call carries the declaration
     // the walk found for it, and is judged against that.
-    func checked(_ calls: [CallSite], in context: TypingContext, writing requiring: Requiring) throws {
+    func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
         for call in calls {
             guard let callee = context.declared(call.callee) else {
                 throw BuildError.unjudged(
@@ -25,7 +25,7 @@ extension Builder {
                 )
             }
 
-            try check(call, against: callee, with: context, writing: requiring)
+            try check(call, against: callee, with: context, writing: fulfillment)
         }
     }
 
@@ -463,7 +463,7 @@ extension Builder {
         _ site: CallSite,
         against callee: Linked,
         with context: TypingContext,
-        writing requiring: Requiring
+        writing fulfillment: Fulfillment
     ) throws {
         let call = site.call
         let shapes = context.shapes
@@ -507,7 +507,7 @@ extension Builder {
                 in: shapes
             ),
             in: shapes,
-            requiring: requiring,
+            fulfillment: fulfillment,
             at: site.place
         ) {
         case let .refusal(reason):

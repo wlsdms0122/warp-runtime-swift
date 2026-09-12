@@ -24,7 +24,7 @@ extension ShapeTable {
         _ types: [Name: TypeExpression],
         constraints: [Name: [TypeExpression]],
         satisfying: [Name: Set<Name>] = [:],
-        unsettled: Requiring? = nil,
+        unsettled: Fulfillment? = nil,
         standing: [Name]? = nil,
         constraintStanding: [Name]? = nil,
         of linkage: Linkage
