@@ -240,13 +240,13 @@ struct TypeTests {
 
         // And a body whose answer nothing can be read from says nothing. An
         // answer worked out from its own is not one the text states.
-        let circling = Procedure(
+        let cycling = Procedure(
             body: [],
             result: .call(Call(selector: "counts"))
         )
 
         _ = try Builder().build(
-            [try Module(procedures: ["entry": entry, "wants": wants, "counts": circling])],
+            [try Module(procedures: ["entry": entry, "wants": wants, "counts": cycling])],
             entry: "entry"
         )
     }

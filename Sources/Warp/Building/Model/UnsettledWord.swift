@@ -10,7 +10,7 @@ import Foundation
 // The stand-in for a written body in the tables the link's own settling reads.
 // A native word answers at the link; a written body is itself still being
 // resolved beside the constants it may read, so a constant that ran one would
-// be a circle with no start. The fact lives in the table (the word is there,
+// be a cycle with no start. The fact lives in the table (the word is there,
 // judged and named, and answers with the refusal) rather than in a flag every
 // resolver would have to carry.
 struct UnsettledWord: Query {

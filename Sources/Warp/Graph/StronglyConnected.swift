@@ -1,5 +1,5 @@
 //
-//  Circles.swift
+//  StronglyConnected.swift
 //  Warp
 //
 //  Created by JSilver
@@ -21,9 +21,9 @@ import Foundation
 // calling one another in a line is an ordinary program and was enough to end
 // the process on the host's stack. Nesting depth is a document's own fact and
 // the walks over expressions may lean on it; call depth is not.
-enum Circles {
+enum StronglyConnected {
     // MARK: - Internal
-    static func among(_ edges: [Name: [Name]]) -> [[Name]] {
+    static func components(among edges: [Name: [Name]]) -> [[Name]] {
         // Where each was met, and the earliest any way on from it can reach
         // back to. A component closes where the two agree.
         var met: [Name: Int] = [:]
@@ -84,16 +84,16 @@ enum Circles {
                 // reached got back to anything met before it, everything still
                 // standing above it is one component.
                 if reaches[step.name] == met[step.name] {
-                    var circle: [Name] = []
+                    var cycle: [Name] = []
 
                     while let last = path.popLast() {
                         standing.remove(last)
-                        circle.append(last)
+                        cycle.append(last)
 
                         if last == step.name { break }
                     }
 
-                    found.append(circle)
+                    found.append(cycle)
                 }
 
                 if let asked = work.last?.name {

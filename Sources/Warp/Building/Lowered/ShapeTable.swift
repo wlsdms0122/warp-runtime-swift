@@ -39,7 +39,7 @@ final class ShapeTable: Sendable {
     // The rows that name themselves through a chain of names, and so stand
     // for no shape. The lowering is where that is worked out, so it is what
     // says so.
-    let circling: [Int]
+    let cycling: [Int]
 
     // Which types satisfy each declared contract, by the contract's own
     // spelling. A contract's members are not a shape the table lowers: what
@@ -85,7 +85,7 @@ final class ShapeTable: Sendable {
         labels: [Name],
         constraintLabels: [Name],
         recordRows: [Int?],
-        circling: [Int] = [],
+        cycling: [Int] = [],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
         unsettled: Requiring? = nil,
@@ -96,7 +96,7 @@ final class ShapeTable: Sendable {
         self.labels = labels
         self.constraintLabels = constraintLabels
         self.recordRows = recordRows
-        self.circling = circling
+        self.cycling = cycling
         self.satisfying = satisfying
         self.settled = settled
         self.unsettled = unsettled

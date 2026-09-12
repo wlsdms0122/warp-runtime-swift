@@ -655,10 +655,10 @@ struct PlaceTests {
         #expect(error?.message.contains("aardvark") == false)
     }
 
-    @Test("a constant on a circle's edge is not counted as part of it")
-    func aConstantReadByACircleIsNotOnIt() throws {
-        // Given. `delta` is read by one of a circle and settles perfectly well,
-        // so the circle is the only thing wrong here. Narrowing by what nothing
+    @Test("a constant on a cycle's edge is not counted as part of it")
+    func aConstantReadByACycleIsNotOnIt() throws {
+        // Given. `delta` is read by one of a cycle and settles perfectly well,
+        // so the cycle is the only thing wrong here. Narrowing by what nothing
         // reads keeps it anyway, because something does read it.
         let sut = try Module(
             constants: [

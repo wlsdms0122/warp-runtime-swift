@@ -538,7 +538,7 @@ struct IndexReferenceJudgmentTests {
     @Test("a constant settles from native words alone")
     func aConstantDoesNotRunAWrittenBody() throws {
         // Given. `shout` has a written body, still being resolved beside the
-        // constants it may read; a constant that runs it is a circle with no
+        // constants it may read; a constant that runs it is a cycle with no
         // start, refused out loud
         let sut = try Module(
             constants: [
@@ -577,7 +577,7 @@ struct IndexReferenceJudgmentTests {
     func aBodyFoldsThroughAWrittenWord() async throws {
         // Given. The constants are settled and the words resolved by the time a
         // body folds, so a constant-headed call may run a written word: the
-        // circle the settling refuses is the constants' own
+        // cycle the settling refuses is the constants' own
         let sut = try Module(
             constants: ["greeting": .literal(.string("hi"))],
             procedures: [

@@ -183,7 +183,7 @@ extension Builder {
         // In name order rather than the rows', so which of two names that
         // name themselves is reported does not follow how the documents were
         // handed over.
-        for label in table.shapes.circling.map({ row in table.shapes.labels[row] }).sorted() {
+        for label in table.shapes.cycling.map({ row in table.shapes.labels[row] }).sorted() {
             guard let declaration = declared[label] else { continue }
 
             throw BuildError(
@@ -422,7 +422,7 @@ extension Builder {
         var settled: Set<Name> = []
 
         // What the walk is standing on, root first. Where it meets a name
-        // already on it, everything from that name down is the circle, and
+        // already on it, everything from that name down is the cycle, and
         // nothing above it is, which is the difference between what names
         // itself back and what merely waits on something that does.
         var walking: [Name] = []
@@ -431,17 +431,17 @@ extension Builder {
             guard !settled.contains(name) else { return }
 
             if let met = walking.firstIndex(of: name) {
-                let circle = walking[met...].sorted()
+                let cycle = walking[met...].sorted()
 
                 throw BuildError(
-                    "constants \(circle.map(\.spelling).joined(separator: ", ")) name each other in a"
-                        + " circle. A constant may name another declared beside it, but"
+                    "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
+                        + " cycle. A constant may name another declared beside it, but"
                         + " not one that names it back",
                     // Any of them is where the fix can be made, so the one
-                    // walked to is the first in sorted order: a circle has no
+                    // walked to is the first in sorted order: a cycle has no
                     // first member, and reading one off the walk would name a
                     // different constant depending on where the walk started.
-                    at: .constant(circle[0].spelling, in: .of(module))
+                    at: .constant(cycle[0].spelling, in: .of(module))
                 )
             }
 

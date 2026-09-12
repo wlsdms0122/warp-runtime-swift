@@ -1579,7 +1579,7 @@ extension Builder {
         // `continue` being the loop's own, so they are absorbed rather than
         // handed on. A round also follows other rounds, so the condition and
         // the body read the settled environment. The one the rounds' own writes
-        // have already joined into. Readings that circle instead of settling
+        // have already joined into. Readings that cycle instead of settling
         // would be widened to `any` behind the author's back. Judging says so
         // out loud, where a refusal can carry the reason; the reading ask stays
         // total and takes the widened answer.
@@ -2269,7 +2269,7 @@ extension Builder {
     // in. A body that writes nothing outward settles on the first look; a chain
     // of writes settles one link per look, so the bound is the chain's own
     // size: the names the body writes, times the few steps the join ladder has.
-    // Past it the readings are not climbing (they are circling) and everything
+    // Past it the readings are not climbing (they are cycling) and everything
     // the body writes falls to `any`, over-wide and never wrong; the judging
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(

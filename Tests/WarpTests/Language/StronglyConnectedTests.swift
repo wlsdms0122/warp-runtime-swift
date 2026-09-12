@@ -1,5 +1,5 @@
 //
-//  CircleTests.swift
+//  StronglyConnectedTests.swift
 //  WarpTests
 //
 //  Created by JSilver
@@ -15,13 +15,13 @@ import Testing
 // about linking, so this is what it is tested on. It also carries its own
 // stack, because written as recursion a chain of calls descends once per link
 // and a chain is as long as a program. A fact only a graph this size states.
-@Suite("The call graph is walked callee first, and a circle is one component")
-struct CircleTests {
+@Suite("The call graph is walked callee first, and a cycle is one component")
+struct StronglyConnectedTests {
     // MARK: - Test
     @Test("everything a name reaches is closed before the name is")
     func calleesComeFirst() {
         // Given. A line of three, and a fourth nobody calls.
-        let found = Circles.among([
+        let found = StronglyConnected.components(among: [
             "a": ["b"],
             "b": ["c"],
             "c": [],
@@ -30,7 +30,7 @@ struct CircleTests {
 
         #expect(found.map(\.count).allSatisfy { count in count == 1 })
 
-        let order = found.flatMap { circle in circle }
+        let order = found.flatMap { cycle in cycle }
 
         #expect(order.firstIndex(of: "c")! < order.firstIndex(of: "b")!)
         #expect(order.firstIndex(of: "b")! < order.firstIndex(of: "a")!)
@@ -38,16 +38,16 @@ struct CircleTests {
     }
 
     @Test("names that reach one another are one component, a self-call included")
-    func circlesAreOneComponent() {
-        let mutual = Circles.among(["ping": ["pong"], "pong": ["ping"]])
+    func cyclesAreOneComponent() {
+        let mutual = StronglyConnected.components(among: ["ping": ["pong"], "pong": ["ping"]])
 
         #expect(mutual.count == 1)
         #expect(Set(mutual[0]) == ["ping", "pong"])
 
-        // A name that reaches itself is its own circle. One member, and the
+        // A name that reaches itself is its own cycle. One member, and the
         // caller tells it from a plain singleton by asking whether it sends to
         // itself.
-        let alone = Circles.among(["self": ["self"]])
+        let alone = StronglyConnected.components(among: ["self": ["self"]])
 
         #expect(alone == [["self"]])
     }
@@ -56,9 +56,9 @@ struct CircleTests {
     func unknownNamesAreNotWalked() {
         // Every selector a body sends is gathered, and most of them name
         // declarations that said what they answer. Those are not in here.
-        let found = Circles.among(["a": ["declared", "b"], "b": []])
+        let found = StronglyConnected.components(among: ["a": ["declared", "b"], "b": []])
 
-        #expect(found.flatMap { circle in circle }.sorted() == ["a", "b"])
+        #expect(found.flatMap { cycle in cycle }.sorted() == ["a", "b"])
     }
 
     @Test("a chain as long as a program is walked without the host's stack")
@@ -73,10 +73,10 @@ struct CircleTests {
             }
         )
 
-        let found = Circles.among(edges)
+        let found = StronglyConnected.components(among: edges)
 
         #expect(found.count == names.count)
-        #expect(found.flatMap { circle in circle }.first == names.last)
+        #expect(found.flatMap { cycle in cycle }.first == names.last)
     }
 
     // MARK: - Public

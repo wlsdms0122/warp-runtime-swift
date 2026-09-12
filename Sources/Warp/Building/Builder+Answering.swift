@@ -23,10 +23,10 @@ import Foundation
 //
 // A body's answer may be another body's, so the order is the call graph's. Each
 // declaration read after everything its answer could come from. Bodies that
-// reach one another's answers in a circle, a recursive one included, are read
+// reach one another's answers in a cycle, a recursive one included, are read
 // as `any`: an answer worked out from itself is not one the text states, and a
 // guess there would be a refusal an author cannot act on. Writing `returns` is
-// what says more, and it removes the circle by saying it.
+// what says more, and it removes the cycle by saying it.
 extension Builder {
     // MARK: - Internal
     // A declaration whose answer nobody wrote, with what it takes to read one
@@ -66,16 +66,16 @@ extension Builder {
             uniquingKeysWith: { first, _ in first }
         )
 
-        for circle in Circles.among(edges) {
+        for component in StronglyConnected.components(among: edges) {
             // One declaration that does not reach its own answer is the only
-            // shape a body can be read for. Everything else is a circle, and
-            // a circle says nothing.
+            // shape a body can be read for. Everything else is a cycle, and
+            // a cycle says nothing.
             guard
-                circle.count == 1,
-                let only = circle.first.flatMap({ name in declared[name] }),
+                component.count == 1,
+                let only = component.first.flatMap({ name in declared[name] }),
                 !only.sends.contains(only.symbol.declared)
             else {
-                for name in circle { recording(name, .any) }
+                for name in component { recording(name, .any) }
 
                 continue
             }

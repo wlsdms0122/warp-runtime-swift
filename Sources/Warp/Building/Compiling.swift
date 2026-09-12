@@ -237,7 +237,7 @@ struct Compiling {
     }
 
     // The stand-ins, while the words themselves settle: a word folding through
-    // a word would be a circle, and which words are already lowered is a fact
+    // a word would be a cycle, and which words are already lowered is a fact
     // of name order rather than of the text.
     func folding() -> Answered {
         Answered.documents(

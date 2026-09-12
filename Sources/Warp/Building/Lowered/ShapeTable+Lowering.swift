@@ -81,11 +81,11 @@ extension ShapeTable {
             return row
         }
 
-        // Marked before any is replaced, so each row in a circle is named
+        // Marked before any is replaced, so each row in a cycle is named
         // as itself rather than as whichever the replacement reached first.
-        let circling = shapes.indices.filter { row in end(of: row) == nil }
+        let cycling = shapes.indices.filter { row in end(of: row) == nil }
 
-        for row in circling {
+        for row in cycling {
             shapes[row] = .undeclared(
                 label: labels[row].spelling,
                 refusal: "type '\(labels[row])', which names itself"
@@ -105,7 +105,7 @@ extension ShapeTable {
             labels: labels,
             constraintLabels: constraintLabels,
             recordRows: recordRows,
-            circling: circling,
+            cycling: cycling,
             satisfying: satisfying,
             settled: unsettled == nil,
             unsettled: unsettled,

@@ -141,7 +141,7 @@ struct AnsweringTests {
     }
 
     @Test("an answer that would come from itself says nothing")
-    func acircleAnswersAny() throws {
+    func aCycleAnswersAny() throws {
         // Given. Two declarations whose answers are each other's. Reading
         // either needs the other, so neither is read: an answer worked out from
         // itself is not one the text states, and a guess there would be a
@@ -164,15 +164,15 @@ struct AnsweringTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
-        // like at a call site. Where the same shape with the circle broken
+        // like at a call site. Where the same shape with the cycle broken
         // reads the record `pong` answers.
-        func reading(circling: Bool) throws -> Module {
+        func reading(cycling: Bool) throws -> Module {
             try Module(
                 procedures: [
                     "ping": Procedure(body: [], result: .call(Call(selector: "pong"))),
                     "pong": Procedure(
                         body: [],
-                        result: circling
+                        result: cycling
                             ? .call(Call(selector: "ping"))
                             : .record(["total": .literal(.int(1))])
                     ),
@@ -188,10 +188,10 @@ struct AnsweringTests {
         }
 
         #expect(throws: BuildError.self) {
-            try builder.build([reading(circling: true)] + Module.standard, entry: entryName)
+            try builder.build([reading(cycling: true)] + Module.standard, entry: entryName)
         }
 
-        _ = try builder.build([reading(circling: false)] + Module.standard, entry: entryName)
+        _ = try builder.build([reading(cycling: false)] + Module.standard, entry: entryName)
     }
 
     @Test("an answer naming a type parameter is filled at the call, or fills with nothing")

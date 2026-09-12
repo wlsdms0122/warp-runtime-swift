@@ -224,12 +224,12 @@ struct ShapeTests {
         #expect(types.admits(constraint: "app.Nobody", value: .int(1)) == nil)
     }
 
-    @Test("a table built by hand whose names form a circle answers instead of chasing them")
-    func aCircleOfNamesIsRefusedNotChased() {
+    @Test("a table built by hand whose names form a cycle answers instead of chasing them")
+    func aCycleOfNamesIsRefusedNotChased() {
         // Given
         let circular = TypeTable(types: ["app.A": .named("app.B"), "app.B": .named("app.A"), "app.C": .int])
 
-        // When / Then: the circle is refused where it is met, and the row
+        // When / Then: the cycle is refused where it is met, and the row
         // beside it answers as itself
         #expect {
             try TypeExpression.named("app.A").settling(.int(1), at: "input", in: circular)
@@ -261,8 +261,8 @@ struct ShapeTests {
         }
     }
 
-    @Test("a name that reaches itself under a wrapper is a circle, and the value judge says so")
-    func aCircleUnderAWrapperIsRefusedNotChased() {
+    @Test("a name that reaches itself under a wrapper is a cycle, and the value judge says so")
+    func aCycleUnderAWrapperIsRefusedNotChased() {
         // Given: a table built by hand, which the build's refusals never saw
         let table = TypeTable(
             types: [
@@ -274,7 +274,7 @@ struct ShapeTests {
             ]
         )
 
-        // When / Then: each circle is refused where a value meets it, and a
+        // When / Then: each cycle is refused where a value meets it, and a
         // chain that ends is walked to its end
         #expect {
             try TypeExpression.named("app.M").settling(.int(1), at: "input", in: table)
@@ -293,7 +293,7 @@ struct ShapeTests {
     }
 
     @Test("the build refuses a chain of names that comes back on itself under a wrapper")
-    func theLinkRefusesACircleUnderAWrapper() throws {
+    func theLinkRefusesACycleUnderAWrapper() throws {
         // Given
         let sut = try Module(
             imports: [],

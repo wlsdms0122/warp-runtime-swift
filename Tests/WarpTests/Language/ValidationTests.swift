@@ -133,7 +133,7 @@ struct ValidationTests {
 
     @Test("a constant sees the constants declared beside it and nothing else")
     func aConstantReadsOnlyItsSiblings() throws {
-        // Given. A chain and not a circle. `aaa` reads `bbb`, declared right
+        // Given. A chain and not a cycle. `aaa` reads `bbb`, declared right
         // beside it, so nothing about `aaa` is wrong: `bbb` is the one reading
         // a name nothing here settles, and the refusal stands on it.
         let error = #expect(throws: ValidationError.self) {

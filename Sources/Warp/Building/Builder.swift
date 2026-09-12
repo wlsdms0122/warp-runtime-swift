@@ -350,7 +350,7 @@ public struct Builder: Sendable {
     // One document compiled against what stands before it, and what it proves
     // written into that. Its own rows stand as the refusal they would earn
     // until it lowers them, so a word folding through a word is refused as the
-    // circle it is.
+    // cycle it is.
     func compile(
         _ module: Module,
         at origin: Int,
@@ -426,7 +426,7 @@ public struct Builder: Sendable {
 
             if let block = declaration.block {
                 // A body not yet lowered stands as its refusal, so a word
-                // folding through a word is refused as the circle it is.
+                // folding through a word is refused as the cycle it is.
                 let folding = Folding(
                     constants: constants,
                     origin: origin,
