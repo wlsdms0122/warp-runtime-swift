@@ -205,7 +205,7 @@ struct Relocating {
 
         self.init(
             table: try zip(assembled.table, assembled.origins).map { judged, origin in
-                try judged.lowered(
+                try judged.linked(
                     in: loweredTypes,
                     of: origin,
                     supplied: supplied,

@@ -152,7 +152,7 @@ public struct Builder: Sendable {
                     at: document.document
                 )
 
-                return try row.lowered { shape in
+                return try row.renumbered { shape in
                     try numbered.read(shape, at: .procedure(row.label.spelling, in: document.document))
                 }
             }

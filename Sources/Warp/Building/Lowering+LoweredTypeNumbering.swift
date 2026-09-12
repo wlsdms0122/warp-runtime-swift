@@ -48,7 +48,7 @@ extension Lowering {
 
             guard case .body = held.implementation else { return held }
 
-            return try held.lowered { shape in
+            return try held.renumbered { shape in
                 try renumbered(shape, in: place, of: held.label)
             }
         }

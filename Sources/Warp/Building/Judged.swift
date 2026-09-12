@@ -75,13 +75,13 @@ struct Judged: Sendable {
     // A native row is joined to the code the host brought under its spelling,
     // which is the one thing a document settled that the document does not
     // hold.
-    func lowered(
+    func linked(
         in table: LoweredTypeTable,
         of origin: Int,
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
-        try lowered(in: table, of: origin, supplied: supplied, at: document, standing: false)
+        try linked(in: table, of: origin, supplied: supplied, at: document, standing: false)
     }
 
     // The same, where a row the supply brings no code for stands as the
@@ -95,11 +95,11 @@ struct Judged: Sendable {
         supplied: Supplying,
         at document: Place.Document
     ) throws -> Linked {
-        try lowered(in: table, of: origin, supplied: supplied, at: document, standing: true)
+        try linked(in: table, of: origin, supplied: supplied, at: document, standing: true)
     }
 
     // MARK: - Private
-    private func lowered(
+    private func linked(
         in table: LoweredTypeTable,
         of origin: Int,
         supplied: Supplying,
