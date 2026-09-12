@@ -23,21 +23,41 @@ extension Builder {
     // Whether values of this type are handed on once, through the names it may
     // hide behind. A chain of names is finite: the link refused one that comes
     // back on itself before this is asked.
-    static func handedOnce(
+    // The two doors a doubt may be written over a value handed on once (a `?`
+    // on a declared type, an `as?` reading one) say the same thing, so they say
+    // it in the same words.
+    static let doubtOverAnObligation =
+        "which is handed on exactly once, and may answer nothing. A value handed"
+            + " on once is followed by a name that holds it on every way through"
+
+    static func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
+        reaches(type, in: table, assuming: []) ?? false
+    }
+
+    // The same question, answering nil where the walk only ever came back to a
+    // membership it was already inside. A ring says nothing new, so a ring of
+    // nothing else says nothing at all, and folding that to "not one" is done
+    // at the one door above rather than partway down: fold it inside the
+    // recursion and the answer starts depending on how many wrappers a member
+    // was written under.
+    //
+    // No `default`: a type nobody thought about must be a compile error here
+    // rather than an answer of no.
+    private static func reaches(
         _ type: TypeExpression,
         in table: TypeTable,
-        assuming: Set<Name> = []
-    ) -> Bool {
+        assuming: Set<Name>
+    ) -> Bool? {
         switch type {
         case .linear:
             return true
 
         case let .named(name):
             if let declared = table.resolve(name) {
-                return handedOnce(declared, in: table, assuming: assuming)
+                return reaches(declared, in: table, assuming: assuming)
             }
 
-            return handedOnce(membership: name, in: table, assuming: assuming)
+            return reaches(membership: name, in: table, assuming: assuming)
 
         // A parameter bounded by a membership stands for some member of it, so
         // what every member is, it is. An unbounded one stands for whatever the
@@ -45,10 +65,10 @@ extension Builder {
         case let .parameter(_, bound):
             guard let bound else { return false }
 
-            return handedOnce(membership: bound, in: table, assuming: assuming)
+            return reaches(membership: bound, in: table, assuming: assuming)
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return handedOnce(inner, in: table, assuming: assuming)
+            return reaches(inner, in: table, assuming: assuming)
 
         // A nullable of one is refused where it is written, because "hand it on
         // if it is there" is not something this language says. So nothing is
@@ -58,8 +78,7 @@ extension Builder {
 
         // None of these is one, and none of them carries one: a value handed on
         // once is followed by the name that holds it, and a name does not go
-        // into a type. Said out loud rather than defaulted, the way the walk's
-        // own reading is.
+        // into a type.
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes,
             .ranged, .array, .dictionary, .record, .procedure, .reading:
             return false
@@ -68,22 +87,8 @@ extension Builder {
 
     // A membership is one when every member is. A membership this question is
     // already inside is taken as it stood rather than asked again, which is
-    // what every other question about a membership does here: a ring answers
-    // what the question started with, and `allSatisfy` starts at true.
-    private static func handedOnce(
-        membership name: Name,
-        in table: TypeTable,
-        assuming: Set<Name>
-    ) -> Bool {
-        guard let reached = reaches(membership: name, in: table, assuming: assuming) else { return false }
-
-        return reached
-    }
-
-    // The same question, answering nil where the walk only ever came back to a
-    // membership it was already inside. A ring says nothing new, so a ring of
-    // nothing else says nothing at all, and a membership no value can be is not
-    // one of these any more than an empty one is.
+    // what every other question about a membership does here, and one that
+    // reached no member of its own answers nothing at all.
     private static func reaches(
         membership name: Name,
         in table: TypeTable,
@@ -93,12 +98,8 @@ extension Builder {
 
         guard let members = table.constraint(name), !members.isEmpty else { return false }
 
-        let answers = members.compactMap { member -> Bool? in
-            guard case let .named(inner) = member, table.resolve(inner) == nil else {
-                return handedOnce(member, in: table, assuming: assuming.union([name]))
-            }
-
-            return reaches(membership: inner, in: table, assuming: assuming.union([name]))
+        let answers = members.compactMap { member in
+            reaches(member, in: table, assuming: assuming.union([name]))
         }
 
         guard !answers.isEmpty else { return nil }
@@ -133,17 +134,16 @@ extension Builder {
         }
 
         let walk = Consuming(context: context, place: place)
-        let left = try walk.through(
+        let left = try walk.answering(
             block,
-            held: Consuming.Held(live: Set(taken.keys), borrowed: Set(borrowed.keys)),
-            guarded: nil
+            held: Consuming.Held(live: Set(taken.keys), borrowed: Set(borrowed.keys))
         )
 
         // What a declaration answers is read off its body where nobody wrote
         // `returns`, and the mark does not survive that reading. So a body
         // answering one is held to writing what it answers, or the caller
         // binding it would take an obligation nothing told it about.
-        if signature.returns == nil, walk.answers(block.result, after: left) {
+        if signature.returns == nil, left.handed {
             throw BuildError(
                 "answers a value handed on exactly once and does not write"
                     + " `returns`. What a declaration answers is read off its body"
@@ -164,7 +164,7 @@ extension Builder {
     }
 
     // MARK: - Private
-    private final class Consuming {
+    private struct Consuming {
         // What a body is holding, and what it has already handed on. The two
         // are apart because they answer different refusals: one is a value
         // dropped, the other a value handed on twice, and a name that has
@@ -179,6 +179,12 @@ extension Builder {
             // that is all: the obligation stayed with whoever handed it over,
             // and a body cannot give away what it never took.
             var borrowed: Set<Name> = []
+
+            // Whether some way out of this body hands the caller an obligation.
+            // A body leaves by its result and by every `return` that carries a
+            // value, and the two are one answer, so the walk carries it rather
+            // than the caller asking each door separately.
+            var handed = false
 
             // How a name is being held, where it is one of these at all. One
             // reading, so every judgment about an operand is made from the
@@ -206,7 +212,8 @@ extension Builder {
                 Held(
                     live: live,
                     moved: moved.union(other.moved),
-                    borrowed: borrowed.union(other.borrowed)
+                    borrowed: borrowed.union(other.borrowed),
+                    handed: handed || other.handed
                 )
             }
         }
@@ -220,16 +227,6 @@ extension Builder {
 
         let context: TypingContext
         let place: Place
-
-        // Whether any way out of this body hands the caller an obligation. The
-        // walk records it rather than answering it, because the refusal it
-        // feeds is about the declaration and the walk is about the body.
-        private(set) var answered = false
-
-        init(context: TypingContext, place: Place) {
-            self.context = context
-            self.place = place
-        }
 
         // What is still held after this block. `guarded` is why a move is
         // refused here, and nil where one is allowed.
@@ -283,6 +280,18 @@ extension Builder {
             }
 
             return try moving(result, held: held, guarded: guarded)
+        }
+
+        // A declaration's own body, walked. Its result is a way out of the
+        // procedure the way a `return` is, which an inner block's result is
+        // not, so the one entry that knows which block this is says so.
+        func answering(_ block: Block, held: Held) throws -> Held {
+            var left = try through(block, held: held, guarded: nil)
+
+            left.handed = left.handed
+                || block.result.map { result in carriesObligation(result, held: left) } == true
+
+            return left
         }
 
         // MARK: - Private
@@ -412,20 +421,16 @@ extension Builder {
                     throw refusal(answered: name)
                 }
 
-                // A `return` hands a value to the caller the way a result does,
-                // so what it hands out is asked here and read where the
-                // declaration is judged.
-                if
-                    leave.reach == .procedure,
-                    let value = leave.value,
-                    carriesObligation(value, held: held)
-                {
-                    answered = true
-                }
-
-                let carried = try leave.value.map { value in
+                var carried = try leave.value.map { value in
                     try moving(value, held: held, guarded: guarded)
                 } ?? held
+
+                // A `return` hands a value to the caller the way a result does,
+                // so it is asked the same question at the same moment: after
+                // the move, where a name that was handed on reads as gone.
+                if leave.reach == .procedure, let value = leave.value {
+                    carried.handed = carried.handed || carriesObligation(value, held: carried)
+                }
 
                 guard let stranded = carried.live.sorted().first else { return carried }
 
@@ -489,13 +494,6 @@ extension Builder {
             }
         }
 
-        // Whether the body hands the caller an obligation, by its result or by
-        // any `return` in it. Asked from outside for the one refusal that is
-        // about the declaration rather than the body.
-        func answers(_ result: Expression?, after held: Held) -> Bool {
-            answered || result.map { written in carriesObligation(written, held: held) } == true
-        }
-
         private func operand(_ expression: Expression, held: Held) -> (name: Name, holding: Held.Holding)? {
             guard
                 case let .reference(path) = expression,
@@ -556,14 +554,8 @@ extension Builder {
             }
         }
 
-        // Whether the value this expression answers carries an obligation.
-        // A different question from whether a *type* is one of these.
-        //
-        // Written out shape by shape with no `default`, because a shape nobody
-        // thought about must be a compile error here rather than an answer of
-        // no: every hole this walk has had was a shape that fell through to
-        // false and took an obligation with it.
         // What this expression hands out, where that is an obligation at all.
+        // A different question from whether a *type* is one of these.
         //
         // Said once, because the three questions this walk asks of a value are
         // the same question about the same tree: may it stand in a list, whom
@@ -650,7 +642,7 @@ extension Builder {
             case .value, .name(_, .gone):
                 return true
 
-            default:
+            case .nothing, .name(_, .live), .name(_, .borrowed):
                 return false
             }
         }

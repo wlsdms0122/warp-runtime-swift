@@ -276,9 +276,7 @@ extension Builder {
             // there. So the mark and the doubt do not stand together.
             guard !Builder.handedOnce(inner, in: table) else {
                 throw BuildError(
-                    "writes `?` on \(inner.rendered), which is handed on exactly"
-                        + " once. A value handed on once is followed by a name that"
-                        + " holds it on every way through",
+                    "writes `?` on \(inner.rendered), \(Builder.doubtOverAnObligation)",
                     at: place
                 )
             }

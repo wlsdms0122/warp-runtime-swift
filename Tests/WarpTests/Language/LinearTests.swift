@@ -822,6 +822,39 @@ struct LinearTests {
         }
     }
 
+    @Test("a return of a bare name is a way out too")
+    func aReturnOfABareNameAnswers() throws {
+        // Given. The name is gone by the time the walk has moved it, which is
+        // the same moment the result is asked, so both doors answer the same
+        // question at the same time
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(),
+                    body: [
+                        Statement(binding: .constant("own"), expression: .call(Call(selector: "app.open"))),
+                        Statement(
+                            binding: .none,
+                            expression: .leave(Leave(reach: .procedure, value: reference("own")))
+                        )
+                    ],
+                    result: nil
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("does not write `returns`")
+        }
+    }
+
     @Test("a `?` does not stand on a type handed on once")
     func aNullableOfOneRefuses() throws {
         // Given. The doubt and the mark say opposite things about the same

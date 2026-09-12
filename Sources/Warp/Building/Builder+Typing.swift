@@ -1135,15 +1135,9 @@ extension Builder {
                 with: context,
                 ask: ask
             )
-            // A reading that may answer nothing cannot take an obligation: what
-            // a value handed on once needs is a name that holds it on every way
-            // through, and a `?` says there is a way through where nothing is
-            // there. So the mark and the doubt are refused together.
             if optional, Builder.handedOnce(type, in: context.types) {
                 try refuse(
-                    "reads a value as '\(type.rendered)', which is handed on exactly"
-                        + " once, and may answer nothing. A value handed on once is"
-                        + " followed by a name that holds it on every way through",
+                    "reads a value as '\(type.rendered)', \(Builder.doubtOverAnObligation)",
                     at: place,
                     when: ask
                 )
