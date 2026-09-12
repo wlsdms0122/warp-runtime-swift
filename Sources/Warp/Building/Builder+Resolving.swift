@@ -274,16 +274,16 @@ extension Builder {
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
                 if case let .body(block) = procedure.implementation {
-                    try judge(buried: block, at: .procedure(name.spelling, in: .of(module)), in: table)
+                    try judge(subexpressions: block, at: .procedure(name.spelling, in: .of(module)), in: table)
                 }
             }
 
             for (name, constant) in module.constants.sorted { $0.key < $1.key } {
-                try judge(buried: constant, at: .constant(name.spelling, in: .of(module)), in: table)
+                try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
             }
 
             for (name, variable) in module.variables.sorted { $0.key < $1.key } {
-                try judge(buried: variable, at: .variable(name.spelling, in: .of(module)), in: table)
+                try judge(subexpressions: variable, at: .variable(name.spelling, in: .of(module)), in: table)
             }
         }
     }
@@ -477,7 +477,7 @@ extension Builder {
     // captures the scope it was written in, so a sibling it reads has to be
     // settled by then.
     private func mentions(of expression: Expression) -> Set<Name> {
-        expression.buried.reduce(into: Set<Name>()) { names, held in
+        expression.subexpressions.reduce(into: Set<Name>()) { names, held in
             guard case let .reference(path) = held else { return }
 
             names.formUnion(path.expandingIndexReferences.compactMap(\.head))

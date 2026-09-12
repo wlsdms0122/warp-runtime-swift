@@ -215,10 +215,10 @@ public struct Draft: Sendable {
         var named: Set<Name> = []
         var counts: [Name: Int] = [:]
 
-        func fold(_ name: Name, _ held: some Burying) {
+        func fold(_ name: Name, _ held: some Traversable) {
             var written = 0
 
-            for found in held.found {
+            for found in held.nodes {
                 switch found {
                 case let .statement(statement):
                     guard let declared = statement.binding?.declared else { continue }
@@ -301,8 +301,8 @@ public struct Draft: Sendable {
     // a cast asks for, and what a closure literal's own signature writes. A
     // signature written inline is held to the same table the top level is, so
     // what it names is asked for the same way.
-    private func mentions(buried held: some Burying) -> Set<Name> {
-        held.found
+    private func mentions(subexpressions held: some Traversable) -> Set<Name> {
+        held.nodes
             .reduce(into: Set<Name>()) { mentioned, found in
                 switch found {
                 case let .statement(statement):

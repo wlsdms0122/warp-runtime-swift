@@ -219,7 +219,7 @@ struct PlaceTests {
 
     @Test("every walk that reports a place steps through the same slots to reach one")
     func theWalksAgreeOnHowDeepASlotIs() throws {
-        // Given. One call, buried under an attempt's rescue: a slot no walk
+        // Given. One call, held under an attempt's rescue: a slot no walk
         // reaches without stepping through the keys between. Four walks report
         // places and each destructures the language for itself, so what one of
         // them forgets to step into is a place that reads like another one.
@@ -288,7 +288,7 @@ struct PlaceTests {
         let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
-                .buried(at: .procedure(entryName.spelling, in: .assembled))
+                .subexpressions(at: .procedure(entryName.spelling, in: .assembled))
                 .first { _, expression in
                     guard case .call = expression else { return false }
 

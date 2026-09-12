@@ -168,7 +168,7 @@ struct ValidationTests {
             )
         ]
 
-        // When / Then. Bare, and buried inside a value shape alike
+        // When / Then. Bare, and held inside a value shape alike
         #expect(!validates(body: sut))
         #expect(
             !validates(body: [

@@ -337,7 +337,7 @@ extension Builder {
 
         // Whether a block reads a name anywhere in it, at any depth.
         private func reads(_ block: Block, name: Name) -> Bool {
-            block.buried.contains { held in
+            block.subexpressions.contains { held in
                 guard case let .reference(path) = held else { return false }
 
                 return path.head == name

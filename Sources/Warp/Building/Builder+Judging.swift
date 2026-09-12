@@ -39,14 +39,14 @@ extension Builder {
     // walk reaches: a procedure both impure and unreachable is walked by
     // neither the frontier nor the pure set, and its mentions would name
     // whatever they liked.
-    func judge(buried held: some Burying, at place: Place, in table: TypeTable) throws {
-        let buried = held.buried(at: place)
+    func judge(subexpressions held: some Traversable, at place: Place, in table: TypeTable) throws {
+        let subexpressions = held.subexpressions(at: place)
 
-        for (place, inner) in closures(in: buried) {
+        for (place, inner) in closures(in: subexpressions) {
             try judge(inner.signature, at: place, in: table)
         }
 
-        for (place, named) in castTypes(in: buried) {
+        for (place, named) in castTypes(in: subexpressions) {
             try judge(cast: named, at: place, in: table)
         }
 
@@ -392,12 +392,12 @@ extension Builder {
 
     // MARK: - Private
     // Every shape a cast names in here, however deep, each with where it was
-    // found. What the walk buries is `buried`'s to know. This says only which
+    // found. What the walk holds is `subexpressions`'s to know. This says only which
     // of it a cast scan keeps.
     private func castTypes(
-        in buried: [(Place, Expression)]
+        in subexpressions: [(Place, Expression)]
     ) -> [(Place, TypeExpression)] {
-        buried.compactMap { place, expression in
+        subexpressions.compactMap { place, expression in
             guard case let .cast(_, named, _) = expression else { return nil }
 
             return (place, named)
@@ -408,9 +408,9 @@ extension Builder {
     // found. A closure's own body may hold more of them, and the one walk goes
     // through the one it found.
     private func closures(
-        in buried: [(Place, Expression)]
+        in subexpressions: [(Place, Expression)]
     ) -> [(Place, Procedure)] {
-        buried.compactMap { place, expression in
+        subexpressions.compactMap { place, expression in
             guard case let .closure(procedure) = expression else { return nil }
 
             return (place, procedure)

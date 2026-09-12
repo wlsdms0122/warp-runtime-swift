@@ -106,7 +106,7 @@ extension Builder {
     // Which declarations a body may read an answer from: every selector it
     // sends. Read off the one walk `Expression` owns.
     func sent(in block: Block) -> Set<Name> {
-        block.buried.reduce(into: Set<Name>()) { sent, expression in
+        block.subexpressions.reduce(into: Set<Name>()) { sent, expression in
             guard case let .call(call) = expression else { return }
 
             sent.insert(call.selector)
