@@ -270,8 +270,8 @@ public struct Writer: Sendable {
         case let .linear(inner):
             return .dictionary([try Name(TypeReader.linearKey): try value(of: inner)])
 
-        case let .variable(inner), let .inout(inner):
-            let keyword = type.isInout ? "inout" : "var"
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            let keyword = type.slotKeyword
 
             switch try value(of: inner) {
             case let .string(written):
@@ -389,6 +389,12 @@ public struct Writer: Sendable {
 
         case let .linear(inner):
             return .linear(stripped(inner))
+
+        case let .consuming(inner):
+            return .consuming(stripped(inner))
+
+        case let .borrowing(inner):
+            return .borrowing(stripped(inner))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return type

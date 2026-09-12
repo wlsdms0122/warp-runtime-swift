@@ -132,7 +132,7 @@ struct LinearTests {
         }
     }
 
-    @Test("handing it to a slot that does not say once refuses")
+    @Test("handing it to a slot that says neither refuses")
     func handedToAPlainSlot() throws {
         // Given
         let sut = try holding(
@@ -150,7 +150,7 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("does not take a value written `linear`")
+            "\(error)".contains("says nothing about what it does with a value written `linear`")
         }
     }
 
@@ -219,6 +219,203 @@ struct LinearTests {
         }
     }
 
+    @Test("a body may read what it borrowed and still owes nothing")
+    func borrowedIsReadAndNotOwed() throws {
+        // Given. `app.name` borrows, so the caller still holds the handle
+        // afterwards and closes it itself
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(
+                    binding: .constant("shown"),
+                    expression: .call(Call(receiver: reference("handle"), selector: "app.name"))
+                ),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: reference("shown")
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a borrowing slot does not end the obligation")
+    func borrowingIsNotClosing() throws {
+        // Given. Only `app.name` is called, so the handle is still held at the end
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(
+                    binding: .constant("shown"),
+                    expression: .call(Call(receiver: reference("handle"), selector: "app.name"))
+                )
+            ],
+            result: reference("shown")
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("still holds 'handle' where it ends")
+        }
+    }
+
+    @Test("a body cannot hand on what it only borrowed")
+    func borrowedIsNotHandedOn() throws {
+        // Given. `app.give` borrows and then closes what it was lent
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.give"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.give": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))]
+                    ),
+                    body: [
+                        Statement(expression: .call(Call(receiver: reference("of"), selector: "app.close")))
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("borrowed 'of' rather than taking it")
+        }
+    }
+
+    @Test("a body cannot answer what it only borrowed")
+    func borrowedIsNotAnswered() throws {
+        // Given
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.leak": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        returns: .named("app.Handle")
+                    ),
+                    body: [],
+                    result: reference("of")
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("answers 'of', and it borrowed 'of' rather than taking it")
+        }
+    }
+
+    @Test("a body cannot keep what it only borrowed in a box")
+    func borrowedIsNotKept() throws {
+        // Given
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.stash": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))]
+                    ),
+                    body: [
+                        Statement(binding: .variable("kept"), expression: reference("of"))
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("keeps 'of' in a box")
+        }
+    }
+
+    @Test("inout is not one of the two things a slot may say about it")
+    func inoutIsNotAConvention() throws {
+        // Given. Writing in place and taking the obligation are two different
+        // things, and a slot that said both would leave what it holds
+        // afterwards undecided
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.swap": Procedure(
+                    signature: Signature(
+                        parameters: ["of": Parameter(type: .inout(.named("app.Handle")))]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("says nothing about what it does with it")
+        }
+    }
+
+    @Test("a parameter naming a type handed on once says what it does with it")
+    func aSilentSlotRefuses() throws {
+        // Given. `app.take` names the type and says nothing, which used to read
+        // as taking the obligation and is what hid borrowing
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.take": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("app.Handle"))]
+                    ),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("says nothing about what it does with it")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // A handle that must be closed, a procedure that makes one, a procedure that takes
@@ -249,6 +446,16 @@ struct LinearTests {
                     signature: Signature(parameters: ["at": Parameter(type: .any)]),
                     body: [],
                     result: .literal(.null)
+                ),
+                // Reads the handle and leaves the obligation with the caller.
+                "app.name": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .reference([.key("of"), .key("name")])
                 )
             ].merging(others) { _, added in added }
         )
@@ -261,7 +468,7 @@ struct CloseEffect: Effect {
 
         var name: Name { "of" }
 
-        var declared: Parameter { Parameter(type: .named("app.Handle")) }
+        var declared: Parameter { Parameter(type: .consuming(.named("app.Handle"))) }
     }
 
     // MARK: - Property

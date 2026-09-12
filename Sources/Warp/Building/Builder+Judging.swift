@@ -70,10 +70,16 @@ extension Builder {
     ) throws {
         for (input, parameter) in signature.parameters.sorted { $0.key < $1.key } {
             try mentioned(
-                in: parameter.declared.inoutUnwrapped,
+                in: parameter.declared.slotUnwrapped,
                 at: place.part(.parameters).key(input.spelling),
                 parameterized: true,
                 resolve: table
+            )
+            try says(
+                what: parameter.declared,
+                doesWithLinear: input,
+                at: place.part(.parameters).key(input.spelling),
+                in: table
             )
             try judge(parameter, called: input, at: place.part(.parameters).key(input.spelling), in: table)
         }
@@ -193,7 +199,7 @@ extension Builder {
 
             for (name, parameter) in signature.parameters.sorted { $0.key < $1.key } {
                 try mentioned(
-                    in: parameter.declared.inoutUnwrapped,
+                    in: parameter.declared.slotUnwrapped,
                     at: place.key(name.spelling),
                     parameterized: parameterized,
                     nested: nested,
@@ -302,6 +308,17 @@ extension Builder {
                 at: place
             )
 
+        // Both say what a slot does with the obligation a `linear` value
+        // carries, so both stand where a slot is written and nowhere else. A
+        // parameter's own type is stripped of them before it reaches here.
+        case .consuming, .borrowing:
+            throw BuildError(
+                "writes `\(type.rendered)`, and only a parameter says what it does"
+                    + " with a value handed on once. `consuming` and `borrowing`"
+                    + " are written on a parameter's type",
+                at: place
+            )
+
         // Only a declared type is handed on once. The obligation rides with
         // the name, so a slot mentioning the name has it and a slot writing
         // the procedure would be claiming it for a type nothing declared it of.
@@ -316,6 +333,32 @@ extension Builder {
             }
 
             try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
+        }
+    }
+
+    // A slot taking a value handed on once says which way it takes it. Silence
+    // read as taking the obligation is what kept a procedure from reading one
+    // without taking it, so silence refuses.
+    private func says(
+        what declared: TypeExpression,
+        doesWithLinear input: Name,
+        at place: Place,
+        in table: TypeTable
+    ) throws {
+        guard handedOnce(declared.slotUnwrapped, in: table) else { return }
+
+        switch declared {
+        case .consuming, .borrowing:
+            return
+
+        default:
+            throw BuildError(
+                "takes '\(declared.rendered)', which is handed on once, and says"
+                    + " nothing about what it does with it. A parameter taking one"
+                    + " writes `consuming` where the obligation moves to it, and"
+                    + " `borrowing` where the obligation stays with the caller",
+                at: place
+            )
         }
     }
 

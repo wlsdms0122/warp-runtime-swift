@@ -90,7 +90,9 @@ extension TypeExpression {
 
         // The mark does not survive lowering. What it says is proven at the
         // link and there is nothing left for a run to keep.
-        case let .linear(inner):
+        // Neither mark survives lowering either, and for the same reason: what
+        // they say is proven at the build.
+        case let .linear(inner), let .consuming(inner), let .borrowing(inner):
             return inner.lowered(in: table)
 
         // Types and memberships are two tables and no name is in both, so a

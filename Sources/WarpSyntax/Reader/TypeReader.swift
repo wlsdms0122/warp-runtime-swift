@@ -114,12 +114,11 @@ public struct TypeReader: Decodable {
 
             let inner = try parse(String(bare))
 
-            if inner.isInout {
-                throw TypeFormError("type '\(text)' writes `inout` twice. Once says it")
-            }
-
-            if case .variable = inner {
-                throw TypeFormError("type '\(text)' writes `var` twice. Once says it")
+            guard inner.slotKeyword.isEmpty else {
+                throw TypeFormError(
+                    "type '\(text)' writes `\(inner.slotKeyword)` inside"
+                        + " `\(keyword)`. A slot says one thing about what it takes"
+                )
             }
 
             return wrap(inner)
@@ -366,7 +365,9 @@ public struct TypeReader: Decodable {
     // The keywords a slot writes about itself, and what each wraps.
     static let slotKeywords: [(String, @Sendable (TypeExpression) -> TypeExpression)] = [
         ("inout", { inner in .inout(inner) }),
-        ("var", { inner in .variable(inner) })
+        ("var", { inner in .variable(inner) }),
+        ("consuming", { inner in .consuming(inner) }),
+        ("borrowing", { inner in .borrowing(inner) })
     ]
 
     // A written type's name, said in this notation's own terms: every other

@@ -38,7 +38,7 @@ extension TypeExpression {
         case let .procedure(signature, _, _):
             signature?.parameterConstraints(into: &table)
 
-        case let .variable(inner), let .inout(inner):
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             inner.parameterConstraints(into: &table)
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
@@ -65,7 +65,7 @@ extension TypeExpression {
         case let .procedure(signature, _, _):
             return signature?.isGeneric ?? false
 
-        case let .variable(inner), let .inout(inner):
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
             return inner.isGeneric
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
@@ -159,6 +159,12 @@ extension TypeExpression {
 
         case let .inout(inner):
             return .inout(inner.bounded(by: bounds))
+
+        case let .consuming(inner):
+            return .consuming(inner.bounded(by: bounds))
+
+        case let .borrowing(inner):
+            return .borrowing(inner.bounded(by: bounds))
 
         case .any, .never, .null, .bool, .int, .double, .number, .string, .bytes, .ranged, .named:
             return self

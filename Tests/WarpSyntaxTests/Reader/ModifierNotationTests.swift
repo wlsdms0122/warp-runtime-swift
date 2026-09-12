@@ -16,7 +16,9 @@ struct ModifierNotationTests {
         ("inout int", TypeExpression.inout(.int)),
         ("inout int?", .inout(.nullable(.int))),
         ("var array<int>", .variable(.array(.int))),
-        ("inout procedure", .inout(.procedure(nil)))
+        ("inout procedure", .inout(.procedure(nil))),
+        ("consuming Handle", .consuming(.named("Handle"))),
+        ("borrowing Handle", .borrowing(.named("Handle")))
     ])
     func slotKeywordsWrapTheWholeType(written: String, expected: TypeExpression) throws {
         #expect(try TypeReader.parse(written) == expected)
@@ -54,7 +56,8 @@ struct ModifierNotationTests {
     }
 
     @Test("a procedure written twice is refused", arguments: [
-        "inout inout int", "var var int", "pure pure procedure", "isolated isolated procedure"
+        "inout inout int", "var var int", "pure pure procedure", "isolated isolated procedure",
+        "consuming consuming Handle", "consuming borrowing Handle", "borrowing inout Handle"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {
         #expect(throws: TypeFormError.self) {

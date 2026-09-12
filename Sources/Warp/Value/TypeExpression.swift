@@ -108,6 +108,20 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // lowered, because the whole of it is proven at the link.
     case linear(TypeExpression)
 
+    // A parameter that takes the obligation a `linear` value carries. The
+    // caller's name is empty afterwards, and this slot is answerable for
+    // handing the value on in its turn. Only a parameter's type is one.
+    case consuming(TypeExpression)
+
+    // A parameter that reads a `linear` value and leaves the obligation where
+    // it was. Nothing is handed over, so the caller still holds the value and
+    // still has to hand it on. Only a parameter's type is one.
+    //
+    // No lifetime rides with this. The language has no references, so what a
+    // slot took is a value of its own and cannot outlive what it was read
+    // from.
+    case borrowing(TypeExpression)
+
     // The declared type, or null. The one union the language has, and it is
     // null-only on purpose. `?.` answers this, and a parameter declaring it may
     // default to null; a general union would put back the "is it this or that"
@@ -238,6 +252,12 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .linear(inner):
             return "linear \(inner.rendered)"
 
+        case let .consuming(inner):
+            return "consuming \(inner.rendered)"
+
+        case let .borrowing(inner):
+            return "borrowing \(inner.rendered)"
+
         case let .procedure(signature, purity, isolation):
             let spelling = [
                 purity == .pure ? "pure" : nil,
@@ -295,17 +315,18 @@ extension TypeExpression {
     // cannot live behind the name.
     public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
 
-    // The spelling with its conditions dropped: a range is an int the bounds
-    // refine, and bytes are `array<byte>` compacted. This answers the kind
-    // question alone. A join asks it, because a join's answer is a kind. It is
-    // deliberately not a gate for `accepts` and `settling`: those exist to read
-    // exactly what dropping erases. The bounds, and which spelling a slot
-    // settles to. The type a parameter hands in place, where it does; otherwise
-    // the type itself. What arrives through `inout` is the inner type, and
-    // every question about what fits asks that.
-    public var inoutUnwrapped: TypeExpression {
-        if case let .inout(inner) = self { return inner }
-        return self
+    // The type a slot's mark stands in front of, where it has one, and the type
+    // itself otherwise. What arrives through `inout`, `consuming` or
+    // `borrowing` is the inner type, and every question about what fits asks
+    // that.
+    public var slotUnwrapped: TypeExpression {
+        switch self {
+        case let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            return inner
+
+        default:
+            return self
+        }
     }
 
     public var isInout: Bool {
@@ -316,6 +337,27 @@ extension TypeExpression {
     public var isVariable: Bool {
         if case .variable = self { return true }
         return false
+    }
+
+    // The keyword a slot mark is written as, for the four that stand in front
+    // of the whole type. Empty for everything else, which is not one.
+    public var slotKeyword: String {
+        switch self {
+        case .variable:
+            return "var"
+
+        case .inout:
+            return "inout"
+
+        case .consuming:
+            return "consuming"
+
+        case .borrowing:
+            return "borrowing"
+
+        default:
+            return ""
+        }
     }
 
     // The type a field holds, whether or not a path may write through it.

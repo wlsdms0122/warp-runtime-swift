@@ -34,7 +34,8 @@ extension TypeExpression {
         case let .procedure(signature, _, _):
             signature?.mentions ?? []
 
-        case let .variable(inner), let .inout(inner), let .linear(inner), let .nullable(inner):
+        case let .variable(inner), let .inout(inner), let .linear(inner), let .nullable(inner),
+            let .consuming(inner), let .borrowing(inner):
             inner.mentions
 
         case let .named(name):
