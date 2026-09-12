@@ -19,7 +19,7 @@ enum Native: Sendable {
 
     // MARK: - Property
     // Answers without running, which is what lets it be asked inside a
-    // condition and inside a path.
+    // condition and while a constant settles.
     var purity: Purity {
         switch self {
         case .query:

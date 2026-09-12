@@ -76,9 +76,8 @@ public struct Builder: Sendable {
     // every run.
     //
     // The order is worked out here. What a document reaches is read off the
-    // words it sends, the spellings its paths step to and the shapes its
-    // signatures name, none of which a caller wrote down, so a caller has
-    // nothing to sort by.
+    // words it sends and the shapes its signatures name, neither of which a
+    // caller wrote down, so a caller has nothing to sort by.
     //
     public func compile(_ modules: [Module]) throws -> [Compiled] {
         try compile(modules, against: [], supplying: .none)
@@ -168,7 +167,7 @@ public struct Builder: Sendable {
             compiling.lay(document, at: origin, rows: rows, answering: answered)
         }
 
-        compiling.answering()
+        try compiling.answering()
 
         return Laid(
             compiled: compiled,

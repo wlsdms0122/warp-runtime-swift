@@ -720,6 +720,39 @@ struct CompiledTests {
         #expect(laid.carried.named[0]?.allSatisfy { row in row != nil } == true)
     }
 
+    @Test("a document laid without what it sends is refused by the spelling")
+    func aDocumentLaidWithoutItsSendsIsRefused() throws {
+        // Given. A document whose body sends a word another declares, laid on
+        // its own. What it numbered reaches nothing.
+        let library = try Module(
+            procedures: [
+                "lib.twice": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .int)],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .call(Call(
+                        receiver: reference("of"),
+                        selector: "std.math.plus",
+                        arguments: ["value": reference("of")]
+                    ))
+                )
+            ]
+        )
+        let alone = try builder.compile([library] + Module.standard)
+            .filter { document in document.declared.contains("lib.twice") }
+
+        // When / Then. The refusal names the spelling, not the number a body
+        // of it happens to carry.
+        #expect {
+            try builder.lay(alone, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("'std.math.plus' is sent by this document")
+        }
+    }
+
     @Test("a path reads into what another document's body answers")
     func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
         // Given. A document declaring a word that writes no `returns`, and

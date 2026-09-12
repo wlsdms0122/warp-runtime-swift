@@ -9,8 +9,7 @@ import Foundation
 
 // A procedure implemented natively that answers without running anything.
 // `count`, `contains`, whatever a module ships. Pure and synchronous, which is
-// what lets it be asked inside a condition and inside a path: `items.count` is
-// this sent to `items` with no arguments.
+// what lets it be asked inside a condition and while a constant settles.
 //
 // It carries no name and no signature. Both belong to the `Procedure` that has
 // this as its implementation. The name is the key its module declares it under,
@@ -18,8 +17,8 @@ import Foundation
 // checked against whichever way the body is written.
 //
 // Answering nil means the word does not apply to that receiver's shape. It is
-// not a failure. A path that derives nothing reads as absent, the same as a
-// field that was never set.
+// not a failure, and it reads as absent the same as a field that was never
+// set.
 public protocol Query: Word {
     // Checks arguments that are already constant, at load. Type is the
     // signature's business; this is for what a type cannot say. That a regex

@@ -191,8 +191,32 @@ struct Compiling {
     // reads the rows whole and the documents arrive in the order the caller
     // handed them over, so one of them may import a word another laid after it
     // declares.
-    mutating func answering() {
-        for origin in documents.indices { answering(origin) }
+    //
+    // A number none of them reaches is a document laid without what it sends,
+    // which is refused here rather than left to read as a number with no row
+    // where a body of it is run.
+    mutating func answering() throws {
+        for origin in documents.indices {
+            answering(origin)
+
+            guard let unfound = (named[origin] ?? []).firstIndex(where: { row in row == nil }) else {
+                continue
+            }
+
+            guard case let .unfound(.sent(declared)) = lowering.numbering[origin]?.row(
+                unfound,
+                rows: lowering.rows,
+                closures: []
+            ) else {
+                continue
+            }
+
+            throw BuildError(
+                "'\(declared)' is sent by this document, and no document laid"
+                    + " beside it declares one",
+                at: Place(in: documents[origin])
+            )
+        }
     }
 
     // A shape the build read off a body rather than out of a signature, held to

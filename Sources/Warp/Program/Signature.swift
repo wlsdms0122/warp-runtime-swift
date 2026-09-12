@@ -17,8 +17,8 @@ public struct Signature: Sendable, Equatable {
     //
     // A name rather than a type, so the body reads its receiver by the name it
     // declared, the same as every other parameter. A reserved spelling would be
-    // the alternative. Declaring a receiver is the whole of what makes a word
-    // reachable through a path: it is what lets `x.name` find it.
+    // the alternative. Declaring one is what lets a call write the receiver in
+    // front of the selector rather than under its name.
     public let receiver: Name?
 
     // What the declaration takes, under the names it wrote them under. A

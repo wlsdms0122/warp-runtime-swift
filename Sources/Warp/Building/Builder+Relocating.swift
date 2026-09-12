@@ -63,10 +63,12 @@ struct Answered: Sendable {
         }
     }
 
-    // Made by `Relocating` alone, which is what keeps a table nobody answered
-    // from standing as one whose numbers are rows.
+    // A table every number of which was made to stand here. The same value as
+    // one nothing numbered, said under the name that says who may make it:
+    // `Relocating` alone, which is what keeps a table nobody answered from
+    // standing as one whose numbers are rows.
     fileprivate static func relocated(_ table: [Linked], rows: [Name: Int]) -> Answered {
-        Answered(table: table, rows: rows, numbers: .rows)
+        unanswerable(table, rows: rows)
     }
 
     // MARK: - Public

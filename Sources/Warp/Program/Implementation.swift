@@ -20,7 +20,7 @@ public enum Implementation: Sendable {
     case body(Block)
 
     // Answers without running anything. Pure and synchronous, which is what
-    // lets it be asked inside a condition and inside a path.
+    // lets it be asked inside a condition and while a constant settles.
     case query(any Query)
 
     // Answers by reaching outside the run. Asynchronous, so it cannot be asked
