@@ -37,7 +37,7 @@ struct ConformanceTests {
             #expect(answered == expected, "\(sut.name): \(sut.note)")
 
         case let .refuses(stage):
-            let reached = await reached(sut)
+            let reached = try await reached(sut)
 
             #expect(reached == stage, "\(sut.name): \(sut.note)")
         }
@@ -64,19 +64,19 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
         let builder = Builder()
-        let image = try builder.build(try linked(sut), entry: "entry")
+        let modules = try brought(sut) + [try Loader().load(sut.program, identity: nil)] + Module.standard
+        let image = try builder.build(modules, entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
     }
 
-    // What the link is handed: the case's document, whatever vocabulary the
-    // case asked the runner to bring, and the standard bundles. The order is
-    // the caller's statement, which is what assembling a link is.
-    private func linked(_ sut: Case) throws -> [Module] {
-        let loader = Loader()
-        let module = try loader.load(sut.program, identity: nil)
+    // The vocabulary the case asked the runner for, as a module standing in
+    // front of the case's own document so that what the host brings is there
+    // to be named. Empty where the case asked for none.
+    private func brought(_ sut: Case) throws -> [Module] {
+        guard let vocabulary = sut.vocabulary else { return [] }
 
-        guard let vocabulary = sut.vocabulary else { return [module] + Module.standard }
+        let loader = Loader()
 
         // The declarations go through the reader every document goes through,
         // because they are declarations. What arrives is read as a body, and
@@ -100,7 +100,7 @@ struct ConformanceTests {
             )
         )
 
-        return [brought, module] + Module.standard
+        return [brought]
     }
 
     // The host's side of one asked-for procedure. Which door it answers through
@@ -163,15 +163,21 @@ struct ConformanceTests {
     // How far a case got before it was refused. The stage is part of the answer:
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
-    private func reached(_ sut: Case) async -> Case.Stage? {
+    private func reached(_ sut: Case) async throws -> Case.Stage? {
         let builder = Builder()
-        let modules: [Module]
+        let vocabulary = try brought(sut)
+        let module: Module
 
+        // The case's own document is read apart from the rest, because a
+        // document that does not read is the answer to this question and a
+        // vocabulary that does not read is a case nobody can ask.
         do {
-            modules = try linked(sut)
+            module = try Loader().load(sut.program, identity: nil)
         } catch {
             return .load
         }
+
+        let modules = vocabulary + [module] + Module.standard
 
         let image: Image
 
@@ -402,7 +408,9 @@ struct Case: Sendable, CustomStringConvertible {
 
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
-        // document's, and the two a module always says.
+        // document's. The three below are the runner's to say and overwrite
+        // whatever a case wrote under them, because the version a vocabulary is
+        // read at is the runner's and its declarations send nothing.
         let stripped = Value.dictionary(
             Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
                 .merging([

@@ -413,6 +413,104 @@ struct LinearTests {
         }
     }
 
+    @Test("a conditional in the body does not forget what was borrowed")
+    func aConditionalKeepsTheBorrow() throws {
+        // Given. Two ways through join what either made, and being borrowed is
+        // one of those facts. A join that dropped it would let every borrow
+        // rule go by writing an `if` first
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.leak": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        returns: .named("app.Handle")
+                    ),
+                    body: [
+                        Statement(
+                            binding: .none,
+                            expression: .conditional(.literal(.bool(true)), then: [], else: [])
+                        )
+                    ],
+                    result: reference("of")
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("answers 'of', and it borrowed 'of' rather than taking it")
+        }
+    }
+
+    @Test("a name already handed on is not read through a slot that borrows")
+    func aHandedOnNameIsNotLent() throws {
+        // Given. Reading a closed handle is what the whole rule is for, and a
+        // slot that only borrows is still a slot that reads it
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close"))),
+                Statement(
+                    binding: .constant("shown"),
+                    expression: .call(Call(receiver: reference("handle"), selector: "app.name"))
+                )
+            ],
+            result: reference("shown")
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("hands 'handle' on a second time")
+        }
+    }
+
+    @Test("a closure does not capture what was borrowed")
+    func aClosureDoesNotCaptureABorrow() throws {
+        // Given. This walk never enters a closure, so what a borrowed name does
+        // in one is not something the text shows
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.stash": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        returns: .procedure(Signature(returns: .named("app.Handle")))
+                    ),
+                    body: [],
+                    result: .closure(
+                        Procedure(
+                            signature: Signature(returns: .named("app.Handle")),
+                            body: [],
+                            result: reference("of")
+                        )
+                    )
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("captures 'of' in a closure, and it borrowed 'of'")
+        }
+    }
+
     @Test("a parameter naming a type handed on once says what it does with it")
     func aSilentSlotRefuses() throws {
         // Given. `app.take` names the type and says nothing, which used to read
