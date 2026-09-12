@@ -345,21 +345,22 @@ extension Builder {
         at place: Place,
         in table: TypeTable
     ) throws {
-        let handedOnce = handedOnce(declared.slotUnwrapped, in: table)
-
         switch declared {
+        // Asked the wider way round: a slot saying what it does with an
+        // obligation is saying something wherever one could arrive, and what
+        // a type parameter or a membership is filled with is the call's.
         case .consuming, .borrowing:
-            guard !handedOnce else { return }
+            guard !mayBeHandedOnce(declared.slotUnwrapped, in: table) else { return }
 
             throw BuildError(
                 "takes '\(declared.rendered)', and `consuming` and `borrowing` say"
-                    + " what a slot does with a value handed on once. Nothing here"
-                    + " is handed on once",
+                    + " what a slot does with a value handed on once. No value of"
+                    + " this type is one",
                 at: place
             )
 
         default:
-            guard handedOnce else { return }
+            guard handedOnce(declared.slotUnwrapped, in: table) else { return }
 
             throw BuildError(
                 "takes '\(declared.rendered)', which is handed on once, and says"

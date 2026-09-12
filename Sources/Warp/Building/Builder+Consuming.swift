@@ -41,6 +41,31 @@ extension Builder {
         }
     }
 
+    // Whether a value handed on once could arrive here, which is a wider
+    // question than whether one certainly does. A type parameter is whatever
+    // the call fills it with, and a membership is whichever of its members
+    // arrived, so both may be one; a slot saying what it does with such a value
+    // is saying something there.
+    func mayBeHandedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
+        switch type {
+        case .linear, .parameter:
+            return true
+
+        case let .named(name):
+            if let declared = table.resolve(name) { return mayBeHandedOnce(declared, in: table) }
+
+            guard let members = table.constraint(name) else { return false }
+
+            return members.contains { member in mayBeHandedOnce(member, in: table) }
+
+        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+            return mayBeHandedOnce(inner, in: table)
+
+        default:
+            return false
+        }
+    }
+
     // Every value a body must hand on, handed on once. The declaration's own
     // slots are where such a value enters a body: `linear` is a document's
     // spelling and a value the link folded is a value, never a promise.
@@ -141,18 +166,28 @@ extension Builder {
             var held = held
 
             for statement in block.body {
+                // A borrowed name written bare is judged here, before the walk,
+                // because the walk refuses one wherever a value leaves by and
+                // a second name for the same borrow is not that.
+                if case (let borrowed, .borrowed)? = operand(statement.expression, held: held) {
+                    switch statement.binding {
+                    case let .constant(name, _)?:
+                        held.borrowed.insert(name)
+
+                    case .variable?, .assignment?:
+                        throw refusal(kept: borrowed)
+
+                    case nil:
+                        break
+                    }
+
+                    continue
+                }
+
                 held = try moving(statement.expression, held: held, guarded: guarded)
 
                 switch statement.binding {
                 case let .constant(name, _)?, let .variable(name, _)?:
-                    if case (let borrowed, .borrowed)? = operand(statement.expression, held: held) {
-                        try refuseKeeping(borrowed, as: statement.binding)
-
-                        held.borrowed.insert(name)
-
-                        continue
-                    }
-
                     guard handedOnce(statement.expression, held: held) else { continue }
 
                     held.live.insert(name)
@@ -161,10 +196,6 @@ extension Builder {
                 // A write puts something else in the box, so what was there is
                 // gone without having been handed on.
                 case let .assignment(path)?:
-                    if case (let borrowed, .borrowed)? = operand(statement.expression, held: held) {
-                        throw refusal(kept: borrowed)
-                    }
-
                     guard let head = path.head, held.live.contains(head), path.count == 1 else { continue }
 
                     throw refusal("writes over '\(head)', which it is still holding")
@@ -195,6 +226,12 @@ extension Builder {
             case let .reference(path):
                 guard let head = path.head, path.count == 1 else { return held }
 
+                // Everywhere a borrowed name may stand is read before the walk
+                // reaches it: an operand of a slot that borrows, a second name
+                // for the same borrow, and the two places a body answers from.
+                // So reaching here is the name leaving by some other way.
+                guard !held.borrowed.contains(head) else { throw refusal(gaveAway: head) }
+
                 guard held.live.contains(head) else {
                     guard held.moved.contains(head) else { return held }
 
@@ -216,12 +253,12 @@ extension Builder {
 
             case let .array(elements):
                 return try elements.reduce(held) { carried, element in
-                    try moving(element, held: carried, guarded: guarded)
+                    try carrying(element, held: carried, guarded: guarded)
                 }
 
             case let .record(record):
                 return try record.sorted(by: { $0.key < $1.key }).reduce(held) { carried, field in
-                    try moving(field.value, held: carried, guarded: guarded)
+                    try carrying(field.value, held: carried, guarded: guarded)
                 }
 
             // A closure runs no fixed number of times, and what it captured it
@@ -340,6 +377,20 @@ extension Builder {
             }
 
             return carried
+        }
+
+        // One element of a list or one field of a record. What a value written
+        // there does is not something a name follows: the walk tracks names,
+        // and a name does not go into a type. So one still held may not be
+        // written into either, the same rule a declared type is held to.
+        private func carrying(_ expression: Expression, held: Held, guarded: String?) throws -> Held {
+            switch operand(expression, held: held)?.holding {
+            case .live?, .borrowed?:
+                throw refusal(carried: operand(expression, held: held)?.name ?? "")
+
+            default:
+                return try moving(expression, held: held, guarded: guarded)
+            }
         }
 
         // The name an operand wrote and how the body is holding it, where the
@@ -478,6 +529,22 @@ extension Builder {
                 "answers '\(name)', and it borrowed '\(name)' rather than taking it."
                     + " What a body answers its caller then owes, and this body never"
                     + " owed it"
+            )
+        }
+
+        private func refusal(gaveAway name: Name) -> BuildError {
+            refusal(
+                "gives '\(name)' away, and it borrowed '\(name)' rather than taking"
+                    + " it. What a body borrowed it may read, and pass to another"
+                    + " slot that borrows"
+            )
+        }
+
+        private func refusal(carried name: Name) -> BuildError {
+            refusal(
+                "carries '\(name)' inside a list or a record, and a value written"
+                    + " `linear` is followed by the name that holds it. Nothing"
+                    + " follows one into a type"
             )
         }
 

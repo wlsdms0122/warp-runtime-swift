@@ -379,7 +379,7 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("Nothing here is handed on once")
+            "\(error)".contains("No value of this type is one")
         }
     }
 
@@ -508,6 +508,84 @@ struct LinearTests {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("captures 'of' in a closure, and it borrowed 'of'")
+        }
+    }
+
+    @Test("a borrow does not leave inside a list or a record")
+    func aBorrowDoesNotLeaveInsideAType() throws {
+        // Given. Wrapping the name is not reading a part of it: the whole value
+        // goes into the list, and what a body borrowed it may not give away
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.leak": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        returns: .any
+                    ),
+                    body: [],
+                    result: .array([reference("of")])
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries 'of' inside a list or a record")
+        }
+    }
+
+    @Test("an obligation does not leave inside a list or a record")
+    func anObligationDoesNotLeaveInsideAType() throws {
+        // Given. The walk follows names, and a name does not go into a type, so
+        // the obligation would neither be handed on nor still be held
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open")))
+            ],
+            result: .array([reference("handle")])
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries 'handle' inside a list or a record")
+        }
+    }
+
+    @Test("a slot says what it does with a type parameter, which the call may fill with one")
+    func aTypeParameterTakesAMark() throws {
+        // Given. What fills `some T` is the call's, so a value handed on once
+        // may arrive here and the slot has something to say about it
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.pass": Procedure(
+                    signature: Signature(
+                        parameters: ["of": Parameter(type: .consuming(.parameter(name: "T")))],
+                        returns: .parameter(name: "T")
+                    ),
+                    body: [],
+                    result: reference("of")
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
