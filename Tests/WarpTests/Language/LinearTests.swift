@@ -959,6 +959,106 @@ struct LinearTests {
         }
     }
 
+    @Test("a carried body answers one through a name, and is read the same")
+    func aCarriedBodyAnsweringThroughAName() throws {
+        // Given. The rule cannot turn on how the answer was written any more
+        // than on whether a key was typed, so the body is walked rather than
+        // read off its shape
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("made"),
+                    expression: .closure(
+                        Procedure(
+                            body: [
+                                Statement(
+                                    binding: .constant("own"),
+                                    expression: .call(Call(selector: "app.open"))
+                                )
+                            ],
+                            result: reference("own")
+                        )
+                    )
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries a body answering a value handed on exactly once")
+        }
+    }
+
+    @Test("a carried body one closure deeper is walked too")
+    func aCarriedBodyOneCloserDeeper() throws {
+        // Given. The walk enters a closure now, so a rule about carried bodies
+        // does not turn on how deeply one was written
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("outer"),
+                    expression: .closure(
+                        Procedure(
+                            body: [
+                                Statement(
+                                    binding: .constant("inner"),
+                                    expression: .closure(
+                                        Procedure(body: [], result: .call(Call(selector: "app.open")))
+                                    )
+                                )
+                            ],
+                            result: .literal(.null)
+                        )
+                    )
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries a body answering a value handed on exactly once")
+        }
+    }
+
+    @Test("a carried body that opens one and drops it is refused like any other")
+    func aCarriedBodyDropsItsOwn() throws {
+        // Given. A closure is a procedure and its body is text, so the same
+        // walk holds it to the same rule. What it runs an unfixed number of
+        // times is the capture, and this name is its own
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("made"),
+                    expression: .closure(
+                        Procedure(
+                            body: [
+                                Statement(
+                                    binding: .constant("own"),
+                                    expression: .call(Call(selector: "app.open"))
+                                )
+                            ],
+                            result: .literal(.null)
+                        )
+                    )
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("still holds 'own' where it ends")
+        }
+    }
+
     @Test("break leaves a loop, not the body that is still holding one")
     func breakDoesNotStrandWhatTheBodyHolds() throws {
         // Given. Only leaving the procedure ends the body. What it was holding

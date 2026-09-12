@@ -147,14 +147,6 @@ extension Builder {
             )
         }
 
-        guard let stranded = left.live.sorted().first else { return }
-
-        throw BuildError(
-            "still holds '\(stranded)' where it ends. A value written `linear` is"
-                + " handed on, and a body that reaches its end holding one has"
-                + " dropped it",
-            at: place
-        )
     }
 
     // MARK: - Private
@@ -293,7 +285,13 @@ extension Builder {
                 handsOut = true
             }
 
-            return left
+            guard let stranded = left.live.sorted().first else { return left }
+
+            throw refusal(
+                "still holds '\(stranded)' where it ends. A value written `linear` is"
+                    + " handed on, and a body that reaches its end holding one has"
+                    + " dropped it"
+            )
         }
 
         // MARK: - Private
@@ -348,11 +346,37 @@ extension Builder {
             case let .closure(procedure):
                 guard let block = procedure.block else { return held }
 
-                // What such a body answers is held where it wrote it, under
-                // *a body carried as a value*. One that wrote no `returns` is
-                // read here instead, the way a declaration's is: the rule
-                // cannot turn on whether a key was typed.
-                if procedure.signature.returns == nil, answers(block) {
+                // A closure is a procedure and its body is text, so the same
+                // walk runs over it, seeded with what the closure itself was
+                // handed rather than with what the body around it holds. The
+                // two do not meet: a name from out here reaching in is the
+                // capture the checks below refuse.
+                //
+                // What such a body may not do is answer one. Nothing reads
+                // inside a body that travels as a value, so what it handed back
+                // would arrive with nothing to say it is owed. Read from the
+                // walk rather than from whether a `returns` was typed, and read
+                // the same whichever way the body answers.
+                let inside = Consuming(context: context, place: place)
+                let seeded = procedure.signature.parameters
+
+                _ = try inside.answering(
+                    block,
+                    held: Held(
+                        live: Set(seeded.filter { _, parameter in
+                            if case .consuming = parameter.declared { return true }
+
+                            return false
+                        }.keys),
+                        borrowed: Set(seeded.filter { _, parameter in
+                            if case .borrowing = parameter.declared { return true }
+
+                            return false
+                        }.keys)
+                    )
+                )
+
+                guard !inside.handsOut else {
                     throw refusal(
                         "carries a body answering a value handed on exactly once."
                             + " \(Builder.followedByAName), and a body carried as a"
@@ -663,24 +687,6 @@ extension Builder {
 
             case .nothing, .name(_, .live), .name(_, .borrowed):
                 return false
-            }
-        }
-
-        // Whether a body hands an obligation to whoever calls it, read off the
-        // expressions it answers by: its result, and every `return` that
-        // carries a value. Asked of a body no walk enters, so what its own
-        // names do inside is not part of the question.
-        private func answers(_ block: Block) -> Bool {
-            let leaving = block.subexpressions.compactMap { held -> Expression? in
-                guard case let .leave(leave) = held, leave.reach == .procedure else { return nil }
-
-                return leave.value
-            }
-
-            let answered = (block.result.map { result in [result] } ?? []) + leaving
-
-            return answered.contains { written in
-                carriesObligation(written, held: Held(live: []))
             }
         }
 
