@@ -544,7 +544,7 @@ struct WriterTests {
                 "description": "every construct, once",
                 "parameters": [
                     "names": "array<string>",
-                    "word": ["type": "string", "default": "hey", "hint": "what to match"],
+                    "word": ["type": "string", "default": "hey", "description": "what to match"],
                     "kind": ["type": "string", "oneOf": ["a", "b"]]
                 ],
                 "returns": "dictionary<any>",
@@ -666,7 +666,7 @@ struct WriterTests {
                 "entry": [
                     "parameters": [
                         "word": "string",
-                        "counted": ["type": "int", "default": 1, "hint": "how many"],
+                        "counted": ["type": "int", "default": 1, "description": "how many"],
                         "kind": ["type": "string", "oneOf": ["a", "b"]]
                     ],
                     "returns": "dictionary<any>",

@@ -16,7 +16,7 @@ public struct Parameter: Sendable, Equatable {
     public let type: TypeExpression?
     public let oneOf: [String]?
     public let `default`: Value?
-    public let hint: String?
+    public let description: String?
 
     // Whether a call must write this argument: the shape's one answer, for
     // the call check, the boundary and path reachability alike.
@@ -33,12 +33,12 @@ public struct Parameter: Sendable, Equatable {
         type: TypeExpression? = nil,
         oneOf: [String]? = nil,
         default: Value? = nil,
-        hint: String? = nil
+        description: String? = nil
     ) {
         self.type = type
         self.oneOf = oneOf
         self.default = `default`
-        self.hint = hint
+        self.description = description
     }
 
     // MARK: - Public

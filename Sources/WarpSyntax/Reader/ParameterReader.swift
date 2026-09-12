@@ -15,7 +15,7 @@ public struct ParameterReader: Decodable {
         case type
         case oneOf
         case `default`
-        case hint
+        case description
     }
 
     // MARK: - Property
@@ -61,7 +61,7 @@ public struct ParameterReader: Decodable {
             default: container.contains(.default)
                 ? try container.decode(ValueReader.self, forKey: .default).value
                 : nil,
-            hint: try container.decodeIfPresent(String.self, forKey: .hint)
+            description: try container.decodeIfPresent(String.self, forKey: .description)
         )
     }
 

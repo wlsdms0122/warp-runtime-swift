@@ -116,7 +116,7 @@ public extension Signature {
                     type: parameter.type?.bounded(by: bounds),
                     oneOf: parameter.oneOf,
                     default: parameter.default,
-                    hint: parameter.hint
+                    description: parameter.description
                 )
             },
             returns: returns?.bounded(by: bounds)

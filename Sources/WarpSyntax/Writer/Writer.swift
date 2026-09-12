@@ -312,8 +312,8 @@ public struct Writer: Sendable {
             written["default"] = fallback
         }
 
-        if let hint = parameter.hint {
-            written["hint"] = .string(hint)
+        if let description = parameter.description {
+            written["description"] = .string(description)
         }
 
         // The shorthand where nothing but the type was said. Written because the
@@ -397,7 +397,7 @@ public struct Writer: Sendable {
                     type: parameter.type.map(stripped),
                     oneOf: parameter.oneOf,
                     default: parameter.default,
-                    hint: parameter.hint
+                    description: parameter.description
                 )
             },
             returns: signature.returns.map(stripped)
