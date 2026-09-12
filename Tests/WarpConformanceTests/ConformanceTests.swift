@@ -107,57 +107,50 @@ struct ConformanceTests {
     // is the claim it makes: the one that answers without running is handed no
     // way to reach outside, and the other is.
     private func supplied(_ one: Case.Supplied, declaring signature: Signature) -> Procedure {
-        let failing = Failing.these(Set(one.failing))
+        Procedure(
+            signature: signature,
+            implementation: door(one, reading: places(signature.parameters.count))
+        )
+    }
 
-        switch (one.runs, signature.parameters.count) {
-        case (false, 0):
-            return Procedure(
-                signature: signature,
-                implementation: .query(
-                    SuppliedQuery<NoParameters>(answers: one.answers, isolated: one.isolated, failing: failing)
-                )
-            )
+    // Which of the fixed place sets this declaration reads its arguments
+    // through. A case declares `of` and `value` and nothing else, so the
+    // arity picks one.
+    private func places(_ count: Int) -> any ParameterSet.Type {
+        switch count {
+        case 0:
+            return NoParameters.self
 
-        case (false, 1):
-            return Procedure(
-                signature: signature,
-                implementation: .query(
-                    SuppliedQuery<OneName>(answers: one.answers, isolated: one.isolated, failing: failing)
-                )
-            )
+        case 1:
+            return OneName.self
 
-        case (false, _):
-            return Procedure(
-                signature: signature,
-                implementation: .query(
-                    SuppliedQuery<TwoNames>(answers: one.answers, isolated: one.isolated, failing: failing)
-                )
-            )
-
-        case (true, 0):
-            return Procedure(
-                signature: signature,
-                implementation: .effect(
-                    SuppliedEffect<NoParameters>(answers: one.answers, isolated: one.isolated, failing: failing)
-                )
-            )
-
-        case (true, 1):
-            return Procedure(
-                signature: signature,
-                implementation: .effect(
-                    SuppliedEffect<OneName>(answers: one.answers, isolated: one.isolated, failing: failing)
-                )
-            )
-
-        case (true, _):
-            return Procedure(
-                signature: signature,
-                implementation: .effect(
-                    SuppliedEffect<TwoNames>(answers: one.answers, isolated: one.isolated, failing: failing)
-                )
-            )
+        default:
+            return TwoNames.self
         }
+    }
+
+    // Which door it answers through, which is the claim it makes about
+    // reaching outside the run.
+    private func door(_ one: Case.Supplied, reading places: any ParameterSet.Type) -> Implementation {
+        func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
+            one.runs
+                ? .effect(
+                    SuppliedEffect<Parameters>(
+                        answers: one.answers,
+                        isolated: one.isolated,
+                        failing: .these(Set(one.failing))
+                    )
+                )
+                : .query(
+                    SuppliedQuery<Parameters>(
+                        answers: one.answers,
+                        isolated: one.isolated,
+                        failing: .these(Set(one.failing))
+                    )
+                )
+        }
+
+        return made(places)
     }
 
     // How far a case got before it was refused. The stage is part of the answer:
@@ -234,6 +227,21 @@ struct Case: Sendable, CustomStringConvertible {
     // The names it may declare are `of` and `value`, in that order, because a
     // procedure the host answers reads its arguments at fixed places and a case
     // cannot invent a place in someone else's runner.
+    // A module the runner brings. The declarations are held apart from the rest
+    // of it because each carries keys a declaration does not.
+    struct Vocabulary: Sendable {
+        // The three a runner says for itself, whatever a case wrote: the
+        // version this module is read at, and that its declarations send
+        // nothing. A case writing one of them is refused rather than quietly
+        // overruled.
+        static let runnersKeys: Set<Name> = ["warp", "imports", "procedures"]
+
+        // The module as the reader takes it.
+        let module: Value
+
+        let procedures: [Supplied]
+    }
+
     struct Supplied: Sendable {
         static let ownKeys: Set<Name> = ["answers", "runs", "isolated", "failing"]
 
@@ -273,7 +281,7 @@ struct Case: Sendable, CustomStringConvertible {
     //
     // Nil where the case asks for none. The declarations are held apart from
     // the rest of the module because each carries keys a declaration does not.
-    let vocabulary: (module: Value, procedures: [Supplied])?
+    let vocabulary: Vocabulary?
 
     var description: String { name }
 
@@ -364,14 +372,22 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Public
-    private static func supplied(
-        in written: Value?
-    ) throws -> (module: Value, procedures: [Supplied])? {
+    private static func supplied(in written: Value?) throws -> Vocabulary? {
         guard let written else { return nil }
 
         guard case let .dictionary(module) = written, case let .dictionary(entries)? = module["procedures"] else {
             throw ConformanceError(
                 "the vocabulary a case asks for is a module, and a module declares procedures"
+            )
+        }
+
+        if let taken = module.names.first(where: { name in
+            name != "procedures" && Vocabulary.runnersKeys.contains(name)
+        }) {
+            throw ConformanceError(
+                "the vocabulary a case asks for writes '\(taken)', which is the"
+                    + " runner's to say. A case says what the module declares and"
+                    + " nothing about how it is read"
             )
         }
 
@@ -408,9 +424,7 @@ struct Case: Sendable, CustomStringConvertible {
 
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
-        // document's. The three below are the runner's to say and overwrite
-        // whatever a case wrote under them, because the version a vocabulary is
-        // read at is the runner's and its declarations send nothing.
+        // document's, and the three the runner says for itself.
         let stripped = Value.dictionary(
             Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
                 .merging([
@@ -424,7 +438,7 @@ struct Case: Sendable, CustomStringConvertible {
                 ]) { _, made in made }
         )
 
-        return (module: stripped, procedures: procedures)
+        return Vocabulary(module: stripped, procedures: procedures)
     }
 
     // The cases live beside the specification they belong to rather than inside

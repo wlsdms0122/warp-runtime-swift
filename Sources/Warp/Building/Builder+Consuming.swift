@@ -129,6 +129,12 @@ extension Builder {
             // How a name is being held, where it is one of these at all. One
             // reading, so every judgment about an operand is made from the
             // same fact rather than each asking the sets again.
+            enum Holding {
+                case live
+                case borrowed
+                case gone
+            }
+
             func holding(_ name: Name) -> Holding? {
                 if live.contains(name) { return .live }
                 if borrowed.contains(name) { return .borrowed }
@@ -149,12 +155,6 @@ extension Builder {
                     borrowed: borrowed.union(other.borrowed)
                 )
             }
-        }
-
-        enum Holding {
-            case live
-            case borrowed
-            case gone
         }
 
         let context: TypingContext
@@ -394,9 +394,9 @@ extension Builder {
         }
 
         // The name an operand wrote and how the body is holding it, where the
-        // operand is a bare name at all. Reading a part of a value answers a
-        // value of its own, and nothing rides out with it.
-        private func operand(_ expression: Expression, held: Held) -> (name: Name, holding: Holding)? {
+        // operand is a bare name at all. A path below the name reads a part of
+        // the value, which answers a value of its own.
+        private func operand(_ expression: Expression, held: Held) -> (name: Name, holding: Held.Holding)? {
             guard
                 case let .reference(path) = expression,
                 let head = path.head,
