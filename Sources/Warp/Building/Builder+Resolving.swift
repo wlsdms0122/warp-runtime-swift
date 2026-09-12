@@ -266,25 +266,9 @@ extension Builder {
     // document is read on its own: what is judged is its own text, and the
     // table is what the whole link declared.
     func judge(_ modules: [Module], in table: TypeTable) throws {
+        try judge(memberships: modules, in: table)
+
         for module in modules {
-            // A membership is handed on once when every member is, so one that
-            // mixes has no answer: a value of it would carry an obligation on
-            // some readings and not on others, and which it was is exactly what
-            // a membership does not say.
-            for (name, members) in module.constraints.sorted(by: { $0.key < $1.key }) {
-                let handed = members.filter { member in Builder.handedOnce(member, in: table) }
-
-                guard !handed.isEmpty, handed.count != members.count else { continue }
-
-                throw BuildError(
-                    "admits \(handed.map(\.rendered).sorted().joined(separator: " and ")),"
-                        + " which is handed on exactly once, beside members that are"
-                        + " not. A value of a membership is followed the same way"
-                        + " whichever member it is",
-                    at: .constraint(name.spelling, in: .of(module))
-                )
-            }
-
             for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
@@ -304,6 +288,38 @@ extension Builder {
             for (name, variable) in module.variables.sorted { $0.key < $1.key } {
                 try judge(subexpressions: variable, at: .variable(name.spelling, in: .of(module)), in: table)
             }
+        }
+    }
+
+    // A membership is handed on once when every member is, so one that mixes
+    // has no answer: a value of it would carry an obligation on some readings
+    // and not on others, and which it was is exactly what a membership does not
+    // say.
+    //
+    // Asked of every module before any procedure is judged, and in name order,
+    // because a slot naming such a membership reads its answer off this. A
+    // procedure judged first would be told its slot is the mistake, and the
+    // mistake is the declaration.
+    private func judge(memberships modules: [Module], in table: TypeTable) throws {
+        let declared = modules
+            .flatMap { module in module.constraints.map { name, members in (name, members, module) } }
+            .sorted { one, other in one.0 < other.0 }
+
+        for (name, members, module) in declared {
+            let handed = members.filter { member in Builder.handedOnce(member, in: table) }
+
+            guard !handed.isEmpty, handed.count != members.count else { continue }
+
+            let rest = members.filter { member in !Builder.handedOnce(member, in: table) }
+
+            throw BuildError(
+                "admits \(handed.map(\.rendered).sorted().joined(separator: " and ")),"
+                    + " which is handed on exactly once, beside"
+                    + " \(rest.map(\.rendered).sorted().joined(separator: " and ")),"
+                    + " which is not. A value of a membership is followed the same"
+                    + " way whichever member it is",
+                at: .constraint(name.spelling, in: .of(module))
+            )
         }
     }
 

@@ -700,7 +700,51 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("beside members that are not")
+            "\(error)".contains("beside int, which is not")
+        }
+    }
+
+    @Test("a cast that names one does not carry it into a list")
+    func aCastNamingOneDoesNotCarryIt() throws {
+        // Given. Nothing inside the cast holds an obligation, and the cast
+        // itself is what says the value is one, so the element is asked of the
+        // cast as well as of what it read
+        let sut = try holding(
+            body: [],
+            result: .array([
+                .cast(
+                    .record(["name": .literal(.string("f"))]),
+                    as: .named("app.Handle"),
+                    optional: false
+                )
+            ])
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("writes what this reads as 'app.Handle' inside a list")
+        }
+    }
+
+    @Test("a membership that names itself is asked once and answered")
+    func aRingOfMembershipsIsNotAskedForever() throws {
+        // Given. A membership whose member is itself. What a ring says about
+        // itself is what the question started with, so the walk stops rather
+        // than asking down it
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            constraints: ["app.Ring": [.named("app.Ring")]]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 

@@ -23,23 +23,34 @@ extension Builder {
     // Whether values of this type are handed on once, through the names it may
     // hide behind. A chain of names is finite: the link refused one that comes
     // back on itself before this is asked.
-    static func handedOnce(_ type: TypeExpression, in table: TypeTable) -> Bool {
+    static func handedOnce(
+        _ type: TypeExpression,
+        in table: TypeTable,
+        asking: Set<Name> = []
+    ) -> Bool {
         switch type {
         case .linear:
             return true
 
         case let .named(name):
-            if let declared = table.resolve(name) { return handedOnce(declared, in: table) }
+            if let declared = table.resolve(name) {
+                return handedOnce(declared, in: table, asking: asking)
+            }
 
-            // A membership is one when every member is. One that mixes is
-            // refused where it is declared, so reaching here with a member that
-            // is and a member that is not cannot happen.
+            // A membership is one when every member is. A member naming a
+            // membership this question is already inside answers nothing new,
+            // and a ring of them would otherwise ask forever: what a ring says
+            // about itself is what it started with.
+            guard !asking.contains(name) else { return false }
+
             guard let members = table.constraint(name), !members.isEmpty else { return false }
 
-            return members.allSatisfy { member in handedOnce(member, in: table) }
+            return members.allSatisfy { member in
+                handedOnce(member, in: table, asking: asking.union([name]))
+            }
 
         case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return handedOnce(inner, in: table)
+            return handedOnce(inner, in: table, asking: asking)
 
         default:
             return false
@@ -369,8 +380,18 @@ extension Builder {
             // each is judged by what it hands out rather than by its own shape.
             // Descending rather than listing them is what keeps the next shape
             // from being a hole.
-            case let .cast(value, _, _):
-                return try carrying(value, held: held, guarded: guarded)
+            //
+            // A cast is asked twice over: what it read may carry one under a
+            // name, and the cast itself may name the type where what it read
+            // carries nothing anything could hold.
+            case let .cast(value, type, optional):
+                let carried = try carrying(value, held: held, guarded: guarded)
+
+                guard optional || !handedOnce(type, in: context.types) else {
+                    throw refusal(carriedValue: expression)
+                }
+
+                return carried
 
             case let .block(block):
                 let inside = try through(Block(body: block.body), held: held, guarded: guarded)
@@ -540,6 +561,9 @@ extension Builder {
             switch expression {
             case let .call(call):
                 written = "what '\(call.selector)' answers"
+
+            case let .cast(_, type, _):
+                written = "what this reads as '\(type.rendered)'"
 
             default:
                 written = "a value handed on once"
