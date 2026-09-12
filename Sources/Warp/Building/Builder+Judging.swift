@@ -75,9 +75,8 @@ extension Builder {
                 parameterized: true,
                 resolve: table
             )
-            try says(
-                what: parameter.declared,
-                doesWithLinear: input,
+            try saysWhatItDoes(
+                with: parameter.declared,
                 at: place.part(.parameters).key(input.spelling),
                 in: table
             )
@@ -336,22 +335,32 @@ extension Builder {
         }
     }
 
-    // A slot taking a value handed on once says which way it takes it. Silence
-    // read as taking the obligation is what kept a procedure from reading one
-    // without taking it, so silence refuses.
-    private func says(
-        what declared: TypeExpression,
-        doesWithLinear input: Name,
+    // A slot taking a value handed on once says which way it takes it, and one
+    // taking anything else says neither. Silence read as taking the obligation
+    // is what kept a procedure from reading one without taking it, and a mark
+    // where nothing is handed on once is a claim about nothing, refused the way
+    // a `?` that says nothing new is.
+    private func saysWhatItDoes(
+        with declared: TypeExpression,
         at place: Place,
         in table: TypeTable
     ) throws {
-        guard handedOnce(declared.slotUnwrapped, in: table) else { return }
+        let handedOnce = handedOnce(declared.slotUnwrapped, in: table)
 
         switch declared {
         case .consuming, .borrowing:
-            return
+            guard !handedOnce else { return }
+
+            throw BuildError(
+                "takes '\(declared.rendered)', and `consuming` and `borrowing` say"
+                    + " what a slot does with a value handed on once. Nothing here"
+                    + " is handed on once",
+                at: place
+            )
 
         default:
+            guard handedOnce else { return }
+
             throw BuildError(
                 "takes '\(declared.rendered)', which is handed on once, and says"
                     + " nothing about what it does with it. A parameter taking one"

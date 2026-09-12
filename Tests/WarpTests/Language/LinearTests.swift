@@ -356,6 +356,33 @@ struct LinearTests {
         }
     }
 
+    @Test("a slot says neither about a type nothing is handed on once for")
+    func aMarkWhereNothingIsOwedRefuses() throws {
+        // Given. `consuming int` claims something about an obligation no value
+        // of the type carries
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.count": Procedure(
+                    signature: Signature(parameters: ["of": Parameter(type: .consuming(.int))]),
+                    body: [],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("Nothing here is handed on once")
+        }
+    }
+
     @Test("inout is not one of the two things a slot may say about it")
     func inoutIsNotAConvention() throws {
         // Given. Writing in place and taking the obligation are two different
