@@ -380,8 +380,7 @@ public struct Builder: Sendable {
         // wrote no `returns`, and which declaration each bare spelling its
         // paths step to reaches.
         var read: [Name: Shape] = [:]
-        var reached: [Name: Name] = [:]
-        var contested: [Name: [Name]] = [:]
+        var derived: (words: [Name: Name], contested: [Name: [Name]]) = ([:], [:])
 
         // What this document settled, and what each of its declarations calls.
         var constants: [Name: Value] = [:]
@@ -391,7 +390,7 @@ public struct Builder: Sendable {
         // One document's reading. What a path may walk to is the document's
         // own, so the frame is made for the document being read.
         func frame() -> TypeFrame {
-            compiling.frame(stepping: reached, contested: contested, reading: reading)
+            compiling.frame(stepping: derived.words, contested: derived.contested, reading: reading)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -565,16 +564,13 @@ public struct Builder: Sendable {
         // the rows it just laid down. A row is the declaration lowered,
         // and whether a path may reach one is a question about the slots
         // it lowered to.
-        let derived = derivable(
+        derived = derivable(
             for: module,
             declaring: declared,
             pure: compiling.pure,
             reaching: compiling.lowering.rows,
             in: compiling.lowering.table
         )
-
-        reached = derived.words
-        contested = derived.contested
 
         compiling.steps(origin, to: derived.words.compactMapValues { declared in compiling.lowering.rows[declared] })
 

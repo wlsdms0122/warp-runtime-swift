@@ -276,9 +276,8 @@ extension Builder {
         // one spelling until a shape stands under it, and a document holding
         // two declarations it never steps to is answerable for nothing.
         //
-        // In the order the caller handed the modules over, which is the order
-        // every collision refusal is read in: the second is the one that could
-        // not be added.
+        // Named in the order the caller handed the modules over, which is the
+        // order every collision refusal is read in.
         return (
             words: held.filter { word, _ in contested[word] == nil }
                 .mapValues { reached in reached.declared },

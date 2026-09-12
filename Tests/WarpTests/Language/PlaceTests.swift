@@ -771,7 +771,7 @@ struct PlaceTests {
         // caller handed the modules over: `catalog` is the second, whatever
         // the three names sort as
         #expect(
-            error?.message.contains("shipping.discounted, catalog.discounted, pricing.discounted") == true
+            error?.message.contains("to: shipping.discounted, catalog.discounted, pricing.discounted") == true
         )
         #expect(error?.message.contains("catalog.discounted") == true)
         #expect(error?.message.contains("pricing.discounted") == true)

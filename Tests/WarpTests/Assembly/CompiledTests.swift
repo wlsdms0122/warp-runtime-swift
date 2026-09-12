@@ -521,7 +521,7 @@ struct CompiledTests {
         #expect {
             try builder.build(sut + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("'describe' by bank.Account.describe, bank.Card.describe")
+            "\(error)".contains("may walk to: bank.Account.describe, bank.Card.describe")
         }
     }
 
@@ -577,7 +577,7 @@ struct CompiledTests {
         #expect {
             try builder.build([one, other, sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("'counted' by a.counted, b.counted")
+            "\(error)".contains("may walk to: a.counted, b.counted")
         }
     }
 

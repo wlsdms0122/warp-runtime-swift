@@ -833,7 +833,7 @@ extension Builder {
         if let declarations = frame.contested[key] {
             return .refused(
                 "\(walked.rendered) sends '\(key)', which is declared by more than one"
-                    + " module this document may walk to. '\(key)' by"
+                    + " module this document may walk to:"
                     + " \(declarations.map(\.spelling).joined(separator: ", "))."
                     + " A path segment names no module, so there is no spelling that"
                     + " would tell them apart"
