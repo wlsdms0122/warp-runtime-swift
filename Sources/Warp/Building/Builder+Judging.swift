@@ -52,6 +52,7 @@ extension Builder {
 
         for (place, inner) in closures(in: subexpressions) {
             try judge(inner.signature, at: place, in: table)
+            try judge(carried: inner.signature, at: place, in: table)
         }
 
         for (place, named) in castTypes(in: subexpressions) {
@@ -203,6 +204,8 @@ extension Builder {
         // at any call, so the bound it claims would be a claim nothing judges.
         case let .procedure(signature, _, _):
             guard let signature else { return }
+
+            try judge(carried: signature, at: place, in: table)
 
             for (name, parameter) in signature.parameters.sorted { $0.key < $1.key } {
                 try mentioned(
@@ -390,6 +393,24 @@ extension Builder {
                 at: place
             )
         }
+    }
+
+    // A body carried as a value, held to what it may answer. What a procedure
+    // answers is followed by the name that holds it, and no walk enters a body
+    // carried as a value: a closure runs where the text that wrote it cannot
+    // see, so what it hands back would arrive with nothing to say it is owed.
+    //
+    // A declaration is not held to this. Its body is text a walk reads, and
+    // what it answers lands on the name its caller binds.
+    private func judge(carried signature: Signature, at place: Place, in table: TypeTable) throws {
+        guard let returns = signature.returns, Builder.handedOnce(returns, in: table) else { return }
+
+        throw BuildError(
+            "writes a procedure answering \(returns.rendered), which is handed on"
+                + " exactly once. \(Builder.followedByAName), and a body carried as a"
+                + " value runs where no name is watching",
+            at: place
+        )
     }
 
     // Whether a parameter's own declaration can be satisfied at all. Facts it

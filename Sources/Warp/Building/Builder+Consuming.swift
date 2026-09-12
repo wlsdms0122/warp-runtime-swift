@@ -222,7 +222,15 @@ extension Builder {
         // already handed out does not. A walk that drops a way (an `attempt`
         // drops its body's) would drop this with it, so it is kept where only
         // setting it is possible.
-        private(set) var handsOut = false
+        private var handsOutValue = false
+
+        var handsOut: Bool { handsOutValue }
+
+        // The one door, and it only opens one way: what a body has handed out
+        // it has handed out, and no way through it takes back.
+        private func handedOut() {
+            handsOutValue = true
+        }
 
         init(context: TypingContext, place: Place) {
             self.context = context
@@ -290,7 +298,7 @@ extension Builder {
             let left = try through(block, held: held, guarded: nil)
 
             if let result = block.result, carriesObligation(result, held: left) {
-                handsOut = true
+                handedOut()
             }
 
             return left
@@ -435,8 +443,13 @@ extension Builder {
                     let value = leave.value,
                     carriesObligation(value, held: carried)
                 {
-                    handsOut = true
+                    handedOut()
                 }
+
+                // Only leaving the procedure ends the body. A `break` or a
+                // `continue` leaves a construct, and what the body was holding
+                // it is holding still on the other side of it.
+                guard leave.reach == .procedure else { return carried }
 
                 guard let stranded = carried.live.sorted().first else { return carried }
 

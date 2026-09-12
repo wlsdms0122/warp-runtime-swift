@@ -489,14 +489,14 @@ struct LinearTests {
                     signature: Signature(
                         receiver: "of",
                         parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
-                        returns: .procedure(Signature(returns: .named("app.Handle")))
+                        returns: .procedure(Signature(returns: .string))
                     ),
                     body: [],
                     result: .closure(
                         Procedure(
-                            signature: Signature(returns: .named("app.Handle")),
+                            signature: Signature(returns: .string),
                             body: [],
-                            result: reference("of")
+                            result: .reference([.key("of"), .key("name")])
                         )
                     )
                 )
@@ -903,6 +903,65 @@ struct LinearTests {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("does not write `returns`")
+        }
+    }
+
+    @Test("a body carried as a value does not answer one")
+    func aCarriedBodyDoesNotAnswerOne() throws {
+        // Given. No walk enters a closure, so what it hands back would arrive
+        // with nothing to say it is owed. A declaration is not held to this:
+        // its body is text a walk reads
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("made"),
+                    expression: .closure(
+                        Procedure(
+                            signature: Signature(returns: .named("app.Handle")),
+                            body: [],
+                            result: .call(Call(selector: "app.open"))
+                        )
+                    )
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("writes a procedure answering app.Handle")
+        }
+    }
+
+    @Test("break leaves a loop, not the body that is still holding one")
+    func breakDoesNotStrandWhatTheBodyHolds() throws {
+        // Given. Only leaving the procedure ends the body. What it was holding
+        // it is holding still on the other side of the loop, and closes there
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(
+                    binding: .constant("spin"),
+                    expression: .loop(
+                        while: .literal(.bool(true)),
+                        body: Block(
+                            body: [
+                                Statement(binding: .none, expression: .leave(Leave(reach: .construct)))
+                            ]
+                        ),
+                        round: "round"
+                    )
+                ),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
