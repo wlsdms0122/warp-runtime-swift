@@ -11,6 +11,7 @@ import Foundation
 enum Runs: Sendable {
     case calling(Name)
     case applying
+    case construct
 }
 
 // The facts nobody declared, worked out over every declaration at once. A
@@ -191,35 +192,43 @@ extension Builder {
     // here. Reading one is what reading a name is; what it costs a body is the
     // promise of answering the same thing twice, and an operand makes no such
     // promise.
-    func runs(in expression: Expression, given pure: Set<Name>) -> Runs? {
+    func runs(in expression: Expression, given context: TypingContext) -> Runs? {
         switch expression {
         case .literal, .reference, .closure:
             return nil
 
         case let .cast(value, _, _):
-            return runs(in: value, given: pure)
+            return runs(in: value, given: context)
 
         case let .array(array):
-            return array.lazy.compactMap { element in runs(in: element, given: pure) }.first
+            return array.lazy.compactMap { element in runs(in: element, given: context) }.first
 
         case let .record(record):
-            return record.values.lazy.compactMap { field in runs(in: field, given: pure) }.first
+            return record.values.lazy.compactMap { field in runs(in: field, given: context) }.first
 
+        // A contract's procedure is answered by whatever type the value turns
+        // out to be, so which declaration this reaches is the run's answer and
+        // its purity with it. Only a call the build resolves to a declaration
+        // is judged here.
         case let .call(call):
-            guard pure.contains(call.selector) else { return .calling(call.selector) }
+            guard
+                context.signature(of: call.selector) != nil,
+                !context.pure.contains(call.selector)
+            else {
+                return call.receiver.flatMap { receiver in runs(in: receiver, given: context) }
+                    ?? call.arguments.values.lazy
+                        .compactMap { argument in runs(in: argument, given: context) }.first
+            }
 
-            return call.receiver.flatMap { receiver in runs(in: receiver, given: pure) }
-                ?? call.arguments.values.lazy.compactMap { argument in runs(in: argument, given: pure) }.first
+            return .calling(call.selector)
 
         // Which procedure a value is, is the run's answer, so nothing here says
         // whether calling it runs.
         case .apply:
             return .applying
 
-        // The load refuses these where an operand is expected, so reaching one
-        // here is a program assembled past that door.
         case .block, .conditional, .loop, .attempt, .leave:
-            return .applying
+            return .construct
         }
     }
 

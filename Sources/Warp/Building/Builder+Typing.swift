@@ -935,10 +935,10 @@ extension Builder {
     private func held(
         _ expression: Expression,
         asOperand place: Place,
-        given pure: Set<Name>,
+        given context: TypingContext,
         when ask: Ask
     ) throws {
-        switch runs(in: expression, given: pure) {
+        switch runs(in: expression, given: context) {
         case nil:
             return
 
@@ -959,6 +959,9 @@ extension Builder {
                 at: place,
                 when: ask
             )
+
+        case .construct?:
+            try refuse(Expression.constructInOperand, at: place, when: ask)
         }
     }
 
@@ -1365,22 +1368,12 @@ extension Builder {
                 return Inspection(rewritten: expression, reading: .any)
             }
 
-            // The guard above already said judging, so this refusal has no
-            // ask to ask. Named one by one, because a loop over the values
-            // alone reports the third operand from the place the first was.
-            if callee.holdsConstruct {
-                throw BuildError(Expression.constructInOperand, at: place.part(.callee))
-            }
-
-            for (name, argument) in arguments.sorted(by: { $0.key < $1.key })
-            where argument.holdsConstruct {
-                throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
-            }
-
-            try held(callee, asOperand: place.part(.callee), given: context.pure, when: ask)
+            // Named one by one, because a loop over the values alone reports
+            // the third operand from the place the first was.
+            try held(callee, asOperand: place.part(.callee), given: context, when: ask)
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                try held(argument, asOperand: place.argument(name.spelling), given: context.pure, when: ask)
+                try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
             }
 
             let called = try inspected(
@@ -1482,24 +1475,14 @@ extension Builder {
                 )
             }
 
-            // The guard above already said judging, so this refusal has no
-            // ask to ask. Named one by one, because a loop over the values
-            // alone reports the third operand from the place the first was.
-            if call.receiver?.holdsConstruct == true {
-                throw BuildError(Expression.constructInOperand, at: place.part(.receiver))
-            }
-
-            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key })
-            where argument.holdsConstruct {
-                throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
-            }
-
+            // Named one by one, because a loop over the values alone reports
+            // the third operand from the place the first was.
             if let written = call.receiver {
-                try held(written, asOperand: place.part(.receiver), given: context.pure, when: ask)
+                try held(written, asOperand: place.part(.receiver), given: context, when: ask)
             }
 
             for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-                try held(argument, asOperand: place.argument(name.spelling), given: context.pure, when: ask)
+                try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
             }
 
             var receiver: Inspection?
@@ -1608,7 +1591,7 @@ extension Builder {
             )
 
             try held(head.reading, asCondition: place.part(.condition(of: .conditional)), in: context, when: ask)
-            try held(condition, asOperand: place.part(.condition(of: .conditional)), given: context.pure, when: ask)
+            try held(condition, asOperand: place.part(.condition(of: .conditional)), given: context, when: ask)
 
             let inside = environment
 
@@ -1697,7 +1680,7 @@ extension Builder {
             )
 
             try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
-            try held(condition, asOperand: place.part(.condition(of: .loop)), given: context.pure, when: ask)
+            try held(condition, asOperand: place.part(.condition(of: .loop)), given: context, when: ask)
 
             let rounds = ask.rewrites
                 ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)

@@ -370,6 +370,70 @@ struct ContractTests {
         }
     }
 
+    @Test("a contract's procedure stands as an operand, because which declaration it reaches is the run's")
+    func aContractCallStandsAsAnOperand() async throws {
+        // Given. An operand answers without running, and the build refuses one
+        // that calls a declaration answering only by running. A contract's
+        // procedure is not such a declaration: which one it reaches is the
+        // value's, so the build has nothing to say and the run judges what it
+        // picked.
+        let sut = try Module(
+            imports: ["std.text.uppercased"],
+            types: ["bank.Account": .record(["balance": .int])],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            claims: ["bank.Account": ["app.Describable"]],
+            procedures: [
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                ),
+                "app.tell": Procedure(
+                    signature: Signature(
+                        receiver: "it",
+                        parameters: [
+                            "it": Parameter(type: .parameter(name: "T", constraint: "app.Describable"))
+                        ],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .call(
+                        Call(
+                            receiver: .call(
+                                Call(receiver: reference("it"), selector: "app.Describable.describe")
+                            ),
+                            selector: "std.text.uppercased"
+                        )
+                    )
+                ),
+                entryName: Procedure(
+                    signature: Signature(returns: .string),
+                    body: [
+                        Statement(
+                            binding: .constant("held"),
+                            expression: .cast(
+                                .record(["balance": .literal(.int(1))]),
+                                as: .named("bank.Account"),
+                                optional: false
+                            )
+                        )
+                    ],
+                    result: .call(Call(receiver: reference("held"), selector: "app.tell"))
+                )
+            ]
+        )
+
+        // When
+        let answer = try await run([sut])
+
+        // Then
+        #expect(answer == .string("AN ACCOUNT"))
+    }
+
     // MARK: - Public
     // MARK: - Private
     // Two types that describe themselves, a contract asking for it, and a
