@@ -154,7 +154,7 @@ extension Builder {
 
         // The bounds are the declaration's own claim, so an order the numbers
         // refuse is refused where it was written. A range below its own floor
-        // is a slot no call could ever fit, the way an empty `oneOf` is.
+        // is a slot no call could ever fit, the way an empty `enum` is.
         case let .ranged(refinement):
             if refinement.saysNothing {
                 throw BuildError(
@@ -320,7 +320,7 @@ extension Builder {
     }
 
     // Whether a parameter's own declaration can be satisfied at all. Facts it
-    // states about itself, judged wherever a parameter is written: a `oneOf`
+    // states about itself, judged wherever a parameter is written: a `enum`
     // none of whose candidates the declared type admits is a parameter no call
     // could ever fit, and a default the parameter itself would refuse is a
     // refusal waiting for the one call that leans on it.
@@ -334,7 +334,7 @@ extension Builder {
         // dead is exactly what the boundary would never match.
         let shape = parameter.declared.lowered(in: table.loweredTypes)
 
-        if let allowed = parameter.oneOf {
+        if let allowed = parameter.candidates {
             // Candidate by candidate: a spelling the declared type cannot spell
             // is a member no call could ever match, and a dead member is the
             // declaration's own defect whether live ones stand beside it or
@@ -347,14 +347,14 @@ extension Builder {
 
             if dead.count == allowed.count {
                 throw BuildError(
-                    "oneOf admits nothing, so no call could ever fit",
+                    "enum admits nothing, so no call could ever fit",
                     at: place
                 )
             }
 
             if let first = dead.first {
                 throw BuildError(
-                    "oneOf lists '\(first)', which"
+                    "enum lists '\(first)', which"
                         + " \(parameter.declared.rendered) does not admit."
                         + " No call could ever match it",
                     at: place
@@ -366,11 +366,11 @@ extension Builder {
 
         // An explicitly-null default is the value the body receives when the
         // argument is left out, so the declaration must admit null like any
-        // other value, and a `oneOf` never lists it, since null has no scalar
+        // other value, and a `enum` never lists it, since null has no scalar
         // spelling. Asked of the value judge itself, since the slot reads an
         // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
-            guard parameter.oneOf == nil, shape.settles(.null, in: table.loweredTypes) else {
+            guard parameter.candidates == nil, shape.settles(.null, in: table.loweredTypes) else {
                 throw BuildError(
                     "its default is not a value it takes: null",
                     at: place

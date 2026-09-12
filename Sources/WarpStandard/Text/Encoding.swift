@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The named mapping between bytes and text. The declaration's `oneOf` says the
+// The named mapping between bytes and text. The declaration's `enum` says the
 // same names early, and this keeps its own contract too, so a name added there
 // without a mapping here refuses instead of quietly answering in the wrong
 // encoding.

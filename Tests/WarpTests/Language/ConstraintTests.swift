@@ -297,7 +297,7 @@ struct ConstraintTests {
     @Test("a constraint admitting nothing refuses at the build")
     func anEmptyConstraintRefusesAtTheLink() throws {
         // Given. No parameter it bounds could ever be filled, which is the same
-        // fact an empty oneOf states
+        // fact an empty enum states
         let sut = try Module(
             constraints: ["Nothing": []],
             procedures: [
@@ -449,7 +449,7 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a oneOf no member of the bound can spell refuses at the build")
+    @Test("a enum no member of the bound can spell refuses at the build")
     func aOneOfOutsideTheBoundRefusesAtTheLink() throws {
         // Given. Words on a Numeric slot: no member of the constraint can spell
         // them, so no call could ever fit this parameter
@@ -460,7 +460,7 @@ struct ConstraintTests {
                         parameters: [
                             "speed": Parameter(
                                 type: .parameter(name: "N", constraint: "std.Numeric"),
-                                oneOf: ["fast", "slow"]
+                                candidates: ["fast", "slow"]
                             )
                         ]
                     ),
@@ -479,7 +479,7 @@ struct ConstraintTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("oneOf admits nothing")
+            error is BuildError && "\(error)".contains("enum admits nothing")
         }
     }
 
@@ -488,13 +488,13 @@ struct ConstraintTests {
         // Given. A fraction spells with its point, so `1` on a double slot is
         // the int's spelling and a member no fraction could ever match, and
         // `1e0`/`1.00` are second spellings of a fraction that has one
-        func module(oneOf candidates: [String]) throws -> Module {
+        func module(candidates candidates: [String]) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
                         signature: Signature(
                             parameters: [
-                                "level": Parameter(type: .double, oneOf: candidates)
+                                "level": Parameter(type: .double, candidates: candidates)
                             ]
                         ),
                         body: [],
@@ -506,7 +506,7 @@ struct ConstraintTests {
 
         for dead in ["1", "1e0", "1.50", "1e-5"] {
             #expect("\(dead)") {
-                try builder.build([module(oneOf: ["2.0", dead])] + Module.standard, entry: entryName)
+                try builder.build([module(candidates: ["2.0", dead])] + Module.standard, entry: entryName)
             } throws: { error in
                 error is BuildError && "\(error)".contains("'\(dead)'")
             }
@@ -515,11 +515,11 @@ struct ConstraintTests {
         // The spellings a document itself writes are alive. The exponent form
         // included, sign and padding and all.
         #expect(throws: Never.self) {
-            try builder.build([module(oneOf: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
+            try builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
         }
     }
 
-    @Test("oneOf membership is the number's worth, not its bit pattern")
+    @Test("enum membership is the number's worth, not its bit pattern")
     func aOneOfMeetsANumberByWorth() async throws {
         // Given. The two zeros are one worth in the language's own order, so a
         // list that writes one admits the other
@@ -528,7 +528,7 @@ struct ConstraintTests {
                 entryName: Procedure(
                     signature: Signature(
                         parameters: [
-                            "level": Parameter(type: .double, oneOf: ["0.0", "1.5"])
+                            "level": Parameter(type: .double, candidates: ["0.0", "1.5"])
                         ]
                     ),
                     body: [],
@@ -558,7 +558,7 @@ struct ConstraintTests {
                         parameters: [
                             "level": Parameter(
                                 type: .parameter(name: "N", constraint: "std.Numeric"),
-                                oneOf: ["1", "2.5"]
+                                candidates: ["1", "2.5"]
                             )
                         ]
                     ),

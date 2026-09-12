@@ -14,7 +14,7 @@ public struct Parameter: Sendable, Equatable {
     // and keeping them apart is what lets the ones written on purpose be told
     // from the ones nobody got around to.
     public let type: TypeExpression?
-    public let oneOf: [String]?
+    public let candidates: [String]?
     public let `default`: Value?
     public let description: String?
 
@@ -31,12 +31,12 @@ public struct Parameter: Sendable, Equatable {
     // MARK: - Initializer
     public init(
         type: TypeExpression? = nil,
-        oneOf: [String]? = nil,
+        candidates: [String]? = nil,
         default: Value? = nil,
         description: String? = nil
     ) {
         self.type = type
-        self.oneOf = oneOf
+        self.candidates = candidates
         self.default = `default`
         self.description = description
     }

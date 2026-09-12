@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // `int(0...255)`. A range is a slot's condition on a number, not a new kind. It
-// is judged where `oneOf` is: at the build for what the text shows, at the
+// is judged where `enum` is: at the build for what the text shows, at the
 // boundary for what only the run can see. What the condition may say is
 // `RefinementTests`'; this suite is where a whole range is judged.
 @Suite
@@ -176,11 +176,11 @@ struct RangeTests {
         }
     }
 
-    @Test("a oneOf entirely past the bounds admits nothing")
+    @Test("a enum entirely past the bounds admits nothing")
     func aOneOfOutsideTheRangeRefuses() throws {
         // Given. No candidate is a value the range could hold, so the parameter
-        // fits no call: the same judgment an empty oneOf gets
-        func module(oneOf candidates: [String]) throws -> Module {
+        // fits no call: the same judgment an empty enum gets
+        func module(candidates candidates: [String]) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -188,7 +188,7 @@ struct RangeTests {
                             parameters: [
                                 "level": Parameter(
                                     type: .ranged(.whole(from: 0, to: .through(255))),
-                                    oneOf: candidates
+                                    candidates: candidates
                                 )
                             ]
                         ),
@@ -201,7 +201,7 @@ struct RangeTests {
 
         // When / Then
         #expect {
-            try builder.build([module(oneOf: ["300", "999"])] + Module.standard, entry: entryName)
+            try builder.build([module(candidates: ["300", "999"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
@@ -209,16 +209,16 @@ struct RangeTests {
         // A live candidate does not excuse a dead one: `300` is a member no
         // call could ever match, and the refusal names it.
         #expect {
-            try builder.build([module(oneOf: ["0", "300"])] + Module.standard, entry: entryName)
+            try builder.build([module(candidates: ["0", "300"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'300'")
         }
 
         // One value, one spelling: `+1` and `007` are second spellings of
         // numbers that already have one, so neither is a candidate an int slot
-        // can spell. The oneOf admits nothing and refuses.
+        // can spell. The enum admits nothing and refuses.
         #expect {
-            try builder.build([module(oneOf: ["+1", "007"])] + Module.standard, entry: entryName)
+            try builder.build([module(candidates: ["+1", "007"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }

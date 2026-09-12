@@ -92,7 +92,7 @@ final class Slot: Sendable {
                     } ?? false
                 }) else {
                     throw ArgumentError(
-                        "input '\(name)': '\(Self.shown(settled))' not in oneOf \(written)"
+                        "input '\(name)': '\(Self.shown(settled))' not in enum \(written)"
                     )
                 }
 
@@ -101,7 +101,7 @@ final class Slot: Sendable {
 
                 guard let scalar, written.contains(scalar) else {
                     throw ArgumentError(
-                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in oneOf \(written)"
+                        "input '\(name)': '\(scalar ?? "\(settled.type)")' not in enum \(written)"
                     )
                 }
             }
@@ -168,7 +168,7 @@ extension Parameter {
             name: name,
             type: type,
             default: `default`,
-            candidates: oneOf.map { written in
+            candidates: candidates.map { written in
                 written.map { spelling in Candidate(spelling, in: type, reading: table) }
             }
         )

@@ -366,7 +366,7 @@ struct BytesTests {
 
     @Test("an encoding the words do not name refuses at the build")
     func anUnknownEncodingRefuses() throws {
-        // Given. The oneOf names the encodings, and a constant is judged at the
+        // Given. The enum names the encodings, and a constant is judged at the
         // link
         let sut = try Module(
             procedures: [

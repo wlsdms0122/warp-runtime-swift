@@ -545,7 +545,7 @@ struct WriterTests {
                 "parameters": [
                     "names": "array<string>",
                     "word": ["type": "string", "default": "hey", "description": "what to match"],
-                    "kind": ["type": "string", "oneOf": ["a", "b"]]
+                    "kind": ["type": "string", "enum": ["a", "b"]]
                 ],
                 "returns": "dictionary<any>",
                 "body": [
@@ -667,7 +667,7 @@ struct WriterTests {
                     "parameters": [
                         "word": "string",
                         "counted": ["type": "int", "default": 1, "description": "how many"],
-                        "kind": ["type": "string", "oneOf": ["a", "b"]]
+                        "kind": ["type": "string", "enum": ["a", "b"]]
                     ],
                     "returns": "dictionary<any>",
                     "body": [

@@ -13,7 +13,7 @@ import Warp
 public struct ParameterReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case type
-        case oneOf
+        case candidates = "enum"
         case `default`
         case description
     }
@@ -57,7 +57,7 @@ public struct ParameterReader: Decodable {
         // taking one settles it, the same gate a caller's value walks.
         self.parameter = Parameter(
             type: type,
-            oneOf: try container.decodeIfPresent([String].self, forKey: .oneOf),
+            candidates: try container.decodeIfPresent([String].self, forKey: .candidates),
             default: container.contains(.default)
                 ? try container.decode(ValueReader.self, forKey: .default).value
                 : nil,

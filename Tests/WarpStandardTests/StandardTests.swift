@@ -364,7 +364,7 @@ struct StandardTests {
 
     @Test("a codec keeps its own contract on the encoding name")
     func aCodecReadsItsEncodingArgument() throws {
-        // Given. The declaration's oneOf says the same names early; this is the
+        // Given. The declaration's enum says the same names early; this is the
         // implementation refusing a name it has no mapping for, so a drifted
         // declaration cannot make it answer in the wrong encoding
         let sut = DecodedQuery()

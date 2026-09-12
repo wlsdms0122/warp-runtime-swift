@@ -67,7 +67,7 @@ struct BuilderTests {
         #expect(error?.place?.rendered == "procedures.helper.parameters.count")
     }
 
-    @Test("a default outside its own oneOf is refused at link")
+    @Test("a default outside its own enum is refused at link")
     func aDefaultOutsideOneOfIsRefused() throws {
         // Given
         let sut = try Module(
@@ -78,7 +78,7 @@ struct BuilderTests {
                         parameters: [
                             "mode": Parameter(
                                 type: .string,
-                                oneOf: ["fast", "slow"],
+                                candidates: ["fast", "slow"],
                                 default: .string("medium")
                             )
                         ]
@@ -114,7 +114,7 @@ struct BuilderTests {
         #expect(answer == .double(1))
     }
 
-    @Test("a oneOf no candidate of which fits the type is refused at link")
+    @Test("a enum no candidate of which fits the type is refused at link")
     func anUnsatisfiableOneOfIsRefused() throws {
         // Given. Admitting nothing is a fact about the type and the set
         // together, not about the set being empty
@@ -123,7 +123,7 @@ struct BuilderTests {
                 entryName: Procedure(body: []),
                 "helper": Procedure(
                     signature: Signature(
-                        parameters: ["count": Parameter(type: .int, oneOf: ["fast"])]
+                        parameters: ["count": Parameter(type: .int, candidates: ["fast"])]
                     ),
                     body: []
                 )
@@ -177,7 +177,7 @@ struct BuilderTests {
                                 type: .procedure(
                                     Signature(
                                         parameters: [
-                                            "mode": Parameter(type: .string, oneOf: [])
+                                            "mode": Parameter(type: .string, candidates: [])
                                         ],
                                         returns: .bool
                                     )
@@ -198,7 +198,7 @@ struct BuilderTests {
         #expect(error?.message.contains("admits nothing") == true)
     }
 
-    @Test("a oneOf that admits nothing is refused at link")
+    @Test("a enum that admits nothing is refused at link")
     func anEmptyOneOfIsRefused() throws {
         // Given. No call could ever fit it, so the declaration is the defect
         let sut = try Module(
@@ -206,7 +206,7 @@ struct BuilderTests {
                 entryName: Procedure(body: []),
                 "helper": Procedure(
                     signature: Signature(
-                        parameters: ["mode": Parameter(type: .string, oneOf: [])]
+                        parameters: ["mode": Parameter(type: .string, candidates: [])]
                     ),
                     body: []
                 )

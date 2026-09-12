@@ -57,7 +57,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // A number the slot admits only inside the range. `int(0...255)`,
     // `double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
     // the value is a whole number or a fraction, and the bounds are judged
-    // where a value is settled, the way `oneOf` is. At the link for a constant,
+    // where a value is settled, the way `enum` is. At the link for a constant,
     // at the boundary for what only the run can see. A module gives one a name
     // the way it names any type: `byte = int(0...255)`.
     case ranged(Refinement)

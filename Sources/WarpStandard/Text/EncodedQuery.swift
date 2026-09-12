@@ -29,7 +29,7 @@ struct EncodedQuery: Query {
         var declared: Parameter {
             switch self {
             case .encoding:
-                return Parameter(type: .string, oneOf: ["utf8"], default: .string("utf8"))
+                return Parameter(type: .string, candidates: ["utf8"], default: .string("utf8"))
 
             case .of:
                 return Parameter(type: .string)

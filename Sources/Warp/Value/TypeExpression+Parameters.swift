@@ -114,7 +114,7 @@ public extension Signature {
             parameters: parameters.mapValues { parameter in
                 Parameter(
                     type: parameter.type?.bounded(by: bounds),
-                    oneOf: parameter.oneOf,
+                    candidates: parameter.candidates,
                     default: parameter.default,
                     description: parameter.description
                 )

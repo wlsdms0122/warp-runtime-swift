@@ -174,7 +174,7 @@ extension LoweredType {
         }
     }
 
-    // A candidate of `oneOf` read as the number its canonical spelling names
+    // A candidate of `enum` read as the number its canonical spelling names
     // for this slot: a fraction slot reads only fraction spellings, so the
     // boundary and the link agree on which members exist. Nil where the
     // spelling names no number the slot takes.

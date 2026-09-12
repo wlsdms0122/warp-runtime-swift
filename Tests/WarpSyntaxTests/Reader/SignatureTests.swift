@@ -125,11 +125,11 @@ struct SignatureTests {
         }
     }
 
-    @Test("a value outside oneOf is rejected")
+    @Test("a value outside enum is rejected")
     func valueOutsideOneOfRejected() {
         // Given
         let sut = Signature(parameters: [
-            "mode": Parameter(type: .string, oneOf: ["fast", "slow"])
+            "mode": Parameter(type: .string, candidates: ["fast", "slow"])
         ])
 
         // When / Then
@@ -144,7 +144,7 @@ struct SignatureTests {
         // so the document reads fine and the build refuses it
         let spec = try Loader.testing.loadProcedure([
             "parameters": [
-                "mode": ["type": "string", "oneOf": ["fast", "slow"], "default": "medium"]
+                "mode": ["type": "string", "enum": ["fast", "slow"], "default": "medium"]
             ],
             "body": [["let": "noop", "value": "ok"]]
         ])

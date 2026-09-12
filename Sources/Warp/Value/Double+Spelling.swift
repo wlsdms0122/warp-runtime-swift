@@ -28,7 +28,7 @@ extension Double {
     }
 
     // The one spelling a document writes a fraction in, and every judge of a
-    // fraction's spelling (the writer, the boundary's oneOf, the link's
+    // fraction's spelling (the writer, the boundary's enum, the link's
     // candidate check) reads this one answer. Nil for what no document carries.
     //
     // The digits are the host's shortest round-trip rendering; the *form* is

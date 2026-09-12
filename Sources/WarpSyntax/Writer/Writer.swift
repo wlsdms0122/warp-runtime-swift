@@ -304,8 +304,8 @@ public struct Writer: Sendable {
             written["type"] = try value(of: type)
         }
 
-        if let oneOf = parameter.oneOf {
-            written["oneOf"] = .array(oneOf.map(Value.string))
+        if let candidates = parameter.candidates {
+            written["enum"] = .array(candidates.map(Value.string))
         }
 
         if let fallback = parameter.default {
@@ -395,7 +395,7 @@ public struct Writer: Sendable {
             parameters: signature.parameters.mapValues { parameter in
                 Parameter(
                     type: parameter.type.map(stripped),
-                    oneOf: parameter.oneOf,
+                    candidates: parameter.candidates,
                     default: parameter.default,
                     description: parameter.description
                 )

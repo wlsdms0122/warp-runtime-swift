@@ -346,7 +346,7 @@ extension LoweredType {
         }
     }
 
-    // Whether a `oneOf` candidate could ever be a spelling of a value of this
+    // Whether a `enum` candidate could ever be a spelling of a value of this
     // shape. Candidates are written as the scalar spellings arguments are
     // compared under, so a shape with no scalar spelling spells none of
     // them, and a number is read by the spelling the boundary reads: `1e0`
@@ -385,7 +385,7 @@ extension LoweredType {
         case let .named(row):
             return table.loweredTypes[row].spells(candidate, in: table)
 
-        // A candidate spells a value, and null is not one a `oneOf` lists, so
+        // A candidate spells a value, and null is not one a `enum` lists, so
         // a nullable slot's candidates are the declared half's.
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.spells(candidate, in: table)
