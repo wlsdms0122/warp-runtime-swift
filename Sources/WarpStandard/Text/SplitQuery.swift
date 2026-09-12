@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A string cut on a separator. Empty pieces are kept: what a document usually
-// wants from splitting is the shape of the text, and dropping the empty ones
+// wants from splitting is the type of the text, and dropping the empty ones
 // would be an opinion about the text rather than a reading of it.
 struct SplitQuery: Query {
     typealias Parameters = StringPair

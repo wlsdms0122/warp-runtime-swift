@@ -93,10 +93,10 @@ struct TypingContext: Sendable {
     }
 
     // A named type stands for what it was declared as. Inference walks into
-    // shapes, so it has to look through a name to find one. The table lowered
+    // types, so it has to look through a name to find one. The table lowered
     // every declaration once, so following a name is reading a row.
-    func resolve(_ shape: LoweredType) -> LoweredType {
-        guard case let .named(row) = shape else { return shape }
+    func resolve(_ type: LoweredType) -> LoweredType {
+        guard case let .named(row) = type else { return type }
 
         return resolve(loweredTypes.loweredTypes[row])
     }

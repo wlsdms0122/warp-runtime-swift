@@ -132,8 +132,8 @@ struct Compiling {
     //
     // What it proved about its own bodies and what the build read off one that
     // declared no answer are read off what it settled rather than off the rows
-    // it stands as. A row is a declaration lowered against a link's shapes,
-    // and none of those is a shape.
+    // it stands as. A row is a declaration lowered against a link's types,
+    // and none of those is a type.
     mutating func lay(
         _ document: Compiled,
         at origin: Int,
@@ -219,7 +219,7 @@ struct Compiling {
         }
     }
 
-    // A shape the build read off a body rather than out of a signature, held to
+    // A type the build read off a body rather than out of a signature, held to
     // the document that wrote the body: the rows it stands on are numbered
     // beside the ones that document's bodies stand on.
     mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {

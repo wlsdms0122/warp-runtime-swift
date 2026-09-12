@@ -48,7 +48,7 @@ struct Chain {
     // MARK: - Private
     private static func step(_ number: Int) throws -> Name { try Name("chain.step\(number)") }
 
-    private static func shape(_ number: Int) throws -> Name { try Name("chain.Step\(number)") }
+    private static func type(_ number: Int) throws -> Name { try Name("chain.Step\(number)") }
 
     // One document: a type for each procedure it holds, and each procedure standing on
     // its own type and handing what it was sent to the procedure in front of it.
@@ -62,7 +62,7 @@ struct Chain {
         var procedures: [Name: Procedure] = [:]
 
         for number in held {
-            types[try shape(number)] = .record(["value": .int])
+            types[try type(number)] = .record(["value": .int])
             procedures[try step(number)] = try procedure(number)
         }
 
@@ -80,7 +80,7 @@ struct Chain {
                     binding: .constant("held"),
                     expression: .cast(
                         .record(["value": .reference([.key("value")])]),
-                        as: .named(try shape(number)),
+                        as: .named(try type(number)),
                         optional: false
                     )
                 )

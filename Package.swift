@@ -13,12 +13,12 @@ let package = Package(
         .library(name: "WarpStandard", targets: ["WarpStandard"]),
     ],
     targets: [
-        // The language as Swift holds it: the shapes a program is made of, and
+        // The language as Swift holds it: the constructs a program is made of, and
         // everything done to them. Checking, linking and running. No
         // dependencies and no `Decodable`, because a language
         // that can decode itself has confused itself with one of its notations.
         //
-        // A caller that builds these shapes directly needs this and nothing
+        // A caller that builds these directly needs this and nothing
         // else. That is what a front end with a syntax of its own does, and
         // what running a program that never travels takes.
         .target(
@@ -38,8 +38,8 @@ let package = Package(
             ]
         ),
         // What a document is: the bytes and the text one is carried in, which
-        // key names which shape, the spellings a notation may write instead,
-        // and the way back out. Data in, the language's own shapes out.
+        // key names which construct, the spellings a notation may write
+        // instead, and the way back out. Data in, the language's own values out.
         //
         // Optional, and the dependency graph is where that is said rather than
         // claimed. A program travels as a document, so this is what a program
@@ -49,7 +49,7 @@ let package = Package(
         // an implementation in another language can speak it without also
         // implementing what a procedure is. The line this package is cut on is
         // what a caller can leave out: a caller that reads bytes needs all of
-        // this, and a caller assembling shapes in Swift needs none of it.
+        // this, and a caller assembling a program in Swift needs none of it.
         .target(
             name: "WarpSyntax",
             dependencies: [
@@ -60,7 +60,7 @@ let package = Package(
         // that cannot import the syntax can only be saying something about the
         // language. Where a behaviour is tested is then a fact anyone reads off
         // the imports rather than a claim. Each layer writes its own fixtures,
-        // in the shape that layer takes.
+        // in the form that layer takes.
         .testTarget(
             name: "WarpTests",
             dependencies: [

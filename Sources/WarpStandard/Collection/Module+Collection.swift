@@ -19,7 +19,7 @@ public extension Module {
                 implementation: .effect(AppendEffect())
             ),
             "std.collection.count": Procedure(
-                description: "How many, for a shape that has a count.",
+                description: "How many, for a type that has a count.",
                 signature: Signature(of: CountQuery.self, receiver: .of, returns: .int),
                 implementation: .query(CountQuery())
             ),

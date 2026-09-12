@@ -12,9 +12,9 @@ extension TypeExpression {
     // Every declared name this reaches: the types it names, and the
     // memberships it bounds a parameter by.
     //
-    // A parameter's own name is not one of them. It stands for a shape the
+    // A parameter's own name is not one of them. It stands for a type the
     // call decides rather than one a module declared, and what a walk through
-    // one reached is rooted at that same undeclared shape.
+    // one reached is rooted at that same undeclared type.
     var mentions: Set<Name> {
         switch self {
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number, .ranged:

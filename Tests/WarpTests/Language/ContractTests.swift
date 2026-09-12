@@ -353,7 +353,7 @@ struct ContractTests {
         }
     }
 
-    @Test("a name is a shape or a membership or a contract, and never two of them")
+    @Test("a name is a type or a membership or a contract, and never two of them")
     func oneNameStandsForOneThing() throws {
         // Given
         let sut = try Module(
@@ -366,7 +366,7 @@ struct ContractTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("cannot stand for two of a shape, a membership and a contract")
+            "\(error)".contains("cannot be a type, a membership and a contract at once")
         }
     }
 

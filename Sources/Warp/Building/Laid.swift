@@ -18,7 +18,7 @@ import Foundation
 // pay for that once a document. This is where it is paid once.
 //
 // The rows a document takes are the rows after the ones already laid, and both
-// shape spaces number by the order their documents stand, so a document laid
+// type spaces number by the order their documents stand, so a document laid
 // down later takes numbers past these and moves none of them. That is what
 // lets what is laid here stand in a compile that puts more documents beside it.
 //

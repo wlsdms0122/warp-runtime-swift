@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The expression grammar. `Expression` has shapes and no spelling; this is the
+// The expression grammar. `Expression` has types and no spelling; this is the
 // spelling. No front end may hide an expression inside a string, so any
 // notation that can write a record can write every expression:
 //
@@ -181,8 +181,8 @@ public struct ExpressionReader: Decodable {
         if record.names.contains("as") || record.names.contains("as?") {
             guard !(record.names.contains("as") && record.names.contains("as?")) else {
                 throw ExpressionFormError(
-                    "a cast names one shape. `as` and `as?` are the two ways to"
-                        + " read a mismatch, not two shapes to read"
+                    "a cast names one type. `as` and `as?` are the two ways to"
+                        + " read a mismatch, not two types to read"
                 )
             }
 
@@ -200,7 +200,7 @@ public struct ExpressionReader: Decodable {
             // A type has two spellings and a cast takes either: the string a
             // built-in or a declared name is written as, and the mapping a
             // record or a procedure signature is written as. Reading only the
-            // first would put a shape out of a cast's reach for no reason but
+            // first would put a type out of a cast's reach for no reason but
             // how it is written.
             let type: TypeExpression
 
@@ -393,7 +393,7 @@ public struct ExpressionReader: Decodable {
     //
     // Lowering here is what makes a placeholder an ordinary reference. It is
     // checked, linked and refused the way every other reference is, instead of
-    // being a shape only the template walk knew how to read.
+    // being a type only the template walk knew how to read.
     private static func lowered(
         _ segments: [TemplateSegment],
         over bindings: [Name: Expression],

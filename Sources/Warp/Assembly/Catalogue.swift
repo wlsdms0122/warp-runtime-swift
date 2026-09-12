@@ -23,7 +23,7 @@ import Foundation
 //
 // What a link needs is not what a document discloses. `imports` says what the
 // program can touch, which is the grant a caller reads before it allows
-// anything; a link needs that and also the shapes a signature names, which
+// anything; a link needs that and also the types a signature names, which
 // touch nothing. So the needs are read off the module here, in both spellings,
 // and one table answers them: the kind rides on the reference.
 public struct Catalogue: Sendable {
@@ -50,7 +50,7 @@ public struct Catalogue: Sendable {
             var collided: [(reference: Reference, first: Int)] = []
 
             for reference in module.declaredProcedures.map(Reference.procedure)
-                + module.declaredShapes.map(Reference.shape) {
+                + module.declaredTypes.map(Reference.type) {
                 guard let first = declares[reference] else {
                     declares[reference] = position
 
@@ -150,15 +150,15 @@ public struct Catalogue: Sendable {
                 }
             }
 
-            // Which shapes the answer declares so far. A document leaning on a
-            // pair names both of them, so a claim about two shapes this list
+            // Which types the answer declares so far. A document leaning on a
+            // pair names both of them, so a claim about two types this list
             // has is a claim this list may be leaning on, and the document
             // making it has to stand in the link for the pair to be answered.
             let named = closed.reduce(into: Set<Name>()) { names, module in
-                names.formUnion(module.declaredShapes)
+                names.formUnion(module.declaredTypes)
             }
 
-            // A claim about two shapes nothing here pairs is brought as well.
+            // A claim about two types nothing here pairs is brought as well.
             // Which pairs are really leaned on is read off bodies against the
             // signatures they call, which is a compile's answer and not a
             // list's.

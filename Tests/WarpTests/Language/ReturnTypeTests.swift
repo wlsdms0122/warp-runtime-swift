@@ -87,7 +87,7 @@ struct ReturnTypeTests {
         }
     }
 
-    @Test("a declared shape is settled on the way out, not only on the way in")
+    @Test("a declared type is settled on the way out, not only on the way in")
     func declaredShapeSettlesOnTheWayOut() async throws {
         // Given
         let sut = try Module(
@@ -122,7 +122,7 @@ struct ReturnTypeTests {
         #expect(answer == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
     }
 
-    @Test("an answer naming a shape nobody declared is refused at link")
+    @Test("an answer naming a type nobody declared is refused at link")
     func unknownReturnTypeIsABuildError() throws {
         // Given
         let sut = try Module(

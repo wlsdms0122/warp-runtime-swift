@@ -24,7 +24,7 @@ public extension Place {
     // The same address, walkable in the text. What a slot is written under
     // becomes a key; what a construct is written under becomes a landmark,
     // since a document may nest it under `value` or write it bare and both are
-    // the same shape by the time anything here sees one.
+    // the same type by the time anything here sees one.
     func written(by registry: ConstructRegistry) -> Place {
         Place(
             steps.map { step in
@@ -88,9 +88,9 @@ public extension Place {
         }
     }
 
-    // The key this notation writes a shape under. Asked of the registry
+    // The key this notation writes a type under. Asked of the registry
     // because a caller registers the forms it likes under the spellings it
-    // likes, and a shape whose key was given up has none to offer. The
+    // likes, and a type whose key was given up has none to offer. The
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {

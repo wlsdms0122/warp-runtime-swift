@@ -12,7 +12,7 @@ import WarpStandard
 
 // What a test writes to reach a procedure: a program authored as Swift values, run
 // with the bundles the procedure lives in. This target writes its own fixtures, in
-// the shape a vocabulary test takes, so a change to the language's own
+// the type a vocabulary test takes, so a change to the language's own
 // fixtures cannot fail a procedure's test for a reason the procedure had nothing to do
 // with.
 

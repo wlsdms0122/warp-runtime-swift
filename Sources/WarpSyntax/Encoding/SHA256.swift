@@ -74,7 +74,7 @@ enum SHA256 {
             // The eight working variables the standard names, kept as eight
             // variables. Written as an array rebuilt each round it is an
             // allocation per round of a loop that runs sixty-four times per
-            // block, for a shape the algorithm never asked for, and this runs
+            // block, for a type the algorithm never asked for, and this runs
             // once per document read and once per document written.
             var (a, b, c, d) = (state[0], state[1], state[2], state[3])
             var (e, f, g, h) = (state[4], state[5], state[6], state[7])

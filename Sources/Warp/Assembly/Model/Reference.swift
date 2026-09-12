@@ -11,26 +11,27 @@ import Foundation
 // and leans on others, and the same question is asked of every one: which
 // document in this list declares it.
 //
-// The kind is part of the value, so a procedure and a shape spelled alike are two
-// references. A link refuses a name standing for a shape and a membership at
-// once and says nothing about a procedure spelled like a type.
+// The kind is part of the value, so a procedure and a type spelled alike are
+// two references. Types, memberships and contracts are one namespace: a link
+// refuses a name standing for a type and a membership at once, and says
+// nothing about a procedure spelled like a type.
 enum Reference: Hashable, Sendable, Comparable {
     case procedure(Name)
-    case shape(Name)
+    case type(Name)
 
     // MARK: - Internal
-    // Procedures before shapes, and each in name order. A catalogue reports the
+    // Procedures before types, and each in name order. A catalogue reports the
     // first collision it walks into, so this is the order an author meets
     // them in.
     static func < (lhs: Reference, rhs: Reference) -> Bool {
         switch (lhs, rhs) {
-        case let (.procedure(left), .procedure(right)), let (.shape(left), .shape(right)):
+        case let (.procedure(left), .procedure(right)), let (.type(left), .type(right)):
             return left < right
 
-        case (.procedure, .shape):
+        case (.procedure, .type):
             return true
 
-        case (.shape, .procedure):
+        case (.type, .procedure):
             return false
         }
     }
@@ -39,7 +40,7 @@ enum Reference: Hashable, Sendable, Comparable {
     var noun: String {
         switch self {
         case .procedure: "procedure"
-        case .shape: "shape"
+        case .type: "type"
         }
     }
 
@@ -47,7 +48,7 @@ enum Reference: Hashable, Sendable, Comparable {
     // kind.
     var name: Name {
         switch self {
-        case let .procedure(name), let .shape(name): name
+        case let .procedure(name), let .type(name): name
         }
     }
 }

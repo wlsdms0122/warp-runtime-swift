@@ -12,8 +12,8 @@ import Foundation
 //
 // Three of them ask for exactly this and differ only in what they keep: the
 // declaration scan wants the closure literals a body buries, the same scan
-// wants the shapes its casts name, and the check wants the selectors a module
-// sends. Written out per collector, one shape of the language is written three
+// wants the types its casts name, and the check wants the selectors a module
+// sends. Written out per collector, one walk over the language is written three
 // times, and a case added to `Expression` reaches whichever copies somebody
 // remembered.
 //

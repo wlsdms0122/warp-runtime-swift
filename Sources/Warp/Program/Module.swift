@@ -35,7 +35,7 @@ public struct Module: Sendable {
     public let imports: Set<Name>
 
     // The same fact said as lookups rather than as a grant: the procedures this
-    // calls, and every procedure and shape it names and does not declare. Read
+    // calls, and every procedure and type it names and does not declare. Read
     // where the module is made, since a link asks each module it is handed for
     // them and the text they are read off does not move.
     let sends: Set<Name>
@@ -49,9 +49,9 @@ public struct Module: Sendable {
     // was written is not here: a refusal that names a place reads it off the
     // draft, and every other reader wants the names alone.
     let declaredProcedures: Set<Name>
-    let declaredShapes: Set<Name>
+    let declaredTypes: Set<Name>
 
-    // Shapes this module declares. A type is a name bound to a
+    // Types this module declares. A type is a name bound to a
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
     // what kind of thing the name stands for.
@@ -67,7 +67,7 @@ public struct Module: Sendable {
     // answer to stand under it.
     //
     // Kept apart from the constraints for the reason the two are different
-    // questions. A constraint is a closed set of shapes and a value of one is
+    // questions. A constraint is a closed set of types and a value of one is
     // one of them; a contract is an open set, and what puts a type in it is
     // that it declares the procedures. Only one of those can be judged by listing.
     public var contracts: [Name: [Name: Signature]] { source.contracts }
@@ -107,7 +107,7 @@ public struct Module: Sendable {
     // against itself.
     //
     // A document arrives through a reader, a serialization or a caller
-    // assembling shapes in Swift, and each of those is a way in. A check that
+    // assembling types in Swift, and each of those is a way in. A check that
     // sat on one of them would leave the others open, and what comes through
     // them is the same module. Here there is one way in.
     //
@@ -118,7 +118,7 @@ public struct Module: Sendable {
     // The imports are a claim, and nil is no claim. A document makes one (it
     // travelled, and what it said about itself is the thing worth holding it
     // to) so a reader hands over what the text wrote and a drifting list is
-    // refused. A caller assembling shapes in Swift has the module in hand and
+    // refused. A caller assembling types in Swift has the module in hand and
     // nobody to disclose it to, so it says nothing and the module states the
     // fact instead. Either way `imports` afterwards is what the module sends.
     public init(
@@ -160,10 +160,10 @@ public struct Module: Sendable {
         self.sends = reading.sends
         self.imports = draft.imports ?? reading.sends
         self.uses = Set(reading.sends.map(Reference.procedure))
-            .union(reading.mentions.map(Reference.shape))
+            .union(reading.mentions.map(Reference.type))
         self.closures = reading.closures
         self.declaredProcedures = reading.declaredProcedures
-        self.declaredShapes = reading.declaredShapes
+        self.declaredTypes = reading.declaredTypes
 
         try Validator().validate(self)
     }

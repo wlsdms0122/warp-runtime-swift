@@ -112,7 +112,7 @@ extension Builder {
         case .literal, .reference, .closure:
             return .these([])
 
-        // A cast that names a shape the value did not arrive as fails, and
+        // A cast that names a type the value did not arrive as fails, and
         // that is the one failure the runtime itself raises. The optional
         // spelling reads the same mismatch as null instead, so it raises
         // nothing.
@@ -196,7 +196,7 @@ extension Builder {
         case .leave:
             return false
 
-        // Judging a value against a shape reaches nothing outside itself, so a
+        // Judging a value against a type reaches nothing outside itself, so a
         // cast is as pure as what it reads.
         case let .cast(value, _, _):
             return isPure(value)

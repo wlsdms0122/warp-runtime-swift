@@ -66,7 +66,7 @@ struct FoldingTests {
         #expect(try sut.read(reference) == .null)
     }
 
-    @Test("a shape-misusing path throws ReferenceUnfit")
+    @Test("a type-misusing path throws ReferenceUnfit")
     func shapeMisuseThrowsUnfit() {
         // Given
         let reference = Expression.reference([.key("count"), .key("field")])

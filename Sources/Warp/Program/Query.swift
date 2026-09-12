@@ -16,7 +16,7 @@ import Foundation
 // the same as any other declaration, and the signature is what a call site is
 // checked against whichever way the body is written.
 //
-// Answering nil means the procedure does not apply to that receiver's shape. It is
+// Answering nil means the procedure does not apply to that receiver's type. It is
 // not a failure, and it reads as absent the same as a field that was never
 // set.
 public protocol Query: NativeProcedure {

@@ -116,8 +116,8 @@ public struct Signature: Sendable, Equatable {
     }
 
     // The same, with what a call put in the type parameters written in. The
-    // filling happens on the lowered shape rather than on the declaration,
-    // because what a call read is a shape and a declaration is a document's
+    // filling happens on the lowered type rather than on the declaration,
+    // because what a call read is a type and a declaration is a document's
     // spelling.
     func lowered(in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> [Slot] {
         ordered(

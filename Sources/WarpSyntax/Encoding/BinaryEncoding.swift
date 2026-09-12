@@ -33,7 +33,7 @@ public enum BinaryEncoding {
     public static let magic: [UInt8] = [0x57, 0x41, 0x52, 0x50]
     public static let format: UInt8 = 1
 
-    // How deep a reader follows before calling the shape an attack rather than
+    // How deep a reader follows before calling the type an attack rather than
     // a program. A document is written by a writer that recursed the same way,
     // so an honest one sits nowhere near this.
     static let depth = 512

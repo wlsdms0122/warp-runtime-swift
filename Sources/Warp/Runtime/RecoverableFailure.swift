@@ -8,7 +8,7 @@
 import Foundation
 
 // A failure of the work itself. The data wasn't there, the world didn't
-// cooperate. `attempt` absorbs these; author mistakes (shape misuse, contract
+// cooperate. `attempt` absorbs these; author mistakes (type misuse, contract
 // violations) deliberately do not carry the marker, so they surface instead.
 //
 // It lives beside the runtime because it is `attempt`'s half of a contract, not
@@ -34,7 +34,7 @@ public protocol RecoverableFailure: WarpError {
 public extension RecoverableFailure {
     var details: [Name: Value] { [:] }
 
-    // Deliberately not a protocol requirement: the shape is assembled here and
+    // Deliberately not a protocol requirement: the type is assembled here and
     // nowhere else, so a conformance cannot hand over a payload the link's
     // declaration does not describe. A declaration a conformance could quietly
     // break is a promise rather than a fact, and this is a promise the type
@@ -52,13 +52,13 @@ public extension RecoverableFailure {
     }
 }
 
-// The shape the sentence above promises, said once as a type so the link can
+// The type the sentence above promises, said once as a type so the link can
 // hold the rescue's name to it.
 //
 // The envelope is the whole declaration: `type` and `message` are what every
 // failure holds, and `details` is the box the failing procedure fills. Declaring
 // the box as a dictionary of `any` is what lets a rescue reach what a failure
-// carried by naming it, without the shape of the box being part of what a
+// carried by naming it, without the type of the box being part of what a
 // runtime must implement.
 public enum FailurePayload {
     public static let declared = TypeExpression.record([

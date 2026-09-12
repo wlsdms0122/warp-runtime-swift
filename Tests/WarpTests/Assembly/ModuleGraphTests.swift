@@ -55,7 +55,7 @@ struct ModuleGraphTests {
         #expect(graph.modules[1].procedures[entryName] != nil)
     }
 
-    @Test("a module stands after the module that declares a shape it names")
+    @Test("a module stands after the module that declares a type it names")
     func aMentionedShapeStandsFirst() throws {
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(

@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// The document has two layers, and this suite is about the lower one: the shapes
+// The document has two layers, and this suite is about the lower one: the types
 // that stand one to one with the language, written without any spelling that
 // stands in for a procedure.
 //

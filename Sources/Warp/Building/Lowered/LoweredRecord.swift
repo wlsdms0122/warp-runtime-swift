@@ -8,15 +8,15 @@
 import Foundation
 
 // A record's fields as the link laid them out: the layout a value settling
-// here is built on, and the shape of the field at each of its places. One
-// shape per field, checked where the pair is made, so every reading may take
+// here is built on, and the type of the field at each of its places. One
+// type per field, checked where the pair is made, so every reading may take
 // the two together.
 struct LoweredRecord: Sendable, Equatable {
     // MARK: - Property
     let layout: Layout
     let fields: [LoweredType]
 
-    // The names beside the shapes, in the layout's order.
+    // The names beside the types, in the layout's order.
     var named: Zip2Sequence<[Name], [LoweredType]> {
         zip(layout.fields, fields)
     }
@@ -25,7 +25,7 @@ struct LoweredRecord: Sendable, Equatable {
     init(layout: Layout, fields: [LoweredType]) {
         precondition(
             layout.fields.count == fields.count,
-            "a record shape has one shape per field its layout names"
+            "a record has one type per field its layout names"
         )
 
         self.layout = layout

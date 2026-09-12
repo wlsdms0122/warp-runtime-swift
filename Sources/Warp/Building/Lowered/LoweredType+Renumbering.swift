@@ -8,15 +8,15 @@
 import Foundation
 
 extension LoweredType {
-    // The same shape with every row it stands on answered again. A shape is a
+    // The same type with every row it stands on answered again. A type is a
     // tree and its rows stand at the leaves, so a caller that can answer one
     // number answers the whole of it, and the walk over the tree is written
     // once.
     //
-    // Two answers, because a shape names two tables. A declared type and a
+    // Two answers, because a type names two tables. A declared type and a
     // membership are separate spaces and no name is in both, so which of them
     // a number counts in is a fact of the case it stands in.
-    // Which rows of a link this shape stands on, in the two spaces it names.
+    // Which rows of a link this type stands on, in the two spaces it names.
     // Read by answering every number with itself, so the walk over the tree
     // stays written once.
     func standing(into types: inout Set<Int>, and memberships: inout Set<Int>) {

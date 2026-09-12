@@ -55,7 +55,7 @@ struct ReferenceLookupTests {
         }
     }
 
-    @Test("shape misuse is unfit, not absent")
+    @Test("type misuse is unfit, not absent")
     func shapeMisuseReturnsUnfit() {
         // Then. Drilling a field into a string is an author error, not missing
         // data

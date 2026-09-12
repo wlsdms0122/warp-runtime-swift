@@ -50,16 +50,16 @@ indirect enum LoweredType: Sendable {
     case parameter(label: Name, bound: Bound?)
 
     // What a type parameter is held to. Two, because the two are answered
-    // differently: a membership lists shapes and the table lowered them into
+    // differently: a membership lists types and the table lowered them into
     // rows, a contract lists procedures and what answers it is a type's own name.
     enum Bound: Sendable, Equatable {
         case membership(Int)
         case contract(Name)
     }
 
-    // The shape a walk reached by taking a path through one a call decides.
+    // The type a walk reached by taking a path through one a call decides.
     // The root is the type parameter's spelling and the path is what was
-    // walked from it, so two walks landing on one field land on one shape.
+    // walked from it, so two walks landing on one field land on one type.
     // Nothing is proven about what it holds, so every judgment answers it the
     // way it answers `any`; it stands apart for the walk's own naming.
     case reading(of: Name, path: [PathSegment])
@@ -79,7 +79,7 @@ indirect enum LoweredType: Sendable {
 
     // MARK: - Property
     // What a box holds. A variable is a fact about the slot, and what is read
-    // out of one is the shape inside it.
+    // out of one is the type inside it.
     var fieldUnwrapped: LoweredType {
         if case let .variable(inner) = self { return inner }
 
@@ -112,7 +112,7 @@ indirect enum LoweredType: Sendable {
     }
 
     // The row this stands on, through `?`, `var` and `inout`, which hold no
-    // value of their own. Nil for a shape that names no row. What follows a
+    // value of their own. Nil for a type that names no row. What follows a
     // chain of names follows this, so a name reached under a wrapper is a
     // link of the chain and not its end.
     var row: Int? {
@@ -154,12 +154,12 @@ indirect enum LoweredType: Sendable {
         }
     }
 
-    // What a walk through this shape reaches by taking those segments. Nil
-    // where this is not a shape a call decides, which is where a walk has a
-    // shape to read the segments against and no need for one of these.
+    // What a walk through this type reaches by taking those segments. Nil
+    // where this is not a type a call decides, which is where a walk has a
+    // type to read the segments against and no need for one of these.
     //
-    // Asked of the shape rather than assembled at the walk, because the root
-    // is the shape's own fact: a parameter roots a reading at itself, and a
+    // Asked of the type rather than assembled at the walk, because the root
+    // is the type's own fact: a parameter roots a reading at itself, and a
     // reading already rooted extends the path it carries.
     //
     // The marks come off on the way in: what a mark says is expected of the
@@ -177,13 +177,13 @@ indirect enum LoweredType: Sendable {
         }
     }
 
-    // Where a field stands in this shape, and what stands there. Nil where
+    // Where a field stands in this type, and what stands there. Nil where
     // the link did not prove a layout: a dictionary, a value that arrived
-    // through `any`, or a shape a call still decides. A box is read through,
+    // through `any`, or a type a call still decides. A box is read through,
     // since a path reads what the box holds.
     //
-    // The place is the value's, not only the shape's. A value settling to a
-    // record shape is built on that shape's layout, so a field the link
+    // The place is the value's, not only the type's. A value settling to a
+    // record type is built on that type's layout, so a field the link
     // proved stands where the layout puts it.
     func place(of field: Name, in table: LoweredTypeTable) -> (position: Int, type: LoweredType)? {
         switch self {
@@ -204,7 +204,7 @@ indirect enum LoweredType: Sendable {
     }
 
     // What an element of this stands as, for a walk taking an index. Nil
-    // where the link proved no element shape.
+    // where the link proved no element type.
     func element(in table: LoweredTypeTable) -> LoweredType? {
         switch self {
         case let .array(element):
@@ -224,7 +224,7 @@ indirect enum LoweredType: Sendable {
         }
     }
 
-    // Whether two procedure shapes declare the same slots and the same answer.
+    // Whether two procedure types declare the same slots and the same answer.
     // What each requires of the value is beside that, so a join may keep the
     // slots while reading the two requirements together.
     func sameProcedure(as other: LoweredType) -> Bool {
@@ -254,7 +254,7 @@ indirect enum LoweredType: Sendable {
         }
     }
 
-    // What a judgment sees. A reading says a path was taken through a shape
+    // What a judgment sees. A reading says a path was taken through a type
     // the call decides, which proves nothing about what it holds, and that is
     // what `any` says.
     var judged: LoweredType {
@@ -263,7 +263,7 @@ indirect enum LoweredType: Sendable {
         return self
     }
 
-    // Whether this shape proves nothing about the value it holds.
+    // Whether this type proves nothing about the value it holds.
     var provesNothing: Bool {
         self == .any || self == .never || decidedAtCall
     }

@@ -201,7 +201,7 @@ struct CompiledTests {
         #expect(answer == .int(7))
     }
 
-    @Test("a document's types take a run of shape rows of their own")
+    @Test("a document's types take a run of type rows of their own")
     func aDocumentTakesABlockOfShapeRows() throws {
         // Given. A document naming a type another declares, handed over first,
         // so the rows follow the documents and not what they name.
@@ -553,7 +553,7 @@ struct CompiledTests {
         let sut = try casting()
 
         // When. Compiled alone, and again beside a document whose type takes a
-        // shape row in front of its own.
+        // type row in front of its own.
         let alone = try compiled(sut + Module.standard)
         let beside = try compiled(
             [
@@ -585,7 +585,7 @@ struct CompiledTests {
     func aDocumentCompilesAgainstWhatIsAlreadyCompiled() async throws {
         // Given. A document whose constant runs a procedure another declared, and
         // that procedure's body standing on a type its own document declared, so
-        // running it reads a shape as well as a row.
+        // running it reads a type as well as a row.
         let answering = try Module(
             types: ["a.Held": .record(["count": .int])],
             procedures: [
@@ -645,8 +645,8 @@ struct CompiledTests {
             #expect(one.declared == other.declared)
             #expect(one.calls == other.calls)
             #expect(one.answers == other.answers)
-            #expect(one.shapeNumbering.types == other.shapeNumbering.types)
-            #expect(one.shapeNumbering.memberships == other.shapeNumbering.memberships)
+            #expect(one.typeNumbering.types == other.typeNumbering.types)
+            #expect(one.typeNumbering.memberships == other.typeNumbering.memberships)
             #expect(one.variables.map(\.name) == other.variables.map(\.name))
             #expect(one.table.count == other.table.count)
         }
@@ -793,7 +793,7 @@ struct CompiledTests {
         )
 
         // When / Then. The step into `count` is judged against what the call
-        // answers, which is a shape only the other document's reading knows.
+        // answers, which is a type only the other document's reading knows.
         #expect(
             try await run(
                 [walking, answering],
@@ -850,13 +850,13 @@ struct CompiledTests {
         return body
     }
 
-    // The shape the cast in a row's result stands on.
+    // The type the cast in a row's result stands on.
     private func cast(in body: Body) throws -> LoweredType {
-        guard case let .cast(_, shape, _)? = body.result else {
+        guard case let .cast(_, type, _)? = body.result else {
             throw BuildError("the entry holds no cast", at: nil)
         }
 
-        return shape
+        return type
     }
 
     // One document declaring a type and casting to it.

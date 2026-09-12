@@ -10,8 +10,8 @@ import Testing
 @testable import Warp
 
 // What the build leaves the run to read types by: rows for names, one judge
-// over shapes, and a document's type reaching it through a door.
-@Suite("Types lower to shapes the run reads by row")
+// over types, and a document's type reaching it through a door.
+@Suite("Types lower to types the run reads by row")
 struct LoweredTypeTests {
     // MARK: - Property
     private let builder = Builder()

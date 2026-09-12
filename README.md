@@ -53,12 +53,12 @@ let value = try await Executor().run(
 
 | product | what | depends on |
 |---|---|---|
-| `Warp` | the shapes, checking, linking, running, and the standard vocabulary | nothing |
-| `WarpSyntax` | a document: the bytes and text one is carried in, read into shapes and written back out | `Warp` |
+| `Warp` | the language, checking, linking, running, and the standard vocabulary | nothing |
+| `WarpSyntax` | a document: the bytes and text one is carried in, read into a program and written back out | `Warp` |
 
 The arrow is the architecture, and it is the one line worth cutting on: what a
 caller can leave out. A caller that reads bytes needs all of this, and a caller
-assembling shapes in Swift needs none of it, so `WarpSyntax` is optional in the
+assembling a program in Swift needs none of it, so `WarpSyntax` is optional in the
 honest sense, and a program that never travels never links it.
 
 Inside it the wire is still written and read without learning what the tree
@@ -121,7 +121,7 @@ no document to hand to anything running elsewhere, and this is how it gets one.
 Whatever refuses somewhere says where. A refusal from the stages that read a
 program before running it carries a `Place`, the path to it through the program,
 and each side reads that path for the reader it has. The language names its own
-slots, which is what a caller that built the shapes in Swift can follow.
+slots, which is what a caller that built the program in Swift can follow.
 `Loader.reading { }` reads the same place in the keys the document writes, so
 `procedures.greet.body.total[2].call.arguments.amount` is a line every step of
 which an author can follow in the text in front of them.
@@ -130,7 +130,7 @@ It is steps rather than a sentence because a front end holding the file this was
 authored in has to walk them to point at the line, and only the front end knows
 that file: what crossed the wire is the document. So a step says how it was got.
 A `key` is one the document itself writes, and a reader may go looking for
-one in the text. A `landmark` is this implementation's key for a shape the
+one in the text. A `landmark` is this implementation's key for a construct the
 document does not name on its own, since `{ call: … }` and
 `{ value: { call: … } }` arrive here as one.
 

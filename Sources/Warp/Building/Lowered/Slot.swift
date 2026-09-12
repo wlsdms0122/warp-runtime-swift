@@ -8,7 +8,7 @@
 import Foundation
 
 // A parameter as the run reads it: what the boundary asks of an argument,
-// and nothing else. The name for a refusal, the shape to settle against,
+// and nothing else. The name for a refusal, the type to settle against,
 // the default where nothing was given, and the members the settled value
 // must be one of. The declaration's type is not here; its lowering is.
 final class Slot: Sendable {

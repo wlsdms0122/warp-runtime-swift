@@ -12,7 +12,7 @@ import Warp
 // type does not declare can be seen rather than silently skipped.
 //
 // Public because a notation reads its own spellings: what a condition slot holds
-// is the notation's shape, and a reader of it opens the same containers these
+// is the notation's type, and a reader of it opens the same containers these
 // readers do. Reading a key that was never declared is the whole job there.
 public struct AnyCodingKey: CodingKey {
     // MARK: - Property

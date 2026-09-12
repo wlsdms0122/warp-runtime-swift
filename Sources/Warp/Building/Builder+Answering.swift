@@ -14,7 +14,7 @@ import Foundation
 // cost a call site nothing: an unwritten answer read as `any`, and `any` was
 // accepted everywhere. It stopped being free when `any` became opaque. A dot on
 // what such a call answers is refused, and the author is asked to write down a
-// shape the body already states.
+// type the body already states.
 //
 // So the body is read. Not into the declaration: what the author wrote is
 // what the image carries and what the boundary checks, and an answer worked
@@ -68,7 +68,7 @@ extension Builder {
 
         for component in StronglyConnected.components(among: edges) {
             // One declaration that does not reach its own answer is the only
-            // shape a body can be read for. Everything else is a cycle, and
+            // type a body can be read for. Everything else is a cycle, and
             // a cycle says nothing.
             guard
                 component.count == 1,
@@ -95,7 +95,7 @@ extension Builder {
             // parameter means is settled at the call, by the same filling a
             // declared `returns: some T` goes through, so a body answering its
             // own parameter answers what the caller put there, and a body
-            // answering a shape only it could name (what a walk *through* a
+            // answering a type only it could name (what a walk *through* a
             // parameter reaches, named for the path that reached it) fills with
             // nothing, which is `any`. One rule, and the useful half comes for
             // free.

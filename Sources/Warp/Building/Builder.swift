@@ -76,7 +76,7 @@ public struct Builder: Sendable {
     // every run.
     //
     // The order is worked out here. What a document reaches is read off the
-    // procedures it sends and the shapes its signatures name, neither of which a
+    // procedures it sends and the types its signatures name, neither of which a
     // caller wrote down, so a caller has nothing to sort by.
     //
     public func compile(_ modules: [Module]) throws -> [Compiled] {
@@ -142,7 +142,7 @@ public struct Builder: Sendable {
         )
 
         for (origin, document) in compiled.enumerated() {
-            let numbered = document.shapeNumbering.rows(in: lowered.types.loweredTypes)
+            let numbered = document.typeNumbering.rows(in: lowered.types.loweredTypes)
 
             let rows = try document.table.map { judged -> Linked in
                 let row = try judged.folding(
@@ -152,8 +152,8 @@ public struct Builder: Sendable {
                     at: document.document
                 )
 
-                return try row.renumbered { shape in
-                    try numbered.read(shape, at: .procedure(row.label.spelling, in: document.document))
+                return try row.renumbered { type in
+                    try numbered.read(type, at: .procedure(row.label.spelling, in: document.document))
                 }
             }
 
@@ -233,7 +233,7 @@ public struct Builder: Sendable {
     // Documents laid down one at a time, in the order `standing` gives, each
     // against the ones already compiled and the ones laid before it.
     //
-    // What only the whole list answers is read once, here: the shape spaces of
+    // What only the whole list answers is read once, here: the type spaces of
     // a link are its documents' together, and documents handed over already
     // compiled were not in the ones the others were compiled against.
     //
@@ -612,7 +612,7 @@ public struct Builder: Sendable {
 
                 calls[symbol.declared] = gathered.map { call in call.callee }
 
-                // A constant answer is a value and not only a shape, so it is
+                // A constant answer is a value and not only a type, so it is
                 // held to what the declaration admits as well as to what it
                 // reads as, the way a constant argument is.
                 if let returns = procedure.signature.returns,
@@ -630,7 +630,7 @@ public struct Builder: Sendable {
             }
         }
 
-        // The shapes its bodies stand on, written as this document's own
+        // The types its bodies stand on, written as this document's own
         // numbers. Lowering read the link's table to judge, so what it wrote
         // is that link's rows; what leaves here is the document's.
         //
@@ -655,7 +655,7 @@ public struct Builder: Sendable {
             calls: declared.map { name in calls[name] ?? [] },
             answers: lowered.answers,
             numbering: numbering,
-            shapeNumbering: lowered.numbering,
+            typeNumbering: lowered.numbering,
             variables: boxes.map { name in (name: name, value: variables[name] ?? .null) }
         )
     }
@@ -705,7 +705,7 @@ public struct Builder: Sendable {
             frontier.append(contentsOf: assembled.calls[row])
         }
 
-        // The shapes of this link, made from what its documents declared and
+        // The types of this link, made from what its documents declared and
         // laid down in the order their blocks are. Which types answer which
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.

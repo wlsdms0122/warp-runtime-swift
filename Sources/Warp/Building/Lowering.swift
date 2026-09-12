@@ -42,12 +42,12 @@ struct Lowering {
     // picks from.
     let contractProcedures: [Name: ContractProcedure]
 
-    // The declared types as the run reads them, for a cast's shape and a
+    // The declared types as the run reads them, for a cast's type and a
     // closure's row.
     let loweredTypes: LoweredTypeTable
 
     // What each document's lowered bodies stand on, by the rows of the table
-    // above. Noted where a shape is written into a body, which is where the
+    // above. Noted where a type is written into a body, which is where the
     // document that wrote it is known; the document's own numbering is worked
     // out from it once everything is lowered.
     private(set) var standing: [Int: Standing] = [:]
@@ -139,9 +139,9 @@ struct Lowering {
         }
     }
 
-    // A shape the build read off a body rather than out of a signature. It is
+    // A type the build read off a body rather than out of a signature. It is
     // written into no body, so what it stands on is noted here: its document
-    // numbers it beside the shapes its bodies stand on.
+    // numbers it beside the types its bodies stand on.
     mutating func stands(on type: LoweredType, of origin: Int) {
         var stood = standing[origin] ?? Standing()
 
@@ -229,11 +229,11 @@ struct Lowering {
         private var capturedSlots: [Name: Int] = [:]
 
         // What the build proved stands in a slot, for the slots it proved
-        // anything about. A path reads its head here, so a field of a shape
+        // anything about. A path reads its head here, so a field of a type
         // the build laid out is lowered to the place it stands in.
         private var held: [Int: LoweredType] = [:]
 
-        // The declarations the shapes written into this body stand on, by the
+        // The declarations the types written into this body stand on, by the
         // rows of the table it was lowered against. Read where the document's
         // own numbering is worked out.
         private(set) var types: Set<Int> = []
@@ -247,23 +247,23 @@ struct Lowering {
 
         var size: Int { names.count }
 
-        // Notes what a shape written into this body stands on. A closure notes
+        // Notes what a type written into this body stands on. A closure notes
         // into the body it was written in: the two are one document, and a
         // document has one numbering.
         //
-        // Read through the walk that rewrites a shape's rows, so which cases
+        // Read through the walk that rewrites a type's rows, so which cases
         // hold a row is answered in one place. What that walk rebuilds is
         // dropped here.
-        func note(_ shape: LoweredType?) {
-            guard let shape else { return }
+        func note(_ type: LoweredType?) {
+            guard let type else { return }
 
-            note(shape)
+            note(type)
         }
 
-        func note(_ shape: LoweredType) {
+        func note(_ type: LoweredType) {
             let root = self.root
 
-            _ = shape.renumbered(
+            _ = type.renumbered(
                 type: { row in
                     root.types.insert(row)
 
@@ -289,8 +289,8 @@ struct Lowering {
 
         // A slot holds what the build proved, and holds nothing where it
         // proved nothing.
-        func hold(_ slot: Int, _ shape: LoweredType?) {
-            held[slot] = shape
+        func hold(_ slot: Int, _ type: LoweredType?) {
+            held[slot] = type
         }
 
         func held(at slot: Int) -> LoweredType? {
@@ -373,7 +373,7 @@ struct Lowering {
 
             switch statement.binding {
             // A name that says what it holds settles to it, so what stands in
-            // the slot is the declared shape. One that says nothing holds what
+            // the slot is the declared type. One that says nothing holds what
             // the code it was given stands as.
             case let .constant(name, declared)?:
                 let slot = slots.allocate(name)
@@ -385,7 +385,7 @@ struct Lowering {
 
             // A box that said what it holds is settled to it by its
             // declaration and by every write, so what stands in it is that
-            // shape. One that said nothing is retyped by each write.
+            // type. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = slots.allocate(name)
                 let settling = declared?.lowered(in: loweredTypes)
@@ -454,8 +454,8 @@ struct Lowering {
         case let .call(call):
             return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
 
-        case let .cast(_, shape, optional):
-            return optional ? nil : shape
+        case let .cast(_, type, optional):
+            return optional ? nil : type
 
         default:
             return nil
@@ -563,12 +563,12 @@ struct Lowering {
             )
 
         case let .cast(value, type, optional):
-            let shape = type.lowered(in: loweredTypes)
-            slots.note(shape)
+            let type = type.lowered(in: loweredTypes)
+            slots.note(type)
 
             return .cast(
                 try lower(value, in: scope, on: slots, label: label, at: place),
-                as: shape,
+                as: type,
                 optional: optional
             )
 
@@ -775,7 +775,7 @@ struct Lowering {
             throw BuildError.unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
         }
 
-        // What stands where the walk is, so a field of a shape the build laid
+        // What stands where the walk is, so a field of a type the build laid
         // out is lowered to the place it stands in. It runs out as soon as the
         // walk reaches something the build did not prove, and every step from
         // there reads by name.

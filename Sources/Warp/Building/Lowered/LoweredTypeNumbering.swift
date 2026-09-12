@@ -7,21 +7,21 @@
 
 import Foundation
 
-// Where the shape rows in a document's lowered bodies come from, and which
+// Where the type rows in a document's lowered bodies come from, and which
 // declaration each one stands for.
 //
-// A body stands on shapes as well as on calls, and the same rule holds for
+// A body stands on types as well as on calls, and the same rule holds for
 // both: the number a document writes is the document's, and which row of a
-// link it is stays the link's answer. So a document numbers the shapes its
+// link it is stays the link's answer. So a document numbers the types its
 // bodies stand on from itself, in name order, and a link that puts other
 // documents beside it moves no number.
 //
 // The names are the ones its lowered code turned out to stand on rather than
-// the ones its text spells. A shape reaches a body through what a path walked
+// the ones its text spells. A type reaches a body through what a path walked
 // as well as through what an author wrote, and that reading is the link's, so
 // what is in this space is read off the lowering and not off the document.
 //
-// Two lists, because a shape names two tables. A declared type and a
+// Two lists, because a type names two tables. A declared type and a
 // membership are separate spaces and no name is in both.
 struct LoweredTypeNumbering: Sendable {
     // What a number turned out to be, with the reason where it is not a row:
@@ -32,8 +32,8 @@ struct LoweredTypeNumbering: Sendable {
         case unnumbered
     }
 
-    // A document's shape numbers answered as the rows of one link, worked out
-    // once per number rather than at every shape standing on one.
+    // A document's type numbers answered as the rows of one link, worked out
+    // once per number rather than at every type standing on one.
     struct Rows {
         // MARK: - Property
         let types: [Answer]
@@ -41,9 +41,9 @@ struct LoweredTypeNumbering: Sendable {
 
         // MARK: - Initializer
         // MARK: - Public
-        // One shape a document wrote, read as this link's rows.
-        func read(_ shape: LoweredType, at place: Place) throws -> LoweredType {
-            try shape.renumbered(
+        // One type a document wrote, read as this link's rows.
+        func read(_ type: LoweredType, at place: Place) throws -> LoweredType {
+            try type.renumbered(
                 type: { number in try row(types, at: number, calling: "named", in: place) },
                 membership: { number in
                     try row(memberships, at: number, calling: "bounding a parameter", in: place)
@@ -52,7 +52,7 @@ struct LoweredTypeNumbering: Sendable {
         }
 
         // MARK: - Private
-        // Which row a document's shape number turned out to be. The reading is
+        // Which row a document's type number turned out to be. The reading is
         // the numbering's; what to say when it does not answer is this.
         private func row(
             _ answers: [Answer],
@@ -62,7 +62,7 @@ struct LoweredTypeNumbering: Sendable {
         ) throws -> Int {
             guard answers.indices.contains(number) else {
                 throw BuildError.unjudged(
-                    "a shape standing at \(number), which its document never numbered",
+                    "a type standing at \(number), which its document never numbered",
                     at: place
                 )
             }
@@ -79,7 +79,7 @@ struct LoweredTypeNumbering: Sendable {
 
             case .unnumbered:
                 throw BuildError.unjudged(
-                    "a shape standing at \(number), which its document never numbered",
+                    "a type standing at \(number), which its document never numbered",
                     at: place
                 )
             }

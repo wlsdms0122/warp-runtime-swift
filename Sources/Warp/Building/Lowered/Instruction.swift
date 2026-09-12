@@ -10,8 +10,8 @@ import Foundation
 // A statement as the run performs it: what to compute, and which slot takes
 // the answer. The label is what a trace calls the statement.
 struct Instruction: Sendable {
-    // What a slot takes, and the shape it takes it as. A name that said what
-    // it holds carries that shape here, so the boundary a declaration is gets
+    // What a slot takes, and the type it takes it as. A name that said what
+    // it holds carries that type here, so the boundary a declaration is gets
     // crossed the way a parameter's does; a name that said nothing carries
     // none, and what the link worked out for it needs no crossing.
     enum Binding: Sendable {

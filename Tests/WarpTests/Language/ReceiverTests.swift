@@ -217,7 +217,7 @@ struct ReceiverTests {
         #expect(image["label"]?.purity == .pure)
     }
 
-    @Test("a dot on an undeclared shape is refused")
+    @Test("a dot on an undeclared type is refused")
     func aDotOnAnyIsRefused() throws {
         // Given. `any` declares no field, so the dot has nothing to read, and
         // a procedure by that name is reached by writing the call rather than by

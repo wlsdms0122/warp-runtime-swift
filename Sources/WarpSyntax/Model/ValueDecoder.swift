@@ -104,7 +104,7 @@ struct ValueDecoder: Decoder {
 
     private struct UnkeyedContainer: UnkeyedDecodingContainer {
         // MARK: - Property
-        // The projection, not a copy of it. The same shape every other walker
+        // The projection, not a copy of it. The same type every other walker
         // of elements in this library holds, so a compact spelling is not made
         // into a boxed element apiece before the first is read.
         let elements: AnyRandomAccessCollection<Value>
@@ -344,7 +344,7 @@ struct ValueDecoder: Decoder {
     // containers so a special case cannot hold in one and not another.
     //
     // Bytes have no container to walk. The one binary kind is handed over
-    // whole, and `Data` is the shape it is asked for as. Anything else asking
+    // whole, and `Data` is the type it is asked for as. Anything else asking
     // for `Data` is refused here rather than allowed to fall through to Data's
     // own decoding, which reads an unkeyed list of small numbers and would
     // quietly turn an int array into bytes.

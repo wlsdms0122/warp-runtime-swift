@@ -213,7 +213,7 @@ struct ExecutorTests {
 
     @Test("a reference typo is not disguised by rescue")
     func referenceTypoBypassesRescue() async throws {
-        // Given. Shape misuse is an author error; rescue must not disguise it
+        // Given. Type misuse is an author error; rescue must not disguise it
         let spec = try Module(
             procedures: [
                 "entry": Procedure(

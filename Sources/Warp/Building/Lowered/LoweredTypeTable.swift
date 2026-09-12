@@ -9,7 +9,7 @@ import Foundation
 
 // The declared types and constraints as the run reads them: by row. A
 // declared name survives into the run as a row rather than being expanded,
-// so a self-naming shape is a shape and not a regress, and a row is read
+// so a self-naming type is a type and not a regress, and a row is read
 // by number. The spellings ride along for a refusal and for a record's
 // name, and the one lookup by spelling left is a record that arrived under
 // an alias, which is resolved once and then carries the canonical spelling.
@@ -32,17 +32,17 @@ final class LoweredTypeTable: Sendable {
     let linkage: Linkage
 
     // The row of the record a row names: the last declared name on the way
-    // to a record shape, so an alias of a declared record is that record
+    // to a record type, so an alias of a declared record is that record
     // and not a second type. Nil where a row stands for no record.
     let recordRows: [Int?]
 
     // The rows that name themselves through a chain of names, and so stand
-    // for no shape. The lowering is where that is worked out, so it is what
+    // for no type. The lowering is where that is worked out, so it is what
     // says so.
     let cycling: [Int]
 
     // Which types satisfy each declared contract, by the contract's own
-    // spelling. A contract's members are not a shape the table lowers: what
+    // spelling. A contract's members are not a type the table lowers: what
     // puts a type in one is a document's claim, held to the declarations that
     // answer the procedures, which the link works out rather than the type
     // language.
@@ -138,7 +138,7 @@ final class LoweredTypeTable: Sendable {
     }
 
     // What a reading standing where a contract is asked comes to. What the
-    // shape alone settles is settled here; a named type settles nothing,
+    // type alone settles is settled here; a named type settles nothing,
     // since which types answer a contract is read off the claims of the whole
     // list, so the name comes back and the asker writes it down.
     enum Answering {
@@ -229,8 +229,8 @@ final class LoweredTypeTable: Sendable {
         }
     }
 
-    // The record a shape names through the row it stands on, or nil where it
-    // names none. The one reading of `recordRows` for a shape that is not
+    // The record a type names through the row it stands on, or nil where it
+    // names none. The one reading of `recordRows` for a type that is not
     // itself a row.
     func record(of type: LoweredType) -> Int? {
         type.row.flatMap { row in recordRows[row] }

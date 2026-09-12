@@ -251,7 +251,7 @@ struct NeverTests {
         // would have done. So the result is not "after" the body the way a
         // plain block's is, and a body no run comes back from (here a procedure only
         // the build knows declares never) leaves the loop answerable still. The
-        // reader refuses the leaves it can see; this is the shape only the build
+        // reader refuses the leaves it can see; this is the type only the build
         // sees, and the run keeps it
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),

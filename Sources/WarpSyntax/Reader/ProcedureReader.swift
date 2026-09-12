@@ -72,7 +72,7 @@ public struct ProcedureReader: Decodable {
             body: block.body,
             // One expression, because a procedure answers one value. Several
             // named answers are one record, which is a thing an author writes
-            // rather than a shape this reader assembles. A document that
+            // rather than a type this reader assembles. A document that
             // declares none answers with nothing, as a block does.
             result: block.result
         )

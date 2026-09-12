@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What a program computes over. Eight data shapes and one that is not data: a
+// What a program computes over. Eight data types and one that is not data: a
 // procedure is a value here, so a body can be passed, kept and answered with.
 //
 // The ninth is made by running, never by reading: a closure comes out of the
@@ -32,7 +32,7 @@ public indirect enum Value: Sendable, Equatable {
     // settled to, where it has. A record made by a literal, answered by a
     // native procedure or read out of a document has no name; it takes one the
     // first time it settles into a slot that declares a type, and from then
-    // on it fits only that name. Two records of one shape under two names
+    // on it fits only that name. Two records of one structure under two names
     // are two values.
     case record(Record)
 
@@ -98,7 +98,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // Whether a procedure is anywhere in here, however deep.
     //
-    // The shapes nest, so the question does: a procedure one array inside a
+    // The types nest, so the question does: a procedure one array inside a
     // record is still a procedure this value holds, and a check that looked
     // only at the outside would pass a program that carries one and refuse the
     // same program written without the wrapper.

@@ -30,7 +30,7 @@ extension Builder {
     }
 
     // Every type a body mentions, held where it is written: the signatures its
-    // closures carry, the shapes its casts name, and what its names say they
+    // closures carry, the types its casts name, and what its names say they
     // hold. Three name spaces bury a body (a procedure's, a constant's and a
     // variable's) and one of them was once missing a judgment the other two
     // made, so the three ask this rather than each holding a copy.
@@ -96,8 +96,8 @@ extension Builder {
         }
     }
 
-    // Everything a cast's shape is held to on its spelling alone: the names it
-    // mentions resolve, and it names a shape there is something to read. Both
+    // Everything a cast's type is held to on its spelling alone: the names it
+    // mentions resolve, and it names a type there is something to read. Both
     // are answered without knowing what the value reads as, so both belong to
     // the pass that sees every cast rather than to the walk that sees the
     // reached ones. A procedure both impure and unreachable is walked by
@@ -139,13 +139,13 @@ extension Builder {
             return
 
         // The link's own note to itself, written where a declaration goes. A
-        // declaration is a promise, and this is a shape worked out from a body.
+        // declaration is a promise, and this is a type worked out from a body.
         // Nobody promised it, and no document could have spelled it. It is
         // refused here rather than left to the reader, because a reader is one
         // way a declaration is built and a host assembling one is another.
         case let .reading(of, path):
             throw BuildError(
-                "writes `\(type.rendered)`, which is a shape the build"
+                "writes `\(type.rendered)`, which is a type the build"
                     + " read out of a body. A declaration says what a call fills,"
                     + " and `\(([PathSegment.key(of)] + path).rendered)` is a path"
                     + " only that body can read",
@@ -225,11 +225,11 @@ extension Builder {
 
             // A value handed on once is followed by the name that holds it, so
             // it stands where a name can hold it and nowhere else. Inside
-            // another shape there is no name to follow, and what the shape
+            // another type there is no name to follow, and what the type
             // does with what it carries is not something the link can read.
             guard !nested || !handedOnce(.named(name), in: table) else {
                 throw BuildError(
-                    "carries '\(name)' inside another shape, and a value written"
+                    "carries '\(name)' inside another type, and a value written"
                         + " `linear` is followed by the name that holds it."
                         + " Nothing follows one inside a list, a record or"
                         + " another declaration",
@@ -241,7 +241,7 @@ extension Builder {
             try mentioned(in: element, at: place, parameterized: parameterized, nested: true, resolve: table)
 
         // The reader refuses a `?` that says nothing new, but the reader sees
-        // spellings, and a name may hide one of the refused shapes behind it.
+        // spellings, and a name may hide one of the refused types behind it.
         // The rule is the model's, so it is held here too, where names resolve:
         // whatever surface wrote the type, `?` wraps only what does not already
         // answer the null question.
@@ -304,7 +304,7 @@ extension Builder {
 
         // Only a declared type is handed on once. The obligation rides with
         // the name, so a slot mentioning the name has it and a slot writing
-        // the procedure would be claiming it for a shape nothing declared it of.
+        // the procedure would be claiming it for a type nothing declared it of.
         case let .linear(inner):
             guard declaring else {
                 throw BuildError(
@@ -332,7 +332,7 @@ extension Builder {
     ) throws {
         // The declaration as the boundary reads it, so what the link calls
         // dead is exactly what the boundary would never match.
-        let shape = parameter.declared.lowered(in: table.loweredTypes)
+        let type = parameter.declared.lowered(in: table.loweredTypes)
 
         if let allowed = parameter.candidates {
             // Candidate by candidate: a spelling the declared type cannot spell
@@ -342,7 +342,7 @@ extension Builder {
             // dead refuses by the plainer name, a dead member among live ones
             // is named.
             let dead = allowed.filter { candidate in
-                !shape.spells(candidate, in: table.loweredTypes)
+                !type.spells(candidate, in: table.loweredTypes)
             }
 
             if dead.count == allowed.count {
@@ -370,7 +370,7 @@ extension Builder {
         // spelling. Asked of the value judge itself, since the slot reads an
         // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
-            guard parameter.candidates == nil, shape.settles(.null, in: table.loweredTypes) else {
+            guard parameter.candidates == nil, type.settles(.null, in: table.loweredTypes) else {
                 throw BuildError(
                     "its default is not a value it takes: null",
                     at: place
@@ -391,7 +391,7 @@ extension Builder {
     }
 
     // MARK: - Private
-    // Every shape a cast names in here, however deep, each with where it was
+    // Every type a cast names in here, however deep, each with where it was
     // found. What the walk holds is `subexpressions`'s to know. This says only which
     // of it a cast scan keeps.
     private func castTypes(

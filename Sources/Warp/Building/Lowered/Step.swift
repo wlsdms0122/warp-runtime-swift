@@ -12,7 +12,7 @@ import Foundation
 enum Step: Sendable {
     // A field of a record whose layout the link proved: the place it stands
     // in, beside the spelling the path wrote. The link reaches this where the
-    // value was settled to a declared shape or built from a lowered layout,
+    // value was settled to a declared type or built from a lowered layout,
     // so the place is the one the value's layout puts the field at.
     case field(Int, Name, optional: Bool)
 

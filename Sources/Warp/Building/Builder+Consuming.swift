@@ -293,7 +293,7 @@ extension Builder {
         }
 
         // What a binding's expression answers, and whether that is handed on
-        // once. Read from the few shapes a value like this is born in: a procedure
+        // once. Read from the few types a value like this is born in: a procedure
         // that answers one, a cast that names one, and a name rebound to
         // another, which is the move that just happened.
         private func handedOnce(_ expression: Expression, held: Held) -> Bool {

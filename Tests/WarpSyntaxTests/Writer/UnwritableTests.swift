@@ -10,15 +10,15 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// The shapes a document has no way to say.
+// The pieces a document has no way to say.
 //
 // All of them are built rather than parsed. A document could not make one, so
 // nothing here comes back from a reader. They are reachable because assembling
-// the language's shapes directly is a supported way to write a program, and
+// the language's types directly is a supported way to write a program, and
 // writing one out is what this whole direction exists for. What matters is that
 // each is refused: a document that came back meaning something else would be
 // worse than no document, because nothing downstream could tell.
-@Suite("A program shape with no document is refused rather than approximated")
+@Suite("A piece of a program with no document is refused rather than approximated")
 struct UnwritableTests {
     // MARK: - Property
     private let sut = Writer()
@@ -135,7 +135,7 @@ struct UnwritableTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One statement around whatever is under test, since none of these shapes
+    // One statement around whatever is under test, since none of these types
     // can be reached by writing a document.
     private func module(binding expression: Warp.Expression) throws -> Module {
         try Module(

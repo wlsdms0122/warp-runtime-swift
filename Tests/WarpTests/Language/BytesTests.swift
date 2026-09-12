@@ -79,9 +79,9 @@ struct BytesTests {
 
     // `holdsEveryByte` says in one question what `settling` says one byte at a
     // time, and two statements of one rule drift apart silently. This is the
-    // oracle that will not let them: for every shape below, the predicate's
+    // oracle that will not let them: for every type below, the predicate's
     // answer is checked against what settling actually does to all 256 bytes,
-    // so a shape added to one and forgotten by the other fails here.
+    // so a type added to one and forgotten by the other fails here.
     @Test("a byte settles as itself exactly where the type says it does")
     func aByteSettlesAsItselfExactlyWhereTheTypeSaysIt() throws {
         // `Named` is bound twice on purpose. Once as a type and once as a
@@ -134,18 +134,18 @@ struct BytesTests {
             .record([:])
         ]
 
-        for shape in loweredTypes {
+        for type in loweredTypes {
             let untouched = (0...255).allSatisfy { byte in
                 let value = Value.int(byte)
 
-                return (try? shape.settling(value, at: "value", in: types)) == value
+                return (try? type.settling(value, at: "value", in: types)) == value
             }
 
             let table = types.loweredTypes
 
             #expect(
-                shape.lowered(in: table).holdsEveryByte(in: table) == untouched,
-                "\(shape.rendered) is held to say \(untouched)"
+                type.lowered(in: table).holdsEveryByte(in: table) == untouched,
+                "\(type.rendered) is held to say \(untouched)"
             )
         }
     }

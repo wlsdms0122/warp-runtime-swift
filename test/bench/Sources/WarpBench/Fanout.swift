@@ -97,7 +97,7 @@ struct Fanout {
     // MARK: - Private
     private static func name(_ number: Int) throws -> Name { try Name("fanout.procedure\(number)") }
 
-    private static func shape(_ number: Int) throws -> Name { try Name("fanout.Type\(number)") }
+    private static func type(_ number: Int) throws -> Name { try Name("fanout.Type\(number)") }
 
     // One document: a type for each procedure it holds, and each procedure standing on
     // its own type and answering what it was sent. It imports nothing, which is
@@ -107,7 +107,7 @@ struct Fanout {
         var procedures: [Name: Procedure] = [:]
 
         for number in held {
-            types[try shape(number)] = .record(["value": .int])
+            types[try type(number)] = .record(["value": .int])
             procedures[try name(number)] = try procedure(number)
         }
 
@@ -124,7 +124,7 @@ struct Fanout {
                     binding: .constant("held"),
                     expression: .cast(
                         .record(["value": .reference([.key("value")])]),
-                        as: .named(try shape(number)),
+                        as: .named(try type(number)),
                         optional: false
                     )
                 )

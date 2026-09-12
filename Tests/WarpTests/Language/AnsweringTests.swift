@@ -15,7 +15,7 @@ import WarpStandard
 // An unwritten `returns` used to read as `any`, which cost a call site nothing
 // while `any` was accepted everywhere. Making `any` opaque turned it into a
 // bill: a dot on what such a call answers was refused, and the author was
-// asked to write down a shape the body already states.
+// asked to write down a type the body already states.
 //
 // So the body is read, in the call graph's order. What the author wrote stays
 // what the image carries (this is the build's own reading, not a promise anybody
@@ -32,7 +32,7 @@ struct AnsweringTests {
     func aDotStandsOnAnUnwrittenAnswer() async throws {
         // Given. `counts` declares no answer and its body answers a record. The
         // dot after the call is judged against that record, which is the whole
-        // of what this buys: the shape the body states does not have to be
+        // of what this buys: the type the body states does not have to be
         // stated twice.
         let sut = try Module(
             procedures: [
@@ -164,7 +164,7 @@ struct AnsweringTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
-        // like at a call site. Where the same shape with the cycle broken
+        // like at a call site. Where the same type with the cycle broken
         // reads the record `pong` answers.
         func reading(cycling: Bool) throws -> Module {
             try Module(
@@ -198,7 +198,7 @@ struct AnsweringTests {
     func aParameterAnswerIsFilledWhereTheCallCanFillIt() throws {
         // Given. `peek` declares no answer, and what its body hands back names
         // a type parameter. That goes through the same filling a declared
-        // `returns: some T` does, so which of the two shapes it is decides
+        // `returns: some T` does, so which of the two types it is decides
         // itself: the parameter is a slot the signature declares and the call
         // fills it, and what a walk *through* a parameter reached is named for
         // a path only that body can read, which nothing fills.
@@ -265,7 +265,7 @@ struct AnsweringTests {
     func theDeclarationIsNotRewritten() throws {
         // Given. The reading is the build's own note to itself. A declaration is
         // a promise, and one read off a body is not a promise anybody made:
-        // writing it back would make the boundary check a shape nobody wrote,
+        // writing it back would make the boundary check a type nobody wrote,
         // and would put it in a document the writer hands back.
         let sut = try Module(
             procedures: [

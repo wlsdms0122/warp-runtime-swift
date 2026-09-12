@@ -18,7 +18,7 @@ import Warp
 // the program runs, because half-running one is worse than refusing it.
 public enum Envelope {
     // MARK: - Property
-    // Which shapes a reader has to understand. It goes up when a shape is added
+    // Which types a reader has to understand. It goes up when a type is added
     // or an existing one changes what it means, and does not move for a new
     // procedure. A procedure is vocabulary, and vocabulary is what `imports` is for.
     //

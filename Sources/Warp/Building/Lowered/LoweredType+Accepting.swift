@@ -7,10 +7,10 @@
 
 import Foundation
 
-// The reading judges: whether one shape may stand where another is
-// declared, whether two shapes are one shape, whether some value could
-// satisfy two shapes at once, and whether a candidate spelling could ever be
-// a value of a shape. The link
+// The reading judges: whether one type may stand where another is
+// declared, whether two types are one type, whether some value could
+// satisfy two types at once, and whether a candidate spelling could ever be
+// a value of a type. The link
 // asks them of readings; the run asks the first of a closure value that
 // reached a procedure slot through `any`. A name the table does not answer
 // passes every one of them: nothing is knowable about it here, and the
@@ -25,13 +25,13 @@ extension LoweredType {
     }
 
     // The same question, carrying which pairs are already being asked. A
-    // named type may reach itself through a shape, so comparing one
+    // named type may reach itself through a type, so comparing one
     // structurally walks back to the comparison it is inside, and a
-    // recursive shape agrees with itself precisely when assuming it does
+    // recursive type agrees with itself precisely when assuming it does
     // uncovers no disagreement. Only the two `named` doors record the pair.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
         // Two declared records under two names are two types, whatever their
-        // shapes: a value settled under one name fits only that name.
+        // structure: a value settled under one name fits only that name.
         if
             case let .named(mine) = self,
             case let .named(theirs) = other,
@@ -59,9 +59,9 @@ extension LoweredType {
         case let (.variable(inner), _):
             return inner.accepts(other, in: table, assuming: assuming)
 
-        // A slot handed a variable in place is the two sides being one shape,
+        // A slot handed a variable in place is the two sides being one type,
         // not one that fits the other. The body writes through the caller's box
-        // and the caller reads back what the body wrote, so a shape that merely
+        // and the caller reads back what the body wrote, so a type that merely
         // fits would let the two disagree about what is there. The body writing
         // what its own declaration allows and the caller reading what its own
         // declaration promised.
@@ -120,7 +120,7 @@ extension LoweredType {
             return mine.accepts(theirs, in: table, assuming: assuming)
 
         // A record is a dictionary whose fields happen to be known: a record
-        // whose every field is the entry shape is such a mapping. Not the
+        // whose every field is the entry type is such a mapping. Not the
         // other way round, since a `dictionary` promises nothing about which
         // fields exist.
         case let (.dictionary(mine), .record(theirs)):
@@ -157,9 +157,9 @@ extension LoweredType {
             // The directions are opposite on purpose: what is given must
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
-            for (name, shape, _) in required {
+            for (name, type, _) in required {
                 guard let taken = given.first(where: { slot in slot.name == name }) else { continue }
-                guard taken.type.accepts(shape, in: table, assuming: assuming) else { return false }
+                guard taken.type.accepts(type, in: table, assuming: assuming) else { return false }
             }
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assuming: assuming)
@@ -206,10 +206,10 @@ extension LoweredType {
         }
     }
 
-    // The same shape with every row it holds walked through to what that row
+    // The same type with every row it holds walked through to what that row
     // stands for. At every depth, not only the outermost.
     //
-    // A row is a spelling, and two spellings of one shape are one shape: a
+    // A row is a spelling, and two spellings of one type are one type: a
     // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
     // are the same thing said twice. Resolving only the outermost made that
     // depend on where the author happened to write the name, so the same
@@ -219,7 +219,7 @@ extension LoweredType {
     }
 
     // A row already being walked through stands as itself. A type may name
-    // itself (`Tree` holding `array<Tree>` is a declared shape) so a walk that
+    // itself (`Tree` holding `array<Tree>` is a declared type) so a walk that
     // expanded every row at every depth would chase one forever.
     private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
         switch self {
@@ -250,11 +250,11 @@ extension LoweredType {
         }
     }
 
-    // Whether some value could satisfy both shapes at once. Not `accepts`:
+    // Whether some value could satisfy both types at once. Not `accepts`:
     // two records that name no field in common accept each other in neither
     // direction and are still both satisfied by a value carrying every
     // field. The bias is deliberate: a refusal is earned only where the
-    // shapes provably disagree, and everything else is left to the run.
+    // types provably disagree, and everything else is left to the run.
     func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
         couldBothHold(other, in: table, assuming: [])
     }
@@ -326,7 +326,7 @@ extension LoweredType {
                 theirs[name].map { given in field.couldBothHold(given, in: table, assuming: assuming) } ?? true
             }
 
-        // A dictionary and a record are one runtime shape read two ways, so
+        // A dictionary and a record are one value at run time read two ways, so
         // every field the record names must be able to be an entry. A list
         // and a map are not asked about their elements: an empty one is of
         // every element type there is.
@@ -347,8 +347,8 @@ extension LoweredType {
     }
 
     // Whether a `enum` candidate could ever be a spelling of a value of this
-    // shape. Candidates are written as the scalar spellings arguments are
-    // compared under, so a shape with no scalar spelling spells none of
+    // type. Candidates are written as the scalar spellings arguments are
+    // compared under, so a type with no scalar spelling spells none of
     // them, and a number is read by the spelling the boundary reads: `1e0`
     // is a fraction no fraction spells, so no call could ever match it.
     func spells(_ candidate: String, in table: LoweredTypeTable) -> Bool {
@@ -395,7 +395,7 @@ extension LoweredType {
         }
     }
 
-    // Whether two shapes are one shape, names resolved. `any` is no wildcard
+    // Whether two types are one type, names resolved. `any` is no wildcard
     // here and neither is a type parameter: standing for anything is what
     // `accepts` reads, and a body free to write anything into a variable the
     // caller declared is the disagreement this refuses.
@@ -412,7 +412,7 @@ extension LoweredType {
         case (.undeclared, _), (_, .undeclared), (.parameter, _), (_, .parameter):
             return true
 
-        // A record under a name is that name, so two names are two shapes
+        // A record under a name is that name, so two names are two types
         // however alike. Every other name is what it names.
         case let (.named(mine), .named(theirs)):
             guard mine != theirs else { return true }
@@ -473,7 +473,7 @@ extension LoweredType {
                 return false
             }
 
-        // Every shape that holds another is answered above; what is left
+        // Every type that holds another is answered above; what is left
         // holds nothing.
         default:
             return self == other
@@ -482,14 +482,14 @@ extension LoweredType {
 
 
     // The judge asked as a question. Settling is the one rule for what a
-    // shape holds, so whether it holds something is that rule run with its
+    // type holds, so whether it holds something is that rule run with its
     // refusal dropped rather than a second rule written beside it. The path
     // is empty because nothing reads the refusal.
     func settles(_ value: Value, in table: LoweredTypeTable, assuming: [Int] = []) -> Bool {
         (try? settling(value, at: "", in: table, assuming: assuming)) != nil
     }
 
-    // One value of every kind a decided shape can hold, for asking the judge
+    // One value of every kind a decided type can hold, for asking the judge
     // rather than restating it.
     private static let witnesses: [Value] = [
         .null, .bool(false), .int(0), .double(0), .string(""),

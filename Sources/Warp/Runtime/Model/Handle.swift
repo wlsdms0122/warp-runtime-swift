@@ -34,7 +34,7 @@ struct Handle: Sendable {
 
     // MARK: - Public
     // What the path holds. The link judged the path against the box's
-    // declared shape, so a part not there now is a box whose scope
+    // declared type, so a part not there now is a box whose scope
     // changed under the hold.
     func value() throws -> Value {
         try box.value.reading(at: path, under: rendered(path))

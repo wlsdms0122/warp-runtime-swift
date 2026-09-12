@@ -39,7 +39,7 @@ struct ModuleNotationTests {
 
     @Test("a top-level body is rejected, because a document is not a procedure")
     func topLevelBodyRejected() {
-        // Given. This was the whole shape of a document once, and it made every
+        // Given. This was the whole type of a document once, and it made every
         // document an entry point with no way to write one that only declares
         let fixture: Value = ["body": [["let": "done", "value": "end"]]]
 

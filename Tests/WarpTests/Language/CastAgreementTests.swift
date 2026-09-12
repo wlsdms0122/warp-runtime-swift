@@ -9,19 +9,19 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A cast is judged twice. Once by the build, which sees two shapes and asks
+// A cast is judged twice. Once by the build, which sees two types and asks
 // whether any value is both, and once by the run, which sees the value that
-// actually arrived and asks whether it is the named shape. The two have to
+// actually arrived and asks whether it is the named type. The two have to
 // agree, and only one of them can be wrong in a way nobody finds out about: the
 // link refusing a cast the run would have taken closes a door with no value on
 // either side of it to show for it.
 //
 // So the contract is one-directional. Wherever a value settles into both
-// shapes, the build must not call the pair impossible. The other way round is
+// types, the build must not call the pair impossible. The other way round is
 // deliberately free. `couldBothHold` refuses only what it can prove, and
 // everything it cannot read into is left to the run.
 //
-// This is the same shape of guard `holdsEveryByte` earned: two hand-written
+// This is the same type of guard `holdsEveryByte` earned: two hand-written
 // answers to one question, held together by asking the judge. Every pair the
 // restatement got wrong (`dictionary` beside `record`, `int?` beside `string?`,
 // `bytes` beside `array<int>`, an int where a double is named, `int?` beside
@@ -39,7 +39,7 @@ struct CastAgreementTests {
             "Ratio": .ranged(.fraction(from: 0, to: .upTo(1))),
             "Maybe": .nullable(.int),
             "Whole": .int,
-            // A shape that names itself, so the walk's own guard is exercised
+            // A type that names itself, so the walk's own guard is exercised
             // by every pair it takes part in.
             "Tree": .record(["children": .array(.named("Tree"))])
         ],
@@ -113,7 +113,7 @@ struct CastAgreementTests {
     @Test("the question reads the same from either side")
     func theQuestionIsSymmetric() {
         // Given. "could some value be both" names no side, so an answer that
-        // depended on which shape was written first would be an answer to a
+        // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
         // side has one, which is exactly where an asymmetry would hide.
         for mine in loweredTypes {
@@ -157,14 +157,14 @@ struct CastAgreementTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Asked of the lowered shapes, which is where the judgment lives. What a
+    // Asked of the lowered types, which is where the judgment lives. What a
     // document writes reaches it by lowering.
     private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
         mine.lowered(in: types.loweredTypes)
             .couldBothHold(theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
-    private func settles(_ shape: TypeExpression, _ value: Value) -> Bool {
-        (try? shape.settling(value, at: "witness", in: types)) != nil
+    private func settles(_ type: TypeExpression, _ value: Value) -> Bool {
+        (try? type.settling(value, at: "witness", in: types)) != nil
     }
 }

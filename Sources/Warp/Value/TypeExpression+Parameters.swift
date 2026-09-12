@@ -51,7 +51,7 @@ extension TypeExpression {
     // use.
     var isGeneric: Bool {
         switch self {
-        // Both are shapes a call decides, and the deep question is only
+        // Both are types a call decides, and the deep question is only
         // whether this declaration has to be filled at all.
         case .parameter, .reading:
             return true

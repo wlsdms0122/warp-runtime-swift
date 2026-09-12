@@ -47,7 +47,7 @@ struct Folding {
     // lowered. What a constant settles from. A native's purity is its own; a
     // written body is never run here, so its purity is not asked.
     init(bindings: [Name: Value], natives modules: [Module]) {
-        // The natives declare the shapes their own signatures name, so the
+        // The natives declare the types their own signatures name, so the
         // table is theirs.
         let loweredTypes = TypeTable(
             types: modules.reduce(into: [:]) { table, module in table.merge(module.types) { first, _ in first } },

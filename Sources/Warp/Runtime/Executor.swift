@@ -23,7 +23,7 @@ public struct Executor: Sendable {
     // What the numbers in those bodies stand for.
     let resolving: Resolving
 
-    // The shapes the link declared, by row. Every boundary that settles a
+    // The types the link declared, by row. Every boundary that settles a
     // value reads it.
     let loweredTypes: LoweredTypeTable
 
@@ -141,10 +141,10 @@ public struct Executor: Sendable {
                 )
             )
 
-        // Judging a value against a shape runs nothing, so a cast is data the
+        // Judging a value against a type runs nothing, so a cast is data the
         // pure half can read.
-        case let .cast(value, shape, optional):
-            return try shape.reading(try read(value, in: activation), optional: optional, in: loweredTypes)
+        case let .cast(value, type, optional):
+            return try type.reading(try read(value, in: activation), optional: optional, in: loweredTypes)
 
         case let .call(call):
             return try self.call(call, in: activation)
@@ -333,8 +333,8 @@ public struct Executor: Sendable {
         // actually arrived. A plain cast lets the refusal out as a failure like
         // any other; an optional one reads the mismatch as null, which is the
         // author saying they expected it.
-        case let .cast(value, shape, optional):
-            return try shape.reading(
+        case let .cast(value, type, optional):
+            return try type.reading(
                 await evaluate(value, in: &activation, at: trace),
                 optional: optional,
                 in: loweredTypes
@@ -584,7 +584,7 @@ public struct Executor: Sendable {
             await observer?.failureRescued(name: activation.frame.names[failure].spelling, error: error)
 
             // While the rescue runs, the failure is a value under the declared
-            // name. Its shape needs no check here: `RecoverableFailure`
+            // name. Its type needs no check here: `RecoverableFailure`
             // assembles the payload itself, so `type` and `message` are there
             // by construction rather than by inspection.
             activation.cells[failure] = .value(recoverable.payload)
@@ -755,7 +755,7 @@ public struct Executor: Sendable {
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
-            // A procedure blaming a shape is answerable only if the author can see
+            // A procedure blaming a type is answerable only if the author can see
             // which name held it.
             guard case let .local(address)? = call.receiver else { throw error }
 
@@ -763,7 +763,7 @@ public struct Executor: Sendable {
         }
     }
 
-    // What a row answers, computed without running. Both shapes it can have
+    // What a row answers, computed without running. Both types it can have
     // are answerable without suspending: one because it is native and says
     // so, the other because the link proved it.
     private func answer(_ callee: Linked, for receiver: Value?, with arguments: Settled) throws -> Value {
@@ -1097,7 +1097,7 @@ public struct Executor: Sendable {
                     return .unfit(reason)
                 }
 
-            // The place the link proved. A value settles to the shape the
+            // The place the link proved. A value settles to the type the
             // link laid out, so the field stands where its layout puts it and
             // there is no name to find.
             case let .field(position, _, _):

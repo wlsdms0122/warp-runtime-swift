@@ -182,7 +182,7 @@ struct ModuleDeclarationTests {
 
     @Test("a document declares a contract, and a procedure reaches it through the contract's name")
     func aDocumentDeclaresAContract() async throws {
-        // Given. Two shapes that describe themselves, and one procedure that knows
+        // Given. Two types that describe themselves, and one procedure that knows
         // neither
         let sut = try loader.loadDocument([
             "types": [

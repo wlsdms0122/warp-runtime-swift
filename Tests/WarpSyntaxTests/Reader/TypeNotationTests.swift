@@ -100,7 +100,7 @@ struct TypeNotationTests {
     func rangesRoundTrip() throws {
         // Given. `rendered` is the type's identity and what a document is
         // written with, so a range that read one way and wrote another would be
-        // a shape a round trip changes.
+        // a type a round trip changes.
         for written in [
             "int(0...255)", "int(0...)", "int(...255)", "int(-10...-1)",
             "int(0..<256)", "int(..<0)",
@@ -201,7 +201,7 @@ struct TypeNotationTests {
             ])
         }
 
-        // A bound is a constraint's name, never a shape.
+        // A bound is a constraint's name, never a type.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "array<int>"],
@@ -284,7 +284,7 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("string<int>") }
     }
 
-    @Test("a module declares shapes its procedures name")
+    @Test("a module declares types its procedures name")
     func moduleDeclaresTypes() throws {
         // Given
         let sut = try loader.loadDocument([
@@ -305,7 +305,7 @@ struct TypeNotationTests {
         )
     }
 
-    @Test("a declared shape is enforced at the call boundary")
+    @Test("a declared type is enforced at the call boundary")
     func declaredShapeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([

@@ -7,18 +7,18 @@
 
 import Foundation
 
-// The type table: every shape the modules in a link declared, and what each
+// The type table: every type the modules in a link declared, and what each
 // name stands for. The counterpart of `Library` on the other axis. That one
-// holds the procedures a caller installed, this one the shapes a document declared.
+// holds the procedures a caller installed, this one the types a document declared.
 //
 // It exists because a named type is kept rather than expanded. Expanding at link
-// would make a self-naming shape a regress, so the name survives into the run and
+// would make a self-naming type a regress, so the name survives into the run and
 // something has to be able to answer it.
 //
 // Constraints live beside the types rather than among them. A constraint is a
 // name for a membership (which types a bounded parameter admits) and nothing is
 // ever *of* one, so a slot cannot declare it and a value cannot arrive as it.
-// Two tables keep the two questions apart: "what shape is this name" and "what
+// Two tables keep the two questions apart: "what type is this name" and "what
 // does this name admit".
 public struct TypeTable: Sendable {
     // MARK: - Property
@@ -27,8 +27,8 @@ public struct TypeTable: Sendable {
 
     // Contracts declared in this link: a name bound to the procedures a value must
     // answer. Beside the constraints for the same reason those are beside the
-    // types. A membership is a closed set of shapes and a contract is the open
-    // set of shapes that declare some procedures, so listing answers one and not
+    // types. A membership is a closed set of types and a contract is the open
+    // set of types that declare some procedures, so listing answers one and not
     // the other.
     public let contracts: [Name: [Name: Signature]]
 

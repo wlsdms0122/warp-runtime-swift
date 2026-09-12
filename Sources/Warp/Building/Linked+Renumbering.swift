@@ -54,13 +54,13 @@ extension Linked {
     ) rethrows -> Instruction.Binding? {
         switch binding {
         case let .bind(slot, settling)?:
-            return .bind(slot, settling: try settling.map { shape in try answer(shape) })
+            return .bind(slot, settling: try settling.map { type in try answer(type) })
 
         case let .declare(slot, settling)?:
-            return .declare(slot, settling: try settling.map { shape in try answer(shape) })
+            return .declare(slot, settling: try settling.map { type in try answer(type) })
 
         case let .assign(address, settling)?:
-            return .assign(address, settling: try settling.map { shape in try answer(shape) })
+            return .assign(address, settling: try settling.map { type in try answer(type) })
 
         case nil:
             return nil
@@ -88,7 +88,7 @@ extension Linked {
 
         // A closure stands as a row of its own, which this walk reaches on its
         // own turn. What is written here is the number that reaches it, and a
-        // number carries no shape.
+        // number carries no type.
         case .closure:
             return operation
 
@@ -100,10 +100,10 @@ extension Linked {
                 }
             )
 
-        case let .cast(value, shape, optional):
+        case let .cast(value, type, optional):
             return .cast(
                 try Self.renumbered(value, answer),
-                as: try answer(shape),
+                as: try answer(type),
                 optional: optional
             )
 

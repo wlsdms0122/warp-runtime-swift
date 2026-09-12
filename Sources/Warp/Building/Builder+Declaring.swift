@@ -70,7 +70,7 @@ extension Builder {
                         "'\(name)' is declared as both a type and a constraint in"
                             + " this link, as a type by \(declared.spelled) and as a"
                             + " constraint by \(declaration.spelled). One name cannot"
-                            + " stand for a shape and a membership at once",
+                            + " stand for a type and a membership at once",
                         at: declaration.place
                     )
                 }
@@ -99,8 +99,8 @@ extension Builder {
                     throw BuildError(
                         "'\(name)' is declared as a contract in this link and as"
                             + " something else by \(declared). One name"
-                            + " cannot stand for two of a shape, a membership and"
-                            + " a contract at once",
+                            + " cannot be a type, a membership and a contract"
+                            + " at once",
                         at: declaration.place
                     )
                 }

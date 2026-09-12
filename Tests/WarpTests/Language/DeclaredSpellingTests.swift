@@ -306,7 +306,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
-        let shape = try Module(
+        let type = try Module(
             types: ["Limit": .int],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
@@ -315,7 +315,7 @@ struct DeclaredSpellingTests {
 
         // When / Then. The build sees its whole graph at once, so the order the
         // caller listed the modules cannot change the conclusion
-        for modules in [[membership, shape], [shape, membership]] {
+        for modules in [[membership, type], [type, membership]] {
             #expect {
                 try builder.build(modules, entry: entryName)
             } throws: { error in

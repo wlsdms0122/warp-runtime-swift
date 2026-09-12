@@ -96,7 +96,7 @@ enum NullMeeting {
 extension PathSegment {
     // Where a segment came down. The walk's fact, not the segment's, and the
     // one thing the mark's rule needs that the segment cannot know. A landing
-    // is spelled out rather than implied, so a shape added later cannot join
+    // is spelled out rather than implied, so a type added later cannot join
     // without saying what a mark means on it, and the ones that name something
     // carry the name rather than asking the segment back for it. Internal, like
     // the rule it feeds: `unwrapped` is the walk's own state, and nothing

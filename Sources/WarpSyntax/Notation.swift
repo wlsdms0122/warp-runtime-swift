@@ -15,7 +15,7 @@ import Warp
 // written as an operator is a message, and so is a template. So a document has
 // two layers, and this is the switch between them. A notation brings its own
 // spellings, and the canonical one brings none, which leaves a document writing
-// the shapes themselves.
+// the types themselves.
 //
 // **Nothing built in offers a spelling, and nothing here names one.** This
 // package reads documents; a document has no spellings, so a reader carrying a

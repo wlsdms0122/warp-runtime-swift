@@ -11,7 +11,7 @@ import Foundation
 // construct that runs a body still answers with a value, and `id: <construct>`
 // is how that value gets a name.
 //
-// The data shapes:
+// The data types:
 //
 //   literal   . A `Value`, verbatim. The type system already says what data
 //                is, so an expression does not restate it
@@ -20,9 +20,9 @@ import Foundation
 //   array     . Elements are expressions
 //   record    . Fields are expressions
 //   call      . A message: a selector, a receiver, arguments. The one
-//                calling shape, and the only open one
+//                calling type, and the only open one
 //
-// The control shapes carry a `Block` and, where a name has to exist inside that
+// The control types carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the id of whatever bound it.
 //
@@ -53,13 +53,13 @@ public indirect enum Expression: Sendable {
     // for a linked one, and linking would stop being a promise.
     case apply(Expression, arguments: [Name: Expression])
 
-    // Reading a value as a shape the text names. `any` declares nothing, so a
+    // Reading a value as a type the text names. `any` declares nothing, so a
     // dot on one is refused at the link. This is the door: the author says what
     // they expect, the link judges every dot after it against that, and the run
     // asks the arriving value the one question the link could not.
     //
     // The `?` axis is `?.`'s, on a cast: a plain one refuses at the run what
-    // did not arrive as the named shape, and an optional one reads that
+    // did not arrive as the named type, and an optional one reads that
     // mismatch as null the way `?.` reads an absence, so the reading is `T?`
     // and the author says which of the two they meant.
     case cast(Expression, as: TypeExpression, optional: Bool)
@@ -78,7 +78,7 @@ public indirect enum Expression: Sendable {
     case attempt(Block, rescue: Block, failure: Name)
     case call(Call)
 
-    // Carrying on somewhere further out than the next statement. The one shape
+    // Carrying on somewhere further out than the next statement. The one case
     // that never even finishes: what comes after it in its body does not run,
     // so a body may not have anything after it.
     case leave(Leave)
@@ -91,10 +91,10 @@ public indirect enum Expression: Sendable {
     // two walks calling one statement's construct two things is two documents
     // as far as an author following the names is concerned.
     //
-    // It is what this implementation calls the shape and **not** a key read
+    // It is what this implementation calls the type and **not** a key read
     // off any document: a caller registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
-    // two texts that arrive here as one shape.
+    // two texts that arrive here as one type.
     public var construct: Construct {
         switch self {
         case .literal: .literal
@@ -184,7 +184,7 @@ public indirect enum Expression: Sendable {
         "a construct runs a body, and a condition is data."
             + " What a body decides reaches a condition through a procedure"
 
-    // Whether a construct (a shape that runs a body, or leaves) sits anywhere
+    // Whether a construct (a type that runs a body, or leaves) sits anywhere
     // in this expression read as data. A call's operand is data the pure half
     // reads, so the check and the link both refuse one by asking this; a
     // closure is data (the body it carries is its own), so the walk does not
@@ -208,7 +208,7 @@ public indirect enum Expression: Sendable {
             return call.receiver?.holdsConstruct ?? false
                 || call.arguments.values.contains { argument in argument.holdsConstruct }
 
-        // A cast runs no body (it names a shape and judges what arrives against
+        // A cast runs no body (it names a type and judges what arrives against
         // it) so it holds a construct only where the value it reads does.
         case let .cast(value, _, _):
             return value.holdsConstruct

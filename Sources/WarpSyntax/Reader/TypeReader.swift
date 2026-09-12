@@ -8,7 +8,8 @@
 import Foundation
 import Warp
 
-// How a document spells a type. Two shapes, because a type has two:
+// How a document spells a type. Two readings, because a type is written two
+// ways:
 //
 //   string / any / procedure  . A built-in, by its own name
 //   array<string>             . A built-in applied to another type

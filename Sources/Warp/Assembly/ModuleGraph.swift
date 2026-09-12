@@ -22,7 +22,7 @@ import Foundation
 // can be the one that goes first.
 //
 // What a module needs is read the way a link reads it: the procedures it calls and
-// the shapes its signatures name. A name nothing here declares is left alone:
+// the types its signatures name. A name nothing here declares is left alone:
 // the link refuses it, and refusing here would be a second copy of a rule that
 // has to be right once.
 //
@@ -47,7 +47,7 @@ public struct ModuleGraph: Sendable {
     public init(_ modules: [Module], after held: Int = 0) throws {
         // Which module declares each reference. One table, since every one of
         // them answers the same question; the kind rides on the reference, so
-        // a procedure and a shape spelled alike stay two rows.
+        // a procedure and a type spelled alike stay two rows.
         var declares: [Reference: Int] = [:]
 
         for (position, module) in modules.enumerated() {
@@ -55,7 +55,7 @@ public struct ModuleGraph: Sendable {
             // caller handed the modules over, and inside one module no two of
             // these are the same reference, so nothing here reads an order.
             let declared = module.declaredProcedures.map(Reference.procedure)
-                + module.declaredShapes.map(Reference.shape)
+                + module.declaredTypes.map(Reference.type)
 
             for reference in declared {
                 guard declares[reference] == nil else { continue }

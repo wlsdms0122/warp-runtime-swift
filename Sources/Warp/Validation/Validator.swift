@@ -297,7 +297,7 @@ public struct Validator: Sendable {
 
                 // A write names a path, and the head of the path is the
                 // variable it writes. The rest of the path is judged at the
-                // link, where the variable's shape is known.
+                // link, where the variable's type is known.
                 case let .assignment(path):
                     if let refusal = path.markedHead {
                         throw ValidationError(refusal, at: here)
@@ -364,10 +364,10 @@ public struct Validator: Sendable {
         at place: Place
     ) throws {
         switch expression {
-        // A literal is data. One shape a value has is not data (a closure is
+        // A literal is data. One kind a value has is not data (a closure is
         // made by running the expression that writes one) so a program carrying
         // one as a literal is carrying something no text spells and nothing
-        // reads back. A caller assembling shapes in Swift is the only one that
+        // reads back. A caller assembling a program in Swift is the only one that
         // can build it, and this is the door it comes through.
         case let .literal(value):
             guard !value.holdsProcedure else {
@@ -397,7 +397,7 @@ public struct Validator: Sendable {
                 )
             }
 
-        // A cast names a shape and reads a value as it. The shape is the link's
+        // A cast names a type and reads a value as it. The type is the link's
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, _, _):

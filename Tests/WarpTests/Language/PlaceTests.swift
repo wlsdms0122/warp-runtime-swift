@@ -377,7 +377,7 @@ struct PlaceTests {
         #expect(refund?.place?.rendered == "02/procedures.refund.body.held[0].reference")
     }
 
-    @Test("a shape is placed by the key it was declared under, dot and all")
+    @Test("a type is placed by the key it was declared under, dot and all")
     func aTypeIsPlacedByItsDeclaredKey() throws {
         // Given. A type declared as `wallet.Coin`. The place is spelled from
         // that key, which is what the document writes.
@@ -416,11 +416,11 @@ struct PlaceTests {
         #expect(error?.place?.rendered == "d0cf00/constraints.wallet.Spendable")
     }
 
-    @Test("a statement's construct is the language's procedure, and says so")
+    @Test("a statement's construct is the language's name, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
-        // Given. One shape, two texts: `{ call: … }` and `{ value: { call: … }
+        // Given. One construct, two texts: `{ call: … }` and `{ value: { call: … }
         // }` are both a call by the time anything here sees one, so the
-        // procedure for the construct is this implementation's rather than something
+        // name for the construct is this implementation's rather than something
         // a reader may go looking for in a file.
         let sut = try #require(
             place(
@@ -434,7 +434,7 @@ struct PlaceTests {
         // Then. The procedure is spelled for the person reading the line
         #expect(sut.rendered?.contains(".sent[0].call.") == true)
 
-        // And carried as the shape rather than as any procedure, so the side that
+        // And carried as the type rather than as any procedure, so the side that
         // spells it is the side that knows what its reader is looking at
         #expect(sut.steps.contains(.construct(.call)))
         #expect(sut.steps.contains(.part(.arguments)))
@@ -562,13 +562,13 @@ struct PlaceTests {
         #expect(error?.message.contains("twice") == true)
     }
 
-    @Test("a shape two documents declare is placed the same way a procedure is")
+    @Test("a type two documents declare is placed the same way a procedure is")
     func aTypeDeclaredTwiceIsPlacedAtTheSecond() throws {
         // Given. The same rule in the space a type is resolved in. The two
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
-        func declaring(_ shape: TypeExpression, as identity: Identity) throws -> Module {
-            try Module(types: ["pricing.Money": shape], procedures: [:], identity: identity)
+        func declaring(_ type: TypeExpression, as identity: Identity) throws -> Module {
+            try Module(types: ["pricing.Money": type], procedures: [:], identity: identity)
         }
 
         let held = try declaring(.int, as: Identity([0x01]))
@@ -585,12 +585,12 @@ struct PlaceTests {
         #expect(error?.message.contains("by 01") == true)
     }
 
-    @Test("a name written as a shape in one document and a membership in another")
+    @Test("a name written as a type in one document and a membership in another")
     func aNameThatIsBothIsPlacedAtTheMembership() throws {
         // Given. The two spaces held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
-        let shape = try Module(types: ["pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
+        let type = try Module(types: ["pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
 
         let membership = try Module(constraints: ["pricing.Money": [.int]], procedures: [:], identity: Identity([0x02]))
 
@@ -598,7 +598,7 @@ struct PlaceTests {
 
         // When
         let error = #expect(throws: BuildError.self) {
-            try Builder().build([shape, membership, caller] + Module.standard, entry: entryName)
+            try Builder().build([type, membership, caller] + Module.standard, entry: entryName)
         }
 
         // Then

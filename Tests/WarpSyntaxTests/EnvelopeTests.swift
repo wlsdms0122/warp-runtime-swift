@@ -31,7 +31,7 @@ struct EnvelopeTests {
     @Test("a document written for a later reader is refused")
     func aLaterDocumentIsRefused() {
         // Given. This is the failure the version exists to prevent. Without it
-        // a reader meets a shape it does not know, reads what it recognises and
+        // a reader meets a type it does not know, reads what it recognises and
         // ignores the rest, and runs a program nobody wrote.
         #expect {
             try loader.load([
@@ -65,7 +65,7 @@ struct EnvelopeTests {
         }
     }
 
-    @Test("a file of some other shape is refused for being one, not for its keys")
+    @Test("a file of some other type is refused for being one, not for its keys")
     func whatIsNotADocumentIsToldSo() {
         // Given. A conformance case, which is written in the same text and is
         // not a document: it declares `test`, nests the document it asks about,
@@ -247,7 +247,7 @@ struct EnvelopeTests {
 
     @Test("being too old to read a document is not the same as the document being wrong")
     func versionIsCheckedBeforeShape() {
-        // Given. A later version may add keys, so checking the shape first
+        // Given. A later version may add keys, so checking the type first
         // would turn "I am too old for this" into "this is malformed". The
         // answers differ: one is upgrade me, the other is fix the sender.
         #expect {

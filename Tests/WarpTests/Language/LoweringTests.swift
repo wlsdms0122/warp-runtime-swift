@@ -283,7 +283,7 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .int(1))
     }
 
-    @Test("a name is what it names at whatever depth a shape holds one")
+    @Test("a name is what it names at whatever depth a type holds one")
     func aHandedVariableReadsNamesAtDepth() throws {
         // Given. The alias sits inside a procedure's parameter rather than at
         // the top of the slot. A name is what it names wherever it is written,
@@ -328,7 +328,7 @@ struct LoweringTests {
         }
     }
 
-    @Test("what is handed in place is the shape the slot declares, and not one that fits it")
+    @Test("what is handed in place is the type the slot declares, and not one that fits it")
     func aHandedVariableIsTheSlotsOwnShape() async throws {
         // Given. A variable holding an unnamed record, handed to a slot
         // declaring `Tag`. By value the boundary would settle it and the procedure

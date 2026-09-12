@@ -10,7 +10,7 @@ import Foundation
 extension Value {
     // This value with one part replaced: the part the path names, in a record
     // and a dictionary by name and in an array by position. The rest is kept
-    // as it was. The link judged the path against the value's declared shape,
+    // as it was. The link judged the path against the value's declared type,
     // and every index was read to a position before this. A record's fields
     // are its layout's, so a name it does not hold is refused; a dictionary's
     // names are its own, so one not held yet is made.

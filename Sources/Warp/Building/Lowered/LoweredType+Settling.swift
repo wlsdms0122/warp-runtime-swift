@@ -7,7 +7,7 @@
 
 import Foundation
 
-// The value judge: what a shape accepts, settled to the declared
+// The value judge: what a type accepts, settled to the declared
 // representation, or a refusal saying which part disagreed. The one judge
 // for a value crossing a declaration, at the link and at the run alike.
 extension LoweredType {
@@ -52,7 +52,7 @@ extension LoweredType {
             // null.
             guard optional else {
                 // Recoverable, unlike the same refusal at a parameter's
-                // boundary: a cast is the author expecting a shape of data
+                // boundary: a cast is the author expecting a type of data
                 // that came from outside, and being wrong about that is what
                 // the world does. An `attempt` catches it.
                 throw CastRefused(
@@ -85,7 +85,7 @@ extension LoweredType {
 
     // Whether null is one of this type's values rather than an absence: the
     // fact `T?` exists to declare, and the boundary reads it. `any` is not
-    // this: an undeclared shape accepts a null that arrives, but it does not
+    // this: an undeclared type accepts a null that arrives, but it does not
     // spell null as a value.
     func declaresNull(in table: LoweredTypeTable) -> Bool {
         switch self {
@@ -105,8 +105,8 @@ extension LoweredType {
         }
     }
 
-    // Whether a call must write a slot of this shape. A default answers
-    // omission with a value; a shape that declares null answers it with the
+    // Whether a call must write a slot of this type. A default answers
+    // omission with a value; a type that declares null answers it with the
     // null it holds. Without either, omission is a missing argument.
     func mustBeGiven(default fallback: Value?, in table: LoweredTypeTable) -> Bool {
         fallback == nil && !declaresNull(in: table)
@@ -202,7 +202,7 @@ extension LoweredType {
             return inner.numeral(candidate, in: table)
 
         // `number`, a parameter a constraint bounds, and the slots that
-        // declare no numeric shape at all: the slot does not name one kind,
+        // declare no numeric type at all: the slot does not name one kind,
         // so a numeral is whichever kind's one spelling the text is.
         default:
             if let whole = Int(spelling: candidate) { return .int(whole) }
@@ -236,14 +236,14 @@ extension LoweredType {
         }
     }
 
-    // How the shape reads in a message: the spelling the author wrote, with
+    // How the type reads in a message: the spelling the author wrote, with
     // a row's label standing where the author wrote the name.
     func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case .any:
             return "any"
 
-        // Spelled as what it is: the shape reached by that path. No document
+        // Spelled as what it is: the type reached by that path. No document
         // writes this, so the spelling answers to the message alone, and an
         // author reading a refusal about `item.a` sees where it came from.
         case let .reading(of, path):
@@ -308,7 +308,9 @@ extension LoweredType {
 
             guard let parameters else { return spelling }
 
-            let written = parameters.map { name, shape, _ in "\(name): \(shape.rendered(in: table))" }
+            let written = parameters.map { name, type, _ in
+                "\(name): \(type.rendered(in: table))"
+            }
 
             return "\(spelling)<(\(written.joined(separator: ", ")))"
                 + " -> \((returns ?? .any).rendered(in: table))>"
@@ -338,7 +340,7 @@ extension LoweredType {
     }
 
     // MARK: - Private
-    // Every shape that reads the value it is given. The two that do not are
+    // Every type that reads the value it is given. The two that do not are
     // answered by `settling` and never arrive here; reaching this by another
     // door sends them back to it.
     private func judging(
@@ -352,14 +354,14 @@ extension LoweredType {
             return try settling(value, at: path(), in: table, assuming: assuming)
 
         // A value arrived where nothing was supposed to, so the arrival is the
-        // refusal: there is no shape to compare it against.
+        // refusal: there is no type to compare it against.
         case .never:
             throw ArgumentError("\(path()): declares never, and nothing is ever that")
 
         case let .undeclared(_, refusal):
             throw UndeclaredTypeError("\(path()): declares \(refusal)")
 
-        // Either shape arrives as itself. Settling to one of them would be the
+        // Either type arrives as itself. Settling to one of them would be the
         // declaration picking, and it declined to.
         case .number:
             switch value {
@@ -371,10 +373,10 @@ extension LoweredType {
             }
 
         // A declared record is nominal. A record arriving without a name
-        // settles to the declared shape and takes the name; one arriving
+        // settles to the declared type and takes the name; one arriving
         // under this name is settled again and keeps it; one arriving under
-        // another name is refused, whatever its shape. A declared name that is
-        // not a record shape settles as the shape it stands for.
+        // another name is refused, whatever its type. A declared name that is
+        // not a record type settles as the type it stands for.
         case let .named(row):
             return try settlingNamed(value, row: row, at: path(), in: table, assuming: assuming)
 
@@ -544,7 +546,7 @@ extension LoweredType {
     }
 
     // Why each member of a membership said no, in one line. A membership
-    // holding one shape of collection refuses a bad element, and the element
+    // holding one type of collection refuses a bad element, and the element
     // is what the author has to go and fix.
     private func refused(
         _ value: Value,

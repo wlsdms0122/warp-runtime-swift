@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // A parameter, written either as a bare type name or as a record. The shorthand
-// is the notation's convenience. The IR has one shape.
+// is the notation's convenience. The document format has one spelling.
 public struct ParameterReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case type

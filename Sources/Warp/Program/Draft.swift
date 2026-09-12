@@ -43,7 +43,7 @@ public struct Draft: Sendable {
     // nothing more.
     //
     // Said here rather than beside the type, because the type may be another
-    // document's. A document that arrives later gives a shape it did not
+    // document's. A document that arrives later gives a type it did not
     // declare the procedures a contract asks, and saying it beside the type would
     // leave that document nowhere to say it.
     public let claims: [Name: Set<Name>]
@@ -117,10 +117,10 @@ public struct Draft: Sendable {
             }
     }
 
-    // What this declares in the shape space, the same way. Types, constraints
-    // and contracts are one space: a link refuses a name standing for a shape
+    // What this declares in the type space, the same way. Types, constraints
+    // and contracts are one space: a link refuses a name standing for a type
     // and a membership at once.
-    func shapes(in document: Place.Document) -> [(name: Name, place: Place)] {
+    func types(in document: Place.Document) -> [(name: Name, place: Place)] {
         types.keys.map { name in
             (name, Place.type(name.spelling, in: document))
         }
@@ -137,21 +137,21 @@ public struct Draft: Sendable {
     // said in one place whichever side asks.
     func declarations(in document: Place.Document) -> [(reference: Reference, place: Place)] {
         procedures(in: document).map { declared in (.procedure(declared.name), declared.place) }
-            + shapes(in: document).map { declared in (.shape(declared.name), declared.place) }
+            + types(in: document).map { declared in (.type(declared.name), declared.place) }
     }
 
     // The same two, when only the names are wanted. Read off the lists above
     // rather than gathered again, so what counts as a procedure and what counts as
-    // a shape is said in one place.
+    // a type is said in one place.
     var declaredProcedures: Set<Name> {
         read().declaredProcedures
     }
 
-    var declaredShapes: Set<Name> {
-        read().declaredShapes
+    var declaredTypes: Set<Name> {
+        read().declaredTypes
     }
 
-    // The shapes this names and does not itself declare.
+    // The types this names and does not itself declare.
     var mentions: Set<Name> {
         read().mentions
     }
@@ -166,15 +166,15 @@ public struct Draft: Sendable {
     struct Reading: Sendable {
         let sends: Set<Name>
 
-        // The shapes this names and does not itself declare. Read off the
+        // The types this names and does not itself declare. Read off the
         // declarations and off the bodies alike: a local binding says what it
-        // holds, a cast asks for a shape, and a closure literal writes a
+        // holds, a cast asks for a type, and a closure literal writes a
         // signature of its own.
         let mentions: Set<Name>
 
         // What this declares, by the name a link resolves to it.
         let declaredProcedures: Set<Name>
-        let declaredShapes: Set<Name>
+        let declaredTypes: Set<Name>
 
         // How many closure literals each declaration wrote, at whatever depth.
         // A closure inside a closure counts with the rest: what the number
@@ -201,7 +201,7 @@ public struct Draft: Sendable {
     // happens.
     func read() -> Reading {
         let declaredProcedures = Set(procedures(in: .assembled).map(\.name))
-        let declaredShapes = Set(shapes(in: .assembled).map(\.name))
+        let declaredTypes = Set(types(in: .assembled).map(\.name))
 
         // A native procedure's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A
@@ -262,7 +262,7 @@ public struct Draft: Sendable {
             }
         }
 
-        // A claim names two shapes, and both are mentions like any other: the
+        // A claim names two types, and both are mentions like any other: the
         // type it is about and the contract it says that type answers. The
         // link reads the contract's procedures to hold the claim to them, so a
         // document making one stands behind the document that wrote it.
@@ -289,15 +289,15 @@ public struct Draft: Sendable {
 
         return Reading(
             sends: sent.subtracting(declaredProcedures),
-            mentions: named.subtracting(declaredShapes),
+            mentions: named.subtracting(declaredTypes),
             declaredProcedures: declaredProcedures,
-            declaredShapes: declaredShapes,
+            declaredTypes: declaredTypes,
             closures: counts
         )
     }
 
     // MARK: - Private
-    // The shapes named inside a body: what a local binding says it holds, what
+    // The types named inside a body: what a local binding says it holds, what
     // a cast asks for, and what a closure literal's own signature writes. A
     // signature written inline is held to the same table the top level is, so
     // what it names is asked for the same way.

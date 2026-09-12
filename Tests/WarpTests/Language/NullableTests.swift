@@ -242,7 +242,7 @@ struct NullableTests {
     @Test("a ? that says nothing refuses behind a name too")
     func aNeedlessNullableBehindAnAliasIsRefused() throws {
         // Given. The reader refuses `any?` by spelling; a name may hide the
-        // same shape, and the rule is the model's, held where names resolve
+        // same type, and the rule is the model's, held where names resolve
         let hidingAny = try Module(
             types: ["Loose": .any],
             procedures: [
@@ -288,7 +288,7 @@ struct NullableTests {
         }
     }
 
-    @Test("what a nullable unwraps to is judged like any other shape")
+    @Test("what a nullable unwraps to is judged like any other type")
     func anUnwrapIsJudgedAgain() async throws {
         // Given. `Task?` unwraps to a declared record through its name, and the
         // record's rules hold after the unwrap: the declared field reads, the
@@ -885,7 +885,7 @@ struct IndexReferenceJudgmentTests {
     }
 }
 
-// A dot on a type parameter. The shape is the call's fact, so the build leaves
+// A dot on a type parameter. The type is the call's fact, so the build leaves
 // the segments as written rather than judging on nothing.
 @Suite
 struct ParameterReceiverTests {
@@ -928,7 +928,7 @@ struct ParameterReceiverTests {
     @Test("naming a step through a parameter does not change what the path means")
     func aNamedStepStillReadsOn() async throws {
         // Given. `of.inner.count` written as two statements. The step is a
-        // shape the call decides, the way the parameter is, so the dot after it
+        // type the call decides, the way the parameter is, so the dot after it
         // stands as written and the call's value answers it
         let sut = try Module(
             procedures: [
@@ -965,8 +965,8 @@ struct ParameterReceiverTests {
     @Test("what was read out of a parameter is not the parameter")
     func aStepIsNotTheParameterItCameThrough() throws {
         // Given. One name written twice: once the parameter, once a field of
-        // it. They are two unknowns, not one (`of` is the shape the call filled
-        // in and `of.inner` is a field of that shape) so the name holds neither
+        // it. They are two unknowns, not one (`of` is the type the call filled
+        // in and `of.inner` is a field of that type) so the name holds neither
         // reading and a dot on it is refused.
         //
         // Read as the same parameter, this linked: a field stood where `some T`
@@ -1021,12 +1021,12 @@ struct ParameterReceiverTests {
         }
     }
 
-    @Test("one field is one shape, however the walk that reached it was marked")
+    @Test("one field is one type, however the walk that reached it was marked")
     func aMarkDoesNotSplitTheField() throws {
         // Given. The same field of the same parameter, reached once plainly and
         // once through a mark. What a mark says is expected of the value; where
         // the walk landed is the field either way, so the two readings are one
-        // shape and a dot on it stands.
+        // type and a dot on it stands.
         //
         // Held as the path and not as its spelling for exactly this: `of.inner`
         // and `of?.inner` spell apart, and a name would have made one field
@@ -1140,7 +1140,7 @@ struct ParameterReceiverTests {
     @Test("one unknown is one unknown, whichever parameter it was read through")
     func oneUnknownIsReadThroughEitherParameter() throws {
         // Given. Two parameters of the same type parameter. A call fills `T`
-        // once, so they hold one shape, and the same field of it read through
+        // once, so they hold one type, and the same field of it read through
         // either name is the same field.
         let sut = try Module(
             procedures: [
@@ -1184,7 +1184,7 @@ struct ParameterReceiverTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a shape read out of a body is not a declaration anybody can write")
+    @Test("a type read out of a body is not a declaration anybody can write")
     func aReadingIsRefusedWhereADeclarationGoes() throws {
         // Given. A declaration assembled in the host claiming what only a walk
         // produces. No document spells one, and the build refuses it where it

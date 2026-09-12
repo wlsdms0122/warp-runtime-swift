@@ -9,9 +9,9 @@ import Foundation
 import Warp
 
 // Where the two positions a document writes an expression in stop being the
-// same. A statement is a name and one construct, so every shape the language has
+// same. A statement is a name and one construct, so every type the language has
 // can be written there; inside another expression there is no name to give, so
-// only the shapes that need none can.
+// only the types that need none can.
 public extension Writer {
     // MARK: - Public
     func value(of statement: Statement) throws -> Value {
@@ -117,7 +117,7 @@ public extension Writer {
 
         // The mark rides on the key, the way `?.` rides on a segment: one
         // spelling says the mismatch refuses and the other says it reads as
-        // null, and the shape itself is written once either way.
+        // null, and the type itself is written once either way.
         case let .cast(read, type, optional):
             return .dictionary([
                 optional ? "as?" : "as": try value(of: type),
@@ -278,8 +278,8 @@ public extension Writer {
     private func spelling(_ form: any ConstructForm.Type) throws -> Name {
         guard let key = registry.key(for: form) else {
             throw WritingError(
-                "this notation registers no procedure for \(form). A shape it gave up"
-                    + " the procedure for is one it can no longer write"
+                "this notation registers no key for \(form). A construct it gave"
+                    + " the key up for is one it can no longer write"
             )
         }
 
@@ -288,7 +288,7 @@ public extension Writer {
 
     // A construct takes the name it binds from the statement it is written as,
     // so one built with any other name has no document. It is reachable: a
-    // caller assembling the language's shapes directly is under no obligation to
+    // caller assembling the language's types directly is under no obligation to
     // make the two agree, and finds out here rather than at a run that reads a
     // name nothing bound.
     private func named(

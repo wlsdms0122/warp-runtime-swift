@@ -10,7 +10,7 @@ import Testing
 struct CatalogueClaimTests {
     private let entryName: Name = "app.main"
 
-    @Test("closing brings a claim about two shapes the list has")
+    @Test("closing brings a claim about two types the list has")
     func closingBringsAClaimAboutShapesTheListHas() throws {
         // Given. Two libraries that know nothing of each other, a third
         // claiming one's type answers the other's contract, and a program

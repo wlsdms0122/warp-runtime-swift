@@ -18,7 +18,7 @@ extension LoweredType {
     // What the type parameters in this declaration stand for, given what
     // arrived. Walked in step: where the declaration has a parameter, whatever
     // sits opposite it is what the parameter stands for; where both have a
-    // shape, the walk goes inside.
+    // type, the walk goes inside.
     //
     // A parameter reached twice has to be read the same both times. Two
     // readings are a disagreement rather than a reason to give up: widening to
@@ -65,7 +65,7 @@ extension LoweredType {
             }
 
             // With the table, because a reading may stand on a row and the
-            // shape that row holds. Asking without it would call those two a
+            // type that row holds. Asking without it would call those two a
             // disagreement, which is the same question the link asks elsewhere
             // and answers correctly.
             if already.accepts(given, in: table) { return }
@@ -135,7 +135,7 @@ extension LoweredType {
         }
     }
 
-    // This shape with every parameter replaced by what it was read as. A
+    // This type with every parameter replaced by what it was read as. A
     // parameter nothing filled reads `any`, which is what a declaration says
     // when it says nothing.
     func filling(_ bound: [Name: LoweredType]) -> LoweredType {

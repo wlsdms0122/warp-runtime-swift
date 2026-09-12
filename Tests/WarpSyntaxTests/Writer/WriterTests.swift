@@ -14,7 +14,7 @@ import WarpStandard
 // Writing is how a program leaves the machine that built it, so what it
 // promises is not that the text comes back the same. It is that the program
 // does. A document arrives spelled however its author liked it and is written
-// back in the shapes the language actually has, which is why writing twice is
+// back in the types the language actually has, which is why writing twice is
 // the question these ask: the first pass says what the program is, and the
 // second has to agree.
 @Suite("A program can be written back out as a document")
@@ -54,7 +54,7 @@ struct WriterTests {
 
     @Test("a canonical document is written back exactly as it was")
     func aCanonicalDocumentIsWrittenBackUnchanged() throws {
-        // Given. `canonical` is written in the shapes themselves, so reading it
+        // Given. `canonical` is written in the types themselves, so reading it
         // and writing it must arrive at the same document. A fixed point only
         // says the writing settled; this says nothing was left behind, because
         // every slot the language has is written down here and a slot that
@@ -266,8 +266,8 @@ struct WriterTests {
 
     @Test("a notation that gave up a procedure cannot write what it said")
     func aDroppedKeyCannotBeWritten() throws {
-        // Given. The registry is what a notation *is*, so a shape whose procedure it
-        // no longer registers is a shape it can no longer write. Answering with
+        // Given. The registry is what a notation *is*, so a type whose procedure it
+        // no longer registers is a type it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it
         // back through this same notation would refuse.
         let module = try loader.loadProcedure([
@@ -378,7 +378,7 @@ struct WriterTests {
     func aMisnamedBindingHasNoDocument() throws {
         // Given. A document cannot write this, because the name a loop binds is
         // the name of the statement it is written as. A caller building the
-        // language's shapes directly is under no such obligation, so this is
+        // language's types directly is under no such obligation, so this is
         // reachable and says so rather than writing a document that would load
         // into something else.
         let module = try Module(
@@ -440,7 +440,7 @@ struct WriterTests {
     }
 
     // Programs built rather than parsed. What they have in common is that no
-    // reader made them, so nothing has already forced them into the shapes a
+    // reader made them, so nothing has already forced them into the types a
     // document happens to have, which is exactly where a writer goes wrong.
     private static let assembled: [Module] = [
         // Both cast spellings, over both ways a type is written. A name, and
@@ -469,7 +469,7 @@ struct WriterTests {
             ]
         ),
         // Messages nested inside other expressions, deeper than a document's
-        // fixed shapes would ever place them
+        // fixed types would ever place them
         try! Module(
             procedures: [
                 entryName: Procedure(
@@ -526,7 +526,7 @@ struct WriterTests {
     ]
 
     // The document format, written out. Every slot the language has appears
-    // here exactly once, in the shapes that stand one to one with it. No
+    // here exactly once, in the types that stand one to one with it. No
     // spelling stands in for anything.
     //
     // It is a fixture and also the closest thing to a statement of what a
@@ -535,7 +535,7 @@ struct WriterTests {
     private static let canonical: Value = [
         "warp": 1,
         "imports": ["std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
-        "description": "one of every shape",
+        "description": "one of every type",
         "types": ["Task": ["done": "bool", "id": "string"]],
         "constraints": ["Scalar": ["int", "string"]],
         "const": ["limit": 10],
@@ -653,13 +653,13 @@ struct WriterTests {
         ]
     ]
 
-    // One document per shape the language has, written the way a document
+    // One document per type the language has, written the way a document
     // usually is. Spellings and all, since what comes out the far side is the
     // thing under test.
     static let corpus: [Value] = [
         // Literals, references, records, arrays and quoting
         [
-            "description": "the shapes that need no name",
+            "description": "the types that need no name",
             "types": ["Task": ["id": "string", "done": "bool"]],
             "const": ["limit": 10],
             "procedures": [

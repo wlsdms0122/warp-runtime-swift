@@ -104,7 +104,7 @@ struct PlaceWrittenTests {
         }
 
         // Then. `call` is the procedure the author wrote, and `call` is what the
-        // language calls the shape
+        // language calls the type
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
         // And unasked, the language answers in its own terms

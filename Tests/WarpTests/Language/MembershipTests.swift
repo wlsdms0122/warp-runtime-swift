@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // A declared membership standing as a type. `A or B` is written the one way
-// the language writes a set of shapes, by declaring it and naming it, so a
+// the language writes a set of types, by declaring it and naming it, so a
 // slot saying "either of these" says something the build can hold to, where it
 // used to have to say `any` and mean nothing.
 @Suite("A membership as a type")

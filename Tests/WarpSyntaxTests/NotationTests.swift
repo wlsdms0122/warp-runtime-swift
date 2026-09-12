@@ -28,7 +28,7 @@ struct NotationTests {
     @Test("a notation with no spellings owes nothing")
     func spellingNothingLeavesNothingOwed() throws {
         // Given. A canonical notation offers no spellings and registers no
-        // construct that lowers to a procedure, so every shape it can still write is
+        // construct that lowers to a procedure, so every type it can still write is
         // one the language already has, and it owes no vocabulary at all.
         #expect(sut.vocabulary(of: .canonical).isEmpty)
         #expect(!sut.vocabulary(of: .testing).isEmpty)
@@ -106,7 +106,7 @@ struct NotationTests {
     func anUnclaimedRecordIsAnExpression() throws {
         // Given. A condition slot asks for an expression, and a spelling is one
         // way of arriving at one. A record carrying none of the notation's keys
-        // never was a condition shape, which is what keeps the spellings
+        // never was a condition type, which is what keeps the spellings
         // optional wherever a condition is asked for.
         let sut = try Loader.testing.loadProcedure([
             "parameters": ["ready": "bool"],
@@ -271,7 +271,7 @@ struct NotationTests {
                 case let .conditional(condition, _, _) = block.body.first?.expression,
                 case .cast = condition
             else {
-                Issue.record("`as` names a shape to read, whatever else is written beside it")
+                Issue.record("`as` names a type to read, whatever else is written beside it")
 
                 return
             }

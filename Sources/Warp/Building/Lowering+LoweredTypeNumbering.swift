@@ -8,10 +8,10 @@
 import Foundation
 
 extension Lowering {
-    // One document's rows with the shapes in them numbered by that document,
+    // One document's rows with the types in them numbered by that document,
     // beside the numbering that says what those numbers stand for.
     //
-    // Lowering reads the link's table to judge, so the shape rows it writes
+    // Lowering reads the link's table to judge, so the type rows it writes
     // are that link's. This turns them into the document's own, which is what
     // leaves compiling: a body carries its document's numbers and nothing
     // about the graph it was linked into.
@@ -33,7 +33,7 @@ extension Lowering {
 
         // Which number each row of this link stands at, so the walk that
         // writes them reads a place rather than hashing a name at every
-        // shape it meets.
+        // type it meets.
         let place = (
             types: Self.placed(stood.types, among: numbering.types, spelling: loweredTypes.labels),
             memberships: Self.placed(
@@ -48,14 +48,14 @@ extension Lowering {
 
             guard case .body = held.implementation else { return held }
 
-            return try held.renumbered { shape in
-                try renumbered(shape, in: place, of: held.label)
+            return try held.renumbered { type in
+                try renumbered(type, in: place, of: held.label)
             }
         }
 
         // What the build read off a body, in the numbers of the document that
         // body came out of. Read against the same numbering the bodies are, so
-        // a call judged against one of these reads the shape its document
+        // a call judged against one of these reads the type its document
         // stands on.
         let read = try answers.reduce(into: [Name: LoweredType]()) { read, answer in
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
@@ -65,15 +65,15 @@ extension Lowering {
     }
 
     // MARK: - Private
-    // One shape written as the numbers its document gave the rows it stands
+    // One type written as the numbers its document gave the rows it stands
     // on. A row the document never numbered is the build having lowered
     // something it did not read, which is this pass's own mistake.
     private func renumbered(
-        _ shape: LoweredType,
+        _ type: LoweredType,
         in place: (types: [Int: Int], memberships: [Int: Int]),
         of label: Name
     ) throws -> LoweredType {
-        try shape.renumbered(
+        try type.renumbered(
             type: { number in
                 guard let stands = place.types[number] else {
                     throw BuildError.unjudged(
@@ -99,7 +99,7 @@ extension Lowering {
     }
 
     // Where each of a link's rows stands in the document's numbering, read
-    // off the names once rather than at every shape the walk meets.
+    // off the names once rather than at every type the walk meets.
     private static func placed(
         _ rows: Set<Int>,
         among names: [Name],

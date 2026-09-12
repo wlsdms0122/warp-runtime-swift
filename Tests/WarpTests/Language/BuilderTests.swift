@@ -297,7 +297,7 @@ struct BuilderTests {
     @Test("a closure a constant holds may not introduce a sibling's name")
     func aClosureConstantMayNotShadowASibling() async throws {
         // Given. The rule a body is held to at load, met here from the caller's
-        // side. Neither shape links, and both are the same mistake: a name the
+        // side. Neither type links, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
         // place.
         func module(introducing statement: Statement?) throws -> Module {
@@ -839,7 +839,7 @@ struct BuilderTests {
 
     @Test("a body that settles an answer is held to it, declared or not")
     func anAnswerReadOffABodyIsJudged() throws {
-        // Given. The same shape, with a body whose answer the text does settle:
+        // Given. The same type, with a body whose answer the text does settle:
         // a body with no result hands back null, and null is not a whole
         // number. What the declaration says stays what it says; what the build
         // reads a call as is what the body hands back.

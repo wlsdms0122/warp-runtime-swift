@@ -24,9 +24,9 @@ struct CatalogueTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a shape a signature mentions brings the module that declares it")
+    @Test("a type a signature mentions brings the module that declares it")
     func aMentionedShapeBringsItsModule() throws {
-        // Given. `shapes` declares the type, `users` declares against it and
+        // Given. `types` declares the type, `users` declares against it and
         // carries nothing.
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
@@ -351,21 +351,21 @@ struct CatalogueTests {
         }
     }
 
-    @Test("a document's procedure collides before its shape")
+    @Test("a document's procedure collides before its type")
     func aProcedureCollidesBeforeAShape() throws {
         // Given. One document declaring a procedure and a type, and a second
         // declaring both of the same names. The catalogue has two answers for
         // each and reports the first it walks into.
         let first = try Module(
-            types: ["a.Shape": .record(["x": .int])],
+            types: ["a.Type": .record(["x": .int])],
             procedures: ["a.procedure": Procedure(body: [], result: .literal(.null))]
         )
         let second = try Module(
-            types: ["a.Shape": .record(["x": .int])],
+            types: ["a.Type": .record(["x": .int])],
             procedures: ["a.procedure": Procedure(body: [], result: .literal(.null))]
         )
 
-        // When / Then. Procedures stand before shapes, so the procedure is the one an
+        // When / Then. Procedures stand before types, so the procedure is the one an
         // author is told about.
         #expect {
             try Catalogue([first, second])

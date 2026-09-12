@@ -199,7 +199,7 @@ struct LinearTests {
         }
     }
 
-    @Test("a value handed on once is not carried inside another shape")
+    @Test("a value handed on once is not carried inside another type")
     func onceInsideAnotherShapeRefuses() throws {
         // Given. Nothing follows a value into a list, so nothing could say the
         // list handed each of them on
@@ -215,7 +215,7 @@ struct LinearTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("carries 'app.Handle' inside another shape")
+            "\(error)".contains("carries 'app.Handle' inside another type")
         }
     }
 

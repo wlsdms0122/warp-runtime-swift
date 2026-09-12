@@ -8,7 +8,7 @@
 import Foundation
 
 // What a link produces and a run reads: every declaration lowered into one
-// table, the row a run starts from, the shapes the link declared, and what
+// table, the row a run starts from, the types the link declared, and what
 // each document's variables start out holding. A closure literal's row is
 // held by the code that makes the closure. Only
 // `Builder` makes one, so holding a value of this type is the evidence that
@@ -30,7 +30,7 @@ public struct Image: Sendable {
     // rows by number and never asks.
     public let reached: Set<Name>
 
-    // Every shape the linked modules declared. A named type survives into the
+    // Every type the linked modules declared. A named type survives into the
     // run as a row of the table's lowering rather than being expanded at
     // link, so the run needs the table that answers it.
     public let types: TypeTable
@@ -68,7 +68,7 @@ public struct Image: Sendable {
     }
 
     // A value settled by a type this link declared: the declaration gives the
-    // layout and holds every field to its shape, so what comes back is what a
+    // layout and holds every field to its type, so what comes back is what a
     // slot of that type holds.
     public func settling(_ value: Value, as declared: Name) throws -> Value {
         guard let row = loweredTypes.row(named: declared) else {

@@ -10,7 +10,7 @@ import Warp
 
 // How any value reads as text. It keeps the opposite contract to the procedures
 // that transform a string: those answer absence for anything else, this takes
-// every shape and refuses only nothing.
+// every type and refuses only nothing.
 //
 // It is what interpolation is made of, which is why it takes more than a
 // string. Interpolating a number is the ordinary case. Nothing renders null,

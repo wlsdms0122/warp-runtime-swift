@@ -161,13 +161,13 @@ struct Relocating {
     private let rows: [Name: Int]
     private let numbering: [Numbering]
 
-    // What each document's shape numbers turned out to be in this link.
+    // What each document's type numbers turned out to be in this link.
     //
-    // Answered once per number rather than at every shape met: a name is read
+    // Answered once per number rather than at every type met: a name is read
     // as many times as a document numbered one, and not as many times as its
-    // bodies stand on it. A document that lowered no body numbered no shape
+    // bodies stand on it. A document that lowered no body numbered no type
     // and has no entry here.
-    private let shapeRows: [LoweredTypeNumbering.Rows]
+    private let typeRows: [LoweredTypeNumbering.Rows]
 
     private let contractProcedures: [Name: ContractProcedure]
     private let loweredTypes: LoweredTypeTable
@@ -182,7 +182,7 @@ struct Relocating {
         table: [Linked],
         rows: [Name: Int],
         numbering: [Numbering],
-        shapeNumbering: [LoweredTypeNumbering],
+        typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
         closures: [[Int]],
         loweredTypes: LoweredTypeTable
@@ -191,7 +191,7 @@ struct Relocating {
         self.table = table
         self.rows = rows
         self.numbering = numbering
-        self.shapeRows = shapeNumbering.map { held in held.rows(in: loweredTypes) }
+        self.typeRows = typeNumbering.map { held in held.rows(in: loweredTypes) }
         self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
     }
@@ -214,7 +214,7 @@ struct Relocating {
             },
             rows: assembled.rows,
             numbering: assembled.numbering,
-            shapeNumbering: assembled.shapeNumbering,
+            typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
             closures: assembled.closures,
             loweredTypes: loweredTypes
@@ -243,7 +243,7 @@ struct Relocating {
                         in: Standing(
                             origin: origin,
                             place: .variable(name.spelling, in: .assembled),
-                            loweredTypes: shapeRows[origin]
+                            loweredTypes: typeRows[origin]
                         )
                     )
                 )
@@ -253,8 +253,8 @@ struct Relocating {
 
     // MARK: - Private
     // Where the walk is: which document wrote this row, what a refusal calls
-    // it, and this link's answers to the shape numbers that document gave.
-    // Read once on entering a row rather than at every shape inside it.
+    // it, and this link's answers to the type numbers that document gave.
+    // Read once on entering a row rather than at every type inside it.
     private struct Standing {
         let origin: Int
 
@@ -281,7 +281,7 @@ struct Relocating {
             let held = Standing(
                 origin: closure.origin,
                 place: standing.place,
-                loweredTypes: shapeRows[closure.origin]
+                loweredTypes: typeRows[closure.origin]
             )
             let row = try self.row(closure.number, in: held)
 
@@ -324,7 +324,7 @@ struct Relocating {
         let standing = Standing(
             origin: row.origin,
             place: .procedure(row.label.spelling, in: .assembled),
-            loweredTypes: shapeRows[row.origin]
+            loweredTypes: typeRows[row.origin]
         )
         let sends = try row.sends.map { number in try self.row(number, in: standing) }
 
@@ -427,10 +427,10 @@ struct Relocating {
                 }
             )
 
-        case let .cast(value, shape, optional):
+        case let .cast(value, type, optional):
             return .cast(
                 try filled(value, in: standing),
-                as: try relocated(shape, in: standing),
+                as: try relocated(type, in: standing),
                 optional: optional
             )
 
@@ -497,8 +497,8 @@ struct Relocating {
         )
     }
 
-    // What a statement writes to and the shape it takes it as: the path where
-    // writing to it walks one, and the row of every shape either way.
+    // What a statement writes to and the type it takes it as: the path where
+    // writing to it walks one, and the row of every type either way.
     private func relocated(
         _ binding: Instruction.Binding?,
         in standing: Standing
@@ -521,13 +521,13 @@ struct Relocating {
         }
     }
 
-    // A shape with the rows its document's numbers stand for.
-    private func relocated(_ shape: LoweredType?, in standing: Standing) throws -> LoweredType? {
-        try shape.map { held in try relocated(held, in: standing) }
+    // A type with the rows its document's numbers stand for.
+    private func relocated(_ type: LoweredType?, in standing: Standing) throws -> LoweredType? {
+        try type.map { held in try relocated(held, in: standing) }
     }
 
-    private func relocated(_ shape: LoweredType, in standing: Standing) throws -> LoweredType {
-        try standing.loweredTypes.read(shape, at: standing.place)
+    private func relocated(_ type: LoweredType, in standing: Standing) throws -> LoweredType {
+        try standing.loweredTypes.read(type, at: standing.place)
     }
 
     // A path with the rows the paths inside its index steps stand for.

@@ -20,13 +20,13 @@ import Foundation
 // so the walk answers only where the text says so.
 //
 // Reading through one is the exception, and it is the one place saying nothing
-// is not enough: a dot needs a shape to be judged against, so a dot on `any`
-// refuses rather than deferring to the run. The author names the shape with
+// is not enough: a dot needs a type to be judged against, so a dot on `any`
+// refuses rather than deferring to the run. The author names the type with
 // `as`, and the walk goes on from there.
 //
 // A path reads a name and nothing else, so every segment a document writes
 // stays what it was written as. What each one lands on is judged here against
-// the type the walk reached, and a dot on a shape that declares no such field
+// the type the walk reached, and a dot on a type that declares no such field
 // is refused rather than left for the run.
 extension Builder {
     // MARK: - Internal
@@ -166,7 +166,7 @@ extension Builder {
             for bound in names.sorted() {
                 // A bound names a membership or a contract, and the two ask
                 // different questions of the same reading: what a membership
-                // admits is a set of shapes, what a contract asks is a set of
+                // admits is a set of types, what a contract asks is a set of
                 // procedures the reading's own type answers.
                 if loweredTypes.satisfying[bound] != nil {
                     switch loweredTypes.answering(contract: bound, reading: reading) {
@@ -339,24 +339,24 @@ extension Builder {
     }
 
     // Walking a path through types the way the resolver walks it through
-    // values. Each dot is judged by the shape the walk has reached: a shape
-    // with fields reads one, a shape without them sends a procedure, and the
+    // values. Each dot is judged by the type the walk has reached: a type
+    // with fields reads one, a type without them sends a procedure, and the
     // judgment is spelled into the answered path (`key` for a read, `procedure` for
     // a call) so a run never asks the value.
     //
-    // A field the shape does not declare is refused, `?.` or not. The type
+    // A field the type does not declare is refused, `?.` or not. The type
     // proved the absence, and a spelling that reads expected absence does not
     // overrule a proof. What may genuinely be absent at run (a `dictionary`
     // entry, a nullable's null) is where `?.` speaks: the plain spelling is
     // refused there, and the optional one answers null and makes the whole
     // path's reading nullable.
     //
-    // Three shapes stop the walk, and each stops it for its own reason. On
+    // Three types stop the walk, and each stops it for its own reason. On
     // `any` the walk **refuses**: nothing was declared, so there is nothing a
     // dot could be judged against, and a dot no declaration proves is what a
-    // run would otherwise have to decide for itself. The shape is named
+    // run would otherwise have to decide for itself. The type is named
     // instead, with `as`. On a type parameter the segments stand **as
-    // written**: the shape is declared, at the call rather than here, and what
+    // written**: the type is declared, at the call rather than here, and what
     // the call filled in answers them. On `never` nothing arrives to be read at
     // all, so there is nothing to judge and nothing to refuse.
     func reading(
@@ -399,25 +399,25 @@ extension Builder {
             // a needless `?` on a type spelling is.
             var unwrapped = false
 
-            // What the dot lands on, settled: the walk-stopping shapes are
+            // What the dot lands on, settled: the walk-stopping types are
             // asked again after every unwrap, because what a `T?` holds is a
             // type like any other (`any`, null, another name, another nullable)
-            // and an unwrap that skipped the questions would judge on a shape
+            // and an unwrap that skipped the questions would judge on a type
             // nobody checked.
             settling: while true {
-                // Three shapes stop a walk, and they stop it for three
+                // Three types stop a walk, and they stop it for three
                 // different reasons, so they are asked separately, and each
                 // says its own. A dot is judged against what a declaration
                 // proves at this site: `any` declares nothing and never will, a
-                // type parameter's shape is declared at the call, and `never`
+                // type parameter's type is declared at the call, and `never`
                 // declares a value that does not arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
                 // ever be proven, and a dot the link cannot judge is the one
                 // thing a run would have to decide for itself. The author says
                 // what they expect and the reading goes on from there; the
-                // shape is theirs to name, not the value's to supply. An index
-                // says as much as a dot does (that a shape is there to be read
+                // type is theirs to name, not the value's to supply. An index
+                // says as much as a dot does (that a type is there to be read
                 // into) so it refuses here too, and says so in its own terms.
                 // Before the three were told apart this arm let indexes through
                 // to the run; that exception was a fact about the branch being
@@ -432,37 +432,37 @@ extension Builder {
                     return .refused(
                         "\(walked.rendered) \(reach) \(current.rendered(in: context.loweredTypes)),"
                             + " which declares nothing."
-                            + " A shape is read by naming it, with `as`"
+                            + " A type is read by naming it, with `as`"
                     )
                 }
 
-                // A parameter is filled by the call, so the shape *is*
+                // A parameter is filled by the call, so the type *is*
                 // declared. Elsewhere. That is why this is not `any`'s case and
                 // does not refuse: the segments stand as written and the call's
-                // shape answers them, which is the decision
+                // type answers them, which is the decision
                 // `ParameterReceiverTests` holds.
                 //
                 // What would make this judgeable here is the bound: a
-                // constraint is a declared membership of concrete shapes, so a
+                // constraint is a declared membership of concrete types, so a
                 // dot every member admits is a dot this site could prove.
                 // Reading it that way needs the walked signature's `bounds`,
                 // which this walk is not given, so the fact is named here
-                // rather than guessed at. The reading stays a shape the call
+                // rather than guessed at. The reading stays a type the call
                 // decides, not `any`. Saying `any` would hand the next
-                // statement a shape the author never wrote. `x = item.a` then
+                // statement a type the author never wrote. `x = item.a` then
                 // `x.b` would refuse on `any` where `item.a.b` in one statement
                 // stands, and naming a step is not supposed to change what a
                 // path means.
                 //
-                // And not the parameter itself. `item` is the shape the call
-                // filled in; `item.a` is a field of that shape, which is a
+                // And not the parameter itself. `item` is the type the call
+                // filled in; `item.a` is a field of that type, which is a
                 // different unknown. Handing the parameter back made a walk
                 // through one impersonate it: the field stood where `some T`
                 // was asked for, and carried T's bound onto a value that never
                 // earned it. `some N: Comparable` proving `item.a` comparable
                 // on nothing but where it was read from.
                 //
-                // Where the walk reached is asked of the shape it walked
+                // Where the walk reached is asked of the type it walked
                 // through, not assembled from the segments written here: a
                 // body may name a step on the way (`held = of.inner`, then
                 // `held.count`), and the field it lands on is the same field
@@ -599,7 +599,7 @@ extension Builder {
                         + " and only an array is indexed"
                 )
 
-            // A dictionary holds entries of one shape under names that are
+            // A dictionary holds entries of one type under names that are
             // data, so which names are there is a run's fact. `?.` reads an
             // absent one as null, and the plain spelling refuses it at run. The
             // rule is asked here like everywhere else and always answers yes:
@@ -634,7 +634,7 @@ extension Builder {
                 current = field.fieldUnwrapped
                 resolved.append(segment)
 
-            // A shape with no fields has no name here to read. The procedure by
+            // A type with no fields has no name here to read. The procedure by
             // this spelling is sent with a written call, which names the
             // declaration it means.
             case let (.key(key, _), _):
@@ -1064,7 +1064,7 @@ extension Builder {
             )
 
         // A cast is where a reading the walk could not judge becomes one it
-        // can. The shape is the author's claim, so it is the reading from here
+        // can. The type is the author's claim, so it is the reading from here
         // on, and the run is left the one question the link cannot answer,
         // which is what actually arrived.
         //
@@ -1085,7 +1085,7 @@ extension Builder {
 
             let read = inner.reading.resolved(in: context.loweredTypes)
 
-            // Both refusals ask the shapes themselves, with nothing gating them
+            // Both refusals ask the types themselves, with nothing gating them
             // on whether the reading is fully proven. A gate like that turned
             // the judgment off wherever `any` sat anywhere inside the reading
             // (`array<any>` read as `string` passed the link and answered null
@@ -1094,7 +1094,7 @@ extension Builder {
             // read as `{ data: { name: string } }`) is one `couldBothHold`
             // already answers on its own, at the field.
             //
-            // Needless means the claim and the reading are the same shape, not
+            // Needless means the claim and the reading are the same type, not
             // that one would accept the other. `accepts` is assignability, and
             // assignability is where a boundary still has work to do: it holds
             // between `int` and `int(0...10)`, and between anything and `any`,
@@ -1102,7 +1102,7 @@ extension Builder {
             // it as proof called every narrowing cast needless and left the
             // author no way to say what they knew.
             //
-            // The claim is judged first, and on itself: a cast onto a shape
+            // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.
             // What the claim names is judged where every cast is seen, in the
             // declaration scan. A spelling says that much on its own, and
@@ -1116,7 +1116,7 @@ extension Builder {
                 ? LoweredType.nullable(claim)
                 : claim
 
-            // A declared record is a name as well as a shape: reading a
+            // A declared record is a name as well as a structure: reading a
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
@@ -1131,7 +1131,7 @@ extension Builder {
                 try refuse(
                     "reads \(inner.reading.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
                         + " and no value is both."
-                        + " A cast names a shape the value may turn out to"
+                        + " A cast names a type the value may turn out to"
                         + " have, and this one it never can",
                     at: place,
                     when: ask
@@ -1140,13 +1140,13 @@ extension Builder {
                 || (!nominal && (settled == read || handed.resolved(in: context.loweredTypes) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
-                // Maybe` hands on `Maybe`. The same shape by two spellings, and
+                // Maybe` hands on `Maybe`. The same type by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
                 try refuse(
                     "reads \(inner.reading.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
                         + " which it already is."
-                        + " A cast opens a shape the types do not prove,"
+                        + " A cast opens what the types do not prove,"
                         + " and here they do",
                     at: place,
                     when: ask
@@ -1155,7 +1155,7 @@ extension Builder {
 
             return Inspection(
                 // The author's spelling stands. `settled` is what the judgment
-                // needed (a name walked through to the shape it declares) and
+                // needed (a name walked through to the type it declares) and
                 // writing that back into the program would spend the name: a
                 // refusal would read `as { age: int }` where the author wrote
                 // `as Person`, and a document written back out would have lost
@@ -1167,12 +1167,12 @@ extension Builder {
                 calls: inner.calls,
                 // The author's spelling here too, and for the same reason it
                 // stands in what is written back: a refusal on the next
-                // statement quotes this reading, and quoting a shape nobody
+                // statement quotes this reading, and quoting a type nobody
                 // wrote (`{ name: string }` where the author wrote `Person`) is
                 // the same name spent, one step later. Every consumer resolves
                 // names itself. `?` is asked of the fact: a name standing for a
                 // nullable already holds null, and wrapping it again would make
-                // the same shape read as two different ones depending on
+                // the same type read as two different ones depending on
                 // whether the author wrote the name or what it stands for.
                 reading: handed,
                 flow: inner.flow
@@ -1850,7 +1850,7 @@ extension Builder {
         // Where the result reads, or why it does not. A block's result sits
         // after its statements. It reads in the environment the body left, and
         // a body no run comes back from leaves it nothing to run, refused. The
-        // one rule the shape has: a loop's exit-answered result is the loop's
+        // one rule the type has: a loop's exit-answered result is the loop's
         // own to read, not this walk's.
         let tail: Inspection?
         let reading: LoweredType
@@ -1900,7 +1900,7 @@ extension Builder {
     }
 
     // The statement walk's answers, named once. The fixpoint hands one back, so
-    // its asker and the walk cannot disagree about the shape.
+    // its asker and the walk cannot disagree about the type.
     private typealias BodyWalk = (
         body: [Statement],
         calls: [CallSite],
@@ -2017,7 +2017,7 @@ extension Builder {
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
             // is written has to fit. A write through a path is judged against
-            // the shape the path reaches, and leaves the variable's type as it
+            // the type the path reaches, and leaves the variable's type as it
             // was.
             case let .assignment(path)?:
                 guard let id = path.head else { break }
@@ -2078,7 +2078,7 @@ extension Builder {
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
     // statement that ends the body, so the two facts cannot part. The reader
-    // catches the shapes it can see, and the link catches the procedures only it can
+    // catches the types it can see, and the link catches the procedures only it can
     // see. One rule, two stages.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(
@@ -2339,7 +2339,7 @@ extension Builder {
                     .reduce(nil) { joined, next in join(joined, next) } ?? .any
             )
 
-        // A record under a name reads as that name; the shape is the
+        // A record under a name reads as that name; the type is the
         // declaration's, and the name is what the value fits. A document's
         // type names its fields by Swift's equality, so two spellings the
         // value keeps apart are one field here, the first by bytes.
@@ -2431,8 +2431,8 @@ extension Builder {
     // MARK: - Internal
     // What a path write reaches, or why it may not. The head is a box; each
     // field on the way is one a declared type wrote `var`, or a field of a
-    // shape no declaration named; an element is written through its index. A
-    // shape that may be null is not written into, and neither is `any`.
+    // type no declaration named; an element is written through its index. A
+    // type that may be null is not written into, and neither is `any`.
     func writable(
         _ path: [PathSegment],
         in environment: [Name: LoweredType],
@@ -2502,7 +2502,7 @@ extension Builder {
             case (.key, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
                     "\(walked.rendered) writes into \(current.rendered(in: context.loweredTypes)), which"
-                        + " declares nothing. A shape is written by naming it"
+                        + " declares nothing. A type is written by naming it"
                 )
 
             case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):

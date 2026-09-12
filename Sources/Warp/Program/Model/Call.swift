@@ -9,7 +9,7 @@ import Foundation
 
 // A message: a selector, what it is sent to, and what it is sent with.
 //
-// The language has one calling shape and leaves the question of what answers to
+// The language has one calling type and leaves the question of what answers to
 // the link. A procedure, a bundled procedure and a caller's own are not three kinds
 // of expression. They are three places a selector can be found, and where it
 // was found is a linkage fact rather than something the author wrote down. So

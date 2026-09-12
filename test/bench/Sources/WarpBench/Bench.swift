@@ -41,8 +41,7 @@ struct Bench {
     private static let baseline = "loop"
 
     // Doubling rather than stepping: what the second table is read for is the
-    // shape of the curve, and a shape shows over a range rather than between
-    // neighbours.
+    // curve, and a curve shows over a range rather than between neighbours.
     private static let chainCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
     // One count of procedures dealt into more and more documents, doubling for the

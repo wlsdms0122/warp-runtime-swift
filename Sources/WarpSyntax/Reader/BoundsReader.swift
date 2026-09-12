@@ -29,7 +29,7 @@ enum BoundsReader {
         guard let bounds, !bounds.isEmpty else { return signature }
 
         // A bound is only ever a name (the membership lives in a declaration,
-        // not in a signature) so a shape here is refused where it was written
+        // not in a signature) so a type here is refused where it was written
         // rather than surfacing later as a name nothing declares. The same
         // predicate the slot's `some T` spelling is held to.
         for (parameter, constraint) in bounds.sorted(by: { $0.key < $1.key }) {

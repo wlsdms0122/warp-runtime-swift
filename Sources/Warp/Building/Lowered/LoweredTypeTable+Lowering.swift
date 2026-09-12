@@ -18,7 +18,7 @@ extension LoweredTypeTable {
     // lets a document already lowered keep the numbers it was lowered with.
     // Either way a row is a row of one table and nothing a link concludes
     // reads one to decide what to say. A name that names itself through a
-    // chain of names stands for no shape and lowers to the shape every
+    // chain of names stands for no type and lowers to the type every
     // judgment refuses, so a chain of names is always finite.
     static func lowering(
         _ types: [Name: TypeExpression],
@@ -92,7 +92,7 @@ extension LoweredTypeTable {
             )
         }
 
-        // The record a row names: the last row on the way to a record shape.
+        // The record a row names: the last row on the way to a record type.
         let recordRows = loweredTypes.indices.map { start -> Int? in
             guard let row = end(of: start), case .record = loweredTypes[row] else { return nil }
 

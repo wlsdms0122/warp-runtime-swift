@@ -7,12 +7,12 @@
 
 import Foundation
 
-// Which shape an expression is, without any of it.
+// Which type an expression is, without any of it.
 //
-// A place says which construct a statement writes, and the shape is the whole
+// A place says which construct a statement writes, and the type is the whole
 // of what it has to say. Carrying the expression would put a program inside an
 // address. The cases are the language's own and no document's: what a text
-// spells a shape with is the notation's, and two texts spelling one shape two
+// spells a type with is the notation's, and two texts spelling one type two
 // ways arrive here as one case.
 public enum Construct: Sendable, Equatable {
     case literal
@@ -31,7 +31,7 @@ public enum Construct: Sendable, Equatable {
     case leave(Leave.Reach)
 
     // MARK: - Public
-    // What the language calls this shape. A document calls several of them
+    // What the language calls this type. A document calls several of them
     // something else, and the reading that knows which is not this one.
     //
     // Leaving renders as one name for all three reaches. Which loop a `leave`

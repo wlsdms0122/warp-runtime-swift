@@ -115,7 +115,7 @@ struct ConditionTests {
             .call(Call(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
         ))
 
-        // A text atom asking a number is shape misuse, not a false answer
+        // A text atom asking a number is type misuse, not a false answer
         #expect(throws: ReferenceUnfit.self) {
             try sut.evaluate(
                 .call(Call(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
@@ -149,7 +149,7 @@ struct ConditionTests {
         }
     }
 
-    @Test("shape misuse in a condition is unfit, not false")
+    @Test("type misuse in a condition is unfit, not false")
     func conditionShapeMisuseThrowsUnfit() throws {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)

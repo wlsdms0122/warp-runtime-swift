@@ -13,12 +13,12 @@ import Warp
 // document that would load into it.
 //
 // It exists because a program has to be able to leave the machine that built
-// it. Building the language's shapes directly is what a front end with a syntax
+// it. Building the language's types directly is what a front end with a syntax
 // of its own does, and a caller assembling procedures in native code does the
 // same, but neither can hand what it built to anything running elsewhere unless
 // the result can be written down. Reading was half a door.
 //
-// Only the shapes that stand one to one with the language are written. Nothing
+// Only the types that stand one to one with the language are written. Nothing
 // here reaches for a spelling (no `is`, no template, no `abort`) because a
 // spelling is a claim about what the reading side implements, and the point of
 // writing plainly is to make that claim as small as it can be. A program that
@@ -68,7 +68,7 @@ public struct Writer: Sendable {
         // way through.
         //
         // The version is this writer's and the imports are the program's: which
-        // shapes were used is a fact about the writing, and what a program takes
+        // types were used is a fact about the writing, and what a program takes
         // from its link is a fact about the program. A draft that claimed
         // nothing is written with what it sends, since a document that says
         // nothing is not one and there is nobody left to ask.
@@ -181,7 +181,7 @@ public struct Writer: Sendable {
         // the language admits an infinity, because it orders like any other
         // bound, and a document that carried the procedures a message shows it in
         // would read back as an error. Said rather than written as something
-        // else, the way an unwritable shape is.
+        // else, the way an unwritable type is.
         case let .ranged(refinement):
             guard refinement.spellable else {
                 throw WritingError(
@@ -209,13 +209,13 @@ public struct Writer: Sendable {
         // there, so a bound still on the type here means no signature owns it,
         // and no surface of the document could carry it: writing the name alone
         // would be a document that reads back meaning something else. No
-        // document spells this. It is a shape the link worked out from a body,
+        // document spells this. It is a type the link worked out from a body,
         // and the link refuses one written into a declaration. Reaching here
         // means a type got past that, so it is said rather than silently
         // written as something else.
         case let .reading(of, path):
             throw WritingError(
-                "`some \(([PathSegment.key(of)] + path).rendered)` is a shape"
+                "`some \(([PathSegment.key(of)] + path).rendered)` is a type"
                     + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"
@@ -265,7 +265,7 @@ public struct Writer: Sendable {
         // form under its one key. An inline record has no front to write it
         // on, and a declaration's field is the one place the procedures go anyway.
         // Written under its own key, which is where a record can carry it: the
-        // shape a declared type is handed on once is usually written inline,
+        // type a declared type is handed on once is usually written inline,
         // and there is no front of a record to write a keyword on.
         case let .linear(inner):
             return .dictionary([try Name(TypeReader.linearKey): try value(of: inner)])

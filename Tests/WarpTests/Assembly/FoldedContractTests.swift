@@ -10,7 +10,7 @@ import Testing
 struct FoldedContractTests {
     private let entryName: Name = "app.main"
 
-    private func documents(returning shape: TypeExpression, giving: Warp.Expression) throws -> [Module] {
+    private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
         let asking = try Module(
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             procedures: [
@@ -24,7 +24,7 @@ struct FoldedContractTests {
                     result: .literal(.int(1))
                 ),
                 "app.give": Procedure(
-                    signature: Signature(returns: shape),
+                    signature: Signature(returns: type),
                     body: [],
                     result: giving
                 )

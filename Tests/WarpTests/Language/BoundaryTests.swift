@@ -163,7 +163,7 @@ struct BoundaryTests {
     @Test("a type parameter read as anything is anything")
     func anyIsTheLoosestReading() throws {
         // Given. A list of anything, added to twice with two kinds of value.
-        // `accepts` cannot order `any` against a shape, since everything takes
+        // `accepts` cannot order `any` against a type, since everything takes
         // `any` and `any` takes everything, so asking which is looser answers
         // yes both ways and whichever was read first would win. Reading it
         // first is what a receiver does, and that made a list of anything into
@@ -199,7 +199,7 @@ struct BoundaryTests {
         }
     }
 
-    @Test("a name a module declared and the shape it stands for are one reading")
+    @Test("a name a module declared and the type it stands for are one reading")
     func aDeclaredNameIsNotADisagreement() throws {
         // Given. The parameter is read as `Tree` by the list and as the record
         // the call wrote. They are the same type, and calling them a
@@ -330,7 +330,7 @@ struct BoundaryTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One procedure, sent to one value with one operand. The shape every arithmetic
+    // One procedure, sent to one value with one operand. The type every arithmetic
     // procedure takes, so the cases above say what they are about and nothing else.
     private func answering(
         _ selector: Name,

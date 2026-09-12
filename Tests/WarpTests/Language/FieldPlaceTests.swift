@@ -242,7 +242,7 @@ struct FieldPlaceTests {
 
     @Test("a place and a name answer the same field")
     func bothWaysAnswerTheSameField() async throws {
-        // Given. One reads a shape the build laid out and one a dictionary,
+        // Given. One reads a type the build laid out and one a dictionary,
         // whose keys are the value's
         let laid = try Procedure(
             signature: Signature(

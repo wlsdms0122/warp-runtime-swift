@@ -35,7 +35,7 @@ public final class Linked: Sendable {
     public let signature: Signature
 
     // Where the receiver stands among the slots, which is where it stands
-    // among the parameters: a lowering reads a parameter's shape and leaves
+    // among the parameters: a lowering reads a parameter's type and leaves
     // the order alone.
     public let receiverPosition: Int?
 
@@ -95,7 +95,7 @@ public final class Linked: Sendable {
     }
 
     // The same row read against another table. A compile that lays more
-    // documents beside the one this came out of numbers their shapes past the
+    // documents beside the one this came out of numbers their types past the
     // ones here and moves none of them, so the slots stand as they are and are
     // carried over rather than lowered a second time. What changes is the
     // table the row settles a call against, which is the one the compile is

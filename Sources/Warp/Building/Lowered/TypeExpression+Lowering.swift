@@ -9,7 +9,7 @@ import Foundation
 
 extension TypeExpression {
     // This type as the run reads it, with every name resolved to its row. A
-    // name nothing declares lowers to the shape every judgment refuses, so
+    // name nothing declares lowers to the type every judgment refuses, so
     // lowering is total and a table a host built by hand still answers for
     // every other name in it.
     func lowered(in table: LoweredTypeTable) -> LoweredType {

@@ -18,7 +18,7 @@ struct SignatureTests {
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
     func untypedParameterDeclaresNothing() throws {
-        // Given. `any` would say every shape is welcome; this says nothing at
+        // Given. `any` would say every type is welcome; this says nothing at
         // all, and the two are not the same declaration even though neither is
         // checked
         let sut = try Loader.testing.loadDocument([
@@ -36,7 +36,7 @@ struct SignatureTests {
         #expect(signature.parameters["subject"]?.type == nil)
         #expect(signature.parameters["labelled"]?.type == .any)
 
-        // Neither checks, so both take a shape nothing was said about.
+        // Neither checks, so both take a type nothing was said about.
         let settled = try signature.settle(["subject": .int(1), "labelled": .int(2)])
 
         #expect(settled["subject"] == .int(1))

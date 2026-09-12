@@ -168,7 +168,7 @@ struct ValidationTests {
             )
         ]
 
-        // When / Then. Bare, and held inside a value shape alike
+        // When / Then. Bare, and held inside a value type alike
         #expect(!validates(body: sut))
         #expect(
             !validates(body: [
@@ -392,7 +392,7 @@ struct ValidationTests {
 
     @Test("a module that claims nothing states what it sends")
     func anUnclaimedModuleStatesWhatItSends() throws {
-        // Given. A caller assembling shapes in Swift holds the module and has
+        // Given. A caller assembling types in Swift holds the module and has
         // nobody to disclose it to, so there is no claim to be held to. What
         // travels is written from this, and what is written has to be true.
         let sut = try Module(
@@ -461,10 +461,10 @@ struct ValidationTests {
 
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
-        // Given. The one value shape a program cannot carry. A closure is made
+        // Given. The one value type a program cannot carry. A closure is made
         // by running the expression that writes one, so a literal holding one
         // is a program no text spells and nothing reads back. Only a caller
-        // assembling shapes in Swift can build it, and this is where that
+        // assembling types in Swift can build it, and this is where that
         // stops.
         let carried = Value.procedure(
             Closure.assembled()

@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A value on its way into a template. JSON is the shape a list or a mapping
+// A value on its way into a template. JSON is the type a list or a mapping
 // shows as, and this is the one thing in the package that writes one. By hand,
 // so what a value shows as is this file's own decision rather than a
 // general-purpose encoder's.
@@ -34,7 +34,7 @@ public struct Rendering {
     // The value as text. One implementation, because `text` the procedure and an
     // effect settling an argument are asking the same question. A scalar reads
     // as its document spelling (a host's infinity, which has none, in this
-    // file's own vocabulary; only the container shapes go through `written`,
+    // file's own vocabulary; only the container types go through `written`,
     // where JSON's own rules apply, and what JSON cannot write stays a visible
     // marker) an answer, not a failure.
     public func text() -> String {

@@ -103,7 +103,7 @@ struct ConformanceTests {
 
 // One question, read from the specification rather than written here.
 //
-// A case is not a program and is not written in the shape of one. It is spelled
+// A case is not a program and is not written in the type of one. It is spelled
 // in the same text (the encoding carries a tree and never learns what a tree
 // means, so there is one of those and not two) but what it holds under `test`
 // is a test, and the document it asks about is nested whole under `program`.
@@ -112,7 +112,7 @@ struct ConformanceTests {
 // a case declares `test`, a document declares `warp`, and each is refused by the
 // other's reader for what it is instead of for the keys it happens to carry.
 struct Case: Sendable, CustomStringConvertible {
-    // Which shapes a runner has to understand to ask these questions. It moves
+    // Which types a runner has to understand to ask these questions. It moves
     // for the same reason `warp` does and on its own schedule. The day a case
     // may say something new is not the day a document may.
     static let version = 2
@@ -148,7 +148,7 @@ struct Case: Sendable, CustomStringConvertible {
     init(from written: Value, in file: String) throws {
         self.file = file
 
-        // The version first, and before the shape, for the reason a document
+        // The version first, and before the type, for the reason a document
         // reads its own first: a later case may say something this runner has
         // no name for, and "I am too old for this" is a different answer from
         // "this is not a case".

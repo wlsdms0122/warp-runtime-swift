@@ -123,7 +123,7 @@ struct Fanout: Sendable {
     }
 
     // The receiver. Closures to run, under names for named pieces or an array
-    // for positional ones. Which one arrived decides the shape of the answer.
+    // for positional ones. Which one arrived decides the type of the answer.
     private func closures<P: NativeProcedure>(
         of invocation: Invocation<P>
     ) throws -> ([Piece], keyed: Bool) {

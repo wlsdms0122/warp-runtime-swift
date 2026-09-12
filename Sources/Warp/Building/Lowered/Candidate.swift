@@ -7,7 +7,7 @@
 
 import Foundation
 
-// One member of a `enum`, read against the slot's shape once at the link.
+// One member of a `enum`, read against the slot's type once at the link.
 //
 // Two readings, because an argument arrives as either. A settled value with a
 // scalar spelling is compared by that spelling, and a number is compared by

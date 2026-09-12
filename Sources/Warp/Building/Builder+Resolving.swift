@@ -16,8 +16,8 @@ extension Builder {
     // Which types answer which contracts, read off what the documents claimed.
     //
     // The table is remade holding the answer. Its rows are numbered from the
-    // declarations alone, so a shape lowered against either table is the same
-    // shape.
+    // declarations alone, so a type lowered against either table is the same
+    // type.
     func lowered(
         _ declaring: TypeTable,
         claims: [Placed<Claim>],
@@ -146,10 +146,10 @@ extension Builder {
         return symbols
     }
 
-    // Every shape the modules declared, and the check that each name a
+    // Every type the modules declared, and the check that each name a
     // declaration mentions is one of them. A type name is resolved here for the
     // same reason a procedure name is: unreached code still has to compile, and
-    // a signature naming a shape nobody declared is a defect whether or not
+    // a signature naming a type nobody declared is a defect whether or not
     // this run walks that way. The spaces arrive gathered from the qualifying
     // pass. The one place their uniqueness is refused, so what this judges is
     // what that fact was proved on. This judges content: what a declaration
@@ -162,9 +162,9 @@ extension Builder {
         standing: [Int],
         numbered linkage: Linkage
     ) throws -> TypeTable {
-        // A document's types and its memberships each take a run of shape rows
+        // A document's types and its memberships each take a run of type rows
         // the way its declarations take a run of table rows, in the standing
-        // order, so a document's shapes are behind the shapes it names.
+        // order, so a document's types are behind the types it names.
         let table = TypeTable(
             types: declared.mapValues(\.held),
             constraints: members.mapValues(\.held),
@@ -176,8 +176,8 @@ extension Builder {
             of: linkage
         )
 
-        // A name that reaches a shape may name itself along the way: `Tree`
-        // holding `array<Tree>` is a shape. A name that reaches only names
+        // A name that reaches a type may name itself along the way: `Tree`
+        // holding `array<Tree>` is a type. A name that reaches only names
         // never becomes one, and the lowering says which do, so the refusal
         // reads the lowering rather than walking the names a second way.
         // Refused first, so every walk below through `named` is finite.
@@ -189,7 +189,7 @@ extension Builder {
 
             throw BuildError(
                 "reaches itself through nothing but names, and a name"
-                    + " that only names names never reaches a shape",
+                    + " that only names names never reaches a type",
                 at: declaration.place
             )
         }
@@ -205,13 +205,13 @@ extension Builder {
                 )
             }
 
-            // A member is a concrete shape. `some` stands for a type and names
+            // A member is a concrete type. `some` stands for a type and names
             // none, `any` would admit everything a membership exists to narrow,
             // and `never` admits nothing. Each is a declaration that says
             // nothing a membership could hold, and a member that names another
             // constraint is what keeps the membership judgment from ever
             // chasing itself. Judged through every name a member hides behind,
-            // or one alias would carry the refused shape in. The chain is
+            // or one alias would carry the refused type in. The chain is
             // finite because a name-only cycle was refused above.
             for member in admitted {
                 var resolved = member
@@ -223,7 +223,7 @@ extension Builder {
                 switch resolved {
                 case .parameter, .any, .never:
                     throw BuildError(
-                        "a member is a concrete shape."
+                        "a member is a concrete type."
                             + " `\(member.rendered)` says nothing a"
                             + " membership could hold",
                         at: declaration.place
@@ -262,7 +262,7 @@ extension Builder {
         return table
     }
 
-    // Every shape a document names, held to being one the link declares. A
+    // Every type a document names, held to being one the link declares. A
     // document is read on its own: what is judged is its own text, and the
     // table is what the whole link declared.
     func judge(_ modules: [Module], in table: TypeTable) throws {

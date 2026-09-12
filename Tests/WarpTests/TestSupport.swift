@@ -67,7 +67,7 @@ struct FailEffect: Effect {
     // MARK: - Private
 }
 
-// A statement that may fail and does not: a plain cast onto a shape the value
+// A statement that may fail and does not: a plain cast onto a type the value
 // already fits. An `attempt` stands only over a body that can fail, so a test
 // showing what a rescue does *not* catch puts one of these in the body.
 func mayFail(_ name: Name = "checked") -> Statement {
@@ -264,7 +264,7 @@ struct ShoutEffect: Effect {
 // MARK: - Conditions
 
 // Walking a collection is a loop over its count, so a test writing one writes
-// the shape a notation spells `each` with: the round's index against the
+// the type a notation spells `each` with: the round's index against the
 // material's count, and the element read at that index.
 func walking(
     _ material: [PathSegment],

@@ -16,7 +16,7 @@ public extension Module {
         description: "Running closures at once.",
         constraints: [
             // What a fan-out is handed: closures under keys, or closures in
-            // order. Two shapes and no third, which is what a membership says
+            // order. Two types and no third, which is what a membership says
             // and what `any` could not.
             "std.concurrent.Pieces": [
                 .array(.procedure(nil, .unstated, .isolated)),
@@ -28,8 +28,8 @@ public extension Module {
             // in one link, so concurrency shows at the call site.
             //
             // What comes back is `any` because it is shaped like what went in,
-            // and a membership names a set of shapes rather than tying one of
-            // them to another. `map`, whose shapes are single, says it all.
+            // and a membership names a set of types rather than tying one of
+            // them to another. `map`, whose types are single, says it all.
             "std.concurrent.all": Procedure(
                 description: "Runs every closure, and answers every answer."
                     + " A record's under its keys, an array's in its order."

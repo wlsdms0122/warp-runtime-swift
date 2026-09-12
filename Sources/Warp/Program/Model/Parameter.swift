@@ -10,7 +10,7 @@ import Foundation
 public struct Parameter: Sendable, Equatable {
     // MARK: - Property
     // What this takes, or nil where nothing was declared. `any` is a claim that
-    // any shape is welcome; nil is the absence of a claim. Neither is checked,
+    // any type is welcome; nil is the absence of a claim. Neither is checked,
     // and keeping them apart is what lets the ones written on purpose be told
     // from the ones nobody got around to.
     public let type: TypeExpression?
@@ -18,7 +18,7 @@ public struct Parameter: Sendable, Equatable {
     public let `default`: Value?
     public let description: String?
 
-    // Whether a call must write this argument: the shape's one answer, for
+    // Whether a call must write this argument: the type's one answer, for
     // the call check, the boundary and path reachability alike.
     public func mustBeGiven(in types: TypeTable) -> Bool {
         declared.lowered(in: types.loweredTypes).mustBeGiven(default: `default`, in: types.loweredTypes)

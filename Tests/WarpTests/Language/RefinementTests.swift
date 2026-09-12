@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What a range may say. It began as one shape (whole numbers, both bounds
+// What a range may say. It began as one kind (whole numbers, both bounds
 // inside) and the two things it could not say were both things programs are
 // written against: a position below a length, and a ratio.
 //

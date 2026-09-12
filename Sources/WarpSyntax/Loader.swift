@@ -93,7 +93,7 @@ public struct Loader: Sendable {
         // said. Whether the list is *right* is the reader's, and it refuses
         // there.
         //
-        // After the shapes and not before them: a document that will not even
+        // After the types and not before them: a document that will not even
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.

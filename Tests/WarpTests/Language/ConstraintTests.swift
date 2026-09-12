@@ -380,7 +380,7 @@ struct ConstraintTests {
 
     @Test("a name that reaches only names refuses at the build")
     func aNameOnlyCycleRefusesAtTheLink() throws {
-        // Given. A shape may name itself through a shape, and a name that only
+        // Given. A type may name itself through a type, and a name that only
         // names names never becomes one
         let cycles: [[Name: TypeExpression]] = [
             ["Loop": .named("Loop")],
@@ -407,7 +407,7 @@ struct ConstraintTests {
             }
         }
 
-        // A recursive shape passes: the name reaches a shape on the way back.
+        // A recursive type passes: the name reaches a type on the way back.
         let tree = try Module(
             types: ["Tree": .record(["children": .array(.named("Tree"))])],
             procedures: [
@@ -424,7 +424,7 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a constraint member is a concrete shape")
+    @Test("a constraint member is a concrete type")
     func aConstraintMemberMustBeConcrete() throws {
         // Given. `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
@@ -444,7 +444,7 @@ struct ConstraintTests {
             #expect {
                 try builder.build([sut] + Module.standard, entry: entryName)
             } throws: { error in
-                error is BuildError && "\(error)".contains("a member is a concrete shape")
+                error is BuildError && "\(error)".contains("a member is a concrete type")
             }
         }
     }
@@ -578,9 +578,9 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a member hiding a refused shape behind a name still refuses")
+    @Test("a member hiding a refused type behind a name still refuses")
     func aMemberBehindANameIsJudgedResolved() throws {
-        // Given. An alias is a name for a shape, so what the shape may not be
+        // Given. An alias is a name for a type, so what the type may not be
         // the alias may not be either
         let sut = try Module(
             types: ["Anything": .any],
@@ -598,13 +598,13 @@ struct ConstraintTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("a member is a concrete shape")
+            error is BuildError && "\(error)".contains("a member is a concrete type")
         }
     }
 
-    @Test("a recursive shape compared with itself agrees instead of recursing")
+    @Test("a recursive type compared with itself agrees instead of recursing")
     func aRecursiveShapeAcceptsItself() throws {
-        // Given. A shape that names itself walks back into the comparison it is
+        // Given. A type that names itself walks back into the comparison it is
         // inside; meeting the pair again is agreement, not a regress
         let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
 
@@ -643,7 +643,7 @@ struct ConstraintTests {
 
     @Test("a dot on a record is a read, and a procedure there is written as a call")
     func aDotOnARecordDoesNotReachAProcedure() throws {
-        // Given. The record does not declare the name, and a shape with fields
+        // Given. The record does not declare the name, and a type with fields
         // reads fields alone: the procedure by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
@@ -669,7 +669,7 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a dot on a shape with no fields says to write the call")
+    @Test("a dot on a type with no fields says to write the call")
     func aDotOnAFieldlessShapeSaysToWriteTheCall() throws {
         // Given. Text has no name to read, so the refusal names the one
         // spelling that reaches the procedure: the written call

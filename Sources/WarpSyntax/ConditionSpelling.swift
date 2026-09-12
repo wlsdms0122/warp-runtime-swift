@@ -24,7 +24,7 @@ import Warp
 // It is a reader rather than a table because the lowering is a reading: a
 // connective holds conditions, which are read the same way recursively, and the
 // pieces report where they are through the same coding path everything else
-// does. A table of keys and procedures could not say that, and the shape of the
+// does. A table of keys and procedures could not say that, and the type of the
 // record is exactly the part that varies.
 public protocol ConditionSpelling: Sendable {
     // The keys that make a record one of this notation's conditions. A record
@@ -45,7 +45,7 @@ public protocol ConditionSpelling: Sendable {
 
     // The condition a record spells. Reached only for a record carrying one of
     // `keys`, and free to refuse. A key this notation names but does not
-    // offer is refused here, and so is one written in a shape it does not
+    // offer is refused here, and so is one written in a type it does not
     // have.
     func condition(from decoder: Decoder) throws -> Expression
 }

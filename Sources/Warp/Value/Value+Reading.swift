@@ -10,8 +10,8 @@ import Foundation
 extension Value {
     // The part a path names, in a record by key and in an array by position.
     // Every index was read to a position before this, and the link judged the
-    // path against the value's declared shape, so a part not held is refused
-    // as what it is: an entry not written yet, or a shape with no such part.
+    // path against the value's declared type, so a part not held is refused
+    // as what it is: an entry not written yet, or a type with no such part.
     func reading(at path: [PathSegment], under rendered: String) throws -> Value {
         guard let segment = path.first else { return self }
 

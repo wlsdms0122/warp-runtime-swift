@@ -64,7 +64,7 @@ struct CallTests {
         #expect(outputs["echoed"] == .string("back"))
     }
 
-    @Test("a procedure that declines the shape it was sent to reads as absence")
+    @Test("a procedure that declines the type it was sent to reads as absence")
     func decliningProcedureReadsAsAbsence() async throws {
         // Given. `count` has nothing to say about an int, and a procedure saying
         // nothing is the same answer as a field nobody set

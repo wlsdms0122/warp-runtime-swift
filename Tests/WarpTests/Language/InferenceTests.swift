@@ -59,7 +59,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a type parameter filled with one shape refuses a call wanting another")
+    @Test("a type parameter filled with one type refuses a call wanting another")
     func aFilledHoleRefusesWhatDisagrees() throws {
         // Given. The same walk, over an array of ints
         let wants = Procedure(
@@ -99,7 +99,7 @@ struct InferenceTests {
     func aWalkAnswersWhatItsProcedureDoes() throws {
         // Given. `map` over strings with a procedure answering int. What the
         // walk answers follows the procedure rather than the receiver, so
-        // asking for the receiver's shape back is the disagreement
+        // asking for the receiver's type back is the disagreement
         let counting = Procedure(
             signature: Signature(
                 parameters: ["item": Parameter(type: .string)],
@@ -301,7 +301,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a field of a declared shape carries the field's type")
+    @Test("a field of a declared type carries the field's type")
     func declaredShapeCarriesItsFields() throws {
         // Given
         let sut = try Module(
@@ -340,7 +340,7 @@ struct InferenceTests {
         )
 
         // When / Then. `task.done` is a bool, and the walk read that from the
-        // shape rather than from the value
+        // type rather than from the value
         #expect(throws: BuildError.self) {
             try builder.build([sut] + Module.standard, entry: entryName)
         }
@@ -480,7 +480,7 @@ struct InferenceTests {
 
     @Test("a declared answer is checked against what the body actually names")
     func rightTypesLink() throws {
-        // Given. The same shapes, agreeing
+        // Given. The same types, agreeing
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
@@ -633,7 +633,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a path drilling a field into a shape that has none is refused")
+    @Test("a path drilling a field into a type that has none is refused")
     func drillingIntoAShapeWithoutFieldsIsRefused() throws {
         // Given
         let sut = try Module(
@@ -683,7 +683,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a call on the shape it reached is not refused")
+    @Test("a call on the type it reached is not refused")
     func aProcedureCalledOnAReadingIsAllowed() throws {
         // Given
         let sut = try Module(
@@ -738,7 +738,7 @@ struct InferenceTests {
     @Test("a cast naming a type nothing declares refuses at the build")
     func aCastNamingNothingIsRefused() throws {
         // Given. `as?` says the author expected the value might not be that
-        // shape. A name nothing declares is not that, and letting it reach the
+        // type. A name nothing declares is not that, and letting it reach the
         // run would have `as?` read a typo as null forever. A type spelled in a
         // body is held to the rule a type spelled in a signature is
         let sut = try Module(
@@ -767,7 +767,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast onto a shape that proves nothing is refused, whatever it reads")
+    @Test("a cast onto a type that proves nothing is refused, whatever it reads")
     func aCastOntoNothingIsRefused() throws {
         // Given. The claim is judged on itself: `as: any` opens no door over an
         // `any` receiver any more than it does over an `int` one
@@ -799,7 +799,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast may name a shape sharing no field with the reading")
+    @Test("a cast may name a type sharing no field with the reading")
     func aCastOntoADisjointRecordStands() throws {
         // Given. Two records naming no field in common accept each other in
         // neither direction and are still both satisfied by one value: a record
@@ -830,7 +830,7 @@ struct InferenceTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a cast between two shapes that name themselves does not chase them forever")
+    @Test("a cast between two types that name themselves does not chase them forever")
     func aCastBetweenRecursiveTypesTerminates() throws {
         // Given. The reading is a declared type rather than `any`, so the walk
         // actually asks whether both could hold. Both sides name themselves,
@@ -889,7 +889,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("repeating a cast is refused whichever way the shape was spelled")
+    @Test("repeating a cast is refused whichever way the type was spelled")
     func aRepeatedCastIsRefusedInlineToo() throws {
         // Given. `payload as? int` hands on `int?`, and asking the sameness
         // question of the spelling rather than of what was handed on let this
@@ -964,7 +964,7 @@ struct InferenceTests {
     @Test("a name standing for a nullable is not wrapped again")
     func anAskingCastOntoANullableNameDoesNotDouble() throws {
         // Given. `Maybe` already holds null, so `as?: Maybe` reads `Maybe`.
-        // Wrapping the name again made the same shape read two ways depending
+        // Wrapping the name again made the same type read two ways depending
         // on whether the author wrote the name or what it stands for, and the
         // second cast then escaped the sameness rule
         let sut = try Module(
@@ -1003,7 +1003,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast in a procedure nothing reaches still names a declared shape")
+    @Test("a cast in a procedure nothing reaches still names a declared type")
     func aCastInUnreachedImpureCodeIsStillHeldToItsName() throws {
         // Given. Impure and unreachable from the entry, so neither the frontier
         // nor the pure set walks it. A signature written here would still be
@@ -1081,7 +1081,7 @@ struct InferenceTests {
 
     @Test("two nullables share null, so a cast between them stands")
     func aCastBetweenNullablesStands() throws {
-        // Given. Null satisfies both, so a value both shapes hold exists
+        // Given. Null satisfies both, so a value both types hold exists
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -1104,7 +1104,7 @@ struct InferenceTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a dictionary and a record are one shape read two ways, so a cast between them stands")
+    @Test("a dictionary and a record are one value read two ways, so a cast between them stands")
     func aCastBetweenADictionaryAndARecordStands() throws {
         // Given. The boundary settles both from the same runtime value, so
         // refusing this would refuse a cast that succeeds
@@ -1137,7 +1137,7 @@ struct InferenceTests {
     func aCastHandsOnItsName() throws {
         // Given. Casting the result to the same declared name again is the
         // sameness rule's case, and it can only see that if the reading it was
-        // handed is still `Person` rather than the shape Person stands for.
+        // handed is still `Person` rather than the type Person stands for.
         // (What a refusal *quotes* is the path walk's own business: it resolves
         // names at every step, for a cast's reading and a declared parameter's
         // alike.)
@@ -1208,7 +1208,7 @@ struct InferenceTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a cast between shapes no value is both is refused")
+    @Test("a cast between types no value is both is refused")
     func aCastThatCanNeverHoldIsRefused() throws {
         // Given. The reading proves a string is there, and no string is a whole
         // number. `as?` here would answer null on every run, which is the
@@ -1239,7 +1239,7 @@ struct InferenceTests {
     func aParameterPathSurvivesBeingNamed() async throws {
         // Given. `of.a.b` in one statement stands, so `x = of.a` then `x.b`
         // must stand too. Folding the parameter walk's reading to `any` made
-        // the second refuse on a shape the author never wrote
+        // the second refuse on a type the author never wrote
         let sut = try Module(
             procedures: [
                 "peek": Procedure(
@@ -1296,7 +1296,7 @@ struct InferenceTests {
         #expect(try await run(sut) == .int(7))
     }
 
-    @Test("a cast onto a shape holding any opens the door it names, and no further")
+    @Test("a cast onto a type holding any opens the door it names, and no further")
     func aCastOntoAShapeHoldingAnyOpensItsOwnDoor() throws {
         // Given. `as: array<any>` is not `as: any`: the types then prove an
         // array is there and an index reads one. What each element holds is
@@ -1358,7 +1358,7 @@ struct InferenceTests {
         _ = try builder.build([sut] + Module.standard, entry: entryName)
     }
 
-    @Test("a cast keeps the name the author wrote, not the shape it stands for")
+    @Test("a cast keeps the name the author wrote, not the type it stands for")
     func aCastKeepsItsName() throws {
         // Given. The build walks a declared name through to judge it, and what
         // it writes back is what was written: a refusal and a document both
@@ -1404,8 +1404,8 @@ struct InferenceTests {
 
     @Test("a cast opens what any declares nothing about")
     func aCastOpensAny() throws {
-        // Given. The same read, with the shape the author expects named: the
-        // dot is judged against that shape, and the run is left only the
+        // Given. The same read, with the type the author expects named: the
+        // dot is judged against that type, and the run is left only the
         // question of what arrived
         let sut = try Module(
             procedures: [

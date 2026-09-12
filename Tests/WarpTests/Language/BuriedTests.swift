@@ -12,7 +12,7 @@ import Testing
 // One walk over everything an expression holds.
 //
 // Three stages want all of it and differ only in what they keep (the closure
-// literals a body buries, the shapes its casts name, the selectors it sends)
+// literals a body buries, the types its casts name, the selectors it sends)
 // and each used to walk the language itself. A case added to `Expression`
 // reached whichever copies somebody remembered, and a case *handled* but not
 // descended into reached none of them while still compiling.

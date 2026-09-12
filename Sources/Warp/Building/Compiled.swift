@@ -22,9 +22,9 @@ public struct Compiled: Sendable, Declaring {
     // where the procedures are.
     let document: Place.Document
 
-    // What it declares in the three shape spaces, as it wrote them. A
+    // What it declares in the three type spaces, as it wrote them. A
     // link lays these down in the order it was handed the documents to
-    // make the table its rows are numbered against, and reads no shape of
+    // make the table its rows are numbered against, and reads no type of
     // this document anywhere else.
     let types: [Name: TypeExpression]
     let constraints: [Name: [TypeExpression]]
@@ -63,7 +63,7 @@ public struct Compiled: Sendable, Declaring {
 
     // What the build read off a body whose declaration wrote no `returns`,
     // by the spelling it was declared under and in this document's own
-    // shape numbers. A declaration that wrote its answer is not here:
+    // type numbers. A declaration that wrote its answer is not here:
     // what an author wrote stands on the row.
     //
     // Read off a body rather than out of a signature, so it is the one
@@ -72,10 +72,10 @@ public struct Compiled: Sendable, Declaring {
     let answers: [Name: LoweredType]
 
     // Where this document's lowered bodies number their calls and their
-    // shapes from. A body carries the document's own numbers, so this is
+    // types from. A body carries the document's own numbers, so this is
     // what a link reads to turn them into rows.
     let numbering: Numbering
-    let shapeNumbering: LoweredTypeNumbering
+    let typeNumbering: LoweredTypeNumbering
 
     // What this document's variables start a run holding, in the order
     // the layouts read them.
