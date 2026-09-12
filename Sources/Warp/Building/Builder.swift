@@ -127,7 +127,7 @@ public struct Builder: Sendable {
         // Which types answer which contracts among these documents. A row
         // whose signature names a contract lowers against that reading, so it
         // is worked out here rather than left to the compile that asks.
-        let shaped = try shaped(
+        let lowered = try lowered(
             declaring,
             conformances: declared.conformances,
             contracts: declared.contracts,
@@ -136,28 +136,28 @@ public struct Builder: Sendable {
         )
 
         var compiling = Compiling(
-            types: shaped.types,
-            requirements: shaped.requirements,
+            types: lowered.types,
+            requirements: lowered.requirements,
             naming: compiled.map(\.document)
         )
 
         for (origin, document) in compiled.enumerated() {
-            let numbered = document.shapeNumbering.rows(in: shaped.types.shapes)
+            let numbered = document.shapeNumbering.rows(in: lowered.types.loweredTypes)
 
             let rows = try document.table.map { judged -> Linked in
                 let row = try judged.folding(
-                    in: shaped.types.shapes,
+                    in: lowered.types.loweredTypes,
                     of: origin,
                     supplied: natives,
                     at: document.document
                 )
 
-                return try row.shaped { shape in
+                return try row.lowered { shape in
                     try numbered.read(shape, at: .procedure(row.label.spelling, in: document.document))
                 }
             }
 
-            let answered = try document.answers.reduce(into: [Name: Shape]()) { read, answer in
+            let answered = try document.answers.reduce(into: [Name: LoweredType]()) { read, answer in
                 read[answer.key] = try numbered.read(
                     answer.value,
                     at: .procedure(answer.key.spelling, in: document.document)
@@ -320,7 +320,7 @@ public struct Builder: Sendable {
         // contract, and what it hands over is written here rather than passed
         // over.
         let fulfillment = Fulfillment()
-        let shaped = try self.shaped(
+        let lowered = try self.lowered(
             declaring,
             conformances: declared.conformances,
             contracts: declared.contracts,
@@ -331,8 +331,8 @@ public struct Builder: Sendable {
 
         var compiling = Compiling(
             laid.carried,
-            types: shaped.types,
-            requirements: shaped.requirements,
+            types: lowered.types,
+            requirements: lowered.requirements,
             naming: documents.map(\.document)
         )
 
@@ -360,7 +360,7 @@ public struct Builder: Sendable {
     ) throws -> Compiled {
         fulfillment.laying(origin, at: Place(in: .of(module)))
 
-        let shapes = compiling.shapes
+        let loweredTypes = compiling.loweredTypes
 
         // What this document declares and what its variables are called, in
         // the order the rows and the boxes stand in.
@@ -370,7 +370,7 @@ public struct Builder: Sendable {
 
         // What the build read off this document's bodies whose declarations
         // wrote no `returns`.
-        var read: [Name: Shape] = [:]
+        var read: [Name: LoweredType] = [:]
 
         // What this document settled, and what each of its declarations calls.
         var constants: [Name: Value] = [:]
@@ -394,13 +394,13 @@ public struct Builder: Sendable {
         // variable stands in the environment as a box whose type is fixed:
         // what a write puts in it has to fit what it started as, because every
         // body of the document reads it as that.
-        func opening(_ signature: Signature) -> [Name: Shape] {
-            environment(of: signature, in: shapes)
-                .merging(constants.mapValues { value in type(of: value, in: shapes) }) { _, constant in
+        func opening(_ signature: Signature) -> [Name: LoweredType] {
+            environment(of: signature, in: loweredTypes)
+                .merging(constants.mapValues { value in type(of: value, in: loweredTypes) }) { _, constant in
                     constant
                 }
                 .merging(
-                    variables.mapValues { value in .inout(type(of: value, in: shapes)) }
+                    variables.mapValues { value in .inout(type(of: value, in: loweredTypes)) }
                 ) { _, variable in variable }
         }
 
@@ -431,7 +431,7 @@ public struct Builder: Sendable {
                     constants: constants,
                     origin: origin,
                     in: compiling.folding(),
-                    shapes: shapes
+                    loweredTypes: loweredTypes
                 )
 
                 // The starting environment knows the constants beside the
@@ -539,7 +539,7 @@ public struct Builder: Sendable {
                     isolated: compiling.isolated.contains(symbol.declared),
                     failing: compiling.failing[symbol.declared] ?? .unstated,
                     sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
-                    in: shapes
+                    in: loweredTypes
                 )
             },
             numbering: numbering,
@@ -618,7 +618,7 @@ public struct Builder: Sendable {
                 if let returns = procedure.signature.returns,
                    let answer = procedure.block?.result?.constantValue {
                     do {
-                        _ = try returns.lowered(in: shapes).settling(answer, at: "answer", in: shapes)
+                        _ = try returns.lowered(in: loweredTypes).settling(answer, at: "answer", in: loweredTypes)
                     } catch {
                         throw BuildError(
                             "answers \(answer.type), and its"
@@ -636,7 +636,7 @@ public struct Builder: Sendable {
         //
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
-        let shaped = try compiling.lowering.numbered(
+        let lowered = try compiling.lowering.numbered(
             declared.compactMap { name in compiling.lowering.rows[name] }
                 + (compiling.lowering.closureRows[origin] ?? []),
             of: origin,
@@ -651,11 +651,11 @@ public struct Builder: Sendable {
             conformances: module.conformances,
             leaned: fulfillment.conformances(of: origin),
             declared: declared,
-            table: shaped.table.map(Judged.init),
+            table: lowered.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
-            answers: shaped.answers,
+            answers: lowered.answers,
             numbering: numbering,
-            shapeNumbering: shaped.numbering,
+            shapeNumbering: lowered.numbering,
             variables: boxes.map { name in (name: name, value: variables[name] ?? .null) }
         )
     }
@@ -728,21 +728,21 @@ public struct Builder: Sendable {
             )
         }
 
-        let shaped = try shaped(
+        let lowered = try lowered(
             declaring,
             conformances: declared.conformances,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures
         )
-        let types = shaped.types
+        let types = lowered.types
 
         // What each document leaned on, answered by every claim in the list.
         for document in compiled {
             try leaning(
                 document.leaned,
-                on: types.shapes.satisfying,
-                unheld: shaped.unheld
+                on: types.loweredTypes.satisfying,
+                unheld: lowered.unheld
             )
         }
 

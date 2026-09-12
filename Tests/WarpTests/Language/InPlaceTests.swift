@@ -389,7 +389,7 @@ struct InPlaceTests {
         // Given. Assembled against the table it is judged against, so what is
         // being asked is the claim and not which link made the row
         let types = TypeTable()
-        let closure = Closure.assembled(answering: .int(1), in: types.shapes)
+        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
 
         // When / Then
         #expect(throws: ArgumentError.self) {

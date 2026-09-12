@@ -1,5 +1,5 @@
 //
-//  RecordShape.swift
+//  LoweredRecord.swift
 //  Warp
 //
 //  Created by JSilver on 9/5/26.
@@ -11,18 +11,18 @@ import Foundation
 // here is built on, and the shape of the field at each of its places. One
 // shape per field, checked where the pair is made, so every reading may take
 // the two together.
-struct RecordShape: Sendable, Equatable {
+struct LoweredRecord: Sendable, Equatable {
     // MARK: - Property
     let layout: Layout
-    let fields: [Shape]
+    let fields: [LoweredType]
 
     // The names beside the shapes, in the layout's order.
-    var named: Zip2Sequence<[Name], [Shape]> {
+    var named: Zip2Sequence<[Name], [LoweredType]> {
         zip(layout.fields, fields)
     }
 
     // MARK: - Initializer
-    init(layout: Layout, fields: [Shape]) {
+    init(layout: Layout, fields: [LoweredType]) {
         precondition(
             layout.fields.count == fields.count,
             "a record shape has one shape per field its layout names"
@@ -35,10 +35,10 @@ struct RecordShape: Sendable, Equatable {
     // What a loop binds each round. The link judges a round against it and
     // the run builds each round on its layout, so the place the link lowers
     // is the place the value puts the field at.
-    static let round = RecordShape(layout: Layout(name: nil, ordered: ["index"]), fields: [.int])
+    static let round = LoweredRecord(layout: Layout(name: nil, ordered: ["index"]), fields: [.int])
 
     // MARK: - Public
-    subscript(field: Name) -> Shape? {
+    subscript(field: Name) -> LoweredType? {
         layout.position(of: field).map { place in fields[place] }
     }
 

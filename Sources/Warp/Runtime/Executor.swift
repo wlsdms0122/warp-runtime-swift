@@ -25,7 +25,7 @@ public struct Executor: Sendable {
 
     // The shapes the link declared, by row. Every boundary that settles a
     // value reads it.
-    let shapes: ShapeTable
+    let loweredTypes: LoweredTypeTable
 
     // One box per module variable, made when the run starts, by the document
     // that declared it, in the order its frame reads them.
@@ -52,14 +52,14 @@ public struct Executor: Sendable {
         environment: (any Environment)?,
         linked: [Linked],
         resolving: Resolving,
-        shapes: ShapeTable = .empty,
+        loweredTypes: LoweredTypeTable = .empty,
         boxes: [[Handle]] = []
     ) {
         self.observer = observer
         self.environment = environment
         self.linked = linked
         self.resolving = resolving
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
         self.boxes = boxes
     }
 
@@ -75,7 +75,7 @@ public struct Executor: Sendable {
             environment: environment,
             linked: image.linked,
             resolving: .rows,
-            shapes: image.shapes,
+            loweredTypes: image.loweredTypes,
             boxes: image.variables.map { started in
                 started.map { name, value in Handle(name, value) }
             }
@@ -144,7 +144,7 @@ public struct Executor: Sendable {
         // Judging a value against a shape runs nothing, so a cast is data the
         // pure half can read.
         case let .cast(value, shape, optional):
-            return try shape.reading(try read(value, in: activation), optional: optional, in: shapes)
+            return try shape.reading(try read(value, in: activation), optional: optional, in: loweredTypes)
 
         case let .call(call):
             return try self.call(call, in: activation)
@@ -169,13 +169,13 @@ public struct Executor: Sendable {
     // boundary like a parameter's, so it is crossed by the one judge.
     private func held(
         _ value: Value,
-        as settling: Shape?,
+        as settling: LoweredType?,
         in slot: Int,
         of activation: Activation
     ) throws -> Value {
         guard let settling else { return value }
 
-        return try settling.settling(value, at: "'\(activation.frame.names[slot])'", in: shapes)
+        return try settling.settling(value, at: "'\(activation.frame.names[slot])'", in: loweredTypes)
     }
 
     // A body run as a procedure: what it answers is caught here, and what it
@@ -337,7 +337,7 @@ public struct Executor: Sendable {
             return try shape.reading(
                 await evaluate(value, in: &activation, at: trace),
                 optional: optional,
-                in: shapes
+                in: loweredTypes
             )
 
         case let .call(call):
@@ -502,7 +502,7 @@ public struct Executor: Sendable {
         }
 
         // Its rows are numbered by the table of the link that made it.
-        guard closure.linked.readable(in: shapes) else {
+        guard closure.linked.readable(in: loweredTypes) else {
             throw ExecutionError("this call \(Linked.unreadable)")
         }
 
@@ -534,7 +534,7 @@ public struct Executor: Sendable {
         while true {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
-            activation.cells[round] = .value(.record(Record(layout: RecordShape.round.layout, values: [.int(index)])))
+            activation.cells[round] = .value(.record(Record(layout: LoweredRecord.round.layout, values: [.int(index)])))
 
             guard try bool(try read(condition, in: activation)) else {
                 guard let result = body.result else { return .null }

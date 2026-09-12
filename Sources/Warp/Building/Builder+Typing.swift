@@ -34,7 +34,7 @@ extension Builder {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
     // are the only names declared before the first statement.
-    func environment(of signature: Signature, in table: ShapeTable) -> [Name: Shape] {
+    func environment(of signature: Signature, in table: LoweredTypeTable) -> [Name: LoweredType] {
         signature.parameters.mapValues { parameter in parameter.declared.lowered(in: table) }
     }
 
@@ -51,9 +51,9 @@ extension Builder {
     func reading(
         from block: Block,
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext
-    ) throws -> Shape {
+    ) throws -> LoweredType {
         let walked = try inspected(
             block: block,
             at: place,
@@ -74,11 +74,11 @@ extension Builder {
     // the author can act on it: at the `result` when one is written, and at
     // the `returns` when the body answers nothing at all.
     func held(
-        _ read: Shape,
+        _ read: LoweredType,
         to returns: TypeExpression?,
         resulting: Bool,
         at place: Place,
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) throws {
         guard let returns else { return }
 
@@ -100,7 +100,7 @@ extension Builder {
     func resolvedSites(
         in block: Block,
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         answering returns: TypeExpression?,
         with context: TypingContext,
         folding: Folding?,
@@ -120,7 +120,7 @@ extension Builder {
             to: returns,
             resulting: block.result != nil,
             at: place,
-            in: context.shapes
+            in: context.loweredTypes
         )
 
         return (inner.block, inner.calls)
@@ -130,7 +130,7 @@ extension Builder {
     func resolvedSites(
         in expression: Expression,
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
@@ -157,8 +157,8 @@ extension Builder {
     // costs nothing when the set holds its one.
     func constraintRefusal(
         mentions: [Name: Set<Name>],
-        readings: [Name: Shape],
-        in shapes: ShapeTable,
+        readings: [Name: LoweredType],
+        in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment?,
         at place: Place
     ) -> String? {
@@ -170,8 +170,8 @@ extension Builder {
                 // different questions of the same reading: what a membership
                 // admits is a set of shapes, what a contract asks is a set of
                 // words the reading's own type answers.
-                if shapes.satisfying[bound] != nil {
-                    switch shapes.answering(contract: bound, reading: reading) {
+                if loweredTypes.satisfying[bound] != nil {
+                    switch loweredTypes.answering(contract: bound, reading: reading) {
                     case let .leansOn(type):
                         fulfillment?.require(Conformance(type: type, contract: bound), at: place)
 
@@ -179,7 +179,7 @@ extension Builder {
                         break
 
                     case .settled(false):
-                        return "'\(parameter)' is read as \(reading.rendered(in: shapes)),"
+                        return "'\(parameter)' is read as \(reading.rendered(in: loweredTypes)),"
                             + " which does not answer every word '\(bound)' asks"
                     }
 
@@ -187,13 +187,13 @@ extension Builder {
                 }
 
                 guard
-                    let row = shapes.constraintRow(named: bound),
-                    !shapes.admits(constraint: row, reading: reading, assuming: [])
+                    let row = loweredTypes.constraintRow(named: bound),
+                    !loweredTypes.admits(constraint: row, reading: reading, assuming: [])
                 else {
                     continue
                 }
 
-                return "'\(parameter)' is read as \(reading.rendered(in: shapes)),"
+                return "'\(parameter)' is read as \(reading.rendered(in: loweredTypes)),"
                     + " which '\(bound)' does not admit"
             }
         }
@@ -208,16 +208,16 @@ extension Builder {
     // its membership, and the declaration comes back with the readings filled.
     // One machine, so a surface added later cannot lose a step in the copying.
     enum Judgment {
-        case fits(slots: [Slot], returns: Shape?)
+        case fits(slots: [Slot], returns: LoweredType?)
         case refusal(String)
     }
 
     func judged(
         _ declared: Signature,
         over slots: [Slot],
-        answering: Shape?,
+        answering: LoweredType?,
         filledWith bound: Bound,
-        in shapes: ShapeTable,
+        in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment?,
         at place: Place
     ) -> Judgment {
@@ -230,8 +230,8 @@ extension Builder {
 
         guard bound.disagreeing.isEmpty else {
             let named = bound.disagreeing.keys.sorted().map { parameter in
-                "'\(parameter)' is read as \(bound.readings[parameter]?.rendered(in: shapes) ?? "?")"
-                    + " and as \(bound.disagreeing[parameter]?.rendered(in: shapes) ?? "?")"
+                "'\(parameter)' is read as \(bound.readings[parameter]?.rendered(in: loweredTypes) ?? "?")"
+                    + " and as \(bound.disagreeing[parameter]?.rendered(in: loweredTypes) ?? "?")"
             }
 
             return .refusal(named.joined(separator: ", "))
@@ -243,7 +243,7 @@ extension Builder {
         if let refusal = constraintRefusal(
             mentions: mentions,
             readings: bound.readings,
-            in: shapes,
+            in: loweredTypes,
             fulfillment: fulfillment,
             at: place
         ) {
@@ -251,7 +251,7 @@ extension Builder {
         }
 
         return .fits(
-            slots: declared.lowered(in: shapes, filling: bound.readings),
+            slots: declared.lowered(in: loweredTypes, filling: bound.readings),
             returns: answering?.filling(bound.readings)
         )
     }
@@ -265,12 +265,12 @@ extension Builder {
         of signature: Signature,
         over slots: [Slot],
         at call: Call,
-        readings sent: [Name: Shape],
-        receiver received: Shape?,
-        in shapes: ShapeTable
+        readings sent: [Name: LoweredType],
+        receiver received: LoweredType?,
+        in loweredTypes: LoweredTypeTable
     ) -> Bound {
-        var bound: [Name: Shape] = [:]
-        var disagreeing: [Name: Shape] = [:]
+        var bound: [Name: LoweredType] = [:]
+        var disagreeing: [Name: LoweredType] = [:]
 
         for name in call.arguments.keys.sorted() {
             guard let slot = slots.first(where: { slot in slot.name == name }), let reading = sent[name] else {
@@ -281,7 +281,7 @@ extension Builder {
                 against: reading,
                 into: &bound,
                 disagreeing: &disagreeing,
-                in: shapes
+                in: loweredTypes
             )
         }
 
@@ -297,7 +297,7 @@ extension Builder {
             against: received,
             into: &bound,
             disagreeing: &disagreeing,
-            in: shapes
+            in: loweredTypes
         )
 
         return Bound(readings: bound, disagreeing: disagreeing)
@@ -310,12 +310,12 @@ extension Builder {
     private func answered(
         by signature: Signature?,
         over slots: [Slot],
-        answering: Shape?,
+        answering: LoweredType?,
         at call: Call,
-        readings sent: @autoclosure () throws -> [Name: Shape],
-        receiver received: @autoclosure () throws -> Shape?,
-        in shapes: ShapeTable
-    ) rethrows -> Shape {
+        readings sent: @autoclosure () throws -> [Name: LoweredType],
+        receiver received: @autoclosure () throws -> LoweredType?,
+        in loweredTypes: LoweredTypeTable
+    ) rethrows -> LoweredType {
         guard let signature, let returns = answering else { return .any }
         guard signature.isGeneric else { return returns }
 
@@ -326,7 +326,7 @@ extension Builder {
                 at: call,
                 readings: try sent(),
                 receiver: try received(),
-                in: shapes
+                in: loweredTypes
             ).readings
         )
     }
@@ -336,7 +336,7 @@ extension Builder {
     // answers, because they are read off one walk. A second walk for the
     // rewrite would be a second copy of the rules.
     enum PathReading {
-        case reads([PathSegment], Shape)
+        case reads([PathSegment], LoweredType)
         case refused(String)
     }
 
@@ -363,7 +363,7 @@ extension Builder {
     // all, so there is nothing to judge and nothing to refuse.
     func reading(
         of path: [PathSegment],
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -432,7 +432,7 @@ extension Builder {
                     }
 
                     return .refused(
-                        "\(walked.rendered) \(reach) \(current.rendered(in: context.shapes)),"
+                        "\(walked.rendered) \(reach) \(current.rendered(in: context.loweredTypes)),"
                             + " which declares nothing."
                             + " A shape is read by naming it, with `as`"
                     )
@@ -518,7 +518,7 @@ extension Builder {
 
                 guard segment.optional else {
                     return .refused(
-                        "\(walked.rendered) reads into \(current.rendered(in: context.shapes)),"
+                        "\(walked.rendered) reads into \(current.rendered(in: context.loweredTypes)),"
                             + " which may be null. Absence is read with"
                             + " `\(segment.mark)`"
                     )
@@ -537,7 +537,7 @@ extension Builder {
             func needless(_ landing: PathSegment.Landing) -> PathReading? {
                 segment.needlessMark(
                     at: walked,
-                    on: current.rendered(in: context.shapes),
+                    on: current.rendered(in: context.loweredTypes),
                     landing: landing,
                     unwrapped: unwrapped
                 )
@@ -548,7 +548,7 @@ extension Builder {
             // bytes, an array in a compact spelling). An element past the end
             // is a defect at the run, not an absence, so `?[` says nothing
             // here unless it just unwrapped the array's own null.
-            func indexed(_ element: Shape) -> PathReading? {
+            func indexed(_ element: LoweredType) -> PathReading? {
                 if let refusal = needless(.element) { return refusal }
 
                 current = element
@@ -597,7 +597,7 @@ extension Builder {
 
             case (.index, _), (.indexRef, _):
                 return .refused(
-                    "\(walked.rendered) indexes into \(current.rendered(in: context.shapes)),"
+                    "\(walked.rendered) indexes into \(current.rendered(in: context.loweredTypes)),"
                         + " and only an array is indexed"
                 )
 
@@ -624,7 +624,7 @@ extension Builder {
                 guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
-                            + " which \(current.rendered(in: context.shapes)) does not declare."
+                            + " which \(current.rendered(in: context.loweredTypes)) does not declare."
                             + " A word is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
                             + " or through `dictionary<any>`"
@@ -642,7 +642,7 @@ extension Builder {
             case let (.key(key, _), _):
                 return .refused(
                     "\(walked.rendered) names '\(key)',"
-                        + " and \(current.rendered(in: context.shapes)) has no name there to read."
+                        + " and \(current.rendered(in: context.loweredTypes)) has no name there to read."
                         + " A word by that spelling is sent with a written call"
                 )
             }
@@ -652,14 +652,14 @@ extension Builder {
     }
 
     // MARK: - Private
-    private static let roundType = Shape.record(.round)
+    private static let roundType = LoweredType.record(.round)
 
     // The segments a stopped walk hands back: as written, except that an index
     // reference is a path of its own and is judged wherever the outer walk
     // stops.
     private func asWritten(
         _ segments: [PathSegment],
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -699,7 +699,7 @@ extension Builder {
 
     private func indexReference(
         _ inner: [PathSegment],
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -716,7 +716,7 @@ extension Builder {
             default:
                 return .refused(
                     "index reference \(inner.rendered) reads"
-                        + " \(innerType.rendered(in: context.shapes)), expected int"
+                        + " \(innerType.rendered(in: context.loweredTypes)), expected int"
                 )
             }
         }
@@ -790,7 +790,7 @@ extension Builder {
 
     // What a path that read past a possible absence holds. Wrapping what
     // already admits null would say the one fact twice.
-    private func nullableReading(of type: Shape) -> Shape {
+    private func nullableReading(of type: LoweredType) -> LoweredType {
         switch type {
         case .any, .null, .nullable:
             return type
@@ -807,7 +807,7 @@ extension Builder {
     // finishing way through made the write. A definite write retypes the name;
     // an indefinite one joins with what the name held.
     private struct Flow {
-        var written: [Name: (type: Shape, definite: Bool)] = [:]
+        var written: [Name: (type: LoweredType, definite: Bool)] = [:]
 
         // What was written on ways that left. It flows past nothing here (no
         // run comes back from a leave) but a `break` ends only its loop and an
@@ -816,7 +816,7 @@ extension Builder {
         // certain, and the type says so by having no room for the claim. A flow
         // that leaves holds everything it wrote here and nothing under
         // `written`.
-        var escaped: [Name: Shape] = [:]
+        var escaped: [Name: LoweredType] = [:]
 
         // Whether every way through leaves.
         var leaves = false
@@ -831,12 +831,12 @@ extension Builder {
         // Beside `escaped` rather than folded into it: an escaped write is
         // about a name the body around this one holds, and this is about the
         // value the procedure hands its caller.
-        var answered: Shape?
+        var answered: LoweredType?
     }
 
     // Two answers, either of which may not be there. The join, said once, for
     // the places that gather what a body hands back.
-    private func joined(_ left: Shape?, _ right: Shape?) -> Shape? {
+    private func joined(_ left: LoweredType?, _ right: LoweredType?) -> LoweredType? {
         guard let right else { return left }
 
         return join(left, right)
@@ -849,15 +849,15 @@ extension Builder {
     // environment or another Flow reads these two, so the rule cannot drift one
     // copy at a time.
     private func merged(
-        _ held: (type: Shape, definite: Bool)?,
-        with later: (type: Shape, definite: Bool)
-    ) -> (type: Shape, definite: Bool) {
+        _ held: (type: LoweredType, definite: Bool)?,
+        with later: (type: LoweredType, definite: Bool)
+    ) -> (type: LoweredType, definite: Bool) {
         guard let held, !later.definite else { return later }
 
         return (join(held.type, later.type), held.definite)
     }
 
-    private func apply(_ flowed: Flow, to environment: inout [Name: Shape]) {
+    private func apply(_ flowed: Flow, to environment: inout [Name: LoweredType]) {
         for (name, write) in flowed.written {
             // A box whose type is fixed was checked where it was written, and
             // a write into it changes nothing about what it holds.
@@ -938,7 +938,7 @@ extension Builder {
     private struct Inspection {
         var rewritten: Expression
         var calls: [CallSite] = []
-        var reading: Shape
+        var reading: LoweredType
         var flow = Flow()
     }
 
@@ -947,13 +947,13 @@ extension Builder {
     private func inspected(
         _ expression: Expression,
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
     ) throws -> Inspection {
         switch expression {
         case let .literal(value):
-            return Inspection(rewritten: expression, reading: type(of: value, in: context.shapes))
+            return Inspection(rewritten: expression, reading: type(of: value, in: context.loweredTypes))
 
         // Nothing comes back from here, so there is no value to have a type.
         // `never` fits wherever it is written, and what evaluating the carried
@@ -963,7 +963,7 @@ extension Builder {
             // caller (a `break` ends its loop and a `continue` its round) and
             // one carrying nothing hands back the null a body with no result
             // hands back, which is the run's own answer for it.
-            func answering(_ flowed: Flow, carrying carried: Shape?) -> Flow {
+            func answering(_ flowed: Flow, carrying carried: LoweredType?) -> Flow {
                 guard leave.reach == .procedure else { return flowed }
 
                 var answering = flowed
@@ -1029,7 +1029,7 @@ extension Builder {
                 do {
                     let value = try folding.read(settled, at: place)
 
-                    return Inspection(rewritten: .literal(value), reading: type(of: value, in: context.shapes))
+                    return Inspection(rewritten: .literal(value), reading: type(of: value, in: context.loweredTypes))
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }
@@ -1040,7 +1040,7 @@ extension Builder {
             var rewritten: [Expression] = []
             var calls: [CallSite] = []
             var flowed = Flow()
-            var element: Shape?
+            var element: LoweredType?
 
             for (position, member) in array.enumerated() {
                 let inner = try inspected(
@@ -1082,10 +1082,10 @@ extension Builder {
                 with: context,
                 ask: ask
             )
-            let conformance = type.lowered(in: context.shapes)
-            let settled = conformance.resolved(in: context.shapes)
+            let conformance = type.lowered(in: context.loweredTypes)
+            let settled = conformance.resolved(in: context.loweredTypes)
 
-            let read = inner.reading.resolved(in: context.shapes)
+            let read = inner.reading.resolved(in: context.loweredTypes)
 
             // Both refusals ask the shapes themselves, with nothing gating them
             // on whether the reading is fully proven. A gate like that turned
@@ -1114,24 +1114,24 @@ extension Builder {
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
             // rather than about the spelling that produced it.
-            let handed = optional && !conformance.declaresNull(in: context.shapes)
-                ? Shape.nullable(conformance)
+            let handed = optional && !conformance.declaresNull(in: context.loweredTypes)
+                ? LoweredType.nullable(conformance)
                 : conformance
 
             // A declared record is a name as well as a shape: reading a
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = context.shapes.record(of: conformance) != nil
+            let nominal = context.loweredTypes.record(of: conformance) != nil
 
-            if !conformance.couldBothHold(inner.reading, in: context.shapes) {
+            if !conformance.couldBothHold(inner.reading, in: context.loweredTypes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
                 try refuse(
-                    "reads \(inner.reading.rendered(in: context.shapes)) as \(settled.rendered(in: context.shapes)),"
+                    "reads \(inner.reading.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
                         + " and no value is both."
                         + " A cast names a shape the value may turn out to"
                         + " have, and this one it never can",
@@ -1139,14 +1139,14 @@ extension Builder {
                     when: ask
                 )
             } else if inner.reading == conformance
-                || (!nominal && (settled == read || handed.resolved(in: context.shapes) == read)) {
+                || (!nominal && (settled == read || handed.resolved(in: context.loweredTypes) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same shape by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
                 try refuse(
-                    "reads \(inner.reading.rendered(in: context.shapes)) as \(settled.rendered(in: context.shapes)),"
+                    "reads \(inner.reading.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
                         + " which it already is."
                         + " A cast opens a shape the types do not prove,"
                         + " and here they do",
@@ -1187,7 +1187,7 @@ extension Builder {
             var rewritten: [Name: Expression] = [:]
             var calls: [CallSite] = []
             var flowed = Flow()
-            var fields: [Name: Shape] = [:]
+            var fields: [Name: LoweredType] = [:]
 
             for (name, field) in record.sorted { $0.key < $1.key } {
                 let inner = try inspected(
@@ -1229,7 +1229,7 @@ extension Builder {
                 let inner = try inspected(
                     block: written,
                     at: place.part(.closure),
-                    in: environment.merging(self.environment(of: procedure.signature, in: context.shapes)) {
+                    in: environment.merging(self.environment(of: procedure.signature, in: context.loweredTypes)) {
                         _, new in new
                     },
                     with: context,
@@ -1243,11 +1243,11 @@ extension Builder {
                 for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
                     guard let held = environment[name]?.fieldUnwrapped.inoutUnwrapped else { continue }
 
-                    guard held.accepts(write.type, in: context.shapes) else {
+                    guard held.accepts(write.type, in: context.loweredTypes) else {
                         throw BuildError(
                             "writes '\(name)', which it captured, as"
-                                + " \(write.type.rendered(in: context.shapes)). The body it captured"
-                                + " from holds it as \(held.rendered(in: context.shapes))",
+                                + " \(write.type.rendered(in: context.loweredTypes)). The body it captured"
+                                + " from holds it as \(held.rendered(in: context.loweredTypes))",
                             at: place.part(.closure)
                         )
                     }
@@ -1258,7 +1258,7 @@ extension Builder {
                     to: procedure.signature.returns,
                     resulting: written.result != nil,
                     at: place.part(.closure),
-                    in: context.shapes
+                    in: context.loweredTypes
                 )
 
                 body = inner.block
@@ -1302,7 +1302,7 @@ extension Builder {
                     pure ? .pure : .unstated,
                     isolated ? .isolated : .unstated
                 )
-                .lowered(in: context.shapes)
+                .lowered(in: context.loweredTypes)
             )
 
         // Which value is called is settled at run time, so nothing here can say
@@ -1395,7 +1395,7 @@ extension Builder {
                                 ask: ask
                             ).reading
                         },
-                        in: context.shapes
+                        in: context.loweredTypes
                     )
                 )
             }
@@ -1450,7 +1450,7 @@ extension Builder {
             }
 
             var arguments: [Name: Expression] = [:]
-            var sent: [Name: Shape] = [:]
+            var sent: [Name: LoweredType] = [:]
             var calls = receiver?.calls ?? []
 
             for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
@@ -1500,7 +1500,7 @@ extension Builder {
                     at: call,
                     readings: sent,
                     receiver: receiver?.reading,
-                    in: context.shapes
+                    in: context.loweredTypes
                 )
             )
 
@@ -1728,7 +1728,7 @@ extension Builder {
         contract asked: Requirement,
         call: Call,
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
     ) throws -> Inspection {
@@ -1753,7 +1753,7 @@ extension Builder {
             ask: ask
         )
 
-        switch context.shapes.answering(contract: asked.contract, reading: receiver.reading) {
+        switch context.loweredTypes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
             ask.fulfillment?.require(
                 Conformance(type: type, contract: asked.contract),
@@ -1765,7 +1765,7 @@ extension Builder {
 
         case .settled(false):
             throw BuildError(
-                "sends '\(call.selector)' to \(receiver.reading.rendered(in: context.shapes)),"
+                "sends '\(call.selector)' to \(receiver.reading.rendered(in: context.loweredTypes)),"
                     + " which does not answer every word '\(asked.contract)' asks",
                 at: place.part(.receiver)
             )
@@ -1795,9 +1795,9 @@ extension Builder {
                 ask: ask
             )
 
-            guard parameter.declared.lowered(in: context.shapes).accepts(inner.reading, in: context.shapes) else {
+            guard parameter.declared.lowered(in: context.loweredTypes).accepts(inner.reading, in: context.loweredTypes) else {
                 throw BuildError(
-                    "hands \(inner.reading.rendered(in: context.shapes)) where '\(asked.contract)'"
+                    "hands \(inner.reading.rendered(in: context.loweredTypes)) where '\(asked.contract)'"
                         + " writes \(parameter.declared.rendered)",
                     at: place.argument(name.spelling)
                 )
@@ -1811,7 +1811,7 @@ extension Builder {
         where call.arguments[name] == nil {
             guard
                 parameter.default != nil
-                    || parameter.declared.lowered(in: context.shapes).declaresNull(in: context.shapes)
+                    || parameter.declared.lowered(in: context.loweredTypes).declaresNull(in: context.loweredTypes)
             else {
                 throw BuildError(
                     "sends '\(call.selector)' without '\(name)', which"
@@ -1826,7 +1826,7 @@ extension Builder {
                 ? .call(Call(receiver: receiver.rewritten, selector: call.selector, arguments: arguments))
                 : .call(call),
             calls: calls,
-            reading: asked.signature.returns?.lowered(in: context.shapes) ?? .any
+            reading: asked.signature.returns?.lowered(in: context.loweredTypes) ?? .any
         )
     }
 
@@ -1836,10 +1836,10 @@ extension Builder {
     private func inspected(
         block: Block,
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
-    ) throws -> (block: Block, calls: [CallSite], reading: Shape, flow: Flow) {
+    ) throws -> (block: Block, calls: [CallSite], reading: LoweredType, flow: Flow) {
         let body = try inspected(
             block.body,
             at: place.part(.body),
@@ -1854,7 +1854,7 @@ extension Builder {
         // one rule the shape has: a loop's exit-answered result is the loop's
         // own to read, not this walk's.
         let tail: Inspection?
-        let reading: Shape
+        let reading: LoweredType
         let flow: Flow
 
         if body.reading == .never {
@@ -1905,8 +1905,8 @@ extension Builder {
     private typealias BodyWalk = (
         body: [Statement],
         calls: [CallSite],
-        environment: [Name: Shape],
-        reading: Shape,
+        environment: [Name: LoweredType],
+        reading: LoweredType,
         flow: Flow
     )
 
@@ -1918,7 +1918,7 @@ extension Builder {
     private func inspected(
         _ body: [Statement],
         at place: Place,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
     ) throws -> BodyWalk {
@@ -2215,9 +2215,9 @@ extension Builder {
     // The environment a loop's insides read: the enclosing names plus the
     // round. One maker, because the fixpoint and its asker both read it.
     private func rounded(
-        _ environment: [Name: Shape],
+        _ environment: [Name: LoweredType],
         as round: Name
-    ) -> [Name: Shape] {
+    ) -> [Name: LoweredType] {
         environment.merging([round: Self.roundType]) { _, new in new }
     }
 
@@ -2228,10 +2228,10 @@ extension Builder {
     // material a second time for it.
     private func walking(
         _ element: Name,
-        holding reading: Shape,
-        in environment: [Name: Shape]
-    ) -> [Name: Shape] {
-        let item: Shape
+        holding reading: LoweredType,
+        in environment: [Name: LoweredType]
+    ) -> [Name: LoweredType] {
+        let item: LoweredType
 
         if case let .array(held) = reading.unrefined {
             item = held
@@ -2250,13 +2250,13 @@ extension Builder {
     private func caught(
         soaking flow: Flow,
         failure: Name,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext
-    ) -> [Name: Shape] {
+    ) -> [Name: LoweredType] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
-        caught[failure] = FailurePayload.declared.lowered(in: context.shapes)
+        caught[failure] = FailurePayload.declared.lowered(in: context.loweredTypes)
 
         return caught
     }
@@ -2273,9 +2273,9 @@ extension Builder {
     // the body writes falls to `any`, over-wide and never wrong; the judging
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
-        from entry: [Name: Shape],
-        read: ([Name: Shape]) throws -> (round: Round, flow: Flow)
-    ) rethrows -> (environment: [Name: Shape], last: Round, converged: Bool) {
+        from entry: [Name: LoweredType],
+        read: ([Name: LoweredType]) throws -> (round: Round, flow: Flow)
+    ) rethrows -> (environment: [Name: LoweredType], last: Round, converged: Bool) {
         var seeded = entry
         var (last, flow) = try read(seeded)
         var steps = 0
@@ -2308,7 +2308,7 @@ extension Builder {
 
     // What a settled value reads as. Internal, because a constant is a value
     // whose type seeds the environment its readers are judged in.
-    func type(of value: Value, in table: ShapeTable) -> Shape {
+    func type(of value: Value, in table: LoweredTypeTable) -> LoweredType {
         switch value {
         case .null:
             return .null
@@ -2345,7 +2345,7 @@ extension Builder {
         // type names its fields by Swift's equality, so two spellings the
         // value keeps apart are one field here, the first by bytes.
         case let .record(record):
-            return record.name.flatMap { name in table.row(named: name).map(Shape.named) }
+            return record.name.flatMap { name in table.row(named: name).map(LoweredType.named) }
                 ?? .record(
                     Dictionary(
                         zip(record.names, record.values).map { name, value in (name, type(of: value, in: table)) }
@@ -2368,7 +2368,7 @@ extension Builder {
     // A reading that leaves is not one of the two. It contributes no value, so
     // it cannot disagree with the reading that stays, and the slot holds what
     // the other one said.
-    private func join(_ left: Shape?, _ right: Shape) -> Shape {
+    private func join(_ left: LoweredType?, _ right: LoweredType) -> LoweredType {
         guard let left else { return right }
         guard left != .never else { return right }
         guard right != .never else { return left }
@@ -2425,7 +2425,7 @@ extension Builder {
 extension Builder {
     // Where a write lands, or why it lands nowhere.
     enum Writable {
-        case reaches(Shape)
+        case reaches(LoweredType)
         case refused(String)
     }
 
@@ -2436,7 +2436,7 @@ extension Builder {
     // shape that may be null is not written into, and neither is `any`.
     func writable(
         _ path: [PathSegment],
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         at place: Place,
         writing fulfillment: Fulfillment?
@@ -2479,7 +2479,7 @@ extension Builder {
             case let (.key(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
-                        "\(walked.rendered) names '\(key)', which \(current.rendered(in: context.shapes))"
+                        "\(walked.rendered) names '\(key)', which \(current.rendered(in: context.loweredTypes))"
                             + " does not declare"
                     )
                 }
@@ -2502,25 +2502,25 @@ extension Builder {
 
             case (.key, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
-                    "\(walked.rendered) writes into \(current.rendered(in: context.shapes)), which"
+                    "\(walked.rendered) writes into \(current.rendered(in: context.loweredTypes)), which"
                         + " declares nothing. A shape is written by naming it"
                 )
 
             case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):
                 return .refused(
-                    "\(walked.rendered) writes into \(current.rendered(in: context.shapes)), which may"
+                    "\(walked.rendered) writes into \(current.rendered(in: context.loweredTypes)), which may"
                         + " be null. Write the whole first"
                 )
 
             case (.key, _):
                 return .refused(
-                    "\(walked.rendered) writes a field into \(current.rendered(in: context.shapes)),"
+                    "\(walked.rendered) writes a field into \(current.rendered(in: context.loweredTypes)),"
                         + " which has none"
                 )
 
             case (.index, _), (.indexRef, _):
                 return .refused(
-                    "\(walked.rendered) writes an element into \(current.rendered(in: context.shapes)),"
+                    "\(walked.rendered) writes an element into \(current.rendered(in: context.loweredTypes)),"
                         + " and only an array is written by position"
                 )
             }
@@ -2537,7 +2537,7 @@ extension Builder {
     private func handedInPlace(
         by call: Call,
         to signature: Signature,
-        in environment: [Name: Shape],
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         at place: Place,
         when ask: Ask
@@ -2585,18 +2585,18 @@ extension Builder {
     // What a name holds: what it declared, held against what it was given, or
     // what the link worked out where it declared nothing.
     private func held(
-        _ given: Shape,
+        _ given: LoweredType,
         declaredAs written: TypeExpression?,
         at place: Place,
         with context: TypingContext,
         when ask: Ask
-    ) throws -> Shape {
-        guard let declared = written?.lowered(in: context.shapes) else { return given }
+    ) throws -> LoweredType {
+        guard let declared = written?.lowered(in: context.loweredTypes) else { return given }
 
-        guard declared.accepts(given, in: context.shapes) else {
+        guard declared.accepts(given, in: context.loweredTypes) else {
             try refuse(
-                "holds \(declared.rendered(in: context.shapes)), and what it was given is"
-                    + " \(given.rendered(in: context.shapes))",
+                "holds \(declared.rendered(in: context.loweredTypes)), and what it was given is"
+                    + " \(given.rendered(in: context.loweredTypes))",
                 at: place,
                 when: ask
             )
@@ -2611,15 +2611,15 @@ extension Builder {
     }
 
     private func refuseUnfit(
-        _ written: Shape,
+        _ written: LoweredType,
         writtenTo path: [PathSegment],
-        holding fixed: Shape?,
-        in environment: [Name: Shape],
+        holding fixed: LoweredType?,
+        in environment: [Name: LoweredType],
         with context: TypingContext,
         at place: Place,
         when ask: Ask
     ) throws {
-        let slot: Shape
+        let slot: LoweredType
 
         if path.count == 1, let fixed {
             slot = fixed
@@ -2634,10 +2634,10 @@ extension Builder {
             }
         }
 
-        guard slot.accepts(written, in: context.shapes) else {
+        guard slot.accepts(written, in: context.loweredTypes) else {
             try refuse(
-                "writes '\(path.rendered)' as \(written.rendered(in: context.shapes)), and it holds"
-                    + " \(slot.rendered(in: context.shapes))",
+                "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
+                    + " \(slot.rendered(in: context.loweredTypes))",
                 at: place,
                 when: ask
             )

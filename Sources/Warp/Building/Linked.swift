@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A declaration, or a closure literal, read against a shape table: the
+// A declaration, or a closure literal, read against a lowered type table: the
 // parameters as a run settles them and what the answer settles against, which
 // are that table's rows. What a document settles without one is `Judged`.
 //
@@ -51,12 +51,12 @@ public final class Linked: Sendable {
     // the answer settles against. The declaration's lowering, born here
     // from the signature beside it.
     let slots: [Slot]
-    let returns: Shape?
+    let returns: LoweredType?
 
     // The table the slots' rows are numbered by. A row means something in
     // its own link alone, and a closure value carries its row out of a run,
     // so a run that is handed one asks whether it was made by the same link.
-    let table: ShapeTable
+    let table: LoweredTypeTable
 
     // The rows this row's word sends, in the places the word names them at.
     // Empty for a body, whose sends are calls its own code carries.
@@ -74,7 +74,7 @@ public final class Linked: Sendable {
         failing: Failing,
         implementation: Implementation,
         sends: [Int] = [],
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
         let returns = signature.returns?.lowered(in: table)
@@ -101,7 +101,7 @@ public final class Linked: Sendable {
     // table the row settles a call against, which is the one the compile is
     // asking with: its rows carry what that compile has worked out and what it
     // is still owed.
-    init(_ row: Linked, in table: ShapeTable) {
+    init(_ row: Linked, in table: LoweredTypeTable) {
         self.label = row.label
         self.origin = row.origin
         self.signature = row.signature
@@ -148,7 +148,7 @@ public final class Linked: Sendable {
         isolated: Bool,
         failing: Failing,
         sends: [Int],
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) -> Linked {
         Linked(
             label: label,
@@ -203,7 +203,7 @@ public final class Linked: Sendable {
 
     // Whether a run reading that table can read this row: the row was made
     // by the same link.
-    func readable(in other: ShapeTable) -> Bool {
+    func readable(in other: LoweredTypeTable) -> Bool {
         table.linkage === other.linkage
     }
 

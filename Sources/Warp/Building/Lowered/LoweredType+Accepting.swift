@@ -1,5 +1,5 @@
 //
-//  Shape+Accepting.swift
+//  LoweredType+Accepting.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -15,12 +15,12 @@ import Foundation
 // reached a procedure slot through `any`. A name the table does not answer
 // passes every one of them: nothing is knowable about it here, and the
 // value judge refuses it where a value arrives.
-extension Shape {
+extension LoweredType {
     // Whether a value of `other` may stand where this is declared.
     // Structural, and one-directional: `any` on the left accepts anything
     // because nothing was declared, and `any` on the right is accepted by
     // anything because nothing is known.
-    func accepts(_ other: Shape, in table: ShapeTable) -> Bool {
+    func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
         accepts(other, in: table, assuming: [])
     }
 
@@ -29,7 +29,7 @@ extension Shape {
     // structurally walks back to the comparison it is inside, and a
     // recursive shape agrees with itself precisely when assuming it does
     // uncovers no disagreement. Only the two `named` doors record the pair.
-    func accepts(_ other: Shape, in table: ShapeTable, assuming: [(Shape, Shape)]) -> Bool {
+    func accepts(_ other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
         // Two declared records under two names are two types, whatever their
         // shapes: a value settled under one name fits only that name.
         if
@@ -83,12 +83,12 @@ extension Shape {
         case let (.named(row), _):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return table.shapes[row].accepts(other, in: table, assuming: assuming + [(self, other)])
+            return table.loweredTypes[row].accepts(other, in: table, assuming: assuming + [(self, other)])
 
         case let (_, .named(row)):
             guard !assuming.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
 
-            return accepts(table.shapes[row], in: table, assuming: assuming + [(self, other)])
+            return accepts(table.loweredTypes[row], in: table, assuming: assuming + [(self, other)])
 
         // A membership standing as a type takes whatever it admits. In the
         // other direction a value of it is one of the members and nothing says
@@ -185,7 +185,7 @@ extension Shape {
             return mine.accepts(.byteElement, in: table, assuming: assuming)
 
         case let (.bytes, .array(theirs)):
-            return Shape.byteElement.accepts(theirs, in: table, assuming: assuming)
+            return LoweredType.byteElement.accepts(theirs, in: table, assuming: assuming)
 
         // The one conversion the language has, the way that cannot lose
         // anything.
@@ -214,19 +214,19 @@ extension Shape {
     // are the same thing said twice. Resolving only the outermost made that
     // depend on where the author happened to write the name, so the same
     // question got two answers depending on nesting.
-    func resolved(in table: ShapeTable) -> Shape {
+    func resolved(in table: LoweredTypeTable) -> LoweredType {
         resolved(in: table, assuming: [])
     }
 
     // A row already being walked through stands as itself. A type may name
     // itself (`Tree` holding `array<Tree>` is a declared shape) so a walk that
     // expanded every row at every depth would chase one forever.
-    private func resolved(in table: ShapeTable, assuming: [Int]) -> Shape {
+    private func resolved(in table: LoweredTypeTable, assuming: [Int]) -> LoweredType {
         switch self {
         case let .named(row):
             guard !assuming.contains(row) else { return self }
 
-            return table.shapes[row].resolved(in: table, assuming: assuming + [row])
+            return table.loweredTypes[row].resolved(in: table, assuming: assuming + [row])
 
         case let .array(element):
             return .array(element.resolved(in: table, assuming: assuming))
@@ -239,7 +239,7 @@ extension Shape {
 
         case let .record(fields):
             return .record(
-                RecordShape(
+                LoweredRecord(
                     layout: fields.layout,
                     fields: fields.fields.map { field in field.resolved(in: table, assuming: assuming) }
                 )
@@ -255,13 +255,13 @@ extension Shape {
     // direction and are still both satisfied by a value carrying every
     // field. The bias is deliberate: a refusal is earned only where the
     // shapes provably disagree, and everything else is left to the run.
-    func couldBothHold(_ other: Shape, in table: ShapeTable) -> Bool {
+    func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
         couldBothHold(other, in: table, assuming: [])
     }
 
     // Names are peeled one layer at a time, with the rows already being
     // asked about remembered, because this walk is the one that recurses.
-    private func couldBothHold(_ other: Shape, in table: ShapeTable, assuming: [Int]) -> Bool {
+    private func couldBothHold(_ other: LoweredType, in table: LoweredTypeTable, assuming: [Int]) -> Bool {
         if
             case let .named(mine) = self,
             case let .named(theirs) = other,
@@ -275,13 +275,13 @@ extension Shape {
         if case let .named(row) = self {
             guard !assuming.contains(row) else { return true }
 
-            return table.shapes[row].couldBothHold(other, in: table, assuming: assuming + [row])
+            return table.loweredTypes[row].couldBothHold(other, in: table, assuming: assuming + [row])
         }
 
         if case let .named(row) = other {
             guard !assuming.contains(row) else { return true }
 
-            return couldBothHold(table.shapes[row], in: table, assuming: assuming + [row])
+            return couldBothHold(table.loweredTypes[row], in: table, assuming: assuming + [row])
         }
 
         if provesNothing || other.provesNothing { return true }
@@ -340,7 +340,7 @@ extension Shape {
 
             // Asked of the judge that will settle it, not of a second opinion
             // about what it would say. One witness per kind is enough here.
-            return Shape.witnesses.contains { witness in
+            return LoweredType.witnesses.contains { witness in
                 mine.settles(witness, in: table) && theirs.settles(witness, in: table)
             }
         }
@@ -351,7 +351,7 @@ extension Shape {
     // compared under, so a shape with no scalar spelling spells none of
     // them, and a number is read by the spelling the boundary reads: `1e0`
     // is a fraction no fraction spells, so no call could ever match it.
-    func spells(_ candidate: String, in table: ShapeTable) -> Bool {
+    func spells(_ candidate: String, in table: LoweredTypeTable) -> Bool {
         switch self {
         case .any, .reading, .string, .undeclared:
             return true
@@ -383,7 +383,7 @@ extension Shape {
             return table.constraints[constraint].contains { member in member.spells(candidate, in: table) }
 
         case let .named(row):
-            return table.shapes[row].spells(candidate, in: table)
+            return table.loweredTypes[row].spells(candidate, in: table)
 
         // A candidate spells a value, and null is not one a `oneOf` lists, so
         // a nullable slot's candidates are the declared half's.
@@ -399,11 +399,11 @@ extension Shape {
     // here and neither is a type parameter: standing for anything is what
     // `accepts` reads, and a body free to write anything into a variable the
     // caller declared is the disagreement this refuses.
-    func same(_ other: Shape, in table: ShapeTable) -> Bool {
+    func same(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
         same(other, in: table, assuming: [])
     }
 
-    func same(_ other: Shape, in table: ShapeTable, assuming: [(Shape, Shape)]) -> Bool {
+    func same(_ other: LoweredType, in table: LoweredTypeTable, assuming: [(LoweredType, LoweredType)]) -> Bool {
         if assuming.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
 
         let walked = assuming + [(self, other)]
@@ -419,15 +419,15 @@ extension Shape {
 
             return table.recordRows[mine] == nil
                 && table.recordRows[theirs] == nil
-                && table.shapes[mine].same(table.shapes[theirs], in: table, assuming: walked)
+                && table.loweredTypes[mine].same(table.loweredTypes[theirs], in: table, assuming: walked)
 
         case let (.named(mine), _):
             return table.recordRows[mine] == nil
-                && table.shapes[mine].same(other, in: table, assuming: walked)
+                && table.loweredTypes[mine].same(other, in: table, assuming: walked)
 
         case let (_, .named(theirs)):
             return table.recordRows[theirs] == nil
-                && same(table.shapes[theirs], in: table, assuming: walked)
+                && same(table.loweredTypes[theirs], in: table, assuming: walked)
 
         case let (.nullable(mine), .nullable(theirs)),
             let (.array(mine), .array(theirs)),
@@ -485,7 +485,7 @@ extension Shape {
     // shape holds, so whether it holds something is that rule run with its
     // refusal dropped rather than a second rule written beside it. The path
     // is empty because nothing reads the refusal.
-    func settles(_ value: Value, in table: ShapeTable, assuming: [Int] = []) -> Bool {
+    func settles(_ value: Value, in table: LoweredTypeTable, assuming: [Int] = []) -> Bool {
         (try? settling(value, at: "", in: table, assuming: assuming)) != nil
     }
 

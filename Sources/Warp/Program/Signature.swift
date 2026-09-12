@@ -108,7 +108,7 @@ public struct Signature: Sendable, Equatable {
 
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
-    func lowered(in table: ShapeTable) -> [Slot] {
+    func lowered(in table: LoweredTypeTable) -> [Slot] {
         ordered(
             { name, parameter in parameter.lowered(named: name, in: table) },
             standing: { slot in slot.name }
@@ -119,7 +119,7 @@ public struct Signature: Sendable, Equatable {
     // filling happens on the lowered shape rather than on the declaration,
     // because what a call read is a shape and a declaration is a document's
     // spelling.
-    func lowered(in table: ShapeTable, filling bound: [Name: Shape]) -> [Slot] {
+    func lowered(in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> [Slot] {
         ordered(
             { name, parameter in parameter.lowered(named: name, in: table, filling: bound) },
             standing: { slot in slot.name }
@@ -157,9 +157,9 @@ public struct Signature: Sendable, Equatable {
         _ given: [Name: Value],
         in types: TypeTable = .empty
     ) throws -> [Name: Value] {
-        let slots = lowered(in: types.shapes)
+        let slots = lowered(in: types.loweredTypes)
 
-        return named(try settle(given, over: slots, offered: false, in: types.shapes), over: slots)
+        return named(try settle(given, over: slots, offered: false, in: types.loweredTypes), over: slots)
     }
 
     // The same, for a caller that hands over more than the body asked for. A
@@ -170,9 +170,9 @@ public struct Signature: Sendable, Equatable {
         offered given: [Name: Value],
         in types: TypeTable = .empty
     ) throws -> [Name: Value] {
-        let slots = lowered(in: types.shapes)
+        let slots = lowered(in: types.loweredTypes)
 
-        return named(try settle(given, over: slots, offered: true, in: types.shapes), over: slots)
+        return named(try settle(given, over: slots, offered: true, in: types.loweredTypes), over: slots)
     }
 
     // MARK: - Internal
@@ -190,7 +190,7 @@ public struct Signature: Sendable, Equatable {
         _ given: [Name: Value],
         over slots: [Slot],
         offered: Bool,
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) throws -> [Value?] {
         try settle(given.map { name, value in (name: name, value: value) }, over: slots, offered: offered, in: table)
     }
@@ -203,7 +203,7 @@ public struct Signature: Sendable, Equatable {
         over slots: [Slot],
         offered: Bool,
         skipping: (Int) -> Bool = { _ in false },
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) throws -> [Value?] {
         if !offered {
             let undeclared = given
@@ -247,7 +247,7 @@ public struct Signature: Sendable, Equatable {
         over slots: [Slot],
         offered: Bool,
         skipping: (Int) -> Bool = { _ in false },
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) throws -> [Value?] {
         // What "nothing was given" means differs by who is giving. An author's
         // argument space folds null and unwritten into one instruction: a

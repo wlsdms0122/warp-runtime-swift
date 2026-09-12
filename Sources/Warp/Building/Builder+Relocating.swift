@@ -167,10 +167,10 @@ struct Relocating {
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no shape
     // and has no entry here.
-    private let shapeRows: [ShapeNumbering.Rows]
+    private let shapeRows: [LoweredTypeNumbering.Rows]
 
     private let requirements: [Name: Requirement]
-    private let shapes: ShapeTable
+    private let loweredTypes: LoweredTypeTable
 
     // Which row each document's closures took. A closure is reached by a
     // number and by nothing else, so this answers where the two name tables
@@ -182,18 +182,18 @@ struct Relocating {
         table: [Linked],
         rows: [Name: Int],
         numbering: [Numbering],
-        shapeNumbering: [ShapeNumbering],
+        shapeNumbering: [LoweredTypeNumbering],
         requirements: [Name: Requirement],
         closures: [[Int]],
-        shapes: ShapeTable
+        loweredTypes: LoweredTypeTable
     ) {
         self.closures = closures
         self.table = table
         self.rows = rows
         self.numbering = numbering
-        self.shapeRows = shapeNumbering.map { held in held.rows(in: shapes) }
+        self.shapeRows = shapeNumbering.map { held in held.rows(in: loweredTypes) }
         self.requirements = requirements
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
     }
 
     // What compiling left, read as this link's rows. Filling a call through a
@@ -201,12 +201,12 @@ struct Relocating {
     // that row takes, so every row is made to stand here rather than as the
     // walk reaches it.
     init(_ assembled: Assembled, types: TypeTable, supplied: Supplying) throws {
-        let shapes = types.shapes
+        let loweredTypes = types.loweredTypes
 
         self.init(
             table: try zip(assembled.table, assembled.origins).map { judged, origin in
                 try judged.lowered(
-                    in: shapes,
+                    in: loweredTypes,
                     of: origin,
                     supplied: supplied,
                     at: assembled.documents[origin]
@@ -217,7 +217,7 @@ struct Relocating {
             shapeNumbering: assembled.shapeNumbering,
             requirements: Requirement.table(in: types),
             closures: assembled.closures,
-            shapes: shapes
+            loweredTypes: loweredTypes
         )
     }
 
@@ -243,7 +243,7 @@ struct Relocating {
                         in: Standing(
                             origin: origin,
                             place: .variable(name.spelling, in: .assembled),
-                            shapes: shapeRows[origin]
+                            loweredTypes: shapeRows[origin]
                         )
                     )
                 )
@@ -262,7 +262,7 @@ struct Relocating {
         // entering rather than built at every refusal that never happens.
         let place: Place
 
-        let shapes: ShapeNumbering.Rows
+        let loweredTypes: LoweredTypeNumbering.Rows
     }
 
     // A folded value read as this link's rows. A closure was made by running a
@@ -281,7 +281,7 @@ struct Relocating {
             let held = Standing(
                 origin: closure.origin,
                 place: standing.place,
-                shapes: shapeRows[closure.origin]
+                loweredTypes: shapeRows[closure.origin]
             )
             let row = try self.row(closure.number, in: held)
 
@@ -324,7 +324,7 @@ struct Relocating {
         let standing = Standing(
             origin: row.origin,
             place: .procedure(row.label.spelling, in: .assembled),
-            shapes: shapeRows[row.origin]
+            loweredTypes: shapeRows[row.origin]
         )
         let sends = try row.sends.map { number in try self.row(number, in: standing) }
 
@@ -522,12 +522,12 @@ struct Relocating {
     }
 
     // A shape with the rows its document's numbers stand for.
-    private func relocated(_ shape: Shape?, in standing: Standing) throws -> Shape? {
+    private func relocated(_ shape: LoweredType?, in standing: Standing) throws -> LoweredType? {
         try shape.map { held in try relocated(held, in: standing) }
     }
 
-    private func relocated(_ shape: Shape, in standing: Standing) throws -> Shape {
-        try standing.shapes.read(shape, at: standing.place)
+    private func relocated(_ shape: LoweredType, in standing: Standing) throws -> LoweredType {
+        try standing.loweredTypes.read(shape, at: standing.place)
     }
 
     // A path with the rows the paths inside its index steps stand for.
@@ -583,7 +583,7 @@ struct Relocating {
                     receiver: nil,
                     to: table[row],
                     row: row,
-                    in: shapes,
+                    in: loweredTypes,
                     at: standing.place
                 )
             }

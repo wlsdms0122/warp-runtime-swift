@@ -1,5 +1,5 @@
 //
-//  ShapeNumbering.swift
+//  LoweredTypeNumbering.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -23,7 +23,7 @@ import Foundation
 //
 // Two lists, because a shape names two tables. A declared type and a
 // membership are separate spaces and no name is in both.
-struct ShapeNumbering: Sendable {
+struct LoweredTypeNumbering: Sendable {
     // What a number turned out to be, with the reason where it is not a row:
     // a name the link does not declare, or a number the document never gave.
     enum Answer: Sendable {
@@ -42,7 +42,7 @@ struct ShapeNumbering: Sendable {
         // MARK: - Initializer
         // MARK: - Public
         // One shape a document wrote, read as this link's rows.
-        func read(_ shape: Shape, at place: Place) throws -> Shape {
+        func read(_ shape: LoweredType, at place: Place) throws -> LoweredType {
             try shape.renumbered(
                 type: { number in try row(types, at: number, calling: "named", in: place) },
                 membership: { number in
@@ -101,28 +101,28 @@ struct ShapeNumbering: Sendable {
 
     // MARK: - Public
     // Every number this gave, answered as the rows of one link.
-    func rows(in shapes: ShapeTable) -> Rows {
+    func rows(in loweredTypes: LoweredTypeTable) -> Rows {
         Rows(
-            types: types.indices.map { number in type(number, in: shapes) },
-            memberships: memberships.indices.map { number in membership(number, in: shapes) }
+            types: types.indices.map { number in type(number, in: loweredTypes) },
+            memberships: memberships.indices.map { number in membership(number, in: loweredTypes) }
         )
     }
 
     // Which row of a link a number stands for, read from that link's table.
-    func type(_ number: Int, in shapes: ShapeTable) -> Answer {
+    func type(_ number: Int, in loweredTypes: LoweredTypeTable) -> Answer {
         guard types.indices.contains(number) else { return .unnumbered }
 
         let name = types[number]
 
-        return shapes.row(named: name).map(Answer.row) ?? .unfound(name)
+        return loweredTypes.row(named: name).map(Answer.row) ?? .unfound(name)
     }
 
-    func membership(_ number: Int, in shapes: ShapeTable) -> Answer {
+    func membership(_ number: Int, in loweredTypes: LoweredTypeTable) -> Answer {
         guard memberships.indices.contains(number) else { return .unnumbered }
 
         let name = memberships[number]
 
-        return shapes.constraintRow(named: name).map(Answer.row) ?? .unfound(name)
+        return loweredTypes.constraintRow(named: name).map(Answer.row) ?? .unfound(name)
     }
 
     // MARK: - Private

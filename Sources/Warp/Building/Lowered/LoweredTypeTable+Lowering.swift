@@ -1,5 +1,5 @@
 //
-//  ShapeTable+Lowering.swift
+//  LoweredTypeTable+Lowering.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension ShapeTable {
+extension LoweredTypeTable {
     // The declarations as the run reads them. A link says which order its rows
     // stand in, so a document's types and its memberships each take a run of
     // rows the way its declarations do; where nothing says, the declared
@@ -28,13 +28,13 @@ extension ShapeTable {
         standing: [Name]? = nil,
         constraintStanding: [Name]? = nil,
         of linkage: Linkage
-    ) -> ShapeTable {
+    ) -> LoweredTypeTable {
         // A table of its own even where nothing is declared: a body carried
         // out of such a link holds rows a shared table would let be read
         // elsewhere.
         guard !types.isEmpty || !constraints.isEmpty else {
-            return ShapeTable(
-                shapes: [],
+            return LoweredTypeTable(
+                loweredTypes: [],
                 constraints: [],
                 labels: [],
                 constraintLabels: [],
@@ -51,8 +51,8 @@ extension ShapeTable {
 
         // The index first, so a declaration naming another lowers against
         // rows that already exist whichever is declared first.
-        let index = ShapeTable(
-            shapes: [],
+        let index = LoweredTypeTable(
+            loweredTypes: [],
             constraints: [],
             labels: labels,
             constraintLabels: constraintLabels,
@@ -60,7 +60,7 @@ extension ShapeTable {
             of: linkage
         )
 
-        var shapes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
+        var loweredTypes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
         let members = constraintLabels.map { label in
             (constraints[label] ?? []).map { member in member.lowered(in: index) }
         }
@@ -71,7 +71,7 @@ extension ShapeTable {
             var row = start
             var walked: [Int] = [start]
 
-            while let next = shapes[row].row {
+            while let next = loweredTypes[row].row {
                 guard !walked.contains(next) else { return nil }
 
                 walked.append(next)
@@ -83,24 +83,24 @@ extension ShapeTable {
 
         // Marked before any is replaced, so each row in a cycle is named
         // as itself rather than as whichever the replacement reached first.
-        let cycling = shapes.indices.filter { row in end(of: row) == nil }
+        let cycling = loweredTypes.indices.filter { row in end(of: row) == nil }
 
         for row in cycling {
-            shapes[row] = .undeclared(
+            loweredTypes[row] = .undeclared(
                 label: labels[row].spelling,
                 refusal: "type '\(labels[row])', which names itself"
             )
         }
 
         // The record a row names: the last row on the way to a record shape.
-        let recordRows = shapes.indices.map { start -> Int? in
-            guard let row = end(of: start), case .record = shapes[row] else { return nil }
+        let recordRows = loweredTypes.indices.map { start -> Int? in
+            guard let row = end(of: start), case .record = loweredTypes[row] else { return nil }
 
             return row
         }
 
-        return ShapeTable(
-            shapes: shapes,
+        return LoweredTypeTable(
+            loweredTypes: loweredTypes,
             constraints: members,
             labels: labels,
             constraintLabels: constraintLabels,

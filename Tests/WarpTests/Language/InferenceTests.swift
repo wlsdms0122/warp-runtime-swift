@@ -1399,7 +1399,7 @@ struct InferenceTests {
             return
         }
 
-        #expect(type.rendered(in: image.shapes).contains("Person"))
+        #expect(type.rendered(in: image.loweredTypes).contains("Person"))
     }
 
     @Test("a cast opens what any declares nothing about")

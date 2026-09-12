@@ -35,7 +35,7 @@ public struct Image: Sendable {
     // link, so the run needs the table that answers it.
     public let types: TypeTable
 
-    var shapes: ShapeTable { types.shapes }
+    var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
     // What each document's variables start a run holding, by the document's
     // position in the link, in the order the layouts read them. A run makes
@@ -71,11 +71,11 @@ public struct Image: Sendable {
     // layout and holds every field to its shape, so what comes back is what a
     // slot of that type holds.
     public func settling(_ value: Value, as declared: Name) throws -> Value {
-        guard let row = shapes.row(named: declared) else {
+        guard let row = loweredTypes.row(named: declared) else {
             throw ValueRefused("no type named '\(declared)' is declared here")
         }
 
-        return try Shape.named(row).settling(value, at: declared.spelling, in: shapes, assuming: [])
+        return try LoweredType.named(row).settling(value, at: declared.spelling, in: loweredTypes, assuming: [])
     }
 
     // MARK: - Private

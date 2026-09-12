@@ -1,5 +1,5 @@
 //
-//  Shape+Renumbering.swift
+//  LoweredType+Renumbering.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Shape {
+extension LoweredType {
     // The same shape with every row it stands on answered again. A shape is a
     // tree and its rows stand at the leaves, so a caller that can answer one
     // number answers the whole of it, and the walk over the tree is written
@@ -37,7 +37,7 @@ extension Shape {
     func renumbered(
         type: (Int) throws -> Int,
         membership: (Int) throws -> Int
-    ) rethrows -> Shape {
+    ) rethrows -> LoweredType {
         switch self {
         case let .array(element):
             return .array(try element.renumbered(type: type, membership: membership))
@@ -47,7 +47,7 @@ extension Shape {
 
         case let .record(held):
             return .record(
-                RecordShape(
+                LoweredRecord(
                     layout: held.layout,
                     fields: try held.fields.map { field in
                         try field.renumbered(type: type, membership: membership)

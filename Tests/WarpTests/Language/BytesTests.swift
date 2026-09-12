@@ -107,7 +107,7 @@ struct BytesTests {
             ]
         )
 
-        let shapes: [TypeExpression] = [
+        let loweredTypes: [TypeExpression] = [
             .any, .int, .number, .double, .string, .bool, .null, .never, .bytes,
             .ranged(.whole(from: 0, to: .through(255))),
             .ranged(.whole()),
@@ -134,14 +134,14 @@ struct BytesTests {
             .record([:])
         ]
 
-        for shape in shapes {
+        for shape in loweredTypes {
             let untouched = (0...255).allSatisfy { byte in
                 let value = Value.int(byte)
 
                 return (try? shape.settling(value, at: "value", in: types)) == value
             }
 
-            let table = types.shapes
+            let table = types.loweredTypes
 
             #expect(
                 shape.lowered(in: table).holdsEveryByte(in: table) == untouched,

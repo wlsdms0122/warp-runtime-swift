@@ -1,5 +1,5 @@
 //
-//  ShapeTests.swift
+//  LoweredTypeTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/3/26.
@@ -12,7 +12,7 @@ import Testing
 // What the build leaves the run to read types by: rows for names, one judge
 // over shapes, and a document's type reaching it through a door.
 @Suite("Types lower to shapes the run reads by row")
-struct ShapeTests {
+struct LoweredTypeTests {
     // MARK: - Property
     private let builder = Builder()
 
@@ -34,7 +34,7 @@ struct ShapeTests {
     @Test("a lowered type renders as the author wrote it")
     func aLoweredTypeRendersAsWritten() throws {
         // Given: every declared type, and a few that name them
-        let table = types.shapes
+        let table = types.loweredTypes
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("bank.Acct")),
             .nullable(.named("bank.Owner")),
@@ -52,7 +52,7 @@ struct ShapeTests {
     @Test("a name lowers to its row, and the row of the record it names is the chain's end")
     func aNameLowersToARow() throws {
         // Given
-        let table = types.shapes
+        let table = types.loweredTypes
 
         // When
         let alias = try #require(table.row(named: "bank.Acct"))
@@ -69,14 +69,14 @@ struct ShapeTests {
     @Test("a walk's reading lowers to itself, and every judgment answers it as any")
     func aReadingLowersToItself() throws {
         // Given
-        let table = types.shapes
+        let table = types.loweredTypes
         let reading = try TypeExpression.reading(of: "T", path: [.key("inner")]).lowered(in: table)
 
         // When / Then
         #expect(reading == .reading(of: "T", path: [.key("inner")]))
         #expect(try TypeExpression.array(.reading(of: "T", path: [])).lowered(in: table)
             == .array(.reading(of: "T", path: [])))
-        #expect(Shape.int.accepts(reading, in: table))
+        #expect(LoweredType.int.accepts(reading, in: table))
         #expect(reading.accepts(.int, in: table))
         #expect(try reading.settling(.int(1), at: "", in: table) == .int(1))
     }
@@ -85,7 +85,7 @@ struct ShapeTests {
     func aRecordSettlesUnderTheCanonicalName() throws {
         // Given: a slot spelled with the alias, a nameless record, and one
         // already named by the alias
-        let table = types.shapes
+        let table = types.loweredTypes
         let slot = TypeExpression.named("bank.Acct").lowered(in: table)
         let owner = Value.dictionary(["name": .string("a")])
 
@@ -143,7 +143,7 @@ struct ShapeTests {
         // When
         let image = try builder.build([module] + Module.standard, entry: "entry")
         let row = try #require(image["std.math.lessThan"])
-        let ordered = try #require(image.shapes.constraintRow(named: "std.Comparable"))
+        let ordered = try #require(image.loweredTypes.constraintRow(named: "std.Comparable"))
 
         // Then
         #expect(row.slots.map(\.name) == ["of", "value"])
@@ -201,7 +201,7 @@ struct ShapeTests {
     func anArgumentGivenTwiceIsRefused() throws {
         // Given
         let signature = Signature(parameters: ["item": Parameter(type: .int)])
-        let table = TypeTable().shapes
+        let table = TypeTable().loweredTypes
 
         // When / Then
         #expect {
@@ -251,8 +251,8 @@ struct ShapeTests {
         #expect(TypeExpression.named("app.Good").accepts(.int, in: table))
         #expect(TypeExpression.named("app.Bad").accepts(.int, in: table))
         #expect(TypeExpression.int.accepts(.named("app.Bad"), in: table))
-        #expect(TypeExpression.named("app.Bad").lowered(in: table.shapes)
-            .couldBothHold(.int, in: table.shapes))
+        #expect(TypeExpression.named("app.Bad").lowered(in: table.loweredTypes)
+            .couldBothHold(.int, in: table.loweredTypes))
         #expect(!TypeExpression.named("app.Bad").declaresNull(in: table))
         #expect {
             try TypeExpression.named("app.Bad").settling(.int(1), at: "input", in: table)
@@ -319,7 +319,7 @@ struct ShapeTests {
         // When / Then: Swift calls the two spellings equal, and the table
         // does not
         #expect(composed.spelling == decomposed)
-        #expect(table.shapes.row(named: composed) == 0)
+        #expect(table.loweredTypes.row(named: composed) == 0)
         #expect(throws: NameRefused.self) { try Name(decomposed) }
     }
 

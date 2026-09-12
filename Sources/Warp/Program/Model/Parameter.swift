@@ -21,7 +21,7 @@ public struct Parameter: Sendable, Equatable {
     // Whether a call must write this argument: the shape's one answer, for
     // the call check, the boundary and path reachability alike.
     public func mustBeGiven(in types: TypeTable) -> Bool {
-        declared.lowered(in: types.shapes).mustBeGiven(default: `default`, in: types.shapes)
+        declared.lowered(in: types.loweredTypes).mustBeGiven(default: `default`, in: types.loweredTypes)
     }
 
     // What this reads as where a type is needed regardless. An undeclared
@@ -49,7 +49,7 @@ public struct Parameter: Sendable, Equatable {
         called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(named: name, in: types.shapes).taking(value, in: types.shapes)
+        try lowered(named: name, in: types.loweredTypes).taking(value, in: types.loweredTypes)
     }
 
     public func checking(
@@ -57,7 +57,7 @@ public struct Parameter: Sendable, Equatable {
         called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(named: name, in: types.shapes).checking(receiver: value, in: types.shapes)
+        try lowered(named: name, in: types.loweredTypes).checking(receiver: value, in: types.loweredTypes)
     }
 
     public func checking(
@@ -65,7 +65,7 @@ public struct Parameter: Sendable, Equatable {
         called name: Name,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(named: name, in: types.shapes).checking(value, in: types.shapes)
+        try lowered(named: name, in: types.loweredTypes).checking(value, in: types.loweredTypes)
     }
 
     // MARK: - Private

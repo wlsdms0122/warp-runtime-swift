@@ -1,5 +1,5 @@
 //
-//  Linked+Shaped.swift
+//  Linked+Lowered.swift
 //  Warp
 //
 //  Created by JSilver on 9/9/26.
@@ -14,43 +14,43 @@ extension Linked {
     // against a table, which is the link's reading and not a number the
     // document gave. That holds for a native, which has no body at all, and
     // for a written one.
-    func shaped(_ answer: (Shape) throws -> Shape) rethrows -> Linked {
+    func lowered(_ answer: (LoweredType) throws -> LoweredType) rethrows -> Linked {
         guard case let .body(body, frame) = implementation else { return self }
 
         return Linked(
             self,
-            implementation: .body(try Self.shaped(body, answer), frame),
+            implementation: .body(try Self.lowered(body, answer), frame),
             sends: sends
         )
     }
 
     // MARK: - Private
-    private static func shaped(
+    private static func lowered(
         _ body: Body,
-        _ answer: (Shape) throws -> Shape
+        _ answer: (LoweredType) throws -> LoweredType
     ) rethrows -> Body {
         Body(
             instructions: try body.instructions.map { instruction in
-                try Self.shaped(instruction, answer)
+                try Self.lowered(instruction, answer)
             },
-            result: try body.result.map { result in try Self.shaped(result, answer) }
+            result: try body.result.map { result in try Self.lowered(result, answer) }
         )
     }
 
-    private static func shaped(
+    private static func lowered(
         _ instruction: Instruction,
-        _ answer: (Shape) throws -> Shape
+        _ answer: (LoweredType) throws -> LoweredType
     ) rethrows -> Instruction {
         Instruction(
-            binding: try Self.shaped(instruction.binding, answer),
-            code: try Self.shaped(instruction.code, answer),
+            binding: try Self.lowered(instruction.binding, answer),
+            code: try Self.lowered(instruction.code, answer),
             label: instruction.label
         )
     }
 
-    private static func shaped(
+    private static func lowered(
         _ binding: Instruction.Binding?,
-        _ answer: (Shape) throws -> Shape
+        _ answer: (LoweredType) throws -> LoweredType
     ) rethrows -> Instruction.Binding? {
         switch binding {
         case let .bind(slot, settling)?:
@@ -67,22 +67,22 @@ extension Linked {
         }
     }
 
-    private static func shaped(
+    private static func lowered(
         _ operation: Operation,
-        _ answer: (Shape) throws -> Shape
+        _ answer: (LoweredType) throws -> LoweredType
     ) rethrows -> Operation {
         switch operation {
         case .literal, .local:
             return operation
 
         case let .array(elements):
-            return .array(try elements.map { element in try Self.shaped(element, answer) })
+            return .array(try elements.map { element in try Self.lowered(element, answer) })
 
         case let .record(held):
             return .record(
                 RecordOperation(
                     layout: held.layout,
-                    fields: try held.fields.map { field in try Self.shaped(field, answer) }
+                    fields: try held.fields.map { field in try Self.lowered(field, answer) }
                 )
             )
 
@@ -94,48 +94,48 @@ extension Linked {
 
         case let .apply(callee, arguments):
             return .apply(
-                try Self.shaped(callee, answer),
+                try Self.lowered(callee, answer),
                 arguments: try arguments.map { name, argument in
-                    (name, try Self.shaped(argument, answer))
+                    (name, try Self.lowered(argument, answer))
                 }
             )
 
         case let .cast(value, shape, optional):
             return .cast(
-                try Self.shaped(value, answer),
+                try Self.lowered(value, answer),
                 as: try answer(shape),
                 optional: optional
             )
 
         case let .block(body):
-            return .block(try Self.shaped(body, answer))
+            return .block(try Self.lowered(body, answer))
 
         case let .conditional(condition, then, otherwise):
             return .conditional(
-                try Self.shaped(condition, answer),
-                then: try then.map { instruction in try Self.shaped(instruction, answer) },
+                try Self.lowered(condition, answer),
+                then: try then.map { instruction in try Self.lowered(instruction, answer) },
                 else: try otherwise.map { instructions in
-                    try instructions.map { instruction in try Self.shaped(instruction, answer) }
+                    try instructions.map { instruction in try Self.lowered(instruction, answer) }
                 }
             )
 
         case let .loop(condition, body, round, keeps):
             return .loop(
-                while: try Self.shaped(condition, answer),
-                body: try Self.shaped(body, answer),
+                while: try Self.lowered(condition, answer),
+                body: try Self.lowered(body, answer),
                 round: round,
                 keeps: keeps
             )
 
         case let .attempt(body, rescue, failure):
             return .attempt(
-                try Self.shaped(body, answer),
-                rescue: try Self.shaped(rescue, answer),
+                try Self.lowered(body, answer),
+                rescue: try Self.lowered(rescue, answer),
                 failure: failure
             )
 
         case let .call(call):
-            return .call(try Self.shaped(call, answer))
+            return .call(try Self.lowered(call, answer))
 
         // The calls a dispatch picks from are the link's to fill, so there is
         // nothing here for a document to number.
@@ -144,9 +144,9 @@ extension Linked {
                 DispatchOperation(
                     contract: dispatch.contract,
                     word: dispatch.word,
-                    receiver: try Self.shaped(dispatch.receiver, answer),
+                    receiver: try Self.lowered(dispatch.receiver, answer),
                     arguments: try dispatch.arguments.mapValues { argument in
-                        try Self.shaped(argument, answer)
+                        try Self.lowered(argument, answer)
                     },
                     calls: dispatch.calls
                 )
@@ -156,32 +156,32 @@ extension Linked {
             return .leave(
                 reach,
                 target: target,
-                try value.map { value in try Self.shaped(value, answer) }
+                try value.map { value in try Self.lowered(value, answer) }
             )
         }
     }
 
-    private static func shaped(
+    private static func lowered(
         _ call: CallOperation,
-        _ answer: (Shape) throws -> Shape
+        _ answer: (LoweredType) throws -> LoweredType
     ) rethrows -> CallOperation {
         CallOperation(
             procedure: call.procedure,
-            receiver: try call.receiver.map { receiver in try Self.shaped(receiver, answer) },
+            receiver: try call.receiver.map { receiver in try Self.lowered(receiver, answer) },
             arguments: try call.arguments.map { argument in
-                try argument.map { operation in try Self.shaped(operation, answer) }
+                try argument.map { operation in try Self.lowered(operation, answer) }
             },
             handed: call.handed
         )
     }
 
-    private static func shaped(
+    private static func lowered(
         _ argument: Argument,
-        _ answer: (Shape) throws -> Shape
+        _ answer: (LoweredType) throws -> LoweredType
     ) rethrows -> Argument {
         switch argument {
         case let .value(operation):
-            return .value(try Self.shaped(operation, answer))
+            return .value(try Self.lowered(operation, answer))
 
         case .reference:
             return argument

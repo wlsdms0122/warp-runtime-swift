@@ -34,7 +34,7 @@ public struct TypeTable: Sendable {
 
     // The same declarations as the run reads them, lowered once here. Every
     // judgment this table answers is asked of the lowered one.
-    let shapes: ShapeTable
+    let loweredTypes: LoweredTypeTable
 
     // The link these rows are numbered against, kept so the table can be
     // remade with what a later pass worked out and still hand back the rows a
@@ -80,7 +80,7 @@ public struct TypeTable: Sendable {
         self.standing = standing
         self.constraintStanding = constraintStanding
         self.linkage = linkage
-        self.shapes = ShapeTable.lowering(
+        self.loweredTypes = LoweredTypeTable.lowering(
             types,
             constraints: constraints,
             satisfying: satisfying,
@@ -136,17 +136,17 @@ public struct TypeTable: Sendable {
     // so a table built by hand refuses or answers where a linked one would, and
     // never chases a declaration the link would have refused.
     public func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
-        guard let row = shapes.constraintRow(named: name) else { return nil }
+        guard let row = loweredTypes.constraintRow(named: name) else { return nil }
 
-        return shapes.admits(constraint: row, reading: reading.lowered(in: shapes), assuming: [])
+        return loweredTypes.admits(constraint: row, reading: reading.lowered(in: loweredTypes), assuming: [])
     }
 
     // The same membership, asked of a value at the boundary. Nil again
     // where nothing declares the constraint.
     public func admits(constraint name: Name, value: Value) -> Bool? {
-        guard let row = shapes.constraintRow(named: name) else { return nil }
+        guard let row = loweredTypes.constraintRow(named: name) else { return nil }
 
-        return shapes.admits(constraint: row, value: value, assuming: [])
+        return loweredTypes.admits(constraint: row, value: value, assuming: [])
     }
 
     // MARK: - Private

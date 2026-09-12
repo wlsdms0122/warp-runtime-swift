@@ -838,7 +838,7 @@ struct ConstraintTests {
                 reading: .parameter(name: "T", constraint: "Loop")
             ) == true
         )
-        let table = sut.shapes
+        let table = sut.loweredTypes
         let loop = try #require(table.constraintRow(named: "Loop"))
 
         #expect(table.admits(constraint: loop, value: .int(1), assuming: []) == true)

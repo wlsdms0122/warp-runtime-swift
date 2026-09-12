@@ -39,7 +39,7 @@ struct Assembled: Sendable {
     // By document, which is what a body carries and what a row says it
     // came from. Read at every row walked, so read by position.
     let numbering: [Numbering]
-    let shapeNumbering: [ShapeNumbering]
+    let shapeNumbering: [LoweredTypeNumbering]
     let variables: [[(name: Name, value: Value)]]
 
     // MARK: - Initializer

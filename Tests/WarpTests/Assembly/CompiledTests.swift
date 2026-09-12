@@ -214,12 +214,12 @@ struct CompiledTests {
         let held = try Module(types: ["a.Held": .int], procedures: [:])
 
         // When.
-        let shapes = try builder.link(compiled([naming, held]), entry: entryName, supplying: Supplying(Module.standard)).types.shapes
+        let loweredTypes = try builder.link(compiled([naming, held]), entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes
 
         // Then. Each document's rows are a run of their own, in name order
         // inside it, laid down in the order the caller handed the documents
         // over.
-        let row = { (declared: Name) in shapes.labels.firstIndex(of: declared) }
+        let row = { (declared: Name) in loweredTypes.labels.firstIndex(of: declared) }
 
         #expect(try #require(row("z.Also")) + 1 == #require(row("z.Wraps")))
         #expect(try #require(row("z.Wraps")) < #require(row("a.Held")))
@@ -515,7 +515,7 @@ struct CompiledTests {
 
         #expect(
             try cast(in: code(of: entryName, in: image)).row
-                == image.types.shapes.row(named: "bank.Account")
+                == image.types.loweredTypes.row(named: "bank.Account")
         )
     }
 
@@ -537,8 +537,8 @@ struct CompiledTests {
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
-            try builder.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
-                != builder.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
+            try builder.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+                != builder.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
         )
         #expect(
             try cast(in: code(of: entryName, in: alone)).row
@@ -575,8 +575,8 @@ struct CompiledTests {
 
         // And. The row it stands on moved and the number did not.
         #expect(
-            try builder.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
-                != builder.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.shapes.row(named: "bank.Account")
+            try builder.link(alone, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
+                != builder.link(beside, entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "bank.Account")
         )
         #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
     }
@@ -804,7 +804,7 @@ struct CompiledTests {
 
     // MARK: - Private
     // What a compile read off the body of a declaration that wrote no answer.
-    private func answer(of declared: Name, in compiled: [Compiled]) throws -> Shape {
+    private func answer(of declared: Name, in compiled: [Compiled]) throws -> LoweredType {
         guard let read = compiled.compactMap({ document in document.answers[declared] }).first else {
             throw BuildError("nothing read an answer for '\(declared)'", at: nil)
         }
@@ -851,7 +851,7 @@ struct CompiledTests {
     }
 
     // The shape the cast in a row's result stands on.
-    private func cast(in body: Body) throws -> Shape {
+    private func cast(in body: Body) throws -> LoweredType {
         guard case let .cast(_, shape, _)? = body.result else {
             throw BuildError("the entry holds no cast", at: nil)
         }

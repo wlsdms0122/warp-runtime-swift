@@ -31,7 +31,7 @@ indirect enum Operation: Sendable {
     // arguments travel by name and settle where the closure is known.
     case apply(Operation, arguments: [(Name, Operation)])
 
-    case cast(Operation, as: Shape, optional: Bool)
+    case cast(Operation, as: LoweredType, optional: Bool)
     case block(Body)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
 

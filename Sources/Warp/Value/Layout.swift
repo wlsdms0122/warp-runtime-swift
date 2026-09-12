@@ -16,7 +16,7 @@ import Foundation
 // one set of fields. What a field holds is not: `{title: string}` and
 // `{title: int}` are one layout under two shapes.
 //
-// Inside a link a name is a row of the shape table; outside one it is a
+// Inside a link a name is a row of the lowered type table; outside one it is a
 // spelling, which is why a reader and a host may write one. A slot that
 // declares a type proves it: a value arriving there under another name is
 // refused. A slot that declares nothing proves nothing, so a name travelling

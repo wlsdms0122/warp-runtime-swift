@@ -176,7 +176,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
         at path: @autoclosure () -> String,
         in types: TypeTable = .empty
     ) throws -> Value {
-        try lowered(in: types.shapes).settling(value, at: path(), in: types.shapes)
+        try lowered(in: types.loweredTypes).settling(value, at: path(), in: types.loweredTypes)
     }
 
     // How the type reads in a message. A declaration an author wrote should come
@@ -453,7 +453,7 @@ extension TypeExpression {
     // means "give me something". The looser question, "could a default of null
     // ever be taken", is the link's and includes `any`.
     public func declaresNull(in types: TypeTable) -> Bool {
-        lowered(in: types.shapes).declaresNull(in: types.shapes)
+        lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }
 }
 
@@ -467,6 +467,6 @@ extension TypeExpression {
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
     public func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
-        lowered(in: types.shapes).accepts(other.lowered(in: types.shapes), in: types.shapes)
+        lowered(in: types.loweredTypes).accepts(other.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 }

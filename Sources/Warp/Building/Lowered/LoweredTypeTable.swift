@@ -1,5 +1,5 @@
 //
-//  ShapeTable.swift
+//  LoweredTypeTable.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -15,14 +15,14 @@ import Foundation
 // an alias, which is resolved once and then carries the canonical spelling.
 // A class, so a judgment that recurses passes one reference down rather than
 // a copy of every array the table holds.
-final class ShapeTable: Sendable {
+final class LoweredTypeTable: Sendable {
     // MARK: - Property
     // The declared types, in the order of their spellings.
-    let shapes: [Shape]
+    let loweredTypes: [LoweredType]
 
     // The members of each declared constraint, in the order of their
     // spellings.
-    let constraints: [[Shape]]
+    let constraints: [[LoweredType]]
 
     let labels: [Name]
     let constraintLabels: [Name]
@@ -68,8 +68,8 @@ final class ShapeTable: Sendable {
 
     // A table declaring nothing, for a judgment asked with no declarations
     // behind it. It belongs to no link, so no row belongs to it.
-    static let empty = ShapeTable(
-        shapes: [],
+    static let empty = LoweredTypeTable(
+        loweredTypes: [],
         constraints: [],
         labels: [],
         constraintLabels: [],
@@ -80,8 +80,8 @@ final class ShapeTable: Sendable {
 
     // MARK: - Initializer
     init(
-        shapes: [Shape],
-        constraints: [[Shape]],
+        loweredTypes: [LoweredType],
+        constraints: [[LoweredType]],
         labels: [Name],
         constraintLabels: [Name],
         recordRows: [Int?],
@@ -91,7 +91,7 @@ final class ShapeTable: Sendable {
         unsettled: Fulfillment? = nil,
         of linkage: Linkage
     ) {
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
         self.constraints = constraints
         self.labels = labels
         self.constraintLabels = constraintLabels
@@ -149,7 +149,7 @@ final class ShapeTable: Sendable {
     // One-sided the way every judgment before the run is: only what is
     // provably outside is refused, and a reading nothing can be said about
     // passes here and is judged again where the value arrives.
-    func answering(contract name: Name, reading: Shape) -> Answering {
+    func answering(contract name: Name, reading: LoweredType) -> Answering {
         switch reading {
         case .any, .reading, .undeclared, .never:
             return .settled(true)
@@ -193,7 +193,7 @@ final class ShapeTable: Sendable {
     // A constrained reading is judged by its own membership rather than by
     // its name: it stands for some member of its constraint, so it fits
     // where every one of those members would.
-    func admits(constraint row: Int, reading: Shape, assuming: [Int]) -> Bool {
+    func admits(constraint row: Int, reading: LoweredType, assuming: [Int]) -> Bool {
         switch reading {
         case .any, .reading:
             return true
@@ -232,7 +232,7 @@ final class ShapeTable: Sendable {
     // The record a shape names through the row it stands on, or nil where it
     // names none. The one reading of `recordRows` for a shape that is not
     // itself a row.
-    func record(of shape: Shape) -> Int? {
+    func record(of shape: LoweredType) -> Int? {
         shape.row.flatMap { row in recordRows[row] }
     }
 

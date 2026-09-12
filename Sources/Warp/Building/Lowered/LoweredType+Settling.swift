@@ -1,5 +1,5 @@
 //
-//  Shape+Settling.swift
+//  LoweredType+Settling.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -10,7 +10,7 @@ import Foundation
 // The value judge: what a shape accepts, settled to the declared
 // representation, or a refusal saying which part disagreed. The one judge
 // for a value crossing a declaration, at the link and at the run alike.
-extension Shape {
+extension LoweredType {
     // `at` is the path into the value so the message names the field rather
     // than the whole argument. `assuming` is which constraints are already
     // being asked of this value: a bounded parameter's membership test
@@ -20,7 +20,7 @@ extension Shape {
     func settling(
         _ value: Value,
         at path: @autoclosure () -> String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int] = []
     ) throws -> Value {
         switch self {
@@ -42,7 +42,7 @@ extension Shape {
 
     // What a cast does, said once. The judgment is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
-    func reading(_ value: Value, optional: Bool, in table: ShapeTable) throws -> Value {
+    func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
         do {
             return try settling(value, at: "as \(rendered(in: table))", in: table)
         } catch let mismatch as ArgumentError {
@@ -83,13 +83,13 @@ extension Shape {
     // fact `T?` exists to declare, and the boundary reads it. `any` is not
     // this: an undeclared shape accepts a null that arrives, but it does not
     // spell null as a value.
-    func declaresNull(in table: ShapeTable) -> Bool {
+    func declaresNull(in table: LoweredTypeTable) -> Bool {
         switch self {
         case .null, .nullable:
             return true
 
         case let .named(row):
-            return table.shapes[row].declaresNull(in: table)
+            return table.loweredTypes[row].declaresNull(in: table)
 
         // A value of a membership is one of its members, so null is spelled
         // here wherever a member spells it.
@@ -104,7 +104,7 @@ extension Shape {
     // Whether a call must write a slot of this shape. A default answers
     // omission with a value; a shape that declares null answers it with the
     // null it holds. Without either, omission is a missing argument.
-    func mustBeGiven(default fallback: Value?, in table: ShapeTable) -> Bool {
+    func mustBeGiven(default fallback: Value?, in table: LoweredTypeTable) -> Bool {
         fallback == nil && !declaresNull(in: table)
     }
 
@@ -117,7 +117,7 @@ extension Shape {
     // type and as a constraint, and folding the guards into one would let a
     // type's row end a constraint's question by assuming it.
     func holdsEveryByte(
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         namedAssuming: [Int] = [],
         boundAssuming: [Int] = []
     ) -> Bool {
@@ -158,7 +158,7 @@ extension Shape {
         case let .named(row):
             guard !namedAssuming.contains(row) else { return false }
 
-            return table.shapes[row].holdsEveryByte(
+            return table.loweredTypes[row].holdsEveryByte(
                 in: table,
                 namedAssuming: namedAssuming + [row],
                 boundAssuming: boundAssuming
@@ -178,7 +178,7 @@ extension Shape {
     // for this slot: a fraction slot reads only fraction spellings, so the
     // boundary and the link agree on which members exist. Nil where the
     // spelling names no number the slot takes.
-    func numeral(_ candidate: String, in table: ShapeTable) -> Value? {
+    func numeral(_ candidate: String, in table: LoweredTypeTable) -> Value? {
         switch self {
         case .int:
             return Int(spelling: candidate).map(Value.int)
@@ -192,7 +192,7 @@ extension Shape {
             return Double(spelling: candidate).map(Value.double)
 
         case let .named(row):
-            return table.shapes[row].numeral(candidate, in: table)
+            return table.loweredTypes[row].numeral(candidate, in: table)
 
         case let .nullable(inner):
             return inner.numeral(candidate, in: table)
@@ -210,7 +210,7 @@ extension Shape {
     // Whether the types a membership admits take every byte between them.
     private func holdsEveryByte(
         of constraint: Int,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         namedAssuming: [Int],
         boundAssuming: [Int]
     ) -> Bool {
@@ -234,7 +234,7 @@ extension Shape {
 
     // How the shape reads in a message: the spelling the author wrote, with
     // a row's label standing where the author wrote the name.
-    func rendered(in table: ShapeTable) -> String {
+    func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case .any:
             return "any"
@@ -339,7 +339,7 @@ extension Shape {
     private func judging(
         _ value: Value,
         at path: @autoclosure () -> String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int]
     ) throws -> Value {
         switch self {
@@ -485,9 +485,9 @@ extension Shape {
     // for what arrived; it does not settle it.
     private func standing(
         _ value: Value,
-        boundBy bound: Shape.Bound?,
+        boundBy bound: LoweredType.Bound?,
         at path: @autoclosure () -> String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int]
     ) throws -> Value {
         // A contract is answered by the value's own name: what the link found
@@ -545,7 +545,7 @@ extension Shape {
         _ value: Value,
         by constraint: Int,
         at path: String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int]
     ) -> String {
         let deeper = assuming + [constraint]
@@ -573,10 +573,10 @@ extension Shape {
         _ value: Value,
         row: Int,
         at path: @autoclosure () -> String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int]
     ) throws -> Value {
-        let declared = table.shapes[row]
+        let declared = table.loweredTypes[row]
 
         guard value.holdsFields, let nominal = table.record(of: self) else {
             return try declared.settling(value, at: path(), in: table, assuming: assuming)
@@ -601,9 +601,9 @@ extension Shape {
 
     private func settlingFields(
         _ value: Value,
-        of held: RecordShape,
+        of held: LoweredRecord,
         at path: @autoclosure () -> String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int]
     ) throws -> Value {
         guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
@@ -627,7 +627,7 @@ extension Shape {
     private func settlingBytes(
         _ value: Value,
         at path: @autoclosure () -> String,
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         assuming: [Int]
     ) throws -> Value {
         switch value {
@@ -636,7 +636,7 @@ extension Shape {
 
         case let .array(elements):
             let bytes = try elements.enumerated().map { index, item in
-                let settled = try Shape.byteElement.settling(
+                let settled = try LoweredType.byteElement.settling(
                     item,
                     at: "\(path())[\(index)]",
                     in: table,
@@ -665,12 +665,12 @@ extension Shape {
 
     private func settlingProcedure(
         _ value: Value,
-        parameters required: [(name: Name, shape: Shape, mustBeGiven: Bool)]?,
-        returns: Shape?,
+        parameters required: [(name: Name, shape: LoweredType, mustBeGiven: Bool)]?,
+        returns: LoweredType?,
         purity: Purity,
         isolation: Isolation,
         at path: @autoclosure () -> String,
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) throws -> Value {
         guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
 
@@ -692,7 +692,7 @@ extension Shape {
             )
         }
 
-        let given = Shape.procedure(
+        let given = LoweredType.procedure(
             parameters: closure.linked.slots.map { slot in
                 (name: slot.name, shape: slot.shape, mustBeGiven: slot.mustBeGiven(in: table))
             },
@@ -701,7 +701,7 @@ extension Shape {
             isolation: closure.isolation
         )
 
-        guard Shape.procedure(parameters: required, returns: returns, purity: .unstated, isolation: .unstated).accepts(given, in: table) else {
+        guard LoweredType.procedure(parameters: required, returns: returns, purity: .unstated, isolation: .unstated).accepts(given, in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )
@@ -729,7 +729,7 @@ extension Shape {
         }
     }
 
-    private func mismatch(_ value: Value, at path: String, in table: ShapeTable) -> ArgumentError {
+    private func mismatch(_ value: Value, at path: String, in table: LoweredTypeTable) -> ArgumentError {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
     }
 }

@@ -35,7 +35,7 @@ struct Carried: Sendable {
     let pure: Set<Name>
     let isolated: Set<Name>
     let failing: [Name: Failing]
-    let answers: [Name: Shape]
+    let answers: [Name: LoweredType]
 
     // Nothing laid down.
     static let none = Carried(

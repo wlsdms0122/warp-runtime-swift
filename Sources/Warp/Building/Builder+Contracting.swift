@@ -195,8 +195,8 @@ extension Builder {
                     + " word is answered about the value it is sent to"
         }
 
-        guard held.declared.lowered(in: table.shapes)
-            .same(TypeExpression.named(type).lowered(in: table.shapes), in: table.shapes)
+        guard held.declared.lowered(in: table.loweredTypes)
+            .same(TypeExpression.named(type).lowered(in: table.loweredTypes), in: table.loweredTypes)
         else {
             return "is named for '\(type)' and the word '\(word)' that '\(contract)'"
                     + " asks, and its receiver takes"
@@ -211,8 +211,8 @@ extension Builder {
                         + " A call written against the contract hands that name"
             }
 
-            guard filled.declared.lowered(in: table.shapes)
-                .same(parameter.declared.lowered(in: table.shapes), in: table.shapes)
+            guard filled.declared.lowered(in: table.loweredTypes)
+                .same(parameter.declared.lowered(in: table.loweredTypes), in: table.loweredTypes)
             else {
                 return "is named for '\(type)' and the word '\(word)' that"
                         + " '\(contract)' asks, and takes '\(name)' as"
@@ -227,7 +227,7 @@ extension Builder {
         where name != receiver && asked.parameters[name] == nil {
             guard
                 parameter.default != nil
-                    || parameter.declared.lowered(in: table.shapes).declaresNull(in: table.shapes)
+                    || parameter.declared.lowered(in: table.loweredTypes).declaresNull(in: table.loweredTypes)
             else {
                 return "is named for '\(type)' and the word '\(word)' that"
                         + " '\(contract)' asks, and requires '\(name)', which"
@@ -238,8 +238,8 @@ extension Builder {
 
         guard let answer = asked.returns else { return nil }
 
-        guard answer.lowered(in: table.shapes)
-            .accepts((given.returns ?? .any).lowered(in: table.shapes), in: table.shapes)
+        guard answer.lowered(in: table.loweredTypes)
+            .accepts((given.returns ?? .any).lowered(in: table.loweredTypes), in: table.loweredTypes)
         else {
             return "is named for '\(type)' and the word '\(word)' that '\(contract)'"
                     + " asks, and answers \((given.returns ?? .any).rendered)"

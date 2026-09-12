@@ -27,7 +27,7 @@ struct Requirement: Sendable {
     // a contract declares no row, so this is the only place its lowering
     // could live.
     let slots: [Slot]
-    let answers: Shape?
+    let answers: LoweredType?
 
     // Which declaration answers this word, by the name of the type that
     // answers it. The link filled this in for every type it found, so a call
@@ -46,15 +46,15 @@ struct Requirement: Sendable {
     // whole of it.
     static func table(in types: TypeTable) -> [Name: Requirement] {
         types.contracts.reduce(into: [Name: Requirement]()) { table, entry in
-            let answering = types.shapes.satisfying[entry.key] ?? []
+            let answering = types.loweredTypes.satisfying[entry.key] ?? []
 
             for (word, signature) in entry.value {
                 table[spelling(of: entry.key, word: word)] = Requirement(
                     contract: entry.key,
                     word: word,
                     signature: signature,
-                    slots: signature.lowered(in: types.shapes),
-                    answers: signature.returns?.lowered(in: types.shapes),
+                    slots: signature.lowered(in: types.loweredTypes),
+                    answers: signature.returns?.lowered(in: types.loweredTypes),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
                         held[type] = spelling(of: type, word: word)
                     }

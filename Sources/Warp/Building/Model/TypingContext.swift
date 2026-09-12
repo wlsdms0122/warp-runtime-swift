@@ -28,12 +28,12 @@ struct TypingContext: Sendable {
 
     // What the link read off a body whose declaration wrote no `returns`.
     // Only those, for the same reason: what a declaration wrote is on its row.
-    let answers: [Name: Shape]
+    let answers: [Name: LoweredType]
 
     // The same declarations as the run reads them, lowered once. Every
     // judgment the walk asks goes here, so the walk and the run judge by one
     // table and by one language.
-    var shapes: ShapeTable { types.shapes }
+    var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
@@ -85,7 +85,7 @@ struct TypingContext: Sendable {
 
     // What it answers: what the link read off a body that declared none, else
     // what the declaration wrote.
-    func answer(of selector: Name) -> Shape? {
+    func answer(of selector: Name) -> LoweredType? {
         if let read = answers[selector] { return read }
         if let row = rows[selector] { return linked[row].returns }
 
@@ -95,10 +95,10 @@ struct TypingContext: Sendable {
     // A named type stands for what it was declared as. Inference walks into
     // shapes, so it has to look through a name to find one. The table lowered
     // every declaration once, so following a name is reading a row.
-    func resolve(_ shape: Shape) -> Shape {
+    func resolve(_ shape: LoweredType) -> LoweredType {
         guard case let .named(row) = shape else { return shape }
 
-        return resolve(shapes.shapes[row])
+        return resolve(loweredTypes.loweredTypes[row])
     }
 
     // MARK: - Private

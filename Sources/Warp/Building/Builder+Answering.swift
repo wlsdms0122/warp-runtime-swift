@@ -40,7 +40,7 @@ extension Builder {
         let symbol: Symbol
 
         let block: Block
-        let environment: [Name: Shape]
+        let environment: [Name: LoweredType]
         let sends: Set<Name>
     }
 
@@ -54,7 +54,7 @@ extension Builder {
     func answers(
         of unsaid: [Unsaid],
         reading context: () -> TypingContext,
-        recording: (Name, Shape) -> Void
+        recording: (Name, LoweredType) -> Void
     ) {
         let declared = Dictionary(
             unsaid.map { one in (one.symbol.declared, one) },

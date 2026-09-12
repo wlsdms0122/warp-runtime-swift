@@ -12,7 +12,7 @@ extension TypeExpression {
     // name nothing declares lowers to the shape every judgment refuses, so
     // lowering is total and a table a host built by hand still answers for
     // every other name in it.
-    func lowered(in table: ShapeTable) -> Shape {
+    func lowered(in table: LoweredTypeTable) -> LoweredType {
         switch self {
         case .any:
             return .any
@@ -54,7 +54,7 @@ extension TypeExpression {
             let ordered = fields.sorted { left, right in left.key < right.key }
 
             return .record(
-                RecordShape(
+                LoweredRecord(
                     layout: Layout(name: nil, ordered: ordered.map(\.key)),
                     fields: ordered.map { _, field in field.lowered(in: table) }
                 )

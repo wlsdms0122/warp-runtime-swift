@@ -69,13 +69,13 @@ public struct Compiled: Sendable, Declaring {
     // Read off a body rather than out of a signature, so it is the one
     // thing a document compiled against this cannot work out for itself
     // without reading the body again.
-    let answers: [Name: Shape]
+    let answers: [Name: LoweredType]
 
     // Where this document's lowered bodies number their calls and their
     // shapes from. A body carries the document's own numbers, so this is
     // what a link reads to turn them into rows.
     let numbering: Numbering
-    let shapeNumbering: ShapeNumbering
+    let shapeNumbering: LoweredTypeNumbering
 
     // What this document's variables start a run holding, in the order
     // the layouts read them.

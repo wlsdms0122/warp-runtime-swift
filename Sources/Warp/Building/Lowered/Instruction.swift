@@ -15,9 +15,9 @@ struct Instruction: Sendable {
     // crossed the way a parameter's does; a name that said nothing carries
     // none, and what the link worked out for it needs no crossing.
     enum Binding: Sendable {
-        case bind(Int, settling: Shape?)
-        case declare(Int, settling: Shape?)
-        case assign(Address, settling: Shape?)
+        case bind(Int, settling: LoweredType?)
+        case declare(Int, settling: LoweredType?)
+        case assign(Address, settling: LoweredType?)
     }
 
     // MARK: - Property

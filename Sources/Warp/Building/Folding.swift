@@ -17,7 +17,7 @@ struct Folding {
     let names: [Name]
     let cells: [Cell]
     let origin: Int
-    let shapes: ShapeTable
+    let loweredTypes: LoweredTypeTable
 
     // The table this folds against, and how the numbers its bodies carry are
     // read. An expression folded beside them is lowered in the same numbering,
@@ -31,14 +31,14 @@ struct Folding {
         constants: [Name: Value],
         origin: Int,
         in answered: Answered,
-        shapes: ShapeTable
+        loweredTypes: LoweredTypeTable
     ) {
         let names = constants.keys.sorted()
 
         self.names = names
         self.cells = names.map { name in .value(constants[name] ?? .null) }
         self.origin = origin
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
         self.answered = answered
     }
 
@@ -49,10 +49,10 @@ struct Folding {
     init(bindings: [Name: Value], natives modules: [Module]) {
         // The natives declare the shapes their own signatures name, so the
         // table is theirs.
-        let shapes = TypeTable(
+        let loweredTypes = TypeTable(
             types: modules.reduce(into: [:]) { table, module in table.merge(module.types) { first, _ in first } },
             constraints: modules.reduce(into: [:]) { table, module in table.merge(module.constraints) { first, _ in first } }
-        ).shapes
+        ).loweredTypes
         var table: [Linked] = []
         var rows: [Name: Int] = [:]
 
@@ -71,7 +71,7 @@ struct Folding {
                         // a word that sends has no row to send to. It refuses
                         // when it tries, the way one with a written body does.
                         sends: [],
-                        in: shapes
+                        in: loweredTypes
                     )
                 )
             }
@@ -81,7 +81,7 @@ struct Folding {
             constants: bindings,
             origin: 0,
             in: .unanswerable(table, rows: rows),
-            shapes: shapes
+            loweredTypes: loweredTypes
         )
     }
 
@@ -138,7 +138,7 @@ struct Folding {
             table: answered.table,
             rows: answered.rows,
             numbering: [origin: numbering],
-            shapes: shapes
+            loweredTypes: loweredTypes
         )
         let (code, frame) = try lowering.lower(
             expression,
@@ -170,7 +170,7 @@ struct Folding {
             environment: nil,
             linked: answered.table,
             resolving: answered.resolving,
-            shapes: shapes
+            loweredTypes: loweredTypes
         )
 
         return try executor.read(code, in: activation)

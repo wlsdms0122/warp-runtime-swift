@@ -49,7 +49,7 @@ struct CastAgreementTests {
         ]
     )
 
-    private let shapes: [TypeExpression] = [
+    private let loweredTypes: [TypeExpression] = [
         .any, .never, .null, .bool, .int, .double, .string, .number, .bytes,
         .ranged(.whole(from: 0, to: .through(255))),
         .ranged(.whole(from: 300)),
@@ -93,8 +93,8 @@ struct CastAgreementTests {
     // MARK: - Test
     @Test("no pair some value satisfies is called impossible")
     func theLinkNeverRefusesWhatARunWouldTake() {
-        for mine in shapes {
-            for theirs in shapes {
+        for mine in loweredTypes {
+            for theirs in loweredTypes {
                 // The witness: one value both judges take. Where there is none,
                 // the build is free. It may still allow the pair, and leaving
                 // what it cannot prove to the run is the whole bias.
@@ -116,8 +116,8 @@ struct CastAgreementTests {
         // depended on which shape was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
         // side has one, which is exactly where an asymmetry would hide.
-        for mine in shapes {
-            for theirs in shapes {
+        for mine in loweredTypes {
+            for theirs in loweredTypes {
                 #expect(
                     couldBothHold(mine, theirs)
                         == couldBothHold(theirs, mine),
@@ -160,8 +160,8 @@ struct CastAgreementTests {
     // Asked of the lowered shapes, which is where the judgment lives. What a
     // document writes reaches it by lowering.
     private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
-        mine.lowered(in: types.shapes)
-            .couldBothHold(theirs.lowered(in: types.shapes), in: types.shapes)
+        mine.lowered(in: types.loweredTypes)
+            .couldBothHold(theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
     private func settles(_ shape: TypeExpression, _ value: Value) -> Bool {

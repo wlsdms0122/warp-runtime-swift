@@ -1,5 +1,5 @@
 //
-//  Lowering+ShapeNumbering.swift
+//  Lowering+LoweredTypeNumbering.swift
 //  Warp
 //
 //  Created by JSilver on 9/8/26.
@@ -23,23 +23,23 @@ extension Lowering {
     func numbered(
         _ rows: [Int],
         of origin: Int,
-        answering answers: [Name: Shape]
-    ) throws -> (table: [Linked], numbering: ShapeNumbering, answers: [Name: Shape]) {
+        answering answers: [Name: LoweredType]
+    ) throws -> (table: [Linked], numbering: LoweredTypeNumbering, answers: [Name: LoweredType]) {
         let stood = standing[origin] ?? Standing()
-        let numbering = ShapeNumbering(
-            types: Set(stood.types.map { row in shapes.labels[row] }),
-            memberships: Set(stood.memberships.map { row in shapes.constraintLabels[row] })
+        let numbering = LoweredTypeNumbering(
+            types: Set(stood.types.map { row in loweredTypes.labels[row] }),
+            memberships: Set(stood.memberships.map { row in loweredTypes.constraintLabels[row] })
         )
 
         // Which number each row of this link stands at, so the walk that
         // writes them reads a place rather than hashing a name at every
         // shape it meets.
         let place = (
-            types: Self.placed(stood.types, among: numbering.types, spelling: shapes.labels),
+            types: Self.placed(stood.types, among: numbering.types, spelling: loweredTypes.labels),
             memberships: Self.placed(
                 stood.memberships,
                 among: numbering.memberships,
-                spelling: shapes.constraintLabels
+                spelling: loweredTypes.constraintLabels
             )
         )
 
@@ -48,7 +48,7 @@ extension Lowering {
 
             guard case .body = held.implementation else { return held }
 
-            return try held.shaped { shape in
+            return try held.lowered { shape in
                 try renumbered(shape, in: place, of: held.label)
             }
         }
@@ -57,7 +57,7 @@ extension Lowering {
         // body came out of. Read against the same numbering the bodies are, so
         // a call judged against one of these reads the shape its document
         // stands on.
-        let read = try answers.reduce(into: [Name: Shape]()) { read, answer in
+        let read = try answers.reduce(into: [Name: LoweredType]()) { read, answer in
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
@@ -69,15 +69,15 @@ extension Lowering {
     // on. A row the document never numbered is the build having lowered
     // something it did not read, which is this pass's own mistake.
     private func renumbered(
-        _ shape: Shape,
+        _ shape: LoweredType,
         in place: (types: [Int: Int], memberships: [Int: Int]),
         of label: Name
-    ) throws -> Shape {
+    ) throws -> LoweredType {
         try shape.renumbered(
             type: { number in
                 guard let stands = place.types[number] else {
                     throw BuildError.unjudged(
-                        "type \'\(shapes.labels[number])\', which its document never numbered",
+                        "type \'\(loweredTypes.labels[number])\', which its document never numbered",
                         at: Place.procedure(label.spelling, in: .assembled)
                     )
                 }
@@ -87,7 +87,7 @@ extension Lowering {
             membership: { number in
                 guard let stands = place.memberships[number] else {
                     throw BuildError.unjudged(
-                        "membership \'\(shapes.constraintLabels[number])\',"
+                        "membership \'\(loweredTypes.constraintLabels[number])\',"
                             + " which its document never numbered",
                         at: Place.procedure(label.spelling, in: .assembled)
                     )

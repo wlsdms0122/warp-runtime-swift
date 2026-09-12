@@ -11,7 +11,7 @@ import Foundation
 // compiling answers and what a link is handed.
 //
 // What a row's slots and answer lower to is this signature read against a
-// shape table, so it stands where a table does. A document has none, and
+// lowered type table, so it stands where a table does. A document has none, and
 // that is the whole difference between this and a row.
 //
 // Which document a row came out of is not here either: the block it stands in
@@ -76,7 +76,7 @@ struct Judged: Sendable {
     // which is the one thing a document settled that the document does not
     // hold.
     func lowered(
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         of origin: Int,
         supplied: Supplying,
         at document: Place.Document
@@ -90,7 +90,7 @@ struct Judged: Sendable {
     // needed; a link states what the whole run may call, and asks for all of
     // it.
     func folding(
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         of origin: Int,
         supplied: Supplying,
         at document: Place.Document
@@ -100,7 +100,7 @@ struct Judged: Sendable {
 
     // MARK: - Private
     private func lowered(
-        in table: ShapeTable,
+        in table: LoweredTypeTable,
         of origin: Int,
         supplied: Supplying,
         at document: Place.Document,
@@ -146,7 +146,7 @@ struct Judged: Sendable {
     private func row(
         _ implementation: Linked.Implementation,
         of origin: Int,
-        in table: ShapeTable
+        in table: LoweredTypeTable
     ) -> Linked {
         Linked(
             label: label,

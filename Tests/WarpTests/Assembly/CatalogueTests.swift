@@ -28,7 +28,7 @@ struct CatalogueTests {
     func aMentionedShapeBringsItsModule() throws {
         // Given. `shapes` declares the type, `users` declares against it and
         // carries nothing.
-        let shapes = try Module(types: ["Age": .int], procedures: [:])
+        let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
             procedures: [
                 entryName: Procedure(
@@ -40,7 +40,7 @@ struct CatalogueTests {
         )
 
         // When.
-        let closed = try Catalogue([shapes]).closing([users])
+        let closed = try Catalogue([loweredTypes]).closing([users])
 
         // Then. The build has both, and it links.
         #expect(closed.count == 2)
@@ -76,7 +76,7 @@ struct CatalogueTests {
 
     @Test("supply handed over as well as held is supply standing twice")
     func supplyListedBesideTheCatalogueStandsTwice() throws {
-        let shapes = try Module(types: ["Age": .int], procedures: [:])
+        let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
             procedures: [
                 entryName: Procedure(
@@ -90,7 +90,7 @@ struct CatalogueTests {
         // When. What is asked for is what the caller means to run, so a module
         // handed over here as well as held in the catalogue is in the answer
         // twice.
-        let closed = try Catalogue([shapes]).closing([users, shapes])
+        let closed = try Catalogue([loweredTypes]).closing([users, loweredTypes])
 
         // Then. The build says so, rather than the catalogue quietly keeping
         // one of them.
@@ -147,10 +147,10 @@ struct CatalogueTests {
 
     @Test("the caller listing one module twice is not quietly folded")
     func aCallerListingOneModuleTwiceIsNotFolded() throws {
-        let shapes = try Module(types: ["Age": .int], procedures: [:])
+        let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
 
         // When.
-        let closed = try Catalogue([]).closing([shapes, shapes])
+        let closed = try Catalogue([]).closing([loweredTypes, loweredTypes])
 
         // Then. Both copies stand, and the build says what is wrong with that.
         #expect(closed.count == 2)

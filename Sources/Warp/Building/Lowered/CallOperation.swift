@@ -46,7 +46,7 @@ struct CallOperation: Sendable {
         receiver: Argument?,
         to callee: Linked,
         row: Int,
-        in shapes: ShapeTable,
+        in loweredTypes: LoweredTypeTable,
         at place: Place
     ) throws {
         if let stray = written.first(where: { name in callee.signature.parameters[name] == nil }) {
@@ -107,7 +107,7 @@ struct CallOperation: Sendable {
 
                 guard case let .literal(value) = code else { return code }
 
-                return .literal(try slot.taking(value, in: shapes))
+                return .literal(try slot.taking(value, in: loweredTypes))
             })
         }
 

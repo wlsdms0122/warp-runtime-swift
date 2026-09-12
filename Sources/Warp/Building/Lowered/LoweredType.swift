@@ -1,5 +1,5 @@
 //
-//  Shape.swift
+//  LoweredType.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -8,11 +8,11 @@
 import Foundation
 
 // A type as the run reads it: the declaration's type with every name the
-// link resolved written in as a row of the shape table. What a document
+// link resolved written in as a row of the lowered type table. What a document
 // spells stays `TypeExpression`; this is the link's product, the way `Operation`
 // is the product of an `Expression`. Every judgment over a value or a
 // reading lives here, and the document's type reaches it by lowering.
-indirect enum Shape: Sendable {
+indirect enum LoweredType: Sendable {
     case any
     case never
     case null
@@ -23,24 +23,24 @@ indirect enum Shape: Sendable {
     case bytes
     case number
     case ranged(TypeExpression.Refinement)
-    case array(Shape)
-    case dictionary(Shape)
+    case array(LoweredType)
+    case dictionary(LoweredType)
 
-    case record(RecordShape)
+    case record(LoweredRecord)
 
     // What a slot asks of a procedure value: the parameters it may be called
     // with, in position order, and what it must answer. Nil where nothing
     // was declared. Purity and isolation are the slot's requirements.
     case procedure(
-        parameters: [(name: Name, shape: Shape, mustBeGiven: Bool)]?,
-        returns: Shape?,
+        parameters: [(name: Name, shape: LoweredType, mustBeGiven: Bool)]?,
+        returns: LoweredType?,
         purity: Purity,
         isolation: Isolation
     )
 
-    case variable(Shape)
-    case `inout`(Shape)
-    case nullable(Shape)
+    case variable(LoweredType)
+    case `inout`(LoweredType)
+    case nullable(LoweredType)
 
     // A declared type, by its row in the table.
     case named(Int)
@@ -80,13 +80,13 @@ indirect enum Shape: Sendable {
     // MARK: - Property
     // What a box holds. A variable is a fact about the slot, and what is read
     // out of one is the shape inside it.
-    var fieldUnwrapped: Shape {
+    var fieldUnwrapped: LoweredType {
         if case let .variable(inner) = self { return inner }
 
         return self
     }
 
-    var inoutUnwrapped: Shape {
+    var inoutUnwrapped: LoweredType {
         if case let .inout(inner) = self { return inner }
 
         return self
@@ -101,7 +101,7 @@ indirect enum Shape: Sendable {
 
     // What a slot holds, through the two marks that say how it is held
     // rather than what it is.
-    var slotUnwrapped: Shape {
+    var slotUnwrapped: LoweredType {
         switch self {
         case let .variable(inner), let .inout(inner):
             return inner.slotUnwrapped
@@ -130,7 +130,7 @@ indirect enum Shape: Sendable {
 
     // The spelling with its conditions dropped: a range is its kind, and
     // bytes are `array<byte>` compacted.
-    var unrefined: Shape {
+    var unrefined: LoweredType {
         switch self {
         case let .ranged(refinement):
             return refinement.shape
@@ -164,7 +164,7 @@ indirect enum Shape: Sendable {
     //
     // The marks come off on the way in: what a mark says is expected of the
     // value, and where the walk landed is the same field either way.
-    func reaching(_ path: [PathSegment]) -> Shape? {
+    func reaching(_ path: [PathSegment]) -> LoweredType? {
         switch self {
         case let .parameter(name, _):
             return .reading(of: name, path: path.map(\.unmarked))
@@ -185,7 +185,7 @@ indirect enum Shape: Sendable {
     // The place is the value's, not only the shape's. A value settling to a
     // record shape is built on that shape's layout, so a field the link
     // proved stands where the layout puts it.
-    func place(of field: Name, in table: ShapeTable) -> (position: Int, shape: Shape)? {
+    func place(of field: Name, in table: LoweredTypeTable) -> (position: Int, shape: LoweredType)? {
         switch self {
         case let .record(held):
             guard let position = held.layout.position(of: field) else { return nil }
@@ -193,7 +193,7 @@ indirect enum Shape: Sendable {
             return (position, held.fields[position])
 
         case let .named(row):
-            return table.shapes[row].place(of: field, in: table)
+            return table.loweredTypes[row].place(of: field, in: table)
 
         case let .variable(inner), let .inout(inner):
             return inner.place(of: field, in: table)
@@ -205,7 +205,7 @@ indirect enum Shape: Sendable {
 
     // What an element of this stands as, for a walk taking an index. Nil
     // where the link proved no element shape.
-    func element(in table: ShapeTable) -> Shape? {
+    func element(in table: LoweredTypeTable) -> LoweredType? {
         switch self {
         case let .array(element):
             return element
@@ -214,7 +214,7 @@ indirect enum Shape: Sendable {
             return .byteElement
 
         case let .named(row):
-            return table.shapes[row].element(in: table)
+            return table.loweredTypes[row].element(in: table)
 
         case let .variable(inner), let .inout(inner):
             return inner.element(in: table)
@@ -227,7 +227,7 @@ indirect enum Shape: Sendable {
     // Whether two procedure shapes declare the same slots and the same answer.
     // What each requires of the value is beside that, so a join may keep the
     // slots while reading the two requirements together.
-    func sameProcedure(as other: Shape) -> Bool {
+    func sameProcedure(as other: LoweredType) -> Bool {
         guard
             case let .procedure(mine, myAnswer, _, _) = self,
             case let .procedure(theirs, theirAnswer, _, _) = other
@@ -257,7 +257,7 @@ indirect enum Shape: Sendable {
     // What a judgment sees. A reading says a path was taken through a shape
     // the call decides, which proves nothing about what it holds, and that is
     // what `any` says.
-    var judged: Shape {
+    var judged: LoweredType {
         if case .reading = self { return .any }
 
         return self
@@ -280,15 +280,15 @@ indirect enum Shape: Sendable {
     }
 
     // What one element of bytes is: the range `std` names `byte`.
-    static let byteElement = Shape.ranged(.whole(from: 0, to: .through(255)))
+    static let byteElement = LoweredType.ranged(.whole(from: 0, to: .through(255)))
 
     // A record of these fields, laid out the way the link lays every record
     // out: by the order of the field spellings.
-    static func record(_ fields: [Name: Shape]) -> Shape {
+    static func record(_ fields: [Name: LoweredType]) -> LoweredType {
         let ordered = fields.sorted { left, right in left.key < right.key }
 
         return .record(
-            RecordShape(
+            LoweredRecord(
                 layout: Layout(name: nil, ordered: ordered.map(\.key)),
                 fields: ordered.map(\.value)
             )
@@ -300,8 +300,8 @@ indirect enum Shape: Sendable {
     // MARK: - Private
 }
 
-extension Shape: Equatable {
-    static func == (lhs: Shape, rhs: Shape) -> Bool {
+extension LoweredType: Equatable {
+    static func == (lhs: LoweredType, rhs: LoweredType) -> Bool {
         switch (lhs, rhs) {
         case (.any, .any), (.never, .never), (.null, .null), (.bool, .bool), (.int, .int),
             (.double, .double), (.string, .string), (.bytes, .bytes), (.number, .number):

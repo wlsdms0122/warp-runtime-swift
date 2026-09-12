@@ -38,14 +38,14 @@ struct Compiling {
     // Only those: what a declaration wrote is on its row already, and a table
     // holding every spelling would hash every declared name to say what the
     // row says.
-    var answers: [Name: Shape] = [:]
+    var answers: [Name: LoweredType] = [:]
 
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
 
     // Every judgment the compile asks and every row it builds reads the table
     // the run will read.
-    var shapes: ShapeTable { types.shapes }
+    var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
     // Which row each document's numbers stand for, answered when the document
     // is laid down.
@@ -71,7 +71,7 @@ struct Compiling {
         self.documents = documents
         self.lowering = Lowering(
             requirements: requirements,
-            shapes: types.shapes
+            loweredTypes: types.loweredTypes
         )
     }
 
@@ -94,7 +94,7 @@ struct Compiling {
         self.lowering = Lowering(
             carried,
             requirements: requirements,
-            shapes: types.shapes
+            loweredTypes: types.loweredTypes
         )
         self.pure = carried.pure
         self.isolated = carried.isolated
@@ -138,7 +138,7 @@ struct Compiling {
         _ document: Compiled,
         at origin: Int,
         rows: [Linked],
-        answering read: [Name: Shape]
+        answering read: [Name: LoweredType]
     ) {
         hold(
             origin,
@@ -222,7 +222,7 @@ struct Compiling {
     // A shape the build read off a body rather than out of a signature, held to
     // the document that wrote the body: the rows it stands on are numbered
     // beside the ones that document's bodies stand on.
-    mutating func read(_ answer: Shape, as declared: Name, of origin: Int) {
+    mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {
         answers[declared] = answer
 
         lowering.stands(on: answer, of: origin)

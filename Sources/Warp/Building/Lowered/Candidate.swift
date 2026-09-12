@@ -25,7 +25,7 @@ struct Candidate: Sendable {
     let numeral: Value?
 
     // MARK: - Initializer
-    init(_ spelling: String, in shape: Shape, reading table: ShapeTable) {
+    init(_ spelling: String, in shape: LoweredType, reading table: LoweredTypeTable) {
         self.spelling = spelling
         self.numeral = shape.numeral(spelling, in: table)
     }

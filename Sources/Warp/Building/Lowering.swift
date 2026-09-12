@@ -44,7 +44,7 @@ struct Lowering {
 
     // The declared types as the run reads them, for a cast's shape and a
     // closure's row.
-    let shapes: ShapeTable
+    let loweredTypes: LoweredTypeTable
 
     // What each document's lowered bodies stand on, by the rows of the table
     // above. Noted where a shape is written into a body, which is where the
@@ -68,11 +68,11 @@ struct Lowering {
     init(
         table: [Linked] = [],
         requirements: [Name: Requirement] = [:],
-        shapes: ShapeTable
+        loweredTypes: LoweredTypeTable
     ) {
         self.table = table
         self.requirements = requirements
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
     }
 
     // The documents already laid down, read against the table this compile is
@@ -82,15 +82,15 @@ struct Lowering {
     init(
         _ carried: Carried,
         requirements: [Name: Requirement],
-        shapes: ShapeTable
+        loweredTypes: LoweredTypeTable
     ) {
-        self.table = carried.table.map { row in Linked(row, in: shapes) }
+        self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
         self.rows = carried.rows
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
         self.requirements = requirements
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
     }
 
     // A lowering standing on tables something else holds: an expression
@@ -99,13 +99,13 @@ struct Lowering {
         table: [Linked],
         rows: [Name: Int],
         numbering: [Int: Numbering],
-        shapes: ShapeTable
+        loweredTypes: LoweredTypeTable
     ) {
         self.table = table
         self.rows = rows
         self.numbering = numbering
         self.requirements = [:]
-        self.shapes = shapes
+        self.loweredTypes = loweredTypes
     }
 
     // MARK: - Public
@@ -142,7 +142,7 @@ struct Lowering {
     // A shape the build read off a body rather than out of a signature. It is
     // written into no body, so what it stands on is noted here: its document
     // numbers it beside the shapes its bodies stand on.
-    mutating func stands(on shape: Shape, of origin: Int) {
+    mutating func stands(on shape: LoweredType, of origin: Int) {
         var stood = standing[origin] ?? Standing()
 
         shape.standing(into: &stood.types, and: &stood.memberships)
@@ -231,7 +231,7 @@ struct Lowering {
         // What the build proved stands in a slot, for the slots it proved
         // anything about. A path reads its head here, so a field of a shape
         // the build laid out is lowered to the place it stands in.
-        private var held: [Int: Shape] = [:]
+        private var held: [Int: LoweredType] = [:]
 
         // The declarations the shapes written into this body stand on, by the
         // rows of the table it was lowered against. Read where the document's
@@ -254,13 +254,13 @@ struct Lowering {
         // Read through the walk that rewrites a shape's rows, so which cases
         // hold a row is answered in one place. What that walk rebuilds is
         // dropped here.
-        func note(_ shape: Shape?) {
+        func note(_ shape: LoweredType?) {
             guard let shape else { return }
 
             note(shape)
         }
 
-        func note(_ shape: Shape) {
+        func note(_ shape: LoweredType) {
             let root = self.root
 
             _ = shape.renumbered(
@@ -289,11 +289,11 @@ struct Lowering {
 
         // A slot holds what the build proved, and holds nothing where it
         // proved nothing.
-        func hold(_ slot: Int, _ shape: Shape?) {
+        func hold(_ slot: Int, _ shape: LoweredType?) {
             held[slot] = shape
         }
 
-        func shape(of slot: Int) -> Shape? {
+        func shape(of slot: Int) -> LoweredType? {
             held[slot]
         }
 
@@ -377,7 +377,7 @@ struct Lowering {
             // the code it was given stands as.
             case let .constant(name, declared)?:
                 let slot = slots.allocate(name)
-                let settling = declared?.lowered(in: shapes)
+                let settling = declared?.lowered(in: loweredTypes)
                 slots.note(settling)
                 scope.slots[name] = slot
                 slots.hold(slot, settling ?? shape(of: code, on: slots))
@@ -388,7 +388,7 @@ struct Lowering {
             // shape. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = slots.allocate(name)
-                let settling = declared?.lowered(in: shapes)
+                let settling = declared?.lowered(in: loweredTypes)
                 slots.note(settling)
                 scope.slots[name] = slot
                 slots.hold(slot, settling)
@@ -425,11 +425,11 @@ struct Lowering {
     // walk made for it, a call on what its row answers, a cast on what it
     // casts to, and a path on what it reaches. Nil everywhere else, which
     // leaves the fields below it to be read by name.
-    private func shape(of code: Operation, on slots: Slots) -> Shape? {
+    private func shape(of code: Operation, on slots: Slots) -> LoweredType? {
         switch code {
         case let .record(held):
             return .record(
-                RecordShape(
+                LoweredRecord(
                     layout: held.layout,
                     fields: held.fields.map { field in shape(of: field, on: slots) ?? .any }
                 )
@@ -439,10 +439,10 @@ struct Lowering {
             return address.steps.reduce(slots.shape(of: address.slot)) { reached, step in
                 switch step {
                 case let .field(_, name, _):
-                    return reached?.place(of: name, in: shapes)?.shape
+                    return reached?.place(of: name, in: loweredTypes)?.shape
 
                 case .index, .at:
-                    return reached?.element(in: shapes)
+                    return reached?.element(in: loweredTypes)
 
                 case .key:
                     return nil
@@ -537,7 +537,7 @@ struct Lowering {
                     isolation: procedure.isolation,
                     failing: procedure.failing,
                     implementation: .body(body, inner.frame),
-                    in: shapes
+                    in: loweredTypes
                 )
             )
 
@@ -563,7 +563,7 @@ struct Lowering {
             )
 
         case let .cast(value, type, optional):
-            let shape = type.lowered(in: shapes)
+            let shape = type.lowered(in: loweredTypes)
             slots.note(shape)
 
             return .cast(
@@ -750,7 +750,7 @@ struct Lowering {
             },
             to: callee,
             row: stands,
-            in: shapes,
+            in: loweredTypes,
             at: place
         )
     }
@@ -760,7 +760,7 @@ struct Lowering {
         in scope: Names,
         on slots: Slots,
         at place: Place
-    ) throws -> (address: Address, reached: Shape?) {
+    ) throws -> (address: Address, reached: LoweredType?) {
         // A mark on the head expects a name to be missing, which is not
         // absence but a reading gone wrong.
         if let refusal = path.markedHead {
@@ -784,7 +784,7 @@ struct Lowering {
         let steps = try path.dropFirst().map { segment -> Step in
             switch segment {
             case let .key(name, optional):
-                guard let place = reached?.place(of: name, in: shapes) else {
+                guard let place = reached?.place(of: name, in: loweredTypes) else {
                     reached = nil
 
                     return .key(name, optional: optional)
@@ -795,13 +795,13 @@ struct Lowering {
                 return .field(place.position, name, optional: optional)
 
             case let .index(index, optional):
-                reached = reached?.element(in: shapes)
+                reached = reached?.element(in: loweredTypes)
 
                 return .index(index, optional: optional)
 
             case let .indexRef(inner, optional):
                 let (address, _) = try lower(inner, in: scope, on: slots, at: place)
-                reached = reached?.element(in: shapes)
+                reached = reached?.element(in: loweredTypes)
 
                 return .at(address, optional: optional)
 

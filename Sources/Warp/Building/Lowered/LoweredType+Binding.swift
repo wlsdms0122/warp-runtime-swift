@@ -1,5 +1,5 @@
 //
-//  Shape+Binding.swift
+//  LoweredType+Binding.swift
 //  Warp
 //
 //  Created by JSilver on 9/7/26.
@@ -14,7 +14,7 @@ import Foundation
 // statements and nothing is solved: a call site is one place, what it hands over
 // is already known there, and the parameters are read off by walking the
 // declaration beside what arrived.
-extension Shape {
+extension LoweredType {
     // What the type parameters in this declaration stand for, given what
     // arrived. Walked in step: where the declaration has a parameter, whatever
     // sits opposite it is what the parameter stands for; where both have a
@@ -32,10 +32,10 @@ extension Shape {
     // whole number added to a fraction refused, without the language growing a
     // way to declare a name twice.
     func binding(
-        against given: Shape,
-        into bound: inout [Name: Shape],
-        disagreeing: inout [Name: Shape],
-        in table: ShapeTable
+        against given: LoweredType,
+        into bound: inout [Name: LoweredType],
+        disagreeing: inout [Name: LoweredType],
+        in table: LoweredTypeTable
     ) {
         switch (self, given) {
         case let (.parameter(name, _), _):
@@ -138,7 +138,7 @@ extension Shape {
     // This shape with every parameter replaced by what it was read as. A
     // parameter nothing filled reads `any`, which is what a declaration says
     // when it says nothing.
-    func filling(_ bound: [Name: Shape]) -> Shape {
+    func filling(_ bound: [Name: LoweredType]) -> LoweredType {
         switch self {
         case let .parameter(name, _):
             return bound[name] ?? .any
@@ -157,7 +157,7 @@ extension Shape {
 
         case let .record(fields):
             return .record(
-                RecordShape(
+                LoweredRecord(
                     layout: fields.layout,
                     fields: fields.fields.map { field in field.filling(bound) }
                 )

@@ -14,12 +14,12 @@ import Foundation
 final class Slot: Sendable {
     // MARK: - Property
     let name: Name
-    let shape: Shape
+    let shape: LoweredType
     let `default`: Value?
     let candidates: [Candidate]?
 
     // MARK: - Initializer
-    init(name: Name, shape: Shape, default: Value?, candidates: [Candidate]?) {
+    init(name: Name, shape: LoweredType, default: Value?, candidates: [Candidate]?) {
         self.name = name
         self.shape = shape
         self.default = `default`
@@ -27,12 +27,12 @@ final class Slot: Sendable {
     }
 
     // MARK: - Public
-    func mustBeGiven(in table: ShapeTable) -> Bool {
+    func mustBeGiven(in table: LoweredTypeTable) -> Bool {
         shape.mustBeGiven(default: `default`, in: table)
     }
 
     // An argument as given, or the default where nothing was.
-    func taking(_ value: Value, in table: ShapeTable) throws -> Value {
+    func taking(_ value: Value, in table: LoweredTypeTable) throws -> Value {
         guard value != .null else {
             guard let fallback = self.default else {
                 // A type that declares null holds it as a value, so a null
@@ -56,7 +56,7 @@ final class Slot: Sendable {
     // word decides for itself what being sent to nothing means: `contains`
     // says false rather than failing, and a path that reached null is
     // absence rather than misuse.
-    func checking(receiver value: Value, in table: ShapeTable) throws -> Value {
+    func checking(receiver value: Value, in table: LoweredTypeTable) throws -> Value {
         guard value != .null else { return value }
 
         return try checking(value, in: table)
@@ -64,7 +64,7 @@ final class Slot: Sendable {
 
     // The value settled to the declared representation, and held to the
     // spellings where the declaration lists them.
-    func checking(_ value: Value, in table: ShapeTable) throws -> Value {
+    func checking(_ value: Value, in table: LoweredTypeTable) throws -> Value {
         if value == .null {
             // Null passes where the declaration says it is a value: a `T?`
             // slot, or the legacy spelling of the same fact, an explicitly
@@ -152,18 +152,18 @@ extension Parameter {
     // This parameter as the run reads it. An undeclared type lowers to
     // `any`: the boundary tells "nothing written" from "`any` written" in no
     // way, so the slot does not either.
-    func lowered(named name: Name, in table: ShapeTable) -> Slot {
+    func lowered(named name: Name, in table: LoweredTypeTable) -> Slot {
         slot(named: name, holding: declared.lowered(in: table), in: table)
     }
 
     // The same, with what a call put in the type parameters written in. A
     // parameter nothing filled reads `any`, which is what the call said about
     // it by saying nothing.
-    func lowered(named name: Name, in table: ShapeTable, filling bound: [Name: Shape]) -> Slot {
+    func lowered(named name: Name, in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> Slot {
         slot(named: name, holding: declared.lowered(in: table).filling(bound), in: table)
     }
 
-    private func slot(named name: Name, holding shape: Shape, in table: ShapeTable) -> Slot {
+    private func slot(named name: Name, holding shape: LoweredType, in table: LoweredTypeTable) -> Slot {
         Slot(
             name: name,
             shape: shape,

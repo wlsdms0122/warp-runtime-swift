@@ -52,7 +52,7 @@ public extension TypeExpression.Refinement {
     }
 
     // The same kind as the run reads it.
-    internal var shape: Shape {
+    internal var shape: LoweredType {
         switch self {
         case .whole:
             return .int

@@ -54,12 +54,12 @@ struct LinkBoundaryTests {
         }
 
         // Then. One number, two declarations
-        #expect(mine.types.shapes.labels[row] == "app.Thing")
-        #expect(theirs.types.shapes.labels[row] == "app.Alpha")
+        #expect(mine.types.loweredTypes.labels[row] == "app.Thing")
+        #expect(theirs.types.loweredTypes.labels[row] == "app.Alpha")
 
         // And the run refuses it rather than reading the other declaration
-        #expect(closure.linked.readable(in: mine.types.shapes))
-        #expect(!closure.linked.readable(in: theirs.types.shapes))
+        #expect(closure.linked.readable(in: mine.types.loweredTypes))
+        #expect(!closure.linked.readable(in: theirs.types.loweredTypes))
     }
 
     // MARK: - Private

@@ -18,7 +18,7 @@ extension Builder {
     // The table is remade holding the answer. Its rows are numbered from the
     // declarations alone, so a shape lowered against either table is the same
     // shape.
-    func shaped(
+    func lowered(
         _ declaring: TypeTable,
         conformances: [Placed<Conformance>],
         contracts: [Name: Placed<[Name: Signature]>],
@@ -183,7 +183,7 @@ extension Builder {
         // In name order rather than the rows', so which of two names that
         // name themselves is reported does not follow how the documents were
         // handed over.
-        for label in table.shapes.cycling.map({ row in table.shapes.labels[row] }).sorted() {
+        for label in table.loweredTypes.cycling.map({ row in table.loweredTypes.labels[row] }).sorted() {
             guard let declaration = declared[label] else { continue }
 
             throw BuildError(
@@ -330,7 +330,7 @@ extension Builder {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in type(of: value, in: context.shapes) },
+                    in: known.mapValues { value in type(of: value, in: context.loweredTypes) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -346,7 +346,7 @@ extension Builder {
                         constants: known,
                         origin: origin,
                         in: answered,
-                        shapes: context.shapes
+                        loweredTypes: context.loweredTypes
                     ).read(judged, as: name, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
@@ -383,7 +383,7 @@ extension Builder {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in type(of: value, in: context.shapes) },
+                    in: known.mapValues { value in type(of: value, in: context.loweredTypes) },
                     with: context,
                     folding: nil,
                     writing: fulfillment
@@ -396,7 +396,7 @@ extension Builder {
                         constants: known,
                         origin: origin,
                         in: answered,
-                        shapes: context.shapes
+                        loweredTypes: context.loweredTypes
                     ).read(judged, as: name, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused

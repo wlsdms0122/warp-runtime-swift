@@ -332,7 +332,7 @@ extension Builder {
     ) throws {
         // The declaration as the boundary reads it, so what the link calls
         // dead is exactly what the boundary would never match.
-        let shape = parameter.declared.lowered(in: table.shapes)
+        let shape = parameter.declared.lowered(in: table.loweredTypes)
 
         if let allowed = parameter.oneOf {
             // Candidate by candidate: a spelling the declared type cannot spell
@@ -342,7 +342,7 @@ extension Builder {
             // dead refuses by the plainer name, a dead member among live ones
             // is named.
             let dead = allowed.filter { candidate in
-                !shape.spells(candidate, in: table.shapes)
+                !shape.spells(candidate, in: table.loweredTypes)
             }
 
             if dead.count == allowed.count {
@@ -370,7 +370,7 @@ extension Builder {
         // spelling. Asked of the value judge itself, since the slot reads an
         // explicit null default as its own legacy spelling of `T?`.
         if fallback == .null {
-            guard parameter.oneOf == nil, shape.settles(.null, in: table.shapes) else {
+            guard parameter.oneOf == nil, shape.settles(.null, in: table.loweredTypes) else {
                 throw BuildError(
                     "its default is not a value it takes: null",
                     at: place
@@ -466,7 +466,7 @@ extension Builder {
         writing fulfillment: Fulfillment
     ) throws {
         let call = site.call
-        let shapes = context.shapes
+        let loweredTypes = context.loweredTypes
 
         // One parameter takes one argument. A receiver written in front of
         // the dot and again by name is refused before either is read, since
@@ -504,9 +504,9 @@ extension Builder {
                 at: call,
                 readings: site.readings,
                 receiver: site.received,
-                in: shapes
+                in: loweredTypes
             ),
-            in: shapes,
+            in: loweredTypes,
             fulfillment: fulfillment,
             at: site.place
         ) {
@@ -544,7 +544,7 @@ extension Builder {
             .union(call.receiver == nil ? [] : [declared.receiver].compactMap { $0 })
 
         let missing = slots
-            .filter { slot in slot.mustBeGiven(in: shapes) && !supplied.contains(slot.name) }
+            .filter { slot in slot.mustBeGiven(in: loweredTypes) && !supplied.contains(slot.name) }
             .map(\.name)
             .sorted()
 
@@ -563,7 +563,7 @@ extension Builder {
             guard let slot = slot(name), let constant = argument.constantValue else { continue }
 
             do {
-                _ = try slot.taking(constant, in: shapes)
+                _ = try slot.taking(constant, in: loweredTypes)
             } catch {
                 throw BuildError(
                     "sending '\(call.selector)': \(error)",
@@ -607,12 +607,12 @@ extension Builder {
 
             let written = site.readings[name] ?? .any
 
-            guard !slot.shape.accepts(written, in: shapes) else { continue }
+            guard !slot.shape.accepts(written, in: loweredTypes) else { continue }
 
             throw BuildError(
                 "sending '\(call.selector)' with \(name),"
-                    + " which holds \(written.rendered(in: shapes))"
-                    + " where \(slot.shape.rendered(in: shapes)) is declared",
+                    + " which holds \(written.rendered(in: loweredTypes))"
+                    + " where \(slot.shape.rendered(in: loweredTypes)) is declared",
                 at: site.place.argument(name.spelling)
             )
         }
@@ -624,10 +624,10 @@ extension Builder {
             let name = declared.receiver,
             let slot = slot(name)
         {
-            guard slot.shape.accepts(written, in: shapes) else {
+            guard slot.shape.accepts(written, in: loweredTypes) else {
                 throw BuildError(
-                    "sending '\(call.selector)' to \(written.rendered(in: shapes)),"
-                        + " where \(slot.shape.rendered(in: shapes)) is declared",
+                    "sending '\(call.selector)' to \(written.rendered(in: loweredTypes)),"
+                        + " where \(slot.shape.rendered(in: loweredTypes)) is declared",
                     at: site.place.part(.receiver)
                 )
             }
