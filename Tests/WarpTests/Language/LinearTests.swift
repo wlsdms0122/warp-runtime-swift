@@ -200,7 +200,7 @@ struct LinearTests {
     }
 
     @Test("a value handed on once is not carried inside another type")
-    func onceInsideAnotherShapeRefuses() throws {
+    func onceInsideAnotherTypeRefuses() throws {
         // Given. Nothing follows a value into a list, so nothing could say the
         // list handed each of them on
         let sut = try Module(

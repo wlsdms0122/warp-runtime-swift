@@ -233,7 +233,7 @@ public struct Builder: Sendable {
     // Documents laid down one at a time, in the order `standing` gives, each
     // against the ones already compiled and the ones laid before it.
     //
-    // What only the whole list answers is read once, here: the type spaces of
+    // What only the whole list answers is read once, here: the type tables of
     // a link are its documents' together, and documents handed over already
     // compiled were not in the ones the others were compiled against.
     //

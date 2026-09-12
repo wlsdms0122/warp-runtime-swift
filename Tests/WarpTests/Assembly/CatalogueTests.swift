@@ -25,7 +25,7 @@ struct CatalogueTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a type a signature mentions brings the module that declares it")
-    func aMentionedShapeBringsItsModule() throws {
+    func aMentionedTypeBringsItsModule() throws {
         // Given. `types` declares the type, `users` declares against it and
         // carries nothing.
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
@@ -352,7 +352,7 @@ struct CatalogueTests {
     }
 
     @Test("a document's procedure collides before its type")
-    func aProcedureCollidesBeforeAShape() throws {
+    func aProcedureCollidesBeforeAType() throws {
         // Given. One document declaring a procedure and a type, and a second
         // declaring both of the same names. The catalogue has two answers for
         // each and reports the first it walks into.

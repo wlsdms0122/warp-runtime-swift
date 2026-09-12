@@ -68,7 +68,7 @@ struct Numbering: Sendable {
 
         // In name order, over whatever wrote one. A procedure, a constant and
         // a variable are all names the document declared, and a name holds one
-        // thing, so the three spaces are one order.
+        // thing, so the three are one order.
         var starting: [Name: Int] = [:]
         var written = 0
 

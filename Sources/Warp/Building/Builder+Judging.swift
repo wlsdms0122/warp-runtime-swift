@@ -211,7 +211,7 @@ extension Builder {
 
             try judgeConstraints(of: signature, at: place, in: table)
 
-        // Types and memberships are two spaces and no name is in both, so a
+        // Types and memberships are two tables and no name is in both, so a
         // mention reaches whichever declares it. A membership standing here is
         // a value of one of its members.
         case let .named(name):

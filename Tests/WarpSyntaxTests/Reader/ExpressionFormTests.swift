@@ -85,7 +85,7 @@ struct ExpressionFormTests {
     }
 
     @Test("form-shaped data inside { value: } quotation stays inert")
-    func quotedFormShapedPayloadStaysInert() throws {
+    func quotedFormLikePayloadStaysInert() throws {
         // Given. { value: } is quotation; ref-shaped data inside is data
         let reference = try loader.expression(from: ["value": ["ref": "secret"]])
 

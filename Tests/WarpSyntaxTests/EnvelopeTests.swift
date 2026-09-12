@@ -246,7 +246,7 @@ struct EnvelopeTests {
     }
 
     @Test("being too old to read a document is not the same as the document being wrong")
-    func versionIsCheckedBeforeShape() {
+    func versionIsCheckedBeforeTheKeys() {
         // Given. A later version may add keys, so checking the type first
         // would turn "I am too old for this" into "this is malformed". The
         // answers differ: one is upgrade me, the other is fix the sender.

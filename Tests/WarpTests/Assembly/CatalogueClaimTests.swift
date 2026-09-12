@@ -11,7 +11,7 @@ struct CatalogueClaimTests {
     private let entryName: Name = "app.main"
 
     @Test("closing brings a claim about two types the list has")
-    func closingBringsAClaimAboutShapesTheListHas() throws {
+    func closingBringsAClaimAboutTypesTheListHas() throws {
         // Given. Two libraries that know nothing of each other, a third
         // claiming one's type answers the other's contract, and a program
         // naming neither the claim nor the procedure that answers it.

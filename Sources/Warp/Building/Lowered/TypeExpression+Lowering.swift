@@ -93,7 +93,7 @@ extension TypeExpression {
         case let .linear(inner):
             return inner.lowered(in: table)
 
-        // Types and memberships are two spaces and no name is in both, so a
+        // Types and memberships are two tables and no name is in both, so a
         // mention is looked for in each. A membership standing as a type is a
         // value of one of its members.
         case let .named(name):

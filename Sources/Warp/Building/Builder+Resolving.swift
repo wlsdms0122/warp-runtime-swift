@@ -235,7 +235,7 @@ extension Builder {
             }
         }
 
-        // The two spaces are walked from the tables rather than per module:
+        // The two tables are walked whole rather than per module:
         // they arrive carrying where each name was written, and asking a module
         // again would be spelling that a second way.
         for (_, declaration) in declared.sorted { $0.key < $1.key } {

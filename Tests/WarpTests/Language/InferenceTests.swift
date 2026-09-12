@@ -302,7 +302,7 @@ struct InferenceTests {
     }
 
     @Test("a field of a declared type carries the field's type")
-    func declaredShapeCarriesItsFields() throws {
+    func declaredTypeCarriesItsFields() throws {
         // Given
         let sut = try Module(
             types: [
@@ -634,7 +634,7 @@ struct InferenceTests {
     }
 
     @Test("a path drilling a field into a type that has none is refused")
-    func drillingIntoAShapeWithoutFieldsIsRefused() throws {
+    func drillingIntoATypeWithoutFieldsIsRefused() throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -1297,7 +1297,7 @@ struct InferenceTests {
     }
 
     @Test("a cast onto a type holding any opens the door it names, and no further")
-    func aCastOntoAShapeHoldingAnyOpensItsOwnDoor() throws {
+    func aCastOntoATypeHoldingAnyOpensItsOwnDoor() throws {
         // Given. `as: array<any>` is not `as: any`: the types then prove an
         // array is there and an index reads one. What each element holds is
         // still nothing, so a dot on one is still refused. The door it named

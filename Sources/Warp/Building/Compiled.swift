@@ -22,7 +22,7 @@ public struct Compiled: Sendable, Declaring {
     // where the procedures are.
     let document: Place.Document
 
-    // What it declares in the three type spaces, as it wrote them. A
+    // What it declares in the three type tables, as it wrote them. A
     // link lays these down in the order it was handed the documents to
     // make the table its rows are numbered against, and reads no type of
     // this document anywhere else.

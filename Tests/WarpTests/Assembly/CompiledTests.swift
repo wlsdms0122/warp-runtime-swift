@@ -202,7 +202,7 @@ struct CompiledTests {
     }
 
     @Test("a document's types take a run of type rows of their own")
-    func aDocumentTakesABlockOfShapeRows() throws {
+    func aDocumentTakesABlockOfTypeRows() throws {
         // Given. A document naming a type another declares, handed over first,
         // so the rows follow the documents and not what they name.
         let naming = try Module(
@@ -498,7 +498,7 @@ struct CompiledTests {
     }
 
     @Test("a cast carries the number its own document gave the type")
-    func aCastCarriesTheDocumentsOwnShapeNumber() throws {
+    func aCastCarriesTheDocumentsOwnTypeNumber() throws {
         // Given. A document casting to a type it declares.
         let sut = try casting()
 
@@ -520,7 +520,7 @@ struct CompiledTests {
     }
 
     @Test("what a document stands on does not move when the link grows")
-    func loweredShapesDoNotFollowTheGraph() throws {
+    func loweredTypesDoNotFollowTheGraph() throws {
         // Given. The same document, compiled once alone and once beside one
         // whose type takes a row in front of its own.
         let sut = try casting()
@@ -547,7 +547,7 @@ struct CompiledTests {
     }
 
     @Test("an answer the build read carries the number its own document gave")
-    func aReadAnswerCarriesTheDocumentsOwnShapeNumber() throws {
+    func aReadAnswerCarriesTheDocumentsOwnTypeNumber() throws {
         // Given. A declaration writing no `returns`, whose body answers a type
         // its document declares.
         let sut = try casting()

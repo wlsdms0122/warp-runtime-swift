@@ -603,7 +603,7 @@ struct ConstraintTests {
     }
 
     @Test("a recursive type compared with itself agrees instead of recursing")
-    func aRecursiveShapeAcceptsItself() throws {
+    func aRecursiveTypeAcceptsItself() throws {
         // Given. A type that names itself walks back into the comparison it is
         // inside; meeting the pair again is agreement, not a regress
         let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
@@ -670,7 +670,7 @@ struct ConstraintTests {
     }
 
     @Test("a dot on a type with no fields says to write the call")
-    func aDotOnAFieldlessShapeSaysToWriteTheCall() throws {
+    func aDotOnAFieldlessTypeSaysToWriteTheCall() throws {
         // Given. Text has no name to read, so the refusal names the one
         // spelling that reaches the procedure: the written call
         let sut = try Module(

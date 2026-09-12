@@ -98,7 +98,7 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Internal
-    // What this declares in the procedure space, each under the place it was
+    // What this declares in the procedure namespace, each under the place it was
     // written at. A contract's procedure is one of them, by the spelling a call
     // writes to reach it, and its place is the two steps the document nests it
     // in rather than the joined name in one.
@@ -117,8 +117,8 @@ public struct Draft: Sendable {
             }
     }
 
-    // What this declares in the type space, the same way. Types, constraints
-    // and contracts are one space: a link refuses a name standing for a type
+    // What this declares in the type namespace, the same way. Types,
+    // constraints and contracts share it: a link refuses a name standing for a type
     // and a membership at once.
     func types(in document: Place.Document) -> [(name: Name, place: Place)] {
         types.keys.map { name in

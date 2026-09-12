@@ -12,9 +12,9 @@ import Foundation
 // key, and a document declaring a bare `Numeric` of its own declares a
 // different name.
 extension Builder {
-    // The three spaces gathered whole, here and nowhere else, so the uniqueness
-    // this pass refuses on is the same fact the tables are built from: each
-    // table is filled as its space is walked. A mention nothing declares is
+    // The three tables gathered whole, here and nowhere else, so the uniqueness
+    // this pass refuses on is the same fact the tables are built from: each is
+    // filled as it is walked. A mention nothing declares is
     // refused by the judgment that owns undeclared names, which says where the
     // mention lives.
     func declared(in documents: [any Declaring]) throws -> (

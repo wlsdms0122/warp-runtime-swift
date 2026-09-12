@@ -329,7 +329,7 @@ struct LoweringTests {
     }
 
     @Test("what is handed in place is the type the slot declares, and not one that fits it")
-    func aHandedVariableIsTheSlotsOwnShape() async throws {
+    func aHandedVariableIsTheSlotsOwnType() async throws {
         // Given. A variable holding an unnamed record, handed to a slot
         // declaring `Tag`. By value the boundary would settle it and the procedure
         // would answer it named; in place there is nothing to settle into. The

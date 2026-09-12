@@ -587,7 +587,7 @@ struct PlaceTests {
 
     @Test("a name written as a type in one document and a membership in another")
     func aNameThatIsBothIsPlacedAtTheMembership() throws {
-        // Given. The two spaces held against each other, which is the one
+        // Given. The two tables held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
         let type = try Module(types: ["pricing.Money": .int], procedures: [:], identity: Identity([0x01]))

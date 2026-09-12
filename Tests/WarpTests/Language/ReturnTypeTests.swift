@@ -88,7 +88,7 @@ struct ReturnTypeTests {
     }
 
     @Test("a declared type is settled on the way out, not only on the way in")
-    func declaredShapeSettlesOnTheWayOut() async throws {
+    func declaredTypeSettlesOnTheWayOut() async throws {
         // Given
         let sut = try Module(
             types: [

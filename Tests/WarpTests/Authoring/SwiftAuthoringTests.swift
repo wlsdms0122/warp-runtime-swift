@@ -123,7 +123,7 @@ struct SwiftAuthoringTests {
     }
 
     @Test("a library procedure, a native procedure and a procedure are all one expression")
-    func oneCallingShape() async throws {
+    func oneCallingType() async throws {
         // Given. Three selectors that are answered in three different places,
         // written identically. Where each is found is the runtime's business.
         let builder = Builder()

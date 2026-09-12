@@ -559,7 +559,7 @@ struct StandardTests {
     }
 
     @Test("a dictionary is walked and rebuilt without naming its fields")
-    func aDictionaryIsDataRatherThanAShape() async throws {
+    func aDictionaryIsDataRatherThanAType() async throws {
         // Given
         let sut = try Module(
             procedures: [

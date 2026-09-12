@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What a document declares in the type spaces, and which document it is.
+// What a document declares in the type tables, and which document it is.
 //
 // A module says it and so does a document already compiled, and a link gathers
 // either the same way: it holds the names to being declared once and lays the
@@ -20,7 +20,7 @@ protocol Declaring {
     var constraints: [Name: [TypeExpression]] { get }
     var contracts: [Name: [Name: Signature]] { get }
 
-    // Which contracts this document says each type answers. Not a type space
+    // Which contracts this document says each type answers. Not a type table
     // and gathered apart from the three: it declares no name, it says
     // something about two that are declared elsewhere.
     var claims: [Name: Set<Name>] { get }

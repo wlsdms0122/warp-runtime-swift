@@ -306,7 +306,7 @@ struct TypeNotationTests {
     }
 
     @Test("a declared type is enforced at the call boundary")
-    func declaredShapeIsEnforced() async throws {
+    func declaredTypeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([
             "types": ["Task": ["id": "string"]],
