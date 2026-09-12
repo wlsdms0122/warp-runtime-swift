@@ -14,7 +14,7 @@ import Foundation
 // whose signature is the contract's with the receiver filled in by the type
 // itself.
 //
-// Read off the claims and not off the whole declaration space. A spelling that
+// Read off the claims and not off the whole shape space. A spelling that
 // happens to join a type's name to a contract's word is that document's word
 // until some document says otherwise, so what a link declares does not decide
 // what an unrelated document may call things.

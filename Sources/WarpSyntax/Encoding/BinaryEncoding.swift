@@ -441,7 +441,7 @@ public enum BinaryEncoding {
     ) throws -> Int {
         let claimed = try unsigned(from: &reading)
 
-        guard claimed <= UInt64(Int.max), reading.conformance(Int(claimed), costing: cost) else {
+        guard claimed <= UInt64(Int.max), reading.claim(Int(claimed), costing: cost) else {
             throw refused("\(what) claims more than the document holds")
         }
 
@@ -515,7 +515,7 @@ public enum BinaryEncoding {
             budget = bytes.count
         }
 
-        mutating func conformance(_ count: Int, costing cost: Int) -> Bool {
+        mutating func claim(_ count: Int, costing cost: Int) -> Bool {
             let charged = count.multipliedReportingOverflow(by: cost)
 
             guard !charged.overflow, charged.partialValue <= budget else { return false }

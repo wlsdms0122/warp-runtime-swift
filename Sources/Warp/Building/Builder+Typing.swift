@@ -1082,8 +1082,8 @@ extension Builder {
                 with: context,
                 ask: ask
             )
-            let conformance = type.lowered(in: context.loweredTypes)
-            let settled = conformance.resolved(in: context.loweredTypes)
+            let claim = type.lowered(in: context.loweredTypes)
+            let settled = claim.resolved(in: context.loweredTypes)
 
             let read = inner.reading.resolved(in: context.loweredTypes)
 
@@ -1114,17 +1114,17 @@ extension Builder {
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
             // rather than about the spelling that produced it.
-            let handed = optional && !conformance.declaresNull(in: context.loweredTypes)
-                ? LoweredType.nullable(conformance)
-                : conformance
+            let handed = optional && !claim.declaresNull(in: context.loweredTypes)
+                ? LoweredType.nullable(claim)
+                : claim
 
             // A declared record is a name as well as a shape: reading a
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = context.loweredTypes.record(of: conformance) != nil
+            let nominal = context.loweredTypes.record(of: claim) != nil
 
-            if !conformance.couldBothHold(inner.reading, in: context.loweredTypes) {
+            if !claim.couldBothHold(inner.reading, in: context.loweredTypes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
@@ -1138,7 +1138,7 @@ extension Builder {
                     at: place,
                     when: ask
                 )
-            } else if inner.reading == conformance
+            } else if inner.reading == claim
                 || (!nominal && (settled == read || handed.resolved(in: context.loweredTypes) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?

@@ -120,7 +120,7 @@ public struct Draft: Sendable {
     // What this declares in the shape space, the same way. Types, constraints
     // and contracts are one space: a link refuses a name standing for a shape
     // and a membership at once.
-    func loweredTypes(in document: Place.Document) -> [(name: Name, place: Place)] {
+    func shapes(in document: Place.Document) -> [(name: Name, place: Place)] {
         types.keys.map { name in
             (name, Place.type(name.spelling, in: document))
         }
@@ -137,7 +137,7 @@ public struct Draft: Sendable {
     // said in one place whichever side asks.
     func declarations(in document: Place.Document) -> [(reference: Reference, place: Place)] {
         words(in: document).map { declared in (.word(declared.name), declared.place) }
-            + loweredTypes(in: document).map { declared in (.shape(declared.name), declared.place) }
+            + shapes(in: document).map { declared in (.shape(declared.name), declared.place) }
     }
 
     // The same two, when only the names are wanted. Read off the lists above
@@ -201,7 +201,7 @@ public struct Draft: Sendable {
     // happens.
     func read() -> Reading {
         let declaredWords = Set(words(in: .assembled).map(\.name))
-        let declaredShapes = Set(loweredTypes(in: .assembled).map(\.name))
+        let declaredShapes = Set(shapes(in: .assembled).map(\.name))
 
         // A native word's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A
