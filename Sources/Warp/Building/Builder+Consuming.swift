@@ -222,15 +222,7 @@ extension Builder {
         // already handed out does not. A walk that drops a way (an `attempt`
         // drops its body's) would drop this with it, so it is kept where only
         // setting it is possible.
-        private var handsOutValue = false
-
-        var handsOut: Bool { handsOutValue }
-
-        // The one door, and it only opens one way: what a body has handed out
-        // it has handed out, and no way through it takes back.
-        private func handedOut() {
-            handsOutValue = true
-        }
+        private(set) var handsOut = false
 
         init(context: TypingContext, place: Place) {
             self.context = context
@@ -298,7 +290,7 @@ extension Builder {
             let left = try through(block, held: held, guarded: nil)
 
             if let result = block.result, carriesObligation(result, held: left) {
-                handedOut()
+                handsOut = true
             }
 
             return left
@@ -355,6 +347,18 @@ extension Builder {
             // would hand on once per run.
             case let .closure(procedure):
                 guard let block = procedure.block else { return held }
+
+                // What such a body answers is held where it wrote it, under
+                // *a body carried as a value*. One that wrote no `returns` is
+                // read here instead, the way a declaration's is: the rule
+                // cannot turn on whether a key was typed.
+                if procedure.signature.returns == nil, answers(block) {
+                    throw refusal(
+                        "carries a body answering a value handed on exactly once."
+                            + " \(Builder.followedByAName), and a body carried as a"
+                            + " value runs where no name is watching"
+                    )
+                }
 
                 for name in held.live.sorted() where reads(block, name: name) {
                     throw refusal(
@@ -438,18 +442,14 @@ extension Builder {
                 // A `return` hands a value to the caller the way a result does,
                 // so it is asked the same question at the same moment: after
                 // the move, where a name that was handed on reads as gone.
-                if
-                    leave.reach == .procedure,
-                    let value = leave.value,
-                    carriesObligation(value, held: carried)
-                {
-                    handedOut()
-                }
-
-                // Only leaving the procedure ends the body. A `break` or a
-                // `continue` leaves a construct, and what the body was holding
-                // it is holding still on the other side of it.
+                // Only leaving the procedure ends the body. A `break` leaves the
+                // construct and a `continue` ends the round, and what the body
+                // was holding it holds still on the other side of either.
                 guard leave.reach == .procedure else { return carried }
+
+                if let value = leave.value, carriesObligation(value, held: carried) {
+                    handsOut = true
+                }
 
                 guard let stranded = carried.live.sorted().first else { return carried }
 
@@ -663,6 +663,24 @@ extension Builder {
 
             case .nothing, .name(_, .live), .name(_, .borrowed):
                 return false
+            }
+        }
+
+        // Whether a body hands an obligation to whoever calls it, read off the
+        // expressions it answers by: its result, and every `return` that
+        // carries a value. Asked of a body no walk enters, so what its own
+        // names do inside is not part of the question.
+        private func answers(_ block: Block) -> Bool {
+            let leaving = block.subexpressions.compactMap { held -> Expression? in
+                guard case let .leave(leave) = held, leave.reach == .procedure else { return nil }
+
+                return leave.value
+            }
+
+            let answered = (block.result.map { result in [result] } ?? []) + leaving
+
+            return answered.contains { written in
+                carriesObligation(written, held: Held(live: []))
             }
         }
 

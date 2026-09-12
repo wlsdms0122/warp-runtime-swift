@@ -935,6 +935,30 @@ struct LinearTests {
         }
     }
 
+    @Test("a carried body that wrote no returns is read the same way")
+    func aCarriedBodyWithoutReturnsIsRead() throws {
+        // Given. The rule cannot turn on whether a key was typed, so a closure
+        // that wrote no `returns` is read by what it answers
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("made"),
+                    expression: .closure(
+                        Procedure(body: [], result: .call(Call(selector: "app.open")))
+                    )
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("carries a body answering a value handed on exactly once")
+        }
+    }
+
     @Test("break leaves a loop, not the body that is still holding one")
     func breakDoesNotStrandWhatTheBodyHolds() throws {
         // Given. Only leaving the procedure ends the body. What it was holding
