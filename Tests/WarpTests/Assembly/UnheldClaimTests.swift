@@ -36,7 +36,7 @@ struct UnheldClaimTests {
         )
         // Claims the pair and declares no witness at all.
         let broken = try Module(
-            claiming: ["bank.Account": ["app.Describable"]],
+            conformances: ["bank.Account": ["app.Describable"]],
             procedures: ["other.nothing": Procedure(body: [], result: .literal(.null))]
         )
         // Names both, and leans on neither: it never hands an Account to tell.
@@ -75,7 +75,7 @@ struct UnheldClaimTests {
         // Then. The claim stands in the link and puts its type under no
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
-        #expect(closed.contains { module in module.claiming.isEmpty == false })
+        #expect(closed.contains { module in module.conformances.isEmpty == false })
         #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
     }
 
@@ -109,7 +109,7 @@ struct UnheldClaimTests {
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let adapting = try Module(
-            claiming: [
+            conformances: [
                 "bank.Account": ["app.Describable"],
                 "bank.Plain": ["app.Describable"]
             ],
@@ -179,8 +179,8 @@ struct UnheldClaimTests {
             types: ["bank.Plain": .record(["note": .string])],
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
-        let claiming = try Module(
-            claiming: ["bank.Plain": ["app.Describable"]],
+        let conformances = try Module(
+            conformances: ["bank.Plain": ["app.Describable"]],
             procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
@@ -206,7 +206,7 @@ struct UnheldClaimTests {
         // where the type was handed over, which is the document an author is
         // reading.
         #expect {
-            try Builder().build([asking, typed, claiming, program] + Module.standard, entry: entryName)
+            try Builder().build([asking, typed, conformances, program] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("procedures.app.main.result")
                 && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
@@ -248,8 +248,8 @@ struct UnheldClaimTests {
                 )
             ]
         )
-        let claiming = try Module(
-            claiming: ["bank.Account": ["app.Describable"]],
+        let conformances = try Module(
+            conformances: ["bank.Account": ["app.Describable"]],
             procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
@@ -278,7 +278,7 @@ struct UnheldClaimTests {
         // the claims of what stood before it, and the claim is not among them.
         // The pair is written down there and the list answers, so the order
         // the caller listed them in decides nothing.
-        let modules = [typed, asking, program, claiming] + Module.standard
+        let modules = [typed, asking, program, conformances] + Module.standard
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {

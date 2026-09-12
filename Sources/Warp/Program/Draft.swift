@@ -46,7 +46,7 @@ public struct Draft: Sendable {
     // document's. A document that arrives later gives a shape it did not
     // declare the words a contract asks, and saying it beside the type would
     // leave that document nowhere to say it.
-    public let claiming: [Name: Set<Name>]
+    public let conformances: [Name: Set<Name>]
 
     public let constants: [Name: Expression]
 
@@ -64,7 +64,7 @@ public struct Draft: Sendable {
         types: [Name: TypeExpression] = [:],
         constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: Signature]] = [:],
-        claiming: [Name: Set<Name>] = [:],
+        conformances: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure]
@@ -74,7 +74,7 @@ public struct Draft: Sendable {
         self.types = types
         self.constraints = constraints
         self.contracts = contracts
-        self.claiming = claiming
+        self.conformances = conformances
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
@@ -266,7 +266,7 @@ public struct Draft: Sendable {
         // type it is about and the contract it says that type answers. The
         // link reads the contract's words to hold the claim to them, so a
         // document making one stands behind the document that wrote it.
-        for (type, contracts) in claiming {
+        for (type, contracts) in conformances {
             named.insert(type)
             named.formUnion(contracts)
         }

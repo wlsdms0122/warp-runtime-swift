@@ -23,5 +23,5 @@ protocol Declaring {
     // Which contracts this document says each type answers. Not a shape space
     // and gathered apart from the three: it declares no name, it says
     // something about two that are declared elsewhere.
-    var claiming: [Name: Set<Name>] { get }
+    var conformances: [Name: Set<Name>] { get }
 }

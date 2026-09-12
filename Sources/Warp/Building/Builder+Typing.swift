@@ -173,7 +173,7 @@ extension Builder {
                 if shapes.satisfying[bound] != nil {
                     switch shapes.answering(contract: bound, reading: reading) {
                     case let .leansOn(type):
-                        requiring?.require(Claim(type: type, contract: bound), at: place)
+                        requiring?.require(Conformance(type: type, contract: bound), at: place)
 
                     case .settled(true):
                         break
@@ -1082,8 +1082,8 @@ extension Builder {
                 with: context,
                 ask: ask
             )
-            let claim = type.lowered(in: context.shapes)
-            let settled = claim.resolved(in: context.shapes)
+            let conformance = type.lowered(in: context.shapes)
+            let settled = conformance.resolved(in: context.shapes)
 
             let read = inner.reading.resolved(in: context.shapes)
 
@@ -1114,17 +1114,17 @@ extension Builder {
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
             // rather than about the spelling that produced it.
-            let handed = optional && !claim.declaresNull(in: context.shapes)
-                ? Shape.nullable(claim)
-                : claim
+            let handed = optional && !conformance.declaresNull(in: context.shapes)
+                ? Shape.nullable(conformance)
+                : conformance
 
             // A declared record is a name as well as a shape: reading a
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = context.shapes.record(of: claim) != nil
+            let nominal = context.shapes.record(of: conformance) != nil
 
-            if !claim.couldBothHold(inner.reading, in: context.shapes) {
+            if !conformance.couldBothHold(inner.reading, in: context.shapes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
@@ -1138,7 +1138,7 @@ extension Builder {
                     at: place,
                     when: ask
                 )
-            } else if inner.reading == claim
+            } else if inner.reading == conformance
                 || (!nominal && (settled == read || handed.resolved(in: context.shapes) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
@@ -1756,7 +1756,7 @@ extension Builder {
         switch context.shapes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
             ask.requiring?.require(
-                Claim(type: type, contract: asked.contract),
+                Conformance(type: type, contract: asked.contract),
                 at: place.part(.receiver)
             )
 

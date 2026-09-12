@@ -260,7 +260,7 @@ struct CompiledTests {
     // the type and the word it sends and has no reason to name the third, so
     // the standing puts the claim on either side of it depending on the order
     // the caller wrote the list in.
-    private func leaning() throws -> (typed: Module, asking: Module, claiming: Module, program: Module) {
+    private func leaning() throws -> (typed: Module, asking: Module, conformances: Module, program: Module) {
         (
             typed: try Module(
                 types: ["bank.Account": .record(["balance": .int])],
@@ -294,8 +294,8 @@ struct CompiledTests {
                     )
                 ]
             ),
-            claiming: try Module(
-                claiming: ["bank.Account": ["app.Describable"]],
+            conformances: try Module(
+                conformances: ["bank.Account": ["app.Describable"]],
                 procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
             ),
             program: try Module(
@@ -334,20 +334,20 @@ struct CompiledTests {
     @Test("a claim answers a document that never names the one making it")
     func aClaimAnswersADocumentThatDoesNotNameIt() throws {
         // Given
-        let (typed, asking, claiming, program) = try leaning()
+        let (typed, asking, conformances, program) = try leaning()
 
         // When / Then. The whole graph, and each document on its own with the
         // claim standing before the program and after it. Nothing in the
         // program points at the claim, so the order the caller listed them in
         // is what decides which side it lands on, and it decides nothing.
         #expect(throws: Never.self) {
-            try builder.build([typed, asking, claiming, program] + Module.standard, entry: entryName)
+            try builder.build([typed, asking, conformances, program] + Module.standard, entry: entryName)
         }
         #expect(throws: Never.self) {
-            try incremental([typed, asking, claiming, program] + Module.standard)
+            try incremental([typed, asking, conformances, program] + Module.standard)
         }
         #expect(throws: Never.self) {
-            try incremental([typed, asking, program, claiming] + Module.standard)
+            try incremental([typed, asking, program, conformances] + Module.standard)
         }
     }
 
@@ -382,7 +382,7 @@ struct CompiledTests {
         // would then be asked for an answer that has not arrived.
         let holding = try Module(
             types: ["bank.Account": .record(["balance": .int])],
-            claiming: ["bank.Account": ["app.Describable"]],
+            conformances: ["bank.Account": ["app.Describable"]],
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let asking = try Module(
@@ -915,7 +915,7 @@ struct CompiledTests {
                     "bank.Account": .record(["balance": .int]),
                     "bank.Card": .record(["last": .string])
                 ],
-                claiming: [
+                conformances: [
                     "bank.Account": ["app.Describable"],
                     "bank.Card": ["app.Describable"]
                 ],

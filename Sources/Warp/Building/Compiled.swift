@@ -33,14 +33,14 @@ public struct Compiled: Sendable, Declaring {
     // Which contracts it said each type answers, as it wrote them. The link
     // holds the claim to the declarations behind it, and which declarations
     // those are is a fact of the link rather than of this document.
-    let claiming: [Name: Set<Name>]
+    let conformances: [Name: Set<Name>]
 
     // The pairs its bodies lean on: a type handed where a contract is asked.
     // Unresolved here, the way a word this document sends and does not declare
     // is unresolved. Which types answer a contract is read off the claims of
     // the whole list, and a claim may be written in a document this one never
     // names.
-    let leaned: [Claim: Place]
+    let leaned: [Conformance: Place]
 
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.

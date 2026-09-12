@@ -25,7 +25,7 @@ final class Requiring: @unchecked Sendable {
     // MARK: - Property
     // A `TypingContext` is `Sendable` and this rides one.
     private let lock = NSLock()
-    private var held: [Int: [Claim: Place]] = [:]
+    private var held: [Int: [Conformance: Place]] = [:]
     private var origin = 0
 
     // Where a pair turned up by a fold stands. A call read in text says its
@@ -65,23 +65,23 @@ final class Requiring: @unchecked Sendable {
         return try body()
     }
 
-    func claims(of origin: Int) -> [Claim: Place] {
+    func conformances(of origin: Int) -> [Conformance: Place] {
         lock.withLock { held[origin] ?? [:] }
     }
 
-    func require(_ claim: Claim, at place: Place) {
-        lock.withLock { write(claim, at: place) }
+    func require(_ conformance: Conformance, at place: Place) {
+        lock.withLock { write(conformance, at: place) }
     }
 
     // A pair a fold could not settle, which stands where the document does.
-    func require(folded claim: Claim) {
-        lock.withLock { write(claim, at: folding) }
+    func require(folded conformance: Conformance) {
+        lock.withLock { write(conformance, at: folding) }
     }
 
     // MARK: - Private
-    private func write(_ claim: Claim, at place: Place) {
-        guard held[origin, default: [:]][claim] == nil else { return }
+    private func write(_ conformance: Conformance, at place: Place) {
+        guard held[origin, default: [:]][conformance] == nil else { return }
 
-        held[origin, default: [:]][claim] = place
+        held[origin, default: [:]][conformance] = place
     }
 }

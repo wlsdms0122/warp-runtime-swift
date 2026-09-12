@@ -511,7 +511,7 @@ extension Shape {
                     )
                 }
 
-                unsettled.require(folded: Claim(type: type, contract: name))
+                unsettled.require(folded: Conformance(type: type, contract: name))
 
                 return value
 

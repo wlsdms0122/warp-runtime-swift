@@ -34,7 +34,7 @@ struct CatalogueClaimTests {
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let adapting = try Module(
-            claiming: ["bank.Account": ["chart.Plottable"]],
+            conformances: ["bank.Account": ["chart.Plottable"]],
             procedures: [
                 "bank.Account.height": Procedure(
                     signature: Signature(
@@ -72,7 +72,7 @@ struct CatalogueClaimTests {
 
         // Then. The claim stands in the link, so the pair the program leans on
         // is answered.
-        #expect(closed.contains { module in module.claiming.isEmpty == false })
+        #expect(closed.contains { module in module.conformances.isEmpty == false })
         #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
     }
 }

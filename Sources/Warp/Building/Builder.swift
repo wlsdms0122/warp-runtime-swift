@@ -129,7 +129,7 @@ public struct Builder: Sendable {
         // is worked out here rather than left to the compile that asks.
         let shaped = try shaped(
             declaring,
-            claims: declared.claims,
+            conformances: declared.conformances,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures
@@ -248,7 +248,7 @@ public struct Builder: Sendable {
             types: [Name: Placed<TypeExpression>],
             constraints: [Name: Placed<[TypeExpression]>],
             contracts: [Name: Placed<[Name: Signature]>],
-            claims: [Placed<Claim>]
+            conformances: [Placed<Conformance>]
         ),
         against laid: Laid
     ) throws -> [Compiled] {
@@ -322,7 +322,7 @@ public struct Builder: Sendable {
         let requiring = Requiring()
         let shaped = try self.shaped(
             declaring,
-            claims: declared.claims,
+            conformances: declared.conformances,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures,
@@ -648,8 +648,8 @@ public struct Builder: Sendable {
             types: module.types,
             constraints: module.constraints,
             contracts: module.contracts,
-            claiming: module.claiming,
-            leaned: requiring.claims(of: origin),
+            conformances: module.conformances,
+            leaned: requiring.conformances(of: origin),
             declared: declared,
             table: shaped.table.map(Judged.init),
             calls: declared.map { name in calls[name] ?? [] },
@@ -730,7 +730,7 @@ public struct Builder: Sendable {
 
         let shaped = try shaped(
             declaring,
-            claims: declared.claims,
+            conformances: declared.conformances,
             contracts: declared.contracts,
             over: declared.types,
             among: signatures

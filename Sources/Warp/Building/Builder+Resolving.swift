@@ -20,7 +20,7 @@ extension Builder {
     // shape.
     func shaped(
         _ declaring: TypeTable,
-        claims: [Placed<Claim>],
+        conformances: [Placed<Conformance>],
         contracts: [Name: Placed<[Name: Signature]>],
         over declaredTypes: [Name: Placed<TypeExpression>],
         among signatures: [Name: Placed<Signature>],
@@ -28,10 +28,10 @@ extension Builder {
     ) throws -> (
         types: TypeTable,
         contractWords: [Name: ContractWord],
-        unheld: [Claim: String]
+        unheld: [Conformance: String]
     ) {
         let witnessed = try witnesses(
-            of: claims,
+            of: conformances,
             asking: contracts,
             over: declaredTypes,
             among: signatures,

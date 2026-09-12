@@ -38,29 +38,29 @@ extension Builder {
     // The run reads a row out of the first by the receiver's own name, and a
     // type standing in it has every word behind it.
     func witnesses(
-        of claims: [Placed<Claim>],
+        of conformances: [Placed<Conformance>],
         asking contracts: [Name: Placed<[Name: Signature]>],
         over types: [Name: Placed<TypeExpression>],
         among space: [Name: Placed<Signature>],
         in table: TypeTable
-    ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
+    ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Conformance: String]) {
         // Every contract, answered or not. The entry is what says a name is a
         // contract at all, so a bound naming one no type answers stays a
         // different thing from a bound naming nothing.
         var gathered = contracts.keys.reduce(into: [Name: [Name: [Name: Name]]]()) { table, contract in
             table[contract] = [:]
         }
-        var unheld: [Claim: String] = [:]
+        var unheld: [Conformance: String] = [:]
 
-        for claim in claims {
-            let (type, contract) = (claim.held.type, claim.held.contract)
+        for conformance in conformances {
+            let (type, contract) = (conformance.held.type, conformance.held.contract)
 
-            switch try holding(claim, asking: contracts, over: types, among: space, in: table) {
+            switch try holding(conformance, asking: contracts, over: types, among: space, in: table) {
             case let .holds(answering):
                 gathered[contract]?[type] = answering
 
             case let .waits(reason):
-                unheld[claim.held] = reason
+                unheld[conformance.held] = reason
             }
         }
 
@@ -78,17 +78,17 @@ extension Builder {
     // pair is written down and something behind it is wrong, which is a
     // different thing to fix from nobody having written it.
     func leaning(
-        _ leaned: [Claim: Place],
+        _ leaned: [Conformance: Place],
         on satisfying: [Name: Set<Name>],
-        unheld: [Claim: String]
+        unheld: [Conformance: String]
     ) throws {
-        for (claim, place) in leaned.sorted(by: { $0.key < $1.key }) {
-            guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
+        for (conformance, place) in leaned.sorted(by: { $0.key < $1.key }) {
+            guard satisfying[conformance.contract]?.contains(conformance.type) != true else { continue }
 
             throw BuildError(
-                unheld[claim]
-                    ?? "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
-                        + " document in this link says '\(claim.type)' answers it."
+                unheld[conformance]
+                    ?? "hands '\(conformance.type)' where '\(conformance.contract)' is asked, and no"
+                        + " document in this link says '\(conformance.type)' answers it."
                         + " A type answers a contract because a document says so",
                 at: place
             )
@@ -111,13 +111,13 @@ extension Builder {
     // the word, and every one of those signatures the contract's with the
     // receiver filled in by the type itself.
     private func holding(
-        _ claim: Placed<Claim>,
+        _ conformance: Placed<Conformance>,
         asking contracts: [Name: Placed<[Name: Signature]>],
         over types: [Name: Placed<TypeExpression>],
         among space: [Name: Placed<Signature>],
         in table: TypeTable
     ) throws -> Holding {
-        let (type, contract) = (claim.held.type, claim.held.contract)
+        let (type, contract) = (conformance.held.type, conformance.held.contract)
 
         guard types[type] != nil else {
             let reason = "'\(type)' is not a type this link declares, and only a"
@@ -126,10 +126,10 @@ extension Builder {
             // Declared as something else here, which no document arriving
             // later undoes: one name has one declarer.
             guard contracts[type] == nil, table.constraint(type) == nil else {
-                throw BuildError(reason, at: claim.place)
+                throw BuildError(reason, at: conformance.place)
             }
 
-            return .waits("\(claim.spelled) says " + reason)
+            return .waits("\(conformance.spelled) says " + reason)
         }
 
         guard let asked = contracts[contract] else {
@@ -137,10 +137,10 @@ extension Builder {
                 + " so there are no words for '\(type)' to answer"
 
             guard types[contract] == nil, table.constraint(contract) == nil else {
-                throw BuildError(reason, at: claim.place)
+                throw BuildError(reason, at: conformance.place)
             }
 
-            return .waits("\(claim.spelled) says " + reason)
+            return .waits("\(conformance.spelled) says " + reason)
         }
 
         var answering: [Name: Name] = [:]
@@ -150,7 +150,7 @@ extension Builder {
 
             guard let witness = space[spelling] else {
                 return .waits(
-                    "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
+                    "\(conformance.spelled) says '\(type)' answers '\(contract)', which asks"
                         + " '\(word)', and nothing in this link declares '\(spelling)'."
                         + " A contract's word is answered by a declaration named"
                         + " for the type and the word"
