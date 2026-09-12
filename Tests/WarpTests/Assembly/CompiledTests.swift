@@ -374,6 +374,106 @@ struct CompiledTests {
         }
     }
 
+    // A document declaring two words one contract could be answered by, which
+    // claims both itself. Both are spelled for a type and the contract's word,
+    // so a bare segment reaches two declarations.
+    private func holding() throws -> Module {
+        try Module(
+            types: [
+                "bank.Account": .int,
+                "bank.Card": .string
+            ],
+            contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
+            claiming: [
+                "bank.Account": ["app.Describable"],
+                "bank.Card": ["app.Describable"]
+            ],
+            procedures: [
+                entryName: Procedure(body: [], result: .literal(.null)),
+                "bank.anAccount": Procedure(
+                    signature: Signature(returns: .named("bank.Account")),
+                    body: [],
+                    result: .literal(.int(7))
+                ),
+                "bank.Account.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("an account"))
+                ),
+                "bank.Card.describe": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("bank.Card"))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .literal(.string("a card"))
+                )
+            ]
+        )
+    }
+
+    // A document writing the bare segment both of those answer.
+    private func stepping() throws -> Module {
+        try Module(
+            walked: ["bank.Account.describe", "bank.Card.describe"],
+            procedures: [
+                "app.told": Procedure(
+                    signature: Signature(returns: .string),
+                    body: [
+                        Statement(
+                            binding: .constant("account"),
+                            expression: .call(Call(selector: "bank.anAccount"))
+                        )
+                    ],
+                    result: .reference([.key("account"), .key("describe")])
+                )
+            ]
+        )
+    }
+
+    @Test("what a bare segment reaches is not decided by any claim")
+    func aClaimDecidesNothingAboutWhatAPathReaches() throws {
+        // Given. The document claims both types itself, and a second one laid
+        // beside it claims the same pairs. Nothing here names that second one.
+        let sut = try holding()
+        let claiming = try Module(
+            claiming: [
+                "bank.Account": ["app.Describable"],
+                "bank.Card": ["app.Describable"]
+            ],
+            procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+        )
+
+        // When / Then. Two declarations a bare segment could not tell apart,
+        // and no such segment is written, so there is nothing to answer for.
+        // Which claims stand where says nothing about that.
+        #expect(throws: Never.self) {
+            try builder.build([sut] + Module.standard, entry: entryName)
+        }
+        #expect(throws: Never.self) {
+            try builder.build([sut, claiming] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a bare segment two declarations answer is refused where it is written")
+    func aContestedSegmentIsRefusedWhereItIsWritten() throws {
+        // Given. The same declarations, and a document writing the segment.
+        let sut = [try holding(), try stepping()]
+
+        // When / Then. The refusal names both declarations, and the claims
+        // standing beside them neither make it nor take it away.
+        #expect {
+            try builder.build(sut + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("'describe' by bank.Account.describe, bank.Card.describe")
+        }
+    }
+
     @Test("a claim is answered by the whole list, not by what a document was compiled against")
     func aClaimIsBackedWhereTheListIsWhole() throws {
         // Given. The claim and the declaration that answers it in two

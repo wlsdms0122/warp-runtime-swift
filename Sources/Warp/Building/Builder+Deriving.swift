@@ -236,7 +236,6 @@ extension Builder {
         declaring declared: [Name],
         naming documents: [Place.Document],
         pure: Set<Name>,
-        answering contracts: Set<Name>,
         reaching rows: [Name: Int],
         in table: [Linked]
     ) throws -> [Name: Name] {
@@ -254,23 +253,15 @@ extension Builder {
 
         var held: [Name: (declared: Name, row: Int)] = [:]
         // Every declaration that contests a name, and not only that one is
-        // contested. Nothing a path writes can tell them apart, so the fix is
-        // on a declaration, which makes all of them something a reader has to
-        // be able to reach. A slot holding the latest collision would keep the
-        // newest two and drop whoever took the name first, so a third arrival
-        // hides the declaration the other two are colliding with.
+        // contested. Nothing a path writes can tell them apart, so a refusal
+        // names all of them. A slot holding the latest collision would keep
+        // the newest two and drop whoever took the name first, so a third
+        // arrival hides the declaration the other two are colliding with.
         var contested: [Name: [(declared: Name, row: Int)]] = [:]
 
         for reached in reachable.sorted(by: { $0.declared < $1.declared }) {
             guard pure.contains(reached.declared) else { continue }
             guard table[reached.row].isDerivable else { continue }
-
-            // A declaration that answers a contract's word is reached through
-            // the contract and not by a bare spelling. Two types answering one
-            // word is the ordinary case, and a bare segment cannot say which
-            // of them is meant, which is the very thing this table refuses.
-            // The contract is the spelling that tells them apart.
-            guard !contracts.contains(reached.declared) else { continue }
 
             // Only two words a path could both reach are ambiguous. A
             // declaration a path cannot reach shares the link but not the
@@ -280,10 +271,18 @@ extension Builder {
             }
         }
 
+        // Refused where the segment is written and nowhere else. A contract's
+        // word is spelled for the type answering it, so a document naming two
+        // types that answer one contract holds two declarations no bare
+        // segment could tell apart and reaches both through the contract. What
+        // it never writes it is not answerable for.
+        //
         // The first name in sorted order, so which declaration an author is
         // sent to does not change with the order a dictionary hands its keys
         // back.
-        if let (word, declarations) = contested.min(by: { one, other in one.key < other.key }) {
+        let written = contested.filter { word, _ in module.walks.contains(word) }
+
+        if let (word, declarations) = written.min(by: { one, other in one.key < other.key }) {
             // In the order the caller handed the modules over, which is the
             // order every collision refusal is read in: the second is the one
             // that could not be added. Gathered in name order above, because
@@ -294,7 +293,7 @@ extension Builder {
             }
 
             throw BuildError(
-                "\(contested.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
+                "\(written.keys.sorted().map(\.spelling).joined(separator: ", ")) is declared by more"
                     + " than one module this document may walk to. '\(word)' by"
                     + " \(ranked.map(\.declared.spelling).joined(separator: ", "))."
                     + " A path segment names no module, so there is no spelling that"

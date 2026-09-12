@@ -28,7 +28,6 @@ extension Builder {
     ) throws -> (
         types: TypeTable,
         contractWords: [Name: ContractWord],
-        answering: Set<Name>,
         unheld: [Claim: String]
     ) {
         let witnessed = try witnesses(
@@ -73,7 +72,6 @@ extension Builder {
         return (
             types: table,
             contractWords: contractWords,
-            answering: Set(witnessed.answering.values.flatMap { answering in answering.values.flatMap(\.values) }),
             unheld: witnessed.unheld
         )
     }

@@ -25,7 +25,6 @@ struct Compiling {
     // What only the whole list answers, which a document has no say in.
     let types: TypeTable
     let contractWords: [Name: ContractWord]
-    let answering: Set<Name>
 
     // Which document each position is, for a refusal that names one.
     let documents: [Place.Document]
@@ -65,12 +64,10 @@ struct Compiling {
     init(
         types: TypeTable,
         contractWords: [Name: ContractWord],
-        answering: Set<Name>,
         naming documents: [Place.Document]
     ) {
         self.types = types
         self.contractWords = contractWords
-        self.answering = answering
         self.documents = documents
         self.lowering = Lowering(
             documents: documents.count,
@@ -90,12 +87,10 @@ struct Compiling {
         _ carried: Carried,
         types: TypeTable,
         contractWords: [Name: ContractWord],
-        answering: Set<Name>,
         naming documents: [Place.Document]
     ) {
         self.types = types
         self.contractWords = contractWords
-        self.answering = answering
         self.documents = documents
         self.lowering = Lowering(
             carried,
