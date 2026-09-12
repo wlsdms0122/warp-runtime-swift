@@ -64,12 +64,12 @@ extension TypeExpression {
             return .procedure(
                 parameters: signature?.ordered(
                     { name, parameter in
-                        let shape = parameter.declared.lowered(in: table)
+                        let lowered = parameter.declared.lowered(in: table)
 
                         return (
                             name: name,
-                            shape: shape,
-                            mustBeGiven: shape.mustBeGiven(default: parameter.default, in: table)
+                            type: lowered,
+                            mustBeGiven: lowered.mustBeGiven(default: parameter.default, in: table)
                         )
                     },
                     standing: { parameter in parameter.name }

@@ -72,7 +72,7 @@ struct CallOperation: Sendable {
             let written = try argument(name)
             let given = isReceiver ? receiver ?? written : written
 
-            if case .inout = slot.shape {
+            if case .inout = slot.type {
                 guard case let .reference(address)? = given else {
                     throw BuildError.unjudged(
                         "'\(name)' handed to '\(callee.label)' in place without a variable",

@@ -186,7 +186,7 @@ extension LoweredType {
         // A range is a condition on a number, so the spelling it reads is the
         // spelling of the kind under it.
         case let .ranged(refinement):
-            return refinement.shape.numeral(candidate, in: table)
+            return refinement.lowered.numeral(candidate, in: table)
 
         case .double:
             return Double(spelling: candidate).map(Value.double)
@@ -665,7 +665,7 @@ extension LoweredType {
 
     private func settlingProcedure(
         _ value: Value,
-        parameters required: [(name: Name, shape: LoweredType, mustBeGiven: Bool)]?,
+        parameters required: [(name: Name, type: LoweredType, mustBeGiven: Bool)]?,
         returns: LoweredType?,
         purity: Purity,
         isolation: Isolation,
@@ -694,7 +694,7 @@ extension LoweredType {
 
         let given = LoweredType.procedure(
             parameters: closure.linked.slots.map { slot in
-                (name: slot.name, shape: slot.shape, mustBeGiven: slot.mustBeGiven(in: table))
+                (name: slot.name, type: slot.type, mustBeGiven: slot.mustBeGiven(in: table))
             },
             returns: closure.linked.returns,
             purity: closure.purity,

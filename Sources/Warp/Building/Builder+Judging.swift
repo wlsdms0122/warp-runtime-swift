@@ -607,12 +607,12 @@ extension Builder {
 
             let written = site.readings[name] ?? .any
 
-            guard !slot.shape.accepts(written, in: loweredTypes) else { continue }
+            guard !slot.type.accepts(written, in: loweredTypes) else { continue }
 
             throw BuildError(
                 "sending '\(call.selector)' with \(name),"
                     + " which holds \(written.rendered(in: loweredTypes))"
-                    + " where \(slot.shape.rendered(in: loweredTypes)) is declared",
+                    + " where \(slot.type.rendered(in: loweredTypes)) is declared",
                 at: site.place.argument(name.spelling)
             )
         }
@@ -624,10 +624,10 @@ extension Builder {
             let name = declared.receiver,
             let slot = slot(name)
         {
-            guard slot.shape.accepts(written, in: loweredTypes) else {
+            guard slot.type.accepts(written, in: loweredTypes) else {
                 throw BuildError(
                     "sending '\(call.selector)' to \(written.rendered(in: loweredTypes)),"
-                        + " where \(slot.shape.rendered(in: loweredTypes)) is declared",
+                        + " where \(slot.type.rendered(in: loweredTypes)) is declared",
                     at: site.place.part(.receiver)
                 )
             }

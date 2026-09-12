@@ -142,10 +142,10 @@ struct Lowering {
     // A shape the build read off a body rather than out of a signature. It is
     // written into no body, so what it stands on is noted here: its document
     // numbers it beside the shapes its bodies stand on.
-    mutating func stands(on shape: LoweredType, of origin: Int) {
+    mutating func stands(on type: LoweredType, of origin: Int) {
         var stood = standing[origin] ?? Standing()
 
-        shape.standing(into: &stood.types, and: &stood.memberships)
+        type.standing(into: &stood.types, and: &stood.memberships)
 
         standing[origin] = stood
     }
@@ -163,7 +163,7 @@ struct Lowering {
         for slot in declared.slots {
             let allocated = slots.allocateParameter(slot.name)
             scope.slots[slot.name] = allocated
-            slots.hold(allocated, slot.shape)
+            slots.hold(allocated, slot.type)
         }
 
         let body = try lower(block, in: scope, on: slots, label: declared.label, at: place)
@@ -293,7 +293,7 @@ struct Lowering {
             held[slot] = shape
         }
 
-        func shape(of slot: Int) -> LoweredType? {
+        func held(at slot: Int) -> LoweredType? {
             held[slot]
         }
 
@@ -318,7 +318,7 @@ struct Lowering {
                 let slot = allocate(name)
                 capturedSlots[name] = slot
                 captures.append((taken, slot))
-                hold(slot, outer.slots.shape(of: taken))
+                hold(slot, outer.slots.held(at: taken))
 
                 return slot
             }
@@ -380,7 +380,7 @@ struct Lowering {
                 let settling = declared?.lowered(in: loweredTypes)
                 slots.note(settling)
                 scope.slots[name] = slot
-                slots.hold(slot, settling ?? shape(of: code, on: slots))
+                slots.hold(slot, settling ?? standing(code, on: slots))
                 binding = .bind(slot, settling: settling)
 
             // A box that said what it holds is settled to it by its
@@ -425,21 +425,21 @@ struct Lowering {
     // walk made for it, a call on what its row answers, a cast on what it
     // casts to, and a path on what it reaches. Nil everywhere else, which
     // leaves the fields below it to be read by name.
-    private func shape(of code: Operation, on slots: Slots) -> LoweredType? {
+    private func standing(_ code: Operation, on slots: Slots) -> LoweredType? {
         switch code {
         case let .record(held):
             return .record(
                 LoweredRecord(
                     layout: held.layout,
-                    fields: held.fields.map { field in shape(of: field, on: slots) ?? .any }
+                    fields: held.fields.map { field in standing(field, on: slots) ?? .any }
                 )
             )
 
         case let .local(address):
-            return address.steps.reduce(slots.shape(of: address.slot)) { reached, step in
+            return address.steps.reduce(slots.held(at: address.slot)) { reached, step in
                 switch step {
                 case let .field(_, name, _):
-                    return reached?.place(of: name, in: loweredTypes)?.shape
+                    return reached?.place(of: name, in: loweredTypes)?.type
 
                 case .index, .at:
                     return reached?.element(in: loweredTypes)
@@ -779,7 +779,7 @@ struct Lowering {
         // out is lowered to the place it stands in. It runs out as soon as the
         // walk reaches something the build did not prove, and every step from
         // there reads by name.
-        var reached = slots.shape(of: slot)
+        var reached = slots.held(at: slot)
 
         let steps = try path.dropFirst().map { segment -> Step in
             switch segment {
@@ -790,7 +790,7 @@ struct Lowering {
                     return .key(name, optional: optional)
                 }
 
-                reached = place.shape
+                reached = place.type
 
                 return .field(place.position, name, optional: optional)
 

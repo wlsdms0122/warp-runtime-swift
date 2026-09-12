@@ -232,8 +232,8 @@ final class LoweredTypeTable: Sendable {
     // The record a shape names through the row it stands on, or nil where it
     // names none. The one reading of `recordRows` for a shape that is not
     // itself a row.
-    func record(of shape: LoweredType) -> Int? {
-        shape.row.flatMap { row in recordRows[row] }
+    func record(of type: LoweredType) -> Int? {
+        type.row.flatMap { row in recordRows[row] }
     }
 
     // MARK: - Private

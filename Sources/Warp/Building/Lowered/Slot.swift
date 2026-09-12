@@ -14,21 +14,21 @@ import Foundation
 final class Slot: Sendable {
     // MARK: - Property
     let name: Name
-    let shape: LoweredType
+    let type: LoweredType
     let `default`: Value?
     let candidates: [Candidate]?
 
     // MARK: - Initializer
-    init(name: Name, shape: LoweredType, default: Value?, candidates: [Candidate]?) {
+    init(name: Name, type: LoweredType, default: Value?, candidates: [Candidate]?) {
         self.name = name
-        self.shape = shape
+        self.type = type
         self.default = `default`
         self.candidates = candidates
     }
 
     // MARK: - Public
     func mustBeGiven(in table: LoweredTypeTable) -> Bool {
-        shape.mustBeGiven(default: `default`, in: table)
+        type.mustBeGiven(default: `default`, in: table)
     }
 
     // An argument as given, or the default where nothing was.
@@ -37,7 +37,7 @@ final class Slot: Sendable {
             guard let fallback = self.default else {
                 // A type that declares null holds it as a value, so a null
                 // here is what was given rather than the absence of anything.
-                guard shape.declaresNull(in: table) else {
+                guard type.declaresNull(in: table) else {
                     throw ArgumentError("input '\(name)': required, and nothing was given")
                 }
 
@@ -69,14 +69,14 @@ final class Slot: Sendable {
             // Null passes where the declaration says it is a value: a `T?`
             // slot, or the legacy spelling of the same fact, an explicitly
             // null default.
-            guard self.default == .null || shape.declaresNull(in: table) else {
-                throw ArgumentError("input '\(name)': expected \(shape.rendered(in: table)), got null")
+            guard self.default == .null || type.declaresNull(in: table) else {
+                throw ArgumentError("input '\(name)': expected \(type.rendered(in: table)), got null")
             }
 
             return value
         }
 
-        let settled = try shape.settling(value, at: "input '\(name)'", in: table)
+        let settled = try type.settling(value, at: "input '\(name)'", in: table)
 
         if let candidates {
             let written = candidates.map(\.spelling)
@@ -163,13 +163,13 @@ extension Parameter {
         slot(named: name, holding: declared.lowered(in: table).filling(bound), in: table)
     }
 
-    private func slot(named name: Name, holding shape: LoweredType, in table: LoweredTypeTable) -> Slot {
+    private func slot(named name: Name, holding type: LoweredType, in table: LoweredTypeTable) -> Slot {
         Slot(
             name: name,
-            shape: shape,
+            type: type,
             default: `default`,
             candidates: oneOf.map { written in
-                written.map { spelling in Candidate(spelling, in: shape, reading: table) }
+                written.map { spelling in Candidate(spelling, in: type, reading: table) }
             }
         )
     }

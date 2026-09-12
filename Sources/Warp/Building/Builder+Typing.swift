@@ -277,7 +277,7 @@ extension Builder {
                 continue
             }
 
-            slot.shape.binding(
+            slot.type.binding(
                 against: reading,
                 into: &bound,
                 disagreeing: &disagreeing,
@@ -293,7 +293,7 @@ extension Builder {
             return Bound(readings: bound, disagreeing: disagreeing)
         }
 
-        slot.shape.binding(
+        slot.type.binding(
             against: received,
             into: &bound,
             disagreeing: &disagreeing,

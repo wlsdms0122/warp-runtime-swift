@@ -47,7 +47,7 @@ struct LinkBoundaryTests {
             return
         }
 
-        guard case let .named(row) = closure.linked.slots[0].shape else {
+        guard case let .named(row) = closure.linked.slots[0].type else {
             Issue.record("the parameter is declared as a name")
 
             return

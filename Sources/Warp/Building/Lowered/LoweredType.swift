@@ -32,7 +32,7 @@ indirect enum LoweredType: Sendable {
     // with, in position order, and what it must answer. Nil where nothing
     // was declared. Purity and isolation are the slot's requirements.
     case procedure(
-        parameters: [(name: Name, shape: LoweredType, mustBeGiven: Bool)]?,
+        parameters: [(name: Name, type: LoweredType, mustBeGiven: Bool)]?,
         returns: LoweredType?,
         purity: Purity,
         isolation: Isolation
@@ -133,7 +133,7 @@ indirect enum LoweredType: Sendable {
     var unrefined: LoweredType {
         switch self {
         case let .ranged(refinement):
-            return refinement.shape
+            return refinement.lowered
 
         case .bytes:
             return .array(.byteElement)
@@ -185,7 +185,7 @@ indirect enum LoweredType: Sendable {
     // The place is the value's, not only the shape's. A value settling to a
     // record shape is built on that shape's layout, so a field the link
     // proved stands where the layout puts it.
-    func place(of field: Name, in table: LoweredTypeTable) -> (position: Int, shape: LoweredType)? {
+    func place(of field: Name, in table: LoweredTypeTable) -> (position: Int, type: LoweredType)? {
         switch self {
         case let .record(held):
             guard let position = held.layout.position(of: field) else { return nil }
@@ -245,7 +245,7 @@ indirect enum LoweredType: Sendable {
             return mine.count == theirs.count
                 && zip(mine, theirs).allSatisfy { one, other in
                     one.name == other.name
-                        && one.shape == other.shape
+                        && one.type == other.type
                         && one.mustBeGiven == other.mustBeGiven
                 }
 

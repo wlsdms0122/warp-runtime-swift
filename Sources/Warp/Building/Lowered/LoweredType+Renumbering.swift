@@ -60,7 +60,7 @@ extension LoweredType {
                 parameters: try parameters?.map { parameter in
                     (
                         name: parameter.name,
-                        shape: try parameter.shape.renumbered(type: type, membership: membership),
+                        type: try parameter.type.renumbered(type: type, membership: membership),
                         mustBeGiven: parameter.mustBeGiven
                     )
                 },

@@ -147,7 +147,7 @@ struct LoweredTypeTests {
 
         // Then
         #expect(row.slots.map(\.name) == ["of", "value"])
-        #expect(row.slots.map(\.shape) == [.parameter(label: "T", bound: .membership(ordered)), .parameter(label: "T", bound: .membership(ordered))])
+        #expect(row.slots.map(\.type) == [.parameter(label: "T", bound: .membership(ordered)), .parameter(label: "T", bound: .membership(ordered))])
         #expect(row.returns == .bool)
         #expect(try await Executor().run(image) == .bool(true))
     }
