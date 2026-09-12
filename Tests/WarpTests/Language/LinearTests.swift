@@ -589,6 +589,122 @@ struct LinearTests {
         }
     }
 
+    @Test("a borrow passes on to another slot that borrows")
+    func aBorrowPassesToAnotherBorrow() throws {
+        // Given. The one thing a borrowed name may be handed to. `app.show`
+        // borrows and lends the same value on to `app.name`, which borrows too,
+        // so the obligation never moves and the entry still closes it
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(
+                    binding: .constant("shown"),
+                    expression: .call(Call(receiver: reference("handle"), selector: "app.show"))
+                ),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: reference("shown"),
+            beside: [
+                "app.show": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))],
+                        returns: .string
+                    ),
+                    body: [],
+                    result: .call(Call(receiver: reference("of"), selector: "app.name"))
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("borrowing inside a loop round stands, because nothing moves")
+    func aBorrowInsideALoopStands() throws {
+        // Given. What a round runs an unfixed number of times is refused only
+        // where something is handed on, and lending hands nothing on
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(
+                    binding: .constant("spin"),
+                    expression: .loop(
+                        while: .literal(.bool(false)),
+                        body: Block(
+                            body: [
+                                Statement(
+                                    binding: .constant("shown"),
+                                    expression: .call(
+                                        Call(receiver: reference("handle"), selector: "app.name")
+                                    )
+                                )
+                            ]
+                        ),
+                        round: "round"
+                    )
+                ),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("a body cannot hand on what it borrowed from inside a loop round either")
+    func aBorrowIsNotGivenAwayInsideALoop() throws {
+        // Given. The guard a round puts on handing something on does not
+        // replace the one a borrow puts on giving it away at all
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.give": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .borrowing(.named("app.Handle")))]
+                    ),
+                    body: [
+                        Statement(
+                            binding: .constant("spin"),
+                            expression: .loop(
+                                while: .literal(.bool(false)),
+                                body: Block(
+                                    body: [
+                                        Statement(
+                                            expression: .call(
+                                                Call(receiver: reference("of"), selector: "app.close")
+                                            )
+                                        )
+                                    ]
+                                ),
+                                round: "round"
+                            )
+                        )
+                    ],
+                    result: .literal(.null)
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("borrowed 'of' rather than taking it")
+        }
+    }
+
     @Test("a parameter naming a type handed on once says what it does with it")
     func aSilentSlotRefuses() throws {
         // Given. `app.take` names the type and says nothing, which used to read
