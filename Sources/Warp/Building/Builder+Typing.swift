@@ -929,6 +929,25 @@ extension Builder {
         throw BuildError(reason(), at: place)
     }
 
+    // A condition chooses a way through a body, so what it reads has to be a
+    // bool. `any` passes, the way it passes every other slot: nothing was
+    // declared, and the run judges what arrives.
+    private func held(
+        _ reading: LoweredType,
+        asCondition place: Place,
+        in context: TypingContext,
+        when ask: Ask
+    ) throws {
+        guard !LoweredType.bool.accepts(reading, in: context.loweredTypes) else { return }
+
+        try refuse(
+            "reads \(reading.rendered(in: context.loweredTypes)), and a condition"
+                + " chooses a way through a body, so it answers a bool",
+            at: place,
+            when: ask
+        )
+    }
+
     // One walk's answers: the expression with every dot's meaning written
     // in, the sends gathered on the way, what the whole of it holds, and
     // what it wrote to the names around it. The reading ask hands the
@@ -1540,6 +1559,9 @@ extension Builder {
                 with: context,
                 ask: ask
             )
+
+            try held(head.reading, asCondition: place.part(.condition(of: .conditional)), in: context, when: ask)
+
             let inside = environment
 
             let taken = try inspected(then, at: place.part(.then), in: inside, with: context, ask: ask)
@@ -1625,6 +1647,9 @@ extension Builder {
                 with: context,
                 ask: ask
             )
+
+            try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
+
             let rounds = ask.rewrites
                 ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
                 : probed
