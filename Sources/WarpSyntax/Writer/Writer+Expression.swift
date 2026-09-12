@@ -384,7 +384,7 @@ public extension Writer {
         case .array: "an array"
         case .record: "a record"
         case .closure: "a closure"
-        case .apply: "an invocation"
+        case .apply: "a call of a value"
         case .block: "a block"
         case .conditional: "a conditional"
         case .loop: "a loop"
