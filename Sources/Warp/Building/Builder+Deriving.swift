@@ -7,6 +7,12 @@
 
 import Foundation
 
+// What makes an expression something the run runs rather than reads.
+enum Runs: Sendable {
+    case calling(Name)
+    case applying
+}
+
 // The facts nobody declared, worked out over every declaration at once. A
 // declaration is pure until its body shows otherwise, and the answer is the
 // whole link's rather than any one body's.
@@ -173,6 +179,48 @@ extension Builder {
                 && isPure(statement.expression, given: pure, reading: variables)
         }
             && (block.result.map { result in isPure(result, given: pure, reading: variables) } ?? true)
+    }
+
+    // What an operand or a condition answers only by running, if anything. An
+    // operand is data: the run reads it rather than running it, so what it may
+    // hold is a literal, a name, a record, a cast and a call whose declaration
+    // answers without running. Anything else is found here rather than at the
+    // run.
+    //
+    // The module variables purity strikes a body for reading are not struck
+    // here. Reading one is what reading a name is; what it costs a body is the
+    // promise of answering the same thing twice, and an operand makes no such
+    // promise.
+    func runs(in expression: Expression, given pure: Set<Name>) -> Runs? {
+        switch expression {
+        case .literal, .reference, .closure:
+            return nil
+
+        case let .cast(value, _, _):
+            return runs(in: value, given: pure)
+
+        case let .array(array):
+            return array.lazy.compactMap { element in runs(in: element, given: pure) }.first
+
+        case let .record(record):
+            return record.values.lazy.compactMap { field in runs(in: field, given: pure) }.first
+
+        case let .call(call):
+            guard pure.contains(call.selector) else { return .calling(call.selector) }
+
+            return call.receiver.flatMap { receiver in runs(in: receiver, given: pure) }
+                ?? call.arguments.values.lazy.compactMap { argument in runs(in: argument, given: pure) }.first
+
+        // Which procedure a value is, is the run's answer, so nothing here says
+        // whether calling it runs.
+        case .apply:
+            return .applying
+
+        // The load refuses these where an operand is expected, so reaching one
+        // here is a program assembled past that door.
+        case .block, .conditional, .loop, .attempt, .leave:
+            return .applying
+        }
     }
 
     func isPure(_ expression: Expression, given pure: Set<Name>, reading variables: Set<Name>) -> Bool {

@@ -929,6 +929,39 @@ extension Builder {
         throw BuildError(reason(), at: place)
     }
 
+    // An operand is data: the run reads it rather than running it. A call to a
+    // declaration that answers only by running is refused here, where the
+    // operand is written, rather than found when the reading reaches it.
+    private func held(
+        _ expression: Expression,
+        asOperand place: Place,
+        given pure: Set<Name>,
+        when ask: Ask
+    ) throws {
+        switch runs(in: expression, given: pure) {
+        case nil:
+            return
+
+        case let .calling(selector)?:
+            try refuse(
+                "reads '\(selector)', which answers only by running, and an"
+                    + " operand is read rather than run. A procedure that runs"
+                    + " is called by a statement, whose name the operand reads",
+                at: place,
+                when: ask
+            )
+
+        case .applying?:
+            try refuse(
+                "calls a value, and which procedure that is, is the run's"
+                    + " answer, so an operand cannot be read without running"
+                    + " it. A statement calls it and the operand reads its name",
+                at: place,
+                when: ask
+            )
+        }
+    }
+
     // A condition chooses a way through a body, so what it reads has to be a
     // bool. `any` passes, the way it passes every other slot: nothing was
     // declared, and the run judges what arrives.
@@ -1344,6 +1377,12 @@ extension Builder {
                 throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
+            try held(callee, asOperand: place.part(.callee), given: context.pure, when: ask)
+
+            for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
+                try held(argument, asOperand: place.argument(name.spelling), given: context.pure, when: ask)
+            }
+
             let called = try inspected(
                 callee,
                 at: place.part(.callee),
@@ -1455,6 +1494,14 @@ extension Builder {
                 throw BuildError(Expression.constructInOperand, at: place.argument(name.spelling))
             }
 
+            if let written = call.receiver {
+                try held(written, asOperand: place.part(.receiver), given: context.pure, when: ask)
+            }
+
+            for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
+                try held(argument, asOperand: place.argument(name.spelling), given: context.pure, when: ask)
+            }
+
             var receiver: Inspection?
 
             if let written = call.receiver {
@@ -1561,6 +1608,7 @@ extension Builder {
             )
 
             try held(head.reading, asCondition: place.part(.condition(of: .conditional)), in: context, when: ask)
+            try held(condition, asOperand: place.part(.condition(of: .conditional)), given: context.pure, when: ask)
 
             let inside = environment
 
@@ -1649,6 +1697,7 @@ extension Builder {
             )
 
             try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
+            try held(condition, asOperand: place.part(.condition(of: .loop)), given: context.pure, when: ask)
 
             let rounds = ask.rewrites
                 ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
