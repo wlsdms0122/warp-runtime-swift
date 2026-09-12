@@ -16,16 +16,16 @@ extension Builder {
     // The one gate every gathered call passes, wherever its body sits. A
     // procedure, a word, a constant's closure. The call carries the declaration
     // the walk found for it, and is judged against that.
-    func checked(_ calls: [CallSite], in frame: TypeFrame, writing requiring: Requiring) throws {
+    func checked(_ calls: [CallSite], in context: TypingContext, writing requiring: Requiring) throws {
         for call in calls {
-            guard let callee = frame.declared(call.callee) else {
+            guard let callee = context.declared(call.callee) else {
                 throw BuildError.unjudged(
                     "a call to '\(call.callee)', which has no row",
                     at: call.place
                 )
             }
 
-            try check(call, against: callee, with: frame, writing: requiring)
+            try check(call, against: callee, with: context, writing: requiring)
         }
     }
 
@@ -462,11 +462,11 @@ extension Builder {
     private func check(
         _ site: CallSite,
         against callee: Linked,
-        with frame: TypeFrame,
+        with context: TypingContext,
         writing requiring: Requiring
     ) throws {
         let call = site.call
-        let shapes = frame.shapes
+        let shapes = context.shapes
 
         // One parameter takes one argument. A receiver written in front of
         // the dot and again by name is refused before either is read, since
@@ -490,14 +490,14 @@ extension Builder {
         // without a way to declare a name twice.
         let declared = callee.signature
 
-        let declaredSlots = frame.slots(of: call.selector)
+        let declaredSlots = context.slots(of: call.selector)
 
         let slots: [Slot]
 
         switch judged(
             declared,
             over: declaredSlots,
-            answering: frame.answer(of: call.selector),
+            answering: context.answer(of: call.selector),
             filledWith: bound(
                 of: declared,
                 over: declaredSlots,

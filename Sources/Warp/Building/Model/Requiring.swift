@@ -23,7 +23,7 @@ import Foundation
 // one. What such a walk concludes is not what the document says.
 final class Requiring: @unchecked Sendable {
     // MARK: - Property
-    // A `TypeFrame` is `Sendable` and this rides one.
+    // A `TypingContext` is `Sendable` and this rides one.
     private let lock = NSLock()
     private var held: [Int: [Claim: Place]] = [:]
     private var origin = 0

@@ -48,19 +48,19 @@ extension Builder {
         _ block: Block,
         at place: Place,
         holding signature: Signature,
-        in frame: TypeFrame
+        in context: TypingContext
     ) throws {
         let held = signature.parameters.filter { _, parameter in
-            handedOnce(parameter.declared, in: frame.types)
+            handedOnce(parameter.declared, in: context.types)
         }
 
-        guard !held.isEmpty || frame.types.types.values.contains(where: { type in
-            handedOnce(type, in: frame.types)
+        guard !held.isEmpty || context.types.types.values.contains(where: { type in
+            handedOnce(type, in: context.types)
         }) else {
             return
         }
 
-        let walk = Consuming(frame: frame, place: place)
+        let walk = Consuming(context: context, place: place)
         let left = try walk.through(block, held: Consuming.Held(live: Set(held.keys)), guarded: nil)
 
         guard let stranded = left.live.sorted().first else { return }
@@ -85,7 +85,7 @@ extension Builder {
             var moved: Set<Name> = []
         }
 
-        let frame: TypeFrame
+        let context: TypingContext
         let place: Place
 
         // What is still held after this block. `guarded` is why a move is
@@ -242,8 +242,8 @@ extension Builder {
         // declared, so a value handed on lands somewhere that says it takes
         // one. A slot that does not say so would let the obligation go.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
-            let signature = frame.signature(of: call.selector)
-                ?? frame.contractWords[call.selector]?.signature
+            let signature = context.signature(of: call.selector)
+                ?? context.contractWords[call.selector]?.signature
 
             var carried = held
 
@@ -299,8 +299,8 @@ extension Builder {
         private func handedOnce(_ expression: Expression, held: Held) -> Bool {
             switch expression {
             case let .call(call):
-                let signature = frame.signature(of: call.selector)
-                    ?? frame.contractWords[call.selector]?.signature
+                let signature = context.signature(of: call.selector)
+                    ?? context.contractWords[call.selector]?.signature
 
                 return signature?.returns.map(handedOnce) ?? false
 
@@ -323,7 +323,7 @@ extension Builder {
                 return true
 
             case let .named(name):
-                guard let declared = frame.types.resolve(name) else { return false }
+                guard let declared = context.types.resolve(name) else { return false }
 
                 return handedOnce(declared)
 

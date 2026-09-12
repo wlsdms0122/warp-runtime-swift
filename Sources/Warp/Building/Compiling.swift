@@ -261,9 +261,9 @@ struct Compiling {
     }
 
     // One document's reading. Which names hold boxes is the document's own, so
-    // a frame is made for the document whose body is being read.
-    func frame(reading variables: Set<Name>) -> TypeFrame {
-        TypeFrame(
+    // a context is made for the document whose body is being read.
+    func context(reading variables: Set<Name>) -> TypingContext {
+        TypingContext(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,

@@ -45,15 +45,15 @@ extension Builder {
     }
 
     // Every unwritten answer, read off its body, one at a time in the order the
-    // call graph allows. Each handed back as it is worked out, and the frame
+    // call graph allows. Each handed back as it is worked out, and the context
     // asked for again, so the next body is read against it.
     //
-    // Handed back rather than returned in a heap: the tables a frame is made
+    // Handed back rather than returned in a heap: the tables a context is made
     // of are the link's, one answer changes one entry in each, and rebuilding
     // them per declaration is the whole graph copied once per node.
     func answers(
         of unsaid: [Unsaid],
-        reading frame: () -> TypeFrame,
+        reading context: () -> TypingContext,
         recording: (Name, Shape) -> Void
     ) {
         let declared = Dictionary(
@@ -88,7 +88,7 @@ extension Builder {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: frame()
+                with: context()
             )
 
             // A reading naming a type parameter is handed on as it is. What a

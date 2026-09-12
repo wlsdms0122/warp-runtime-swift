@@ -1,5 +1,5 @@
 //
-//  TypeFrame.swift
+//  TypingContext.swift
 //  Warp
 //
 //  Created by JSilver on 8/17/26.
@@ -13,7 +13,7 @@ import Foundation
 // One value rather than two arguments threaded through every walk, because they
 // are one fact (the link's answer to "what does this name mean") read from two
 // sides.
-struct TypeFrame: Sendable {
+struct TypingContext: Sendable {
     // MARK: - Property
     // The declared types as the documents wrote them, for the surfaces a
     // document's own spelling is owed to.

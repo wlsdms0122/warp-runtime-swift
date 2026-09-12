@@ -377,8 +377,8 @@ public struct Builder: Sendable {
         var variables: [Name: Value] = [:]
         var calls: [Name: [Name]] = [:]
 
-        func frame() -> TypeFrame {
-            compiling.frame(reading: reading)
+        func context() -> TypingContext {
+            compiling.context(reading: reading)
         }
 
         func row(of symbol: Symbol) throws -> Int {
@@ -442,7 +442,7 @@ public struct Builder: Sendable {
                     at: symbol.place,
                     in: opening(declaration.signature),
                     answering: declaration.signature.returns,
-                    with: frame(),
+                    with: context(),
                     folding: folding,
                     origin: origin,
                     writing: requiring
@@ -460,7 +460,7 @@ public struct Builder: Sendable {
 
             resolvedBodies[symbol.declared] = answer
 
-            try checked(answer.calls, in: frame(), writing: requiring)
+            try checked(answer.calls, in: context(), writing: requiring)
 
             // Read off the body the build is about to lower, so what is proven
             // is what runs. The environment is the one the body was judged in.
@@ -469,7 +469,7 @@ public struct Builder: Sendable {
                     rewritten,
                     at: symbol.place,
                     holding: declaration.signature,
-                    in: frame()
+                    in: context()
                 )
             }
 
@@ -557,15 +557,15 @@ public struct Builder: Sendable {
         // URL out of other constants is spelling it with words like any
         // other expression.
         //
-        // The frame is read before the lowering is handed over, since one of
-        // the tables a frame stands on is the lowering this writes into.
+        // The context is read before the lowering is handed over, since one of
+        // the tables a context stands on is the lowering this writes into.
         constants = try self.constants(
             of: module,
             at: origin,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             leaning: requiring,
-            in: frame()
+            in: context()
         )
 
         variables = try self.variables(
@@ -575,7 +575,7 @@ public struct Builder: Sendable {
             folding: compiling.folding(),
             writing: &compiling.lowering,
             leaning: requiring,
-            in: frame()
+            in: context()
         )
 
         // What every declaration of this document whose `returns` nobody
@@ -594,7 +594,7 @@ public struct Builder: Sendable {
                     sends: sent(in: block)
                 )
             },
-            reading: frame,
+            reading: context,
             recording: { qualified, answer in
                 read[qualified] = answer
 

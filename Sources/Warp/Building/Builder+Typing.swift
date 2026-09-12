@@ -52,13 +52,13 @@ extension Builder {
         from block: Block,
         at place: Place,
         in environment: [Name: Shape],
-        with frame: TypeFrame
+        with context: TypingContext
     ) throws -> Shape {
         let walked = try inspected(
             block: block,
             at: place,
             in: environment,
-            with: frame,
+            with: context,
             ask: .reading
         )
 
@@ -102,7 +102,7 @@ extension Builder {
         at place: Place,
         in environment: [Name: Shape],
         answering returns: TypeExpression?,
-        with frame: TypeFrame,
+        with context: TypingContext,
         folding: Folding?,
         origin: Int? = nil,
         writing requiring: Requiring
@@ -111,7 +111,7 @@ extension Builder {
             block: block,
             at: place,
             in: environment,
-            with: frame,
+            with: context,
             ask: .judging(folding: folding, origin: origin, writing: requiring)
         )
 
@@ -120,7 +120,7 @@ extension Builder {
             to: returns,
             resulting: block.result != nil,
             at: place,
-            in: frame.shapes
+            in: context.shapes
         )
 
         return (inner.block, inner.calls)
@@ -131,7 +131,7 @@ extension Builder {
         in expression: Expression,
         at place: Place,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         folding: Folding?,
         writing requiring: Requiring
     ) throws -> (Expression, [CallSite]) {
@@ -139,7 +139,7 @@ extension Builder {
             expression,
             at: place,
             in: environment,
-            with: frame,
+            with: context,
             ask: .judging(folding: folding, writing: requiring)
         )
 
@@ -364,14 +364,14 @@ extension Builder {
     func reading(
         of path: [PathSegment],
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         at place: Place,
         writing requiring: Requiring?
     ) -> PathReading {
         if let refusal = path.markedHead { return .refused(refusal) }
 
         guard case let .key(head, _)? = path.first, var current = environment[head] else {
-            return asWritten(path, in: environment, with: frame, at: place, writing: requiring)
+            return asWritten(path, in: environment, with: context, at: place, writing: requiring)
         }
 
         // A box stands in the environment marked as one; what is read out of
@@ -386,7 +386,7 @@ extension Builder {
         var optional = false
 
         for (offset, segment) in path.dropFirst().enumerated() {
-            current = frame.resolve(current)
+            current = context.resolve(current)
             walked.append(segment)
 
             // The segments after this one, as written. For the walks that stop
@@ -432,7 +432,7 @@ extension Builder {
                     }
 
                     return .refused(
-                        "\(walked.rendered) \(reach) \(current.rendered(in: frame.shapes)),"
+                        "\(walked.rendered) \(reach) \(current.rendered(in: context.shapes)),"
                             + " which declares nothing."
                             + " A shape is read by naming it, with `as`"
                     )
@@ -470,7 +470,7 @@ extension Builder {
                 // `held.count`), and the field it lands on is the same field
                 // either way.
                 if let reached = current.reaching([segment] + rest()) {
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
+                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -484,7 +484,7 @@ extension Builder {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
+                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -505,7 +505,7 @@ extension Builder {
                         break
                     }
 
-                    switch asWritten([segment] + rest(), in: environment, with: frame, at: place, writing: requiring) {
+                    switch asWritten([segment] + rest(), in: environment, with: context, at: place, writing: requiring) {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -518,7 +518,7 @@ extension Builder {
 
                 guard segment.optional else {
                     return .refused(
-                        "\(walked.rendered) reads into \(current.rendered(in: frame.shapes)),"
+                        "\(walked.rendered) reads into \(current.rendered(in: context.shapes)),"
                             + " which may be null. Absence is read with"
                             + " `\(segment.mark)`"
                     )
@@ -526,7 +526,7 @@ extension Builder {
 
                 optional = true
                 unwrapped = true
-                current = frame.resolve(inner)
+                current = context.resolve(inner)
             }
 
             // Whether the mark the author wrote here had anything to read past.
@@ -537,7 +537,7 @@ extension Builder {
             func needless(_ landing: PathSegment.Landing) -> PathReading? {
                 segment.needlessMark(
                     at: walked,
-                    on: current.rendered(in: frame.shapes),
+                    on: current.rendered(in: context.shapes),
                     landing: landing,
                     unwrapped: unwrapped
                 )
@@ -562,7 +562,7 @@ extension Builder {
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
             case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
+                switch indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -580,7 +580,7 @@ extension Builder {
             // Bytes are an array of bytes in a compact spelling, so an index
             // reads one. A `byte`, the range `std` names.
             case let (.indexRef(inner, optionally), .bytes):
-                switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
+                switch indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -597,7 +597,7 @@ extension Builder {
 
             case (.index, _), (.indexRef, _):
                 return .refused(
-                    "\(walked.rendered) indexes into \(current.rendered(in: frame.shapes)),"
+                    "\(walked.rendered) indexes into \(current.rendered(in: context.shapes)),"
                         + " and only an array is indexed"
                 )
 
@@ -624,7 +624,7 @@ extension Builder {
                 guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
-                            + " which \(current.rendered(in: frame.shapes)) does not declare."
+                            + " which \(current.rendered(in: context.shapes)) does not declare."
                             + " A word is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
                             + " or through `dictionary<any>`"
@@ -642,7 +642,7 @@ extension Builder {
             case let (.key(key, _), _):
                 return .refused(
                     "\(walked.rendered) names '\(key)',"
-                        + " and \(current.rendered(in: frame.shapes)) has no name there to read."
+                        + " and \(current.rendered(in: context.shapes)) has no name there to read."
                         + " A word by that spelling is sent with a written call"
                 )
             }
@@ -660,7 +660,7 @@ extension Builder {
     private func asWritten(
         _ segments: [PathSegment],
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         at place: Place,
         writing requiring: Requiring?
     ) -> PathReading {
@@ -673,7 +673,7 @@ extension Builder {
                 continue
             }
 
-            switch indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
+            switch indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
             case let .refused(reason):
                 return .refused(reason)
 
@@ -700,23 +700,23 @@ extension Builder {
     private func indexReference(
         _ inner: [PathSegment],
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         at place: Place,
         writing requiring: Requiring?
     ) -> IndexReading {
-        switch reading(of: inner, in: environment, with: frame, at: place, writing: requiring) {
+        switch reading(of: inner, in: environment, with: context, at: place, writing: requiring) {
         case let .refused(reason):
             return .refused(reason)
 
         case let .reads(innerResolved, innerType):
-            switch frame.resolve(innerType) {
+            switch context.resolve(innerType) {
             case .int, .ranged, .double, .number, .any, .never, .parameter:
                 return .judged(innerResolved)
 
             default:
                 return .refused(
                     "index reference \(inner.rendered) reads"
-                        + " \(innerType.rendered(in: frame.shapes)), expected int"
+                        + " \(innerType.rendered(in: context.shapes)), expected int"
                 )
             }
         }
@@ -948,12 +948,12 @@ extension Builder {
         _ expression: Expression,
         at place: Place,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         ask: Ask
     ) throws -> Inspection {
         switch expression {
         case let .literal(value):
-            return Inspection(rewritten: expression, reading: type(of: value, in: frame.shapes))
+            return Inspection(rewritten: expression, reading: type(of: value, in: context.shapes))
 
         // Nothing comes back from here, so there is no value to have a type.
         // `never` fits wherever it is written, and what evaluating the carried
@@ -980,7 +980,7 @@ extension Builder {
                 )
             }
 
-            let carried = try inspected(value, at: place, in: environment, with: frame, ask: ask)
+            let carried = try inspected(value, at: place, in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -999,7 +999,7 @@ extension Builder {
         // data the moment it is read, so under a folding scope it is judged
         // first (the same rules as any path) and then becomes that data.
         case let .reference(path):
-            switch reading(of: path, in: environment, with: frame, at: place, writing: ask.requiring) {
+            switch reading(of: path, in: environment, with: context, at: place, writing: ask.requiring) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
 
@@ -1029,7 +1029,7 @@ extension Builder {
                 do {
                     let value = try folding.read(settled, at: place)
 
-                    return Inspection(rewritten: .literal(value), reading: type(of: value, in: frame.shapes))
+                    return Inspection(rewritten: .literal(value), reading: type(of: value, in: context.shapes))
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }
@@ -1047,7 +1047,7 @@ extension Builder {
                     member,
                     at: place.index(position),
                     in: environment,
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
 
@@ -1079,13 +1079,13 @@ extension Builder {
                 value,
                 at: place.part(.receiver),
                 in: environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
-            let claim = type.lowered(in: frame.shapes)
-            let settled = claim.resolved(in: frame.shapes)
+            let claim = type.lowered(in: context.shapes)
+            let settled = claim.resolved(in: context.shapes)
 
-            let read = inner.reading.resolved(in: frame.shapes)
+            let read = inner.reading.resolved(in: context.shapes)
 
             // Both refusals ask the shapes themselves, with nothing gating them
             // on whether the reading is fully proven. A gate like that turned
@@ -1114,7 +1114,7 @@ extension Builder {
             // The reading this cast hands on, worked out before the sameness
             // question so that question can ask about what is handed on
             // rather than about the spelling that produced it.
-            let handed = optional && !claim.declaresNull(in: frame.shapes)
+            let handed = optional && !claim.declaresNull(in: context.shapes)
                 ? Shape.nullable(claim)
                 : claim
 
@@ -1122,16 +1122,16 @@ extension Builder {
             // nameless record as one attaches the name, so it is never a
             // cast of what the value already is. Two names never hold one
             // value, and the unresolved types are asked so that is seen.
-            let nominal = frame.shapes.record(of: claim) != nil
+            let nominal = context.shapes.record(of: claim) != nil
 
-            if !claim.couldBothHold(inner.reading, in: frame.shapes) {
+            if !claim.couldBothHold(inner.reading, in: context.shapes) {
                 // Neither could ever be the other, and the reading proves what
                 // it is, so this cast cannot succeed on any run. `as` would
                 // refuse every time and `as?` would answer null every time,
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
                 try refuse(
-                    "reads \(inner.reading.rendered(in: frame.shapes)) as \(settled.rendered(in: frame.shapes)),"
+                    "reads \(inner.reading.rendered(in: context.shapes)) as \(settled.rendered(in: context.shapes)),"
                         + " and no value is both."
                         + " A cast names a shape the value may turn out to"
                         + " have, and this one it never can",
@@ -1139,14 +1139,14 @@ extension Builder {
                     when: ask
                 )
             } else if inner.reading == claim
-                || (!nominal && (settled == read || handed.resolved(in: frame.shapes) == read)) {
+                || (!nominal && (settled == read || handed.resolved(in: context.shapes) == read)) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? int` hands on `int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same shape by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
                 try refuse(
-                    "reads \(inner.reading.rendered(in: frame.shapes)) as \(settled.rendered(in: frame.shapes)),"
+                    "reads \(inner.reading.rendered(in: context.shapes)) as \(settled.rendered(in: context.shapes)),"
                         + " which it already is."
                         + " A cast opens a shape the types do not prove,"
                         + " and here they do",
@@ -1194,7 +1194,7 @@ extension Builder {
                     field,
                     at: place.key(name.spelling),
                     in: environment,
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
 
@@ -1229,10 +1229,10 @@ extension Builder {
                 let inner = try inspected(
                     block: written,
                     at: place.part(.closure),
-                    in: environment.merging(self.environment(of: procedure.signature, in: frame.shapes)) {
+                    in: environment.merging(self.environment(of: procedure.signature, in: context.shapes)) {
                         _, new in new
                     },
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
 
@@ -1243,11 +1243,11 @@ extension Builder {
                 for (name, write) in inner.flow.written.sorted(by: { $0.key < $1.key }) {
                     guard let held = environment[name]?.fieldUnwrapped.inoutUnwrapped else { continue }
 
-                    guard held.accepts(write.type, in: frame.shapes) else {
+                    guard held.accepts(write.type, in: context.shapes) else {
                         throw BuildError(
                             "writes '\(name)', which it captured, as"
-                                + " \(write.type.rendered(in: frame.shapes)). The body it captured"
-                                + " from holds it as \(held.rendered(in: frame.shapes))",
+                                + " \(write.type.rendered(in: context.shapes)). The body it captured"
+                                + " from holds it as \(held.rendered(in: context.shapes))",
                             at: place.part(.closure)
                         )
                     }
@@ -1258,7 +1258,7 @@ extension Builder {
                     to: procedure.signature.returns,
                     resulting: written.result != nil,
                     at: place.part(.closure),
-                    in: frame.shapes
+                    in: context.shapes
                 )
 
                 body = inner.block
@@ -1268,16 +1268,16 @@ extension Builder {
             var reading: Set<Name> = []
 
             if case .judging(_, _?, _) = ask {
-                reading = frame.variables
+                reading = context.variables
             }
 
-            let pure = body.map { block in isPure(block, given: frame.pure, reading: reading) } ?? false
+            let pure = body.map { block in isPure(block, given: context.pure, reading: reading) } ?? false
             let isolated = body.map { block in
                 isIsolated(
                     block,
                     declaring: Set(procedure.signature.parameters.keys),
-                    given: frame.isolated,
-                    taking: { selector in frame.signature(of: selector) }
+                    given: context.isolated,
+                    taking: { selector in context.signature(of: selector) }
                 )
             } ?? false
 
@@ -1289,7 +1289,7 @@ extension Builder {
                         implementation: .body(body),
                         purity: pure ? .pure : .unstated,
                         isolation: isolated ? .isolated : .unstated,
-                        failing: failing(body, given: frame.failing)
+                        failing: failing(body, given: context.failing)
                     )
                 )
             }
@@ -1302,7 +1302,7 @@ extension Builder {
                     pure ? .pure : .unstated,
                     isolated ? .isolated : .unstated
                 )
-                .lowered(in: frame.shapes)
+                .lowered(in: context.shapes)
             )
 
         // Which value is called is settled at run time, so nothing here can say
@@ -1331,7 +1331,7 @@ extension Builder {
                 callee,
                 at: place.part(.callee),
                 in: environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
             var rewritten: [Name: Expression] = [:]
@@ -1342,7 +1342,7 @@ extension Builder {
                     argument,
                     at: place.argument(name.spelling),
                     in: environment,
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
 
@@ -1367,22 +1367,22 @@ extension Builder {
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
         case let .call(call):
-            let signature = frame.signature(of: call.selector) ?? frame.contractWords[call.selector]?.signature
+            let signature = context.signature(of: call.selector) ?? context.contractWords[call.selector]?.signature
 
             guard case .judging = ask else {
                 return Inspection(
                     rewritten: expression,
                     reading: try answered(
                         by: signature,
-                        over: frame.slots(of: call.selector),
-                        answering: frame.answer(of: call.selector),
+                        over: context.slots(of: call.selector),
+                        answering: context.answer(of: call.selector),
                         at: call,
                         readings: try call.arguments.reduce(into: [:]) { read, argument in
                             read[argument.key] = try inspected(
                                 argument.value,
                                 at: place.argument(argument.key.spelling),
                                 in: environment,
-                                with: frame,
+                                with: context,
                                 ask: ask
                             ).reading
                         },
@@ -1391,11 +1391,11 @@ extension Builder {
                                 receiver,
                                 at: place.part(.receiver),
                                 in: environment,
-                                with: frame,
+                                with: context,
                                 ask: ask
                             ).reading
                         },
-                        in: frame.shapes
+                        in: context.shapes
                     )
                 )
             }
@@ -1403,13 +1403,13 @@ extension Builder {
             // A call through a contract names no declaration. What answers it
             // is the receiver's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
-            if let asked = frame.contractWords[call.selector] {
+            if let asked = context.contractWords[call.selector] {
                 return try inspected(
                     contract: asked,
                     call: call,
                     at: place,
                     in: environment,
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
             }
@@ -1418,7 +1418,7 @@ extension Builder {
             // it. Its answer is unknown, and a dot on an unknown answer would
             // be refused first for what the dot reads, which is not what the
             // author got wrong.
-            guard let callee = frame.declared(call.selector) else {
+            guard let callee = context.declared(call.selector) else {
                 throw BuildError(
                     "sends '\(call.selector)', which no module in this link declares",
                     at: place
@@ -1444,7 +1444,7 @@ extension Builder {
                     written,
                     at: place.part(.receiver),
                     in: environment,
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
             }
@@ -1458,7 +1458,7 @@ extension Builder {
                     argument,
                     at: place.argument(name.spelling),
                     in: environment,
-                    with: frame,
+                    with: context,
                     ask: ask
                 )
 
@@ -1471,7 +1471,7 @@ extension Builder {
                 by: call,
                 to: callee.signature,
                 in: environment,
-                with: frame,
+                with: context,
                 at: place,
                 when: ask
             )
@@ -1495,17 +1495,17 @@ extension Builder {
                 ] + calls,
                 reading: answered(
                     by: signature,
-                    over: frame.slots(of: call.selector),
-                    answering: frame.answer(of: call.selector),
+                    over: context.slots(of: call.selector),
+                    answering: context.answer(of: call.selector),
                     at: call,
                     readings: sent,
                     receiver: receiver?.reading,
-                    in: frame.shapes
+                    in: context.shapes
                 )
             )
 
         case let .block(block):
-            let inner = try inspected(block: block, at: place, in: environment, with: frame, ask: ask)
+            let inner = try inspected(block: block, at: place, in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites ? .block(inner.block) : expression,
@@ -1538,12 +1538,12 @@ extension Builder {
                 condition,
                 at: place.part(.condition(of: .conditional)),
                 in: environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
             let inside = environment
 
-            let taken = try inspected(then, at: place.part(.then), in: inside, with: frame, ask: ask)
+            let taken = try inspected(then, at: place.part(.then), in: inside, with: context, ask: ask)
 
             guard let otherwise else {
                 return Inspection(
@@ -1560,7 +1560,7 @@ extension Builder {
                 otherwise,
                 at: place.part(.otherwise),
                 in: inside,
-                with: frame,
+                with: context,
                 ask: ask
             )
 
@@ -1602,7 +1602,7 @@ extension Builder {
                     body.body,
                     at: place.part(.body),
                     in: entry,
-                    with: frame,
+                    with: context,
                     ask: .reading
                 )
 
@@ -1623,11 +1623,11 @@ extension Builder {
                 condition,
                 at: place.part(.condition(of: .loop)),
                 in: seeded,
-                with: frame,
+                with: context,
                 ask: ask
             )
             let rounds = ask.rewrites
-                ? try inspected(body.body, at: place.part(.body), in: seeded, with: frame, ask: ask)
+                ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
                 : probed
 
             // The result runs once, at whichever exit the run takes (a
@@ -1647,7 +1647,7 @@ extension Builder {
                         ?? join(.null, written)
                 }
 
-                tail = try inspected(result, at: place.part(.result), in: exit, with: frame, ask: ask)
+                tail = try inspected(result, at: place.part(.result), in: exit, with: context, ask: ask)
             }
 
             return Inspection(
@@ -1681,7 +1681,7 @@ extension Builder {
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
             // link found, which is none.
-            if failing(block, given: frame.failing).failsNothing {
+            if failing(block, given: context.failing).failsNothing {
                 try refuse(
                     "attempts a body that cannot fail, so its rescue is a body"
                         + " no run reaches. What a rescue catches is what the"
@@ -1696,14 +1696,14 @@ extension Builder {
                 block: block,
                 at: place,
                 in: environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
             let rescued = try inspected(
                 block: rescue,
                 at: place.part(.rescue),
-                in: caught(soaking: attempted.flow, failure: failure, in: environment, with: frame),
-                with: frame,
+                in: caught(soaking: attempted.flow, failure: failure, in: environment, with: context),
+                with: context,
                 ask: ask
             )
 
@@ -1729,7 +1729,7 @@ extension Builder {
         call: Call,
         at place: Place,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         ask: Ask
     ) throws -> Inspection {
         guard let written = call.receiver else {
@@ -1749,11 +1749,11 @@ extension Builder {
             written,
             at: place.part(.receiver),
             in: environment,
-            with: frame,
+            with: context,
             ask: ask
         )
 
-        switch frame.shapes.answering(contract: asked.contract, reading: receiver.reading) {
+        switch context.shapes.answering(contract: asked.contract, reading: receiver.reading) {
         case let .leansOn(type):
             ask.requiring?.require(
                 Claim(type: type, contract: asked.contract),
@@ -1765,7 +1765,7 @@ extension Builder {
 
         case .settled(false):
             throw BuildError(
-                "sends '\(call.selector)' to \(receiver.reading.rendered(in: frame.shapes)),"
+                "sends '\(call.selector)' to \(receiver.reading.rendered(in: context.shapes)),"
                     + " which does not answer every word '\(asked.contract)' asks",
                 at: place.part(.receiver)
             )
@@ -1791,13 +1791,13 @@ extension Builder {
                 argument,
                 at: place.argument(name.spelling),
                 in: environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
 
-            guard parameter.declared.lowered(in: frame.shapes).accepts(inner.reading, in: frame.shapes) else {
+            guard parameter.declared.lowered(in: context.shapes).accepts(inner.reading, in: context.shapes) else {
                 throw BuildError(
-                    "hands \(inner.reading.rendered(in: frame.shapes)) where '\(asked.contract)'"
+                    "hands \(inner.reading.rendered(in: context.shapes)) where '\(asked.contract)'"
                         + " writes \(parameter.declared.rendered)",
                     at: place.argument(name.spelling)
                 )
@@ -1811,7 +1811,7 @@ extension Builder {
         where call.arguments[name] == nil {
             guard
                 parameter.default != nil
-                    || parameter.declared.lowered(in: frame.shapes).declaresNull(in: frame.shapes)
+                    || parameter.declared.lowered(in: context.shapes).declaresNull(in: context.shapes)
             else {
                 throw BuildError(
                     "sends '\(call.selector)' without '\(name)', which"
@@ -1826,7 +1826,7 @@ extension Builder {
                 ? .call(Call(receiver: receiver.rewritten, selector: call.selector, arguments: arguments))
                 : .call(call),
             calls: calls,
-            reading: asked.signature.returns?.lowered(in: frame.shapes) ?? .any
+            reading: asked.signature.returns?.lowered(in: context.shapes) ?? .any
         )
     }
 
@@ -1837,14 +1837,14 @@ extension Builder {
         block: Block,
         at place: Place,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         ask: Ask
     ) throws -> (block: Block, calls: [CallSite], reading: Shape, flow: Flow) {
         let body = try inspected(
             block.body,
             at: place.part(.body),
             in: environment,
-            with: frame,
+            with: context,
             ask: ask
         )
 
@@ -1875,7 +1875,7 @@ extension Builder {
                 result,
                 at: place.part(.result),
                 in: body.environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
 
@@ -1919,7 +1919,7 @@ extension Builder {
         _ body: [Statement],
         at place: Place,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         ask: Ask
     ) throws -> BodyWalk {
         var environment = environment
@@ -1935,7 +1935,7 @@ extension Builder {
                 statement.expression,
                 at: here,
                 in: environment,
-                with: frame,
+                with: context,
                 ask: ask
             )
 
@@ -2004,7 +2004,7 @@ extension Builder {
             // nothing holds what the link worked out from what it was given.
             case let .constant(id, declared)?:
                 locals.insert(id)
-                environment[id] = try held(inner.reading, declaredAs: declared, at: here, with: frame, when: ask)
+                environment[id] = try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
 
             // A variable stands in the environment as a box, so a later
             // write can tell it from a fixed name. A box that said what it
@@ -2012,7 +2012,7 @@ extension Builder {
             case let .variable(id, declared)?:
                 locals.insert(id)
 
-                let holds = try held(inner.reading, declaredAs: declared, at: here, with: frame, when: ask)
+                let holds = try held(inner.reading, declaredAs: declared, at: here, with: context, when: ask)
                 environment[id] = declared == nil ? .variable(holds) : .inout(holds)
 
             // A write to a whole variable retypes it, the way a declaration
@@ -2030,7 +2030,7 @@ extension Builder {
                         writtenTo: path,
                         holding: fixed,
                         in: environment,
-                        with: frame,
+                        with: context,
                         at: here,
                         when: ask
                     )
@@ -2048,7 +2048,7 @@ extension Builder {
                             writtenTo: path,
                             holding: nil,
                             in: environment,
-                            with: frame,
+                            with: context,
                             at: here,
                             when: ask
                         )
@@ -2251,12 +2251,12 @@ extension Builder {
         soaking flow: Flow,
         failure: Name,
         in environment: [Name: Shape],
-        with frame: TypeFrame
+        with context: TypingContext
     ) -> [Name: Shape] {
         var caught = environment
 
         apply(absorbed(flow), to: &caught)
-        caught[failure] = FailurePayload.declared.lowered(in: frame.shapes)
+        caught[failure] = FailurePayload.declared.lowered(in: context.shapes)
 
         return caught
     }
@@ -2437,7 +2437,7 @@ extension Builder {
     func writable(
         _ path: [PathSegment],
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         at place: Place,
         writing requiring: Requiring?
     ) -> Writable {
@@ -2468,18 +2468,18 @@ extension Builder {
             }
 
             if case let .indexRef(inner, _) = segment {
-                if case let .refused(reason) = indexReference(inner, in: environment, with: frame, at: place, writing: requiring) {
+                if case let .refused(reason) = indexReference(inner, in: environment, with: context, at: place, writing: requiring) {
                     return .refused(reason)
                 }
             }
 
-            current = frame.resolve(current)
+            current = context.resolve(current)
 
             switch (segment, current) {
             case let (.key(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
-                        "\(walked.rendered) names '\(key)', which \(current.rendered(in: frame.shapes))"
+                        "\(walked.rendered) names '\(key)', which \(current.rendered(in: context.shapes))"
                             + " does not declare"
                     )
                 }
@@ -2502,25 +2502,25 @@ extension Builder {
 
             case (.key, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
-                    "\(walked.rendered) writes into \(current.rendered(in: frame.shapes)), which"
+                    "\(walked.rendered) writes into \(current.rendered(in: context.shapes)), which"
                         + " declares nothing. A shape is written by naming it"
                 )
 
             case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):
                 return .refused(
-                    "\(walked.rendered) writes into \(current.rendered(in: frame.shapes)), which may"
+                    "\(walked.rendered) writes into \(current.rendered(in: context.shapes)), which may"
                         + " be null. Write the whole first"
                 )
 
             case (.key, _):
                 return .refused(
-                    "\(walked.rendered) writes a field into \(current.rendered(in: frame.shapes)),"
+                    "\(walked.rendered) writes a field into \(current.rendered(in: context.shapes)),"
                         + " which has none"
                 )
 
             case (.index, _), (.indexRef, _):
                 return .refused(
-                    "\(walked.rendered) writes an element into \(current.rendered(in: frame.shapes)),"
+                    "\(walked.rendered) writes an element into \(current.rendered(in: context.shapes)),"
                         + " and only an array is written by position"
                 )
             }
@@ -2538,7 +2538,7 @@ extension Builder {
         by call: Call,
         to signature: Signature,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         at place: Place,
         when ask: Ask
     ) throws {
@@ -2576,7 +2576,7 @@ extension Builder {
                 continue
             }
 
-            if case let .refused(reason) = writable(path, in: environment, with: frame, at: at, writing: ask.requiring) {
+            if case let .refused(reason) = writable(path, in: environment, with: context, at: at, writing: ask.requiring) {
                 try refuse("hands '\(name)' in place, and \(reason)", at: at, when: ask)
             }
         }
@@ -2588,15 +2588,15 @@ extension Builder {
         _ given: Shape,
         declaredAs written: TypeExpression?,
         at place: Place,
-        with frame: TypeFrame,
+        with context: TypingContext,
         when ask: Ask
     ) throws -> Shape {
-        guard let declared = written?.lowered(in: frame.shapes) else { return given }
+        guard let declared = written?.lowered(in: context.shapes) else { return given }
 
-        guard declared.accepts(given, in: frame.shapes) else {
+        guard declared.accepts(given, in: context.shapes) else {
             try refuse(
-                "holds \(declared.rendered(in: frame.shapes)), and what it was given is"
-                    + " \(given.rendered(in: frame.shapes))",
+                "holds \(declared.rendered(in: context.shapes)), and what it was given is"
+                    + " \(given.rendered(in: context.shapes))",
                 at: place,
                 when: ask
             )
@@ -2615,7 +2615,7 @@ extension Builder {
         writtenTo path: [PathSegment],
         holding fixed: Shape?,
         in environment: [Name: Shape],
-        with frame: TypeFrame,
+        with context: TypingContext,
         at place: Place,
         when ask: Ask
     ) throws {
@@ -2624,7 +2624,7 @@ extension Builder {
         if path.count == 1, let fixed {
             slot = fixed
         } else {
-            switch writable(path, in: environment, with: frame, at: place, writing: ask.requiring) {
+            switch writable(path, in: environment, with: context, at: place, writing: ask.requiring) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
                 return
@@ -2634,10 +2634,10 @@ extension Builder {
             }
         }
 
-        guard slot.accepts(written, in: frame.shapes) else {
+        guard slot.accepts(written, in: context.shapes) else {
             try refuse(
-                "writes '\(path.rendered)' as \(written.rendered(in: frame.shapes)), and it holds"
-                    + " \(slot.rendered(in: frame.shapes))",
+                "writes '\(path.rendered)' as \(written.rendered(in: context.shapes)), and it holds"
+                    + " \(slot.rendered(in: context.shapes))",
                 at: place,
                 when: ask
             )

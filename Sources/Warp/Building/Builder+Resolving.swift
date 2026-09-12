@@ -302,15 +302,15 @@ extension Builder {
         folding answered: Answered,
         writing lowering: inout Lowering,
         leaning requiring: Requiring,
-        in frame: TypeFrame
+        in context: TypingContext
     ) throws -> [Name: Value] {
         // Folding runs what it reads, and running reads rows. A lowered body
         // carries its document's own numbers, so the table handed here is one
         // that says which row each of those numbers stands for.
         //
-        // The frame is the document's own, since a document reads its own
+        // The context is the document's own, since a document reads its own
         // constants, and it is handed over rather than asked for: the lowering
-        // this writes into is one of the tables a frame is read off.
+        // this writes into is one of the tables a context is read off.
         guard !module.constants.isEmpty else { return [:] }
 
         var known: [Name: Value] = [:]
@@ -330,8 +330,8 @@ extension Builder {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
-                    with: frame,
+                    in: known.mapValues { value in type(of: value, in: context.shapes) },
+                    with: context,
                     folding: nil,
                     writing: requiring
                 )
@@ -339,14 +339,14 @@ extension Builder {
                 // A closure a constant holds runs later, so evaluating the
                 // constant proves nothing about the sends inside it. They pass
                 // the same gate every gathered call does.
-                try checked(calls, in: frame, writing: requiring)
+                try checked(calls, in: context, writing: requiring)
 
                 do {
                     known[name] = try Folding(
                         constants: known,
                         origin: origin,
                         in: answered,
-                        shapes: frame.shapes
+                        shapes: context.shapes
                     ).read(judged, as: name, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
@@ -370,7 +370,7 @@ extension Builder {
         folding answered: Answered,
         writing lowering: inout Lowering,
         leaning requiring: Requiring,
-        in frame: TypeFrame
+        in context: TypingContext
     ) throws -> [Name: Value] {
         guard !module.variables.isEmpty else { return [:] }
 
@@ -383,20 +383,20 @@ extension Builder {
                 let (judged, calls) = try resolvedSites(
                     in: expression,
                     at: place,
-                    in: known.mapValues { value in type(of: value, in: frame.shapes) },
-                    with: frame,
+                    in: known.mapValues { value in type(of: value, in: context.shapes) },
+                    with: context,
                     folding: nil,
                     writing: requiring
                 )
 
-                try checked(calls, in: frame, writing: requiring)
+                try checked(calls, in: context, writing: requiring)
 
                 do {
                     started[name] = try Folding(
                         constants: known,
                         origin: origin,
                         in: answered,
-                        shapes: frame.shapes
+                        shapes: context.shapes
                     ).read(judged, as: name, writing: &lowering, at: place)
                 } catch let refused as BuildError {
                     throw refused
