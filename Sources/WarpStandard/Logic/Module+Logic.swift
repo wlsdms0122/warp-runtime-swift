@@ -10,7 +10,7 @@ import Warp
 
 public extension Module {
     static let logic = try! Module(
-        description: "Equality, negation and the connectives.",
+        description: "Equality, negation, the connectives and choosing a value.",
         procedures: [
             "std.logic.equal": Procedure(
                 description: "Whether two values are the same.",
@@ -39,6 +39,15 @@ public extension Module {
                 description: "Whether one answers true, asked until one does.",
                 signature: Signature(of: OrQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(OrQuery())
+            ),
+            "std.logic.select": Procedure(
+                description: "What one of two sides answers, chosen by a truth.",
+                signature: Signature(
+                    of: SelectQuery.self,
+                    receiver: .of,
+                    returns: .parameter(name: "Answer")
+                ),
+                implementation: .query(SelectQuery())
             )
         ]
     )
