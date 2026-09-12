@@ -118,7 +118,7 @@ struct TypeTests {
     @Test("a type may name itself")
     func namedTypeMayRecur() throws {
         // Given. Kept rather than expanded at link, which is what makes a
-        // self-naming type a type instead of a regress
+        // self-naming type a type and not a regress
         let types = TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
         )

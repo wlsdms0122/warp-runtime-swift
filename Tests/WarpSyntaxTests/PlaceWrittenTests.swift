@@ -103,8 +103,8 @@ struct PlaceWrittenTests {
             try loader.reading { try Builder().build([module], entry: entryName) }
         }
 
-        // Then. `call` is the procedure the author wrote, and `call` is what the
-        // language calls the type
+        // Then. `call` is the key the author wrote, and `call` is what the
+        // language calls the construct
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
         // And unasked, the language answers in its own terms

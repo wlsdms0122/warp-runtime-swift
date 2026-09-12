@@ -563,12 +563,12 @@ struct Lowering {
             )
 
         case let .cast(value, type, optional):
-            let type = type.lowered(in: loweredTypes)
-            slots.note(type)
+            let lowered = type.lowered(in: loweredTypes)
+            slots.note(lowered)
 
             return .cast(
                 try lower(value, in: scope, on: slots, label: label, at: place),
-                as: type,
+                as: lowered,
                 optional: optional
             )
 

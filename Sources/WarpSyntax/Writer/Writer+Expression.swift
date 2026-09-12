@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // Where the two positions a document writes an expression in stop being the
-// same. A statement is a name and one construct, so every type the language has
+// same. A statement is a name and one construct, so every construct the language has
 // can be written there; inside another expression there is no name to give, so
 // only the types that need none can.
 public extension Writer {

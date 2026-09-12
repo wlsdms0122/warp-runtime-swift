@@ -135,7 +135,7 @@ struct UnwritableTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One statement around whatever is under test, since none of these types
+    // One statement around whatever is under test, since none of these pieces
     // can be reached by writing a document.
     private func module(binding expression: Warp.Expression) throws -> Module {
         try Module(

@@ -103,7 +103,7 @@ struct ConformanceTests {
 
 // One question, read from the specification rather than written here.
 //
-// A case is not a program and is not written in the type of one. It is spelled
+// A case is not a program and is not written in the form of one. It is spelled
 // in the same text (the encoding carries a tree and never learns what a tree
 // means, so there is one of those and not two) but what it holds under `test`
 // is a test, and the document it asks about is nested whole under `program`.

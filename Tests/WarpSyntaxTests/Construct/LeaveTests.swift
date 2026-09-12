@@ -461,7 +461,7 @@ struct LeaveTests {
     func nothingRunsAfterLeaving() {
         // Given. A statement after one that leaves never runs, so the name it
         // was going to bind never binds. Reading it later would read nothing,
-        // and there is no type of program where that is what the author meant.
+        // and there is no kind of program where that is what the author meant.
         #expect {
             try loader.loadProcedure([
                 "returns": "string",

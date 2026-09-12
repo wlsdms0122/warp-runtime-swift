@@ -98,7 +98,7 @@ public enum TextEncoding {
     }
 
     // A container being put back together, exactly as in the binary reader. One
-    // type of reader per encoding would be two chances to differ. A sum rather
+    // reader per encoding would be two chances to differ. A sum rather
     // than two optionals, so "neither" and "both" are not states the code has
     // to promise never to reach; a record with no key is one waiting for its
     // next field name.

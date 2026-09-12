@@ -22,7 +22,7 @@ import Foundation
 //   call      . A message: a selector, a receiver, arguments. The one
 //                calling type, and the only open one
 //
-// The control types carry a `Block` and, where a name has to exist inside that
+// The control constructs carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the id of whatever bound it.
 //

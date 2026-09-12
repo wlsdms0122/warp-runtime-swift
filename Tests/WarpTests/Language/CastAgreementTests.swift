@@ -21,7 +21,7 @@ import Testing
 // deliberately free. `couldBothHold` refuses only what it can prove, and
 // everything it cannot read into is left to the run.
 //
-// This is the same type of guard `holdsEveryByte` earned: two hand-written
+// This is the same kind of guard `holdsEveryByte` earned: two hand-written
 // answers to one question, held together by asking the judge. Every pair the
 // restatement got wrong (`dictionary` beside `record`, `int?` beside `string?`,
 // `bytes` beside `array<int>`, an int where a double is named, `int?` beside

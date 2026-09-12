@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The expression grammar. `Expression` has types and no spelling; this is the
+// The expression grammar. `Expression` has constructs and no spelling; this is the
 // spelling. No front end may hide an expression inside a string, so any
 // notation that can write a record can write every expression:
 //

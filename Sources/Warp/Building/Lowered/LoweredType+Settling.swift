@@ -52,7 +52,7 @@ extension LoweredType {
             // null.
             guard optional else {
                 // Recoverable, unlike the same refusal at a parameter's
-                // boundary: a cast is the author expecting a type of data
+                // boundary: a cast is the author expecting a kind of data
                 // that came from outside, and being wrong about that is what
                 // the world does. An `attempt` catches it.
                 throw CastRefused(

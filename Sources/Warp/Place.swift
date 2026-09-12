@@ -226,7 +226,7 @@ public extension Place {
     }
 
     // Every part a program has, by the language's own name for it. A part is
-    // where something sits in the type of a program; the boundary's `Slot` is
+    // where something sits in the structure of a program; the boundary's `Slot` is
     // what a call fills, and the two are named apart because they are two
     // things. No spelling rides along: what a document writes a part under is
     // the reading side's, and a procedure declared in two places is a procedure the two

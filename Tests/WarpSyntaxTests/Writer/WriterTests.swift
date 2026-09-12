@@ -653,7 +653,7 @@ struct WriterTests {
         ]
     ]
 
-    // One document per type the language has, written the way a document
+    // One document per construct the language has, written the way a document
     // usually is. Spellings and all, since what comes out the far side is the
     // thing under test.
     static let corpus: [Value] = [

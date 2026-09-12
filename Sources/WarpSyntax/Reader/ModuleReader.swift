@@ -125,7 +125,7 @@ public struct ModuleReader: Decodable {
     // A document says which language it is written for, and one that does not
     // is not a document. Reading silence as the earliest would mean guessing at
     // the one question that has to be answerable from the bytes alone, and it
-    // is what lets a file of some other type entirely walk in and be turned
+    // is what lets a file of some other kind entirely walk in and be turned
     // away for its keys rather than for what it is.
     //
     // Anything outside the range this reader knows is refused rather than

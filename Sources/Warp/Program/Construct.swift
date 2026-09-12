@@ -31,7 +31,7 @@ public enum Construct: Sendable, Equatable {
     case leave(Leave.Reach)
 
     // MARK: - Public
-    // What the language calls this type. A document calls several of them
+    // What the language calls this construct. A document calls several of them
     // something else, and the reading that knows which is not this one.
     //
     // Leaving renders as one name for all three reaches. Which loop a `leave`
