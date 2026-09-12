@@ -44,7 +44,7 @@ final class LoweredTypeTable: Sendable {
     // Which types satisfy each declared contract, by the contract's own
     // spelling. A contract's members are not a shape the table lowers: what
     // puts a type in one is a document's claim, held to the declarations that
-    // answer the words, which the link works out rather than the type
+    // answer the procedures, which the link works out rather than the type
     // language.
     //
     // Every declared contract has an entry, so a name with none is a name no
@@ -119,7 +119,7 @@ final class LoweredTypeTable: Sendable {
         constraintRows[name]
     }
 
-    // Whether the type a value arrived wearing answers every word a contract
+    // Whether the type a value arrived wearing answers every procedure a contract
     // asks. Nil where nothing declares the contract, the way an undeclared
     // constraint answers nil: what an undeclared name means is the asking
     // surface's.

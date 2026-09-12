@@ -16,7 +16,7 @@ import Foundation
 // the same as any other declaration, and the signature is what a call site is
 // checked against whichever way the body is written.
 //
-// Answering nil means the word does not apply to that receiver's shape. It is
+// Answering nil means the procedure does not apply to that receiver's shape. It is
 // not a failure, and it reads as absent the same as a field that was never
 // set.
 public protocol Query: NativeProcedure {
@@ -24,7 +24,7 @@ public protocol Query: NativeProcedure {
     // signature's business; this is for what a type cannot say. That a regex
     // pattern compiles. An author typo surfaces before any run.
     //
-    // Asked through the door the word reads its arguments through, so a word
+    // Asked through the door the procedure reads its arguments through, so a procedure
     // names a key here the way it names one when it answers. There is no run
     // behind this one, so a procedure it was handed cannot be called.
     func validate(_ question: Question<Self>) throws

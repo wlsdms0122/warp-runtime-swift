@@ -248,7 +248,7 @@ struct ClosureTests {
 
     @Test("an author can write a construct that takes a body")
     func authorWrittenControlStructure() async throws {
-        // Given. `twice` is not a native word and not a language case. It is a
+        // Given. `twice` is not a native procedure and not a language case. It is a
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(

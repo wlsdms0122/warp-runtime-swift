@@ -11,7 +11,7 @@ import Testing
 
 // A statement typed `never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call
-// is the build's to refuse, because only the build knows what the word declares.
+// is the build's to refuse, because only the build knows what the procedure declares.
 // One rule, two places, each catching what only it can see.
 @Suite("What never finishes binds nothing")
 struct NeverTests {
@@ -153,14 +153,14 @@ struct NeverTests {
                         Statement(binding: .variable("y"), expression: .literal(.int(1))),
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "wants", arguments: [
-                                "word": .reference([.key("y")])
+                                "procedure": .reference([.key("y")])
                             ]))
                         )
                     ],
                     result: reference("y")
                 ),
                 "wants": Procedure(
-                    signature: Signature(parameters: ["word": Parameter(type: .string)]),
+                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: []
                 )
             ]
@@ -249,7 +249,7 @@ struct NeverTests {
         // Given. A loop's result is read at the exits: a condition that
         // declines at the start runs no round and answers, whatever the rounds
         // would have done. So the result is not "after" the body the way a
-        // plain block's is, and a body no run comes back from (here a word only
+        // plain block's is, and a body no run comes back from (here a procedure only
         // the build knows declares never) leaves the loop answerable still. The
         // reader refuses the leaves it can see; this is the shape only the build
         // sees, and the run keeps it

@@ -9,7 +9,7 @@ import Foundation
 
 // The type table: every shape the modules in a link declared, and what each
 // name stands for. The counterpart of `Library` on the other axis. That one
-// holds the words a caller installed, this one the shapes a document declared.
+// holds the procedures a caller installed, this one the shapes a document declared.
 //
 // It exists because a named type is kept rather than expanded. Expanding at link
 // would make a self-naming shape a regress, so the name survives into the run and
@@ -25,10 +25,10 @@ public struct TypeTable: Sendable {
     public let types: [Name: TypeExpression]
     public let constraints: [Name: [TypeExpression]]
 
-    // Contracts declared in this link: a name bound to the words a value must
+    // Contracts declared in this link: a name bound to the procedures a value must
     // answer. Beside the constraints for the same reason those are beside the
     // types. A membership is a closed set of shapes and a contract is the open
-    // set of shapes that declare some words, so listing answers one and not
+    // set of shapes that declare some procedures, so listing answers one and not
     // the other.
     public let contracts: [Name: [Name: Signature]]
 

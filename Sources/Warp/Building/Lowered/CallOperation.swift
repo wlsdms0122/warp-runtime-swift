@@ -36,7 +36,7 @@ struct CallOperation: Sendable {
     // the place instead, and a literal settled to the slot it lands in.
     //
     // One rule, whether the callee is the one the call named or one of the
-    // types the link found answering a contract's word. The arguments are
+    // types the link found answering a contract's procedure. The arguments are
     // asked for by name in the order the callee's slots stand, so a call the
     // author wrote lowers each one where it lands and a call through a
     // contract hands over what it lowered once.

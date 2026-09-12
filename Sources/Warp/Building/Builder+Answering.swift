@@ -34,7 +34,7 @@ extension Builder {
     // statement, and which other unwritten answers its own may come from.
     struct Unsaid {
         // The declaration itself, rather than the two things this walk asks of
-        // it. What it is called across the link and where its words are in the
+        // it. What it is called across the link and where its procedures are in the
         // document are both the symbol's to say, and copying either out here
         // would be a second place the rule for it lives.
         let symbol: Symbol
@@ -80,7 +80,7 @@ extension Builder {
                 continue
             }
 
-            // A refusal is the judging pass's to state, in its own words and
+            // A refusal is the judging pass's to state, in its own terms and
             // at its own place. Raising one here would put the first refusal
             // an author sees somewhere the frontier never decided, so what
             // this pass cannot read it treats as unread.

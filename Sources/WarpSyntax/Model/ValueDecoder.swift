@@ -291,7 +291,7 @@ struct ValueDecoder: Decoder {
     let value: Value
     let codingPath: [CodingKey]
 
-    // Where the reading has reached, said in the document's own words.
+    // Where the reading has reached, said in the document's own terms.
     //
     // `codingPath` is the same walk in `Codable`'s terms, and it cannot answer
     // this: a coding key carries a number whenever its spelling reads as one,
@@ -371,7 +371,7 @@ struct ValueDecoder: Decoder {
 }
 
 extension Decoder {
-    // Where this reading has reached, in the document's own words. Nothing
+    // Where this reading has reached, in the document's own terms. Nothing
     // where the reading is not this package's, which is the honest answer for a
     // decoder whose descent nobody here watched.
     var steps: [Place.Step] { (self as? ValueDecoder)?.steps ?? [] }

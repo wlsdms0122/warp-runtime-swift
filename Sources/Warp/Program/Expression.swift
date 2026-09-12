@@ -26,11 +26,11 @@ import Foundation
 // block, the name itself, so an expression means the same thing wherever it
 // appears, instead of borrowing the id of whatever bound it.
 //
-// `call` is the one open case. A procedure, a bundled word and a caller's own
+// `call` is the one open case. A procedure, a bundled procedure and a caller's own
 // all lower to it, because they differ only in where the selector is found, and
 // finding it is the link's job, not the grammar's.
 //
-// There is no operator here. Equality, negation and the connectives are words
+// There is no operator here. Equality, negation and the connectives are procedures
 // like any other, so the grammar says what a program *is* and never what one
 // computes. A connective declines to ask its later sides by taking procedures
 // rather than values, which is a thing a declaration can say.
@@ -84,14 +84,14 @@ public indirect enum Expression: Sendable {
     case leave(Leave)
 
     // MARK: - Property
-    // The word for the construct this is, where it stands as a statement's.
+    // The name of the construct this is, where it stands as a statement's.
     // Everything with no construct of its own answers `value`.
     //
     // Here rather than worked out by each walk that reports a place, because
     // two walks calling one statement's construct two things is two documents
-    // as far as an author following the words is concerned.
+    // as far as an author following the names is concerned.
     //
-    // It is what this implementation calls the shape and **not** a word read
+    // It is what this implementation calls the shape and **not** a key read
     // off any document: a caller registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
     // two texts that arrive here as one shape.
@@ -176,13 +176,13 @@ public indirect enum Expression: Sendable {
     // things.
     public static let constructInOperand =
         "a construct runs a body, and a call's operand is data."
-            + " A body a word is to run travels as a closure"
+            + " A body a procedure is to run travels as a closure"
     public static let declarationOnABoundName =
         "this construct binds the name. A loop's round, a walk's element,"
             + " an attempt's failure, so what it holds is not declared here"
     public static let constructInCondition =
         "a construct runs a body, and a condition is data."
-            + " What a body decides reaches a condition through a word"
+            + " What a body decides reaches a condition through a procedure"
 
     // Whether a construct (a shape that runs a body, or leaves) sits anywhere
     // in this expression read as data. A call's operand is data the pure half

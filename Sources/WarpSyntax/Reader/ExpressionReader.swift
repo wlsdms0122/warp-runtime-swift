@@ -27,7 +27,7 @@ import Warp
 //   { call: <message> }. A message where a value is wanted. The same form a
 //                        statement writes, and here because the language puts
 //                        no such limit on it: every spelling that stands in for
-//                        a word builds one of these somewhere inside an
+//                        a procedure builds one of these somewhere inside an
 //                        expression, so a document that could only write one as
 //                        a statement could not say plainly what its own
 //                        spellings mean
@@ -40,9 +40,9 @@ public struct ExpressionReader: Decodable {
     // The keys that make a record an expression form. A record that carries one
     // of these as plain data must be quoted. `{ value: ... }`.
     //
-    // Fixed, where construct words are a `ConstructRegistry` a caller composes. The
+    // Fixed, where construct keys are a `ConstructRegistry` a caller composes.
     // asymmetry is deliberate, and this set is why: it is the quoting boundary.
-    // A construct word is read in statement position, where a document is already
+    // A construct key is read in statement position, where a document is already
     // writing code; these are read wherever data appears, so widening the set
     // turns records that were data into forms. Under a movable boundary the same
     // document means different things in different notations, and the way an author
@@ -52,12 +52,12 @@ public struct ExpressionReader: Decodable {
     ]
 
     // The key a closure literal is written under. Named because a place read
-    // in a document's words asks for it, and a word spelled in two files is a
-    // word the two can come to disagree about.
+    // in a document's keys asks for it, and a key spelled in two files is a
+    // key the two can come to disagree about.
     static let closureKey: Name = "closure"
 
     // What a cast reads and what a call is sent to are written under one
-    // key, and the two readers meet only in the text, so the word is here
+    // key, and the two readers meet only in the text, so the key is here
     // rather than in each of them.
     static let subjectKey: Name = "of"
 
@@ -71,7 +71,7 @@ public struct ExpressionReader: Decodable {
     // MARK: - Public
     // MARK: - Internal
     // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which words a statement may write is the
+    // closure carries statements, and which procedures a statement may write is the
     // registry's answer, which travels in the decoder rather than in the data.
     //
     // Not public: a form reading an expression goes through `init(from:)`, which
@@ -262,7 +262,7 @@ public struct ExpressionReader: Decodable {
             } catch let refusal as ReadingError {
                 // A reading that says where it is says it deeper than here, and
                 // folding it into this form's sentence would spend the address
-                // to say the words again.
+                // to say the procedures again.
                 throw refusal
             } catch {
                 throw ExpressionFormError("{ closure: }: \(error)")
@@ -315,7 +315,7 @@ public struct ExpressionReader: Decodable {
 
         // A notation may decline to offer a template, and then these keys are
         // refused rather than read as an ordinary record. Giving up a spelling
-        // says a document may not write it. It does not hand the words back to
+        // says a document may not write it. It does not hand the procedures back to
         // mean something else, which is why the set of form keys is the same in
         // every notation whether or not each one is offered.
         let notation = decoder?.userInfo[.notation] as? Notation ?? .canonical
@@ -323,7 +323,7 @@ public struct ExpressionReader: Decodable {
         guard let interpolation = notation.interpolation else {
             throw ExpressionFormError(
                 "this notation does not spell a template. Put the text together"
-                    + " by sending the words that put text together"
+                    + " by sending the procedures that put text together"
             )
         }
 
@@ -387,7 +387,7 @@ public struct ExpressionReader: Decodable {
         return try lowered(segments, over: bindings, spending: interpolation)
     }
 
-    // A template as the words that build it. Interpolation is a spelling rather
+    // A template as the procedures that build it. Interpolation is a spelling rather
     // than a thing the language has: each piece becomes a literal or a value
     // asked how it reads, and the pieces are written one after another.
     //

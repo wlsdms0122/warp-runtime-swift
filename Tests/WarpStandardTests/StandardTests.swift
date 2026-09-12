@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 @testable import WarpStandard
 
-// The words that ship in bundles, and the fact that they are bundles: a caller
+// The procedures that ship in bundles, and the fact that they are bundles: a caller
 // takes the ones its programs have use for, and a name from a bundle it left out
 // does not resolve.
 @Suite("The standard vocabulary")
@@ -78,7 +78,7 @@ struct StandardTests {
         #expect(try await run(sut) == .bool(false))
     }
 
-    @Test("a word takes a procedure the author wrote and runs it")
+    @Test("a procedure takes a procedure the author wrote and runs it")
     func aWalkTakesAProcedure() async throws {
         // Given. Map, filter and reduce are declarations rather than
         // constructs. Nothing in the grammar knows they exist
@@ -256,14 +256,14 @@ struct StandardTests {
             ("std.math.dividedBy", .int(5), .int(0))
         ]
 
-        for (word, receiver, operand) in asks {
+        for (procedure, receiver, operand) in asks {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
-                            selector: word,
+                            selector: procedure,
                             arguments: ["value": .literal(operand)]
                         ))
                     )
@@ -271,13 +271,13 @@ struct StandardTests {
             )
 
             // When / Then
-            await #expect(throws: ExecutionError.self, "\(word) took the process") {
+            await #expect(throws: ExecutionError.self, "\(procedure) took the process") {
                 try await run(sut)
             }
         }
     }
 
-    @Test("arithmetic off the word's edge is a fault, not a wrap")
+    @Test("arithmetic off the procedure's edge is a fault, not a wrap")
     func wholeArithmeticOverflowFaults() async throws {
         // Given. Each of these falls off the edge of the machine word, and the
         // language stops rather than answering a number the digits do not say
@@ -287,14 +287,14 @@ struct StandardTests {
             ("std.math.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ word: Name, _ receiver: Value, _ operand: Value) throws -> Module {
+        func asking(_ procedure: Name, _ receiver: Value, _ operand: Value) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
-                            selector: word,
+                            selector: procedure,
                             arguments: ["value": .literal(operand)]
                         ))
                     )
@@ -302,15 +302,15 @@ struct StandardTests {
             )
         }
 
-        for (word, receiver, operand) in asks {
+        for (procedure, receiver, operand) in asks {
             // When / Then
-            await #expect(throws: ExecutionError.self, "\(word) answered") {
-                try await run(asking(word, receiver, operand))
+            await #expect(throws: ExecutionError.self, "\(procedure) answered") {
+                try await run(asking(procedure, receiver, operand))
             }
         }
 
         // `Int.min remainder -1` trips the hardware's division, but the
-        // remainder itself is 0. An answer the word holds, so it answers.
+        // remainder itself is 0. An answer the procedure holds, so it answers.
         #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
@@ -351,7 +351,7 @@ struct StandardTests {
     @Test("joined asked directly reads no default, since the default is the declaration's")
     func joinedAskedDirectlyRefusesAMissingSeparator() throws {
         // Given: asked outside a link, nothing fills the declaration's
-        // default, and the word carries none of its own
+        // default, and the procedure carries none of its own
         let sut = JoinedQuery()
 
         // When / Then
@@ -414,10 +414,10 @@ struct StandardTests {
         )
     }
 
-    @Test("rounding and magnitude stop at the word's edge")
-    func roundingPastTheWordFaults() async throws {
+    @Test("rounding and magnitude stop at the procedure's edge")
+    func roundingPastTheIntFaults() async throws {
         // Given. A fraction whose whole part is past the machine word has no
-        // int to answer, and the word's own minimum has no magnitude the word
+        // int to answer, and the procedure's own minimum has no magnitude the procedure
         // holds. The refusal names the overflow, not a missing whole answer.
         // The two reasons are different facts.
         let asks: [(Name, Value)] = [
@@ -426,14 +426,14 @@ struct StandardTests {
             ("std.math.absolute", .int(Int.min))
         ]
 
-        for (word, receiver) in asks {
+        for (procedure, receiver) in asks {
             let sut = try Module(
                 procedures: [
                     entryName: Procedure(
                         body: [],
                         result: .call(Call(
                             receiver: .literal(receiver),
-                            selector: word
+                            selector: procedure
                         ))
                     )
                 ]
@@ -678,7 +678,7 @@ struct StandardTests {
     @Test("ordering reads as a condition, which is what it was missing")
     func comparisonReadsAsACondition() async throws {
         // Given. `{ of: x, lessThan: y }` is the condition grammar sending a
-        // word, so ordering needed no grammar of its own
+        // procedure, so ordering needed no grammar of its own
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -714,8 +714,8 @@ struct StandardTests {
         #expect(try await run(sut, arguments: ["n": .int(30)])["result"] == .string("large"))
     }
 
-    @Test("text words compose the way a document writes them")
-    func textWordsCompose() async throws {
+    @Test("text procedures compose the way a document writes them")
+    func textProceduresCompose() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -757,7 +757,7 @@ struct StandardTests {
         #expect(outputs["result"] == .string("a / B / c"))
     }
 
-    @Test("what a word answers is declared, so the build reads it")
+    @Test("what a procedure answers is declared, so the build reads it")
     func standardAnswersAreDeclared() throws {
         // Given. `count` declares that it answers an int, and `split` declares
         // that it is sent a string

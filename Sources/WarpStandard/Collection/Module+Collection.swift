@@ -10,7 +10,7 @@ import Warp
 
 public extension Module {
     static let collection = try! Module(
-        description: "Words about arrays and records. A string counts and contains too.",
+        description: "Procedures about arrays and records. A string counts and contains too.",
         procedures: [
             "std.collection.append": Procedure(
                 description: "Writes one element onto the end of the array a variable"

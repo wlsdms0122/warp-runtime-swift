@@ -61,7 +61,7 @@ struct ReadingErrorTests {
     @Test("the steps of a reading's refusal are the document's own keys")
     func aReadingWalksTheDocumentsKeys() throws {
         // Given. The address decoding reached, spelled the way every other
-        // stage spells one, so an author follows the same words either way: a
+        // stage spells one, so an author follows the same procedures either way: a
         // statement wears the name it wrote, which is what validation and the
         // link call it
         let fixture: Value = [
@@ -118,7 +118,7 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "procedures.entry.body[0].fallbck")
     }
 
-    @Test("a form that refuses in its own words still says which document")
+    @Test("a form that refuses in its own terms still says which document")
     func aFormsOwnRefusalIsPlaced() throws {
         // Given. A form reading an expression refuses with the expression
         // reader's own error, which carries no place of its own. It leaves
@@ -178,7 +178,7 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "procedures")
     }
 
-    @Test("a document written for another warp is refused at the word that says so")
+    @Test("a document written for another warp is refused at the procedure that says so")
     func aVersionRefusalIsAtTheVersionKey() throws {
         // Given. The key is written, so there is something to point at. What
         // says no version at all is refused about the document, since nothing

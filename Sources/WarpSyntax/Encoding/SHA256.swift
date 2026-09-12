@@ -108,19 +108,19 @@ enum SHA256 {
             state[7] &+= h
         }
 
-        return state.flatMap { word in
+        return state.flatMap { procedure in
             [
-                UInt8(truncatingIfNeeded: word >> 24),
-                UInt8(truncatingIfNeeded: word >> 16),
-                UInt8(truncatingIfNeeded: word >> 8),
-                UInt8(truncatingIfNeeded: word)
+                UInt8(truncatingIfNeeded: procedure >> 24),
+                UInt8(truncatingIfNeeded: procedure >> 16),
+                UInt8(truncatingIfNeeded: procedure >> 8),
+                UInt8(truncatingIfNeeded: procedure)
             ]
         }
     }
 
     // MARK: - Private
-    private static func rotated(_ word: UInt32, _ places: UInt32) -> UInt32 {
-        (word >> places) | (word << (32 - places))
+    private static func rotated(_ procedure: UInt32, _ places: UInt32) -> UInt32 {
+        (procedure >> places) | (procedure << (32 - places))
     }
 
     private static func padded(_ data: Data) -> [UInt8] {

@@ -152,7 +152,7 @@ struct LoweredTypeTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a word hands a closure its arguments by name, and the closure reads them")
+    @Test("a procedure hands a closure its arguments by name, and the closure reads them")
     func aClosureIsHandedArgumentsByName() async throws {
         // Given: `map` hands `item`, and a closure that declares it
         let module = try Module(

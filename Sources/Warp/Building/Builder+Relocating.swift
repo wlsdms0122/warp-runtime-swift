@@ -30,7 +30,7 @@ struct Answered: Sendable {
     }
 
     // A table holding nothing a link could answer: rows built from native
-    // words alone, which carry no lowered body and send nothing.
+    // procedures alone, which carry no lowered body and send nothing.
     static func unanswerable(_ table: [Linked], rows: [Name: Int]) -> Answered {
         Answered(table: table, rows: rows, numbers: .rows)
     }
@@ -169,7 +169,7 @@ struct Relocating {
     // and has no entry here.
     private let shapeRows: [LoweredTypeNumbering.Rows]
 
-    private let contractWords: [Name: ContractWord]
+    private let contractProcedures: [Name: ContractProcedure]
     private let loweredTypes: LoweredTypeTable
 
     // Which row each document's closures took. A closure is reached by a
@@ -183,7 +183,7 @@ struct Relocating {
         rows: [Name: Int],
         numbering: [Numbering],
         shapeNumbering: [LoweredTypeNumbering],
-        contractWords: [Name: ContractWord],
+        contractProcedures: [Name: ContractProcedure],
         closures: [[Int]],
         loweredTypes: LoweredTypeTable
     ) {
@@ -192,7 +192,7 @@ struct Relocating {
         self.rows = rows
         self.numbering = numbering
         self.shapeRows = shapeNumbering.map { held in held.rows(in: loweredTypes) }
-        self.contractWords = contractWords
+        self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
     }
 
@@ -215,7 +215,7 @@ struct Relocating {
             rows: assembled.rows,
             numbering: assembled.numbering,
             shapeNumbering: assembled.shapeNumbering,
-            contractWords: ContractWord.table(in: types),
+            contractProcedures: ContractProcedure.table(in: types),
             closures: assembled.closures,
             loweredTypes: loweredTypes
         )
@@ -547,9 +547,12 @@ struct Relocating {
     }
 
     private func filled(_ dispatch: DispatchOperation, in standing: Standing) throws -> DispatchOperation {
-        let spelling = ContractWord.spelling(of: dispatch.contract, word: dispatch.word)
+        let spelling = ContractProcedure.spelling(
+            of: dispatch.contract,
+            procedure: dispatch.procedure
+        )
 
-        guard let asked = contractWords[spelling] else {
+        guard let asked = contractProcedures[spelling] else {
             throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: standing.place)
         }
 
@@ -566,7 +569,7 @@ struct Relocating {
 
         return DispatchOperation(
             contract: dispatch.contract,
-            word: dispatch.word,
+            procedure: dispatch.procedure,
             receiver: receiver,
             arguments: arguments,
             calls: try asked.answering.reduce(into: [Name: CallOperation]()) { calls, entry in

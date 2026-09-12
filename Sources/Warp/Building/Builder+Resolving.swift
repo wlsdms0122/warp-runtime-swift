@@ -27,7 +27,7 @@ extension Builder {
         unsettled: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
-        contractWords: [Name: ContractWord],
+        contractProcedures: [Name: ContractProcedure],
         unheld: [Claim: String]
     ) {
         let witnessed = try witnesses(
@@ -42,13 +42,13 @@ extension Builder {
             unsettled: unsettled
         )
 
-        // The words the contracts ask, under the spellings a call writes to
+        // The procedures the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
         // into, so what a call reaches and what a judgment reads are one
         // reading rather than two.
-        let contractWords = ContractWord.table(in: table)
+        let contractProcedures = ContractProcedure.table(in: table)
 
-        // A contract's word and a declaration cannot take one spelling. A call
+        // A contract's procedure and a declaration cannot take one spelling. A call
         // writing it lowers to the pick the contract makes, so the declaration
         // standing under it is reachable by nothing and the two readings of
         // one name never meet.
@@ -56,14 +56,15 @@ extension Builder {
         // In name order, so which collision is reported first is the text's
         // fact rather than a hash seed's.
         if
-            let spelling = contractWords.keys.sorted().first(where: { taken in signatures[taken] != nil }),
+            let spelling = contractProcedures.keys.sorted()
+                .first(where: { taken in signatures[taken] != nil }),
             let declared = signatures[spelling],
-            let asked = contractWords[spelling]
+            let asked = contractProcedures[spelling]
         {
             throw BuildError(
-                "'\(spelling)' is declared by \(declared.spelled) and asked as a word"
+                "'\(spelling)' is declared by \(declared.spelled) and asked as a procedure"
                     + " of '\(asked.contract)', so there is no answer to which one a"
-                    + " call reaches. A contract's word and a declaration cannot take"
+                    + " call reaches. A contract's procedure and a declaration cannot take"
                     + " one spelling",
                 at: declared.place
             )
@@ -71,7 +72,7 @@ extension Builder {
 
         return (
             types: table,
-            contractWords: contractWords,
+            contractProcedures: contractProcedures,
             unheld: witnessed.unheld
         )
     }
@@ -360,7 +361,7 @@ extension Builder {
     }
 
     // What a document's variables start a run holding. Settled the way a
-    // constant is, from native words alone, reading the constants beside it
+    // constant is, from native procedures alone, reading the constants beside it
     // and no variable; the starting value is a fact the link reads, and a
     // variable's type is the type of that value.
     func variables(

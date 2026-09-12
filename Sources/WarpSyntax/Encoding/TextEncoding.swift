@@ -352,7 +352,7 @@ public enum TextEncoding {
                 case let .bytes(bytes):
                     settled = .bytes(bytes)
 
-                // A bare word in front of a record is the record's name: the
+                // A bare token in front of a record is the record's name: the
                 // declared type the value settled to.
                 case let .bare(bare):
                     if tokens.first == .recordOpen, let name = try? Name(bare), name.isDeclarable {
@@ -398,7 +398,7 @@ public enum TextEncoding {
     // number is whole or a fraction by grammar. A point or an exponent, not a
     // reader's guess.
     private static func scalar(from bare: String) throws -> Value {
-        if let word = Name.scalarWords[bare] { return word }
+        if let scalar = Name.scalarKeywords[bare] { return scalar }
 
         do {
             guard let first = bare.first, first == "-" || first.isNumber else {
@@ -431,7 +431,7 @@ public enum TextEncoding {
     }
 
     // A key's spelling as the name it stands for, said in this reader's own
-    // words.
+    // procedures.
     private static func key(_ spelling: String) throws -> Name {
         do {
             return try Name(spelling)

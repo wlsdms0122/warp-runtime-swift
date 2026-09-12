@@ -109,9 +109,9 @@ whole set of modules at once, and the table a compile is read against is its
 own.
 
 `Loader` reads the canonical document and nothing else by default. Which
-construct words exist is a `ConstructRegistry`; a host may register its own
+construct keys exist is a `ConstructRegistry`; a host may register its own
 forms. A front end may also hand over a `Notation`. Its own condition
-spelling and its own template words, and no table of either is shipped here:
+spelling and its own template procedures, and no table of either is shipped here:
 a document has no spellings, so this package names none. The wire never carries
 one.
 
@@ -123,14 +123,14 @@ program before running it carries a `Place`, the path to it through the program,
 and each side reads that path for the reader it has. The language names its own
 slots, which is what a caller that built the shapes in Swift can follow.
 `Loader.reading { }` reads the same place in the keys the document writes, so
-`procedures.greet.body.total[2].call.arguments.amount` is a line every word of
+`procedures.greet.body.total[2].call.arguments.amount` is a line every step of
 which an author can follow in the text in front of them.
 
 It is steps rather than a sentence because a front end holding the file this was
 authored in has to walk them to point at the line, and only the front end knows
 that file: what crossed the wire is the document. So a step says how it was got.
-A `key` is a word the document itself writes, and a reader may go looking for
-one in the text. A `landmark` is this implementation's word for a shape the
+A `key` is one the document itself writes, and a reader may go looking for
+one in the text. A `landmark` is this implementation's key for a shape the
 document does not name on its own, since `{ call: … }` and
 `{ value: { call: … } }` arrive here as one.
 
@@ -186,10 +186,10 @@ yet.
 
 ## Vocabulary: the boundary to the outside
 
-A word is a procedure whose implementation is native. `Query` answers without
-running; `Effect` answers by running. Everything a program can do to the world
-goes through a word the host declared, which is what makes the host's
-vocabulary the bounds of an arriving program.
+A native procedure is one whose implementation the host supplies. `Query`
+answers without running; `Effect` answers by running. Everything a program can
+do to the world goes through a native procedure the host declared, which is what
+makes the host's vocabulary the bounds of an arriving program.
 
 ```swift
 struct ShoutQuery: Query {
@@ -215,7 +215,7 @@ let vocabulary = Module(
 ```
 
 Link it beside `Module.standard` and a document may send `app.shout`, and a
-document that sends a word nobody linked is refused by name before anything
+document that sends a procedure nobody linked is refused by name before anything
 runs. The standard vocabulary ships the same way: bundles a caller takes what
 it wants from, no second name table and no second lookup order.
 

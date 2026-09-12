@@ -31,7 +31,7 @@ public struct Rendering {
     }
 
     // MARK: - Public
-    // The value as text. One implementation, because `text` the word and an
+    // The value as text. One implementation, because `text` the procedure and an
     // effect settling an argument are asking the same question. A scalar reads
     // as its document spelling (a host's infinity, which has none, in this
     // file's own vocabulary; only the container shapes go through `written`,

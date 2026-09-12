@@ -10,11 +10,11 @@ import Warp
 
 // `return:`, `break:` and `continue:`.
 //
-// Three forms rather than one under three words, because the table maps a word
-// to a form and reads back the same way. One form answering to three words
-// could be written down but not written out. Asked which word means it, the
+// Three forms rather than one under three keys, because the table maps a key
+// to a form and reads back the same way. One form answering to three procedures
+// could be written down but not written out. Asked which procedure means it, the
 // table would have three answers and no way to say which. Three forms also make
-// each word droppable on its own, which one would not.
+// each procedure droppable on its own, which one would not.
 //
 //     { id: done,   return: { ref: answer } }
 //     { id: enough, break: }
@@ -89,7 +89,7 @@ public struct ContinueForm: ConstructForm {
 extension BreakForm {
     // Which loop, or nothing for the nearest. A loop answers what it was going
     // to answer, so there is nothing to carry and what stands here is a name.
-    static func target(from decoder: Decoder, called word: Name) throws -> Name? {
+    static func target(from decoder: Decoder, called procedure: Name) throws -> Name? {
         switch try ValueReader(from: decoder).value {
         case .null:
             return nil
@@ -99,7 +99,7 @@ extension BreakForm {
 
         case let other:
             throw ReadingError(
-                "\(word) takes the name of a loop, or nothing for the"
+                "\(procedure) takes the name of a loop, or nothing for the"
                     + " nearest one. Got \(other.type)",
                 at: decoder.steps
             )

@@ -143,7 +143,7 @@ extension Linked {
             return .dispatch(
                 DispatchOperation(
                     contract: dispatch.contract,
-                    word: dispatch.word,
+                    procedure: dispatch.procedure,
                     receiver: try Self.renumbered(dispatch.receiver, answer),
                     arguments: try dispatch.arguments.mapValues { argument in
                         try Self.renumbered(argument, answer)

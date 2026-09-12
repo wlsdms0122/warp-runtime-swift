@@ -53,7 +53,7 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            let (wrap, purity, isolation) = Self.procedureWords(of: key.stringValue)
+            let (wrap, purity, isolation) = Self.procedureKeywords(of: key.stringValue)
         {
             let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
 
@@ -108,8 +108,8 @@ public struct TypeReader: Decodable {
         // whole spelling is one. `inout` and `var` stand in front of the whole
         // type, including a trailing `?`, so they are read before anything else
         // is.
-        for (word, wrap) in Self.slotWords {
-            guard let bare = text.dropPrefixed("\(word) ") else { continue }
+        for (keyword, wrap) in Self.slotKeywords {
+            guard let bare = text.dropPrefixed("\(keyword) ") else { continue }
 
             let inner = try parse(String(bare))
 
@@ -125,7 +125,7 @@ public struct TypeReader: Decodable {
         }
 
         guard let (purity, isolation, rest) = Self.modifiers(of: text) else {
-            throw TypeFormError("type '\(text)' writes a word twice. Once says it")
+            throw TypeFormError("type '\(text)' writes a procedure twice. Once says it")
         }
 
         if purity == .pure || isolation == .isolated {
@@ -169,7 +169,7 @@ public struct TypeReader: Decodable {
             }
         }
 
-        // Purity is a word in front rather than an argument, because it says
+        // Purity is a keyword in front rather than an argument, because it says
         // what a slot requires of the whole procedure rather than of a part of
         // it. The same place a reader expects an adjective. A type parameter
         // rather than a name: `some T` is worked out from the call, where `T`
@@ -284,49 +284,64 @@ public struct TypeReader: Decodable {
     public static var builtinNames: Set<Name> { Set(builtins.keys) }
 
     // The keys a procedure form may sit under, in the writer's spelling: a
-    // slot word or none, then the modifiers, then `procedure`.
+    // slot keyword or none, then the modifiers, then `procedure`.
     public static var procedureKeys: Set<Name> {
-        let words = [(Purity.unstated, Isolation.unstated), (.pure, .unstated), (.unstated, .isolated), (.pure, .isolated)]
-            .map { purity, isolation in procedureWord(purity, isolation) }
+        let spellings = [
+            (Purity.unstated, Isolation.unstated),
+            (.pure, .unstated),
+            (.unstated, .isolated),
+            (.pure, .isolated)
+        ]
+            .map { purity, isolation in procedureSpelling(purity, isolation) }
 
         return Set(
-            (words + slotWords.flatMap { slot, _ in words.map { word in "\(slot) \(word)" } })
+            (
+                spellings
+                    + slotKeywords.flatMap { slot, _ in
+                        spellings.map { spelling in "\(slot) \(spelling)" }
+                    }
+            )
                 .map(Name.init(normal:))
         )
     }
 
-    // What a procedure form's key says, read front to back: a slot word if
+    // What a procedure form's key says, read front to back: a slot keyword if
     // one is written, the modifiers in either order, and `procedure`. Nil
     // where the key is not a procedure form's.
-    static func procedureWords(
+    static func procedureKeywords(
         of key: String
     ) -> (wrap: (TypeExpression) -> TypeExpression, purity: Purity, isolation: Isolation)? {
         var rest = key
         var wrap: (TypeExpression) -> TypeExpression = { inner in inner }
 
-        for (word, wrapping) in slotWords {
-            guard let bare = rest.dropPrefixed("\(word) ") else { continue }
+        for (keyword, wrapping) in slotKeywords {
+            guard let bare = rest.dropPrefixed("\(keyword) ") else { continue }
 
             rest = String(bare)
             wrap = wrapping
             break
         }
 
-        guard let (purity, isolation, word) = modifiers(of: rest), word == "procedure" else { return nil }
+        guard
+            let (purity, isolation, head) = modifiers(of: rest),
+            head == "procedure"
+        else {
+            return nil
+        }
 
         return (wrap, purity, isolation)
     }
 
-    // The one spelling of a procedure type's word: `pure` before `isolated`,
+    // The one spelling of a procedure type's head: `pure` before `isolated`,
     // both before `procedure`.
-    public static func procedureWord(_ purity: Purity, _ isolation: Isolation) -> String {
+    public static func procedureSpelling(_ purity: Purity, _ isolation: Isolation) -> String {
         [purity == .pure ? "pure" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")
     }
 
     // The modifiers at the front of a type's text, in either order, and the
-    // text left after them. Nil where a word is written twice.
+    // text left after them. Nil where a modifier is written twice.
     static func modifiers(of text: String) -> (Purity, Isolation, String)? {
         var rest = text
         var purity = Purity.unstated
@@ -347,13 +362,13 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // The words a slot writes about itself, and what each wraps.
-    static let slotWords: [(String, @Sendable (TypeExpression) -> TypeExpression)] = [
+    // The keywords a slot writes about itself, and what each wraps.
+    static let slotKeywords: [(String, @Sendable (TypeExpression) -> TypeExpression)] = [
         ("inout", { inner in .inout(inner) }),
         ("var", { inner in .variable(inner) })
     ]
 
-    // A written type's name, said in this notation's own words: every other
+    // A written type's name, said in this notation's own terms: every other
     // refusal a type's spelling earns is a `TypeFormError`.
     static func named(_ text: String) throws -> Name {
         do {
@@ -363,7 +378,7 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // One word with nothing structural in it. What a type parameter's spelling
+    // One name with nothing structural in it. What a type parameter's spelling
     // has to be, and what a `bounds` value has to be: the two halves of one
     // notation, held to one predicate.
     static func isName(_ text: String) -> Bool {
@@ -426,7 +441,7 @@ public struct TypeReader: Decodable {
     private static let builtins: [Name: TypeExpression] = [
         "any": .any,
         // A declaration a call never comes back from. Written out loud because
-        // a word that always refuses is a word an author may declare.
+        // a procedure that always refuses is a procedure an author may declare.
         "never": .never,
         "null": .null,
         "bool": .bool,

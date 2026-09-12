@@ -41,7 +41,7 @@ struct CompiledTests {
 
     @Test("what a document says holds whichever entry a caller names")
     func judgementDoesNotDependOnTheEntry() throws {
-        // Given. A declaration nothing reaches, calling a word nobody declares.
+        // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.int(1))),
@@ -168,10 +168,10 @@ struct CompiledTests {
         #expect(try purity(of: "top.alone") == .pure)
     }
 
-    @Test("a constant runs a written word a document standing before it declared")
-    func aConstantRunsAWordOfADocumentBehindIt() async throws {
+    @Test("a constant runs a written procedure a document standing before it declared")
+    func aConstantRunsAProcedureOfADocumentBehindIt() async throws {
         // Given. Two documents, the second holding a constant that calls the
-        // first's written word.
+        // first's written procedure.
         let answering = try Module(
             procedures: [
                 "a.answer": Procedure(
@@ -197,7 +197,7 @@ struct CompiledTests {
         // runs.
         let answer = try await run([asking, answering])
 
-        // Then. The constant is the value the word answered.
+        // Then. The constant is the value the procedure answered.
         #expect(answer == .int(7))
     }
 
@@ -227,18 +227,18 @@ struct CompiledTests {
 
     @Test("compiling leaves which types answer a contract to the link")
     func aContractCallIsFilledAtTheLink() throws {
-        // Given. A word calling through a contract, and two types answering it
-        // from a document that word never names.
+        // Given. A procedure calling through a contract, and two types answering it
+        // from a document that procedure never names.
         let sut = try describing()
 
         // When. Compiled.
         let compiled = try compiled(sut + Module.standard)
 
-        // Then. The call names the contract's word and no row.
+        // Then. The call names the contract's procedure and no row.
         let compiledCall = try dispatch(in: code(of: "app.tell", in: compiled))
 
         #expect(compiledCall.contract == "app.Describable")
-        #expect(compiledCall.word == "describe")
+        #expect(compiledCall.procedure == "describe")
         #expect(compiledCall.calls.isEmpty)
 
         // And. Linking fills one call for every type that answers.
@@ -250,14 +250,14 @@ struct CompiledTests {
 
     @Test("a type answering a contract from a document the caller never names")
     func aWitnessOutsideTheCallersReachAnswers() async throws {
-        // Given / When / Then. Both answered, and the word that called them
+        // Given / When / Then. Both answered, and the procedure that called them
         // mentions neither type.
         #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
     }
 
     // A type, a contract, a claim about the two in a third document, and a
     // program handing the type where the contract is asked. The program names
-    // the type and the word it sends and has no reason to name the third, so
+    // the type and the procedure it sends and has no reason to name the third, so
     // the standing puts the claim on either side of it depending on the order
     // the caller wrote the list in.
     private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
@@ -434,7 +434,7 @@ struct CompiledTests {
 
     @Test("a document numbers its calls from itself, and the link answers with rows")
     func aCallCarriesTheDocumentsOwnNumber() throws {
-        // Given. A document calling a word it does not declare.
+        // Given. A document calling a procedure it does not declare.
         let sut = try calling()
 
         // When. Compiled.
@@ -583,8 +583,8 @@ struct CompiledTests {
 
     @Test("a document compiled against the ones behind it runs the same as the graph")
     func aDocumentCompilesAgainstWhatIsAlreadyCompiled() async throws {
-        // Given. A document whose constant runs a word another declared, and
-        // that word's body standing on a type its own document declared, so
+        // Given. A document whose constant runs a procedure another declared, and
+        // that procedure's body standing on a type its own document declared, so
         // running it reads a shape as well as a row.
         let answering = try Module(
             types: ["a.Held": .record(["count": .int])],
@@ -657,7 +657,7 @@ struct CompiledTests {
         // Given. Two documents declaring one spelling.
         let first = try Module(
             procedures: [
-                "app.word": Procedure(
+                "app.procedure": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(1))
@@ -666,7 +666,7 @@ struct CompiledTests {
         )
         let second = try Module(
             procedures: [
-                "app.word": Procedure(
+                "app.procedure": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(2))
@@ -686,7 +686,7 @@ struct CompiledTests {
 
     @Test("a document laid before the one it imports still answers its numbers")
     func aDocumentLaidBeforeWhatItImportsIsAnswered() throws {
-        // Given. A document whose body sends a word another document declares.
+        // Given. A document whose body sends a procedure another document declares.
         let library = try Module(
             procedures: [
                 "lib.twice": Procedure(
@@ -722,7 +722,7 @@ struct CompiledTests {
 
     @Test("a document laid without what it sends is refused by the spelling")
     func aDocumentLaidWithoutItsSendsIsRefused() throws {
-        // Given. A document whose body sends a word another declares, laid on
+        // Given. A document whose body sends a procedure another declares, laid on
         // its own. What it numbered reaches nothing.
         let library = try Module(
             procedures: [
@@ -755,7 +755,7 @@ struct CompiledTests {
 
     @Test("a path reads into what another document's body answers")
     func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
-        // Given. A document declaring a word that writes no `returns`, and
+        // Given. A document declaring a procedure that writes no `returns`, and
         // another calling it and then reading into what it answers.
         let answering = try Module(
             types: ["a.Held": .record(["count": .int])],
@@ -887,7 +887,7 @@ struct CompiledTests {
         return dispatch
     }
 
-    // Two documents. The first declares the contract and the word calling
+    // Two documents. The first declares the contract and the procedure calling
     // through it; the second declares the types answering, and the first names
     // neither of them.
     private func describing() throws -> [Module] {
@@ -982,7 +982,7 @@ struct CompiledTests {
         return call.procedure
     }
 
-    // Two documents, the second calling a word the first declares.
+    // Two documents, the second calling a procedure the first declares.
     private func calling() throws -> [Module] {
         [
             try Module(

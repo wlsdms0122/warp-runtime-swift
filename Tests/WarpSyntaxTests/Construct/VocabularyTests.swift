@@ -20,8 +20,8 @@ struct VocabularyTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a word is a declaration, so a module can add one")
-    func moduleAddsWords() async throws {
+    @Test("a procedure is a declaration, so a module can add one")
+    func moduleAddsProcedures() async throws {
         // Given. `count` and `contains` are declarations, not language
         // structure; anyone adds their own the same way
         let extra = try Module(
@@ -67,7 +67,7 @@ struct VocabularyTests {
         #expect(outputs["head"] == .string("spectacle"))
     }
 
-    @Test("a word left out of the link is a word that does not exist")
+    @Test("a procedure left out of the link is a procedure that does not exist")
     func omittedVocabularyDoesNotResolve() throws {
         // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
@@ -93,7 +93,7 @@ struct VocabularyTests {
     }
 }
 
-// MARK: - Words a test brings
+// MARK: - Procedures a test brings
 
 private struct FirstQuery: Query {
     enum Parameters: Int, ParameterSet {

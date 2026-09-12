@@ -10,12 +10,12 @@ import Warp
 
 // Running closures at once. An isolated closure is a body that is safe to run
 // beside another (it writes no name it captured, touches no module variable and
-// cannot leave past its own edge) so "run these concurrently" is a thing a word
+// cannot leave past its own edge) so "run these concurrently" is a thing a procedure
 // can be handed, and the grammar does not need a construct to say it. Which
 // closures are isolated the link derived, and each piece is asked as it is
 // started.
 //
-// One machine under three words, because what a piece is, how it is started and
+// One machine under three procedures, because what a piece is, how it is started and
 // how a failure is reported are the same for all three, and only what "done"
 // means differs.
 //
@@ -44,7 +44,7 @@ struct Fanout: Sendable {
 
     // MARK: - Property
     // The declared spelling, because `first` and `map` are also collection
-    // words. A refusal that says which module's word refused is the one a
+    // procedures. A refusal that says which module's procedure refused is the one a
     // caller can act on.
     private let name: String
 
@@ -54,7 +54,7 @@ struct Fanout: Sendable {
     }
 
     // MARK: - Public
-    // Every piece, waited for. A failure fails the whole word, and every
+    // Every piece, waited for. A failure fails the whole procedure, and every
     // piece's failure is reported, keyed by the piece's label: which failures
     // there are is not allowed to depend on timing.
     func all<P: NativeProcedure>(_ invocation: Invocation<P>) async throws -> Value {
@@ -69,7 +69,7 @@ struct Fanout: Sendable {
     }
 
     // The first success, with the rest asked to stop. Which piece wins is the
-    // one fact here that timing decides, and the word's name says so.
+    // one fact here that timing decides, and the procedure's name says so.
     func first<P: NativeProcedure>(_ invocation: Invocation<P>) async throws -> Value {
         // The keys of a record are not wasted on a `first`. The winner's is
         // not reported, but a failure's is: when nothing wins, every piece's
@@ -195,7 +195,7 @@ struct Fanout: Sendable {
         }
 
         // The slot asks for isolated closures, so a piece that reached here
-        // has already been settled against that. Asked again at the word's own
+        // has already been settled against that. Asked again at the procedure's own
         // door, where a host that assembled the invocation itself arrives.
         guard closure.runsBeside else {
             throw ExecutionError(

@@ -10,16 +10,16 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// A construct's word belongs to the table, not to the type that reads it. The
+// A construct's procedure belongs to the table, not to the type that reads it. The
 // language's constructs are anonymous, so nothing downstream of the registry
-// can tell which word arrived, and these are the facts that follow.
-@Suite("A word belongs to the registry")
+// can tell which procedure arrived, and these are the facts that follow.
+@Suite("A procedure belongs to the registry")
 struct SpellingTests {
     // MARK: - Property
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a form can be registered under another word")
-    func formTakesTheRegistrysWord() async throws {
+    @Test("a form can be registered under another procedure")
+    func formIsRegisteredUnderAnotherKey() async throws {
         // Given. `unless` is `conditional` spelled differently, and the IR it builds
         // cannot say which of the two was written
         let loader = Loader(
@@ -50,8 +50,8 @@ struct SpellingTests {
         #expect(outputs["result"] == .string("took-then"))
     }
 
-    @Test("registering a form twice is an alias, so both words work")
-    func aliasKeepsBothWords() throws {
+    @Test("registering a form twice is an alias, so both procedures work")
+    func aliasKeepsBothKeys() throws {
         // Given / When
         let sut = try ConstructRegistry.standard.registering(ConditionalForm.self, as: "unless")
 
@@ -60,8 +60,8 @@ struct SpellingTests {
         #expect(sut.form(for: "unless") != nil)
     }
 
-    @Test("a word can be given up, and a built-in respelled by giving it up first")
-    func removingFreesTheWord() throws {
+    @Test("a procedure can be given up, and a built-in respelled by giving it up first")
+    func removingFreesTheKey() throws {
         // Given. A notation that wants `apply` for something of its own takes
         // it by dropping ours, which is why a rename here is not a rename of
         // the language
@@ -74,19 +74,19 @@ struct SpellingTests {
         #expect(sut.form(for: "invoke") != nil)
     }
 
-    @Test("a claimed word is never silently replaced, however it was claimed")
-    func claimedWordRejected() throws {
+    @Test("a claimed procedure is never silently replaced, however it was claimed")
+    func claimedKeyRejected() throws {
         // Given
         let sut = try ConstructRegistry.standard.registering(ConditionalForm.self, as: "unless")
 
-        // When / Then. The guard is on the word, not on the form
+        // When / Then. The guard is on the procedure, not on the form
         #expect(throws: ValidationError.self) {
             try sut.registering(LoopForm.self, as: "unless")
         }
     }
 
-    @Test("a word the registry does not hold is not a construct")
-    func unregisteredWordRefused() {
+    @Test("a procedure the registry does not hold is not a construct")
+    func unregisteredKeyRefused() {
         // Given. `conditional` given up is `conditional` unspellable
         let loader = Loader(registry: ConstructRegistry.standard.removing("conditional"))
 

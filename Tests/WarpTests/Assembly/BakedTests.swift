@@ -71,9 +71,9 @@ struct BakedTests {
         #expect(try await Executor().run(image, arguments: ["value": .int(40)]) == .int(42))
     }
 
-    @Test("a word nothing compiled answers is refused where it is sent")
-    func aWordNothingAnswersIsRefused() throws {
-        // Given. A document sending a word neither it nor the vocabulary
+    @Test("a procedure nothing compiled answers is refused where it is sent")
+    func aProcedureNothingAnswersIsRefused() throws {
+        // Given. A document sending a procedure neither it nor the vocabulary
         // declares.
         let arriving = try Module(
             imports: ["app.missing"],
@@ -165,7 +165,7 @@ struct BakedTests {
         }
     }
 
-    @Test("a compiled document names its native words and holds none of their code")
+    @Test("a compiled document names its native procedures and holds none of their code")
     func anArtifactHoldsNoNativeCode() throws {
         // Given. The standard vocabulary, which is native the whole way down.
         let baked = try builder.compile(Module.standard)
@@ -181,13 +181,13 @@ struct BakedTests {
         }
     }
 
-    @Test("a link handed no native code is refused where the word was declared")
+    @Test("a link handed no native code is refused where the procedure was declared")
     func aLinkWithoutNativeCodeIsRefused() throws {
         // Given. A vocabulary compiled, and a document compiled against it.
         let baked = try builder.compile(Module.standard)
         let compiled = try builder.compile([try adding(1)], against: baked, supplying: Supplying(Module.standard))
 
-        // When / Then. The artifacts alone say which words are native and
+        // When / Then. The artifacts alone say which procedures are native and
         // nothing more, so a link brought none of the code cannot run them.
         #expect {
             try builder.link(baked + compiled, entry: entry, supplying: Supplying([]))
@@ -196,13 +196,13 @@ struct BakedTests {
         }
     }
 
-    @Test("a word brought under a spelling declares what the row was compiled against")
-    func aBroughtWordDeclaresWhatWasCompiledAgainst() throws {
-        // Given. A document compiled against a word saying it touches nothing
+    @Test("a procedure brought under a spelling declares what the row was compiled against")
+    func aBroughtProcedureDeclaresWhatWasCompiledAgainst() throws {
+        // Given. A document compiled against a procedure saying it touches nothing
         // shared.
         let baked = try builder.compile([try counting(isolated: true)] + Module.standard)
 
-        // When / Then. Linking with a word of the same spelling saying it
+        // When / Then. Linking with a procedure of the same spelling saying it
         // touches something shared judges the row against a claim nothing in
         // the build makes.
         #expect {
@@ -212,17 +212,17 @@ struct BakedTests {
                 supplying: Supplying([try counting(isolated: false)] + Module.standard)
             )
         } throws: { error in
-            "\(error)".contains("said about its isolation, and the word brought under")
+            "\(error)".contains("said about its isolation, and the procedure brought under")
         }
     }
 
-    @Test("a word brought under a spelling takes what the row was compiled against")
-    func aBroughtWordTakesWhatTheRowWasCompiledAgainst() throws {
-        // Given. A document compiled against a word reading one argument under
+    @Test("a procedure brought under a spelling takes what the row was compiled against")
+    func aBroughtProcedureTakesWhatTheRowWasCompiledAgainst() throws {
+        // Given. A document compiled against a procedure reading one argument under
         // 'of'.
         let baked = try builder.compile([try reading(under: "of")] + Module.standard)
 
-        // When / Then. A word of the same spelling reading under another name
+        // When / Then. A procedure of the same spelling reading under another name
         // reads its arguments at places this row does not stand on.
         #expect {
             try builder.link(
@@ -231,7 +231,7 @@ struct BakedTests {
                 supplying: Supplying([try reading(under: "value")] + Module.standard)
             )
         } throws: { error in
-            "\(error)".contains("said about its declaration, and the word brought under")
+            "\(error)".contains("said about its declaration, and the procedure brought under")
         }
     }
 
@@ -246,23 +246,23 @@ struct BakedTests {
         }
     }
 
-    @Test("a compile handed no native code stands the words it never folds")
+    @Test("a compile handed no native code stands the procedures it never folds")
     func aCompileStandsWhatItNeverFolds() throws {
         // Given. A vocabulary compiled, and a document whose bodies call it
         // but whose constants fold through nothing.
         let baked = try builder.compile(Module.standard)
 
         // When / Then. What a compile runs is what it folds, so a document
-        // folding nothing needs no code behind the words it calls.
+        // folding nothing needs no code behind the procedures it calls.
         #expect(throws: Never.self) {
             try builder.compile([try adding(1)], against: baked, supplying: .none)
         }
     }
 
-    @Test("a constant folding through a word no code was brought for is refused")
-    func aFoldThroughAnUnbroughtWordIsRefused() throws {
+    @Test("a constant folding through a procedure no code was brought for is refused")
+    func aFoldThroughAnUnbroughtProcedureIsRefused() throws {
         // Given. A vocabulary compiled, and a document whose constant runs one
-        // of its words.
+        // of its procedures.
         let baked = try builder.compile(Module.standard)
         let arriving = try Module(
             imports: ["std.math.plus"],
@@ -295,7 +295,7 @@ struct BakedTests {
     // MARK: - Private
     private var entry: Name { "app.add1" }
 
-    // A document declaring one native word reading a single argument under
+    // A document declaring one native procedure reading a single argument under
     // the name given.
     private func reading(under name: Name) throws -> Module {
         try Module(
@@ -311,7 +311,7 @@ struct BakedTests {
         )
     }
 
-    // A document declaring one native word, which says whether it touches
+    // A document declaring one native procedure, which says whether it touches
     // anything shared.
     private func counting(isolated: Bool) throws -> Module {
         try Module(
@@ -347,7 +347,7 @@ struct BakedTests {
     }
 }
 
-// A word answering a number, which says whether it touches anything shared.
+// A procedure answering a number, which says whether it touches anything shared.
 private struct CountingQuery: Query {
     typealias Parameters = NoParameters
 
@@ -363,7 +363,7 @@ private struct CountingQuery: Query {
     // MARK: - Private
 }
 
-// Two words answering the same way, each reading its one argument under its
+// Two procedures answering the same way, each reading its one argument under its
 // own name.
 private struct OfQuery: Query {
     enum Parameters: Int, ParameterSet {

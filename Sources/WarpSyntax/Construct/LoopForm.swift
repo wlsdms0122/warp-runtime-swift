@@ -10,7 +10,7 @@ import Warp
 
 // Repetition governed by a condition: the body runs while `while` holds.
 // Nothing here bounds a body that never settles. An author bounds a loop with a
-// counter and a word, and a receiver stops one with cancellation.
+// counter and a procedure, and a receiver stops one with cancellation.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`
@@ -22,8 +22,8 @@ public struct LoopForm: ConstructForm {
     public static let key: Name = "loop"
 
     // The condition slot may be written in spellings a notation named itself, so
-    // the words behind them are owed wherever this form is registered and
-    // nowhere else. Which words those are is never this form's business.
+    // the procedures behind them are owed wherever this form is registered and
+    // nowhere else. Which procedures those are is never this form's business.
     public static let readsCondition = true
 
     // The body is decoded as a key that must be there, so a loop with nothing

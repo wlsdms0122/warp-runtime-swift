@@ -53,7 +53,7 @@ final class Slot: Sendable {
     }
 
     // A receiver checked as this slot, except that nothing passes through. A
-    // word decides for itself what being sent to nothing means: `contains`
+    // procedure decides for itself what being sent to nothing means: `contains`
     // says false rather than failing, and a path that reached null is
     // absence rather than misuse.
     func checking(receiver value: Value, in table: LoweredTypeTable) throws -> Value {

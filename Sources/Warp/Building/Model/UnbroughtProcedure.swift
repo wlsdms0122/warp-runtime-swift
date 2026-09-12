@@ -1,5 +1,5 @@
 //
-//  UnbroughtWord.swift
+//  UnbroughtProcedure.swift
 //  Warp
 //
 //  Created by JSilver on 9/10/26.
@@ -7,8 +7,8 @@
 
 import Foundation
 
-// The stand-in for a word whose code a compile was not handed. A compiled
-// document names the words it left to native code and holds none of it, and a
+// The stand-in for a procedure whose code a compile was not handed. A compiled
+// document names the procedures it left to native code and holds none of it, and a
 // compile runs one only where it folds a constant through it, so a row nothing
 // folds stands here rather than stopping the compile. A link is another
 // matter: it states what the whole run may call, and never lays one down.
@@ -17,7 +17,7 @@ import Foundation
 // What the run reads off a row is which door it answers through, and a row
 // standing in for an effect that claimed to be a query is a row the executor
 // would read the wrong way.
-struct UnbroughtWord: Query {
+struct UnbroughtProcedure: Query {
     typealias Parameters = NoParameters
 
     // MARK: - Property
@@ -30,7 +30,7 @@ struct UnbroughtWord: Query {
 
     // MARK: - Public
     func evaluate(_ question: Question<Self>) throws -> Value? {
-        throw UnbroughtWord.refusal(label)
+        throw UnbroughtProcedure.refusal(label)
     }
 
     // MARK: - Private

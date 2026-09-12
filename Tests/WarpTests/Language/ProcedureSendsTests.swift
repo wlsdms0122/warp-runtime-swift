@@ -1,5 +1,5 @@
 //
-//  WordSendsTests.swift
+//  ProcedureSendsTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/7/26.
@@ -9,17 +9,17 @@ import Foundation
 import Testing
 @testable import Warp
 
-// What a native word sending another word answers, and what the build refuses
-// before anything runs. A word declares the words it sends the way it declares
+// What a native procedure sending another procedure answers, and what the build refuses
+// before anything runs. A procedure declares the procedures it sends the way it declares
 // the arguments it reads, so both are the build's to resolve.
-@Suite("A word sends a word the build resolved")
-struct WordSendsTests {
+@Suite("A procedure sends a procedure the build resolved")
+struct ProcedureSendsTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a word answers through the word it declared it sends")
-    func aWordReachesWhatItDeclared() async throws {
+    @Test("a procedure answers through the procedure it declared it sends")
+    func aProcedureReachesWhatItDeclared() async throws {
         // Given
         let image = try Builder().build(
             [try Module(procedures: ["entry": Procedure(
@@ -36,8 +36,8 @@ struct WordSendsTests {
         #expect(answer == .int(4))
     }
 
-    @Test("an effect reaches a word that runs")
-    func anEffectReachesAWordThatRuns() async throws {
+    @Test("an effect reaches a procedure that runs")
+    func anEffectReachesAProcedureThatRuns() async throws {
         // Given
         let image = try Builder().build(
             [try Module(procedures: ["entry": Procedure(
@@ -54,7 +54,7 @@ struct WordSendsTests {
         #expect(answer == .string("HI"))
     }
 
-    @Test("a word sending a spelling nothing declares is refused at the build")
+    @Test("a procedure sending a spelling nothing declares is refused at the build")
     func anUndeclaredSendIsRefused() {
         // Given / When / Then
         #expect(throws: BuildError.self) {
@@ -77,8 +77,8 @@ struct WordSendsTests {
         }
     }
 
-    @Test("an isolated word sending one that keeps state is refused")
-    func anIsolatedWordSendingSharedStateIsRefused() {
+    @Test("an isolated procedure sending one that keeps state is refused")
+    func anIsolatedProcedureSendingSharedStateIsRefused() {
         // Given / When / Then. `app.counting` says it touches nothing shared
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
@@ -90,8 +90,8 @@ struct WordSendsTests {
         }
     }
 
-    @Test("a word that says it touches shared state may send one that does")
-    func aSharedWordSendingSharedStateStands() async throws {
+    @Test("a procedure that says it touches shared state may send one that does")
+    func aSharedProcedureSendingSharedStateStands() async throws {
         // Given
         let image = try Builder().build(
             [try Module(procedures: ["entry": Procedure(
@@ -108,14 +108,14 @@ struct WordSendsTests {
         #expect(answer == .int(1))
     }
 
-    @Test("what a native word sends counts in the module's disclosure")
+    @Test("what a native procedure sends counts in the module's disclosure")
     func nativeSendsAreDisclosed() throws {
         // Given / When / Then. The list is what a caller reads to decide what
-        // to grant, so a word's own sends are in it
+        // to grant, so a procedure's own sends are in it
         #expect(Module.sending.imports == ["std.math.times", "app.shout"])
     }
 
-    @Test("a module claiming a list its words contradict is refused")
+    @Test("a module claiming a list its procedures contradict is refused")
     func aDriftedDisclosureIsRefused() {
         // Given / When / Then
         #expect(throws: ValidationError.self) {
@@ -131,9 +131,9 @@ struct WordSendsTests {
         }
     }
 
-    @Test("a word whose sends stand apart is refused where the module is made")
-    func aWordSendingFromScatteredPlacesIsRefused() {
-        // Given / When / Then. A run reaches a sent word by the place the word
+    @Test("a procedure whose sends stand apart is refused where the module is made")
+    func aProcedureSendingFromScatteredPlacesIsRefused() {
+        // Given / When / Then. A run reaches a sent procedure by the place the procedure
         // names it at, so a place nothing stands at reaches nothing.
         #expect(throws: ValidationError.self) {
             try Module(
@@ -150,8 +150,8 @@ struct WordSendsTests {
     // MARK: - Private
 }
 
-// MARK: - Words a test brings
-// Doubling by sending the word that multiplies, rather than multiplying here.
+// MARK: - Procedures a test brings
+// Doubling by sending the procedure that multiplies, rather than multiplying here.
 // What it sends is its own declaration, so the build resolves the row and this
 // reads it.
 private struct TwiceQuery: Query {
@@ -179,7 +179,7 @@ private struct TwiceQuery: Query {
     // MARK: - Private
 }
 
-// Announcing by sending the word that shouts. An effect, so what it sends may
+// Announcing by sending the procedure that shouts. An effect, so what it sends may
 // run too.
 private struct AnnounceEffect: Effect {
     enum Parameters: Int, ParameterSet {
@@ -206,7 +206,7 @@ private struct AnnounceEffect: Effect {
     // MARK: - Private
 }
 
-// Answers what the ticketing word answers. Two declarations over one word: one
+// Answers what the ticketing procedure answers. Two declarations over one procedure: one
 // says it touches nothing shared and is refused for sending this, and one says
 // it does and stands.
 private struct CountedQuery: Query {
@@ -306,8 +306,8 @@ private extension Module {
         ]
     )
 
-    // The same word under two claims: one says it touches nothing shared and
-    // is refused for sending the ticketing word, and one says it does.
+    // The same procedure under two claims: one says it touches nothing shared and
+    // is refused for sending the ticketing procedure, and one says it does.
     static let claims = try! Module(
         procedures: [
             "app.counted": Procedure(
@@ -328,7 +328,7 @@ private extension Module {
 }
 
 
-// Sending two words, the second standing at a place nothing before it does.
+// Sending two procedures, the second standing at a place nothing before it does.
 private struct ScatteredQuery: Query {
     typealias Parameters = NoParameters
 

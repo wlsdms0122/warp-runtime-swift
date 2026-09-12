@@ -11,7 +11,7 @@ import Testing
 @testable import WarpSyntax
 
 // Running at once, as a document spells it: closures handed to the
-// `std.concurrent` words. There is no construct here. A fan-out is a call, and
+// `std.concurrent` procedures. There is no construct here. A fan-out is a call, and
 // what makes it safe is what a closure already is.
 @Suite
 struct ConcurrentTests {

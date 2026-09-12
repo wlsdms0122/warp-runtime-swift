@@ -8,7 +8,7 @@
 import Foundation
 
 // The stand-in for an effect whose code a compile was not handed. The other
-// door of `UnbroughtWord`.
+// door of `UnbroughtProcedure`.
 struct UnbroughtEffect: Effect {
     typealias Parameters = NoParameters
 
@@ -22,7 +22,7 @@ struct UnbroughtEffect: Effect {
 
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        throw UnbroughtWord.refusal(label)
+        throw UnbroughtProcedure.refusal(label)
     }
 
     // MARK: - Private

@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// A program shape this notation has no words for.
+// A program shape this notation cannot write.
 //
 // It is worth having as its own kind of refusal. A notation is a table of
 // spellings and a set of forms, so what it cannot say is a fact about that

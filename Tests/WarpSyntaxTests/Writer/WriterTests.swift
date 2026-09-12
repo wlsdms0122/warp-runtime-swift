@@ -77,18 +77,18 @@ struct WriterTests {
         // The condition spelling these are read with is recognised by `of`,
         // which is how a message names its receiver everywhere, so it leaves no
         // key here that a survival could be told apart by. A spelling whose key
-        // is not also a word is asked about below.
+        // is not also a procedure is asked about below.
         let spellings: Set<Name> = ["format", "with"]
 
         // Then
         #expect(Self.keys(in: written).isDisjoint(with: spellings))
     }
 
-    @Test("a spelling whose key is nobody's word does not survive being written")
+    @Test("a spelling whose key is nobody's procedure does not survive being written")
     func aSpelledKeyIsNotWrittenBack() throws {
         // Given. The corpus above cannot answer this. Its notation names the
-        // word in the document (`{ of: x, equal: y }`), so a key that survived
-        // and a word that was written look the same on the way out. This one
+        // procedure in the document (`{ of: x, equal: y }`), so a key that survived
+        // and a procedure that was written look the same on the way out. This one
         // spells `holds` and reaches `example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
         let loader = Loader()
@@ -102,13 +102,13 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["example.holds"], from: Notation(condition: WordedConditions()))
+        ], importing: ["example.holds"], from: Notation(condition: OwnVocabularyConditions()))
 
         // When
         let written = try sut.value(of: module)
 
         // Then
-        #expect(Self.keys(in: written).isDisjoint(with: WordedConditions().keys))
+        #expect(Self.keys(in: written).isDisjoint(with: OwnVocabularyConditions().keys))
         #expect(Self.keys(in: written).contains("call"))
     }
 
@@ -128,12 +128,12 @@ struct WriterTests {
             ],
             "procedures": [
                 "entry": [
-                    "parameters": ["names": "array<string>", "word": "string"],
+                    "parameters": ["names": "array<string>", "procedure": "string"],
                     "body": [
                         ["var": "pick"],
                         [
                             "value": ["conditional": [
-                                "when": ["of": ["ref": "word"], "equal": "hey"],
+                                "when": ["of": ["ref": "procedure"], "equal": "hey"],
                                 "then": [["set": "pick", "value": "matched"]],
                                 "else": [["set": "pick", "value": "missed"]]
                             ]
@@ -164,8 +164,8 @@ struct WriterTests {
                         [
                             "let": "line",
                             "value": [
-                                "format": "${word}/${pick}",
-                                "with": ["word": ["ref": "word"], "pick": ["ref": "pick"]]
+                                "format": "${procedure}/${pick}",
+                                "with": ["procedure": ["ref": "procedure"], "pick": ["ref": "pick"]]
                             ]
                         ]
                     ],
@@ -179,7 +179,7 @@ struct WriterTests {
         ]
         let arguments: [Name: Value] = [
             "names": .array([.string("a"), .string("bb")]),
-            "word": .string("hey")
+            "procedure": .string("hey")
         ]
 
         let original = try loader.loadDocument(document)
@@ -196,17 +196,17 @@ struct WriterTests {
         #expect(before["line"] == .string("hey/matched"))
     }
 
-    @Test("a spelling is written back as the words it stood for")
+    @Test("a spelling is written back as the procedures it stood for")
     func aSpellingIsWrittenPlainly() throws {
-        // Given. `{ of: x, <word>: y }` is a spelling, and what it means is a
+        // Given. `{ of: x, <procedure>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try loader.loadProcedure([
-            "parameters": ["word": "string"],
+            "parameters": ["procedure": "string"],
             "body": [
                 [
                     "value": ["conditional": [
-                        "when": ["of": ["ref": "word"], "equal": "hey"],
+                        "when": ["of": ["ref": "procedure"], "equal": "hey"],
                         "then": [["let": "kept", "value": "matched"]]
                     ]
                 ]]
@@ -226,9 +226,9 @@ struct WriterTests {
             return
         }
 
-        // The word the spelling reached, written as the message it always was.
+        // The procedure the spelling reached, written as the message it always was.
         #expect(message["procedure"] == .string("std.logic.equal"))
-        #expect(message["of"]?["ref"] == .string("word"))
+        #expect(message["of"]?["ref"] == .string("procedure"))
         #expect(message["arguments"]?["value"] == .string("hey"))
     }
 
@@ -264,9 +264,9 @@ struct WriterTests {
         #expect(carried == .dictionary(["ref": .string("not-a-path")]))
     }
 
-    @Test("a notation that gave up a word cannot write what it said")
-    func aDroppedWordCannotBeWritten() throws {
-        // Given. The registry is what a notation *is*, so a shape whose word it
+    @Test("a notation that gave up a procedure cannot write what it said")
+    func aDroppedKeyCannotBeWritten() throws {
+        // Given. The registry is what a notation *is*, so a shape whose procedure it
         // no longer registers is a shape it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it
         // back through this same notation would refuse.
@@ -288,7 +288,7 @@ struct WriterTests {
             try narrowed.value(of: module)
         }
 
-        // And the same program through a notation that kept the word is fine
+        // And the same program through a notation that kept the procedure is fine
         #expect(throws: Never.self) {
             try sut.value(of: module)
         }
@@ -404,7 +404,7 @@ struct WriterTests {
         }
     }
 
-    @Test("a word backed by native code has no document")
+    @Test("a procedure backed by native code has no document")
     func nativeCodeHasNoDocument() throws {
         // Given. What a caller brings is declared where the run is assembled,
         // not carried in the program. Writing its name alone would make a
@@ -419,7 +419,7 @@ struct WriterTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Every key anywhere in a document. A spelling is a word, and a word could
+    // Every key anywhere in a document. A spelling is a procedure, and a procedure could
     // be written at any depth, so asking whether one survived is asking about
     // the whole of it.
     private static func keys(in value: Value) -> Set<Name> {
@@ -473,14 +473,14 @@ struct WriterTests {
         try! Module(
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(parameters: ["word": Parameter(type: .string)]),
+                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: [
                         Statement(binding: .constant("joined"), expression: .call(
                                 Call(
                                     receiver: .array([
                                         .call(
                                             Call(
-                                                receiver: .reference([.key("word")]),
+                                                receiver: .reference([.key("procedure")]),
                                                 selector: "std.text.text"
                                             )
                                         ),
@@ -494,7 +494,7 @@ struct WriterTests {
                                 "line": .reference([.key("joined")]),
                                 "size": .call(
                                     Call(
-                                        receiver: .reference([.key("word")]),
+                                        receiver: .reference([.key("procedure")]),
                                         selector: "std.collection.count"
                                     )
                                 )
@@ -544,13 +544,13 @@ struct WriterTests {
                 "description": "every construct, once",
                 "parameters": [
                     "names": "array<string>",
-                    "word": ["type": "string", "default": "hey", "description": "what to match"],
+                    "procedure": ["type": "string", "default": "hey", "description": "what to match"],
                     "kind": ["type": "string", "enum": ["a", "b"]]
                 ],
                 "returns": "dictionary<any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
-                    ["let": "pair", "value": ["a": ["ref": "word"], "b": 2]],
+                    ["let": "pair", "value": ["a": ["ref": "procedure"], "b": 2]],
                     ["let": "quoted", "value": ["value": ["ref": "not-a-path"]]],
                     ["var": "seen", "value": 0],
                     ["let": "indexed", "value": ["ref": "names[0]"]],
@@ -665,14 +665,14 @@ struct WriterTests {
             "procedures": [
                 "entry": [
                     "parameters": [
-                        "word": "string",
+                        "procedure": "string",
                         "counted": ["type": "int", "default": 1, "description": "how many"],
                         "kind": ["type": "string", "enum": ["a", "b"]]
                     ],
                     "returns": "dictionary<any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
-                        ["let": "pair", "value": ["a": ["ref": "word"], "b": 2]],
+                        ["let": "pair", "value": ["a": ["ref": "procedure"], "b": 2]],
                         ["let": "quoted", "value": ["value": ["ref": "literal-text"]]],
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
@@ -686,12 +686,12 @@ struct WriterTests {
             "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
             "procedures": [
                 "entry": [
-                    "parameters": ["word": "string", "ready": "bool"],
+                    "parameters": ["procedure": "string", "ready": "bool"],
                     "body": [
                         ["var": "pick"],
                         [
                             "value": ["conditional": [
-                                // A connective is a word over sides nobody has
+                                // A connective is a procedure over sides nobody has
                                 // asked yet, which is why each arrives as a
                                 // closure. A notation may spell that; a document
                                 // writes it.
@@ -704,7 +704,7 @@ struct WriterTests {
                                                     "result": [
                                                         "call": [
                                                             "procedure": "std.logic.equal",
-                                                            "of": ["ref": "word"],
+                                                            "of": ["ref": "procedure"],
                                                             "arguments": ["value": "hey"]
                                                         ]
                                                     ]
@@ -830,9 +830,9 @@ struct WriterTests {
             "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["word": "string", "names": "array<string>"],
+                    "parameters": ["procedure": "string", "names": "array<string>"],
                     "body": [
-                        ["let": "shouted", "value": ["call": ["procedure": "shout", "of": ["ref": "word"]]]],
+                        ["let": "shouted", "value": ["call": ["procedure": "shout", "of": ["ref": "procedure"]]]],
                         [
                             "let": "kept",
                             "value": ["call": [
@@ -866,7 +866,7 @@ struct WriterTests {
                         ]],
                         [
                             "let": "line",
-                            "value": ["format": "${word}!", "with": ["word": ["ref": "word"]]]
+                            "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
                         ]
                     ],
                     "result": ["result": ["ref": "line"]]

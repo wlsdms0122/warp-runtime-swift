@@ -42,7 +42,7 @@ struct Folding {
         self.answered = answered
     }
 
-    // Against native words alone: every declaration of the modules by its
+    // Against native procedures alone: every declaration of the modules by its
     // spelling, a written body standing as the refusal it earns before it is
     // lowered. What a constant settles from. A native's purity is its own; a
     // written body is never run here, so its purity is not asked.
@@ -68,7 +68,7 @@ struct Folding {
                         isolated: false,
                         failing: procedure.implementation.nativelyFailing ?? .unstated,
                         // A constant settles before the link's table exists, so
-                        // a word that sends has no row to send to. It refuses
+                        // a procedure that sends has no row to send to. It refuses
                         // when it tries, the way one with a written body does.
                         sends: [],
                         in: loweredTypes

@@ -51,7 +51,7 @@ indirect enum LoweredType: Sendable {
 
     // What a type parameter is held to. Two, because the two are answered
     // differently: a membership lists shapes and the table lowered them into
-    // rows, a contract lists words and what answers it is a type's own name.
+    // rows, a contract lists procedures and what answers it is a type's own name.
     enum Bound: Sendable, Equatable {
         case membership(Int)
         case contract(Name)
@@ -71,7 +71,7 @@ indirect enum LoweredType: Sendable {
 
     // A name the table does not answer: nothing declares it, or it names
     // itself. Nothing can be said about it, so every judgment over readings
-    // lets it pass, and the value judge refuses it in the refusal's words.
+    // lets it pass, and the value judge refuses it in the refusal's procedures.
     // A table a host built by hand answers instead of failing to lower, and
     // only the judgments that reach the name are touched by it. The link
     // refuses such a name as it lowers the table, so a run never meets one.

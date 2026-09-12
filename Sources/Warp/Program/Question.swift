@@ -8,12 +8,12 @@
 import Foundation
 
 public struct Question<P: NativeProcedure>: Sendable {
-    // The arguments a word reads: settled by the row a run sent, with the
-    // run as the way back in for a word handed a procedure, or offered by
-    // name where a caller asks the word directly, with no declaration and no
+    // The arguments a procedure reads: settled by the row a run sent, with the
+    // run as the way back in for a procedure handed a procedure, or offered by
+    // name where a caller asks the procedure directly, with no declaration and no
     // run behind them.
     private enum Arguments: Sendable {
-        // The numbers this word's declared sends stand at travel with the run,
+        // The numbers this procedure's declared sends stand at travel with the run,
         // since they are the sender's document's numbers and only a run can
         // say which rows they are.
         case settled(Settled, sends: [Int], from: Int, Executor)
@@ -22,20 +22,20 @@ public struct Question<P: NativeProcedure>: Sendable {
 
     // MARK: - Property
     // What this was sent to, or nil where it was sent to nothing. Nil rather
-    // than null because a word decides for itself what being sent to nothing
+    // than null because a procedure decides for itself what being sent to nothing
     // means: `contains` says false rather than failing.
     public let receiver: Value?
 
     // The way back in travels with the arguments rather than being handed to
-    // `Query.evaluate`: most words never call anything, and a parameter every
-    // word declares to serve the few that do is a parameter in the wrong
+    // `Query.evaluate`: most procedures never call anything, and a parameter every
+    // procedure declares to serve the few that do is a parameter in the wrong
     // place.
     private let arguments: Arguments
 
     // MARK: - Initializer
-    // Asking a word with no declaration and no run behind it: the link judging
-    // a constant against the word that will settle it. Not a door out of the
-    // package, because what makes a word answerable is the link that took its
+    // Asking a procedure with no declaration and no run behind it: the link judging
+    // a constant against the procedure that will settle it. Not a door out of the
+    // package, because what makes a procedure answerable is the link that took its
     // declaration, and a question built beside that skips it.
     init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
         self.receiver = receiver
@@ -48,7 +48,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     }
 
     // MARK: - Public
-    // What an argument holds, named by the word's own key. An argument nobody
+    // What an argument holds, named by the procedure's own key. An argument nobody
     // wrote and one written as null are the same fact here, the same as they
     // are everywhere else.
     //
@@ -65,9 +65,9 @@ public struct Question<P: NativeProcedure>: Sendable {
         }
     }
 
-    // Sending a word this word declared it sends. The link resolved the row,
-    // so what happens here is an index and not a lookup, and a word this one
-    // never declared is a word that does not compile.
+    // Sending a procedure this procedure declared it sends. The link resolved the row,
+    // so what happens here is an index and not a lookup, and a procedure this one
+    // never declared is a procedure that does not compile.
     //
     // Synchronous, because a query answers without running and the link
     // refused a query declaring it sends anything that runs.
@@ -80,16 +80,17 @@ public struct Question<P: NativeProcedure>: Sendable {
             sends.indices.contains(key.position)
         else {
             throw ExecutionError(
-                "this word sends '\(key.selector)', and this question was asked"
-                    + " with no link behind it. A constant settles from words that send nothing"
+                "this procedure sends '\(key.selector)', and this question was asked"
+                    + " with no link behind it. A constant settles from"
+                    + " procedures that send nothing"
             )
         }
 
         return try executor.send(sends[key.position], from: origin, to: receiver, offering: arguments)
     }
 
-    // Running a procedure this word was handed. What may be handed is what the
-    // link proved answers without running, which a word states by declaring the
+    // Running a procedure this procedure was handed. What may be handed is what the
+    // link proved answers without running, which a procedure states by declaring the
     // parameter `pure procedure`, so reaching here means the judgement was
     // already made.
     public func call(_ procedure: Value, with arguments: [(name: Name, value: Value)] = []) throws -> Value {

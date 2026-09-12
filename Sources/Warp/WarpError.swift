@@ -21,7 +21,7 @@ public protocol WarpError: Error, Sendable, CustomStringConvertible {
     // rather than where the mistake is.
     var trace: Trace? { get }
 
-    // Where in the document the words are. A stage that reads a program before
+    // Where in the document the procedures are. A stage that reads a program before
     // running it has this and no trace; a run has the trace and the text is
     // behind it. Two questions, so two slots, and a refusal answers whichever
     // one it is in a position to.

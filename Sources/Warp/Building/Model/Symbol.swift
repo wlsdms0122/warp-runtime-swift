@@ -31,7 +31,7 @@ struct Symbol: Sendable {
 
     let procedure: Procedure
 
-    // Where this declaration's words are, in the document that wrote it.
+    // Where this declaration's procedures are, in the document that wrote it.
     var place: Place { .procedure(declared.spelling, in: document) }
 
     // What a sentence calls this declaration when it names one among several.

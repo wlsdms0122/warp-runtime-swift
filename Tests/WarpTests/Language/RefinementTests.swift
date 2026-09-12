@@ -216,7 +216,7 @@ struct RefinementTests {
     func everyBoundIsSpelled() {
         // Given. A range bounded by a nan beside one bounded by nothing. They
         // are refused for different reasons and an author reads the reason
-        // beside the range, so the two cannot come back in the same words.
+        // beside the range, so the two cannot come back in the same procedures.
         let unspellable = TypeExpression.ranged(.fraction(to: .through(.nan)))
         let unbounded = TypeExpression.ranged(.fraction())
 
@@ -231,7 +231,7 @@ struct RefinementTests {
         // Given. An infinity is a bound the language admits on purpose: it
         // orders like any other, and `double(0.0...)` written the long way is a
         // range half the fractions are inside. What no document has is a
-        // spelling for it, and the words a message shows it in read back as an
+        // spelling for it, and the procedures a message shows it in read back as an
         // error rather than as the range.
         let unbounded = TypeExpression.Refinement.fraction(from: 0)
         let infinite = TypeExpression.Refinement.fraction(from: 0, to: .through(.infinity))
@@ -246,7 +246,7 @@ struct RefinementTests {
         // And a whole bound always is. Its spelling is its digits
         #expect(TypeExpression.Refinement.whole(to: .upTo(.min)).spellable)
 
-        // The message still shows it, in this vocabulary's own words
+        // The message still shows it, in this vocabulary's own terms
         #expect(TypeExpression.ranged(infinite).rendered == "double(0.0...<infinity>)")
     }
 
@@ -299,7 +299,7 @@ struct RefinementTests {
         #expect(try await run(kept, arguments: ["blob": .bytes([1, 2])]) == .bytes([1, 2]))
     }
 
-    @Test("what only the run sees is judged at the boundary, in the range's words")
+    @Test("what only the run sees is judged at the boundary, in the range's procedures")
     func aFractionOutsideItsRangeRefusesAtTheBoundary() async throws {
         let sut = try Module(
             procedures: [

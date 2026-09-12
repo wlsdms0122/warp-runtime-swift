@@ -10,7 +10,7 @@ import Foundation
 // What a declaration says it takes. Distinct from `ValueType`, which is what a
 // value *is*: `any` is only ever something a declaration says, and `array`
 // alone was the most a declaration could say about a list. No element, no
-// fields, no name for a shape two procedures share.
+// fields, no name for a shape two declarations share.
 //
 // A type is an expression for the same reason an expression is: it composes.
 // `array<string>` is `array` applied to `string`, and a name is a name for one
@@ -239,7 +239,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
             return "linear \(inner.rendered)"
 
         case let .procedure(signature, purity, isolation):
-            let word = [
+            let spelling = [
                 purity == .pure ? "pure" : nil,
                 isolation == .isolated ? "isolated" : nil,
                 "procedure"
@@ -247,7 +247,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
             .compactMap { part in part }
             .joined(separator: " ")
 
-            guard let signature else { return word }
+            guard let signature else { return spelling }
 
             let written = signature.ordered(
                 { name, parameter in (name: name, declared: parameter.declared.rendered) },
@@ -258,7 +258,8 @@ public indirect enum TypeExpression: Sendable, Equatable {
             // Rendered as what it accepts, because a message is about what would
             // have fit. Which half was written is a fact about the source rather
             // than about the value being refused.
-            return "\(word)<(\(written.joined(separator: ", "))) -> \((signature.returns ?? .any).rendered)>"
+            return "\(spelling)<(\(written.joined(separator: ", ")))"
+                + " -> \((signature.returns ?? .any).rendered)>"
 
         case let .array(element):
             return "array<\(element.rendered)>"

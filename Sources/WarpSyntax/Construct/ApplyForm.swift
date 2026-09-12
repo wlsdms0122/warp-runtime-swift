@@ -13,9 +13,9 @@ import Warp
 // Beside `call:` rather than folded into it, because the two ask different
 // questions. `call:` names a symbol, and the builder answers it before anything
 // runs; this names an expression, and only a run can say what it holds. Writing
-// both as one word would hide which of those an author had written.
+// both under one key would hide which of those an author had written.
 //
-// The spelling is not negotiated with whoever else wants the word. A word
+// The spelling is not negotiated with whoever else wants the key. A key
 // belongs to a `ConstructRegistry`, so a caller that wants `apply` for itself
 // removes this one and registers its own.
 public struct ApplyForm: ConstructForm {

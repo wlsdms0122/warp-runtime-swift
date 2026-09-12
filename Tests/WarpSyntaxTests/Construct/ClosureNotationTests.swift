@@ -12,7 +12,7 @@ import Testing
 import WarpStandard
 
 // A capability the language has and the notation cannot spell is a capability
-// only Swift has. These are the two words that close that gap.
+// only Swift has. These are the two procedures that close that gap.
 @Suite("Writing a closure in a document")
 struct ClosureNotationTests {
     // MARK: - Property
@@ -22,7 +22,7 @@ struct ClosureNotationTests {
     // MARK: - Test
     @Test("an author writes a construct that takes a body")
     func authorWrittenControlStructure() async throws {
-        // Given. `twice` is a procedure, not a native word and not a language
+        // Given. `twice` is a procedure, not a native procedure and not a language
         // case
         let sut = try loader.loadDocument([
             "procedures": [

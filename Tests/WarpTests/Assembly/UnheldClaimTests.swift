@@ -10,9 +10,9 @@ import Testing
 struct UnheldClaimTests {
     private let entryName: Name = "app.main"
 
-    @Test("a claim with no word behind it refuses only what leans on it")
+    @Test("a claim with no procedure behind it refuses only what leans on it")
     func anUnheldClaimRefusesOnlyWhatLeansOnIt() throws {
-        // Given. A contract, a type, and a claim about the two with no word
+        // Given. A contract, a type, and a claim about the two with no procedure
         // anywhere to answer it. The program names both for its own reasons
         // and hands the type nowhere.
         // A contract and a type, both named by the program for their own sake.
@@ -81,7 +81,7 @@ struct UnheldClaimTests {
 
     @Test("a good claim beside an unheld one in the same document")
     func aGoodClaimBesideAnUnheldOne() throws {
-        // Given. One document claiming two pairs, one of them with no word
+        // Given. One document claiming two pairs, one of them with no procedure
         // behind it, and a program leaning on the other.
         let asking = try Module(
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
@@ -155,7 +155,7 @@ struct UnheldClaimTests {
 
     @Test("an unheld claim refuses at the call that leaned on it")
     func anUnheldClaimRefusesAtTheLeaningCall() throws {
-        // Given. The claim in one document with no word behind it, and the
+        // Given. The claim in one document with no procedure behind it, and the
         // program that hands the type in another.
         let asking = try Module(
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
@@ -215,7 +215,7 @@ struct UnheldClaimTests {
 
     @Test("a constant folded before the claim arrives is answered by the list")
     func aFoldedConstantIsAnsweredByTheList() throws {
-        // Given. A word bounded by a contract that answers without running, a
+        // Given. A procedure bounded by a contract that answers without running, a
         // constant handing it a type, and the claim in a document the program
         // never names.
         let asking = try Module(

@@ -13,10 +13,10 @@ import WarpStandard
 // halves of a build timed apart.
 //
 // A build compiles and then links. Compiling settles what a document says
-// against what it reaches, and a word here reaches nothing outside the document
+// against what it reaches, and a procedure here reaches nothing outside the document
 // it is written in, so each document's compile is a question about that
 // document alone. Linking lays the compiled documents down together and is one
-// question about the whole list. Dealing the same words into more documents
+// question about the whole list. Dealing the same procedures into more documents
 // moves work from the second question into the first without changing how much
 // work there is.
 //
@@ -45,7 +45,7 @@ struct Fanout {
             try Self.document(dealing.held(by: document))
         }
 
-        self.entry = try Self.word(0)
+        self.entry = try Self.name(0)
         self.modules = modules
         self.compiled = Vocabulary.laid.compiled + (try Builder().compile(
             modules,
@@ -95,11 +95,11 @@ struct Fanout {
     }
 
     // MARK: - Private
-    private static func word(_ number: Int) throws -> Name { try Name("fanout.word\(number)") }
+    private static func name(_ number: Int) throws -> Name { try Name("fanout.procedure\(number)") }
 
-    private static func shape(_ number: Int) throws -> Name { try Name("fanout.Word\(number)") }
+    private static func shape(_ number: Int) throws -> Name { try Name("fanout.Type\(number)") }
 
-    // One document: a type for each word it holds, and each word standing on
+    // One document: a type for each procedure it holds, and each procedure standing on
     // its own type and answering what it was sent. It imports nothing, which is
     // what leaves its compile a question about itself.
     private static func document(_ held: Range<Int>) throws -> Module {
@@ -108,7 +108,7 @@ struct Fanout {
 
         for number in held {
             types[try shape(number)] = .record(["value": .int])
-            procedures[try word(number)] = try procedure(number)
+            procedures[try name(number)] = try procedure(number)
         }
 
         return try Module(imports: [], types: types, procedures: procedures)

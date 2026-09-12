@@ -83,7 +83,7 @@ struct CallTests {
         }
     }
 
-    @Test("a call names a word and not the document that declares it")
+    @Test("a call names a procedure and not the document that declares it")
     func callNamesASymbol() async throws {
         // Given. The callee lives in a module the caller never mentions
         let caller = try loader.loadDocument([
@@ -98,8 +98,8 @@ struct CallTests {
         let elsewhere = try loader.loadDocument([
             "procedures": [
                 "some-other-file.greet": [
-                    "body": [["let": "word", "value": "hello"]],
-                    "result": ["said": ["ref": "word"]],
+                    "body": [["let": "procedure", "value": "hello"]],
+                    "result": ["said": ["ref": "procedure"]],
                     "returns": ["said": "string"]
                 ]
             ]
@@ -120,11 +120,11 @@ struct CallTests {
             "imports": ["std.text.joined", "std.text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": ["word": "string"],
+                    "parameters": ["procedure": "string"],
                     "body": [
                         [
                             "let": "said",
-                            "value": ["call": ["procedure": "shout", "of": ["ref": "word"]]
+                            "value": ["call": ["procedure": "shout", "of": ["ref": "procedure"]]
                         ]]
                     ],
                     "result": ["result": ["ref": "said"]]
@@ -140,7 +140,7 @@ struct CallTests {
         ])
 
         // When
-        let outputs = try await run(sut, arguments: ["word": .string("hey")])
+        let outputs = try await run(sut, arguments: ["procedure": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("hey!"))
@@ -148,7 +148,7 @@ struct CallTests {
 
     @Test("a call carries values only, and a blocks key has no meaning to refuse quietly")
     func aBlocksKeyIsRefusedAtDecode() {
-        // Given. A body a word is to run travels as a closure argument, so
+        // Given. A body a procedure is to run travels as a closure argument, so
         // `blocks:` names nothing. An unknown key is refused where it is
         // written rather than dropped.
         let sut: Value = [

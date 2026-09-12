@@ -22,9 +22,9 @@ import Foundation
 // down later takes numbers past these and moves none of them. That is what
 // lets what is laid here stand in a compile that puts more documents beside it.
 //
-// The natives among them are joined to the host's words here, since making a
+// The natives among them are joined to the host's procedures here, since making a
 // row is what joining is. The documents laid beside them later are joined at
-// the link, which is where a build states every word its run may call.
+// the link, which is where a build states every procedure its run may call.
 public struct Laid: Sendable {
     // MARK: - Property
     public let compiled: [Compiled]

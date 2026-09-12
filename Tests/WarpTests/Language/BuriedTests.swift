@@ -42,7 +42,7 @@ struct BuriedTests {
             .apply(marker("apply callee"), arguments: ["to": marker("apply argument")]),
             .call(Call(
                 receiver: marker("call receiver"),
-                selector: "word",
+                selector: "procedure",
                 arguments: ["with": marker("call argument")]
             )),
             .block(Block(

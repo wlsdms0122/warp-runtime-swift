@@ -13,7 +13,7 @@ import Warp
 // order and stops as soon as the answer is settled, which is the whole of what
 // short circuit is.
 //
-// Taking procedures is what lets these be declarations. A word receives its
+// Taking procedures is what lets these be declarations. A procedure receives its
 // arguments already computed, so a connective over values would have run every
 // side before it could decline to.
 struct Connective: Sendable {

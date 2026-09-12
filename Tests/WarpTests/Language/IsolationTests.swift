@@ -10,17 +10,17 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// Isolation is derived for a body and declared by a native word. The build can
-// read what a body writes and calls; it cannot read what a word keeps in the
-// host language, so the word says. A word that says nothing is isolated, and
+// Isolation is derived for a body and declared by a native procedure. The build can
+// read what a body writes and calls; it cannot read what a procedure keeps in the
+// host language, so the procedure says. A procedure that says nothing is isolated, and
 // one that holds state says otherwise and takes its callers with it.
 @Suite("What may run beside something else")
 struct IsolationTests {
     // MARK: - Property
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a word that says nothing about itself is isolated")
-    func aSilentWordIsIsolated() throws {
+    @Test("a procedure that says nothing about itself is isolated")
+    func aSilentProcedureIsIsolated() throws {
         // Given. `app.shout` declares no isolation, so it takes the default
         let sut = try Module(
             imports: ["app.shout"],
@@ -39,8 +39,8 @@ struct IsolationTests {
         #expect(image[entryName]?.isolation == .isolated)
     }
 
-    @Test("a word that holds state is not isolated, and neither is what calls it")
-    func aStatefulWordStrikesItsCallers() throws {
+    @Test("a procedure that holds state is not isolated, and neither is what calls it")
+    func aStatefulProcedureStrikesItsCallers() throws {
         // Given
         let sut = try Module(
             imports: ["app.ticket"],
@@ -60,13 +60,13 @@ struct IsolationTests {
         // When
         let image = try Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
 
-        // Then. The word itself, and the body one hop away from it
+        // Then. The procedure itself, and the body one hop away from it
         #expect(image["app.ticket"]?.isolation == .unstated)
         #expect(image["app.reach"]?.isolation == .unstated)
         #expect(image[entryName]?.isolation == .unstated)
     }
 
-    @Test("a closure reaching a word that holds state is refused where isolation is asked")
+    @Test("a closure reaching a procedure that holds state is refused where isolation is asked")
     func aStatefulClosureIsRefusedBesideAnother() async throws {
         // Given. Two pieces to run at once, one of them reaching the box
         let sut = try Module(

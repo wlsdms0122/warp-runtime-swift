@@ -138,7 +138,7 @@ extension LoweredType {
             // A slot asking for purity takes only what says it is pure, and one
             // asking for isolation only what says it is isolated. The two are
             // separate claims: a pure body answers without running and can
-            // still reach a native word that holds state.
+            // still reach a native procedure that holds state.
             guard wantedPurity != .pure || offeredPurity == .pure else { return false }
             guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
 

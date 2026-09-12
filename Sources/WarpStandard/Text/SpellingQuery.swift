@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// How any value reads as text. It keeps the opposite contract to the words
+// How any value reads as text. It keeps the opposite contract to the procedures
 // that transform a string: those answer absence for anything else, this takes
 // every shape and refuses only nothing.
 //

@@ -11,7 +11,7 @@ import Foundation
 // syntax (`a.b[0]`, whatever else) into these segments. The runtime never
 // re-parses text, so the surface grammar stays a frontend fact.
 //
-// A dot reads a name out of what the walk has reached, and only that. A word is
+// A dot reads a name out of what the walk has reached, and only that. A procedure is
 // sent with a written call, which spells the declaration it means, so a path
 // never decides which declaration a bare name stands for.
 //

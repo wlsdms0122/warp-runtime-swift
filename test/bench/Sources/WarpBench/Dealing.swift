@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A count of words dealt into a count of documents: which run of them each
+// A count of procedures dealt into a count of documents: which run of them each
 // document holds.
 //
 // In runs rather than one at a time round the documents, so a document holding
@@ -15,30 +15,30 @@ import Foundation
 // is the world's own business.
 struct Dealing {
     // MARK: - Property
-    let words: Int
+    let procedures: Int
     let documents: Int
 
     // MARK: - Initializer
-    init(of words: Int, across documents: Int) throws {
-        guard words > 0 else { throw Refusal.wordless }
-        guard 1 ... words ~= documents else { throw Refusal.undealable }
+    init(of procedures: Int, across documents: Int) throws {
+        guard procedures > 0 else { throw Refusal.procedureless }
+        guard 1 ... procedures ~= documents else { throw Refusal.undealable }
 
-        self.words = words
+        self.procedures = procedures
         self.documents = documents
     }
 
     // MARK: - Public
-    // The run of words one document holds.
+    // The run of procedures one document holds.
     func held(by document: Int) -> Range<Int> {
-        (document * words / documents) ..< ((document + 1) * words / documents)
+        (document * procedures / documents) ..< ((document + 1) * procedures / documents)
     }
 
     // MARK: - Private
     private enum Refusal: Error {
-        // A world of no words holds nothing to start a build from.
-        case wordless
+        // A world of no procedures holds nothing to start a build from.
+        case procedureless
 
-        // Fewer documents than one, or more documents than there are words to
+        // Fewer documents than one, or more documents than there are procedures to
         // put in them: either way a document is left with nothing.
         case undealable
     }

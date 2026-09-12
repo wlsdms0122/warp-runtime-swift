@@ -23,8 +23,8 @@ public struct ConditionalForm: ConstructForm {
     public static let key: Name = "conditional"
 
     // The condition slot may be written in spellings a notation named itself, so
-    // the words behind them are owed wherever this form is registered and
-    // nowhere else. Which words those are is never this form's business.
+    // the procedures behind them are owed wherever this form is registered and
+    // nowhere else. Which procedures those are is never this form's business.
     public static let readsCondition = true
 
     private let condition: Expression

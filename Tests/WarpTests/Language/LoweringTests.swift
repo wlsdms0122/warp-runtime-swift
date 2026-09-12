@@ -233,7 +233,7 @@ struct LoweringTests {
 
     @Test("a body reading a module variable does not answer without running")
     func aBodyReadingAVariableIsNotPure() throws {
-        // Given. The variable's value is the run's, so folding the word at the
+        // Given. The variable's value is the run's, so folding the procedure at the
         // link would fix a value nothing at the run could change
         let module = try Module(
             variables: ["count": .literal(.int(0))],
@@ -331,10 +331,10 @@ struct LoweringTests {
     @Test("what is handed in place is the shape the slot declares, and not one that fits it")
     func aHandedVariableIsTheSlotsOwnShape() async throws {
         // Given. A variable holding an unnamed record, handed to a slot
-        // declaring `Tag`. By value the boundary would settle it and the word
+        // declaring `Tag`. By value the boundary would settle it and the procedure
         // would answer it named; in place there is nothing to settle into. The
-        // word writes through the caller's box, so what the caller reads back
-        // is whatever the word left there.
+        // procedure writes through the caller's box, so what the caller reads back
+        // is whatever the procedure left there.
         func module(holding held: Warp.Expression) throws -> Module {
             try Module(
                 types: ["Tag": .record(["a": .int])],
@@ -376,9 +376,9 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .bool(true))
     }
 
-    @Test("a constant folding through a written word is refused whichever is declared first")
-    func aConstantFoldingThroughAWordIsRefusedInAnyOrder() throws {
-        // Given. `J` settles by calling `app.alpha`, a written word; while the
+    @Test("a constant folding through a written procedure is refused whichever is declared first")
+    func aConstantFoldingThroughAProcedureIsRefusedInAnyOrder() throws {
+        // Given. `J` settles by calling `app.alpha`, a written procedure; while the
         // constants settle every written body stands as its refusal, so the
         // order is not the text's
         let module = try Module(

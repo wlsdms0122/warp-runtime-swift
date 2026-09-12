@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The two values an equality word reads. Nothing is required on either side:
+// The two values an equality procedure reads. Nothing is required on either side:
 // comparing against null is what asking whether a name holds anything is, and a
 // required parameter cannot be given null.
 enum ComparedPair: Int, ParameterSet {

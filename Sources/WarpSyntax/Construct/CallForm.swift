@@ -14,15 +14,15 @@ import Warp
 // linkage fact into the call site; which module declared it is the builder's
 // business.
 //
-// It is a construct key rather than the bare name a native word is written
+// It is a construct key rather than the bare name a native procedure is written
 // under, because a construct key is read at decode time and a procedure's name
 // is not in the registry then. It is not known until the link. A name only
-// known after linking cannot be a construct key, and this word is what that
+// known after linking cannot be a construct key, and this procedure is what that
 // costs.
 //
-// A body a word is to run travels as a closure argument like any other value. A
+// A body a procedure is to run travels as a closure argument like any other value. A
 // call carries no body of its own kind. One channel, one rule: what crosses
-// into a word is isolated.
+// into a procedure is isolated.
 public struct CallForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure

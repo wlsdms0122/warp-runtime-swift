@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 public extension Module {
-    // Words about whether a body goes on, rather than about what it computes.
+    // Procedures about whether a body goes on, rather than about what it computes.
     // The other bundles are named for what they read (truths, numbers, text,
     // containers) and this one reads nothing.
     static let control = try! Module(

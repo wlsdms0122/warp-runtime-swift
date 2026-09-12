@@ -8,9 +8,9 @@
 import Foundation
 import Warp
 
-// The two values an ordering word reads. Both sides are the same member of the
+// The two values an ordering procedure reads. Both sides are the same member of the
 // shared ground's `Comparable`, so what orders with what is decided by the
-// membership rather than by each word.
+// membership rather than by each procedure.
 enum ComparablePair: Int, ParameterSet {
     case of
     case value

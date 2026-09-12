@@ -10,10 +10,10 @@ import Foundation
 // Runs every program under `program/` and prints three tables. The first is
 // nanoseconds per round and how that compares to the loop alone, beside what
 // the same program costs to arrive as text, to build, and to build and run one
-// round and be dropped. The second is the cost of building a chain of words as
-// the chain grows, once with the words spread one to a document and once with
+// round and be dropped. The second is the cost of building a chain of procedures as
+// the chain grows, once with the procedures spread one to a document and once with
 // all of them in one, so that a figure says which of the two a build is paying
-// for. The third holds one count of words and deals them into more and more
+// for. The third holds one count of procedures and deals them into more and more
 // documents, timing the two halves of the build apart, so that what a build
 // could spread across cores is a figure rather than an estimate.
 //
@@ -45,11 +45,11 @@ struct Bench {
     // neighbours.
     private static let chainCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
-    // One count of words dealt into more and more documents, doubling for the
+    // One count of procedures dealt into more and more documents, doubling for the
     // same reason the chain's counts do.
     private static let documentCounts = [1, 2, 4, 8, 16, 32, 64, 128, 256]
 
-    // As many words as the most documents, so the widest spread is one word to
+    // As many procedures as the most documents, so the widest spread is one procedure to
     // a document.
     private static let fanoutWords = documentCounts.reduce(1, max)
 
@@ -114,12 +114,12 @@ struct Bench {
             let apart = try Dealing(of: count, across: count)
             let together = try Dealing(of: count, across: 1)
 
-            spread[apart.words] = try Self.fastest(Chain(apart).build)
-            gathered[together.words] = try Self.fastest(Chain(together).build)
+            spread[apart.procedures] = try Self.fastest(Chain(apart).build)
+            gathered[together.procedures] = try Self.fastest(Chain(together).build)
         }
 
         print("")
-        print(Self.table(spread: spread, gathered: gathered, against: printed?["words"]))
+        print(Self.table(spread: spread, gathered: gathered, against: printed?["procedures"]))
 
         var costs: [Int: Cost] = [:]
 
@@ -148,7 +148,7 @@ struct Bench {
         let once: Double
     }
 
-    // What one world of fanned-out words costs, by the door that was asked.
+    // What one world of fanned-out procedures costs, by the door that was asked.
     private struct Cost {
         let build: Double
         let compile: Double
@@ -288,17 +288,17 @@ struct Bench {
         return lines.joined(separator: "\n")
     }
 
-    // What building a chain of words costs, once with the words dealt one to a
+    // What building a chain of procedures costs, once with the procedures dealt one to a
     // document and once with all of them in a single document.
     //
-    // Beside each total, what one more word adds: the standard vocabulary is in
+    // Beside each total, what one more procedure adds: the standard vocabulary is in
     // every one of these worlds, so a total carries a cost the count does not
     // move, and subtracting the smallest chain is what leaves the count's own.
     //
-    // The two series carry the same words, the same bodies and the same names,
+    // The two series carry the same procedures, the same bodies and the same names,
     // and differ only in how many documents hold them. A column that climbs on
-    // both is a build growing with the words it was given; one that climbs only
-    // where the words are spread is a build growing with the documents.
+    // both is a build growing with the procedures it was given; one that climbs only
+    // where the procedures are spread is a build growing with the documents.
     private static func table(
         spread: [Int: Double],
         gathered: [Int: Double],
@@ -313,12 +313,12 @@ struct Bench {
         else { return "" }
 
         var lines = [
-            "building a chain of words, each calling the one in front of it;"
+            "building a chain of procedures, each calling the one in front of it;"
                 + " spread one to a document and gathered into one; fastest of \(buildSamples)",
             "",
             against == nil
-                ? "| words | spread us | spread each | gathered us | gathered each |"
-                : "| words | spread us | spread each | gathered us | gathered each |"
+                ? "| procedures | spread us | spread each | gathered us | gathered each |"
+                : "| procedures | spread us | spread each | gathered us | gathered each |"
                     + " spread moved | gathered moved |",
             against == nil ? "|---|---|---|---|---|" : "|---|---|---|---|---|---|---|"
         ]
@@ -349,10 +349,10 @@ struct Bench {
         return lines.joined(separator: "\n")
     }
 
-    // What one count of words costs to build as it is dealt into more and more
+    // What one count of procedures costs to build as it is dealt into more and more
     // documents, with the two halves of the build timed apart.
     //
-    // The words, the bodies and the names are the same in every row, and none
+    // The procedures, the bodies and the names are the same in every row, and none
     // of them calls another, so nothing here grows with the count except what
     // having more documents costs. `compile` is the documents settled together
     // and `alone` the same documents settled one at a time, which is what a
@@ -366,11 +366,11 @@ struct Bench {
     // the documents out or for taking the answers back.
     private static func table(
         _ costs: [Int: Cost],
-        of words: Int,
+        of procedures: Int,
         against: [String: [String: Double]]?
     ) -> String {
         var lines = [
-            "building \(words) words that call nothing, dealt into documents,"
+            "building \(procedures) procedures that call nothing, dealt into documents,"
                 + " against a vocabulary compiled once; fastest of \(buildSamples)",
             "",
             "`alone` is the documents compiled one at a time rather than together."
@@ -417,7 +417,7 @@ struct Bench {
         return lines.joined(separator: "\n")
     }
 
-    // Microseconds each word past the smallest chain added, where any did.
+    // Microseconds each procedure past the smallest chain added, where any did.
     private static func each(_ build: Double, over base: Double, from smallest: Int, to count: Int) -> String {
         guard count > smallest else { return "" }
 

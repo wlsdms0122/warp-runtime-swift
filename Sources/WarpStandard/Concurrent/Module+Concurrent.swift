@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 public extension Module {
-    // Words that run closures at once. Vocabulary rather than grammar, so
+    // Procedures that run closures at once. Vocabulary rather than grammar, so
     // running things concurrently is something a caller grants by linking this
     // bundle. A program whose caller left it out cannot fan out at all.
     static let concurrent = try! Module(
@@ -33,7 +33,7 @@ public extension Module {
             "std.concurrent.all": Procedure(
                 description: "Runs every closure, and answers every answer."
                     + " A record's under its keys, an array's in its order."
-                    + " A failure fails the whole word, with every piece's"
+                    + " A failure fails the whole procedure, with every piece's"
                     + " failure reported.",
                 signature: Signature(of: AllEffect.self, receiver: .of, returns: .any),
                 implementation: .effect(AllEffect())

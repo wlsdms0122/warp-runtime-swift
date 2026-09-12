@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // Every occurrence of one piece of text swapped for another. Literal, not a
-// pattern. `regex` is the word that reads patterns, and one word doing both
+// pattern. `regex` is the procedure that reads patterns, and one procedure doing both
 // would make which of the two an author meant depend on the argument.
 struct ReplacingQuery: Query {
     // What this takes: the text, the piece sought, and what stands in its

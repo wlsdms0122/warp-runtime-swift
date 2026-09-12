@@ -125,7 +125,7 @@ struct ConcurrencyTests {
     func mapCarriesNullElements() async throws {
         // Given. The sequential walk hands a null element straight to its body,
         // and running the same walk at once must not turn that into "nothing
-        // was given": what a word offers is what arrived
+        // was given": what a procedure offers is what arrived
         let sut = Statement(binding: .constant("kept"), expression: .call(
                 Call(
                     receiver: .literal(.array([.int(1), .null, .int(3)])),
@@ -223,7 +223,7 @@ struct ConcurrencyTests {
     @Test("first asks the pieces still running to stop")
     func firstCancelsTheRest() async throws {
         // Given. One piece answers at once, the other waits far longer than the
-        // test does. Returning from the word awaits every sibling, so without
+        // test does. Returning from the procedure awaits every sibling, so without
         // the ask this would take the sibling's time, not the winner's.
         let waiting = CancellationWatch()
         let sut = Statement(binding: .constant("either"), expression: .call(
@@ -364,7 +364,7 @@ struct ConcurrencyTests {
     @Test("map refuses material that is not a collection")
     func mapRefusesUnfitMaterial() async throws {
         // Given. The material arrives as `any`, so only the run can judge it,
-        // and the boundary every word shares is what judges it
+        // and the boundary every procedure shares is what judges it
         let sut = Statement(binding: .constant("walked"), expression: .call(
                 Call(
                     receiver: reference("subject"),

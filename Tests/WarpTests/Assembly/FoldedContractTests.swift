@@ -47,7 +47,7 @@ struct FoldedContractTests {
         return [asking, program]
     }
 
-    // Given. A word answering `any` hands a string where a contract is asked,
+    // Given. A procedure answering `any` hands a string where a contract is asked,
     // and the reading says nothing about what arrives.
     @Test("a value wearing no name is refused however much of the list is in hand")
     func aNamelessValueIsRefused() throws {
@@ -64,13 +64,13 @@ struct FoldedContractTests {
                 compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
-            "\(error)".contains("string does not answer every word 'app.Describable' asks")
+            "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
         }
 
         #expect {
             try Builder().build(modules, entry: entryName)
         } throws: { error in
-            "\(error)".contains("string does not answer every word 'app.Describable' asks")
+            "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
         }
     }
 
@@ -131,7 +131,7 @@ struct FoldedContractTests {
         }
     }
 
-    // A word answering `any` hands a named record where a contract is asked,
+    // A procedure answering `any` hands a named record where a contract is asked,
     // and the reading says nothing about what arrives, so nothing is written
     // down where the call is read.
     @Test("a value wearing a name is written down where the table cannot settle")

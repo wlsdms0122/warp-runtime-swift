@@ -33,7 +33,7 @@ public struct ReadingError: WarpError {
     // MARK: - Property
     public let message: String
 
-    // Where the reading had reached, in the document's own words.
+    // Where the reading had reached, in the document's own terms.
     public let steps: [Place.Step]
 
     private let document: Place.Document?

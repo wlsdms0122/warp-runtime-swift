@@ -10,13 +10,13 @@ import Testing
 @testable import Warp
 @testable import WarpSyntax
 
-// A refusal about a document, addressed in the document's own words.
+// A refusal about a document, addressed in the document's own keys.
 //
 // The language names its slots for itself, which is the right answer for a
 // caller that assembled a program in Swift and wrote no text. Here there is a
 // text and the author is holding it: `condition` is a slot they cannot look
 // for, and `where` is what they typed.
-@Suite("A place reads in the words the document writes")
+@Suite("A place reads in the procedures the document writes")
 struct PlaceWrittenTests {
     // MARK: - Property
     private let loader = Loader.testing
@@ -46,9 +46,9 @@ struct PlaceWrittenTests {
         #expect(error?.place?.rendered == "procedures.entry.body.spin[0].loop.while")
     }
 
-    @Test("a conditional and a loop hold one slot and write two words")
+    @Test("a conditional and a loop hold one slot and write two keys")
     func oneSlotIsWrittenTwoWays() {
-        // Given. The language calls both a condition, so the word a place reads
+        // Given. The language calls both a condition, so the procedure a place reads
         // with is decided by the construct the walk is inside.
         let conditional = Place.procedure(entryName.spelling, in: .assembled)
             .statement("pick", at: 0)
@@ -69,10 +69,10 @@ struct PlaceWrittenTests {
         #expect(loop.rendered?.hasSuffix(".loop.condition") == true)
     }
 
-    @Test("a respelled construct reads as the word its author wrote")
+    @Test("a respelled construct reads as the procedure its author wrote")
     func aRespelledConstructIsSpelledAsRegistered() throws {
-        // Given. A notation that registers the conditional form under another word.
-        // What an author may look for in their file is that word, and nothing
+        // Given. A notation that registers the conditional form under another procedure.
+        // What an author may look for in their file is that procedure, and nothing
         // here holds a second copy of it to disagree with.
         let registry = try ConstructRegistry(forms: ["if": ConditionalForm.self])
         let sut = Place.procedure(entryName.spelling, in: .assembled)
@@ -103,11 +103,11 @@ struct PlaceWrittenTests {
             try loader.reading { try Builder().build([module], entry: entryName) }
         }
 
-        // Then. `call` is the word the author wrote, and `call` is what the
+        // Then. `call` is the procedure the author wrote, and `call` is what the
         // language calls the shape
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
-        // And unasked, the language answers in its own words
+        // And unasked, the language answers in its own terms
         let untranslated = #expect(throws: BuildError.self) {
             try Builder().build([module], entry: entryName)
         }
@@ -115,8 +115,8 @@ struct PlaceWrittenTests {
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
-    @Test("a call and an invocation are written with the same two words")
-    func oneWordAnswersForBothForms() {
+    @Test("a call and an invocation are written under the same two keys")
+    func oneKeyAnswersForBothForms() {
         // Given. The place reading takes both from `CallForm`, which is right
         // only while the two agree. If they ever part, this is what says so
         // rather than a line number quietly going missing.

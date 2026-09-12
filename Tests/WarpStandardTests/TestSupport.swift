@@ -10,10 +10,10 @@ import Testing
 import Warp
 import WarpStandard
 
-// What a test writes to reach a word: a program authored as Swift values, run
-// with the bundles the word lives in. This target writes its own fixtures, in
+// What a test writes to reach a procedure: a program authored as Swift values, run
+// with the bundles the procedure lives in. This target writes its own fixtures, in
 // the shape a vocabulary test takes, so a change to the language's own
-// fixtures cannot fail a word's test for a reason the word had nothing to do
+// fixtures cannot fail a procedure's test for a reason the procedure had nothing to do
 // with.
 
 // MARK: - Writing
@@ -42,7 +42,7 @@ func refusing(_ message: Warp.Expression) -> Warp.Expression {
     .call(Call(receiver: message, selector: "std.control.abort"))
 }
 
-// Equality and the connectives are words, so a test writing one writes the
+// Equality and the connectives are procedures, so a test writing one writes the
 // send the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))
@@ -135,7 +135,7 @@ func answer(
 
 // MARK: - Vocabulary
 
-// Vocabulary is modules, so a test that needs a word beyond the standard ones
+// Vocabulary is modules, so a test that needs a procedure beyond the standard ones
 // declares one and puts it in the link.
 extension Module {
     static let shouting = try! Module(

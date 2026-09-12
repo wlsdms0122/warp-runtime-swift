@@ -205,7 +205,7 @@ extension LoweredType {
         // declare no numeric shape at all: the slot does not name one kind,
         // so a numeral is whichever kind's one spelling the text is.
         default:
-            if let word = Int(spelling: candidate) { return .int(word) }
+            if let procedure = Int(spelling: candidate) { return .int(procedure) }
 
             return Double(spelling: candidate).map(Value.double)
         }
@@ -298,7 +298,7 @@ extension LoweredType {
             return "inout \(inner.rendered(in: table))"
 
         case let .procedure(parameters, returns, purity, isolation):
-            let word = [
+            let spelling = [
                 purity == .pure ? "pure" : nil,
                 isolation == .isolated ? "isolated" : nil,
                 "procedure"
@@ -306,11 +306,12 @@ extension LoweredType {
             .compactMap { part in part }
             .joined(separator: " ")
 
-            guard let parameters else { return word }
+            guard let parameters else { return spelling }
 
             let written = parameters.map { name, shape, _ in "\(name): \(shape.rendered(in: table))" }
 
-            return "\(word)<(\(written.joined(separator: ", "))) -> \((returns ?? .any).rendered(in: table))>"
+            return "\(spelling)<(\(written.joined(separator: ", ")))"
+                + " -> \((returns ?? .any).rendered(in: table))>"
 
         case let .array(element):
             return "array<\(element.rendered(in: table))>"
@@ -511,7 +512,7 @@ extension LoweredType {
                     throw ArgumentError(
                         "\(path()): expected \(rendered(in: table)), and"
                             + " \(value.nominal.map { held in "'\(held)'" } ?? "\(value.type)")"
-                            + " does not answer every word '\(name)' asks"
+                            + " does not answer every procedure '\(name)' asks"
                     )
                 }
 
@@ -524,7 +525,7 @@ extension LoweredType {
 
                 throw ArgumentError(
                     "\(path()): expected \(rendered(in: table)), and \(arrived)"
-                        + " does not answer every word '\(name)' asks"
+                        + " does not answer every procedure '\(name)' asks"
                 )
             }
         }
@@ -723,7 +724,7 @@ extension LoweredType {
             (.string, .string):
             return value
 
-        // The widening is binary64's own rounding, and every machine word has
+        // The widening is binary64's own rounding, and every int has
         // a fraction near it: the conversion cannot fail, only round.
         case (.double, .int(let integer)):
             return .double(Double(integer))

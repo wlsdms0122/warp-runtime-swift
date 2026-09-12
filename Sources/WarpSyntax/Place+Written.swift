@@ -8,16 +8,16 @@
 import Foundation
 import Warp
 
-// A place in the words a document writes it with.
+// A place in the procedures a document writes it with.
 //
 // `Place` carries a slot and a construct as themselves, because the language
 // has no opinion about what a text calls them. This is the side that does: the
 // keys are the readers' own, taken from where they are declared rather than
-// spelled again here, and the word for a construct is asked of the registry. A
-// notation may have respelled one, and then that is the word its author is
+// spelled again here, and the key for a construct is asked of the registry. A
+// notation may have respelled one, and then that is the key its author is
 // looking at.
 //
-// Every step answers on its own. A slot whose word depends on the construct
+// Every step answers on its own. A slot whose procedure depends on the construct
 // holding it says which one, so nothing here reads the steps around it and
 // there is no step this can be handed without an answer.
 public extension Place {
@@ -40,7 +40,7 @@ public extension Place {
 
     // MARK: - Private
     // The key a document writes a part under, from the reader that reads it
-    // there. A word spelled here as well would be the second of two places
+    // there. A procedure spelled here as well would be the second of two places
     // deciding what a document says, and the two meet only in stored text.
     private static func key(of part: Place.Part) -> String {
         switch part {
@@ -58,12 +58,12 @@ public extension Place {
         case .body: BlockReader.CodingKeys.body.stringValue
         case .result: BlockReader.CodingKeys.result.stringValue
 
-        // A receiver is written the same word wherever one is (a message in
-        // statement position, a message in a value, a cast) so the word is the
-        // expression grammar's rather than any one form's.
+        // A receiver is written under the same key wherever one is (a message
+        // in statement position, a message in a value, a cast) so the key is
+        // the expression grammar's rather than any one form's.
         case .receiver: ExpressionReader.subjectKey.spelling
 
-        // A call and an invocation are written with the same two words, which
+        // A call and an invocation are written under the same two keys, which
         // `PlaceWrittenTests` holds them to, so one of them answers for both.
         case .callee: CallForm.CodingKeys.procedure.stringValue
         case .arguments: CallForm.CodingKeys.arguments.stringValue
@@ -79,7 +79,7 @@ public extension Place {
         // The one part two constructs write differently, which is why the part
         // says which one holds it. Answered by name and not by a default, so a
         // third construct that holds a condition arrives here as a compiler
-        // error rather than as a word nobody chose.
+        // error rather than as a procedure nobody chose.
         case let .condition(construct):
             switch construct {
             case .conditional: ConditionalForm.CodingKeys.when.stringValue
@@ -88,9 +88,9 @@ public extension Place {
         }
     }
 
-    // The word this notation writes a shape under. Asked of the registry
+    // The key this notation writes a shape under. Asked of the registry
     // because a caller registers the forms it likes under the spellings it
-    // likes, and a shape whose word was given up has none to offer. The
+    // likes, and a shape whose key was given up has none to offer. The
     // language's own name stands in there, which is what a place said before
     // anybody asked a document.
     private static func key(of construct: Construct, by registry: ConstructRegistry) -> String {

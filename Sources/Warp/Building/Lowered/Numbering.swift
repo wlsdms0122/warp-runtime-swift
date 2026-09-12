@@ -58,8 +58,8 @@ struct Numbering: Sendable {
     // document's fact and a set has no order to lend it.
     //
     // `closures` says how many each of the document's names wrote, which is
-    // read off the document rather than counted while lowering. Lowering runs the words
-    // before the rest, and which declarations are words is a fact of the graph,
+    // read off the document rather than counted while lowering. Lowering runs the procedures
+    // before the rest, and which declarations are procedures is a fact of the graph,
     // so a number counted in that order would move when an unrelated module
     // joins the link.
     init(imports: Set<Name>, declared: [Name], closures: [Name: Int] = [:]) {

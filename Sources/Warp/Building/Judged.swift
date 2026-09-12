@@ -26,7 +26,7 @@ struct Judged: Sendable {
     enum Implementation: Sendable {
         case body(Body, Frame)
 
-        // The spellings the word this row was compiled against said it
+        // The spellings the procedure this row was compiled against said it
         // sends, in the places it names them at. What it reads is the
         // declaration's parameters in order, which the row's own slots
         // stand in, so only the sends are written down.
@@ -40,7 +40,7 @@ struct Judged: Sendable {
     let isolation: Isolation
     let failing: Failing
 
-    // The rows this row's word sends, in the places the word names them at,
+    // The rows this row's procedure sends, in the places the procedure names them at,
     // numbered by the document. Empty for a body, whose sends are calls its
     // own code carries.
     let sends: [Int]
@@ -62,8 +62,8 @@ struct Judged: Sendable {
         case let .body(body, frame):
             self.implementation = .body(body, frame)
 
-        case let .native(word):
-            self.implementation = Self.native(word)
+        case let .native(procedure):
+            self.implementation = Self.native(procedure)
         }
     }
 
@@ -85,7 +85,7 @@ struct Judged: Sendable {
     }
 
     // The same, where a row the supply brings no code for stands as the
-    // refusal it earns instead of stopping here. A compile runs a word only
+    // refusal it earns instead of stopping here. A compile runs a procedure only
     // where it folds a constant through it, so what it never folds it never
     // needed; a link states what the whole run may call, and asks for all of
     // it.
@@ -118,28 +118,28 @@ struct Judged: Sendable {
                 // query is what a compile settled as pure, and a stand-in on
                 // the other door would be read the wrong way by a run.
                 return row(
-                    .native(purity == .pure ? .query(UnbroughtWord(label)) : .effect(UnbroughtEffect(label))),
+                    .native(purity == .pure ? .query(UnbroughtProcedure(label)) : .effect(UnbroughtEffect(label))),
                     of: origin,
                     in: table
                 )
             }
 
-            // A word declares its own purity, isolation, failing and the
+            // A procedure declares its own purity, isolation, failing and the
             // places it sends at, and the module bringing it declares what it
-            // takes and answers. This row carries what the word a compile was
-            // handed declared, so a host bringing a word saying something else
+            // takes and answers. This row carries what the procedure a compile was
+            // handed declared, so a host bringing a procedure saying something else
             // brings a row standing on claims nothing here makes.
             guard
-                purity == brought.word.purity,
-                isolation == brought.word.isolation,
-                failing == brought.word.failing,
+                purity == brought.native.purity,
+                isolation == brought.native.isolation,
+                failing == brought.native.failing,
                 signature == brought.signature,
                 sending == brought.sending
             else {
                 throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row(.native(brought.word), of: origin, in: table)
+            return row(.native(brought.native), of: origin, in: table)
         }
     }
 
@@ -162,10 +162,10 @@ struct Judged: Sendable {
     }
 
     // What this row was compiled against, where it was left to native code.
-    // A body reads and sends nothing a word declared, so it answers with
+    // A body reads and sends nothing a procedure declared, so it answers with
     // neither.
-    private static func native(_ word: Native) -> Implementation {
-        .native(sending: word.sending)
+    private static func native(_ procedure: Native) -> Implementation {
+        .native(sending: procedure.sending)
     }
 
     // A row whose document left it to native code, and a link that brought
@@ -185,16 +185,16 @@ struct Judged: Sendable {
         in document: Place.Document
     ) -> BuildError {
         let differing = [
-            purity == brought.word.purity ? nil : "purity",
-            isolation == brought.word.isolation ? nil : "isolation",
-            failing == brought.word.failing ? nil : "failing",
+            purity == brought.native.purity ? nil : "purity",
+            isolation == brought.native.isolation ? nil : "isolation",
+            failing == brought.native.failing ? nil : "failing",
             signature == brought.signature ? nil : "declaration",
             sending == brought.sending ? nil : "sends"
         ].compactMap { axis in axis }
 
         return BuildError(
-            "'\(label)' stands on what the word a compile was handed said about its"
-                + " \(differing.joined(separator: ", ")), and the word brought under"
+            "'\(label)' stands on what the procedure a compile was handed said about its"
+                + " \(differing.joined(separator: ", ")), and the procedure brought under"
                 + " that spelling says otherwise",
             at: .procedure(label.spelling, in: document)
         )

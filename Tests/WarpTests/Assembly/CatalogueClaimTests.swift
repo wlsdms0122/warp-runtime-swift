@@ -14,7 +14,7 @@ struct CatalogueClaimTests {
     func closingBringsAClaimAboutShapesTheListHas() throws {
         // Given. Two libraries that know nothing of each other, a third
         // claiming one's type answers the other's contract, and a program
-        // naming neither the claim nor the word that answers it.
+        // naming neither the claim nor the procedure that answers it.
         let charting = try Module(
             contracts: ["chart.Plottable": ["height": Signature(returns: .int)]],
             procedures: [

@@ -16,7 +16,7 @@ struct UppercasedQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) throws -> Value? {
-        // Not a string is not a failure here. A path that asks a string word
+        // Not a string is not a failure here. A path that asks a string procedure
         // of a number reads as absence, the same as a field never set.
         guard case let .string(text) = question.receiver else { return nil }
 

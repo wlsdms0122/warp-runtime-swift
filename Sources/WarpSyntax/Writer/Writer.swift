@@ -64,7 +64,7 @@ public struct Writer: Sendable {
         // Written every time, because a document that travels is the only kind
         // worth writing and neither question can be asked of it later. What it
         // costs is two keys; what it buys is that a reader too old for it, or
-        // without the words it calls, says so instead of finding out part of the
+        // without the procedures it calls, says so instead of finding out part of the
         // way through.
         //
         // The version is this writer's and the imports are the program's: which
@@ -99,8 +99,12 @@ public struct Writer: Sendable {
 
         if !draft.contracts.isEmpty {
             written[ModuleReader.CodingKeys.contracts.name] = .dictionary(
-                try draft.contracts.mapValues { words in
-                    .dictionary(try words.mapValues { word in .dictionary(try fields(of: word)) })
+                try draft.contracts.mapValues { procedures in
+                    .dictionary(
+                        try procedures.mapValues { procedure in
+                            .dictionary(try fields(of: procedure))
+                        }
+                    )
                 }
             )
         }
@@ -129,7 +133,7 @@ public struct Writer: Sendable {
     }
 
     public func value(of procedure: Procedure) throws -> Value {
-        // A body is what a document declares. A word backed by native code has
+        // A body is what a document declares. A procedure backed by native code has
         // nothing a document could carry, and writing its name alone would make
         // a document that loads into something else.
         guard case let .body(block) = procedure.implementation else {
@@ -175,7 +179,7 @@ public struct Writer: Sendable {
         // The range rides in the name's spelling (`int(0...255)`) the way the
         // reader takes it in. A bound with no spelling has nothing to ride in:
         // the language admits an infinity, because it orders like any other
-        // bound, and a document that carried the words a message shows it in
+        // bound, and a document that carried the procedures a message shows it in
         // would read back as an error. Said rather than written as something
         // else, the way an unwritable shape is.
         case let .ranged(refinement):
@@ -259,41 +263,43 @@ public struct Writer: Sendable {
         // A slot's `var` or `inout` is written in front of the inner type,
         // whichever form the inner type takes: a bare name, or a procedure
         // form under its one key. An inline record has no front to write it
-        // on, and a declaration's field is the one place the words go anyway.
+        // on, and a declaration's field is the one place the procedures go anyway.
         // Written under its own key, which is where a record can carry it: the
         // shape a declared type is handed on once is usually written inline,
-        // and there is no front of a record to write a word on.
+        // and there is no front of a record to write a keyword on.
         case let .linear(inner):
             return .dictionary([try Name(TypeReader.linearKey): try value(of: inner)])
 
         case let .variable(inner), let .inout(inner):
-            let word = type.isInout ? "inout" : "var"
+            let keyword = type.isInout ? "inout" : "var"
 
             switch try value(of: inner) {
             case let .string(written):
-                return .string("\(word) \(written)")
+                return .string("\(keyword) \(written)")
 
             case let .dictionary(form) where form.count == 1
                 && TypeReader.procedureKeys.contains(form.entries[0].name):
-                return .dictionary([try Name("\(word) \(form.entries[0].name)"): form.entries[0].value])
+                return .dictionary([
+                    try Name("\(keyword) \(form.entries[0].name)"): form.entries[0].value
+                ])
 
             default:
                 throw WritingError(
-                    "`\(word)` is written in front of a type name, and"
+                    "`\(keyword)` is written in front of a type name, and"
                         + " \(inner.rendered) is written as a record. Declare the"
-                        + " record under a name and write `\(word)` on the name"
+                        + " record under a name and write `\(keyword)` on the name"
                 )
             }
 
         case let .procedure(signature, purity, isolation):
-            let word = TypeReader.procedureWord(purity, isolation)
+            let spelling = TypeReader.procedureSpelling(purity, isolation)
 
-            guard let signature else { return .string(word) }
+            guard let signature else { return .string(spelling) }
 
             // No bound check of its own: a procedure type written as a type has
             // no `bounds` surface, and the `.parameter` case refuses any bound
             // the walk below meets. One guard, wherever the walk started.
-            return .dictionary([try Name(word): .dictionary(try fields(of: signature))])
+            return .dictionary([try Name(spelling): .dictionary(try fields(of: signature))])
         }
     }
 

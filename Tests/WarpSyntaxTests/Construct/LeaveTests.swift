@@ -16,7 +16,7 @@ import WarpStandard
 // They are grammar because checking one needs what a signature has no slot for.
 // Whether `return 5` fits depends on what the procedure it is written in
 // declared it answers, and whether `break` is allowed depends on there being a
-// loop around it. A word could be handed the value and could not be told either
+// loop around it. A procedure could be handed the value and could not be told either
 // thing.
 //
 // Before these existed the only way out was to fail on purpose and catch it,
@@ -33,13 +33,13 @@ struct LeaveTests {
     func returningAnswers() async throws {
         // Given
         let sut = try loader.loadProcedure([
-            "parameters": ["word": "string"],
+            "parameters": ["procedure": "string"],
             "returns": "string",
             "body": [
                 ["var": "early", "value": "kept going"],
                 [
                     "value": ["conditional": [
-                        "when": ["of": ["ref": "word"], "equal": "stop"],
+                        "when": ["of": ["ref": "procedure"], "equal": "stop"],
                         "then": [["value": ["return": "left early"]]]
                     ]
                 ]]
@@ -48,8 +48,8 @@ struct LeaveTests {
         ], importing: ["std.logic.equal"])
 
         // When
-        let stopped = try await answer(sut, ["word": .string("stop")])
-        let carried = try await answer(sut, ["word": .string("go")])
+        let stopped = try await answer(sut, ["procedure": .string("stop")])
+        let carried = try await answer(sut, ["procedure": .string("go")])
 
         // Then
         #expect(stopped == .string("left early"))
@@ -290,7 +290,7 @@ struct LeaveTests {
 
     @Test("answering leaves the procedure it was written in, and no other")
     func answeringStaysInItsOwnFrame() async throws {
-        // Given. Three ways to reach a body: a run starting at one, a word
+        // Given. Three ways to reach a body: a run starting at one, a procedure
         // whose implementation is written, and a closure being invoked. When
         // only the first caught an answer, a `return` inside a called body left
         // through its own frame and became the *caller's* answer. Settled
@@ -317,7 +317,7 @@ struct LeaveTests {
                 ],
                 "helper": [
                     "returns": "string",
-                    "body": [["value": ["return": "from the word"]]]
+                    "body": [["value": ["return": "from the procedure"]]]
                 ]
             ]
         ])

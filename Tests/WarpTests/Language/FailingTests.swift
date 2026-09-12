@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What a body may fail with, before it runs. A native word says what it raises
+// What a body may fail with, before it runs. A native procedure says what it raises
 // and a body is read off what it casts, calls and rescues, so the build can
 // answer what the whole program may fail with and can tell an author their
 // rescue is a body no run reaches.
@@ -45,8 +45,8 @@ struct FailingTests {
         #expect(image[entryName]?.failing == .these([]))
     }
 
-    @Test("a word that raises is read through whatever calls it")
-    func aRaisingWordCarriesToItsCallers() throws {
+    @Test("a procedure that raises is read through whatever calls it")
+    func aRaisingProcedureCarriesToItsCallers() throws {
         // Given
         let sut = try Module(
             imports: ["std.control.abort"],

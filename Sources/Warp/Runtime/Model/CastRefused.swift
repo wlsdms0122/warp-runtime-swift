@@ -35,7 +35,7 @@ public struct CastRefused: RecoverableFailure {
 
     public var type: String { Self.word }
 
-    // The word this failure names itself by, said once so the link can read
+    // The procedure this failure names itself by, said once so the link can read
     // it where it derives what a cast may fail with.
     public static let word = "cast_refused"
 

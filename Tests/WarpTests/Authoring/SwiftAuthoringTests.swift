@@ -79,7 +79,7 @@ struct SwiftAuthoringTests {
             result: .record(["verdict": .reference([.key("verdict")])])
         )
 
-        // When Comparing is a word, so this links the bundle that declares one.
+        // When Comparing is a procedure, so this links the bundle that declares one.
         // The control flow beside it needs nothing.
         let image = try builder.build(
             [try Module(procedures: ["entry": procedure]), .logic],
@@ -122,7 +122,7 @@ struct SwiftAuthoringTests {
         #expect(outputs["shout"] == .string("HEY"))
     }
 
-    @Test("a library word, a native word and a procedure are all one expression")
+    @Test("a library procedure, a native procedure and a procedure are all one expression")
     func oneCallingShape() async throws {
         // Given. Three selectors that are answered in three different places,
         // written identically. Where each is found is the runtime's business.
@@ -139,7 +139,7 @@ struct SwiftAuthoringTests {
                     )
                 ),
                 Statement(binding: .constant("called"), expression: .call(
-                        Call(selector: "echo", arguments: ["word": .literal(.string("yo"))])
+                        Call(selector: "echo", arguments: ["procedure": .literal(.string("yo"))])
                     )
                 )
             ],
@@ -153,11 +153,11 @@ struct SwiftAuthoringTests {
         // which module declared it is the builder's business.
         let echo = Procedure(
             signature: Signature(
-                parameters: ["word": Parameter(type: .string)],
+                parameters: ["procedure": Parameter(type: .string)],
                 returns: .record(["said": .string])
             ),
             body: [],
-            result: .record(["said": .reference([.key("word")])])
+            result: .record(["said": .reference([.key("procedure")])])
         )
 
         // When
@@ -174,5 +174,5 @@ struct SwiftAuthoringTests {
     }
 }
 
-// A word written in Swift and never taught to a document to spell. It conforms
+// A procedure written in Swift and never taught to a document to spell. It conforms
 // to `Effect` and to nothing else. The proof that the run path asks for no

@@ -24,18 +24,18 @@ public struct Module: Sendable {
     // Metadata only. Which document a thing came out of is `identity`.
     public var description: String? { source.description }
 
-    // The words this module sends and does not declare. Everything else here is
+    // The procedures this module sends and does not declare. Everything else here is
     // what the module declares; this is what it asks of whatever it is linked
     // with, and a link that does not declare all of them cannot run it.
     //
     // Exactly what it sends, always: a caller granting from this list would
-    // otherwise grant a word the program never uses, or link a program that
+    // otherwise grant a procedure the program never uses, or link a program that
     // sends one the list never mentioned. Which of those two the module is
     // refused for is `Validator`'s to say.
     public let imports: Set<Name>
 
-    // The same fact said as lookups rather than as a grant: the words this
-    // calls, and every word and shape it names and does not declare. Read
+    // The same fact said as lookups rather than as a grant: the procedures this
+    // calls, and every procedure and shape it names and does not declare. Read
     // where the module is made, since a link asks each module it is handed for
     // them and the text they are read off does not move.
     let sends: Set<Name>
@@ -48,7 +48,7 @@ public struct Module: Sendable {
     // What this declares, by the name a link resolves to it. Where each one
     // was written is not here: a refusal that names a place reads it off the
     // draft, and every other reader wants the names alone.
-    let declaredWords: Set<Name>
+    let declaredProcedures: Set<Name>
     let declaredShapes: Set<Name>
 
     // Shapes this module declares. A type is a name bound to a
@@ -63,13 +63,13 @@ public struct Module: Sendable {
     // bounds `some T`, and a slot cannot declare it directly.
     public var constraints: [Name: [TypeExpression]] { source.constraints }
 
-    // Contracts this module declares: a name bound to the words a value must
+    // Contracts this module declares: a name bound to the procedures a value must
     // answer to stand under it.
     //
     // Kept apart from the constraints for the reason the two are different
     // questions. A constraint is a closed set of shapes and a value of one is
     // one of them; a contract is an open set, and what puts a type in it is
-    // that it declares the words. Only one of those can be judged by listing.
+    // that it declares the procedures. Only one of those can be judged by listing.
     public var contracts: [Name: [Name: Signature]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a
@@ -159,10 +159,10 @@ public struct Module: Sendable {
 
         self.sends = reading.sends
         self.imports = draft.imports ?? reading.sends
-        self.uses = Set(reading.sends.map(Reference.word))
+        self.uses = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.shape))
         self.closures = reading.closures
-        self.declaredWords = reading.declaredWords
+        self.declaredProcedures = reading.declaredProcedures
         self.declaredShapes = reading.declaredShapes
 
         try Validator().validate(self)

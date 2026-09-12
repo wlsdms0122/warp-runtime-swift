@@ -30,8 +30,8 @@ public struct Draft: Sendable {
     public let types: [Name: TypeExpression]
     public let constraints: [Name: [TypeExpression]]
 
-    // Contracts this module declares: a name bound to the words a value must
-    // answer to stand under it. Each word is a signature the implementing
+    // Contracts this module declares: a name bound to the procedures a value must
+    // answer to stand under it. Each procedure is a signature the implementing
     // declaration is held to, written without the receiver, which is the
     // implementing type itself.
     public let contracts: [Name: [Name: Signature]]
@@ -39,12 +39,12 @@ public struct Draft: Sendable {
     // Which contracts each type this document names answers, by the name of
     // the type. A type answers a contract because a document says it does: the
     // link holds the claim to the declarations that back it, and a declaration
-    // named for a type and a word nobody claimed is that document's word and
+    // named for a type and a procedure nobody claimed is that document's procedure and
     // nothing more.
     //
     // Said here rather than beside the type, because the type may be another
     // document's. A document that arrives later gives a shape it did not
-    // declare the words a contract asks, and saying it beside the type would
+    // declare the procedures a contract asks, and saying it beside the type would
     // leave that document nowhere to say it.
     public let claims: [Name: Set<Name>]
 
@@ -80,7 +80,7 @@ public struct Draft: Sendable {
         self.procedures = procedures
     }
 
-    // The words this declares and does not itself declare a procedure for.
+    // The procedures this declares and does not itself declare a procedure for.
     // Everything the program can do that touches anything, and a caller
     // reading it is reading the bounds of what it is about to allow.
     public var sends: Set<Name> {
@@ -98,20 +98,20 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Internal
-    // What this declares in the word space, each under the place it was
-    // written at. A contract's word is one of them, by the spelling a call
+    // What this declares in the procedure space, each under the place it was
+    // written at. A contract's procedure is one of them, by the spelling a call
     // writes to reach it, and its place is the two steps the document nests it
     // in rather than the joined name in one.
-    func words(in document: Place.Document) -> [(name: Name, place: Place)] {
+    func procedures(in document: Place.Document) -> [(name: Name, place: Place)] {
         procedures.keys.map { name in
             (name, Place.procedure(name.spelling, in: document))
         }
-            + contracts.flatMap { contract, words in
-                words.keys.map { word in
+            + contracts.flatMap { contract, procedures in
+                procedures.keys.map { procedure in
                     (
-                        Name(normal: "\(contract.spelling).\(word.spelling)"),
+                        Name(normal: "\(contract.spelling).\(procedure.spelling)"),
                         Place.contract(contract.spelling, in: document)
-                            .appending(.key(word.spelling))
+                            .appending(.key(procedure.spelling))
                     )
                 }
             }
@@ -136,15 +136,15 @@ public struct Draft: Sendable {
     // lists above rather than gathered again, so what a document declares is
     // said in one place whichever side asks.
     func declarations(in document: Place.Document) -> [(reference: Reference, place: Place)] {
-        words(in: document).map { declared in (.word(declared.name), declared.place) }
+        procedures(in: document).map { declared in (.procedure(declared.name), declared.place) }
             + shapes(in: document).map { declared in (.shape(declared.name), declared.place) }
     }
 
     // The same two, when only the names are wanted. Read off the lists above
-    // rather than gathered again, so what counts as a word and what counts as
+    // rather than gathered again, so what counts as a procedure and what counts as
     // a shape is said in one place.
-    var declaredWords: Set<Name> {
-        read().declaredWords
+    var declaredProcedures: Set<Name> {
+        read().declaredProcedures
     }
 
     var declaredShapes: Set<Name> {
@@ -173,7 +173,7 @@ public struct Draft: Sendable {
         let mentions: Set<Name>
 
         // What this declares, by the name a link resolves to it.
-        let declaredWords: Set<Name>
+        let declaredProcedures: Set<Name>
         let declaredShapes: Set<Name>
 
         // How many closure literals each declaration wrote, at whatever depth.
@@ -186,8 +186,8 @@ public struct Draft: Sendable {
         // is. The same three the document is read over everywhere else.
         //
         // Read off the document so a closure's number is the document's fact.
-        // The link lowers the words before the rest, and which declarations
-        // are words depends on the whole graph, so a count taken while
+        // The link lowers the procedures before the rest, and which declarations
+        // are procedures depends on the whole graph, so a count taken while
         // lowering would move when an unrelated module joins.
         let closures: [Name: Int]
     }
@@ -200,10 +200,10 @@ public struct Draft: Sendable {
     // once and read by every link it stands in, and this is where that reading
     // happens.
     func read() -> Reading {
-        let declaredWords = Set(words(in: .assembled).map(\.name))
+        let declaredProcedures = Set(procedures(in: .assembled).map(\.name))
         let declaredShapes = Set(shapes(in: .assembled).map(\.name))
 
-        // A native word's sends are its own declaration rather than something
+        // A native procedure's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A
         // list that missed them would understate what the module does, which
         // is the one thing this list may not do.
@@ -256,15 +256,15 @@ public struct Draft: Sendable {
             }
         }
 
-        for words in contracts.values {
-            for signature in words.values {
+        for procedures in contracts.values {
+            for signature in procedures.values {
                 named.formUnion(signature.mentions)
             }
         }
 
         // A claim names two shapes, and both are mentions like any other: the
         // type it is about and the contract it says that type answers. The
-        // link reads the contract's words to hold the claim to them, so a
+        // link reads the contract's procedures to hold the claim to them, so a
         // document making one stands behind the document that wrote it.
         for (type, contracts) in claims {
             named.insert(type)
@@ -288,9 +288,9 @@ public struct Draft: Sendable {
         }
 
         return Reading(
-            sends: sent.subtracting(declaredWords),
+            sends: sent.subtracting(declaredProcedures),
             mentions: named.subtracting(declaredShapes),
-            declaredWords: declaredWords,
+            declaredProcedures: declaredProcedures,
             declaredShapes: declaredShapes,
             closures: counts
         )

@@ -17,7 +17,7 @@ import Warp
 //
 // A front end with a document stops at `Value`. A YAML or JSON parser produces
 // data; turning that data into a procedure is this one path, and what every
-// notation shares is the `Expression` it arrives at rather than the words used
+// notation shares is the `Expression` it arrives at rather than the procedures used
 // to get there. A front end with a syntax of its own builds those expressions
 // directly and never comes through here, the way a compiler builds its back
 // end's instructions rather than printing them and reading them back.
@@ -30,13 +30,13 @@ public struct Loader: Sendable {
         self.registry = registry
     }
 
-    // Every word a notation reaches on its own through this table. From the
+    // Every procedure a notation reaches on its own through this table. From the
     // readers that spell one, and from the forms registered here. A document
     // written entirely in these spellings still needs them declared somewhere
     // in its link, so a caller assembling a graph can ask what it owes before
     // assembling it.
     //
-    // What a notation says with a word rather than a construct is a choice it
+    // What a notation says with a procedure rather than a construct is a choice it
     // made, so the debt is its own to state. Leaving it unstated would have the
     // bundles read as optional while the spellings quietly required them.
     public func vocabulary(of notation: Notation) -> Set<Name> {
@@ -128,7 +128,7 @@ public struct Loader: Sendable {
     // being asked for is the text, and a module is the reading of one.
     //
     // Filling the imports is what makes this a front end's call and not a
-    // reader's. A text in a notation has no author for that list (the words it
+    // reader's. A text in a notation has no author for that list (the procedures it
     // sends are what the spellings lowered to, which the author never typed) so
     // the side that lowered them is the side that can state them. A text that
     // claimed a list keeps it, and is held to it on the way in.
@@ -195,12 +195,12 @@ public struct Loader: Sendable {
         try read(ExpressionReader.self, from: value, in: .assembled, from: notation).expression
     }
 
-    // Whatever this does, with anything it refuses addressed in the words the
+    // Whatever this does, with anything it refuses addressed in the spellings the
     // document uses.
     //
     // The language names its own slots, which is the reading a caller that
     // assembled a program in Swift is owed: it wrote no document, so no
-    // document's words would lead it anywhere. A caller holding a text is owed
+    // document's procedures would lead it anywhere. A caller holding a text is owed
     // the other reading (`condition` is a slot they cannot look for and `while`
     // is what they typed) and this is where a stage that has no document of its
     // own gets it.

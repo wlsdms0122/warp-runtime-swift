@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// A procedure, a library word and a caller reaching outside are one expression, and
+// A procedure, a library procedure and a caller reaching outside are one expression, and
 // the only difference is where the selector was found. These ask the language
 // that directly, without a notation in between to spell the three differently.
 @Suite
@@ -18,8 +18,8 @@ struct CallTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a library word, a native word and a procedure are sent the same way")
-    func threeKindsOfWordAreOneExpression() async throws {
+    @Test("a library procedure, a native procedure and a procedure are sent the same way")
+    func threeKindsOfProcedureAreOneExpression() async throws {
         // Given
                 let echo = Procedure(
             signature: Signature(
@@ -64,9 +64,9 @@ struct CallTests {
         #expect(outputs["echoed"] == .string("back"))
     }
 
-    @Test("a word that declines the shape it was sent to reads as absence")
-    func decliningWordReadsAsAbsence() async throws {
-        // Given. `count` has nothing to say about an int, and a word saying
+    @Test("a procedure that declines the shape it was sent to reads as absence")
+    func decliningProcedureReadsAsAbsence() async throws {
+        // Given. `count` has nothing to say about an int, and a procedure saying
         // nothing is the same answer as a field nobody set
         let sut = Warp.Expression.call(
             Call(receiver: .literal(.int(7)), selector: "std.collection.count")
@@ -104,9 +104,9 @@ struct CallTests {
         }
     }
 
-    @Test("a native word is linked against its signature like a procedure is")
-    func hostWordIsCheckedAgainstItsSignature() async throws {
-        // Given. An argument the word does not declare. This was unreachable
+    @Test("a native procedure is linked against its signature like a procedure is")
+    func hostProcedureIsCheckedAgainstItsSignature() async throws {
+        // Given. An argument the procedure does not declare. This was unreachable
         // while an effect was an opaque Swift value.
         let sut = Procedure(
             body: [

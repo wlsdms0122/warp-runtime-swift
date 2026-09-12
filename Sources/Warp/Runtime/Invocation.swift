@@ -15,7 +15,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Property
     public let selector: Name
 
-    // The declaration being sent, so a word reads its arguments by the names
+    // The declaration being sent, so a procedure reads its arguments by the names
     // the declaration gave them.
     public let signature: Signature
 
@@ -25,7 +25,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     private let settled: Settled
 
     // Where the run was when this was sent, as everything it went through to
-    // get here. Provenance, not meaning: a word does not know the statement it
+    // get here. Provenance, not meaning: a procedure does not know the statement it
     // was written in, but a log line and a refusal both want to say where they
     // are.
     public let trace: Trace
@@ -35,11 +35,11 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // The variables handed in place, by parameter position.
     private let holds: [(position: Int, handle: Handle)]
 
-    // The rows this word's declared sends reach, in the places the word names
+    // The rows this procedure's declared sends reach, in the places the procedure names
     // them at.
     private let sends: [Int]
 
-    // Which document numbered them. A word's declared sends are numbered the
+    // Which document numbered them. A procedure's declared sends are numbered the
     // way a call written in a body is, by the document that declared it.
     private let origin: Int
 
@@ -69,7 +69,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     }
 
     // MARK: - Public
-    // What an argument holds, named by the word's own key. An argument nobody
+    // What an argument holds, named by the procedure's own key. An argument nobody
     // wrote and one written as null are the same fact here, the same as they
     // are everywhere else.
     public subscript(key: P.Parameters) -> Value {
@@ -87,9 +87,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         return try hold.value()
     }
 
-    // Writes a value through the hold a parameter was handed. A native word
+    // Writes a value through the hold a parameter was handed. A native procedure
     // declaring a parameter `inout` answers into the caller's variable this
-    // way, and a word writing an argument that is not a path is a word the
+    // way, and a procedure writing an argument that is not a path is a procedure the
     // link should have refused.
     public func write(_ key: P.Parameters, _ value: Value) throws {
         guard let hold = hold(of: key) else {
@@ -114,11 +114,11 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         }
     }
 
-    // Sending a word this word declared it sends. The link resolved the row,
-    // so what happens here is an index and not a lookup, and a word this one
-    // never declared is a word that does not compile.
+    // Sending a procedure this procedure declared it sends. The link resolved the row,
+    // so what happens here is an index and not a lookup, and a procedure this one
+    // never declared is a procedure that does not compile.
     //
-    // The label names which piece of this word's work the send is, the way it
+    // The label names which piece of this procedure's work the send is, the way it
     // does for a closure, so a refusal from inside says where it happened.
     public func send(
         _ key: P.Imports,
@@ -139,9 +139,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         )
     }
 
-    // Calling a closure the word was handed as a value. The label names which
-    // piece of the word's work this call is, so a refusal from inside says
-    // where it happened rather than only which word was running.
+    // Calling a closure the procedure was handed as a value. The label names which
+    // piece of the procedure's work this call is, so a refusal from inside says
+    // where it happened rather than only which procedure was running.
     public func call(
         _ closure: Closure,
         offering arguments: [(name: Name, value: Value)],

@@ -58,7 +58,7 @@ struct BoundaryTests {
         }
     }
 
-    @Test("what a word answers is what it was given, not merely a number")
+    @Test("what a procedure answers is what it was given, not merely a number")
     func arithmeticAnswersTheKindItWasGiven() throws {
         // Given. A whole number added to a whole number is a whole number, and
         // a declaration that only said "a number" would not fit anywhere asking
@@ -102,8 +102,8 @@ struct BoundaryTests {
 
     @Test("ordering compares two of a kind, and text is a kind")
     func orderingIsNotOnlyForNumbers() async throws {
-        // Given. The words that order values order text too, so declaring them
-        // as taking numbers said something the word does not mean
+        // Given. The procedures that order values order text too, so declaring them
+        // as taking numbers said something the procedure does not mean
         #expect(try await answering("std.math.lessThan", .string("a"), .string("b")) == .bool(true))
         #expect(try await answering("std.math.lessThan", .int(1), .int(2)) == .bool(true))
     }
@@ -258,19 +258,19 @@ struct BoundaryTests {
         }
     }
 
-    @Test("whole-number arithmetic faults at the word's edge")
-    func wholeArithmeticFaultsPastTheWord() async throws {
+    @Test("whole-number arithmetic faults at the procedure's edge")
+    func wholeArithmeticFaultsPastTheInt() async throws {
         // Given. `int` is the machine word: a sum past its edge has no int to
         // answer, and the language stops rather than wrapping or answering a
         // silent fraction.
-        for (word, left, right) in [(Name, Int, Int)]([
+        for (procedure, left, right) in [(Name, Int, Int)]([
             ("std.math.plus", Int.max, 1),
             ("std.math.minus", Int.min, 1),
             ("std.math.times", Int.max, 2)
         ]) {
             // When / Then
             await #expect {
-                try await answering(word, .int(left), .int(right))
+                try await answering(procedure, .int(left), .int(right))
             } throws: { error in
                 "\(error)".contains("overflows int")
             }
@@ -283,14 +283,14 @@ struct BoundaryTests {
         // the fraction path could answer infinity: a value a program can carry
         // to exactly the first place that tries to write it down. Found by
         // running `1e308 plus 1e308` and being answered inf.
-        for (word, left, right) in [(Name, Double, Double)]([
+        for (procedure, left, right) in [(Name, Double, Double)]([
             ("std.math.plus", 1e308, 1e308),
             ("std.math.minus", -1e308, 1e308),
             ("std.math.times", 1e308, 10.0)
         ]) {
             // When / Then
             await #expect {
-                try await answering(word, .double(left), .double(right))
+                try await answering(procedure, .double(left), .double(right))
             } throws: { error in
                 "\(error)".contains("no finite answer")
             }
@@ -299,7 +299,7 @@ struct BoundaryTests {
 
     @Test("division answers a fraction, whole or not")
     func divisionAnswersAFraction() async throws {
-        // Given. The alternative is two words, or one word whose answer type
+        // Given. The alternative is two procedures, or one procedure whose answer type
         // depends on whether the division came out even. The second is not a
         // type a signature can hold.
         #expect(try await answering("std.math.dividedBy", .int(7), .int(2)) == .double(3.5))
@@ -330,8 +330,8 @@ struct BoundaryTests {
 
     // MARK: - Public
     // MARK: - Private
-    // One word, sent to one value with one operand. The shape every arithmetic
-    // word takes, so the cases above say what they are about and nothing else.
+    // One procedure, sent to one value with one operand. The shape every arithmetic
+    // procedure takes, so the cases above say what they are about and nothing else.
     private func answering(
         _ selector: Name,
         _ receiver: Value,

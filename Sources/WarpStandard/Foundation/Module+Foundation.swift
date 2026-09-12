@@ -9,9 +9,9 @@ import Foundation
 import Warp
 
 public extension Module {
-    // The ground the other bundles stand on: the memberships their words are
+    // The ground the other bundles stand on: the memberships their procedures are
     // bounded by, declared once where every bundle can name them. It declares
-    // no procedures (what it gives a link is vocabulary, not words) and a
+    // no procedures (what it gives a link is memberships) and a
     // bundle whose signatures mention these needs this module in the link,
     // which is the one dependency the standard modules have.
     static let foundation = try! Module(

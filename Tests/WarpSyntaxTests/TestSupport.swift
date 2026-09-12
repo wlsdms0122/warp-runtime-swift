@@ -102,7 +102,7 @@ func validates(
     }
 }
 
-// A caller registers on both sides: the word in the notation's registry, the
+// A caller registers on both sides: the procedure in the notation's registry, the
 // declaration in a module. The split is the point. One says how a document
 // spells it, the other says what answers.
 extension Module {
@@ -145,7 +145,7 @@ extension Loader {
     // reading is handed a document with no spellings left in it.
     //
     // The version is filled in, which nobody writes by hand. A fixture that
-    // sends words still writes its own `imports`: what a program takes from
+    // sends procedures still writes its own `imports`: what a program takes from
     // its link is the author's to say, and a helper that said it for them
     // would make every fixture's list true by construction.
     //
@@ -233,7 +233,7 @@ func run(
 
 // MARK: - Conditions
 
-// Equality and the connectives are words, so a test writing one writes the send
+// Equality and the connectives are procedures, so a test writing one writes the send
 // the reader lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))

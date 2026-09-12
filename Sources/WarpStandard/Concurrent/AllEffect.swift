@@ -15,7 +15,7 @@ struct AllEffect: Effect {
 
     // MARK: - Property
     // Every recoverable failure a piece raises is gathered into one, so this
-    // is the only way this word comes out however the pieces failed.
+    // is the only way this procedure comes out however the pieces failed.
     let failing = Failing.these([ConcurrentFailed.word])
 
     private let fanout = Fanout("std.concurrent.all")

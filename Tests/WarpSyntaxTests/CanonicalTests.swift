@@ -12,7 +12,7 @@ import Testing
 
 // The document has two layers, and this suite is about the lower one: the shapes
 // that stand one to one with the language, written without any spelling that
-// stands in for a word.
+// stands in for a procedure.
 //
 // It matters because the lower layer is what travels. A program that leaves the
 // machine it was written on arrives somewhere that has to read it, and every
@@ -105,7 +105,7 @@ struct CanonicalTests {
         // to is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) throws -> Module {
             try loader.loadProcedure([
-                "parameters": ["word": "string"],
+                "parameters": ["procedure": "string"],
                 "body": [
                     ["var": "pick"],
                     [
@@ -120,23 +120,23 @@ struct CanonicalTests {
             ], importing: ["std.logic.equal"])
         }
 
-        let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
+        let spelled = try picking(on: ["of": ["ref": "procedure"], "equal": "hey"])
         let plainly = try picking(on: [
             "call": [
                 "procedure": "std.logic.equal",
-                "of": ["ref": "word"],
+                "of": ["ref": "procedure"],
                 "arguments": ["value": "hey"]
             ]
         ])
 
         // When
         let hit = (
-            try await run(spelled, arguments: ["word": .string("hey")]),
-            try await run(plainly, arguments: ["word": .string("hey")])
+            try await run(spelled, arguments: ["procedure": .string("hey")]),
+            try await run(plainly, arguments: ["procedure": .string("hey")])
         )
         let miss = (
-            try await run(spelled, arguments: ["word": .string("ho")]),
-            try await run(plainly, arguments: ["word": .string("ho")])
+            try await run(spelled, arguments: ["procedure": .string("ho")]),
+            try await run(plainly, arguments: ["procedure": .string("ho")])
         )
 
         // Then

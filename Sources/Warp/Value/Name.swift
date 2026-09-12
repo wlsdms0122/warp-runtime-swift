@@ -22,16 +22,16 @@ public struct Name: Sendable, Hashable, Comparable {
     // MARK: - Property
     public let spelling: String
 
-    // The spelling's bytes folded to a word, worked out where the name is
+    // The spelling's bytes folded to an integer, worked out where the name is
     // written. Every table a link keeps is keyed by a name, so the bytes would
     // otherwise be walked again at each probe.
     private let digest: Int
 
-    // The words the text encoding reads bare as values, and what each one
+    // The keywords the text encoding reads bare as values, and what each one
     // is. A name is never one of them: a bare `true` in front of a record
     // would otherwise be read as the record's name, and the value would be
     // gone.
-    public static let scalarWords: [String: Value] = [
+    public static let scalarKeywords: [String: Value] = [
         "null": .null,
         "true": .bool(true),
         "false": .bool(false)
@@ -48,11 +48,11 @@ public struct Name: Sendable, Hashable, Comparable {
 
     // Whether this is spelled the way a declaration, a notation's prefix and a
     // record's name all spell one: identifiers joined by dots, and not a
-    // scalar's word.
+    // scalar's keyword.
     public var isDeclarable: Bool {
         let bytes = spelling.utf8
 
-        guard Name.scalarWords[spelling] == nil else { return false }
+        guard Name.scalarKeywords[spelling] == nil else { return false }
 
         var end: String.UTF8View.Index? = bytes.endIndex
 

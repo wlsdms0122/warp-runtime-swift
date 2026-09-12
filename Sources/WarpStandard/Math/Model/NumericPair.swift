@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The two numbers an arithmetic word reads. One type because the two sides of
+// The two numbers an arithmetic procedure reads. One type because the two sides of
 // every operation are declared alike: both are the same member of the shared
 // ground's `Numeric`, so a whole answers a whole and a fraction a fraction.
 enum NumericPair: Int, ParameterSet {

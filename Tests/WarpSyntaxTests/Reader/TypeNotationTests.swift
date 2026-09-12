@@ -46,7 +46,7 @@ struct TypeNotationTests {
                 == .ranged(.whole(from: Int.max))
         )
 
-        // A bound past the word is a whole number's one spelling of a number no
+        // A bound past the int is a whole number's one spelling of a number no
         // int holds. Refused as that fact, not as a spelling defect.
         #expect {
             try TypeReader.parse("int(18446744073709551615...)")

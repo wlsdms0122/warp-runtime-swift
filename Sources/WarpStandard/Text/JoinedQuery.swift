@@ -43,7 +43,7 @@ struct JoinedQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) throws -> Value? {
-        // The `.array` case and not the elements projection, because this word
+        // The `.array` case and not the elements projection, because this procedure
         // declares `array<string>` and bytes cross an `array<…>` slot whole
         // only where the element declaration leaves every byte alone. `string`
         // does not, so a bytes receiver is read out and refused element by

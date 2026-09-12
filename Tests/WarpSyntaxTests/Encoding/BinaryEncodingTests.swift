@@ -233,7 +233,7 @@ struct BinaryEncodingTests {
         // Given. É as e-plus-mark: valid UTF-8, ascending order, and a second
         // byte spelling for a name whose NFC form is one character. Accepting
         // it would let one name sort to two places and a record hold a field
-        // twice, losing one without a word.
+        // twice, losing one without a procedure.
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
             0x07, 0x01,

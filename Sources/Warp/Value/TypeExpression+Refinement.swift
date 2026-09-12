@@ -306,7 +306,7 @@ public extension TypeExpression.Refinement {
     }
 
     // A fraction as a range writes it. A bound no document spells is shown in
-    // this vocabulary's words rather than elided. Two ranges are one type when
+    // this vocabulary's own terms rather than elided. Two ranges are one type when
     // they hold the same numbers, and dropping an unspellable bound would read
     // a bounded range and an unbounded one alike. What comes out then is for a
     // message; `spellable` is what the writer asks.

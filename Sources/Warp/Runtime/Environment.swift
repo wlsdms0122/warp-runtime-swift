@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What a caller hands one run: the services its own words reach for, and
+// What a caller hands one run: the services its own procedures reach for, and
 // whatever else only that caller knows about. The language never reads it; an
 // effect recognises its own environment and takes it from here.
 public protocol Environment: Sendable {

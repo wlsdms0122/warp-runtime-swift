@@ -15,14 +15,14 @@ import Warp
 //
 // The slot exists as a type of its own because a notation may write one
 // specially: an operator key and its subject, a connective over conditions, a
-// word that takes its expression directly. Every part of that (including which
+// procedure that takes its expression directly. Every part of that (including which
 // keys are operators at all, and the `of` they are written beside) belongs to
 // the notation, so this asks the notation and reads an expression when there is
 // none or when the record is not one of its.
 //
 // A table of operator keys here would give a document's condition slot a grammar
 // the specification does not give it, and would leave the front end that spells
-// those words unable to replace any of it.
+// those procedures unable to replace any of it.
 public struct ConditionReader: Decodable {
     // MARK: - Property
     public let condition: Expression

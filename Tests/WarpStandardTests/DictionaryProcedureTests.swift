@@ -1,5 +1,5 @@
 //
-//  DictionaryWordTests.swift
+//  DictionaryProcedureTests.swift
 //  WarpStandardTests
 //
 //  Created by JSilver on 9/6/26.
@@ -10,11 +10,11 @@ import Testing
 @testable import Warp
 @testable import WarpStandard
 
-// The words a dictionary is read and written by. What a dictionary is belongs
+// The procedures a dictionary is read and written by. What a dictionary is belongs
 // to the language and is tested there; this is what the standard vocabulary
 // answers when one arrives.
-@Suite("What the words answer for a dictionary")
-struct DictionaryWordTests {
+@Suite("What the procedures answer for a dictionary")
+struct DictionaryProcedureTests {
     // MARK: - Test
     @Test("setting a field answers a dictionary, whatever the receiver was")
     func settingAnswersADictionary() throws {
@@ -47,7 +47,7 @@ struct DictionaryWordTests {
         }
     }
 
-    @Test("a word that counts fields counts either spelling")
+    @Test("a procedure that counts fields counts either spelling")
     func countingReadsEitherSpelling() throws {
         // Given. The declaration answers `int`, so neither spelling may answer
         // absence

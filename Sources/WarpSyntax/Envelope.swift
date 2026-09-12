@@ -12,7 +12,7 @@ import Warp
 //
 // A program that stays where it was built needs none of this. The thing that
 // built it is the thing that runs it. A program that travels does: it arrives
-// at something that may be older than the program is, may not have the words
+// at something that may be older than the program is, may not have the procedures
 // the program calls, and cannot ask the sender anything. Both questions have to
 // be answerable from the bytes alone, and both have to be answerable *before*
 // the program runs, because half-running one is worse than refusing it.
@@ -20,7 +20,7 @@ public enum Envelope {
     // MARK: - Property
     // Which shapes a reader has to understand. It goes up when a shape is added
     // or an existing one changes what it means, and does not move for a new
-    // word. A word is vocabulary, and vocabulary is what `imports` is for.
+    // procedure. A procedure is vocabulary, and vocabulary is what `imports` is for.
     //
     // Every document says it. A reader that filled in a default would be
     // reading a document that never said which language it was written for, and
@@ -43,12 +43,12 @@ public enum Envelope {
     // Written and not null. A key holding nothing is not a claim, and the two
     // who ask have to agree about that: the door turns away a document that
     // declares nothing, and the reader takes a key holding nothing as a list
-    // of no words. Answering differently is how `imports: null` passes the
+    // of no procedures. Answering differently is how `imports: null` passes the
     // door as a claim while the module behind it says it takes nothing.
     //
     // Asked twice because the two are in different places. The door holds the
     // document and reads the value; the reader is inside it and has a
-    // container. One rule, said here in both of their words.
+    // container. One rule, said here in both of their procedures.
     public static func declaresImports(_ written: Value?) -> Bool {
         guard let written else { return false }
 

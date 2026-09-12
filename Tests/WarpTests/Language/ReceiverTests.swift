@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A receiver is a declared parameter, and a word a caller sends to one is a
+// A receiver is a declared parameter, and a procedure a caller sends to one is a
 // declaration like any other. It is not reserved for native code.
 @Suite("A declaration may be sent to something")
 struct ReceiverTests {
@@ -26,12 +26,12 @@ struct ReceiverTests {
                 "entry": Procedure(
                     signature: Signature(
                         parameters: [
-                            "word": Parameter(type: .string)
+                            "procedure": Parameter(type: .string)
                         ]
                     ),
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "shout", arguments: [
-                                        "of": .reference([.key("word")])
+                                        "of": .reference([.key("procedure")])
                                     ]))
                         )
                     ],
@@ -60,13 +60,13 @@ struct ReceiverTests {
         )
 
         // When
-        let outputs = try await run(sut, arguments: ["word": .string("hey")])
+        let outputs = try await run(sut, arguments: ["procedure": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("hey!"))
     }
 
-    @Test("a native word and a written one are declared the same way")
+    @Test("a native procedure and a written one are declared the same way")
     func nativeAndWrittenDeclareAlike() throws {
         // Given
         let written = try Module(
@@ -183,7 +183,7 @@ struct ReceiverTests {
         #expect(image["std.collection.count"]?.purity == .pure)
     }
 
-    @Test("a body that sends a pure word is pure")
+    @Test("a body that sends a pure procedure is pure")
     func aBodyThatSendsIsStillPure() throws {
         // Given. Purity is judged over the name a body wrote, and what that
         // name means depends on where it was written. `label` sends `joined`,
@@ -220,7 +220,7 @@ struct ReceiverTests {
     @Test("a dot on an undeclared shape is refused")
     func aDotOnAnyIsRefused() throws {
         // Given. `any` declares no field, so the dot has nothing to read, and
-        // a word by that name is reached by writing the call rather than by
+        // a procedure by that name is reached by writing the call rather than by
         // the dot finding it.
         let sut = try Module(
             procedures: [

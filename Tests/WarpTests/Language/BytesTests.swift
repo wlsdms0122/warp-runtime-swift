@@ -208,8 +208,8 @@ struct BytesTests {
     }
 
     @Test("the collection vocabulary applies to bytes directly")
-    func collectionWordsReadBytes() async throws {
-        // Given. Each word declares an array receiver, and bytes are one
+    func collectionProceduresReadBytes() async throws {
+        // Given. Each procedure declares an array receiver, and bytes are one
         let asks: [(Warp.Expression, Value)] = [
             (
                 .call(Call(
@@ -262,14 +262,14 @@ struct BytesTests {
         }
     }
 
-    @Test("a word wanting elements no byte can be refuses at the boundary, by the element")
-    func aWordWantingOtherElementsRefusesAtTheBoundary() async throws {
+    @Test("a procedure wanting elements no byte can be refuses at the boundary, by the element")
+    func aProcedureWantingOtherElementsRefusesAtTheBoundary() async throws {
         // Given. `joined` declares `array<string>`, which leaves no byte as it
         // is, so the compact spelling does not cross: it is read out and
         // settled element by element. The receiver is read `any` here so the
         // link lets it through and the run is the one that answers.
         //
-        // This is why a word whose elements no byte can be still asks for the
+        // This is why a procedure whose elements no byte can be still asks for the
         // `.array` case: a bytes value never reaches it.
         let sut = try Module(
             procedures: [
@@ -337,7 +337,7 @@ struct BytesTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func word(_ selector: Name, on receiver: Value) throws -> Module {
+        func procedure(_ selector: Name, on receiver: Value) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -352,19 +352,19 @@ struct BytesTests {
         }
 
         // When / Then
-        #expect(try await run(word("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
-        #expect(try await run(word("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
+        #expect(try await run(procedure("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
+        #expect(try await run(procedure("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
 
         // Bytes carry no promise of being text, and a completed guess is a
         // text nobody sent.
         await #expect {
-            try await run(word("std.text.decoded", on: .bytes([0xff])))
+            try await run(procedure("std.text.decoded", on: .bytes([0xff])))
         } throws: { error in
             "\(error)".contains("not utf8 text")
         }
     }
 
-    @Test("an encoding the words do not name refuses at the build")
+    @Test("an encoding the procedures do not name refuses at the build")
     func anUnknownEncodingRefuses() throws {
         // Given. The enum names the encodings, and a constant is judged at the
         // link
@@ -449,7 +449,7 @@ struct BytesTests {
 
     @Test("what JSON cannot say shows as unencodable, never as almost-JSON")
     func renderingHoldsTheFiniteLine() {
-        // Given. Infinity arrives only from a host's own word, and the
+        // Given. Infinity arrives only from a host's own procedure, and the
         // rendering must not leak it as invalid JSON
         #expect(Rendering(.array([.double(.infinity)])).text() == "<unencodable>")
         #expect(Rendering(.dictionary(["a": .double(.nan)])).text() == "<unencodable>")

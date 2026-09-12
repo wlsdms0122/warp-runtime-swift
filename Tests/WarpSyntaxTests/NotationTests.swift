@@ -17,7 +17,7 @@ import Testing
 // none of them, and a reader given none has no opinion about the keys it meets.
 //
 // What a particular notation does with the hole (which keys it names, which
-// words they reach, what it refuses) is tested where that notation lives.
+// procedures they reach, what it refuses) is tested where that notation lives.
 @Suite("A notation is what a document is read with")
 struct NotationTests {
     // MARK: - Property
@@ -28,7 +28,7 @@ struct NotationTests {
     @Test("a notation with no spellings owes nothing")
     func spellingNothingLeavesNothingOwed() throws {
         // Given. A canonical notation offers no spellings and registers no
-        // construct that lowers to a word, so every shape it can still write is
+        // construct that lowers to a procedure, so every shape it can still write is
         // one the language already has, and it owes no vocabulary at all.
         #expect(sut.vocabulary(of: .canonical).isEmpty)
         #expect(!sut.vocabulary(of: .testing).isEmpty)
@@ -36,31 +36,31 @@ struct NotationTests {
 
     @Test("a spelling nobody reaches is not owed")
     func aSpellingNobodyReachesIsNotOwed() throws {
-        // Given. A condition's words are read through `when` and `where`, so a
-        // notation whose spellings reach words and which registers neither form
+        // Given. A condition's procedures are read through `when` and `where`, so a
+        // notation whose spellings reach procedures and which registers neither form
         // spends nothing on them. Offering is not spending.
         let notation = Notation(
-            condition: WordedConditions(),
+            condition: OwnVocabularyConditions(),
             interpolation: Interpolation(read: "text", joined: "joined")
         )
         let sut = Loader(registry: try ConstructRegistry(forms: []))
 
         // Then. What is left is what a template spends, which every slot can
         // hold and no registry decides
-        #expect(sut.vocabulary(of: notation).isDisjoint(with: WordedConditions().vocabulary))
+        #expect(sut.vocabulary(of: notation).isDisjoint(with: OwnVocabularyConditions().vocabulary))
         #expect(sut.vocabulary(of: notation) == notation.vocabulary)
     }
 
     @Test("what a condition spelling reaches is owed where a condition is read")
-    func aConditionsWordsAreOwedByTheFormsThatReadOne() throws {
+    func aConditionsProceduresAreOwedByTheFormsThatReadOne() throws {
         // Given. The other half: register a form with a condition slot and the
-        // words are owed again. Nothing in this package knows what they are.
+        // procedures are owed again. Nothing in this package knows what they are.
         let sut = Loader(registry: try ConstructRegistry(forms: [ConditionalForm.self]))
 
         // Then
         #expect(
-            sut.vocabulary(of: Notation(condition: WordedConditions()))
-                == WordedConditions().vocabulary
+            sut.vocabulary(of: Notation(condition: OwnVocabularyConditions()))
+                == OwnVocabularyConditions().vocabulary
         )
     }
 
@@ -73,7 +73,7 @@ struct NotationTests {
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
-                    "parameters": ["word": "string"],
+                    "parameters": ["procedure": "string"],
                     "body": [
                         ["var": "pick"],
                         [
@@ -81,7 +81,7 @@ struct NotationTests {
                                 "when": [
                                     "call": [
                                         "procedure": "std.logic.equal",
-                                        "of": ["ref": "word"],
+                                        "of": ["ref": "procedure"],
                                         "arguments": ["value": "hey"]
                                     ]
                                 ],
@@ -96,7 +96,7 @@ struct NotationTests {
         ], from: .canonical)
 
         // When
-        let outputs = try await run(module, arguments: ["word": .string("hey")])
+        let outputs = try await run(module, arguments: ["procedure": .string("hey")])
 
         // Then
         #expect(outputs["result"] == .string("matched"))
@@ -141,7 +141,7 @@ struct NotationTests {
         // would come back a message, so it has no document *there*. Even though
         // it has one in a document, below.
         let module = try Self.conditional(on: .record([
-            "of": .reference(path("word")),
+            "of": .reference(path("procedure")),
             "equal": .literal(.string("hey"))
         ]))
 
@@ -161,11 +161,11 @@ struct NotationTests {
         let module = try Module(
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(parameters: ["word": Parameter(type: .bool)]),
+                    signature: Signature(parameters: ["procedure": Parameter(type: .bool)]),
                     body: [
                         Statement(expression: .conditional(
                             .record([
-                                "of": .reference(path("word")),
+                                "of": .reference(path("procedure")),
                                 "equal": .literal(.string("hey"))
                             ]),
                             then: [Statement(expression: .literal(.string("yes")))],
@@ -205,11 +205,11 @@ struct NotationTests {
                 "imports": ["std.text.joined", "std.text.text"],
                 "procedures": [
                     "entry": [
-                        "parameters": ["word": "string"],
+                        "parameters": ["procedure": "string"],
                         "body": [
                             [
                                 "let": "line",
-                                "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]
+                                "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]
                             ]
                         ]
                     ]
@@ -220,14 +220,14 @@ struct NotationTests {
         }
     }
 
-    @Test("a template is spelled with the words the notation names")
-    func aTemplateSpendsTheNotationsWords() throws {
-        // Given, which words a template lowers to is the notation's answer, and
+    @Test("a template is spelled with the procedures the notation names")
+    func aTemplateSpendsTheNotationsProcedures() throws {
+        // Given, which procedures a template lowers to is the notation's answer, and
         // the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
-            "parameters": ["word": "string"],
+            "parameters": ["procedure": "string"],
             "body": [
-                ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
+                ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]]
             ]
         ], importing: ["std.text.joined", "std.text.text"])
 
@@ -236,7 +236,7 @@ struct NotationTests {
             case let .body(block) = sut.procedures[entryName]?.implementation,
             case let .call(call) = block.body.first?.expression
         else {
-            Issue.record("a template is the words that put text together")
+            Issue.record("a template is the procedures that put text together")
 
             return
         }
@@ -289,9 +289,9 @@ struct NotationTests {
             "imports": [],
             "procedures": [
                 "entry": [
-                    "parameters": ["word": "string"],
+                    "parameters": ["procedure": "string"],
                     "body": [
-                        ["let": "asked", "value": ["of": ["ref": "word"], "is": "hey"]]
+                        ["let": "asked", "value": ["of": ["ref": "procedure"], "is": "hey"]]
                     ],
                     "result": ["ref": "asked"]
                 ]
@@ -320,7 +320,7 @@ struct NotationTests {
         try Module(
             procedures: [
                 entryName: Procedure(
-                    signature: Signature(parameters: ["word": Parameter(type: .string)]),
+                    signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
                     body: [
                         Statement(expression: .conditional(
                             condition,

@@ -86,8 +86,8 @@ struct ValueNotationTests {
         }
     }
 
-    @Test("a foreign numeral past the word reads as the double the carrier holds")
-    func aForeignNumeralPastTheWordReadsAsDouble() throws {
+    @Test("a foreign numeral past the int reads as the double the carrier holds")
+    func aForeignNumeralPastTheIntReadsAsDouble() throws {
         // Given. A JSON number is a binary64 by the carrier's own nature: its
         // digits cannot be told from a fraction, and whatever exactness the
         // writing had was the carrier's to lose before this reader saw it; the

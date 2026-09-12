@@ -195,7 +195,7 @@ struct ControlFlowTests {
     func anAuthorBoundsALoopWithACounterAndAbort() async throws {
         // Given. Repetition carries no budget of its own; a counter in the
         // condition and `abort` past the bound say it exactly, and the failure
-        // is a word's failure like any other
+        // is a procedure's failure like any other
         let sut = Warp.Expression.loop(
             while: .call(
                 Call(

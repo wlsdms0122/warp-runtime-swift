@@ -27,7 +27,7 @@ final class Variable: @unchecked Sendable {
     private var stored: Value
 
     // MARK: - Initializer
-    // The lock is not for concurrent words, whose closures cannot write a
+    // The lock is not for concurrent procedures, whose closures cannot write a
     // variable they did not declare. It is for the reads that still cross task
     // boundaries there, so a shared box is not a data race by construction.
     init(_ value: Value) {

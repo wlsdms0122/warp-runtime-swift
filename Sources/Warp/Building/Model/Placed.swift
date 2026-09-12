@@ -12,7 +12,7 @@ import Foundation
 //
 // One value and not two tables held in step by hand. The link renames what it
 // gathers (a type declared `Coin` is `wallet.Coin` everywhere after) so where
-// the words are has to be carried from the pass that renamed them, and a second
+// the procedures are has to be carried from the pass that renamed them, and a second
 // table keyed the same way is a keyspace nothing checks. A refusal that looked
 // its place up could miss, and a miss reads as a refusal with no place: the
 // error still says what is wrong and stops saying where.

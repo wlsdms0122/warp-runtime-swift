@@ -20,9 +20,9 @@ struct ModuleGraphTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a module stands after the module whose word it sends")
-    func aSentWordStandsFirst() throws {
-        // Given. `caller` sends a word `library` declares, handed over in the
+    @Test("a module stands after the module whose procedure it sends")
+    func aSentProcedureStandsFirst() throws {
+        // Given. `caller` sends a procedure `library` declares, handed over in the
         // order that puts the needing one first.
         let library = try Module(
             procedures: [
@@ -76,7 +76,7 @@ struct ModuleGraphTests {
 
     @Test("modules that need each other have no order, so they are refused")
     func aRingIsRefused() throws {
-        // Given. Each sends a word the other declares.
+        // Given. Each sends a procedure the other declares.
         let one = try Module(
             procedures: [
                 "one.here": Procedure(
@@ -104,7 +104,7 @@ struct ModuleGraphTests {
         }
     }
 
-    @Test("a module that sends its own words stands on nothing")
+    @Test("a module that sends its own procedures stands on nothing")
     func aModuleAloneIsNotARing() throws {
         // Given. Two declarations of one module calling each other, which is
         // recursion inside a module rather than a ring between modules.

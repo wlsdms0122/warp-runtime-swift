@@ -196,7 +196,7 @@ struct NullableTests {
                 ),
                 entryName: Procedure(
                     signature: Signature(
-                        parameters: ["word": Parameter(type: .string)],
+                        parameters: ["procedure": Parameter(type: .string)],
                         returns: .string
                     ),
                     body: [
@@ -204,7 +204,7 @@ struct NullableTests {
                         // omission with null, so the build takes the call.
                         Statement(binding: .constant("called"), expression: .call(Call(
                                 selector: "labelled",
-                                arguments: ["of": .reference([.key("word")])]
+                                arguments: ["of": .reference([.key("procedure")])]
                             ))
                         )
                     ],
@@ -214,7 +214,7 @@ struct NullableTests {
         )
 
         // When / Then
-        #expect(try await run(sut, arguments: ["word": .string("hey")]) == .string("hey"))
+        #expect(try await run(sut, arguments: ["procedure": .string("hey")]) == .string("hey"))
     }
 
     @Test("a constant's dots are judged like a body's")
@@ -535,7 +535,7 @@ struct IndexReferenceJudgmentTests {
     private let entryName: Name = "entry"
 
     // MARK: - Test
-    @Test("a constant settles from native words alone")
+    @Test("a constant settles from native procedures alone")
     func aConstantDoesNotRunAWrittenBody() throws {
         // Given. `shout` has a written body, still being resolved beside the
         // constants it may read; a constant that runs it is a cycle with no
@@ -569,14 +569,14 @@ struct IndexReferenceJudgmentTests {
         #expect {
             try builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("native words alone")
+            error is BuildError && "\(error)".contains("native procedures alone")
         }
     }
 
-    @Test("a body's constant-headed call runs a written word, resolved")
-    func aBodyFoldsThroughAWrittenWord() async throws {
-        // Given. The constants are settled and the words resolved by the time a
-        // body folds, so a constant-headed call may run a written word: the
+    @Test("a body's constant-headed call runs a written procedure, resolved")
+    func aBodyFoldsThroughAWrittenProcedure() async throws {
+        // Given. The constants are settled and the procedures resolved by the time a
+        // body folds, so a constant-headed call may run a written procedure: the
         // cycle the settling refuses is the constants' own
         let sut = try Module(
             constants: ["greeting": .literal(.string("hi"))],
@@ -605,7 +605,7 @@ struct IndexReferenceJudgmentTests {
 
     @Test("whether a body links is its own text's fact, whoever calls it")
     func linkabilityDoesNotDependOnCallers() async throws {
-        // Given. `helper` folds a constant-headed call through a written word; a word
+        // Given. `helper` folds a constant-headed call through a written procedure; a procedure
         // (`loud`) that happens to call `helper` must not change what `helper`
         // means, because nothing about `helper`'s text changed
         let procedures: [Name: Procedure] = [
@@ -866,12 +866,12 @@ struct IndexReferenceJudgmentTests {
                 entryName: Procedure(
                     signature: Signature(
                         parameters: [
-                            "word": Parameter(type: .string),
+                            "procedure": Parameter(type: .string),
                             "i": Parameter(type: .int)
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("word"), .indexRef([.key("i")])])
+                    result: .reference([.key("procedure"), .indexRef([.key("i")])])
                 )
             ]
         )
@@ -895,9 +895,9 @@ struct ParameterReceiverTests {
     // MARK: - Test
     @Test("a dot on some T reads the field the call filled in")
     func aDotOnAParameterReadsData() async throws {
-        // Given. The word's body reads `of.count`; the call fills T with a
+        // Given. The procedure's body reads `of.count`; the call fills T with a
         // record carrying `count`, and the field wins because nothing here ever
-        // judged the dot a word
+        // judged the dot a procedure
         let sut = try Module(
             procedures: [
                 "peek": Procedure(

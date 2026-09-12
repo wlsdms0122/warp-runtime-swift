@@ -15,16 +15,16 @@ import WarpStandard
 // at once and cannot say which one broke. What is written here is the language
 // on its own: procedures authored as Swift values, paths written as segments
 // rather than parsed from text. The standard vocabulary comes in because a
-// program has to call somewhere, and what those words answer is tested where
+// program has to call somewhere, and what those procedures answer is tested where
 // they live.
 
 struct TestRecoverableFailure: RecoverableFailure {
     // MARK: - Property
     let message = "the world did not cooperate"
 
-    let type = TestRecoverableFailure.word
+    let type = TestRecoverableFailure.procedure
 
-    static let word = "test"
+    static let procedure = "test"
 
     // MARK: - Initializer
     // MARK: - Public
@@ -52,7 +52,7 @@ struct FailEffect: Effect {
     }
 
     // MARK: - Property
-    let failing = Failing.these([TestRecoverableFailure.word])
+    let failing = Failing.these([TestRecoverableFailure.procedure])
 
     // MARK: - Initializer
     // MARK: - Public
@@ -179,9 +179,9 @@ func validates(body: [Statement], visible: Set<Name> = []) -> Bool {
 }
 
 
-// MARK: - Words a test brings
+// MARK: - Procedures a test brings
 
-// Vocabulary is modules, so a test that needs a word declares one and puts it
+// Vocabulary is modules, so a test that needs a procedure declares one and puts it
 // in the link.
 extension Module {
     static let shouting = try! Module(
@@ -193,7 +193,7 @@ extension Module {
         ]
     )
 
-    // A word that answers from a box it keeps between calls, and says so. Two
+    // A procedure that answers from a box it keeps between calls, and says so. Two
     // bodies calling it meet in that box.
     static let ticketing = try! Module(
         procedures: [
@@ -294,7 +294,7 @@ func walking(
     )
 }
 
-// Equality and the connectives are words, so a test writing one writes the call
+// Equality and the connectives are procedures, so a test writing one writes the call
 // the notation lowers to.
 func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
     .call(Call(receiver: subject, selector: "std.logic.equal", arguments: ["value": operand]))

@@ -145,8 +145,8 @@ struct ExpressionFormTests {
         #expect(!validates(reference), "the binding expression reaches outward")
     }
 
-    @Test("a template lowers to the words that build it")
-    func templateLowersToWords() throws {
+    @Test("a template lowers to the procedures that build it")
+    func templateLowersToProcedures() throws {
         // Given
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",

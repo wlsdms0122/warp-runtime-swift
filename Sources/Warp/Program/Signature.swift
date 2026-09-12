@@ -70,11 +70,11 @@ public struct Signature: Sendable, Equatable {
         self.returns = returns
     }
 
-    // A native word's declaration, read off the word itself. What it takes is
-    // its own type's to say, so a registration names the word once and the
+    // A native procedure's declaration, read off the procedure itself. What it takes is
+    // its own type's to say, so a registration names the procedure once and the
     // parameters come with it.
     public init<P: NativeProcedure>(
-        of word: P.Type,
+        of procedure: P.Type,
         receiver: P.Parameters? = nil,
         returns: TypeExpression? = nil
     ) {
@@ -163,7 +163,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // The same, for a caller that hands over more than the body asked for. A
-    // word walking an array offers the element and whatever else it has, and
+    // procedure walking an array offers the element and whatever else it has, and
     // which of those the author wanted is the author's business: declaring a
     // name only to leave it unread is a declaration nobody meant.
     public func settle(
@@ -195,7 +195,7 @@ public struct Signature: Sendable, Equatable {
         try settle(given.map { name, value in (name: name, value: value) }, over: slots, offered: offered, in: table)
     }
 
-    // Arguments given as a list of names and values, the way a word hands
+    // Arguments given as a list of names and values, the way a procedure hands
     // them to a closure and a call of a value hands them to what it named.
     // Each slot finds its name along the list, so neither side hashes.
     func settle(
@@ -252,7 +252,7 @@ public struct Signature: Sendable, Equatable {
         // What "nothing was given" means differs by who is giving. An author's
         // argument space folds null and unwritten into one instruction: a
         // reference that names nothing reads as null, and requiring the author
-        // to know which is which would make absence observable. A word that
+        // to know which is which would make absence observable. A procedure that
         // *offers* is the other way: it hands over values it actually holds,
         // and a null it offered is a value, an element of the walked
         // collection and not a blank, so only a position it never offered is

@@ -16,7 +16,7 @@ public extension Writer {
     // MARK: - Public
     func value(of statement: Statement) throws -> Value {
         // The reader cannot produce a named conditional, so this guards the caller
-        // that builds statements directly, with the validator's own words:
+        // that builds statements directly, with the validator's own terms:
         // writing one silently would make a document that reads back as
         // something else.
         if statement.binding != nil, statement.expression.answersNothing {
@@ -225,7 +225,7 @@ public extension Writer {
             return (try spelling(AttemptForm.self), .dictionary(written))
 
         // Whatever is left needs no name, so it is written as the expression it
-        // is under the word that says "this statement is just a value".
+        // is under the key that says "this statement is just a value".
         default:
             return (StatementReader.valueKey, try value(of: expression, constructs: Set(registry.keys)))
         }
@@ -278,8 +278,8 @@ public extension Writer {
     private func spelling(_ form: any ConstructForm.Type) throws -> Name {
         guard let key = registry.key(for: form) else {
             throw WritingError(
-                "this notation registers no word for \(form). A shape it gave up"
-                    + " the word for is one it can no longer write"
+                "this notation registers no procedure for \(form). A shape it gave up"
+                    + " the procedure for is one it can no longer write"
             )
         }
 
@@ -319,7 +319,7 @@ public extension Writer {
     // The third answer is a refusal rather than a case. A procedure is code
     // that has already closed over a scope, and a document holds neither.
     // Quoting one would put something in the text that reading it back could
-    // not answer with, which is the same reason a natively implemented word has
+    // not answer with, which is the same reason a natively implemented procedure has
     // no document.
     private enum Spelling {
         case plainly

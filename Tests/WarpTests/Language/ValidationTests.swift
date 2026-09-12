@@ -157,7 +157,7 @@ struct ValidationTests {
     func aConstructInACallOperandIsRefused() {
         // Given. A document cannot even write one there, and the run would
         // refuse it; a program assembled directly meets the same rule before
-        // anything runs. The body a word is to run travels as a closure.
+        // anything runs. The body a procedure is to run travels as a closure.
         let arm = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
         let sut = [
             Statement(binding: .constant("said"), expression: .call(
@@ -332,14 +332,14 @@ struct ValidationTests {
         try Validator().validate(taken)
     }
 
-    @Test("a module is held to the words it says it imports", arguments: [
+    @Test("a module is held to the procedures it says it imports", arguments: [
         [] as Set<Name>,
         ["std.collection.count", "std.math.plus"]
     ])
     func aModuleIsHeldToItsImports(_ claimed: Set<Name>) {
         // Given. A caller decides what to grant from this list and then links
         // what it granted, so a list that says less than the program sends
-        // links a word nobody allowed, and one that says more takes a grant the
+        // links a procedure nobody allowed, and one that says more takes a grant the
         // program never uses
         #expect(throws: ValidationError.self) {
             try Module(
@@ -359,11 +359,11 @@ struct ValidationTests {
         }
     }
 
-    @Test("a list wrong in both directions says which words moved, not which lists")
+    @Test("a list wrong in both directions says which procedures moved, not which lists")
     func bothDifferencesAreSaidApart() {
-        // Given. A module sending thirty words would leave an author diffing
+        // Given. A module sending thirty procedures would leave an author diffing
         // two lists by eye, and the two differences are two mistakes with two
-        // fixes: one word is a grant nobody disclosed, the other is a grant
+        // fixes: one procedure is a grant nobody disclosed, the other is a grant
         // nothing uses.
         let error = #expect(throws: ValidationError.self) {
             try Module(
@@ -413,8 +413,8 @@ struct ValidationTests {
         #expect(sut.imports == ["std.collection.count"])
     }
 
-    @Test("a word the module declares itself is not one it imports")
-    func ownWordsAreNotImports() throws {
+    @Test("a procedure the module declares itself is not one it imports")
+    func ownProceduresAreNotImports() throws {
         // Given. What a module brings with it is not what it asks for
         let sut = try Module(
             procedures: [

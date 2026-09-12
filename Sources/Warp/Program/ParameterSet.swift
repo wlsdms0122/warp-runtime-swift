@@ -7,10 +7,10 @@
 
 import Foundation
 
-// The parameters one native word declares: every name it takes, what each is
+// The parameters one native procedure declares: every name it takes, what each is
 // declared as, and where each stands among them.
 //
-// A word reads an argument by naming a case, so a name it never declared is
+// A procedure reads an argument by naming a case, so a name it never declared is
 // a name that does not compile. The place is the case's raw value, which is
 // what lets the run read a place where it read a name.
 //
@@ -23,7 +23,7 @@ public protocol ParameterSet: CaseIterable, Hashable, Sendable {
     // What it takes, defaulted, and the members it must be one of.
     var declared: Parameter { get }
 
-    // Where it stands among the word's parameters.
+    // Where it stands among the procedure's parameters.
     var position: Int { get }
 }
 
@@ -31,7 +31,7 @@ public extension ParameterSet where Self: RawRepresentable, RawValue == Int {
     var position: Int { rawValue }
 }
 
-// A word that declares nothing. Its one case is never reached, which is what
+// A procedure that declares nothing. Its one case is never reached, which is what
 // having no parameters means.
 public enum NoParameters: Int, ParameterSet {
     case none

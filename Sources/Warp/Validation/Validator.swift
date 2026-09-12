@@ -12,7 +12,7 @@ import Foundation
 // The walk is structural, and it stays structural through call: a message
 // carries expressions whose insides this can read, so what exists inside a
 // caller's body is read here rather than asked of whatever answers the
-// selector. Which means validation never consults the word table. A document is
+// selector. Which means validation never consults the procedure table. A document is
 // checked against itself, before anything is resolved.
 public struct Validator: Sendable {
     // MARK: - Property
@@ -114,7 +114,7 @@ public struct Validator: Sendable {
 
     // MARK: - Private
     // What a module says it imports against what it sends. A caller reads the
-    // list to decide whether to grant the words before it links anything, so a
+    // list to decide whether to grant the procedures before it links anything, so a
     // list allowed to drift would be worse than none: it would be trusted and
     // wrong.
     private func declared(_ module: Module) throws {
@@ -129,10 +129,10 @@ public struct Validator: Sendable {
         guard !undisclosed.isEmpty || !unspent.isEmpty else { return }
 
         // The two differences and not the two lists. They are different
-        // mistakes with different fixes (a word sent and not listed is the
-        // grant the list existed to disclose, and a word listed and not called
+        // mistakes with different fixes (a procedure sent and not listed is the
+        // grant the list existed to disclose, and a procedure listed and not called
         // asks for one the program has no use for) and a module sending thirty
-        // words would otherwise leave an author diffing two of them by eye to
+        // procedures would otherwise leave an author diffing two of them by eye to
         // find the one that moved.
         let said = [
             undisclosed.isEmpty ? nil : "sends \(undisclosed), which it does not import",
@@ -206,9 +206,9 @@ public struct Validator: Sendable {
         )
     }
 
-    // A native word reads its arguments at the places its own keys stand at,
+    // A native procedure reads its arguments at the places its own keys stand at,
     // and the row a run hands it is the declaration's parameters in order. The
-    // two are the same list or the word reads an argument nobody sent it.
+    // two are the same list or the procedure reads an argument nobody sent it.
     private func reads(_ procedure: Procedure, at place: Place) throws {
         guard let keys = procedure.implementation.nativeParameters else { return }
 
@@ -220,17 +220,17 @@ public struct Validator: Sendable {
             read.map(\.name) == declared
         else {
             throw ValidationError(
-                "this word reads \(read.map(\.name.spelling)) and is declared"
-                    + " with \(declared.map(\.spelling)). A word reads its"
+                "this procedure reads \(read.map(\.name.spelling)) and is declared"
+                    + " with \(declared.map(\.spelling)). A procedure reads its"
                     + " arguments at the places its own keys stand at",
                 at: place.part(.parameters)
             )
         }
     }
 
-    // A native word sends the words it declares, at the places it names them
-    // at, and a run reaches one by that place. The places are one word to a
-    // place from the first or a place a word names reaches nothing.
+    // A native procedure sends the procedures it declares, at the places it names them
+    // at, and a run reaches one by that place. The places are one procedure to a
+    // place from the first or a place a procedure names reaches nothing.
     private func sends(_ procedure: Procedure, at place: Place) throws {
         guard let keys = procedure.implementation.nativeImports else { return }
 
@@ -238,8 +238,8 @@ public struct Validator: Sendable {
 
         guard sent.map(\.position) == Array(sent.indices) else {
             throw ValidationError(
-                "this word sends words standing at \(sent.map(\.position)), which is"
-                    + " not one word to a place from the first",
+                "this procedure sends procedures standing at \(sent.map(\.position)), which is"
+                    + " not one procedure to a place from the first",
                 at: place.part(.imports)
             )
         }
@@ -263,8 +263,8 @@ public struct Validator: Sendable {
 
         for (position, statement) in body.enumerated() {
             // A statement is its name and the construct it writes under. Both,
-            // because a document writes both and following one word at a time
-            // is what a place is for.
+            // because a document writes both and following one at a time is
+            // what a place is for.
             let here = place.statement(statement, at: position)
 
             if let binding = statement.binding {
@@ -620,7 +620,7 @@ public struct Validator: Sendable {
     // write a construct there, and the run refuses one that arrives anyway.
     // Held here too, so a program assembled directly meets the same rule before
     // it runs, and at the link, which asks the same predicate, so a program
-    // that skipped this door still cannot slip one through: the body a word is
+    // that skipped this door still cannot slip one through: the body a procedure is
     // to run travels as a closure, and there is no second channel for bodies.
     private func refuseConstruct(_ expression: Expression, at place: Place) throws {
         guard expression.holdsConstruct else { return }
@@ -630,7 +630,7 @@ public struct Validator: Sendable {
 
     // A condition is data by the same fact an operand is: the run asks it
     // purely. Refused with its own sentence, because the fix is different. What
-    // a body decides reaches a condition through a word.
+    // a body decides reaches a condition through a procedure.
     private func refuseConstructCondition(_ expression: Expression, at place: Place) throws {
         guard expression.holdsConstruct else { return }
 

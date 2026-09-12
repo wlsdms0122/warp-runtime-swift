@@ -11,7 +11,7 @@ import Foundation
 //
 // The runtime knows which procedures answer without running (the builder works
 // it out for bodies and a native declares it) but until this, nothing could
-// *ask* for one. A word that runs its argument inside a condition or a path
+// *ask* for one. A procedure that runs its argument inside a condition or a path
 // needs an argument that can be run there, and `procedure` alone does not say
 // so.
 public enum Purity: Sendable, Equatable {

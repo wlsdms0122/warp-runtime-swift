@@ -1,5 +1,5 @@
 //
-//  ContractWordReader.swift
+//  ContractProcedureReader.swift
 //  WarpSyntax
 //
 //  Created by JSilver
@@ -8,12 +8,12 @@
 import Foundation
 import Warp
 
-// One word of a contract: what a call may hand it and what it answers.
+// One procedure of a contract: what a call may hand it and what it answers.
 //
 // No `receiver` and no `bounds`. The receiver is the type that satisfies the
-// contract, which is the whole point of the word being in one, and the bound a
+// contract, which is the whole point of the procedure being in one, and the bound a
 // type parameter carries is owned by the signature that declares it.
-public struct ContractWordReader: Decodable {
+public struct ContractProcedureReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case returns
@@ -27,7 +27,7 @@ public struct ContractWordReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
-            context: "contract word"
+            context: "contract procedure"
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)

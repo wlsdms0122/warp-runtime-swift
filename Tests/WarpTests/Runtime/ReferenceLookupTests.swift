@@ -75,7 +75,7 @@ struct ReferenceLookupTests {
     @Test("a key segment reads data alone, and never derives")
     func keySegmentDoesNotDerive() {
         // Then. The value has no say: a `key` the build left as a read is a
-        // read, even where a word by that name would have answered
+        // read, even where a procedure by that name would have answered
         guard case .unfit = sut.lookup([.key("items"), .key("count")]) else {
             Issue.record("expected unfit for a key on an array")
 
@@ -117,7 +117,7 @@ struct ReferenceLookupTests {
         guard case let .unfit(distant) = resolver.lookup(
             [.key("items"), .indexRef([.key("far")])]
         ) else {
-            Issue.record("expected unfit for an index reference past the word")
+            Issue.record("expected unfit for an index reference past the int")
 
             return
         }

@@ -11,7 +11,7 @@ import Foundation
 //
 // An author binds a call to a name and passes the name, so a declared `returns`
 // only reaches the next call site if the link knows what that name holds. This
-// is what knows: `said = call counts` followed by `wants(word: said)` is two
+// is what knows: `said = call counts` followed by `wants(procedure: said)` is two
 // declarations disagreeing, and both are text.
 //
 // It is inference and not a type system. Nothing here is required to say
@@ -24,12 +24,10 @@ import Foundation
 // refuses rather than deferring to the run. The author names the shape with
 // `as`, and the walk goes on from there.
 //
-// The walk is also the rewrite that fixes what a dot means. A document writes
-// `key` segments, and whether one reads a field or sends a word is decided here
-// by the type the walk reached (a shape with fields reads, a shape without them
-// sends) and the decision is written into the path as a `word` segment. A run
-// reads the spelling and never asks the value, which is the point: the same
-// path means the same thing on every run.
+// A path reads a name and nothing else, so every segment a document writes
+// stays what it was written as. What each one lands on is judged here against
+// the type the walk reached, and a dot on a shape that declares no such field
+// is refused rather than left for the run.
 extension Builder {
     // MARK: - Internal
     // The environment a procedure's body starts from: its own parameters, which
@@ -169,7 +167,7 @@ extension Builder {
                 // A bound names a membership or a contract, and the two ask
                 // different questions of the same reading: what a membership
                 // admits is a set of shapes, what a contract asks is a set of
-                // words the reading's own type answers.
+                // procedures the reading's own type answers.
                 if loweredTypes.satisfying[bound] != nil {
                     switch loweredTypes.answering(contract: bound, reading: reading) {
                     case let .leansOn(type):
@@ -180,7 +178,7 @@ extension Builder {
 
                     case .settled(false):
                         return "'\(parameter)' is read as \(reading.rendered(in: loweredTypes)),"
-                            + " which does not answer every word '\(bound)' asks"
+                            + " which does not answer every procedure '\(bound)' asks"
                     }
 
                     continue
@@ -342,8 +340,8 @@ extension Builder {
 
     // Walking a path through types the way the resolver walks it through
     // values. Each dot is judged by the shape the walk has reached: a shape
-    // with fields reads one, a shape without them sends a word, and the
-    // judgment is spelled into the answered path (`key` for a read, `word` for
+    // with fields reads one, a shape without them sends a procedure, and the
+    // judgment is spelled into the answered path (`key` for a read, `procedure` for
     // a call) so a run never asks the value.
     //
     // A field the shape does not declare is refused, `?.` or not. The type
@@ -420,7 +418,7 @@ extension Builder {
                 // what they expect and the reading goes on from there; the
                 // shape is theirs to name, not the value's to supply. An index
                 // says as much as a dot does (that a shape is there to be read
-                // into) so it refuses here too, and says so in its own words.
+                // into) so it refuses here too, and says so in its own terms.
                 // Before the three were told apart this arm let indexes through
                 // to the run; that exception was a fact about the branch being
                 // shared, not a decision about indexes, and keeping it would
@@ -625,7 +623,7 @@ extension Builder {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
                             + " which \(current.rendered(in: context.loweredTypes)) does not declare."
-                            + " A word is sent with a written call, and data"
+                            + " A procedure is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
                             + " or through `dictionary<any>`"
                     )
@@ -636,14 +634,14 @@ extension Builder {
                 current = field.fieldUnwrapped
                 resolved.append(segment)
 
-            // A shape with no fields has no name here to read. The word by
+            // A shape with no fields has no name here to read. The procedure by
             // this spelling is sent with a written call, which names the
             // declaration it means.
             case let (.key(key, _), _):
                 return .refused(
                     "\(walked.rendered) names '\(key)',"
                         + " and \(current.rendered(in: context.loweredTypes)) has no name there to read."
-                        + " A word by that spelling is sent with a written call"
+                        + " A procedure by that spelling is sent with a written call"
                 )
             }
         }
@@ -1367,7 +1365,8 @@ extension Builder {
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
         case let .call(call):
-            let signature = context.signature(of: call.selector) ?? context.contractWords[call.selector]?.signature
+            let signature = context.signature(of: call.selector)
+                ?? context.contractProcedures[call.selector]?.signature
 
             guard case .judging = ask else {
                 return Inspection(
@@ -1403,7 +1402,7 @@ extension Builder {
             // A call through a contract names no declaration. What answers it
             // is the receiver's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
-            if let asked = context.contractWords[call.selector] {
+            if let asked = context.contractProcedures[call.selector] {
                 return try inspected(
                     contract: asked,
                     call: call,
@@ -1725,7 +1724,7 @@ extension Builder {
     // contract asked is the whole of the judgment, and which body runs is
     // decided at the run by the name the receiver wears.
     private func inspected(
-        contract asked: ContractWord,
+        contract asked: ContractProcedure,
         call: Call,
         at place: Place,
         in environment: [Name: LoweredType],
@@ -1735,7 +1734,7 @@ extension Builder {
         guard let written = call.receiver else {
             throw BuildError(
                 "sends '\(call.selector)' with nothing in front of it."
-                    + " A contract's word is answered about the value it is"
+                    + " A contract's procedure is answered about the value it is"
                     + " sent to, so there is nothing here to answer it",
                 at: place
             )
@@ -1766,7 +1765,7 @@ extension Builder {
         case .settled(false):
             throw BuildError(
                 "sends '\(call.selector)' to \(receiver.reading.rendered(in: context.loweredTypes)),"
-                    + " which does not answer every word '\(asked.contract)' asks",
+                    + " which does not answer every procedure '\(asked.contract)' asks",
                 at: place.part(.receiver)
             )
         }
@@ -2079,7 +2078,7 @@ extension Builder {
     // What never finishes binds nothing, so a name on it promises a binding
     // that cannot happen. Asked exactly where the sequence rule finds a
     // statement that ends the body, so the two facts cannot part. The reader
-    // catches the shapes it can see, and the link catches the words only it can
+    // catches the shapes it can see, and the link catches the procedures only it can
     // see. One rule, two stages.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
         try refuse(

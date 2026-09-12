@@ -264,7 +264,7 @@ struct DeclaredNameTests {
         }
     }
 
-    @Test("a closure under a name that says what it holds is handed in place, and the word writes it back")
+    @Test("a closure under a name that says what it holds is handed in place, and the procedure writes it back")
     func aDeclaredClosureIsHandedInPlace() async throws {
         // Given. The build derives `pure isolated` for a closure literal, and an
         // `inout` slot takes the same shape. The name says what it holds, so
@@ -301,7 +301,7 @@ struct DeclaredNameTests {
         // When
         let answer = try await Executor().run(try Builder().build([sut] + Module.standard, entry: entryName))
 
-        // Then. The word wrote a closure of its own into the caller's name
+        // Then. The procedure wrote a closure of its own into the caller's name
         #expect(answer == .int(9))
     }
 

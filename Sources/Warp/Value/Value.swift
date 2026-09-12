@@ -30,14 +30,14 @@ public indirect enum Value: Sendable, Equatable {
 
     // Fields under names, and the name of the declared type the record
     // settled to, where it has. A record made by a literal, answered by a
-    // native word or read out of a document has no name; it takes one the
+    // native procedure or read out of a document has no name; it takes one the
     // first time it settles into a slot that declares a type, and from then
     // on it fits only that name. Two records of one shape under two names
     // are two values.
     case record(Record)
 
     // Names and values where the names are data: what a document hands in,
-    // what a host builds out of raw data, and what a word that reads names
+    // what a host builds out of raw data, and what a procedure that reads names
     // answers. A declaration is what turns one of these into a record.
     case dictionary(Dictionary)
 
@@ -158,7 +158,7 @@ public indirect enum Value: Sendable, Equatable {
     // where the `bytes = array<byte>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they
     // are, lazily, so a compact spelling is not unpacked to read one element,
-    // and a word taking either through `any` reads this one projection
+    // and a procedure taking either through `any` reads this one projection
     // instead of knowing the equation itself.
     public var elements: AnyRandomAccessCollection<Value>? {
         switch self {
@@ -176,14 +176,14 @@ public indirect enum Value: Sendable, Equatable {
     // The elements at these positions, in the spelling this value is. Nil for
     // what has no elements to take, the way `elements` answers nil.
     //
-    // This is for the words that only put their receiver's own elements in
+    // This is for the procedures that only put their receiver's own elements in
     // another order or take fewer of them, and so never have to look at one.
     // Saying which by position lets bytes be rearranged as the bytes they are:
     // reading them out as values and writing them back would cost the boxing
     // twice over, which is the cost being compact exists to avoid.
     //
     // A position this value does not have is answered the way a value with no
-    // elements at all is: with nil. The three words in this library count
+    // elements at all is: with nil. The three procedures in this library count
     // their positions from `elements` and so can never ask for one. This
     // is reachable from outside, where a caller's own arithmetic decides, and
     // a library that brings its caller's process down over that is not one
@@ -236,14 +236,14 @@ public indirect enum Value: Sendable, Equatable {
     // These elements, spelled the way this value is. The other half of the
     // projection above: `elements` reads a compact spelling as the array it is,
     // and this writes an array back into the compact spelling where it still
-    // holds, so a word that answers its receiver's own elements, rearranged or
+    // holds, so a procedure that answers its receiver's own elements, rearranged or
     // fewer, answers bytes when it was given bytes.
     //
     // Where it no longer holds, a byte's slot now carrying something that is
     // not one, the answer is a plain array, because the spelling is a fact
     // about the value and saying otherwise would be a claim no value backs.
     //
-    // A word that builds *new* elements does not come through here. `map`
+    // A procedure that builds *new* elements does not come through here. `map`
     // answers what its procedure answered, and that is its own value however it
     // was reached; the declaration says so by naming a second parameter for it.
     public func respelled(_ elements: some Collection<Value>) -> Value {
@@ -374,7 +374,7 @@ public indirect enum Value: Sendable, Equatable {
     private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
         guard !fraction.isNaN else { return nil }
 
-        // Past either end of what an int can be (0x1p63 is the word's own edge,
+        // Past either end of what an int can be (0x1p63 is the int's own edge,
         // written exactly where `Double(Int.max)` would round past it) the
         // answer needs no digits, and infinity, which only a host can hand in,
         // is answered by the same two lines.

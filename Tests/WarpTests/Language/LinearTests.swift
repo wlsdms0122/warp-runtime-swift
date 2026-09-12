@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // A value handed on exactly once. What the type says is that the values of it
-// are given away: to a word, or as the body's answer. What the build proves is
+// are given away: to a procedure, or as the body's answer. What the build proves is
 // that every way through a body does that once, which is what "this resource
 // is closed exactly once" comes to.
 @Suite("A value handed on once")
@@ -221,8 +221,8 @@ struct LinearTests {
 
     // MARK: - Public
     // MARK: - Private
-    // A handle that must be closed, a word that makes one, a word that takes
-    // one, and a word that only looks.
+    // A handle that must be closed, a procedure that makes one, a procedure that takes
+    // one, and a procedure that only looks.
     private func holding(
         body: [Statement],
         result: Warp.Expression,

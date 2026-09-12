@@ -10,7 +10,7 @@ import Warp
 
 public extension Module {
     static let text = try! Module(
-        description: "Words about strings.",
+        description: "Procedures about strings.",
         procedures: [
             "std.text.decoded": Procedure(
                 description: "The bytes read as text in a named encoding.",

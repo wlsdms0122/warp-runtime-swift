@@ -16,7 +16,7 @@ public extension Module {
     // Each is written here and checked where it is made, so a refusal from one
     // is this package disagreeing with itself rather than anything a caller
     // did. That is why the seven force the try: there is no caller to hand it
-    // to, and a bundle that will not check is a bug in the words shipped with
+    // to, and a bundle that will not check is a bug in the procedures shipped with
     // the language.
     static let standard: [Module] = [
         .foundation, .logic, .math, .text, .collection, .control, .concurrent

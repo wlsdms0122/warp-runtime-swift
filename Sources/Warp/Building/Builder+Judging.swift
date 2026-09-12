@@ -14,7 +14,7 @@ import Foundation
 extension Builder {
     // MARK: - Internal
     // The one gate every gathered call passes, wherever its body sits. A
-    // procedure, a word, a constant's closure. The call carries the declaration
+    // native procedure, a written body, a constant's closure. The call carries the
     // the walk found for it, and is judged against that.
     func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
         for call in calls {
@@ -304,7 +304,7 @@ extension Builder {
 
         // Only a declared type is handed on once. The obligation rides with
         // the name, so a slot mentioning the name has it and a slot writing
-        // the word would be claiming it for a shape nothing declared it of.
+        // the procedure would be claiming it for a shape nothing declared it of.
         case let .linear(inner):
             guard declaring else {
                 throw BuildError(
@@ -572,13 +572,13 @@ extension Builder {
             }
         }
 
-        // A word may judge its own constant arguments before any run. A type
-        // cannot say that a regex pattern compiles, and the word can. It
+        // A procedure may judge its own constant arguments before any run. A type
+        // cannot say that a regex pattern compiles, and the procedure can. It
         // happens here rather than while decoding, because a notation judging
         // arguments would have to know the vocabulary; judging belongs where
         // names resolve.
-        // A word's own keys name its parameters, so what a call wrote by name
-        // is asked for by key here, through the same door the word reads an
+        // A procedure's own keys name its parameters, so what a call wrote by name
+        // is asked for by key here, through the same door the procedure reads an
         // argument through when it answers.
         func validate(_ query: some Query, given constants: [Name: Value]) throws {
             try query.validate(Question(arguments: constants))

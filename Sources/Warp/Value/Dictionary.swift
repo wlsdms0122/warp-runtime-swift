@@ -8,7 +8,7 @@
 import Foundation
 
 // Names and values where the names are data: what a document hands in and what
-// a word that reads names answers. Which names are here is the value's to say,
+// a procedure that reads names answers. Which names are here is the value's to say,
 // not a declaration's, so each entry carries its own name.
 //
 // The entries stand in ascending byte order of their names, the order the

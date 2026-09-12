@@ -486,7 +486,7 @@ public enum BinaryEncoding {
     }
 
     // `unsigned(from:)` already held the 64-bit line, so the exact conversion
-    // to the word cannot miss. A truncating one here would say otherwise.
+    // to the procedure cannot miss. A truncating one here would say otherwise.
     private static func unzigzagged(_ unsigned: UInt64) -> Int {
         Int(Int64(bitPattern: unsigned >> 1 ^ (0 &- (unsigned & 1))))
     }

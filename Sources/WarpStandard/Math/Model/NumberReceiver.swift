@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The one number a rounding word reads. It takes nothing beyond its receiver,
+// The one number a rounding procedure reads. It takes nothing beyond its receiver,
 // which is what makes `quotient.floored` reachable from a path.
 enum NumberReceiver: Int, ParameterSet {
     case of

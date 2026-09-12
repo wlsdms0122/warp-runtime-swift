@@ -14,22 +14,22 @@ import Warp
 // encoding.
 struct Encoding: Sendable {
     // MARK: - Property
-    private let word: String
+    private let procedure: String
 
     // MARK: - Initializer
-    init(_ word: String) {
-        self.word = word
+    init(_ procedure: String) {
+        self.procedure = procedure
     }
 
     // MARK: - Public
     // Refuses a name this has no mapping for, before either direction runs.
     func named(_ value: Value) throws {
         guard case let .string(name) = value else {
-            throw ExecutionError("\(word) asks \(value.type) for an encoding name")
+            throw ExecutionError("\(procedure) asks \(value.type) for an encoding name")
         }
 
         guard name == "utf8" else {
-            throw ExecutionError("\(word) has no encoding named '\(name)'")
+            throw ExecutionError("\(procedure) has no encoding named '\(name)'")
         }
     }
 

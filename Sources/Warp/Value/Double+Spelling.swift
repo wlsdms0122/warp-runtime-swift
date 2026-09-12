@@ -9,7 +9,7 @@ import Foundation
 
 extension Double {
     // The fraction as something to read, spelled where a document spells it and
-    // said in this vocabulary's own words where none does. Only a host's hand
+    // said in this vocabulary's own terms where none does. Only a host's hand
     // brings an infinity or a nan here, and every surface that has to show one
     // says it the same way rather than in whatever the host's formatter says
     // today.

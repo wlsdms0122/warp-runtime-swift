@@ -11,9 +11,9 @@ import Warp
 // What a template lowers to, for a notation that offers one.
 //
 // The keys `format` and `with` are reserved in every notation. That much is the
-// document's, and the specification names those two and no others. Which words
+// document's, and the specification names those two and no others. Which procedures
 // they spend is not: a template asks each piece how it reads and writes the
-// pieces one after another, and what those two words are called is the
+// pieces one after another, and what those two procedures are called is the
 // notation's own answer.
 //
 // Qualified names are what these should be, though nothing here checks it. A

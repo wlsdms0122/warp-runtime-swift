@@ -11,9 +11,9 @@ import Foundation
 // before it.
 //
 // A module is compiled against what it needs, so what it needs has to be
-// compiled first: the words it sends answer with types, the facts nobody
+// compiled first: the procedures it sends answer with types, the facts nobody
 // declared (purity, isolation, failure) are read off what a body reaches, and
-// a constant settles by running the words it calls. All three are answers a
+// a constant settles by running the procedures it calls. All three are answers a
 // module asks its neighbours for, and asking for one that is not ready yet
 // has no answer to give.
 //
@@ -21,7 +21,7 @@ import Foundation
 // The names each side needs of the other are what makes the ring, and neither
 // can be the one that goes first.
 //
-// What a module needs is read the way a link reads it: the words it calls and
+// What a module needs is read the way a link reads it: the procedures it calls and
 // the shapes its signatures name. A name nothing here declares is left alone:
 // the link refuses it, and refusing here would be a second copy of a rule that
 // has to be right once.
@@ -47,14 +47,14 @@ public struct ModuleGraph: Sendable {
     public init(_ modules: [Module], after held: Int = 0) throws {
         // Which module declares each reference. One table, since every one of
         // them answers the same question; the kind rides on the reference, so
-        // a word and a shape spelled alike stay two rows.
+        // a procedure and a shape spelled alike stay two rows.
         var declares: [Reference: Int] = [:]
 
         for (position, module) in modules.enumerated() {
             // In no order. Which module answers a reference is the order the
             // caller handed the modules over, and inside one module no two of
             // these are the same reference, so nothing here reads an order.
-            let declared = module.declaredWords.map(Reference.word)
+            let declared = module.declaredProcedures.map(Reference.procedure)
                 + module.declaredShapes.map(Reference.shape)
 
             for reference in declared {

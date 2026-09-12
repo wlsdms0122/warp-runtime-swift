@@ -11,19 +11,19 @@ import Foundation
 //
 // A refusal that names no place sends the author searching the whole document,
 // so every stage that reads a document before running it carries one. It is the
-// text's answer to what `Trace` answers about a run: this says where the words
+// text's answer to what `Trace` answers about a run: this says where the procedures
 // are, that says where the run had been, and a stage that refuses before
 // anything runs has only the first to give.
 //
 // The steps are kept rather than a string assembled from them, because a place
 // is read at more than one level and each spells it for its own reader. A part
 // and a construct travel as themselves; the names an author gave things travel
-// as the words they typed. A string spells both the same way and neither can be
+// as the spellings they typed. A string spells both the same way and neither can be
 // recovered from it.
 //
 // What is spelled here is the language's own reading, which is the one a caller
 // holding a program it assembled in Swift is owed. It wrote no document, so no
-// document's words would lead it anywhere. A reading in a document's words is
+// document's keys would lead it anywhere. A reading in a document's keys is
 // the reading side's, and a reading in lines and columns is the front end's.
 public struct Place: Sendable, Equatable {
     // MARK: - Property
@@ -229,12 +229,12 @@ public extension Place {
     // where something sits in the shape of a program; the boundary's `Slot` is
     // what a call fills, and the two are named apart because they are two
     // things. No spelling rides along: what a document writes a part under is
-    // the reading side's, and a word declared in two places is a word the two
+    // the reading side's, and a procedure declared in two places is a procedure the two
     // can come to disagree about with nothing going wrong loudly enough to
     // notice.
     //
     // One case per part and not per key. A conditional and a loop both hold a
-    // condition; that a document writes the two under different words is a fact
+    // condition; that a document writes the two under different keys is a fact
     // about the document.
     enum Part: Sendable, Equatable {
         case procedures
@@ -257,7 +257,7 @@ public extension Place {
         case closure
 
         // A condition, and which construct holds it. The construct is carried
-        // because a document does not write the two under one word (a
+        // because a document does not write the two under one key (a
         // conditional asks `when` and a loop asks `while`) and a part that had
         // to be told by whatever step came before it is a part that can be
         // reached from somewhere nobody remembered to tell.
@@ -305,7 +305,7 @@ public extension Place {
         case loop
     }
 
-    // What one step of a place is. The cases divide on who chose the word,
+    // What one step of a place is. The cases divide on who chose the procedure,
     // because that is the division a reader that maps a place back to a file
     // has to make.
     enum Step: Sendable, Equatable {
@@ -314,7 +314,7 @@ public extension Place {
         case key(String)
 
         // A part of the program, which every side names for itself. Carried as
-        // the part and not as a word, so the side spelling it is the side that
+        // the part and not as a spelling, so the side spelling it is the side that
         // knows what its reader is looking at.
         case part(Part)
 
@@ -334,7 +334,7 @@ public extension Place {
         // A body a caller assembled and handed over, which has no document
         // under it to have a key in. It renders like a key on purpose, since a
         // person reading a line wants a line. What tells the two apart is this
-        // case, for the reader that has to know which of the words it may look
+        // case, for the reader that has to know which of the procedures it may look
         // for in a file.
         case landmark(String)
 

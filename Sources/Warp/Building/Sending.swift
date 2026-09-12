@@ -7,20 +7,20 @@
 
 import Foundation
 
-// Where a native word's declared sends stand in its document's numbering. A
-// word names the spellings it sends and this answers with numbers, so the run
-// reads a number where the word wrote a spelling.
+// Where a native procedure's declared sends stand in its document's numbering. A
+// procedure names the spellings it sends and this answers with numbers, so the run
+// reads a number where the procedure wrote a spelling.
 //
 // Which row a number is stays the link's answer, the same as for a call a body
 // wrote. A spelling nothing declares is refused there.
 //
-// Refused here are the two claims a word makes that sending can contradict. A
+// Refused here are the two claims a procedure makes that sending can contradict. A
 // query is the claim that it answers without running, and running is not
-// something a caller can catch; an isolated word is the claim that it touches no name
-// another body could touch at the same time, and neither is that. A word
+// something a caller can catch; an isolated procedure is the claim that it touches no name
+// another body could touch at the same time, and neither is that. A procedure
 // making either claim while sending something that breaks it is refused.
 //
-// What it may fail with is not one of them. A Swift body can catch, so a word
+// What it may fail with is not one of them. A Swift body can catch, so a procedure
 // declaring it fails nothing while sending something that fails is describing
 // itself and not contradicting itself.
 struct Sending {
@@ -56,8 +56,8 @@ struct Sending {
 
         guard ordered.map(\.position) == Array(ordered.indices) else {
             throw BuildError(
-                "'\(label)' sends words standing at \(ordered.map(\.position)), which is"
-                    + " not one word to a place from the first",
+                "'\(label)' sends procedures standing at \(ordered.map(\.position)), which is"
+                    + " not one procedure to a place from the first",
                 at: Place.procedure(label.spelling, in: .assembled).part(.imports)
             )
         }

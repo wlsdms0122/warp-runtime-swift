@@ -9,18 +9,18 @@ import Foundation
 import Testing
 @testable import Warp
 
-// A contract: the words a value must answer. A document says which types
+// A contract: the procedures a value must answer. A document says which types
 // answer one, a signature bounds a type parameter by it, and a body calls the
-// words without knowing which type it holds. The link finds the declaration
-// behind each claimed word, and the run reads a row out of that by the name
+// procedures without knowing which type it holds. The link finds the declaration
+// behind each claimed procedure, and the run reads a row out of that by the name
 // the value wears.
 @Suite("What a value is able to do")
 struct ContractTests {
     // MARK: - Property
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a body calls a word on a value whose type it does not know")
-    func aContractCarriesAWordIntoAGenericBody() async throws {
+    @Test("a body calls a procedure on a value whose type it does not know")
+    func aContractCarriesAProcedureIntoAGenericBody() async throws {
         // Given. Two types, one contract, one body that knows neither
         let sut = try describing(
             body: [
@@ -51,7 +51,7 @@ struct ContractTests {
         #expect(try await run(sut) == .array([.string("balance 7"), .string("card 42")]))
     }
 
-    @Test("a type that does not answer every word does not stand in the slot")
+    @Test("a type that does not answer every procedure does not stand in the slot")
     func anUnsatisfyingTypeRefuses() throws {
         // Given. `bank.Plain` declares no `describe`
         let sut = try describing(
@@ -78,13 +78,13 @@ struct ContractTests {
         }
     }
 
-    @Test("a declaration cannot take a contract word's spelling")
-    func aDeclarationCannotTakeAContractWordSpelling() throws {
-        // Given. `app.Describable.describe` is both a contract's word and a
+    @Test("a declaration cannot take a contract procedure's spelling")
+    func aDeclarationCannotTakeAContractProcedureSpelling() throws {
+        // Given. `app.Describable.describe` is both a contract's procedure and a
         // declaration, so a call writing that spelling has two readings
         let sut = try describing(
             types: ["bank.Plain": .record(["note": .string])],
-            words: [
+            procedures: [
                 "app.Describable.describe": Procedure(
                     signature: Signature(
                         receiver: "of",
@@ -103,11 +103,11 @@ struct ContractTests {
         #expect {
             try Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            "\(error)".contains("A contract's word and a declaration cannot take one spelling")
+            "\(error)".contains("A contract's procedure and a declaration cannot take one spelling")
         }
     }
 
-    @Test("a word sent through a contract is judged against what the contract said")
+    @Test("a procedure sent through a contract is judged against what the contract said")
     func theContractOwnsTheJudgment() throws {
         // Given. The contract says `describe` answers a string and takes
         // nothing, so a call handing it something refuses
@@ -139,7 +139,7 @@ struct ContractTests {
         }
     }
 
-    @Test("a declaration named for a type and a word is held to the contract")
+    @Test("a declaration named for a type and a procedure is held to the contract")
     func aMismatchedWitnessRefuses() throws {
         // Given. `bank.Account.describe` answers an int where the contract
         // writes a string
@@ -170,8 +170,8 @@ struct ContractTests {
         }
     }
 
-    @Test("a declaration named for a type and a word answers nothing nobody claimed")
-    func anUnclaimedSpellingIsAnOrdinaryWord() throws {
+    @Test("a declaration named for a type and a procedure answers nothing nobody claimed")
+    func anUnclaimedSpellingIsAnOrdinaryProcedure() throws {
         // Given. One document declares `bank.Account.describe` and says
         // nothing about any contract. Another, which it never names, declares
         // a contract asking `describe` and answering a string
@@ -197,15 +197,15 @@ struct ContractTests {
             ]
         )
 
-        // When / Then. The spelling is that document's word, so a contract
+        // When / Then. The spelling is that document's procedure, so a contract
         // arriving beside it reserves nothing
         #expect(throws: Never.self) {
             try Builder().build([held, asking] + Module.standard, entry: entryName)
         }
     }
 
-    @Test("a claim is held to every word the contract asks")
-    func aClaimMissingAWordRefuses() throws {
+    @Test("a claim is held to every procedure the contract asks")
+    func aClaimMissingAProcedureRefuses() throws {
         // Given. `bank.Plain` is said to answer, and nothing declares
         // `bank.Plain.describe`
         let sut = try Module(
@@ -227,7 +227,7 @@ struct ContractTests {
     func aThirdDocumentMayClaimThePair() throws {
         // Given. Two libraries that know nothing of each other, and a third
         // that says one's type answers the other's contract and writes the
-        // word that answers it.
+        // procedure that answers it.
         let charting = try Module(
             contracts: ["chart.Plottable": ["height": Signature(returns: .int)]],
             procedures: [
@@ -373,8 +373,8 @@ struct ContractTests {
     // MARK: - Public
     // MARK: - Private
     // Two types that describe themselves, a contract asking for it, and a
-    // generic word standing between the caller and both.
-    // A word bounded by the contract, and an entry that hands the type to it.
+    // generic procedure standing between the caller and both.
+    // A procedure bounded by the contract, and an entry that hands the type to it.
     // A claim is held where a document leans on the pair: a list is assembled
     // from what a host was willing to supply, so one of its documents claiming
     // something the list cannot make good on refuses only the program that
@@ -407,7 +407,7 @@ struct ContractTests {
 
     private func describing(
         types extra: [Name: TypeExpression] = [:],
-        words added: [Name: Procedure] = [:],
+        procedures added: [Name: Procedure] = [:],
         body: [Statement],
         result: Warp.Expression
     ) throws -> Module {

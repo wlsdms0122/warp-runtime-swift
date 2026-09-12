@@ -8,16 +8,16 @@
 import Foundation
 import Warp
 
-// A fraction read back as a machine word, after it was rounded. `int` is the
-// machine word, so a fraction whose whole part is past it has no int to answer.
-// That stops the run the way arithmetic off the word's edge does.
+// A fraction read back as an int, after it was rounded. An int is 64 bits, so
+// a fraction whose whole part is past its edge has no int to answer. That stops
+// the run the way arithmetic off that edge does.
 struct IntegerConversion: Sendable {
     // MARK: - Property
-    private let word: String
+    private let procedure: String
 
     // MARK: - Initializer
-    init(_ word: String) {
-        self.word = word
+    init(_ procedure: String) {
+        self.procedure = procedure
     }
 
     // MARK: - Public
@@ -33,7 +33,7 @@ struct IntegerConversion: Sendable {
             throw ExecutionError("\(asked) has no whole answer")
 
         case .overflow:
-            throw ExecutionError("\(word) of \(asked) overflows int")
+            throw ExecutionError("\(procedure) of \(asked) overflows int")
 
         // The input already went through `rounded(_:)`, so digits after the
         // point cannot survive to here.

@@ -147,7 +147,7 @@ struct BuilderTests {
                 entryName: Procedure(body: []),
                 "helper": Procedure(
                     signature: Signature(
-                        parameters: ["word": Parameter(type: .string, default: .null)]
+                        parameters: ["procedure": Parameter(type: .string, default: .null)]
                     ),
                     body: []
                 )
@@ -397,9 +397,9 @@ struct BuilderTests {
         #expect(answer == .int(3))
     }
 
-    @Test("a constant may reach a word the same way a body does")
-    func aConstantReachesAWord() async throws {
-        // Given. Folding happens after the words are known, so a constant that
+    @Test("a constant may reach a procedure the same way a body does")
+    func aConstantReachesAProcedure() async throws {
+        // Given. Folding happens after the procedures are known, so a constant that
         // interpolates is a constant that sends
         let sut = try Module(
             constants: [

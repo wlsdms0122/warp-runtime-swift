@@ -46,11 +46,11 @@ public struct ValueReader: Decodable {
         }
 
         // A foreign carrier's number is a binary64 by the carrier's own nature:
-        // past the machine word its digits cannot be told from a fraction
+        // past the int's range its digits cannot be told from a fraction
         // spelled without a point (`1e19` and its digits arrive identically) so
-        // what a word cannot hold reads as the double the carrier holds. This
-        // is the one reader that does not keep a whole numeral's kind past the
-        // word, on purpose: the warp encodings and the YAML front end own their
+        // what an int cannot hold reads as the double the carrier holds. This
+        // is the one reader that does not keep a whole numeral's kind past that
+        // range, on purpose: the warp encodings and the YAML front end own their
         // grammars and refuse there, and this path reads what a Codable carrier
         // holds, which lost the distinction before this reader saw it.
         if let double = try? container.decode(Double.self) {

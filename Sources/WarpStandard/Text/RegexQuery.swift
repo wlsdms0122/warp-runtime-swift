@@ -16,14 +16,14 @@ struct RegexQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     // A pattern that does not compile is an author mistake, and a constant one
-    // is knowable before the run, which is the whole reason a word gets to
+    // is knowable before the run, which is the whole reason a procedure gets to
     // check its own arguments at load.
     func validate(_ question: Question<Self>) throws {
         guard
             case let .string(pattern) = question[.value],
             (try? NSRegularExpression(pattern: pattern)) != nil
         else {
-            // A word judging its own arguments is handed the values and not
+            // A procedure judging its own arguments is handed the values and not
             // where they were written; the link knows that, and says it.
             throw ValidationError("regex needs a valid string pattern", at: nil)
         }

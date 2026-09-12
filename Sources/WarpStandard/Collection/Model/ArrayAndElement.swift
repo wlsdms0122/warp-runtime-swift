@@ -9,7 +9,7 @@ import Foundation
 import Warp
 
 // An array and one more element for it. The element is the array's own, so a
-// word that puts it among the rest answers an array of the same kind.
+// procedure that puts it among the rest answers an array of the same kind.
 enum ArrayAndElement: Int, ParameterSet {
     case of
     case value

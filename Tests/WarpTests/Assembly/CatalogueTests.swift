@@ -47,8 +47,8 @@ struct CatalogueTests {
         #expect(try builder.build(closed, entry: entryName).rows[entryName] != nil)
     }
 
-    @Test("a word a body sends brings the module that declares it")
-    func aSentWordBringsItsModule() throws {
+    @Test("a procedure a body sends brings the module that declares it")
+    func aSentProcedureBringsItsModule() throws {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
@@ -65,10 +65,10 @@ struct CatalogueTests {
         )
 
         // When. The catalogue holds the whole standard vocabulary; the program
-        // names one word of it.
+        // names one procedure of it.
         let closed = try Catalogue(Module.standard).closing([program])
 
-        // Then. `math` came for the word, and `foundation` came after it for
+        // Then. `math` came for the procedure, and `foundation` came after it for
         // the constraint `math`'s own signatures mention.
         #expect(closed.count == 3)
         #expect(try builder.build(closed, entry: entryName).rows["std.math.plus"] != nil)
@@ -98,10 +98,10 @@ struct CatalogueTests {
         #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
 
-    @Test("a caller cannot supply a granted word to a granted module")
+    @Test("a caller cannot supply a granted procedure to a granted module")
     func aWantedModuleDoesNotStandInForTheCatalogue() throws {
-        // Given. `supplier` sends a word the catalogue declares, and the
-        // program declares that same word itself.
+        // Given. `supplier` sends a procedure the catalogue declares, and the
+        // program declares that same procedure itself.
         let real = try Module(
             procedures: ["app.w": Procedure(body: [], result: .literal(.string("host")))]
         )
@@ -115,12 +115,12 @@ struct CatalogueTests {
             ]
         )
 
-        // When. `supplier` needs the word, so the catalogue's declarer is
+        // When. `supplier` needs the procedure, so the catalogue's declarer is
         // brought whatever else declares it.
         let closed = try Catalogue([real, supplier]).closing([program])
 
         // Then. The build meets both and refuses, rather than binding
-        // `lib.run` to the word the program wrote.
+        // `lib.run` to the procedure the program wrote.
         #expect(closed.count == 3)
         #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
     }
@@ -174,7 +174,7 @@ struct CatalogueTests {
 
     @Test("what a module needs is closed through the modules brought for it")
     func needsAreClosedThroughWhatWasBrought() throws {
-        // Given. `program` names a word of `text`, which declares nothing of
+        // Given. `program` names a procedure of `text`, which declares nothing of
         // `foundation` itself but mentions its constraints in signatures.
         let program = try Module(
             procedures: [
@@ -284,7 +284,7 @@ struct CatalogueTests {
             ]
         )
 
-        // When. The contract is nowhere in the catalogue, so the words a claim
+        // When. The contract is nowhere in the catalogue, so the procedures a claim
         // is spelled from are read off the answer as it grows
         let closed = try Catalogue([holding, answering]).closing([program])
 
@@ -351,26 +351,26 @@ struct CatalogueTests {
         }
     }
 
-    @Test("a document's word collides before its shape")
-    func aWordCollidesBeforeAShape() throws {
-        // Given. One document declaring a word and a type, and a second
+    @Test("a document's procedure collides before its shape")
+    func aProcedureCollidesBeforeAShape() throws {
+        // Given. One document declaring a procedure and a type, and a second
         // declaring both of the same names. The catalogue has two answers for
         // each and reports the first it walks into.
         let first = try Module(
             types: ["a.Shape": .record(["x": .int])],
-            procedures: ["a.word": Procedure(body: [], result: .literal(.null))]
+            procedures: ["a.procedure": Procedure(body: [], result: .literal(.null))]
         )
         let second = try Module(
             types: ["a.Shape": .record(["x": .int])],
-            procedures: ["a.word": Procedure(body: [], result: .literal(.null))]
+            procedures: ["a.procedure": Procedure(body: [], result: .literal(.null))]
         )
 
-        // When / Then. Words stand before shapes, so the word is the one an
+        // When / Then. Procedures stand before shapes, so the procedure is the one an
         // author is told about.
         #expect {
             try Catalogue([first, second])
         } throws: { error in
-            "\(error)".contains("the word 'a.word' is declared by")
+            "\(error)".contains("the procedure 'a.procedure' is declared by")
         }
     }
 }

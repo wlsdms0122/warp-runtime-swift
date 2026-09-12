@@ -9,16 +9,16 @@ import Foundation
 import Testing
 @testable import Warp
 
-// Where a refusal says the words are.
+// Where a refusal says the procedures are.
 //
 // What these hold a place to is that it leads somewhere for the reader it is
 // shown to. These programs are assembled in Swift and were never written down,
-// so the reader is the caller that built them and the words are the language's
+// so the reader is the caller that built them and the procedures are the language's
 // own. A document's would name keys that exist in no file. Reading a place in a
-// document's words is asked of `WarpSyntax`, which has the document.
+// document's procedures is asked of `WarpSyntax`, which has the document.
 //
 // The steps are what makes both readings possible: a slot and a construct
-// travel as themselves, and only what an author named travels as a word.
+// travel as themselves, and only what an author named travels as a procedure.
 @Suite
 struct PlaceTests {
     // MARK: - Property
@@ -27,7 +27,7 @@ struct PlaceTests {
     @Test("a place is spelled from the language's own names")
     func aPlaceIsSpelledFromTheLanguagesNames() {
         // Given. A slot a document calls something else. A loop's condition is
-        // `where` in a document, and that word appears nowhere in what a caller
+        // `where` in a document, and that procedure appears nowhere in what a caller
         // assembling this wrote.
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
@@ -175,7 +175,7 @@ struct PlaceTests {
         // Given. The same slot of the same statement, reached once by the walk
         // that checks a document against itself and once by the walk that
         // resolves its names. Two spellings of one place is two documents as
-        // far as an author following the words is concerned.
+        // far as an author following the procedures is concerned.
         let linked = try Module(
             procedures: [
                 entryName: Procedure(body: [
@@ -226,7 +226,7 @@ struct PlaceTests {
         //
         // Each of them is made to speak about this call in the way only it can:
         // a name nothing declares for the walk that checks the document against
-        // itself, a word nothing declares for the walk that resolves names, a
+        // itself, a procedure nothing declares for the walk that resolves names, a
         // claim the types already prove for the walk that reads them.
         let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].call"
 
@@ -416,11 +416,11 @@ struct PlaceTests {
         #expect(error?.place?.rendered == "d0cf00/constraints.wallet.Spendable")
     }
 
-    @Test("a statement's construct is the language's word, and says so")
+    @Test("a statement's construct is the language's procedure, and says so")
     func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
         // Given. One shape, two texts: `{ call: … }` and `{ value: { call: … }
         // }` are both a call by the time anything here sees one, so the
-        // word for the construct is this implementation's rather than something
+        // procedure for the construct is this implementation's rather than something
         // a reader may go looking for in a file.
         let sut = try #require(
             place(
@@ -431,10 +431,10 @@ struct PlaceTests {
             )
         )
 
-        // Then. The word is spelled for the person reading the line
+        // Then. The procedure is spelled for the person reading the line
         #expect(sut.rendered?.contains(".sent[0].call.") == true)
 
-        // And carried as the shape rather than as any word, so the side that
+        // And carried as the shape rather than as any procedure, so the side that
         // spells it is the side that knows what its reader is looking at
         #expect(sut.steps.contains(.construct(.call)))
         #expect(sut.steps.contains(.part(.arguments)))
@@ -464,7 +464,7 @@ struct PlaceTests {
     @Test("both stages point at the statement that leaves, not at what follows it")
     func theLeaveRuleIsPlacedOnTheLeavingStatement() throws {
         // Given. The one rule both stages hold: the load catches the leaves the
-        // text shows, the build catches the word that declares `never`. What an
+        // text shows, the build catches the procedure that declares `never`. What an
         // author has to change is the statement that ends the body, so that is
         // where each of them says it is.
         let declared = try Module(

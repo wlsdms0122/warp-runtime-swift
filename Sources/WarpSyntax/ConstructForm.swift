@@ -10,7 +10,7 @@ import Warp
 
 // How a document spells a construct. A keyword and an expression meet here and
 // nowhere else. The language's own constructs have no names, and this is the
-// one surface that says which word builds which.
+// one surface that says which procedure builds which.
 //
 // A form is asked for its expression with the name it is being bound under,
 // because two constructs need a name to exist inside their body and this
@@ -20,12 +20,12 @@ import Warp
 // over.
 public protocol ConstructForm: Sendable, Decodable {
     // The spelling this form proposes. `ConstructRegistry` may register it
-    // under another, so a form never learns which word actually reached it. A
-    // word is a fact about a notation, and a form is not one.
+    // under another, so a form never learns which key actually reached it. A
+    // procedure is a fact about a notation, and a form is not one.
     static var key: Name { get }
 
     // Whether this form opens a condition slot. Answering yes is how a form owns
-    // the words its notation spends there, without knowing any of them.
+    // the procedures its notation spends there, without knowing any of them.
     //
     // It is a fact about the form rather than a sum the form computes. A form
     // that had to fetch what its slot spends is a form that can fetch nothing
@@ -41,11 +41,11 @@ public protocol ConstructForm: Sendable, Decodable {
     // end of a wire, where nobody can see what wrote it.
     static var requiresBody: Bool { get }
 
-    // Words this form's expression sends, which a link has to declare for the
+    // Procedures this form's expression sends, which a link has to declare for the
     // spelling to reach anything. Most forms build the language's own constructs
     // and send nothing, so most leave this empty.
     //
-    // These are the form's own. A word it decided to send. What its slots spend
+    // These are the form's own. A procedure it decided to send. What its slots spend
     // is not here; it is above.
     static func vocabulary(with notation: Notation) -> Set<Name>
 

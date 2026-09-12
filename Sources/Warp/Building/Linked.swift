@@ -42,9 +42,9 @@ public final class Linked: Sendable {
     public let purity: Purity
     public let isolation: Isolation
 
-    // What may come out of this when the work goes wrong: the words its
+    // What may come out of this when the work goes wrong: the procedures its
     // failures name themselves by. Read off the body's casts, calls and
-    // rescues, or declared by the native word.
+    // rescues, or declared by the native procedure.
     public let failing: Failing
 
     // The parameters as the run settles them, in the same order, and what
@@ -58,7 +58,7 @@ public final class Linked: Sendable {
     // so a run that is handed one asks whether it was made by the same link.
     let table: LoweredTypeTable
 
-    // The rows this row's word sends, in the places the word names them at.
+    // The rows this row's procedure sends, in the places the procedure names them at.
     // Empty for a body, whose sends are calls its own code carries.
     let sends: [Int]
 
@@ -157,7 +157,7 @@ public final class Linked: Sendable {
             purity: pure ? .pure : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
-            implementation: .native(procedure.implementation.native ?? .query(UnsettledWord())),
+            implementation: .native(procedure.implementation.native ?? .query(UnsettledProcedure())),
             sends: sends,
             in: table
         )

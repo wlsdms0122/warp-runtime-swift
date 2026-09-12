@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// A string and the string a word reads it against: a prefix, a pattern, a
+// A string and the string a procedure reads it against: a prefix, a pattern, a
 // separator.
 enum StringPair: Int, ParameterSet {
     case of

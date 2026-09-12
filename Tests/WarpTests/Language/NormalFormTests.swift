@@ -79,7 +79,7 @@ struct NormalFormTests {
         #expect(combining.spelling.count == 3)
     }
 
-    @Test("a type's name is identifiers joined by dots, and never a scalar's word")
+    @Test("a type's name is identifiers joined by dots, and never a scalar's procedure")
     func aTypesNameIsDeclarable() throws {
         #expect(try Name("std.logic.Answer").isDeclarable)
         #expect(try !Name("std..Answer").isDeclarable)

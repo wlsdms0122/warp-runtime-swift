@@ -9,21 +9,21 @@ import Foundation
 import Testing
 @testable import Warp
 
-// The word-boundary judges in one place: every judge that meets a fraction or
+// The procedure-boundary judges in one place: every judge that meets a fraction or
 // a spelled candidate reads through these, so the edges are pinned here once
 // rather than rediscovered at each caller.
-@Suite("Word readings and spellings")
+@Suite("Procedure readings and spellings")
 struct IntSpellingTests {
     // MARK: - Lifecycle
     // MARK: - Test
-    @Test("a fraction reads as the word it is, and misses by the fact it is")
+    @Test("a fraction reads as the int it is, and misses by the fact it is")
     func readingNamesTheFact() {
         #expect({ if case .int(42) = Int.reading(42.0) { true } else { false } }())
         #expect({ if case .int(Int.min) = Int.reading(-0x1p63) { true } else { false } }())
         #expect({ if case .int(0) = Int.reading(-0.0) { true } else { false } }())
 
-        // The word's upper edge: 2^63 itself is already past Int.max, and
-        // infinity is past every word, the same fact at its limit.
+        // The procedure's upper edge: 2^63 itself is already past Int.max, and
+        // infinity is past every procedure, the same fact at its limit.
         #expect({ if case .overflow = Int.reading(0x1p63) { true } else { false } }())
         #expect({ if case .overflow = Int.reading(1e30) { true } else { false } }())
         #expect({ if case .overflow = Int.reading(-1e30) { true } else { false } }())
@@ -82,7 +82,7 @@ struct IntSpellingTests {
 
         // The reading behind the door tells the two misses apart: an alias
         // is not the one spelling, and the one spelling of a number past the
-        // word is exactly that.
+        // procedure is exactly that.
         #expect({ if case .notOneSpelling = Int.reading(spelling: "-0") { true } else { false } }())
         #expect({ if case .notOneSpelling = Int.reading(spelling: "007") { true } else { false } }())
         #expect({ if case .overflow = Int.reading(spelling: "9223372036854775808") { true } else { false } }())

@@ -11,26 +11,26 @@ import Foundation
 // and leans on others, and the same question is asked of every one: which
 // document in this list declares it.
 //
-// The kind is part of the value, so a word and a shape spelled alike are two
+// The kind is part of the value, so a procedure and a shape spelled alike are two
 // references. A link refuses a name standing for a shape and a membership at
-// once and says nothing about a word spelled like a type.
+// once and says nothing about a procedure spelled like a type.
 enum Reference: Hashable, Sendable, Comparable {
-    case word(Name)
+    case procedure(Name)
     case shape(Name)
 
     // MARK: - Internal
-    // Words before shapes, and each in name order. A catalogue reports the
+    // Procedures before shapes, and each in name order. A catalogue reports the
     // first collision it walks into, so this is the order an author meets
     // them in.
     static func < (lhs: Reference, rhs: Reference) -> Bool {
         switch (lhs, rhs) {
-        case let (.word(left), .word(right)), let (.shape(left), .shape(right)):
+        case let (.procedure(left), .procedure(right)), let (.shape(left), .shape(right)):
             return left < right
 
-        case (.word, .shape):
+        case (.procedure, .shape):
             return true
 
-        case (.shape, .word):
+        case (.shape, .procedure):
             return false
         }
     }
@@ -38,7 +38,7 @@ enum Reference: Hashable, Sendable, Comparable {
     // What a sentence calls this kind where it names one.
     var noun: String {
         switch self {
-        case .word: "word"
+        case .procedure: "procedure"
         case .shape: "shape"
         }
     }
@@ -47,7 +47,7 @@ enum Reference: Hashable, Sendable, Comparable {
     // kind.
     var name: Name {
         switch self {
-        case let .word(name), let .shape(name): name
+        case let .procedure(name), let .shape(name): name
         }
     }
 }

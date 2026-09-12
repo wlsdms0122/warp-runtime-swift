@@ -249,8 +249,8 @@ struct RangeTests {
         }
     }
 
-    @Test("a range fills a word's receiver, the way an int does")
-    func aRangeFillsAWordsReceiver() async throws {
+    @Test("a range fills a procedure's receiver, the way an int does")
+    func aRangeFillsAProceduresReceiver() async throws {
         // Given. A range's value stands where the int it narrows stands
         let sut = try Module(
             procedures: [

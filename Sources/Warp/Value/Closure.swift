@@ -50,7 +50,7 @@ public struct Closure: Sendable {
     }
 
     // Whether this may run beside another body. Purity does not answer it: a
-    // pure body can still call a native word that holds state, and that word
+    // pure body can still call a native procedure that holds state, and that procedure
     // is what two of these would meet in.
     public var runsBeside: Bool {
         isolation == .isolated

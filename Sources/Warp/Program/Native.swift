@@ -7,10 +7,10 @@
 
 import Foundation
 
-// A word implemented in native code: one that answers without running
+// A procedure implemented in native code: one that answers without running
 // anything, or one that reaches outside the run.
 //
-// What such a word declares about itself is read here. A body's purity,
+// What such a procedure declares about itself is read here. A body's purity,
 // isolation and failing are what its code turns out to do and a link works
 // them out; a native says, and the row a compile settles records what it said.
 enum Native: Sendable {
@@ -54,7 +54,7 @@ enum Native: Sendable {
 
     // The places it reads its arguments at, with the name each place stands
     // under. Its own, so a declaration whose parameters stand elsewhere is a
-    // word reading an argument nobody sent it.
+    // procedure reading an argument nobody sent it.
     var parameters: [(position: Int, name: Name)] {
         switch self {
         case let .query(query):
@@ -65,7 +65,7 @@ enum Native: Sendable {
         }
     }
 
-    // The words it sends, in the places it names them at.
+    // The procedures it sends, in the places it names them at.
     var imports: [(position: Int, selector: Name)] {
         switch self {
         case let .query(query):
@@ -76,8 +76,8 @@ enum Native: Sendable {
         }
     }
 
-    // The words it sends as a link compares them: in position order,
-    // spellings only. A row records these where it was compiled, and a word
+    // The procedures it sends as a link compares them: in position order,
+    // spellings only. A row records these where it was compiled, and a procedure
     // brought later naming others sends where the row does not stand.
     var sending: [Name] {
         imports.sorted { left, right in left.position < right.position }.map(\.selector)
@@ -86,13 +86,13 @@ enum Native: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
-    // Generic, so the word's own parameter type has a name here. Handing an
+    // Generic, so the procedure's own parameter type has a name here. Handing an
     // existential to a generic function opens it.
-    private func places<P: NativeProcedure>(of word: P) -> [(position: Int, name: Name)] {
+    private func places<P: NativeProcedure>(of procedure: P) -> [(position: Int, name: Name)] {
         P.Parameters.allCases.map { key in (position: key.position, name: key.name) }
     }
 
-    private func sends<P: NativeProcedure>(of word: P) -> [(position: Int, selector: Name)] {
+    private func sends<P: NativeProcedure>(of procedure: P) -> [(position: Int, selector: Name)] {
         P.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
     }
 }

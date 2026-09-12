@@ -49,7 +49,7 @@ extension Int {
     public static func reading(spelling: String) -> Spelled {
         guard let number = Int(spelling) else {
             // The parse missed: either the grammar did too, or the grammar
-            // held and only the word could not.
+            // held and only the int could not.
             return wholeGrammar(spelling) ? .overflow : .notOneSpelling
         }
 

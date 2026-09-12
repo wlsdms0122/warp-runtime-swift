@@ -139,7 +139,7 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a key that is not a word is written in quotes, and read back")
+    @Test("a key that is not a procedure is written in quotes, and read back")
     func aQuotedKeyComesBack() throws {
         // Given
         let document = Value.dictionary(["spaced key": .int(1), "가나다": .int(2)])
@@ -214,8 +214,8 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a bare word the format never assigned is refused")
-    func anUnknownWordIsRefused() {
+    @Test("a bare token the format never assigned is refused")
+    func anUnknownTokenIsRefused() {
         for text in ["warpt 1\nyes", "warpt 1\nnul", "warpt 1\n--1", "warpt 1\n1.5.5", "warpt 1\n1e"] {
             #expect(throws: (any Error).self) {
                 try TextEncoding.value(from: text)
@@ -331,7 +331,7 @@ struct TextEncodingTests {
         #expect(try TextEncoding.text(from: .bytes([0x00, 0xff])) == "warpt 1\nx\"00ff\"\n")
 
         // And the spellings that are not it. Refused by the grammar, with the
-        // grammar's own words, not left to the canonical backstop
+        // grammar's own terms, not left to the canonical backstop
         for text in [
             "warpt 1\nx\"6A\"\n",    // uppercase
             "warpt 1\nx\"6a 73\"\n"  // spaced

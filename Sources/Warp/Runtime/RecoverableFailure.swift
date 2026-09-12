@@ -14,16 +14,16 @@ import Foundation
 // It lives beside the runtime because it is `attempt`'s half of a contract, not
 // a taxonomy of errors: the executor is the only thing that reads it, and what
 // declares it is whatever can fail while a body runs. Three constructs here,
-// and a caller's own words out beyond the package.
+// and a caller's own procedures out beyond the package.
 //
 // While a rescue runs, the failure exists as a value: the executor binds
 // `payload` under the failed statement's id, so a rescue body can read what
 // went wrong through `<id>.message` and, under `<id>.details`, whatever else
 // that failure carries. The envelope is the same for every failure and what
-// rides inside it is the failing word's own. The runtime owns the mechanism,
+// rides inside it is the failing procedure's own. The runtime owns the mechanism,
 // the error owns the vocabulary.
 public protocol RecoverableFailure: WarpError {
-    // One word naming what happened. `aborted`, `concurrent_failed`.
+    // What this failure names itself. `aborted`, `concurrent_failed`.
     var type: String { get }
 
     // Whatever this failure carries beyond the envelope. Empty for most; a
@@ -41,7 +41,7 @@ public extension RecoverableFailure {
     // system keeps.
     //
     // What a failure carries rides in a box of its own rather than beside the
-    // envelope's names, so no failure can redefine the word naming what
+    // envelope's names, so no failure can redefine the procedure naming what
     // happened by adding a field.
     var payload: Value {
         .dictionary([
@@ -56,7 +56,7 @@ public extension RecoverableFailure {
 // hold the rescue's name to it.
 //
 // The envelope is the whole declaration: `type` and `message` are what every
-// failure holds, and `details` is the box the failing word fills. Declaring
+// failure holds, and `details` is the box the failing procedure fills. Declaring
 // the box as a dictionary of `any` is what lets a rescue reach what a failure
 // carried by naming it, without the shape of the box being part of what a
 // runtime must implement.

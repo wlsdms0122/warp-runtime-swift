@@ -37,10 +37,10 @@ struct Lowering {
     // Each document's variables by name, in the order a run makes their boxes.
     private(set) var variables: [Int: [Name: Int]] = [:]
 
-    // Every contract's words, under the spelling a call writes to reach one.
+    // Every contract's procedures, under the spelling a call writes to reach one.
     // A selector in here names no row: it names the table of rows the run
     // picks from.
-    let contractWords: [Name: ContractWord]
+    let contractProcedures: [Name: ContractProcedure]
 
     // The declared types as the run reads them, for a cast's shape and a
     // closure's row.
@@ -67,11 +67,11 @@ struct Lowering {
     // MARK: - Initializer
     init(
         table: [Linked] = [],
-        contractWords: [Name: ContractWord] = [:],
+        contractProcedures: [Name: ContractProcedure] = [:],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = table
-        self.contractWords = contractWords
+        self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
     }
 
@@ -81,7 +81,7 @@ struct Lowering {
     // are read again.
     init(
         _ carried: Carried,
-        contractWords: [Name: ContractWord],
+        contractProcedures: [Name: ContractProcedure],
         loweredTypes: LoweredTypeTable
     ) {
         self.table = carried.table.map { row in Linked(row, in: loweredTypes) }
@@ -89,7 +89,7 @@ struct Lowering {
         self.numbering = carried.numbering
         self.variables = carried.variables
         self.closureRows = carried.closureRows
-        self.contractWords = contractWords
+        self.contractProcedures = contractProcedures
         self.loweredTypes = loweredTypes
     }
 
@@ -104,7 +104,7 @@ struct Lowering {
         self.table = table
         self.rows = rows
         self.numbering = numbering
-        self.contractWords = [:]
+        self.contractProcedures = [:]
         self.loweredTypes = loweredTypes
     }
 
@@ -627,10 +627,10 @@ struct Lowering {
             )
 
         case let .call(call):
-            // A selector naming a contract's word names no row. Which row
+            // A selector naming a contract's procedure names no row. Which row
             // answers is the receiver's, so every one the build found is
             // lowered here and the run picks by the name it reads.
-            if let asked = contractWords[call.selector] {
+            if let asked = contractProcedures[call.selector] {
                 return .dispatch(
                     try lower(call, through: asked, in: scope, on: slots, label: label, at: place)
                 )
@@ -651,7 +651,7 @@ struct Lowering {
 
     private mutating func lower(
         _ call: Call,
-        through asked: ContractWord,
+        through asked: ContractProcedure,
         in scope: Names,
         on slots: Slots,
         label: Name,
@@ -671,7 +671,7 @@ struct Lowering {
         // and the run hands what it read to whichever row it picked.
         return DispatchOperation(
             contract: asked.contract,
-            word: asked.word,
+            procedure: asked.procedure,
             receiver: receiver,
             arguments: try arguments(
                 of: call,

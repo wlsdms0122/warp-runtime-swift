@@ -69,7 +69,7 @@ struct TypeTests {
         }
     }
 
-    @Test("a name is identifiers joined by dots, and never a scalar's word", arguments: [
+    @Test("a name is identifiers joined by dots, and never a scalar's procedure", arguments: [
         ("Account", true), ("bank.Account", true), ("_x1", true),
         ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])
@@ -177,7 +177,7 @@ struct TypeTests {
             result: .literal(.int(1))
         )
         let wants = Procedure(
-            signature: Signature(parameters: ["word": Parameter(type: .string)]),
+            signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
             body: []
         )
         let entry = Procedure(
@@ -186,7 +186,7 @@ struct TypeTests {
                         Call(
                             selector: "wants",
                             arguments: [
-                                "word": .call(Call(selector: "counts"))
+                                "procedure": .call(Call(selector: "counts"))
                             ]
                         )
                     )
@@ -211,7 +211,7 @@ struct TypeTests {
         // a declared answer earns is earned here.
         let counts = Procedure(body: [], result: .literal(.int(1)))
         let wants = Procedure(
-            signature: Signature(parameters: ["word": Parameter(type: .string)]),
+            signature: Signature(parameters: ["procedure": Parameter(type: .string)]),
             body: []
         )
         let entry = Procedure(
@@ -220,7 +220,7 @@ struct TypeTests {
                         Call(
                             selector: "wants",
                             arguments: [
-                                "word": .call(Call(selector: "counts"))
+                                "procedure": .call(Call(selector: "counts"))
                             ]
                         )
                     )

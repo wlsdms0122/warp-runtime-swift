@@ -10,8 +10,8 @@ import Foundation
 // Takes every module this run was given and one name to start from, and answers
 // with an image, or refuses.
 //
-// A build is handed its whole module graph at once. The words a program can
-// call are the words the caller put in front of it, so what to build is the
+// A build is handed its whole module graph at once. The procedures a program can
+// call are the procedures the caller put in front of it, so what to build is the
 // caller's statement and joining the names up is this. A module's `imports` says what it
 // asks for and never where to find it, and the entry is an argument rather than
 // a name written into a document.
@@ -21,10 +21,10 @@ import Foundation
 // that way, and so is one in a declaration this entry never calls. The entry
 // says which declarations a run reaches and nothing about which ones hold.
 //
-// Every call goes through the same gate: a library word and a procedure are
-// checked against a signature by the same code, and the only difference is
-// where the signature came from. The installed table, or another module in the
-// same link.
+// Every call goes through the same gate: a procedure the host installed and one
+// another document wrote are checked against a signature by the same code, and
+// the only difference is where the signature came from. The installed table, or
+// another module in the same link.
 //
 // A name is its declared spelling and nothing else. A call site says
 // `std.math.plus`, and that is the one declaration it can mean, wherever it was
@@ -42,7 +42,7 @@ import Foundation
 // everything a document says against the interfaces it reaches: resolving
 // (`Builder+Resolving`), the facts nobody declared (`Builder+Deriving`,
 // `Builder+Isolating`), judging (`Builder+Judging`, `Builder+Typing`) and
-// lowering (`Lowering`). It runs the words a constant calls, which is what
+// lowering (`Lowering`). It runs the procedures a constant calls, which is what
 // folding is. Linking takes what that answered and one name to start from,
 // judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
@@ -76,7 +76,7 @@ public struct Builder: Sendable {
     // every run.
     //
     // The order is worked out here. What a document reaches is read off the
-    // words it sends and the shapes its signatures name, neither of which a
+    // procedures it sends and the shapes its signatures name, neither of which a
     // caller wrote down, so a caller has nothing to sort by.
     //
     public func compile(_ modules: [Module]) throws -> [Compiled] {
@@ -86,13 +86,13 @@ public struct Builder: Sendable {
     // The same, against documents the caller already holds.
     //
     // `compiled` is what the caller already holds, and the documents given
-    // here are compiled against it. A word a document sends is answered by
+    // here are compiled against it. A procedure a document sends is answered by
     // either, and one that nothing here answers is refused where it is sent.
     //
     // The artifacts and the code behind them are asked for together, since
     // neither is any use here without the other: an artifact names its
     // natives and holds none of the code, and folding a constant runs the
-    // words the documents behind it declared.
+    // procedures the documents behind it declared.
     public func compile(
         _ modules: [Module],
         against compiled: [Compiled],
@@ -105,7 +105,7 @@ public struct Builder: Sendable {
     // caller compiling against them more than once pays for that once.
     //
     // What it costs is every declaration behind the one being compiled: its
-    // signature lowered into slots, and for a native the host's word joined to
+    // signature lowered into slots, and for a native the host's procedure joined to
     // it under its spelling. A host brings the same vocabulary every run, and
     // this is where it stops turning it into rows every time.
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
@@ -137,7 +137,7 @@ public struct Builder: Sendable {
 
         var compiling = Compiling(
             types: lowered.types,
-            contractWords: lowered.contractWords,
+            contractProcedures: lowered.contractProcedures,
             naming: compiled.map(\.document)
         )
 
@@ -332,7 +332,7 @@ public struct Builder: Sendable {
         var compiling = Compiling(
             laid.carried,
             types: lowered.types,
-            contractWords: lowered.contractWords,
+            contractProcedures: lowered.contractProcedures,
             naming: documents.map(\.document)
         )
 
@@ -349,7 +349,7 @@ public struct Builder: Sendable {
 
     // One document compiled against what stands before it, and what it proves
     // written into that. Its own rows stand as the refusal they would earn
-    // until it lowers them, so a word folding through a word is refused as the
+    // until it lowers them, so a procedure folding through a procedure is refused as the
     // cycle it is.
     func compile(
         _ module: Module,
@@ -425,8 +425,8 @@ public struct Builder: Sendable {
             var answer = (procedure: declaration, calls: [CallSite]())
 
             if let block = declaration.block {
-                // A body not yet lowered stands as its refusal, so a word
-                // folding through a word is refused as the cycle it is.
+                // A body not yet lowered stands as its refusal, so a procedure
+                // folding through a procedure is refused as the cycle it is.
                 let folding = Folding(
                     constants: constants,
                     origin: origin,
@@ -486,7 +486,7 @@ public struct Builder: Sendable {
         // body reaches, so a document's answer is settled once the documents
         // it reaches have theirs, and the standing refused a ring where that
         // is not so. Read over every declaration the document holds rather
-        // than the reached ones: a path names a word the call graph never
+        // than the reached ones: a path names a procedure the call graph never
         // mentions.
         //
         // What this document declares, by the spelling a call in it writes.
@@ -552,9 +552,9 @@ public struct Builder: Sendable {
         // may run.
         compiling.foldable()
 
-        // Settled after the words are known, because a constant may call
+        // Settled after the procedures are known, because a constant may call
         // one: interpolation is `joined` now, and a constant that spells a
-        // URL out of other constants is spelling it with words like any
+        // URL out of other constants is spelling it with procedures like any
         // other expression.
         //
         // The context is read before the lowering is handed over, since one of
@@ -669,7 +669,7 @@ public struct Builder: Sendable {
     // every claimed type answers the contract it is claimed under, and every
     // constraint a document leaned on is held by some document beside it.
     // `supplying` is the native code the documents named. An artifact says
-    // which of its words are native and holds none of the code, so the modules
+    // which of its procedures are native and holds none of the code, so the modules
     // that declared them are handed over beside the artifacts.
     public func link(
         _ compiled: [Compiled],

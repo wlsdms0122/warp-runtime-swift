@@ -52,8 +52,8 @@ struct ModuleDeclarationTests {
         #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
     }
 
-    @Test("a bare name for another module's word is refused at the build")
-    func aBareNameForAnotherModulesWordIsRefused() throws {
+    @Test("a bare name for another module's procedure is refused at the build")
+    func aBareNameForAnotherModulesProcedureIsRefused() throws {
         // Given
         let caller = try loader.loadDocument([
             "imports": ["greet"],
@@ -180,9 +180,9 @@ struct ModuleDeclarationTests {
         }
     }
 
-    @Test("a document declares a contract, and a word reaches it through the contract's name")
+    @Test("a document declares a contract, and a procedure reaches it through the contract's name")
     func aDocumentDeclaresAContract() async throws {
-        // Given. Two shapes that describe themselves, and one word that knows
+        // Given. Two shapes that describe themselves, and one procedure that knows
         // neither
         let sut = try loader.loadDocument([
             "types": [

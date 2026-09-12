@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The numeric operations. Five words send here, so what a sum and a quotient
+// The numeric operations. Five procedures send here, so what a sum and a quotient
 // share is written once: which pairs are numbers at all, where the whole path
 // ends and the fraction path begins, and which answers fall off the edge.
 //
@@ -16,7 +16,7 @@ import Warp
 // exception, because a quotient is not generally whole. `remainder` is where a
 // whole division's other half is read.
 //
-// `int` is the machine word, so a whole answer can fall off its edge. That is a
+// `int` is 64 bits, so a whole answer can fall off its edge. That is a
 // fault of the program, not a condition of its data: an overflow and a divisor
 // of zero stop the run the way an index past the end does, without the
 // recoverable marker an `attempt` reads.
@@ -105,7 +105,7 @@ struct Arithmetic: Sendable {
         case .dividedBy:
             preconditionFailure("a quotient is a fraction")
 
-        // A remainder is smaller than its divisor, so it always fits the word.
+        // A remainder is smaller than its divisor, so it always fits the int.
         // The overflow guard below is not its judge. The one divisor that trips
         // the hardware's division (`Int.min % -1`) still has the answer 0, so
         // it is answered directly.
@@ -154,7 +154,7 @@ struct Arithmetic: Sendable {
     }
 
     // The fraction path's reading of one side. Binary64's own rounding, which
-    // every machine word is within reach of.
+    // every int is within reach of.
     private func fraction(_ value: Value?) -> Double {
         switch value {
         case let .int(whole):

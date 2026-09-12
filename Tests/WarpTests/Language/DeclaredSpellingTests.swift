@@ -269,9 +269,9 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("min without a receiver refuses in its own words")
-    func minWithoutAReceiverRefusesInItsOwnWords() async throws {
-        // Given. The receiver is a reference that reads null, which a word is
+    @Test("min without a receiver refuses in its own terms")
+    func minWithoutAReceiverRefusesInItsOwnTerms() async throws {
+        // Given. The receiver is a reference that reads null, which a procedure is
         // sent as nothing
         let sut = try Module(
             procedures: [
@@ -289,7 +289,7 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        // When / Then. The refusal is the ordering word's own, not arithmetic's
+        // When / Then. The refusal is the ordering procedure's own, not arithmetic's
         await #expect {
             try await run(sut)
         } throws: { error in
@@ -385,7 +385,7 @@ struct DeclaredSpellingTests {
         }
     }
 
-    @Test("min and max order the way the comparison words do")
+    @Test("min and max order the way the comparison procedures do")
     func minAndMaxOrderLikeTheComparisons() async throws {
         // Given. Strings order lexicographically under Comparable, which bounds
         // `min` the way it bounds `lessThan`

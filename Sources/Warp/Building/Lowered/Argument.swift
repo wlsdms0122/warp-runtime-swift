@@ -11,7 +11,7 @@ import Foundation
 //
 // What the argument is and which slot takes it are two facts. A call through a
 // contract writes one argument list and has as many callees as there are types
-// answering the word, so the list is lowered once and placed against each.
+// answering the procedure, so the list is lowered once and placed against each.
 enum Argument: Sendable {
     case value(Operation)
 

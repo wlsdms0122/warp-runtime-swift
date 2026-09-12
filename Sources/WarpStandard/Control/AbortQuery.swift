@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// Leaving instead of answering. The only word that never returns, which is what
+// Leaving instead of answering. The only procedure that never returns, which is what
 // `returns: never` on its declaration says and what lets the arm that leaves
 // stay out of the type the arm that stays decides.
 //
@@ -18,7 +18,7 @@ struct AbortQuery: Query {
     // What this takes: the message it refuses with. Anything spells, so a
     // refusal can name what it was holding rather than only a sentence
     // written ahead of time. It is required: a refusal with nothing to say
-    // is the one shape this word exists to prevent.
+    // is the one shape this procedure exists to prevent.
     enum Parameters: Int, ParameterSet {
         case of
 

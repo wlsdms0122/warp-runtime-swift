@@ -105,7 +105,7 @@ struct ConstraintTests {
     @Test("a module declares a constraint of its own and the bound holds")
     func aModuleDeclaresAConstraintOfItsOwn() async throws {
         // Given. The membership lives in the declaration, so a signature writes
-        // the name and the same judgment std's words get is this one's
+        // the name and the same judgment std's procedures get is this one's
         let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
             procedures: [
@@ -451,7 +451,7 @@ struct ConstraintTests {
 
     @Test("a enum no member of the bound can spell refuses at the build")
     func aOneOfOutsideTheBoundRefusesAtTheLink() throws {
-        // Given. Words on a Numeric slot: no member of the constraint can spell
+        // Given. Procedures on a Numeric slot: no member of the constraint can spell
         // them, so no call could ever fit this parameter
         let sut = try Module(
             procedures: [
@@ -641,10 +641,10 @@ struct ConstraintTests {
         }
     }
 
-    @Test("a dot on a record is a read, and a word there is written as a call")
-    func aDotOnARecordDoesNotReachAWord() throws {
+    @Test("a dot on a record is a read, and a procedure there is written as a call")
+    func aDotOnARecordDoesNotReachAProcedure() throws {
         // Given. The record does not declare the name, and a shape with fields
-        // reads fields alone: the word by that name is not consulted, and the
+        // reads fields alone: the procedure by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
             procedures: [
@@ -665,14 +665,14 @@ struct ConstraintTests {
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("does not declare")
-                && "\(error)".contains("A word is sent with a written call")
+                && "\(error)".contains("A procedure is sent with a written call")
         }
     }
 
     @Test("a dot on a shape with no fields says to write the call")
     func aDotOnAFieldlessShapeSaysToWriteTheCall() throws {
         // Given. Text has no name to read, so the refusal names the one
-        // spelling that reaches the word: the written call
+        // spelling that reaches the procedure: the written call
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -765,10 +765,10 @@ struct ConstraintTests {
                 "shout": Procedure(
                     signature: Signature(
                         receiver: "of",
-                        parameters: ["word": Parameter(type: .string)]
+                        parameters: ["procedure": Parameter(type: .string)]
                     ),
                     body: [],
-                    result: reference("word")
+                    result: reference("procedure")
                 ),
                 entryName: Procedure(
                     signature: Signature(),
@@ -788,7 +788,7 @@ struct ConstraintTests {
 
     @Test("an effect's own resolver reads the receiver it was handed")
     func anEffectResolverReadsItsReceiver() async throws {
-        // Given. A native word resolves its receiver through its invocation,
+        // Given. A native procedure resolves its receiver through its invocation,
         // which is the one door outside the executor's own resolvers.
         let sut = try Module(
             procedures: [

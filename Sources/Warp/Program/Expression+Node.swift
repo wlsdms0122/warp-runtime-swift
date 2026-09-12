@@ -22,9 +22,9 @@ import Foundation
 // a thing is travels as a value the caller hands in, along with how to step
 // into one, and the caller wanting nowhere hands in nothing.
 //
-// A step is a `Place.Step` rather than a word, because a statement is found by
+// A step is a `Place.Step` rather than a name, because a statement is found by
 // its name and by its position and only one of those is always there. Handing
-// the step over whole is what lets a caller keep both; a word would have made
+// the step over whole is what lets a caller keep both; a name would have made
 // this walk choose between them on every stage's behalf.
 
 // What a walk finds: a statement, or an expression. A stage keeps the one it is

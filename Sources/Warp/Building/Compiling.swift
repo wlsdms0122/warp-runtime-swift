@@ -24,7 +24,7 @@ struct Compiling {
     // MARK: - Property
     // What only the whole list answers, which a document has no say in.
     let types: TypeTable
-    let contractWords: [Name: ContractWord]
+    let contractProcedures: [Name: ContractProcedure]
 
     // Which document each position is, for a refusal that names one.
     let documents: [Place.Document]
@@ -63,14 +63,14 @@ struct Compiling {
     // Nothing laid down yet.
     init(
         types: TypeTable,
-        contractWords: [Name: ContractWord],
+        contractProcedures: [Name: ContractProcedure],
         naming documents: [Place.Document]
     ) {
         self.types = types
-        self.contractWords = contractWords
+        self.contractProcedures = contractProcedures
         self.documents = documents
         self.lowering = Lowering(
-            contractWords: contractWords,
+            contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )
     }
@@ -85,15 +85,15 @@ struct Compiling {
     init(
         _ carried: Carried,
         types: TypeTable,
-        contractWords: [Name: ContractWord],
+        contractProcedures: [Name: ContractProcedure],
         naming documents: [Place.Document]
     ) {
         self.types = types
-        self.contractWords = contractWords
+        self.contractProcedures = contractProcedures
         self.documents = documents
         self.lowering = Lowering(
             carried,
-            contractWords: contractWords,
+            contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )
         self.pure = carried.pure
@@ -189,7 +189,7 @@ struct Compiling {
 
     // The same for every document laid down, said once they all stand. This
     // reads the rows whole and the documents arrive in the order the caller
-    // handed them over, so one of them may import a word another laid after it
+    // handed them over, so one of them may import a procedure another laid after it
     // declares.
     //
     // A number none of them reaches is a document laid without what it sends,
@@ -236,8 +236,8 @@ struct Compiling {
         loweredRows.append(row)
     }
 
-    // The stand-ins, while the words themselves settle: a word folding through
-    // a word would be a cycle, and which words are already lowered is a fact
+    // The stand-ins, while the procedures themselves settle: a procedure folding through
+    // a procedure would be a cycle, and which procedures are already lowered is a fact
     // of name order rather than of the text.
     func folding() -> Answered {
         Answered.documents(
@@ -271,7 +271,7 @@ struct Compiling {
             pure: pure,
             isolated: isolated,
             failing: failing,
-            contractWords: contractWords,
+            contractProcedures: contractProcedures,
             variables: variables
         )
     }

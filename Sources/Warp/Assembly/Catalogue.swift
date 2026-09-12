@@ -11,8 +11,8 @@ import Foundation
 //
 // A module says what it asks for and never where to find it, so somebody has
 // to decide which modules stand beside it. That decision is a grant: a program
-// does what the words in front of it let it do, and this is where a host
-// writes down which words those may be. Closing a list against a catalogue
+// does what the procedures in front of it let it do, and this is where a host
+// writes down which procedures those may be. Closing a list against a catalogue
 // reaches only what the host put in one.
 //
 // The link is not where this happens. It is handed a graph and holds one name
@@ -49,7 +49,7 @@ public struct Catalogue: Sendable {
         for (position, module) in modules.enumerated() {
             var collided: [(reference: Reference, first: Int)] = []
 
-            for reference in module.declaredWords.map(Reference.word)
+            for reference in module.declaredProcedures.map(Reference.procedure)
                 + module.declaredShapes.map(Reference.shape) {
                 guard let first = declares[reference] else {
                     declares[reference] = position
@@ -98,7 +98,7 @@ public struct Catalogue: Sendable {
     // catalogue, and a module handed over here as well as held there stands in
     // the answer twice, which the link refuses. Keeping the second one out
     // instead would mean a name the catalogue declares could be answered by
-    // whatever the caller listed, so a program declaring one word of a granted
+    // whatever the caller listed, so a program declaring one procedure of a granted
     // module would quietly become the module every other module calls.
     //
     // A name nothing here declares is left alone. The link refuses it, naming
@@ -116,7 +116,7 @@ public struct Catalogue: Sendable {
         }
 
         // Two walks, until neither adds anything. Names first, then claims,
-        // because what a claim needs is spelled from the contract's words, and
+        // because what a claim needs is spelled from the contract's procedures, and
         // the contract may be a document the name walk has only just brought.
         // Each walk on its own would answer for a list the other is still
         // growing.
@@ -145,8 +145,8 @@ public struct Catalogue: Sendable {
             // one is the link's refusal, and choosing between them here would
             // be that rule copied and made to answer earlier.
             let asked = closed.reduce(into: [Name: Set<Name>]()) { table, module in
-                for (contract, words) in module.contracts {
-                    table[contract, default: []].formUnion(words.keys)
+                for (contract, procedures) in module.contracts {
+                    table[contract, default: []].formUnion(procedures.keys)
                 }
             }
 
@@ -165,7 +165,7 @@ public struct Catalogue: Sendable {
             //
             // What that costs is the link's size: a host claiming widely about
             // a common vocabulary hands every link the same crowd. What it
-            // does not cost is a refusal, since a claim whose words are
+            // does not cost is a refusal, since a claim whose procedures are
             // missing puts its type under no contract.
             for (position, module) in modules.enumerated() {
                 let claims = module.claims
@@ -182,15 +182,20 @@ public struct Catalogue: Sendable {
             }
 
             // A claim is answered by declarations named for its type and the
-            // words its contract asks, and a document making one may declare
-            // neither. The words are the contract's, which is why they are
+            // procedures its contract asks, and a document making one may declare
+            // neither. The procedures are the contract's, which is why they are
             // read above rather than off the draft, which cannot see another
             // document's contract.
             for module in closed {
                 for (type, contracts) in module.claims.sorted(by: { $0.key < $1.key }) {
                     for contract in contracts.sorted() {
-                        for word in (asked[contract] ?? []).sorted() {
-                            bring(declares[.word(ContractWord.spelling(of: type, word: word))])
+                        for procedure in (asked[contract] ?? []).sorted() {
+                            let spelling = ContractProcedure.spelling(
+                                of: type,
+                                procedure: procedure
+                            )
+
+                            bring(declares[.procedure(spelling)])
                         }
                     }
                 }

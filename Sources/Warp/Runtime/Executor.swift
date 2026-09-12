@@ -9,7 +9,7 @@ import Foundation
 
 // Runs an image. Two halves over one code: `read` answers what answers
 // without running, synchronously, which is what a condition, an argument, a
-// pure body and a word handed a procedure need; `evaluate` runs constructs,
+// pure body and a procedure handed a procedure need; `evaluate` runs constructs,
 // effects and calls of values, and hands every data case to `read`.
 public struct Executor: Sendable {
     // MARK: - Property
@@ -97,8 +97,8 @@ public struct Executor: Sendable {
     }
 
     // MARK: - Internal
-    // Calling a closure a word holds. Arguments are offered rather than
-    // settled strictly: the word decides what it has to give, and which of
+    // Calling a closure a procedure holds. Arguments are offered rather than
+    // settled strictly: the procedure decides what it has to give, and which of
     // those the closure's author wanted is the author's business.
     func call(
         _ closure: Closure,
@@ -130,7 +130,7 @@ public struct Executor: Sendable {
 
         // Making a closure runs nothing: it is the capture, and the capture is
         // these cells. Which is why it belongs to the pure half and a
-        // condition may hand one to a word.
+        // condition may hand one to a procedure.
         case let .closure(number, captures):
             return .procedure(
                 Closure(
@@ -183,7 +183,7 @@ public struct Executor: Sendable {
     //
     // Both halves are the frame, and neither works without the other, so there
     // is one of these rather than one per way of reaching a body. There are
-    // three ways: a run starting here, a word whose implementation is written,
+    // three ways: a run starting here, a procedure whose implementation is written,
     // and a closure being invoked.
     private func answer(
         _ body: Body,
@@ -404,7 +404,7 @@ public struct Executor: Sendable {
         switch callee.implementation {
         // A query answers without running, so the pure half is the whole
         // implementation. It is here only so that `x.count` and the same
-        // word written as a statement mean the same thing.
+        // procedure written as a statement mean the same thing.
         case .native(.query):
             return try self.call(call, in: activation)
 
@@ -440,7 +440,7 @@ public struct Executor: Sendable {
 
             // A receiver is written on the other side of the dot rather than by
             // name. It is not settled as an argument, since being sent to
-            // nothing is something a word answers rather than refuses, but the
+            // nothing is something a procedure answers rather than refuses, but the
             // body reads it under the name its signature gave it.
             if let position = callee.receiverPosition, let receiver = try received(call, of: callee, handed: handed, in: activation) {
                 inner.cells[frame.parameters[position]] = .value(receiver)
@@ -637,7 +637,7 @@ public struct Executor: Sendable {
     // naming it declares. Nil where the call wrote none.
     // Which row answers a call through a contract, and the receiver it answers
     // about. The name the value wears is the whole of the choosing: the link
-    // gathered every type that answers this word and lowered a call for each,
+    // gathered every type that answers this procedure and lowered a call for each,
     // so nothing is resolved here.
     private func picked(
         _ dispatch: DispatchOperation,
@@ -647,9 +647,9 @@ public struct Executor: Sendable {
 
         guard let name = receiver.nominal, let call = dispatch.calls[name] else {
             throw ExecutionError(
-                "'\(dispatch.contract).\(dispatch.word)' is sent to"
+                "'\(dispatch.contract).\(dispatch.procedure)' is sent to"
                     + " \(receiver.nominal.map { held in "'\(held)'" } ?? "\(receiver.type)"),"
-                    + " which answers no word of '\(dispatch.contract)'"
+                    + " which answers no procedure of '\(dispatch.contract)'"
             )
         }
 
@@ -755,7 +755,7 @@ public struct Executor: Sendable {
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
-            // A word blaming a shape is answerable only if the author can see
+            // A procedure blaming a shape is answerable only if the author can see
             // which name held it.
             guard case let .local(address)? = call.receiver else { throw error }
 
@@ -770,7 +770,7 @@ public struct Executor: Sendable {
         let sent = sent(to: callee, receiver: receiver, arguments: arguments)
 
         switch callee.implementation {
-        // Absent and null are the same fact, and a word asked about nothing
+        // Absent and null are the same fact, and a procedure asked about nothing
         // decides for itself what that means: `contains` says false rather
         // than failing.
         case let .native(.query(query)):
@@ -841,8 +841,8 @@ public struct Executor: Sendable {
     }
 
     // Running a closure here rather than in `evaluate`, which is what makes a
-    // word able to take one. What may be called is what the link proved
-    // answers, and a slot declaring `pure procedure` is how a word says so.
+    // procedure able to take one. What may be called is what the link proved
+    // answers, and a slot declaring `pure procedure` is how a procedure says so.
     func call(_ closure: Closure, with arguments: [(name: Name, value: Value)]) throws -> Value {
         var (body, activation) = try enter(closure, given: arguments, offered: true)
 
@@ -870,7 +870,7 @@ public struct Executor: Sendable {
         }
     }
 
-    // The two doors a native word answers through. The word's parameters are
+    // The two doors a native procedure answers through. The procedure's parameters are
     // its own type, so the call is made where that type has a name: handing
     // `any Query` to a generic function opens it.
     private func evaluate<W: Query>(
@@ -924,10 +924,10 @@ public struct Executor: Sendable {
         return row
     }
 
-    // Sending a word a word declared it sends. The number is the sender's
+    // Sending a procedure a procedure declared it sends. The number is the sender's
     // document's, the same as one written in a body. The arguments are offered
     // rather than settled strictly, for the reason a closure's are: a Swift
-    // body is not text the link could read the names out of, so what the word
+    // body is not text the link could read the names out of, so what the procedure
     // gives and what the callee declared are matched where both exist.
     func send(
         _ number: Int,

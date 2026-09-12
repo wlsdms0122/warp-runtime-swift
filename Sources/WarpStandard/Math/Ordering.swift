@@ -12,15 +12,15 @@ import Warp
 // nowhere else, so `min` cannot drift from what `lessThan` reads. Numbers by
 // worth, exactly at every size, and strings lexicographically.
 //
-// The word's own spelling comes in because these refusals name the word that
+// The procedure's own spelling comes in because these refusals name the procedure that
 // was sent, and a caller acts on that name.
 struct Ordering: Sendable {
     // MARK: - Property
-    private let word: String
+    private let procedure: String
 
     // MARK: - Initializer
-    init(_ word: String) {
-        self.word = word
+    init(_ procedure: String) {
+        self.procedure = procedure
     }
 
     // MARK: - Public
@@ -28,16 +28,16 @@ struct Ordering: Sendable {
     // order is refused rather than answered false or picked from: false claims
     // the opposite comparison would say something, and it would not.
     func of(_ receiver: Value?, and operand: Value) throws -> (ComparisonResult, Value) {
-        // Its own refusal for an absent left side. These words order, so
+        // Its own refusal for an absent left side. These procedures order, so
         // arithmetic's "expected two numbers" would name a domain they do not
         // have.
         guard let receiver else {
-            throw ExecutionError("\(word) asks two of a kind, and nothing arrived to order")
+            throw ExecutionError("\(procedure) asks two of a kind, and nothing arrived to order")
         }
 
         guard let order = Value.order(receiver, operand) else {
             throw ExecutionError(
-                "\(word) asks \(receiver.type) and"
+                "\(procedure) asks \(receiver.type) and"
                     + " \(operand.type), which have no order."
                     + " It takes two numbers or two strings"
             )

@@ -7,14 +7,14 @@
 
 import Foundation
 
-// A call through a contract, as the run makes it: the value the word is sent
-// to, what the call was written with, and one lowered call for every type that
-// answers the word.
+// A call through a contract, as the run makes it: the value the procedure is
+// sent to, what the call was written with, and one lowered call for every type
+// that answers the procedure.
 //
 // Apart from `CallOperation` because the two are different facts. A call names
-// the row the link settled; this names a contract's word and leaves which rows
-// answer it to the link, because which types answer a contract is a fact of
-// the graph rather than of the document holding the call. A document's own
+// the row the link settled; this names a contract's procedure and leaves which
+// rows answer it to the link, because which types answer a contract is a fact
+// of the graph rather than of the document holding the call. A document's own
 // text cannot say it: a type declared in a document this one never names can
 // answer a contract this one calls through.
 //
@@ -24,13 +24,13 @@ import Foundation
 struct DispatchOperation: Sendable {
     // MARK: - Property
     let contract: Name
-    let word: Name
+    let procedure: Name
 
     // Read once. Its name picks the call, and the call is made with what was
     // read rather than with a second reading of the same operand.
     let receiver: Operation
 
-    // What the call was written with, under the names the contract's word
+    // What the call was written with, under the names the contract's procedure
     // declares. Lowered once: where an argument lands is the answering row's
     // to say, and the rows are many.
     let arguments: [Name: Argument]
@@ -42,13 +42,13 @@ struct DispatchOperation: Sendable {
     // MARK: - Initializer
     init(
         contract: Name,
-        word: Name,
+        procedure: Name,
         receiver: Operation,
         arguments: [Name: Argument],
         calls: [Name: CallOperation] = [:]
     ) {
         self.contract = contract
-        self.word = word
+        self.procedure = procedure
         self.receiver = receiver
         self.arguments = arguments
         self.calls = calls

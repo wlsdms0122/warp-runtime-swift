@@ -9,7 +9,7 @@ import Foundation
 
 // What a body does with the values it must hand on exactly once.
 //
-// A type written `linear` says the values of it are handed on: given to a word,
+// A type written `linear` says the values of it are handed on: given to a procedure,
 // or answered. A body holding one has to do that on every way through, and may
 // not do it twice, and the link says so before anything runs. That is the whole
 // of what "this resource is closed exactly once" means here.
@@ -243,7 +243,7 @@ extension Builder {
         // one. A slot that does not say so would let the obligation go.
         private func moving(_ call: Call, held: Held, guarded: String?) throws -> Held {
             let signature = context.signature(of: call.selector)
-                ?? context.contractWords[call.selector]?.signature
+                ?? context.contractProcedures[call.selector]?.signature
 
             var carried = held
 
@@ -293,14 +293,14 @@ extension Builder {
         }
 
         // What a binding's expression answers, and whether that is handed on
-        // once. Read from the few shapes a value like this is born in: a word
+        // once. Read from the few shapes a value like this is born in: a procedure
         // that answers one, a cast that names one, and a name rebound to
         // another, which is the move that just happened.
         private func handedOnce(_ expression: Expression, held: Held) -> Bool {
             switch expression {
             case let .call(call):
                 let signature = context.signature(of: call.selector)
-                    ?? context.contractWords[call.selector]?.signature
+                    ?? context.contractProcedures[call.selector]?.signature
 
                 return signature?.returns.map(handedOnce) ?? false
 

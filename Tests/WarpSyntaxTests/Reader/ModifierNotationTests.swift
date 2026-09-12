@@ -10,7 +10,7 @@ import Testing
 import Warp
 @testable import WarpSyntax
 
-@Suite("The words a slot writes about itself")
+@Suite("The procedures a slot writes about itself")
 struct ModifierNotationTests {
     @Test("inout and var stand in front of the whole type", arguments: [
         ("inout int", TypeExpression.inout(.int)),
@@ -18,7 +18,7 @@ struct ModifierNotationTests {
         ("var array<int>", .variable(.array(.int))),
         ("inout procedure", .inout(.procedure(nil)))
     ])
-    func slotWordsWrapTheWholeType(written: String, expected: TypeExpression) throws {
+    func slotKeywordsWrapTheWholeType(written: String, expected: TypeExpression) throws {
         #expect(try TypeReader.parse(written) == expected)
     }
 
@@ -34,8 +34,8 @@ struct ModifierNotationTests {
         #expect(try Writer().value(of: parsed) == .string(canonical))
     }
 
-    @Test("a slot word and a modifier on one procedure form survive the round trip")
-    func slotWordAndModifierRoundTrip() throws {
+    @Test("a slot keyword and a modifier on one procedure form survive the round trip")
+    func slotKeywordAndModifierRoundTrip() throws {
         // Given. A parameter typed `inout pure procedure<...>`, which the
         // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))
@@ -53,10 +53,10 @@ struct ModifierNotationTests {
         #expect(module.procedures["entry"]?.signature.parameters["f"]?.type == type)
     }
 
-    @Test("a word written twice is refused", arguments: [
+    @Test("a procedure written twice is refused", arguments: [
         "inout inout int", "var var int", "pure pure procedure", "isolated isolated procedure"
     ])
-    func aWordWrittenTwiceIsRefused(written: String) {
+    func aModifierWrittenTwiceIsRefused(written: String) {
         #expect(throws: TypeFormError.self) {
             try TypeReader.parse(written)
         }

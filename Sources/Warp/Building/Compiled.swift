@@ -19,7 +19,7 @@ import Foundation
 // of it.
 public struct Compiled: Sendable, Declaring {
     // Which document this is, so a refusal a build makes about it says
-    // where the words are.
+    // where the procedures are.
     let document: Place.Document
 
     // What it declares in the three shape spaces, as it wrote them. A
@@ -36,7 +36,7 @@ public struct Compiled: Sendable, Declaring {
     let claims: [Name: Set<Name>]
 
     // The pairs its bodies lean on: a type handed where a contract is asked.
-    // Unresolved here, the way a word this document sends and does not declare
+    // Unresolved here, the way a procedure this document sends and does not declare
     // is unresolved. Which types answer a contract is read off the claims of
     // the whole list, and a claim may be written in a document this one never
     // names.

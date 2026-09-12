@@ -10,7 +10,7 @@ import Warp
 
 // Each element answered by a procedure, in order. The procedure parameter is
 // declared `pure procedure`, so what arrives is something the link proved
-// answers without running, which is what lets this be a word rather than a
+// answers without running, which is what lets this be a procedure rather than a
 // construct the grammar had to grow.
 struct MapQuery: Query {
     // What this takes: the elements, and the body each is offered to. What the

@@ -248,7 +248,7 @@ public struct TemplateParser: Sendable {
 
     // MARK: - Private
     // A segment's spelling as the name it stands for, said in this parser's
-    // own words so an author reading a template's refusal reads one voice.
+    // own terms so an author reading a template's refusal reads one voice.
     private func name(_ spelling: String) throws -> Name {
         do {
             return try Name(spelling)

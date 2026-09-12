@@ -34,7 +34,7 @@ public enum Construct: Sendable, Equatable {
     // What the language calls this shape. A document calls several of them
     // something else, and the reading that knows which is not this one.
     //
-    // Leaving reads as one word for all three reaches. Which loop a `leave`
+    // Leaving renders as one name for all three reaches. Which loop a `leave`
     // ends is carried in the case and spelled by whoever spells for a document.
     // An address exists to reach the statement, and the statement is already
     // named a step above.

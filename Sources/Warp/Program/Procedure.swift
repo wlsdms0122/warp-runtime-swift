@@ -16,9 +16,9 @@ import Foundation
 // procedure.
 //
 // A signature and an implementation, and nothing else. The implementation is a
-// body of statements or native code, and that axis is the only thing that used
-// to separate this from a "library word", which is why there is no library any
-// more, and no second name table, and no second lookup order.
+// body of statements or native code, and that axis is the only thing separating
+// one a document wrote from one the host installed. One name table, one lookup
+// order.
 public struct Procedure: Sendable {
     // MARK: - Property
     public let description: String?

@@ -70,8 +70,12 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.type),
             constraints: try Self.record([TypeReader].self, in: container, forKey: .constraints)
                 .mapValues { members in members.map(\.type) },
-            contracts: try Self.record([String: ContractWordReader].self, in: container, forKey: .contracts)
-                .mapValues { words in try words.mapValues(\.signature).named(at: []) },
+            contracts: try Self.record(
+                [String: ContractProcedureReader].self,
+                in: container,
+                forKey: .contracts
+            )
+                .mapValues { procedures in try procedures.mapValues(\.signature).named(at: []) },
             claims: try Self.record([String].self, in: container, forKey: .satisfies)
                 .mapValues { contracts in try Set(contracts).named(at: []) },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
@@ -147,7 +151,7 @@ public struct ModuleReader: Decodable {
             )
         }
 
-        // The rest is about the word that is written, so it is read standing on
+        // The rest is about the procedure that is written, so it is read standing on
         // it. Refusing from out here would put the answer at the document's
         // first character, which is a line the author has no reason to look at.
         let written = try envelope.superDecoder(forKey: key)

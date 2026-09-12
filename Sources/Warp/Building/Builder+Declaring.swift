@@ -88,9 +88,9 @@ extension Builder {
         }
 
         for (origin, held) in documents.enumerated() {
-            for (name, words) in held.contracts.sorted(by: { $0.key < $1.key }) {
+            for (name, procedures) in held.contracts.sorted(by: { $0.key < $1.key }) {
                 let declaration = Placed(
-                    words,
+                    procedures,
                     at: .contract(name.spelling, in: held.document),
                     of: origin
                 )
@@ -113,10 +113,10 @@ extension Builder {
                     )
                 }
 
-                guard !words.isEmpty else {
+                guard !procedures.isEmpty else {
                     throw BuildError(
                         "asks nothing, so every type satisfies it. A contract is"
-                            + " the words a value answers, and one with no words"
+                            + " the procedures a value answers, and one with no procedures"
                             + " says nothing a slot could lean on",
                         at: declaration.place
                     )

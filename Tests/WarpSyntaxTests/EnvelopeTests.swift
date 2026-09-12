@@ -13,7 +13,7 @@ import Testing
 // What a document says about itself before anything reads what it says.
 //
 // Both questions exist only because a program can arrive somewhere that did not
-// build it: is this written for a reader like me, and do I have the words it
+// build it: is this written for a reader like me, and do I have the procedures it
 // calls. A program that stays where it was built has neither question, because
 // the thing that built it is the thing that runs it.
 //
@@ -159,7 +159,7 @@ struct EnvelopeTests {
     @Test("a document that undersells what it imports is refused")
     func anUntruthfulManifestIsRefused() {
         // Given. The whole value of the list is that it can be believed, and
-        // what is said back is the word that moved rather than both lists
+        // what is said back is the procedure that moved rather than both lists
         #expect {
             try loader.loadDocument([
                 "imports": [],
@@ -183,7 +183,7 @@ struct EnvelopeTests {
     @Test("a document that oversells what it imports is refused the same way")
     func anOverstatedManifestIsRefused() {
         // Given. The list is the set of what the program sends, not a bound
-        // around it: a caller grants from this list, and a word listed but
+        // around it: a caller grants from this list, and a procedure listed but
         // never sent is a grant the program had no use for
         #expect {
             try loader.loadDocument([
@@ -205,11 +205,11 @@ struct EnvelopeTests {
         }
     }
 
-    @Test("a word sent from a constant is imported like any other")
-    func constantsSendWordsToo() throws {
+    @Test("a procedure sent from a constant is imported like any other")
+    func constantsSendProceduresToo() throws {
         // Given. A constant is an expression, and understating what a program
         // imports is worse than saying nothing: a caller decides from this list
-        // what to allow, and would then be refused at the build by a word the
+        // what to allow, and would then be refused at the build by a procedure the
         // list never mentioned.
         let constant: Value = [
             "call": ["procedure": "std.math.plus", "of": 1, "arguments": ["value": 2]]
@@ -224,7 +224,7 @@ struct EnvelopeTests {
         // Then
         #expect(module.imports == ["std.math.plus"])
 
-        // And a list that leaves the constant's word out is refused
+        // And a list that leaves the constant's procedure out is refused
         #expect {
             try loader.loadDocument([
                 "imports": [],
@@ -278,8 +278,8 @@ struct EnvelopeTests {
         #expect(sut.procedures["entry"] != nil)
     }
 
-    @Test("a word a document declares itself is not something it imports")
-    func ownWordsAreNotImports() throws {
+    @Test("a procedure a document declares itself is not something it imports")
+    func ownProceduresAreNotImports() throws {
         // Given. What a document brings with it is not what it asks for
         let module = try loader.loadDocument([
             "procedures": [
@@ -297,10 +297,10 @@ struct EnvelopeTests {
 
     @Test("what a program can do to anything is what it sends")
     func sendingBoundsWhatAProgramReaches() throws {
-        // Given. A path reaches words too, and this is why the list can still
+        // Given. A path reaches procedures too, and this is why the list can still
         // be read as the bounds of what a program is allowed to do. `count`
         // here is reached by walking rather than sending, and a path only ever
-        // reaches a word that answers without running, so nothing a path
+        // reaches a procedure that answers without running, so nothing a path
         // reaches can touch anything outside.
         let module = try loader.loadDocument([
             "procedures": [
@@ -315,13 +315,13 @@ struct EnvelopeTests {
         // Then
         #expect(module.imports.isEmpty)
 
-        // And the build still holds it to that. The word has to be there
+        // And the build still holds it to that. The procedure has to be there
         #expect(throws: BuildError.self) {
             try Builder().build([module], entry: entryName)
         }
     }
 
-    @Test("a word sent from anywhere inside is counted")
+    @Test("a procedure sent from anywhere inside is counted")
     func everyCornerIsCounted() throws {
         // Given. A list that missed one would be a list nobody could rely on,
         // so every place a message can be written is walked
