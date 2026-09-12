@@ -56,7 +56,7 @@ public struct ExpressionReader: Decodable {
     // word the two can come to disagree about.
     static let closureKey: Name = "closure"
 
-    // What a cast reads and what a message is sent to are written under one
+    // What a cast reads and what a call is sent to are written under one
     // key, and the two readers meet only in the text, so the word is here
     // rather than in each of them.
     static let subjectKey: Name = "of"
