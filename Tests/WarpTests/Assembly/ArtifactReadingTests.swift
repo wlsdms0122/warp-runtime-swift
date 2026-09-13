@@ -114,15 +114,28 @@ struct ArtifactReadingTests {
 
     @Test("is refused where a body stands past its frame")
     func aBodyPastItsFrame() throws {
-        // Given. A real artifact whose one row keeps a frame of no slots, while
-        // its body still stands on one.
-        guard case var .array(parts) = try written(),
+        // Given. A row whose body binds a local and reads it back, so the slot
+        // it stands on is its own rather than a parameter's, and a frame shrunk
+        // to hold none of it.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(binding: .constant("n"), expression: .literal(.int(1)))],
+                    result: reference("n")
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try artifact(of: sut),
               case var .array(table) = parts[7],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
-              case var .array(frame) = implementation[2]
+              case var .array(frame) = implementation[2],
+              case let .int(size) = frame[0], size > 0,
+              case let .array(parameters) = frame[1], parameters.isEmpty
         else {
-            Issue.record("an artifact writes a row's frame beside its body")
+            Issue.record("a row with a local stands on a slot no parameter holds")
 
             return
         }
@@ -142,7 +155,7 @@ struct ArtifactReadingTests {
     // MARK: - Public
     // MARK: - Private
     private func written() throws -> Value {
-        let sut = try Module(
+        try artifact(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],
             procedures: [
                 "app.entry": Procedure(
@@ -151,8 +164,11 @@ struct ArtifactReadingTests {
                     result: .cast(reference("p"), as: .named("app.Point"), optional: false)
                 )
             ]
-        )
-        let compiled = try builder.compile([sut] + Module.standard)
+        ))
+    }
+
+    private func artifact(of module: Module) throws -> Value {
+        let compiled = try builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }) else {
             throw ConformanceMissing()
