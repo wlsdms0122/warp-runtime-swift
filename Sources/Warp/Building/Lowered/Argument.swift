@@ -22,6 +22,19 @@ enum Argument: Sendable {
 
 extension Argument {
     // The argument read as a value, for a slot that does not take it in place.
+    // Whether this reads any slot in the range, the way an operation is asked.
+    // What a contract's call hands over is one of these, so a walk that asks
+    // an operation has to ask these too or it stops at the dot.
+    func reads(_ slots: Range<Int>) -> Bool {
+        switch self {
+        case let .value(operation):
+            return operation.reads(slots)
+
+        case let .reference(address):
+            return address.reads(slots)
+        }
+    }
+
     var read: Operation {
         switch self {
         case let .value(operation):

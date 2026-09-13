@@ -94,12 +94,13 @@ extension Operation {
                 || call.arguments.contains { argument in argument?.reads(slots) == true }
                 || call.handed.contains { handed in handed.address.reads(slots) }
 
+        // What a call through a contract hands over is in `arguments`. The
+        // calls beside it are the link's copy of the same, and a body is
+        // asked this before a link has made them, so asking those alone
+        // stops at the dot.
         case let .dispatch(dispatch):
             return dispatch.receiver.reads(slots)
-                || dispatch.calls.values.contains { call in
-                    call.arguments.contains { argument in argument?.reads(slots) == true }
-                        || call.handed.contains { handed in handed.address.reads(slots) }
-                }
+                || dispatch.arguments.contains { _, argument in argument.reads(slots) }
 
         case let .leave(_, _, value):
             return value?.reads(slots) == true
