@@ -80,4 +80,51 @@ public struct Compiled: Sendable, Declaring {
     // What this document's variables start a run holding, in the order
     // the layouts read them.
     let variables: [(name: Name, value: Value)]
+
+    // MARK: - Initializer
+    init(
+        document: Place.Document,
+        types: [Name: TypeExpression],
+        constraints: [Name: [TypeExpression]],
+        contracts: [Name: [Name: Signature]],
+        claims: [Name: Set<Name>],
+        leaned: [Claim: Place],
+        declared: [Name],
+        table: [Judged],
+        calls: [[Name]],
+        answers: [Name: LoweredType],
+        numbering: Numbering,
+        typeNumbering: LoweredTypeNumbering,
+        variables: [(name: Name, value: Value)]
+    ) {
+        self.document = document
+        self.types = types
+        self.constraints = constraints
+        self.contracts = contracts
+        self.claims = claims
+        self.leaned = leaned
+        self.declared = declared
+        self.table = table
+        self.calls = calls
+        self.answers = answers
+        self.numbering = numbering
+        self.typeNumbering = typeNumbering
+        self.variables = variables
+    }
+
+    // MARK: - Public
+    // This artifact said as a value, so a caller can keep it where bytes are
+    // kept. What carries it from there is the writing a document already
+    // travels in, and a caller that reads it back is handed this again.
+    //
+    // Which runtime wrote it is not in here. An artifact is read back by the
+    // runtime that wrote it, and a caller keeping one beside a document it no
+    // longer matches is why what this is kept under says so.
+    public var written: Value {
+        ArtifactWriter().value(of: self)
+    }
+
+    public init(written value: Value) throws {
+        self = try ArtifactReader().compiled(from: value)
+    }
 }

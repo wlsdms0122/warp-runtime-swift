@@ -175,17 +175,17 @@ struct Numbering: Sendable {
     }
 
     private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
-        var fields = try Fields(value, of: part)
+        guard case let .array(written) = value else {
+            throw ArtifactRefused("'\(part)' is not written as a list")
+        }
 
-        return try fields.list { entry in
+        return try written.reduce(into: [Name: Int]()) { places, entry in
             var place = try Fields(entry, of: part)
-            let read = (Name(normal: try place.text()), try place.integer())
+
+            places[Name(normal: try place.text())] = try place.integer()
 
             try place.end()
-
-            return read
         }
-        .reduce(into: [Name: Int]()) { places, entry in places[entry.0] = entry.1 }
     }
 
     // MARK: - Public
