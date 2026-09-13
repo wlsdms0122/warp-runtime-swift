@@ -28,6 +28,34 @@ struct Numbering: Sendable {
         // out leaves a procedure no declared spelling reaches, so the link
         // answers it by position rather than by spelling.
         case closure(Int)
+
+        // MARK: - Internal
+        var written: Value {
+            switch self {
+            case let .sent(name):
+                return .array([.int(0), .string(name.spelling)])
+
+            case let .closure(number):
+                return .array([.int(1), .int(number)])
+            }
+        }
+
+        init(written value: Value) throws {
+            var fields = try Fields(value, of: "numbering reference")
+
+            switch try fields.tag() {
+            case 0:
+                self = .sent(Name(normal: try fields.text()))
+
+            case 1:
+                self = .closure(try fields.integer())
+
+            default:
+                throw ArtifactRefused("'numbering reference' names nothing this reads")
+            }
+
+            try fields.end()
+        }
     }
 
     // What a number turned out to be, with the reason where it is not a row:
@@ -96,6 +124,68 @@ struct Numbering: Sendable {
         called = rows
         closing = [:]
         opening = 0
+    }
+
+
+    // MARK: - Internal
+    // What this counts from, said as a value, so an artifact carries the
+    // numbering its bodies were lowered against. Written here because what it
+    // holds is its own: the spellings and the closure count it was built from
+    // are not on the artifact anywhere else.
+    var written: Value {
+        let space: Value = switch self.space {
+        case let .document(references):
+            .array([.int(0), .array(references.map(\.written))])
+
+        case .table:
+            .array([.int(1)])
+        }
+
+        return .array([space, Self.written(called), Self.written(closing), .int(opening)])
+    }
+
+    init(written value: Value) throws {
+        var fields = try Fields(value, of: "numbering")
+        var space = try Fields(try fields.next(), of: "numbering space")
+
+        switch try space.tag() {
+        case 0:
+            self.space = .document(try space.list(Reference.init(written:)))
+
+        case 1:
+            self.space = .table
+
+        default:
+            throw ArtifactRefused("'numbering' is counted from nothing this reads")
+        }
+
+        try space.end()
+
+        called = try Self.read(try fields.next(), of: "numbering names")
+        closing = try Self.read(try fields.next(), of: "numbering closures")
+        opening = try fields.integer()
+
+        try fields.end()
+    }
+
+    private static func written(_ places: [Name: Int]) -> Value {
+        .array(places.keys.sorted().map { name in
+            .array([.string(name.spelling), .int(places[name]!)])
+        })
+    }
+
+    private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
+        var fields = try Fields(value, of: part)
+
+        return try fields.list { entry in
+            var place = try Fields(entry, of: part)
+            let read = (Name(normal: try place.text()), try place.integer())
+
+            try place.end()
+
+            return read
+        }
+        .reduce(into: [Name: Int]()) { places, entry in places[entry.0] = entry.1 }
     }
 
     // MARK: - Public
