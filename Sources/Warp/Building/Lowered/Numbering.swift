@@ -175,6 +175,20 @@ struct Numbering: Sendable {
         return references.count - opening
     }
 
+    // Which of this document's closures a number stands for, or nothing where
+    // it stands for a spelling instead. A body carries reference numbers, and
+    // which closure one of them is, is this document's own arithmetic.
+    func lifted(_ number: Int) -> Int? {
+        guard case let .document(references) = space,
+              references.indices.contains(number),
+              case .closure = references[number]
+        else {
+            return nil
+        }
+
+        return number - opening
+    }
+
     // Which row of a link the number stands for, read from the tables that
     // link built.
     func row(_ number: Int, rows: [Name: Int], closures: [Int]) -> Answer {

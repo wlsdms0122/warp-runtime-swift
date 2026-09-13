@@ -69,6 +69,60 @@ struct Judged: Sendable {
         self.implementation = implementation
     }
 
+    // The same, where the parts were read apart and what has to be true is how
+    // the body, its frame and the declaration stand to each other. A frame is
+    // reached by position everywhere a run touches it, so a list written short
+    // is an array read past its end rather than a row that answers wrongly.
+    init(
+        label: Name,
+        signature: Signature,
+        purity: Purity,
+        isolation: Isolation,
+        failing: Failing,
+        sends: [Sent],
+        implementation: Implementation,
+        judging: Void
+    ) throws {
+        if case let .body(body, frame) = implementation {
+            guard frame.names.count == frame.size else {
+                throw ArtifactRefused(
+                    "a frame of \(frame.size) names \(frame.names.count) slot(s)"
+                )
+            }
+
+            guard frame.parameters.count == signature.names.count else {
+                throw ArtifactRefused(
+                    "a frame stands \(frame.parameters.count) of the"
+                        + " \(signature.names.count) its declaration takes"
+                )
+            }
+
+            guard frame.parameters.allSatisfy({ slot in slot < frame.size }),
+                  frame.variables.allSatisfy({ _, slot in slot < frame.size })
+            else {
+                throw ArtifactRefused(
+                    "a frame of \(frame.size) stands a parameter or a variable past its end"
+                )
+            }
+
+            guard body.standing.slots.allSatisfy({ slot in slot < frame.size }) else {
+                throw ArtifactRefused(
+                    "a body stands on a slot its frame of \(frame.size) does not hold"
+                )
+            }
+        }
+
+        self.init(
+            label: label,
+            signature: signature,
+            purity: purity,
+            isolation: isolation,
+            failing: failing,
+            sends: sends,
+            implementation: implementation
+        )
+    }
+
     // What of a row its document settled. What is left behind is a reading of
     // this against a table, which any table gives again.
     init(_ row: Linked) {

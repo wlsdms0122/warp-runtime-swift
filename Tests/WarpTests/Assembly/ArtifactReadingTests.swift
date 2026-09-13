@@ -271,6 +271,35 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where the spellings stand in an order the table does not")
+    func declarationsOutOfStep() throws {
+        // Given. A document of two declarations, with the spellings swapped and
+        // the rows left where they were. Each row still knows its own label, so
+        // nothing but the two together can tell.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case let .array(declared) = parts[6],
+              declared.count == 2
+        else {
+            Issue.record("an artifact writes its declared spellings as a part")
+
+            return
+        }
+
+        parts[6] = .array(declared.reversed())
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

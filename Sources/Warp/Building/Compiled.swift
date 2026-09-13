@@ -147,6 +147,15 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
+        // Which row a spelling stands for is read off where it stands in this
+        // list, and which code a native row brings is read off the row's own
+        // label. The two answer the same question, so a list that names them
+        // in another order leaves every row knowing itself and every spelling
+        // reaching somebody else.
+        guard declared == table.prefix(declared.count).map(\.label) else {
+            throw ArtifactRefused("an artifact declares its rows in an order its table does not")
+        }
+
         // What a body reaches through a box of its own document. A run reads
         // one by standing at its number, so a number past the ones written
         // here is an array reached past its end.
@@ -160,6 +169,33 @@ public struct Compiled: Sendable, Declaring {
             throw ArtifactRefused(
                 "a body stands on a variable past the \(variables.count) this document holds"
             )
+        }
+
+        // A closure stands its own row, and what it takes with it stands in
+        // that row's frame. Which row it is, is this document's arithmetic:
+        // the closures follow the declarations, in the order the document
+        // numbered them. Only a list that has them all can ask this.
+        let lifted = declared.count ..< table.count
+
+        for row in table {
+            guard case let .body(body, _) = row.implementation else { continue }
+
+            for closure in body.standing.closures {
+                guard let written = numbering.lifted(closure.number), written < lifted.count else {
+                    throw ArtifactRefused(
+                        "a body stands up a closure at \(closure.number), where this"
+                            + " document numbers none"
+                    )
+                }
+
+                guard case let .body(_, frame) = table[lifted.lowerBound + written].implementation,
+                      closure.inner.allSatisfy({ slot in slot < frame.size })
+                else {
+                    throw ArtifactRefused(
+                        "a closure takes something into a slot its own frame does not hold"
+                    )
+                }
+            }
         }
 
         self.init(
@@ -198,7 +234,7 @@ public struct Compiled: Sendable, Declaring {
     }
 
     public init(written value: Value) throws {
-        var fields = try Fields(value, of: "artifact")
+        var fields = try Fields(value, of: "artifact format")
         let format = try fields.count()
 
         guard format == Self.format else {

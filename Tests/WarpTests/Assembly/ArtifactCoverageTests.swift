@@ -49,7 +49,14 @@ struct ArtifactCoverageTests {
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.ten", "a.eleven"],
-            table: [row(label: "a.ten", body: true), row(label: "a.eleven", body: false)],
+            // Two declarations and the two closures their bodies lifted, which
+            // is the order a document numbers its rows in.
+            table: [
+                row(label: "a.ten", body: true),
+                row(label: "a.eleven", body: false),
+                lifted(label: "a.twenty"),
+                lifted(label: "a.twentyOne")
+            ],
             calls: [["a.twelve"], []],
             answers: ["a.ten": everyLoweredType],
             numbering: Numbering(imports: ["a.twelve"], declared: ["a.ten", "a.eleven"], closures: ["a.ten": 2]),
@@ -169,6 +176,23 @@ struct ArtifactCoverageTests {
         .conditional, .loop, .attempt, .call, .leave(.procedure), .leave(.construct), .leave(.round)
     ]
 
+    // A row a closure literal was lifted into, whose frame holds what the
+    // body that stood it up takes into it.
+    private static func lifted(label: Name) -> Judged {
+        Judged(
+            label: label,
+            signature: Signature(returns: .int),
+            purity: .unstated,
+            isolation: .unstated,
+            failing: .unstated,
+            sends: [],
+            implementation: .body(
+                Body(instructions: [], result: .literal(.int(0))),
+                Frame(size: 2, parameters: [], variables: [], names: ["c0", "c1"])
+            )
+        )
+    }
+
     private static func row(label: Name, body: Bool) -> Judged {
         Judged(
             label: label,
@@ -203,7 +227,10 @@ struct ArtifactCoverageTests {
             ),
             Instruction(binding: nil, code: .array([.literal(.null), .literal(.bool(true))]), label: "array"),
             Instruction(binding: nil, code: .record(recordOperation), label: "record"),
-            Instruction(binding: nil, code: .closure(1, captures: [(4, 0), (5, 1)]), label: "closure"),
+            // The number is a reference of this document, and the closures
+            // stand behind the spellings: one import and two declarations, so
+            // the first closure is three.
+            Instruction(binding: nil, code: .closure(3, captures: [(4, 0), (5, 1)]), label: "closure"),
             Instruction(
                 binding: nil,
                 code: .apply(.local(Address(slot: 6, steps: [])), arguments: [("a", .literal(.int(2)))]),
