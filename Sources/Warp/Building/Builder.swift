@@ -642,7 +642,10 @@ public struct Builder: Sendable {
         let lowered = try compiling.lowering.numbered(
             try declared.map { name in
                 guard let row = compiling.lowering.rows[name] else {
-                    throw BuildError("'\(name)' has no row in the table", at: nil)
+                    throw BuildError.unjudged(
+                        "'\(name)', which this document declares and the lowering has no row for",
+                        at: .procedure(name.spelling, in: module.document)
+                    )
                 }
 
                 return row

@@ -511,6 +511,106 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a claim's contracts stand out of order")
+    func claimsOutOfOrder() throws {
+        // Given. A type that answers two contracts, with the two swapped. The
+        // set reads the same either way, so what breaks is quieter: one
+        // artifact would have two writings.
+        let sut = try Module(
+            types: ["app.Box": .record(["v": .int])],
+            contracts: [
+                "app.One": ["one": Signature(returns: .int)],
+                "app.Two": ["two": Signature(returns: .int)]
+            ],
+            claims: ["app.Box": ["app.One", "app.Two"]],
+            procedures: [
+                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "app.Box.one": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("app.Box"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                ),
+                "app.Box.two": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("app.Box"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(2))
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(claims) = parts[4],
+              case var .array(entry) = claims[0],
+              case let .array(contracts) = entry[1],
+              contracts.count == 2
+        else {
+            Issue.record("an artifact writes which contracts each type answers")
+
+            return
+        }
+
+        entry[1] = .array(contracts.reversed())
+        claims[0] = .array(entry)
+        parts[4] = .array(claims)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a numbering's closure table stands out of order")
+    func numberingClosuresOutOfOrder() throws {
+        // Given. A document whose two declarations each write a closure, with
+        // the table that says where each one's begin written backwards.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                ),
+                "app.other": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))))
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(numbering) = parts[10],
+              case let .array(closing) = numbering[1],
+              closing.count == 2
+        else {
+            Issue.record("an artifact writes where each declaration's closures begin")
+
+            return
+        }
+
+        numbering[1] = .array(closing.reversed())
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

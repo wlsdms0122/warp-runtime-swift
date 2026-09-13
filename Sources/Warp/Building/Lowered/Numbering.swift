@@ -284,16 +284,14 @@ struct Numbering: Sendable {
             throw ArtifactRefused("'\(part)' is not written as a list")
         }
 
-        return try written.reduce(into: [Name: Int]()) { places, entry in
+        return try Fields.gathered(try written.map { entry in
             var place = try Fields(entry, of: part)
-            let name = try place.name()
-
-            guard places.updateValue(try place.count(), forKey: name) == nil else {
-                throw ArtifactRefused("'\(part)' writes '\(name)' twice")
-            }
+            let held = (try place.name(), try place.count())
 
             try place.end()
-        }
+
+            return held
+        }, of: part)
     }
 
     private static func placed(_ names: [Name], from start: Int) -> [Name: Int] {

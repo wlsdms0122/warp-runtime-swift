@@ -31,7 +31,7 @@ struct ArtifactReader {
             try keyed(written, of: "contract", signature)
         }
         let claims = try keyed(fields.next(), of: "claims") { written in
-            Set(try Fields.list(written, of: "claims", name))
+            Set(try Fields.ordered(written, of: "claims", name))
         }
         let leaned = try leaned(fields.next())
 
@@ -43,12 +43,7 @@ struct ArtifactReader {
         // the writing lays them down. The order is the agreement with the
         // writing, so it is said here in sentences rather than left standing
         // in the order some initialiser happens to declare.
-        let declared = try fields.list(name)
-
-        guard declared.ordered else {
-            throw ArtifactRefused("'artifact' writes its declared spellings out of order")
-        }
-
+        let declared = try Fields.ordered(fields.next(), of: "declared", name)
         let table = try fields.list(judged)
         let calls = try fields.list { written in try Fields.list(written, of: "calls", name) }
         let answers = try keyed(fields.next(), of: "answers", lowered)
@@ -82,7 +77,7 @@ struct ArtifactReader {
         of part: String,
         _ read: (Value) throws -> T
     ) throws -> [Name: T] {
-        try gathered(try Fields.list(value, of: part) { entry in
+        try Fields.gathered(try Fields.list(value, of: part) { entry in
             var fields = try Fields(entry, of: part)
             let held = (try fields.name(), try read(fields.next()))
 
@@ -90,24 +85,6 @@ struct ArtifactReader {
 
             return held
         }, of: part)
-    }
-
-    // A list a name stands over, gathered into what a name answers. The
-    // writing puts them in name order, and out of order is refused rather than
-    // taken: one artifact is one writing of bytes, and a reading that took any
-    // order would let two writings say one artifact. A name written twice is
-    // the same refusal, since a list in order never goes back.
-    private func gathered<Key: Hashable & Comparable, T>(
-        _ entries: [(Key, T)],
-        of part: String
-    ) throws -> [Key: T] {
-        guard entries.map(\.0).ordered else {
-            throw ArtifactRefused("'\(part)' writes its names out of order, or one of them twice")
-        }
-
-        return entries.reduce(into: [Key: T]()) { gathered, entry in
-            gathered[entry.0] = entry.1
-        }
     }
 
     // A reading that goes through a door the value layer judges. A type of
@@ -120,16 +97,6 @@ struct ArtifactReader {
         } catch let refused as ValueRefused {
             throw ArtifactRefused(refused.message)
         }
-    }
-
-    // A written list a set is made of. The writing puts it in order, and a
-    // reading that took any order would let two writings say one artifact.
-    private func ordered<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
-        guard written.ordered else {
-            throw ArtifactRefused("'\(part)' writes its names out of order, or one of them twice")
-        }
-
-        return written
     }
 
     private func name(_ value: Value) throws -> Name {
@@ -145,7 +112,7 @@ struct ArtifactReader {
     }
 
     private func leaned(_ value: Value) throws -> [Claim: Place] {
-        try gathered(try Fields.list(value, of: "leaned") { entry in
+        try Fields.gathered(try Fields.list(value, of: "leaned") { entry in
             var fields = try Fields(entry, of: "leaned")
             let claim = Claim(type: try name(fields.next()), contract: try name(fields.next()))
             let where_ = try place(fields.next())
@@ -347,7 +314,7 @@ private extension ArtifactReader {
         switch try fields.tag() {
         case 0: read = .unstated
         case 1:
-            read = .these(Set(try ordered(try Fields.list(fields.next(), of: "failing", text), of: "failing")))
+            read = .these(Set(try Fields.ordered(fields.next(), of: "failing", text)))
         default: throw ArtifactRefused("'failing' says neither nothing nor which failures")
         }
 

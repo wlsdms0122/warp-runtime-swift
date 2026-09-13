@@ -178,6 +178,43 @@ extension Fields {
         return try written.map(read)
     }
 
+    // A written list that stands in order, none of it twice. The writing puts
+    // every list of names in order, so a reading that took any order would let
+    // two writings say one artifact.
+    //
+    // Here rather than at each place that reads one, because a rule applied by
+    // hand is a rule left out by hand: every list of names this reads comes
+    // through this door or through the one below it.
+    static func ordered<T: Comparable>(
+        _ value: Value,
+        of part: String,
+        _ read: (Value) throws -> T
+    ) throws -> [T] {
+        try judged(try list(value, of: part, read), of: part)
+    }
+
+    // The same, where what a name stands over is read beside it and the whole
+    // is gathered into what a name answers.
+    static func gathered<Key: Hashable & Comparable, T>(
+        _ entries: [(Key, T)],
+        of part: String
+    ) throws -> [Key: T] {
+        try judged(entries.map(\.0), of: part)
+
+        return entries.reduce(into: [Key: T]()) { gathered, entry in
+            gathered[entry.0] = entry.1
+        }
+    }
+
+    @discardableResult
+    private static func judged<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
+        guard written.ordered else {
+            throw ArtifactRefused("'\(part)' writes its names out of order, or one of them twice")
+        }
+
+        return written
+    }
+
     // A writing that may hold nothing: a list of none or one, so a value that
     // is itself null is told from no value at all. What lays one down is
     // `ArtifactWriter.maybe`, and the two are one rule said from each side.
