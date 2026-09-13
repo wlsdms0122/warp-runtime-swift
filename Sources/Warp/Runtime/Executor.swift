@@ -1062,14 +1062,14 @@ public struct Executor: Sendable {
             }
 
             // Sending to something fills the slot it is sent to, so a value
-            // handed under that name is a second instruction for one place.
-            // The same refusal a call writing its receiver both in front and by
-            // name earns.
+            // handed under that name is a second instruction for one place. A
+            // document writes its receiver in front of the selector and a
+            // procedure sends to one, so the two spell it differently and
+            // refuse the same thing.
             guard receiver == nil || position != callee.receiverPosition else {
                 throw ExecutionError(
-                    "'\(callee.label)' is sent to something and handed"
-                        + " '\(callee.slots[position].name)' as well, which is the name it is"
-                        + " sent to"
+                    "'\(callee.slots[position].name)' sent to '\(callee.label)' both as what"
+                        + " it is sent to and by name"
                 )
             }
 
