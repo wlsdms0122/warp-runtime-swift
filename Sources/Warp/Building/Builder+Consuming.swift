@@ -128,7 +128,7 @@ extension Builder {
         }
 
         let walk = Consuming(context: context, place: place)
-        let left = try walk.answering(
+        try walk.answering(
             block,
             held: Consuming.Held(live: Set(taken.keys), borrowed: Set(borrowed.keys))
         )
@@ -146,7 +146,6 @@ extension Builder {
                 at: place.part(.result)
             )
         }
-
     }
 
     // MARK: - Private
@@ -283,14 +282,14 @@ extension Builder {
         // A declaration's own body, walked. Its result is a way out of the
         // procedure the way a `return` is, which an inner block's result is
         // not, so the one entry that knows which block this is says so.
-        func answering(_ block: Block, held: Held) throws -> Held {
+        func answering(_ block: Block, held: Held) throws {
             let left = try through(block, held: held, guarded: nil)
 
             if let result = block.result, carriesObligation(result, held: left) {
                 handsOut = true
             }
 
-            guard let stranded = left.live.sorted().first else { return left }
+            guard let stranded = left.live.sorted().first else { return }
 
             throw refusal(
                 "still holds '\(stranded)' where it ends. A value written `linear` is"
@@ -365,7 +364,7 @@ extension Builder {
                 let inside = Consuming(context: context, place: place)
                 let seeded = procedure.signature.parameters
 
-                _ = try inside.answering(
+                try inside.answering(
                     block,
                     held: Held(
                         live: Set(seeded.filter { _, parameter in
