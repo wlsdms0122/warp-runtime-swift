@@ -56,6 +56,31 @@ enum SlotMark: String, CaseIterable, Sendable {
         }
     }
 
+    // The mark a spelling begins with, and the spelling under it. The other
+    // half of `marked(_:)`: one asks a type that has been made, this asks text
+    // that has not been read yet, and a mark stands in front of a whole
+    // spelling so the question is the same one twice.
+    static func leading(of text: String) -> (mark: SlotMark, rest: String)? {
+        for mark in allCases {
+            guard text.hasPrefix(mark.written) else { continue }
+
+            return (mark, String(text.dropFirst(mark.written.count)))
+        }
+
+        return nil
+    }
+
+    // The spelling with every mark taken off the front of it.
+    static func unmarked(_ text: String) -> String {
+        var bare = text
+
+        while let (_, rest) = leading(of: bare) {
+            bare = rest
+        }
+
+        return bare
+    }
+
     // The type a slot marked this way holds.
     func marking(_ inner: TypeExpression) -> TypeExpression {
         switch self {
@@ -74,4 +99,6 @@ enum SlotMark: String, CaseIterable, Sendable {
     }
 
     // MARK: - Private
+    // The mark as it stands in front of a type, the space included.
+    private var written: String { "\(rawValue) " }
 }

@@ -12,7 +12,7 @@ import Warp
 
 @Suite("The procedures a slot writes about itself")
 struct ModifierNotationTests {
-    @Test("inout and var stand in front of the whole type", arguments: [
+    @Test("a mark stands in front of the whole type", arguments: [
         ("inout int", TypeExpression.inout(.int)),
         ("inout int?", .inout(.nullable(.int))),
         ("var array<int>", .variable(.array(.int))),
@@ -20,7 +20,7 @@ struct ModifierNotationTests {
         ("consuming Handle", .consuming(.named("Handle"))),
         ("borrowing Handle", .borrowing(.named("Handle")))
     ])
-    func slotKeywordsWrapTheWholeType(written: String, expected: TypeExpression) throws {
+    func everyMarkStandsInFrontOfTheWholeType(written: String, expected: TypeExpression) throws {
         #expect(try TypeReader.parse(written) == expected)
     }
 
@@ -138,6 +138,20 @@ struct ModifierNotationTests {
         #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == type)
     }
 
+    @Test("a record's only field is not a key the reading takes some other way")
+    func aRecordIsNotWrittenUnderAKeyTheReadingTakes() throws {
+        // Given. The writer asks the reading itself rather than a list beside
+        // it, so a key the reading refuses is refused here too rather than
+        // written and then unreadable
+        for spelling in ["var inout procedure", "procedure", "var procedure", "linear"] {
+            let type = TypeExpression.record([try Name(spelling): .int])
+
+            #expect(throws: WritingError.self) {
+                try Writer().value(of: type)
+            }
+        }
+    }
+
     @Test("isolated is read in either order and written in one", arguments: [
         ("isolated procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated procedure"),
         ("pure isolated procedure", .procedure(nil, .pure, .isolated), "pure isolated procedure"),
@@ -150,8 +164,8 @@ struct ModifierNotationTests {
         #expect(try Writer().value(of: parsed) == .string(canonical))
     }
 
-    @Test("a slot keyword and a modifier on one procedure form survive the round trip")
-    func slotKeywordAndModifierRoundTrip() throws {
+    @Test("a mark and a modifier on one procedure form survive the round trip")
+    func aMarkAndAModifierRoundTrip() throws {
         // Given. A parameter typed `inout pure procedure<...>`, which the
         // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))

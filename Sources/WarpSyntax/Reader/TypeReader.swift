@@ -57,7 +57,7 @@ public struct TypeReader: Decodable {
         // whole spelling is one. `inout` and `var` stand in front of the whole
         // type, including a trailing `?`, so they are read before anything else
         // is.
-        if let (mark, bare) = marked(text) {
+        if let (mark, bare) = SlotMark.leading(of: text) {
             let inner = try parse(bare)
 
             if let inside = SlotMark.marked(inner) {
@@ -229,26 +229,23 @@ public struct TypeReader: Decodable {
     // both decide what a document *cannot* say, so writing one asks for them.
     public static var builtinNames: Set<Name> { Set(builtins.keys) }
 
-    // The keys a procedure form may sit under, in the writer's spelling: a
-    // slot keyword or none, then the modifiers, then `procedure`.
-    public static var procedureKeys: Set<Name> {
-        let spellings = [
-            (Purity.unstated, Isolation.unstated),
-            (.pure, .unstated),
-            (.unstated, .isolated),
-            (.pure, .isolated)
-        ]
-            .map { purity, isolation in procedureSpelling(purity, isolation) }
+    // Whether the reading takes this key as a procedure form's. Asked of the
+    // reading itself rather than of a list beside it, because a list and a
+    // parser drift and what they disagree about is a document one of them
+    // writes and the other refuses.
+    public static func readsAsAProcedure(_ key: Name) -> Bool {
+        ((try? procedureKeywords(of: key.spelling)) ?? nil) != nil
+    }
 
-        return Set(
-            (
-                spellings
-                    + SlotMark.allCases.flatMap { mark in
-                        spellings.map { spelling in "\(mark.rawValue) \(spelling)" }
-                    }
-            )
-                .map(Name.init(normal:))
-        )
+    // Whether the reading takes this key as anything but a record's field
+    // name, the keys it refuses outright included: a record written under one
+    // would come back as something else, or not come back.
+    public static func readsPastARecord(_ key: Name) -> Bool {
+        do {
+            return try procedureKeywords(of: key.spelling) != nil || key.spelling == linearKey
+        } catch {
+            return true
+        }
     }
 
     // What a procedure form's key says, read front to back: a slot's mark if one
@@ -260,7 +257,7 @@ public struct TypeReader: Decodable {
     static func procedureKeywords(
         of key: String
     ) throws -> (mark: SlotMark?, purity: Purity, isolation: Isolation)? {
-        let (mark, rest) = marked(key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
+        let (mark, rest) = SlotMark.leading(of: key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
 
         // The same rule the spelling of a whole type is read by, on the key a
         // procedure form is written under. Without it a second mark leaves the
@@ -271,8 +268,8 @@ public struct TypeReader: Decodable {
         // document named it.
         if
             let mark,
-            let inside = marked(rest)?.mark,
-            let (_, _, head) = modifiers(of: unmarked(rest)),
+            let inside = SlotMark.leading(of: rest)?.mark,
+            let (_, _, head) = modifiers(of: SlotMark.unmarked(rest)),
             head == "procedure"
         {
             throw TypeFormError(
@@ -340,30 +337,6 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Private
-    // The mark a spelling begins with, and the spelling under it. Read off the
-    // text rather than off a type, because a mark stands in front of a whole
-    // spelling and this is asked before anything has been made of it.
-    private static func marked(_ text: String) -> (mark: SlotMark, rest: String)? {
-        for mark in SlotMark.allCases {
-            guard let bare = text.dropPrefixed("\(mark.rawValue) ") else { continue }
-
-            return (mark, String(bare))
-        }
-
-        return nil
-    }
-
-    // The spelling with every mark taken off the front of it.
-    private static func unmarked(_ text: String) -> String {
-        var bare = text
-
-        while let (_, rest) = marked(bare) {
-            bare = rest
-        }
-
-        return bare
-    }
-
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         if let written = try? decoder.singleValueContainer().decode(String.self) {
             return try parse(written)

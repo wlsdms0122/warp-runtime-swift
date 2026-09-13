@@ -259,15 +259,16 @@ public struct Writer: Sendable {
                 "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
 
-        // A record and a procedure are both written as a mapping, and the one
-        // key that tells them apart belongs to the procedure. A record whose
-        // only field is that key would come back as the other one.
+        // A record, a procedure and a type handed on once are all written as a
+        // mapping, and the key is what tells them apart. A record whose only
+        // field is a key the reading takes some other way would come back as
+        // that other thing, or not come back at all.
         case let .record(fields):
-            guard fields.count != 1 || !TypeReader.procedureKeys.contains(fields.keys.first!) else {
+            guard fields.count != 1 || !TypeReader.readsPastARecord(fields.keys.first!) else {
                 throw WritingError(
-                    "a record whose only field is '\(fields.keys.first!)' is written the same"
-                        + " way a procedure type is, and a document has no way to tell"
-                        + " them apart"
+                    "a record whose only field is '\(fields.keys.first!)' is read as"
+                        + " something other than a record, and a document has no way"
+                        + " to tell the two apart"
                 )
             }
 
@@ -356,7 +357,7 @@ public struct Writer: Sendable {
             return .string("\(mark.rawValue) \(written)")
 
         case let .dictionary(form) where form.count == 1
-            && TypeReader.procedureKeys.contains(form.entries[0].name):
+            && TypeReader.readsAsAProcedure(form.entries[0].name):
             return .dictionary([
                 try Name("\(mark.rawValue) \(form.entries[0].name)"): form.entries[0].value
             ])
