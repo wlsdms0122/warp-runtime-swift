@@ -23,7 +23,7 @@ struct Sent: Sendable, Equatable {
     let offers: [Int]
 
     // MARK: - Initializer
-    init(row: Int, offers: [Int] = []) {
+    init(row: Int, offers: [Int]) {
         self.row = row
         self.offers = offers
     }
