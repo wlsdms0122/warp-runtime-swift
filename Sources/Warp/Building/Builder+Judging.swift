@@ -715,8 +715,8 @@ extension Builder {
         // front of the dot, so what was written there would go nowhere.
         guard site.received == nil || declared.receiver != nil else {
             throw BuildError(
-                "'\(call.selector)' is sent to something, and it declares nothing to be"
-                    + " sent to",
+                "'\(call.selector)' is sent to something, and it"
+                    + " \(BuildError.receivesByNoName)",
                 at: site.place.part(.receiver)
             )
         }

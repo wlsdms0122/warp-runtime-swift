@@ -301,6 +301,25 @@ struct ProcedureSendsTests {
         #expect(answer == .string("sent to nothing"))
     }
 
+    @Test("a procedure that declares what it is sent to reads null as being sent to nothing")
+    func aDeclaredReceiverSentNullReadsAsNothing() async throws {
+        // Given. The branch a callee with a receiver of its own takes, which is
+        // the one the door rather than the boundary answers
+        let image = try Builder().build(
+            [try Module(procedures: ["entry": Procedure(
+                body: [],
+                result: .call(Call(selector: "app.nullingToAReceiver"))
+            )])] + [.nullingToAReceiver, .reporting],
+            entry: "entry"
+        )
+
+        // When
+        let answer = try await Executor().run(image)
+
+        // Then
+        #expect(answer == .string("sent to nothing"))
+    }
+
     // MARK: - Private
 }
 
@@ -432,7 +451,6 @@ private struct ShoutingQuery: Query {
     // MARK: - Private
 }
 
-
 // Hands two arguments in the order it wrote them, which is not the order the
 // callee keeps them in. What the callee answers says which order was kept.
 private struct PickingEffect: Effect {
@@ -500,7 +518,6 @@ private struct OverhandingEffect: Effect {
     // MARK: - Private
 }
 
-
 // Hands one name twice.
 private struct DoublingEffect: Effect {
     typealias Parameters = NoParameters
@@ -545,7 +562,6 @@ private struct ReceivingEffect: Effect {
     // MARK: - Private
 }
 
-
 // Sends an int to a procedure whose receiver is declared string.
 private struct MistypingEffect: Effect {
     typealias Parameters = NoParameters
@@ -586,7 +602,6 @@ private struct UnreceivingEffect: Effect {
     // MARK: - Private
 }
 
-
 // Sends null rather than leaving the receiver out.
 private struct NullingEffect: Effect {
     typealias Parameters = NoParameters
@@ -621,7 +636,6 @@ private struct PlainQuery: Query {
     // MARK: - Private
 }
 
-
 // Sends null to a procedure that runs rather than one that answers as data.
 private struct NullingToAnEffect: Effect {
     typealias Parameters = NoParameters
@@ -645,6 +659,46 @@ private struct NullingToAnEffect: Effect {
 // Declares nothing to be sent to, runs, and says what it was sent to.
 private struct PlainlyRunningEffect: Effect {
     typealias Parameters = NoParameters
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        invocation.receiver == nil ? .string("sent to nothing") : .string("sent to something")
+    }
+
+    // MARK: - Private
+}
+
+// Sends null to a procedure that does declare what it is sent to.
+private struct NullingToAReceiver: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case receiving
+
+        var selector: Name { "app.receiving" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.receiving, to: .null)
+    }
+
+    // MARK: - Private
+}
+
+// Declares what it is sent to, and says what it was sent.
+private struct ReceivingReporter: Effect {
+    enum Parameters: Int, ParameterSet {
+        case said
+
+        var name: Name { "said" }
+
+        var declared: Parameter { Parameter(type: .string) }
+    }
 
     // MARK: - Property
     // MARK: - Initializer
@@ -849,8 +903,25 @@ private extension Module {
             )
         ]
     )
-}
 
+    static let reporting = try! Module(
+        procedures: [
+            "app.receiving": Procedure(
+                signature: Signature(of: ReceivingReporter.self, receiver: .said, returns: .string),
+                implementation: .effect(ReceivingReporter())
+            )
+        ]
+    )
+
+    static let nullingToAReceiver = try! Module(
+        procedures: [
+            "app.nullingToAReceiver": Procedure(
+                signature: Signature(returns: .string),
+                implementation: .effect(NullingToAReceiver())
+            )
+        ]
+    )
+}
 
 // Sending two procedures, the second standing at a place nothing before it does.
 private struct ScatteredQuery: Query {

@@ -772,16 +772,8 @@ public struct Executor: Sendable {
         let sent = sent(to: callee, receiver: receiver, arguments: arguments)
 
         switch callee.implementation {
-        // Absent and null are the same fact, and a procedure asked about nothing
-        // decides for itself what that means: `contains` says false rather
-        // than failing.
         case let .native(.query(query)):
-            return try evaluate(
-                query,
-                of: callee,
-                receiver: sent == .null ? nil : sent,
-                settled: arguments
-            ) ?? .null
+            return try evaluate(query, of: callee, receiver: sent, settled: arguments) ?? .null
 
         // A body the link proved pure runs here, synchronously. Nothing in it
         // can suspend, which is what the proof says.
@@ -873,6 +865,17 @@ public struct Executor: Sendable {
     }
 
     // The two doors a native procedure answers through. The procedure's parameters are
+    // What a native procedure reads as what it was sent to. Null is being sent to
+    // nothing said as a value rather than by leaving it out, and a procedure
+    // decides for itself what being sent to nothing means, so the door answers
+    // nothing and no procedure asks the question twice.
+    //
+    // A body is not asked it at all: it reads its receiver as the parameter it
+    // declared, and null is a value that parameter may hold.
+    private func sentTo(_ receiver: Value?) -> Value? {
+        receiver == .null ? nil : receiver
+    }
+
     // its own type, so the call is made where that type has a name: handing
     // `any Query` to a generic function opens it.
     private func evaluate<W: Query>(
@@ -883,7 +886,7 @@ public struct Executor: Sendable {
     ) throws -> Value? {
         try query.evaluate(
             Question(
-                receiver: receiver,
+                receiver: sentTo(receiver),
                 settled: settled,
                 sends: callee.sends,
                 from: callee.origin,
@@ -904,7 +907,7 @@ public struct Executor: Sendable {
             Invocation(
                 selector: callee.label,
                 signature: callee.signature,
-                receiver: receiver,
+                receiver: sentTo(receiver),
                 settled: settled,
                 holds: holds,
                 sends: callee.sends,
@@ -1018,19 +1021,14 @@ public struct Executor: Sendable {
     private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
         guard let receiver else { return nil }
 
-        // Null is being sent to nothing, said as a value rather than by leaving
-        // it out, so a procedure that declares nothing to be sent to is told
-        // nothing by it. It answers as nothing here rather than further down,
-        // so what every kind of callee is handed says the same thing.
-        guard callee.receiverPosition != nil else {
-            guard receiver == .null else {
-                throw ExecutionError(
-                    "'\(callee.label)' is sent to something, and it declares nothing to be"
-                        + " sent to"
-                )
-            }
-
-            return nil
+        // Null is being sent to nothing said as a value, so a procedure that
+        // declares nothing to be sent to is told nothing by it. What a native
+        // procedure then reads is the door's to settle.
+        guard callee.receiverPosition != nil || receiver == .null else {
+            throw ExecutionError(
+                "'\(callee.label)' is sent to something, and it"
+                    + " \(BuildError.receivesByNoName)"
+            )
         }
 
         return try callee.settling(receiver: receiver)

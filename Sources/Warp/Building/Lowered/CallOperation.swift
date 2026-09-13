@@ -61,7 +61,7 @@ struct CallOperation: Sendable {
         // only at the slot the callee receives by, and there is no such slot.
         guard receiver == nil || callee.signature.receiver != nil else {
             throw BuildError.unjudged(
-                "a receiver for '\(callee.label)', which declares nothing to be sent to",
+                "a receiver for '\(callee.label)', which \(BuildError.receivesByNoName)",
                 at: place
             )
         }

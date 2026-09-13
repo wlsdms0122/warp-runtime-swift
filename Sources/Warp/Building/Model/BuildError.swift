@@ -48,6 +48,12 @@ extension BuildError {
     // A body the build lowered without judging it first: what the lowering
     // cannot place is the build's own mistake rather than the author's, and
     // reads that way.
+    // What a procedure that receives by no name says about a value written in
+    // front of it. Said here because two say it: the judging refuses the call
+    // and the lowering asserts the judging ran, and a rule worded twice is a
+    // rule that drifts.
+    static let receivesByNoName = "declares nothing to be sent to"
+
     static func unjudged(_ what: String, at place: Place) -> BuildError {
         BuildError("the build lowered \(what) without judging it", at: place)
     }
