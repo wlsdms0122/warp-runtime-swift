@@ -64,107 +64,18 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
         let builder = Builder()
-        let modules = try brought(sut) + [try Loader().load(sut.program, identity: nil)] + Module.standard
-        let image = try builder.build(modules, entry: "entry")
+        let image = try builder.build(try sut.modules(), entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
     }
 
-    // The vocabulary the case asked the runner for, as a module standing in
-    // front of the case's own document so that what the host brings is there
-    // to be named. Empty where the case asked for none.
-    private func brought(_ sut: Case) throws -> [Module] {
-        guard let vocabulary = sut.vocabulary else { return [] }
-
-        let loader = Loader()
-
-        // The declarations go through the reader every document goes through,
-        // because they are declarations. What arrives is read as a body, and
-        // the implementation is swapped for the one the case described: a body
-        // is what a document can write and a host procedure is what it cannot.
-        let declared = try loader.load(vocabulary.module, identity: nil)
-
-        let brought = try Module(
-            types: declared.types,
-            constraints: declared.constraints,
-            contracts: declared.contracts,
-            claims: declared.claims,
-            procedures: Dictionary(
-                uniqueKeysWithValues: try vocabulary.procedures.map { one in
-                    guard let read = declared.procedures[one.name] else {
-                        throw ConformanceError("'\(one.name)' was asked for and did not read")
-                    }
-
-                    return (one.name, try supplied(one, declaring: read.signature))
-                }
-            )
-        )
-
-        return [brought]
-    }
-
-    // The host's side of one asked-for procedure. Which door it answers through
-    // is the claim it makes: the one that answers without running is handed no
-    // way to reach outside, and the other is.
-    private func supplied(_ one: Case.Supplied, declaring signature: Signature) throws -> Procedure {
-        Procedure(
-            signature: signature,
-            implementation: door(one, reading: try places(signature.parameters.count))
-        )
-    }
-
-    // Which of the fixed place sets this declaration reads its arguments
-    // through. A case declares `of` and `value` and nothing else, so the
-    // arity picks one.
-    private func places(_ count: Int) throws -> any ParameterSet.Type {
-        switch count {
-        case 0:
-            return NoParameters.self
-
-        case 1:
-            return OneName.self
-
-        case 2:
-            return TwoNames.self
-
-        default:
-            throw ConformanceError(
-                "a procedure a case asks for declares \(count) names, and the places"
-                    + " a case may name are `of` and `value`"
-            )
-        }
-    }
-
-    // Which door it answers through, which is the claim it makes about
-    // reaching outside the run.
-    private func door(_ one: Case.Supplied, reading places: any ParameterSet.Type) -> Implementation {
-        func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
-            one.runs
-                ? .effect(
-                    SuppliedEffect<Parameters>(
-                        answers: one.answers,
-                        isolated: one.isolated,
-                        failing: .these(Set(one.failing))
-                    )
-                )
-                : .query(
-                    SuppliedQuery<Parameters>(
-                        answers: one.answers,
-                        isolated: one.isolated,
-                        failing: .these(Set(one.failing))
-                    )
-                )
-        }
-
-        return made(places)
-    }
 
     // How far a case got before it was refused. The stage is part of the answer:
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async throws -> Case.Stage? {
         let builder = Builder()
-        let vocabulary = try brought(sut)
+        let vocabulary = try sut.brought
         let module: Module
 
         // The case's own document is read apart from the rest, because a
@@ -445,6 +356,106 @@ struct Case: Sendable, CustomStringConvertible {
     // The cases live beside the specification they belong to rather than inside
     // this package, because they are not this implementation's. The day there
     // is a second implementation they move with `spec/` and this file stays.
+    // MARK: - Internal
+    // Every module this case stands on: what the host was asked to bring, the
+    // case's own document, and the standard vocabulary. The case describes the
+    // vocabulary it asked for, so building it is the case's own answer and not
+    // a runner's.
+    func modules() throws -> [Module] {
+        try brought + [try Loader().load(program, identity: nil)] + Module.standard
+    }
+
+    // The vocabulary the case asked the runner for, as a module standing in
+    // front of the case's own document so that what the host brings is there
+    // to be named. Empty where the case asked for none.
+    var brought: [Module] {
+        get throws {
+                guard let vocabulary else { return [] }
+
+            let loader = Loader()
+
+            // The declarations go through the reader every document goes through,
+            // because they are declarations. What arrives is read as a body, and
+            // the implementation is swapped for the one the case described: a body
+            // is what a document can write and a host procedure is what it cannot.
+            let declared = try loader.load(vocabulary.module, identity: nil)
+
+            let brought = try Module(
+                types: declared.types,
+                constraints: declared.constraints,
+                contracts: declared.contracts,
+                claims: declared.claims,
+                procedures: Dictionary(
+                    uniqueKeysWithValues: try vocabulary.procedures.map { one in
+                        guard let read = declared.procedures[one.name] else {
+                            throw ConformanceError("'\(one.name)' was asked for and did not read")
+                        }
+
+                        return (one.name, try supplied(one, declaring: read.signature))
+                    }
+                )
+            )
+
+            return [brought]
+        }
+    }
+
+    // The host's side of one asked-for procedure. Which door it answers through
+    // is the claim it makes: the one that answers without running is handed no
+    // way to reach outside, and the other is.
+    private func supplied(_ one: Supplied, declaring signature: Signature) throws -> Procedure {
+        Procedure(
+            signature: signature,
+            implementation: door(one, reading: try places(signature.parameters.count))
+        )
+    }
+
+    // Which of the fixed place sets this declaration reads its arguments
+    // through. A case declares `of` and `value` and nothing else, so the
+    // arity picks one.
+    private func places(_ count: Int) throws -> any ParameterSet.Type {
+        switch count {
+        case 0:
+            return NoParameters.self
+
+        case 1:
+            return OneName.self
+
+        case 2:
+            return TwoNames.self
+
+        default:
+            throw ConformanceError(
+                "a procedure a case asks for declares \(count) names, and the places"
+                    + " a case may name are `of` and `value`"
+            )
+        }
+    }
+
+    // Which door it answers through, which is the claim it makes about
+    // reaching outside the run.
+    private func door(_ one: Supplied, reading places: any ParameterSet.Type) -> Implementation {
+        func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
+            one.runs
+                ? .effect(
+                    SuppliedEffect<Parameters>(
+                        answers: one.answers,
+                        isolated: one.isolated,
+                        failing: .these(Set(one.failing))
+                    )
+                )
+                : .query(
+                    SuppliedQuery<Parameters>(
+                        answers: one.answers,
+                        isolated: one.isolated,
+                        failing: .these(Set(one.failing))
+                    )
+                )
+        }
+
+        return made(places)
+    }
+
     static func all() throws -> [Case] {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // WarpConformanceTests
