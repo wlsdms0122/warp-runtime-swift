@@ -875,24 +875,13 @@ public struct Executor: Sendable {
     ) throws -> Value? {
         try query.evaluate(
             Question(
-                receiver: told(receiver),
+                receiver: nothingIfNull(receiver),
                 settled: settled,
                 sends: callee.sends,
                 from: callee.origin,
                 executor: self
             )
         )
-    }
-
-    // What a native procedure reads as what it was sent to. Null is being sent to
-    // nothing said as a value rather than by leaving it out, and a procedure
-    // decides for itself what being sent to nothing means, so the door answers
-    // nothing and no procedure asks the question twice.
-    //
-    // A body is not asked it at all: it reads its receiver as the parameter it
-    // declared, and null is a value that parameter may hold.
-    private func told(_ receiver: Value?) -> Value? {
-        receiver == .null ? nil : receiver
     }
 
     private func run<W: Effect>(
@@ -907,7 +896,7 @@ public struct Executor: Sendable {
             Invocation(
                 selector: callee.label,
                 signature: callee.signature,
-                receiver: told(receiver),
+                receiver: nothingIfNull(receiver),
                 settled: settled,
                 holds: holds,
                 sends: callee.sends,
@@ -916,6 +905,17 @@ public struct Executor: Sendable {
                 executor: self
             )
         )
+    }
+
+    // What a native procedure reads as what it was sent to. Null is being sent to
+    // nothing said as a value rather than by leaving it out, and a procedure
+    // decides for itself what being sent to nothing means, so both doors answer
+    // nothing and no procedure asks the question twice.
+    //
+    // A body is not asked it at all: it reads its receiver as the parameter it
+    // declared, and null is a value that parameter may hold.
+    private func nothingIfNull(_ receiver: Value?) -> Value? {
+        receiver == .null ? nil : receiver
     }
 
     // Which row of this table a number written in a body stands for. A number
@@ -1016,14 +1016,14 @@ public struct Executor: Sendable {
     // to the same thing.
     //
     // Whether a send carries one at all is the sending body's, so a procedure
-    // declaring nothing to be sent to is told rather than handed a value it
+    // declaring nothing to be sent to is refused rather than handed a value it
     // has no name for.
     private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
         guard let receiver else { return nil }
 
-        // Null is being sent to nothing said as a value, so a procedure that
-        // declares nothing to be sent to is told nothing by it. What a native
-        // procedure then reads is the door's to settle.
+        // Null is being sent to nothing said as a value, so it reaches a
+        // procedure that declares nothing to be sent to without contradicting
+        // it. What a native procedure then reads is the door's to settle.
         guard callee.receiverPosition != nil || receiver == .null else {
             throw ExecutionError(
                 "'\(callee.label)' is sent to something, and it"
