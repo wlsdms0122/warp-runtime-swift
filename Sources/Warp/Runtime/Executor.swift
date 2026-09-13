@@ -937,11 +937,11 @@ public struct Executor: Sendable {
         _ sending: Sent,
         from origin: Int,
         to receiver: Value?,
-        offering arguments: [(position: Int, value: Value)],
+        offering values: [Value],
         at trace: Trace
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
-        let settled = try settled(callee, to: receiver, offering: arguments)
+        let settled = try settled(callee, to: receiver, sending: sending, offering: values)
 
         switch callee.implementation {
         case .native(.query):
@@ -986,7 +986,7 @@ public struct Executor: Sendable {
         _ sending: Sent,
         from origin: Int,
         to receiver: Value?,
-        offering arguments: [(position: Int, value: Value)]
+        offering values: [Value]
     ) throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
 
@@ -997,28 +997,55 @@ public struct Executor: Sendable {
             )
         }
 
-        return try answer(callee, for: receiver, with: try settled(callee, to: receiver, offering: arguments))
+        return try answer(
+            callee,
+            for: receiver,
+            with: try settled(callee, to: receiver, sending: sending, offering: values)
+        )
     }
 
-    // A send's arguments over the callee's boundary, each already standing at
-    // the place the build read for it. A receiver stands apart the way it does
-    // for a call written in a document, so the slot it names is filled by it
-    // rather than by what was handed over.
+    // A send's arguments over the callee's boundary. The build read where each
+    // handed value goes, so the pairing is made here from the send itself and
+    // the values the sender built.
     //
     // A place nothing was handed at answers nil, which is what tells the
     // boundary the sender offered nothing there.
     private func settled(
         _ callee: Linked,
         to receiver: Value?,
-        offering arguments: [(position: Int, value: Value)]
+        sending: Sent,
+        offering values: [Value]
     ) throws -> Settled {
+        // How many a Swift body builds is the body's, so this is the one thing
+        // about a send the build cannot read.
+        guard values.count == sending.offers.count else {
+            throw ExecutionError(
+                "'\(callee.label)' is handed \(values.count) here, and the procedure sending"
+                    + " it declares it hands \(sending.offers.count)"
+            )
+        }
+
         var given: [Value?] = Array(repeating: nil, count: callee.slots.count)
 
-        for (position, value) in arguments {
+        for (position, value) in zip(sending.offers, values) {
+            // A row taking fewer parameters than the build read them off is a
+            // row this send was not compiled against.
             guard given.indices.contains(position) else {
                 throw ExecutionError(
-                    "'\(callee.label)' is handed something standing at \(position),"
-                        + " which is not one of its places"
+                    "'\(callee.label)' takes \(callee.slots.count) parameters, and this send"
+                        + " stands something at \(position)"
+                )
+            }
+
+            // Sending to something fills the slot it is sent to, so a value
+            // handed under that name is a second instruction for one place.
+            // The same refusal a call writing its receiver both in front and by
+            // name earns.
+            guard receiver == nil || position != callee.receiverPosition else {
+                throw ExecutionError(
+                    "'\(callee.label)' is sent to something and handed"
+                        + " '\(callee.slots[position].name)' as well, which is the name it is"
+                        + " sent to"
                 )
             }
 

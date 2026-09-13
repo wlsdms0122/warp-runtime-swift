@@ -195,6 +195,36 @@ struct ProcedureSendsTests {
         }
     }
 
+    @Test("a procedure handing one name twice is refused at the build")
+    func aDoubledHandedNameIsRefused() {
+        // Given / When / Then. Two instructions for one place, and neither is
+        // the one to keep
+        #expect(throws: BuildError.self) {
+            try Builder().build(
+                [try Module(procedures: ["entry": Procedure(body: [])])] + [.doubling, .picked],
+                entry: "entry"
+            )
+        }
+    }
+
+    @Test("a procedure handing the name it sends to is refused when it sends")
+    func handingTheReceiversNameIsRefused() async throws {
+        // Given. Whether a send carries a receiver is the Swift body's, so this
+        // is not a thing the build can read off the declaration
+        let image = try Builder().build(
+            [try Module(procedures: ["entry": Procedure(
+                body: [],
+                result: .call(Call(selector: "app.receiving"))
+            )])] + [.receiving, .greeted],
+            entry: "entry"
+        )
+
+        // When / Then
+        await #expect(throws: ExecutionError.self) {
+            try await Executor().run(image)
+        }
+    }
+
     // MARK: - Private
 }
 
@@ -268,8 +298,6 @@ private struct CountedQuery: Query {
         case ticket
 
         var selector: Name { "app.ticket" }
-
-        var offers: [Name] { [] }
     }
 
     // MARK: - Property
@@ -296,8 +324,6 @@ private struct StrayQuery: Query {
         case nowhere
 
         var selector: Name { "app.nowhere" }
-
-        var offers: [Name] { [] }
     }
 
     // MARK: - Property
@@ -318,8 +344,6 @@ private struct ShoutingQuery: Query {
         case shout
 
         var selector: Name { "app.shout" }
-
-        var offers: [Name] { [] }
     }
 
     // MARK: - Property
@@ -395,6 +419,51 @@ private struct OverhandingEffect: Effect {
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
         try await invocation.send(.pick, offering: [.int(9), .int(1)])
+    }
+
+    // MARK: - Private
+}
+
+
+// Hands one name twice.
+private struct DoublingEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case pick
+
+        var selector: Name { "app.pick" }
+
+        var offers: [Name] { ["z", "z"] }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.pick, offering: [.int(9), .int(1)])
+    }
+
+    // MARK: - Private
+}
+
+// Sends to something and hands over the name it is sent to as well.
+private struct ReceivingEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case greet
+
+        var selector: Name { "app.greet" }
+
+        var offers: [Name] { ["subject"] }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.greet, to: .int(7), offering: [.int(9)])
     }
 
     // MARK: - Private
@@ -493,6 +562,38 @@ private extension Module {
             )
         ]
     )
+
+    static let doubling = try! Module(
+        procedures: [
+            "app.doubling": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .effect(DoublingEffect())
+            )
+        ]
+    )
+
+    static let greeted = try! Module(
+        procedures: [
+            "app.greet": Procedure(
+                signature: Signature(
+                    receiver: "subject",
+                    parameters: ["subject": Parameter(type: .int)],
+                    returns: .int
+                ),
+                body: [],
+                result: .reference([.key("subject")])
+            )
+        ]
+    )
+
+    static let receiving = try! Module(
+        procedures: [
+            "app.receiving": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .effect(ReceivingEffect())
+            )
+        ]
+    )
 }
 
 
@@ -513,8 +614,6 @@ private struct ScatteredQuery: Query {
                 return "std.math.minus"
             }
         }
-
-        var offers: [Name] { [] }
     }
 
     // MARK: - Property

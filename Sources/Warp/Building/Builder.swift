@@ -496,14 +496,16 @@ public struct Builder: Sendable {
             asked[symbol.declared] = symbol.procedure.signature
         }
 
+        // What a selector this document may reach takes: its own declarations
+        // first, the documents standing before it after. One rule, so the two
+        // judgements standing on it read the same declaration.
+        let taking: @Sendable (Name) -> Signature? = {
+            [rows = compiling.lowering.rows, table = compiling.lowering.table] selector in
+            own[selector] ?? rows[selector].map { row in table[row].signature }
+        }
+
         pure(among: holding, settling: &compiling.pure, reading: reading)
-        isolated(
-            among: holding,
-            settling: &compiling.isolated,
-            taking: { [rows = compiling.lowering.rows, table = compiling.lowering.table] selector in
-                own[selector] ?? rows[selector].map { row in table[row].signature }
-            }
-        )
+        isolated(among: holding, settling: &compiling.isolated, taking: taking)
         failing(among: holding, settling: &compiling.failing)
 
         // Where this document numbers its calls from: what it looks for
@@ -519,9 +521,7 @@ public struct Builder: Sendable {
             numbering: numbering,
             pure: compiling.pure,
             isolated: compiling.isolated,
-            taking: { [rows = compiling.lowering.rows, table = compiling.lowering.table] selector in
-                own[selector] ?? rows[selector].map { row in table[row].signature }
-            }
+            taking: taking
         )
 
         // This document's block of the table, in name order. What a

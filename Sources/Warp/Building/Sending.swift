@@ -48,7 +48,7 @@ struct Sending {
         numbering: Numbering,
         pure: Set<Name>? = nil,
         isolated: Set<Name>? = nil,
-        taking: @escaping @Sendable (Name) -> Signature? = { _ in nil }
+        taking: @escaping @Sendable (Name) -> Signature?
     ) {
         self.numbering = numbering
         self.pure = pure
@@ -120,12 +120,22 @@ struct Sending {
         }
 
         let names = signature.names
+        var taken: Set<Int> = []
 
+        // A name handed twice is two instructions for one place, and neither is
+        // the one to keep. The same rule a call written in a body is held to.
         return try send.offers.map { offered in
             guard let position = names.firstIndex(of: offered) else {
                 throw BuildError(
                     "'\(label)' hands '\(offered)' to '\(send.selector)', which declares"
                         + " no parameter under that name",
+                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                )
+            }
+
+            guard taken.insert(position).inserted else {
+                throw BuildError(
+                    "'\(label)' hands '\(offered)' to '\(send.selector)' more than once",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)
                 )
             }

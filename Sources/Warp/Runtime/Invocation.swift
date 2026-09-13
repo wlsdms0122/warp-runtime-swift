@@ -138,7 +138,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             sends[key.position],
             from: origin,
             to: receiver,
-            offering: try sends[key.position].handing(arguments, to: key.selector),
+            offering: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }

@@ -35,20 +35,5 @@ struct Sent: Sendable, Equatable {
         Sent(row: row, offers: offers)
     }
 
-    // The values a run hands over, standing where the build worked out each one
-    // goes. A procedure handing a different number of them than it declared it hands
-    // is the one thing about a send a build cannot read, since how many a Swift
-    // body builds is the body's, so it is said here.
-    func handing(_ values: [Value], to selector: Name) throws -> [(position: Int, value: Value)] {
-        guard values.count == offers.count else {
-            throw ExecutionError(
-                "'\(selector)' is handed \(values.count) here, and the procedure sending"
-                    + " it declares it hands \(offers.count)"
-            )
-        }
-
-        return zip(offers, values).map { position, value in (position: position, value: value) }
-    }
-
     // MARK: - Private
 }

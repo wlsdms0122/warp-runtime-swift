@@ -29,8 +29,14 @@ public protocol ImportSet: CaseIterable, Hashable, Sendable {
     var position: Int { get }
 
     // The arguments handed over at this send, in the order the procedure hands
-    // them. Empty where it hands nothing.
+    // them.
     var offers: [Name] { get }
+}
+
+public extension ImportSet {
+    // A send that says nothing about what it hands over hands nothing, which is
+    // what most of them do.
+    var offers: [Name] { [] }
 }
 
 public extension ImportSet where Self: RawRepresentable, RawValue == Int {
@@ -45,6 +51,4 @@ public enum NoImports: Int, ImportSet {
     public static var allCases: [NoImports] { [] }
 
     public var selector: Name { "" }
-
-    public var offers: [Name] { [] }
 }
