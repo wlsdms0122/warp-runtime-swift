@@ -238,9 +238,13 @@ struct Bench {
         return String(format: "%+.1f%%", (now - before) / before * 100)
     }
 
+    // The figures this table compares, which is also what it asks a table it is
+    // compared against to carry.
+    private static let figures = ["ns/round", "load us", "build us", "baked us"]
+
     private static func table(
         _ measured: [String: Measurement],
-        against: [String: [String: Double]]?,
+        against read: [String: [String: Double]]?,
         from path: String?,
         rounds: Int,
         repeats: Int
@@ -248,7 +252,29 @@ struct Bench {
         let loop = measured[baseline]?.perRound ?? 0
         let heading = "rounds \(rounds), fastest of \(repeats);"
             + " load, build, baked and once are the fastest of \(buildSamples)"
+
+        // A table taken before a figure existed is not a table this one moved
+        // from. The figure beside a missing one is the worst of it: the columns
+        // kept their spellings while what they measure was split, so the
+        // arithmetic would run and read as a change. So the comparison is
+        // dropped whole and the figures stand on their own.
+        let missing = read.map { read in
+            figures.filter { figure in read.values.allSatisfy { row in row[figure] == nil } }
+        } ?? []
+        let against = missing.isEmpty ? read : nil
+
         var lines = [against == nil ? heading : heading + "; against \(path ?? "")", ""]
+
+        if !missing.isEmpty {
+            lines = [
+                heading,
+                "",
+                "Not compared against \(path ?? ""): it carries no"
+                    + " \(missing.map { figure in "`\(figure)`" }.joined(separator: ", "))."
+                    + " Take it again before reading this against it.",
+                ""
+            ]
+        }
 
         lines += against == nil
             ? [
