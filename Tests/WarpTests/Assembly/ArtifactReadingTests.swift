@@ -112,6 +112,33 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a body stands past its frame")
+    func aBodyPastItsFrame() throws {
+        // Given. A real artifact whose one row keeps a frame of no slots, while
+        // its body still stands on one.
+        guard case var .array(parts) = try written(),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(frame) = implementation[2]
+        else {
+            Issue.record("an artifact writes a row's frame beside its body")
+
+            return
+        }
+
+        frame[0] = .int(0)
+        implementation[2] = .array(frame)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: .array(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     private func written() throws -> Value {

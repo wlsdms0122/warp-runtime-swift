@@ -607,7 +607,22 @@ private extension ArtifactReader {
         let read: Judged.Implementation
 
         switch try fields.tag() {
-        case 0: read = .body(try body(fields.next()), try frame(fields.next()))
+        case 0:
+            let held = try body(fields.next())
+            let standing = try frame(fields.next())
+
+            // Every slot the body names has to be one the frame holds. A run
+            // reads a slot by standing at it, so a body naming one the frame
+            // does not hold is not a program that answers wrongly but an
+            // array reached past its end.
+            guard !held.mentions(atOrAbove: standing.size) else {
+                throw ArtifactRefused(
+                    "a body stands on a slot its frame of \(standing.size) does not hold"
+                )
+            }
+
+            read = .body(held, standing)
+
         case 1: read = .native(sending: try Fields.list(fields.next(), of: "sending", send))
         default: throw ArtifactRefused("'implementation' answers in a way this reads none of")
         }
@@ -644,8 +659,9 @@ private extension ArtifactReader {
 
     func frame(_ value: Value) throws -> Frame {
         var fields = try Fields(value, of: "frame")
+        let size = try fields.count()
         let read = Frame(
-            size: try fields.count(),
+            size: size,
             parameters: try Fields.list(fields.next(), of: "frame", counted),
             variables: try Fields.list(fields.next(), of: "frame") { written in
                 var held = try Fields(written, of: "frame variable")
@@ -659,6 +675,12 @@ private extension ArtifactReader {
         )
 
         try fields.end()
+
+        guard read.parameters.allSatisfy({ slot in slot < size }),
+              read.variables.allSatisfy({ _, slot in slot < size })
+        else {
+            throw ArtifactRefused("a frame of \(size) stands a parameter or a variable past its end")
+        }
 
         return read
     }
