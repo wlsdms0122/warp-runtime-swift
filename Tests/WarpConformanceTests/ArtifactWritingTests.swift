@@ -32,12 +32,15 @@ struct ArtifactWritingTests {
         let modules = try sut.modules()
         let compiled = try builder.compile(modules)
 
-        // When. Each artifact said as a value, read back, and said again.
-        let read = try compiled.map { one in try Compiled(written: one.written) }
+        // When. Each artifact written to bytes and read back out of them.
+        let bytes = try compiled.map { one in try BinaryEncoding.data(from: try one.written) }
+        let read = try bytes.map { written in
+            try Compiled(written: try BinaryEncoding.value(from: written))
+        }
 
-        // Then. One artifact is one value, both ways.
-        for (before, after) in zip(compiled, read) {
-            #expect(before.written == after.written, "\(sut.name)")
+        // Then. One artifact is one writing, both ways.
+        for (before, after) in zip(bytes, read) {
+            #expect(before == (try? BinaryEncoding.data(from: try after.written)), "\(sut.name)")
         }
 
         // And the program those artifacts build answers what the written ones

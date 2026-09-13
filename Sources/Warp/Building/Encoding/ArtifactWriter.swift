@@ -22,8 +22,8 @@ struct ArtifactWriter {
     init() { }
 
     // MARK: - Internal
-    func value(of compiled: Compiled) -> Value {
-        .array([
+    func value(of compiled: Compiled) throws -> Value {
+        let written: Value = .array([
             document(compiled.document),
             keyed(compiled.types, type),
             keyed(compiled.constraints) { types in .array(types.map(type)) },
@@ -42,6 +42,20 @@ struct ArtifactWriter {
                 .array([name(entry.name), entry.value])
             })
         ])
+
+        // A procedure is not data, and what a value of one holds is the row a
+        // link gave it. Asked of what came out rather than of each place a
+        // value is embedded: a folded closure reaches an artifact through a
+        // module variable and through a body's literal both, and a third way
+        // would be refused here without this having to hear about it.
+        guard !written.holdsProcedure else {
+            throw ArtifactRefused(
+                "this document settles a procedure into a value, and an"
+                    + " artifact carries values as data"
+            )
+        }
+
+        return written
     }
 
     // MARK: - Private

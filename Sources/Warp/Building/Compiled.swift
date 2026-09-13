@@ -121,7 +121,7 @@ public struct Compiled: Sendable, Declaring {
     // runtime that wrote it, and a caller keeping one beside a document it no
     // longer matches is why what this is kept under says so.
     public var written: Value {
-        ArtifactWriter().value(of: self)
+        get throws { try ArtifactWriter().value(of: self) }
     }
 
     public init(written value: Value) throws {
