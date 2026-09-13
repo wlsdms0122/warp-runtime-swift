@@ -28,34 +28,6 @@ struct Numbering: Sendable {
         // out leaves a procedure no declared spelling reaches, so the link
         // answers it by position rather than by spelling.
         case closure(Int)
-
-        // MARK: - Internal
-        var written: Value {
-            switch self {
-            case let .sent(name):
-                return .array([.int(0), .string(name.spelling)])
-
-            case let .closure(number):
-                return .array([.int(1), .int(number)])
-            }
-        }
-
-        init(written value: Value) throws {
-            var fields = try Fields(value, of: "numbering reference")
-
-            switch try fields.tag() {
-            case 0:
-                self = .sent(Name(normal: try fields.text()))
-
-            case 1:
-                self = .closure(try fields.count())
-
-            default:
-                throw ArtifactRefused("'numbering reference' names nothing this reads")
-            }
-
-            try fields.end()
-        }
     }
 
     // What a number turned out to be, with the reason where it is not a row:
@@ -128,9 +100,14 @@ struct Numbering: Sendable {
 
     // MARK: - Internal
     // What this counts from, said as a value, so an artifact carries the
-    // numbering its bodies were lowered against. Written here because what it
-    // holds is its own: the spellings and the closure count it was built from
-    // are not on the artifact anywhere else.
+    // numbering its bodies were lowered against.
+    //
+    // Only what a reading cannot work out is written. The numbers a name
+    // stands at, where the closures begin and what counts from what are all
+    // one arithmetic over the spellings, and writing them down would make a
+    // numbering whose parts disagree something an artifact can hold. What is
+    // left is the spellings in order, how many closures stand behind them,
+    // and where each declaration's own begin.
     var written: Value {
         get throws {
             guard case let .document(references) = space else {
@@ -141,23 +118,42 @@ struct Numbering: Sendable {
             }
 
             return .array([
-                .array(references.map(\.written)),
-                Self.written(called),
+                .array(try references.prefix(opening).map { reference in
+                    guard case let .sent(name) = reference else {
+                        throw ArtifactRefused("a numbering counts a closure among its spellings")
+                    }
+
+                    return .string(name.spelling)
+                }),
                 Self.written(closing),
-                .int(opening)
+                .int(references.count - opening)
             ])
         }
     }
 
     init(written value: Value) throws {
         var fields = try Fields(value, of: "numbering")
-
-        space = .document(try fields.list(Reference.init(written:)))
-        called = try Self.read(try fields.next(), of: "numbering names")
-        closing = try Self.read(try fields.next(), of: "numbering closures")
-        opening = try fields.count()
+        let spellings = try fields.list { written in try Fields.name(written, of: "numbering") }
+        let closing = try Self.read(try fields.next(), of: "numbering closures")
+        let closures = try fields.count()
 
         try fields.end()
+
+        // Where each declaration's closures begin stands among the closures
+        // and nowhere else. A start outside them is a body reaching a row this
+        // numbering never gave.
+        guard closing.values.allSatisfy({ start in
+            start >= spellings.count && start < spellings.count + closures
+        }) else {
+            throw ArtifactRefused("a numbering opens a declaration's closures outside its own")
+        }
+
+        space = .document(
+            spellings.map(Reference.sent) + (0 ..< closures).map(Reference.closure)
+        )
+        called = Self.placed(spellings, from: 0)
+        self.closing = closing
+        opening = spellings.count
     }
 
     // MARK: - Public

@@ -25,14 +25,17 @@ struct ArtifactReadingTests {
     // MARK: - Test
     @Test("is refused where a count is written below zero")
     func aCountBelowZero() throws {
-        // Given. A real artifact whose numbering opens at a number below zero.
-        guard case var .array(parts) = try parts(), case var .array(numbering) = parts[10] else {
+        // Given. A real artifact whose numbering counts its closures below zero.
+        guard case var .array(parts) = try parts(),
+              case var .array(numbering) = parts[10],
+              numbering.count == 3
+        else {
             Issue.record("an artifact writes its numbering as a part")
 
             return
         }
 
-        numbering[3] = .int(-1)
+        numbering[2] = .int(-1)
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -232,6 +235,36 @@ struct ArtifactReadingTests {
         row[6] = .array(implementation)
         table[0] = .array(row)
         parts[7] = .array(table)
+
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a table is shorter than what it stands for")
+    func aTableTooShort() throws {
+        guard case var .array(parts) = try parts(), case let .array(table) = parts[7], !table.isEmpty else {
+            Issue.record("an artifact writes its rows as a part")
+
+            return
+        }
+
+        parts[7] = .array(table.dropLast())
+
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a call list stands for no declaration")
+    func callsThatStandForNothing() throws {
+        guard case var .array(parts) = try parts(), case let .array(calls) = parts[8] else {
+            Issue.record("an artifact writes what each declaration calls as a part")
+
+            return
+        }
+
+        parts[8] = .array(calls + [.array([])])
 
         #expect(throws: ArtifactRefused.self) {
             try Compiled(written: stamped(parts))

@@ -22,7 +22,7 @@ struct ArtifactReader {
     func compiled(from value: Value) throws -> Compiled {
         var fields = try Fields(value, of: "artifact")
 
-        let read = Compiled(
+        let read = try Compiled(
             document: try document(fields.next()),
             types: try keyed(fields.next(), of: "types", expression),
             constraints: try keyed(fields.next(), of: "constraints") { written in
@@ -41,7 +41,8 @@ struct ArtifactReader {
             answers: try keyed(fields.next(), of: "answers", lowered),
             numbering: try Numbering(written: fields.next()),
             typeNumbering: try typeNumbering(fields.next()),
-            variables: try fields.list(variable)
+            variables: try fields.list(variable),
+            judging: ()
         )
 
         try fields.end()
@@ -880,6 +881,16 @@ private extension ArtifactReader {
         )
 
         try fields.end()
+
+        // What is handed in place stands at one of the positions this call
+        // fills. A run writes it there without asking how many there are, and
+        // so does the sentence it raises when the value does not fit.
+        guard read.handed.allSatisfy({ handed in handed.position < read.arguments.count }) else {
+            throw ArtifactRefused(
+                "a call hands something in place at a position past the"
+                    + " \(read.arguments.count) it fills"
+            )
+        }
 
         return read
     }

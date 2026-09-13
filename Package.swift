@@ -18,6 +18,11 @@ let package = Package(
         // dependencies and no `Decodable`, because a language
         // that can decode itself has confused itself with one of its notations.
         //
+        // What it compiles it can also say as one of its own values, which is
+        // a different thing from laying that value down as bytes: an artifact
+        // read back beside its document is the language reading itself, and
+        // the wire it travels on is the notation's.
+        //
         // A caller that builds these directly needs this and nothing
         // else. That is what a front end with a syntax of its own does, and
         // what running a program that never travels takes.

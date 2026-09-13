@@ -135,15 +135,10 @@ struct LoweredTypeNumbering: Sendable {
 
     // MARK: - Private
     private static func judged(_ names: [Name], of part: String) throws -> [Name] {
-        guard names == names.sorted() else {
-            throw ValueRefused("a numbering's \(part) are not in name order")
-        }
-
-        if let repeated = zip(names, names.dropFirst()).first(where: { one, other in one == other }) {
-            throw ValueRefused("a numbering names '\(repeated.0)' twice among its \(part)")
+        guard Name.ordered(names) else {
+            throw ValueRefused("a numbering's \(part) are not in name order, or name one twice")
         }
 
         return names
     }
-
 }

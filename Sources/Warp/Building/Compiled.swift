@@ -112,6 +112,73 @@ public struct Compiled: Sendable, Declaring {
         self.variables = variables
     }
 
+    // The same, where the parts were read apart and what has to be true is how
+    // they stand to each other. Each one alone says nothing wrong; a table
+    // shorter than the spellings it stands for, or a variable numbered past
+    // the ones this holds, is a fact about two of them.
+    //
+    // This is the only door that sees all of them, so it is the only place
+    // those facts can be asked.
+    init(
+        document: Place.Document,
+        types: [Name: TypeExpression],
+        constraints: [Name: [TypeExpression]],
+        contracts: [Name: [Name: Signature]],
+        claims: [Name: Set<Name>],
+        leaned: [Claim: Place],
+        declared: [Name],
+        table: [Judged],
+        calls: [[Name]],
+        answers: [Name: LoweredType],
+        numbering: Numbering,
+        typeNumbering: LoweredTypeNumbering,
+        variables: [(name: Name, value: Value)],
+        judging: Void
+    ) throws {
+        guard declared.count <= table.count else {
+            throw ArtifactRefused(
+                "an artifact declares \(declared.count) row(s) in a table of \(table.count)"
+            )
+        }
+
+        guard calls.count == declared.count else {
+            throw ArtifactRefused(
+                "an artifact writes \(calls.count) call list(s) for \(declared.count) declaration(s)"
+            )
+        }
+
+        // What a body reaches through a box of its own document. A run reads
+        // one by standing at its number, so a number past the ones written
+        // here is an array reached past its end.
+        let holding = table.allSatisfy { row in
+            guard case let .body(_, frame) = row.implementation else { return true }
+
+            return frame.variables.allSatisfy { variable, _ in variable < variables.count }
+        }
+
+        guard holding else {
+            throw ArtifactRefused(
+                "a body stands on a variable past the \(variables.count) this document holds"
+            )
+        }
+
+        self.init(
+            document: document,
+            types: types,
+            constraints: constraints,
+            contracts: contracts,
+            claims: claims,
+            leaned: leaned,
+            declared: declared,
+            table: table,
+            calls: calls,
+            answers: answers,
+            numbering: numbering,
+            typeNumbering: typeNumbering,
+            variables: variables
+        )
+    }
+
     // MARK: - Public
     // How an artifact is laid out, which is not how the language is versioned.
     // What a program needs of its runtime is said in the document; this says

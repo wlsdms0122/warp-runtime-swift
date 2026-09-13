@@ -127,6 +127,12 @@ public struct Name: Sendable, Hashable, Comparable {
     // record's entries, a signature's parameter positions, a canonical
     // writer's keys. Swift's `<` orders under canonical equivalence and would
     // put two spellings of one name in one place.
+    // Whether names stand in order, none of them twice. The two are one
+    // question: a list that never goes back is a list that never repeats.
+    static func ordered(_ names: [Name]) -> Bool {
+        zip(names, names.dropFirst()).allSatisfy { one, other in one < other }
+    }
+
     public static func < (lhs: Name, rhs: Name) -> Bool {
         Name.compared(lhs.spelling, rhs.spelling) < 0
     }
