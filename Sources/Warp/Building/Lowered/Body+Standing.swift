@@ -10,9 +10,10 @@ import Foundation
 // What a body stands on: the frame slots it names, and the closures it stands
 // up beside what each of those takes with it.
 //
-// One walk answers both because both are read off the same places. `reads`
-// asks a third question over the same shape and stays apart: it counts only
-// the slots a body's value depends on, and leaves out the ones it writes.
+// One walk answers all of them because they are read off the same places.
+// `reads` asks a further question over the same shape and stays apart: it
+// counts only the slots a body's value depends on, and leaves out the ones it
+// writes.
 extension Body {
     struct Standing {
         // MARK: - Property
@@ -20,6 +21,13 @@ extension Body {
         // writes it. A frame that does not hold one of these is a frame the
         // body does not fit.
         private(set) var slots: [Int] = []
+
+        // The runs of slots the body takes whole. A range is not a slot and
+        // not a set of them either: a run is read as one, so an empty one whose
+        // bounds stand outside the frame is an array reached past its end just
+        // as a full one is. Held as a range so that what it is cannot be
+        // mistaken for what it holds.
+        private(set) var extents: [Range<Int>] = []
 
         // The closures the body stands up: which one of its document's it is,
         // and where what it takes with it stands in the closure's own frame.
@@ -29,6 +37,10 @@ extension Body {
         // MARK: - Internal
         mutating func stand(on slot: Int) {
             slots.append(slot)
+        }
+
+        mutating func stand(over run: Range<Int>) {
+            extents.append(run)
         }
 
         mutating func stand(up number: Int, taking inner: [Int]) {
@@ -136,9 +148,7 @@ extension Operation {
             condition.stand(in: &standing)
             body.stand(in: &standing)
             standing.stand(on: round)
-            if let kept = keeps, !kept.isEmpty {
-                standing.stand(on: kept.upperBound - 1)
-            }
+            keeps.map { kept in standing.stand(over: kept) }
 
         case let .attempt(body, rescue: rescue, failure: failure):
             body.stand(in: &standing)

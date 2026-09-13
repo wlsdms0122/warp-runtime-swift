@@ -104,7 +104,11 @@ struct Judged: Sendable {
                 )
             }
 
-            guard body.standing.slots.allSatisfy({ slot in slot < frame.size }) else {
+            let standing = body.standing
+
+            guard standing.slots.allSatisfy({ slot in slot < frame.size }),
+                  standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
+            else {
                 throw ArtifactRefused(
                     "a body stands on a slot its frame of \(frame.size) does not hold"
                 )

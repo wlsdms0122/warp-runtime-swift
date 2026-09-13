@@ -187,9 +187,11 @@ public struct Compiled: Sendable, Declaring {
                     )
                 }
 
-                guard case let .body(_, frame) = table[lifted.lowerBound + written].implementation,
-                      closure.inner.allSatisfy({ slot in slot < frame.size })
-                else {
+                guard case let .body(_, frame) = table[lifted.lowerBound + written].implementation else {
+                    throw ArtifactRefused("a closure stands a row no body stands on")
+                }
+
+                guard closure.inner.allSatisfy({ slot in slot < frame.size }) else {
                     throw ArtifactRefused(
                         "a closure takes something into a slot its own frame does not hold"
                     )

@@ -31,7 +31,6 @@ struct ArtifactWriter {
     }
 
 
-    // MARK: - Internal
     func value(of compiled: Compiled) throws -> Value {
         let written: Value = .array([
             document(compiled.document),

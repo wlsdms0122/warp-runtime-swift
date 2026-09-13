@@ -428,6 +428,63 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a loop keeps a run its frame does not hold")
+    func aRunPastTheFrame() throws {
+        // Given. A body whose loop keeps a run of its slots, with the run moved
+        // out past the frame and left empty. An empty run names no slot and a
+        // run read as one is read whole, so the bounds are what a frame has to
+        // hold either way.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .nullable(.int)),
+                    body: [],
+                    result: .loop(
+                        while: .call(Call(
+                            receiver: reference("round", "index"),
+                            selector: "std.math.lessThan",
+                            arguments: ["value": .literal(.int(2))]
+                        )),
+                        body: Block(
+                            body: [Statement(binding: .constant("k"), expression: reference("round", "index"))],
+                            result: reference("k")
+                        ),
+                        round: "round"
+                    )
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(body) = implementation[1],
+              case var .array(result) = body[1],
+              case var .array(operation) = result[0],
+              case let .int(9) = operation[0],
+              case let .array(keeps) = operation[4],
+              keeps.count == 1
+        else {
+            Issue.record("an artifact writes a loop that keeps a run of its slots")
+
+            return
+        }
+
+        operation[4] = .array([.array([.int(9999), .int(9999)])])
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When / Then. Refused, rather than reaching the run that reads it.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken
