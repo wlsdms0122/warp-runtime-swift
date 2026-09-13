@@ -46,9 +46,10 @@ public struct BuildError: WarpError {
 
 extension BuildError {
     // What a procedure that receives by no name says about a value sent to it.
-    // Said here because the judging refuses a call that writes one and the run
-    // refuses a procedure that sends one, and the two are one rule: two
-    // spellings of a sentence are two sentences before long.
+    // Three refusals say it: the judging turns down a call that writes one, the
+    // lowering turns down one that reached it unjudged, and the run turns down a
+    // send that carries one. They are one rule, and two spellings of a sentence
+    // are two sentences before long.
     static let receivesByNoName = "declares nothing to be sent to"
 
     // A body the build lowered without judging it first: what the lowering

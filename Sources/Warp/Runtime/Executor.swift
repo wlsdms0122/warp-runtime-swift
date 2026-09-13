@@ -911,9 +911,6 @@ public struct Executor: Sendable {
     // nothing said as a value rather than by leaving it out, and a procedure
     // decides for itself what being sent to nothing means, so both doors answer
     // nothing and no procedure asks the question twice.
-    //
-    // A body is not asked it at all: it reads its receiver as the parameter it
-    // declared, and null is a value that parameter may hold.
     private func nothingIfNull(_ receiver: Value?) -> Value? {
         receiver == .null ? nil : receiver
     }
@@ -1016,8 +1013,8 @@ public struct Executor: Sendable {
     // to the same thing.
     //
     // Whether a send carries one at all is the sending body's, so a procedure
-    // declaring nothing to be sent to is refused rather than handed a value it
-    // has no name for.
+    // declaring nothing to be sent to is refused here rather than handed a
+    // value it has no name for.
     private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
         guard let receiver else { return nil }
 
