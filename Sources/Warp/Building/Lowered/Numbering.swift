@@ -102,12 +102,14 @@ struct Numbering: Sendable {
     // What this counts from, said as a value, so an artifact carries the
     // numbering its bodies were lowered against.
     //
-    // Only what a reading cannot work out is written. The numbers a name
-    // stands at, where the closures begin and what counts from what are all
-    // one arithmetic over the spellings, and writing them down would make a
-    // numbering whose parts disagree something an artifact can hold. What is
-    // left is the spellings in order, how many closures stand behind them,
-    // and where each declaration's own begin.
+    // What is written is what a reading will use and cannot work out. The
+    // numbers a name stands at and what counts from what are one arithmetic
+    // over the spellings, so writing them down would make a numbering whose
+    // parts disagree something an artifact can hold.
+    //
+    // Where each declaration's closures begin is neither: folding runs a
+    // dependency's body against this, and lowering a closure literal there
+    // asks it. So it is written and held to standing among the closures.
     var written: Value {
         get throws {
             guard case let .document(references) = space else {

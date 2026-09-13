@@ -1180,6 +1180,13 @@ public struct Executor: Sendable {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
+                guard record.values.indices.contains(position) else {
+                    return .unfit(
+                        "\(walked().rendered) drills to a field a record of"
+                            + " \(record.values.count) does not hold"
+                    )
+                }
+
                 read = .found(record.values[position])
 
             case let .key(key, optional):

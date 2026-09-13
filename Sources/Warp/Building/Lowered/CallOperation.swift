@@ -24,6 +24,26 @@ struct CallOperation: Sendable {
     }
 
     // MARK: - Initializer
+    // The same, where the parts were read apart. What is handed in place
+    // stands at one of the positions this call fills, and a run writes it
+    // there without asking how many there are.
+    init(
+        procedure: Int,
+        receiver: Operation?,
+        arguments: [Operation?],
+        handed: [Handed],
+        judging: Void
+    ) throws {
+        guard handed.allSatisfy({ one in one.position < arguments.count }) else {
+            throw ValueRefused(
+                "a call hands something in place at a position past the"
+                    + " \(arguments.count) it fills"
+            )
+        }
+
+        self.init(procedure: procedure, receiver: receiver, arguments: arguments, handed: handed)
+    }
+
     init(procedure: Int, receiver: Operation?, arguments: [Operation?], handed: [Handed]) {
         self.procedure = procedure
         self.receiver = receiver

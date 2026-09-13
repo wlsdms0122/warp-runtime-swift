@@ -41,7 +41,9 @@ struct ArtifactCoverageTests {
     // MARK: - Public
     // MARK: - Private
     private static let everything: Compiled = {
-        Compiled(
+        // Through the door a reading goes through, so the fixture cannot stand
+        // up an artifact the reading would refuse.
+        try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
             constraints: ["a.four": [.int, .string]],
@@ -61,7 +63,8 @@ struct ArtifactCoverageTests {
             answers: ["a.ten": everyLoweredType],
             numbering: Numbering(imports: ["a.twelve"], declared: ["a.ten", "a.eleven"], closures: ["a.ten": 2]),
             typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
-            variables: [(name: "a.thirteen", value: .int(13)), (name: "a.fourteen", value: .string("x"))]
+            variables: [(name: "a.thirteen", value: .int(13)), (name: "a.fourteen", value: .string("x"))],
+            judging: ()
         )
     }()
 

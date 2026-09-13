@@ -13,25 +13,27 @@ import Foundation
 // One walk answers both because both are read off the same places. `reads`
 // asks a third question over the same shape and stays apart: it counts only
 // the slots a body's value depends on, and leaves out the ones it writes.
-struct Standing {
-    // MARK: - Property
-    // Every slot of this frame the body names, whether it reads it or writes
-    // it. A frame that does not hold one of these is a frame the body does
-    // not fit.
-    private(set) var slots: [Int] = []
+extension Body {
+    struct Standing {
+        // MARK: - Property
+        // Every slot of this frame the body names, whether it reads it or
+        // writes it. A frame that does not hold one of these is a frame the
+        // body does not fit.
+        private(set) var slots: [Int] = []
 
-    // The closures the body stands up: which one of its document's it is, and
-    // where what it takes with it stands in the closure's own frame.
-    private(set) var closures: [(number: Int, inner: [Int])] = []
+        // The closures the body stands up: which one of its document's it is,
+        // and where what it takes with it stands in the closure's own frame.
+        private(set) var closures: [(number: Int, inner: [Int])] = []
 
-    // MARK: - Initializer
-    // MARK: - Internal
-    mutating func stand(on slot: Int) {
-        slots.append(slot)
-    }
+        // MARK: - Initializer
+        // MARK: - Internal
+        mutating func stand(on slot: Int) {
+            slots.append(slot)
+        }
 
-    mutating func stand(up number: Int, taking inner: [Int]) {
-        closures.append((number: number, inner: inner))
+        mutating func stand(up number: Int, taking inner: [Int]) {
+            closures.append((number: number, inner: inner))
+        }
     }
 }
 
@@ -44,14 +46,14 @@ extension Body {
         return standing
     }
 
-    func stand(in standing: inout Standing) {
+    func stand(in standing: inout Body.Standing) {
         instructions.forEach { instruction in instruction.stand(in: &standing) }
         result?.stand(in: &standing)
     }
 }
 
 extension Instruction {
-    func stand(in standing: inout Standing) {
+    func stand(in standing: inout Body.Standing) {
         switch binding {
         case let .bind(slot, _)?, let .declare(slot, _)?:
             standing.stand(on: slot)
@@ -68,14 +70,14 @@ extension Instruction {
 }
 
 extension Address {
-    func stand(in standing: inout Standing) {
+    func stand(in standing: inout Body.Standing) {
         standing.stand(on: slot)
         steps.forEach { step in step.stand(in: &standing) }
     }
 }
 
 extension Step {
-    func stand(in standing: inout Standing) {
+    func stand(in standing: inout Body.Standing) {
         guard case let .at(address, _) = self else { return }
 
         address.stand(in: &standing)
@@ -83,7 +85,7 @@ extension Step {
 }
 
 extension Argument {
-    func stand(in standing: inout Standing) {
+    func stand(in standing: inout Body.Standing) {
         switch self {
         case let .value(operation):
             operation.stand(in: &standing)
@@ -95,7 +97,7 @@ extension Argument {
 }
 
 extension Operation {
-    func stand(in standing: inout Standing) {
+    func stand(in standing: inout Body.Standing) {
         switch self {
         case .literal:
             break

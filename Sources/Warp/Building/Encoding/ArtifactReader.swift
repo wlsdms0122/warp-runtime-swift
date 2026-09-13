@@ -99,11 +99,7 @@ struct ArtifactReader {
     private func document(_ value: Value) throws -> Place.Document {
         Place.Document(
             identity: try Fields.maybe(value, of: "document") { written in
-                guard case let .bytes(bytes) = written else {
-                    throw ArtifactRefused("'document' writes an identity that is not bytes")
-                }
-
-                return Identity(bytes)
+                Identity(try Fields.bytes(written, of: "document"))
             }
         )
     }
@@ -823,7 +819,7 @@ private extension ArtifactReader {
 
     func callOperation(_ value: Value) throws -> CallOperation {
         var fields = try Fields(value, of: "call")
-        let read = CallOperation(
+        let read = try refusing { try CallOperation(
             procedure: try fields.count(),
             receiver: try fields.maybe(operation),
             arguments: try Fields.list(fields.next(), of: "arguments") { written in
@@ -839,20 +835,11 @@ private extension ArtifactReader {
                 try held.end()
 
                 return taken
-            }
-        )
+            },
+            judging: ()
+        ) }
 
         try fields.end()
-
-        // What is handed in place stands at one of the positions this call
-        // fills. A run writes it there without asking how many there are, and
-        // so does the sentence it raises when the value does not fit.
-        guard read.handed.allSatisfy({ handed in handed.position < read.arguments.count }) else {
-            throw ArtifactRefused(
-                "a call hands something in place at a position past the"
-                    + " \(read.arguments.count) it fills"
-            )
-        }
 
         return read
     }
