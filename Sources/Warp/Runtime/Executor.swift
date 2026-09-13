@@ -865,17 +865,6 @@ public struct Executor: Sendable {
     }
 
     // The two doors a native procedure answers through. The procedure's parameters are
-    // What a native procedure reads as what it was sent to. Null is being sent to
-    // nothing said as a value rather than by leaving it out, and a procedure
-    // decides for itself what being sent to nothing means, so the door answers
-    // nothing and no procedure asks the question twice.
-    //
-    // A body is not asked it at all: it reads its receiver as the parameter it
-    // declared, and null is a value that parameter may hold.
-    private func sentTo(_ receiver: Value?) -> Value? {
-        receiver == .null ? nil : receiver
-    }
-
     // its own type, so the call is made where that type has a name: handing
     // `any Query` to a generic function opens it.
     private func evaluate<W: Query>(
@@ -886,13 +875,24 @@ public struct Executor: Sendable {
     ) throws -> Value? {
         try query.evaluate(
             Question(
-                receiver: sentTo(receiver),
+                receiver: told(receiver),
                 settled: settled,
                 sends: callee.sends,
                 from: callee.origin,
                 executor: self
             )
         )
+    }
+
+    // What a native procedure reads as what it was sent to. Null is being sent to
+    // nothing said as a value rather than by leaving it out, and a procedure
+    // decides for itself what being sent to nothing means, so the door answers
+    // nothing and no procedure asks the question twice.
+    //
+    // A body is not asked it at all: it reads its receiver as the parameter it
+    // declared, and null is a value that parameter may hold.
+    private func told(_ receiver: Value?) -> Value? {
+        receiver == .null ? nil : receiver
     }
 
     private func run<W: Effect>(
@@ -907,7 +907,7 @@ public struct Executor: Sendable {
             Invocation(
                 selector: callee.label,
                 signature: callee.signature,
-                receiver: sentTo(receiver),
+                receiver: told(receiver),
                 settled: settled,
                 holds: holds,
                 sends: callee.sends,

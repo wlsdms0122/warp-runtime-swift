@@ -321,7 +321,7 @@ struct Bench {
         // a column this asks a table it is compared against to carry.
         let comparison = Comparison(
             read,
-            over: ["ns/round", "load us", "build us", "baked us"],
+            over: ["ns/round", "load us", "build us", "baked us", "once us"],
             from: path
         )
         let loop = measured[baseline]?.perRound ?? 0
@@ -337,8 +337,9 @@ struct Bench {
                 "|---|---|---|---|---|---|---|---|"
             ]
             : [
-                "| workload | ns/round | moved | x loop | load us | moved | build us | moved | baked us | moved |",
-                "|---|---|---|---|---|---|---|---|---|---|"
+                "| workload | ns/round | moved | x loop | load us | moved | build us | moved"
+                    + " | baked us | moved | once us | moved |",
+                "|---|---|---|---|---|---|---|---|---|---|---|---|"
             ]
 
         for (name, measurement) in measured.sorted(by: { $0.key < $1.key }) {
@@ -356,12 +357,13 @@ struct Bench {
             }
 
             lines.append(String(
-                format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ | %.0f | %@ | %.0f | %@ |",
+                format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %@ |",
                 name, measurement.perRound, Self.moved(measurement.perRound, from: before["ns/round"]),
                 ratio,
                 measurement.load / 1000, Self.moved(measurement.load / 1000, from: before["load us"]),
                 measurement.build / 1000, Self.moved(measurement.build / 1000, from: before["build us"]),
-                measurement.baked / 1000, Self.moved(measurement.baked / 1000, from: before["baked us"])
+                measurement.baked / 1000, Self.moved(measurement.baked / 1000, from: before["baked us"]),
+                measurement.once / 1000, Self.moved(measurement.once / 1000, from: before["once us"])
             ))
         }
 
