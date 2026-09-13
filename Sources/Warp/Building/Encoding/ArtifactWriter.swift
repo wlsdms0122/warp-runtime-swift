@@ -36,7 +36,7 @@ struct ArtifactWriter {
             .array(compiled.table.map(judged)),
             .array(compiled.calls.map { called in .array(called.map(name)) }),
             keyed(compiled.answers, lowered),
-            compiled.numbering.written,
+            try compiled.numbering.written,
             typeNumbering(compiled.typeNumbering),
             .array(compiled.variables.map { entry in
                 .array([name(entry.name), entry.value])

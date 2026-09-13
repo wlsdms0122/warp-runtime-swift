@@ -44,6 +44,18 @@ public struct Layout: Sendable, Hashable {
         self.fields = sorted
     }
 
+    // Fields already in order, where that is a claim about what was handed
+    // rather than something to put right. A reading that sorted them would
+    // pair them with values it read somewhere else.
+    init(name: Name?, judging fields: [Name]) throws {
+        guard zip(fields, fields.dropFirst()).allSatisfy({ one, other in one < other }) else {
+            throw ValueRefused("a layout's fields are not in name order")
+        }
+
+        self.name = name
+        self.fields = fields
+    }
+
     // The inner door: names already in order, none repeating.
     init(name: Name?, ordered fields: [Name]) {
         precondition(

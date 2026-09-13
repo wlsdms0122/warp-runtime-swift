@@ -83,7 +83,7 @@ struct ArtifactReader {
     // door refuses is refused of these bytes, said in the words this reading
     // answers in: a caller holding a cache is told to build again, not to go
     // looking at a document.
-    private func judged<T>(_ read: () throws -> T) throws -> T {
+    private func refusing<T>(_ read: () throws -> T) throws -> T {
         do {
             return try read()
         } catch let refused as ValueRefused {
@@ -469,15 +469,11 @@ private extension ArtifactReader {
 
         try fields.end()
 
-        // Through the door that judges, so that what a layout promises about
-        // its names is asked of bytes the way it is asked of a document. The
-        // inner door is reached with what that one ordered, which is what makes
-        // its promise true rather than assumed.
-        let ordered = try judged { try Layout(fields: written) }
-
-        guard let named else { return ordered }
-
-        return Layout(name: named, ordered: ordered.fields)
+        // Through the door that judges rather than the one that orders. What
+        // stands beside a layout here is a list of values read on its own, and
+        // a reading that put the names in order would pair them with values
+        // that never moved.
+        return try refusing { try Layout(name: named, judging: written) }
     }
 }
 
@@ -560,7 +556,7 @@ private extension ArtifactReader {
     func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var fields = try Fields(value, of: "record")
         let held = try layout(fields.next())
-        let read = try judged {
+        let read = try refusing {
             try LoweredRecord(
                 layout: held,
                 judging: try Fields.list(fields.next(), of: "record", lowered)
@@ -576,7 +572,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "type numbering")
         let types = try Fields.list(fields.next(), of: "type numbering", name)
         let memberships = try Fields.list(fields.next(), of: "type numbering", name)
-        let read = try judged { try LoweredTypeNumbering(ordered: types, memberships: memberships) }
+        let read = try refusing { try LoweredTypeNumbering(ordered: types, memberships: memberships) }
 
         try fields.end()
 
@@ -587,14 +583,16 @@ private extension ArtifactReader {
 private extension ArtifactReader {
     func judged(_ value: Value) throws -> Judged {
         var fields = try Fields(value, of: "row")
+        let label = try name(fields.next())
+        let signature = try signature(fields.next())
         let read = Judged(
-            label: try name(fields.next()),
-            signature: try signature(fields.next()),
+            label: label,
+            signature: signature,
             purity: try purity(fields.next()),
             isolation: try isolation(fields.next()),
             failing: try failing(fields.next()),
             sends: try Fields.list(fields.next(), of: "row", sent),
-            implementation: try implementation(fields.next())
+            implementation: try implementation(fields.next(), taking: signature)
         )
 
         try fields.end()
@@ -602,14 +600,14 @@ private extension ArtifactReader {
         return read
     }
 
-    func implementation(_ value: Value) throws -> Judged.Implementation {
+    func implementation(_ value: Value, taking signature: Signature) throws -> Judged.Implementation {
         var fields = try Fields(value, of: "implementation")
         let read: Judged.Implementation
 
         switch try fields.tag() {
         case 0:
             let held = try body(fields.next())
-            let standing = try frame(fields.next())
+            let standing = try frame(fields.next(), taking: signature)
 
             // Every slot the body names has to be one the frame holds. A run
             // reads a slot by standing at it, so a body naming one the frame
@@ -657,7 +655,7 @@ private extension ArtifactReader {
         return read
     }
 
-    func frame(_ value: Value) throws -> Frame {
+    func frame(_ value: Value, taking signature: Signature) throws -> Frame {
         var fields = try Fields(value, of: "frame")
         let size = try fields.count()
         let read = Frame(
@@ -680,6 +678,21 @@ private extension ArtifactReader {
               read.variables.allSatisfy({ _, slot in slot < size })
         else {
             throw ArtifactRefused("a frame of \(size) stands a parameter or a variable past its end")
+        }
+
+        // A frame holds one name per slot and one slot per thing its
+        // declaration takes. A run reaches both by position rather than by
+        // asking how many there are, so a list written short is an array read
+        // past its end and not a frame that answers wrongly.
+        guard read.names.count == size else {
+            throw ArtifactRefused("a frame of \(size) names \(read.names.count) slot(s)")
+        }
+
+        guard read.parameters.count == signature.names.count else {
+            throw ArtifactRefused(
+                "a frame stands \(read.parameters.count) of the"
+                    + " \(signature.names.count) its declaration takes"
+            )
         }
 
         return read
@@ -859,7 +872,7 @@ private extension ArtifactReader {
     func recordOperation(_ value: Value) throws -> RecordOperation {
         var fields = try Fields(value, of: "record")
         let held = try layout(fields.next())
-        let read = try judged {
+        let read = try refusing {
             try RecordOperation(
                 layout: held,
                 judging: try Fields.list(fields.next(), of: "record", operation)

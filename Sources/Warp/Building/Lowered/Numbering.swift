@@ -133,34 +133,27 @@ struct Numbering: Sendable {
     // holds is its own: the spellings and the closure count it was built from
     // are not on the artifact anywhere else.
     var written: Value {
-        let space: Value = switch self.space {
-        case let .document(references):
-            .array([.int(0), .array(references.map(\.written))])
+        get throws {
+            guard case let .document(references) = space else {
+                throw ArtifactRefused(
+                    "this numbering counts from a link's own rows, and an"
+                        + " artifact carries a document's numbers"
+                )
+            }
 
-        case .table:
-            .array([.int(1)])
+            return .array([
+                .array(references.map(\.written)),
+                Self.written(called),
+                Self.written(closing),
+                .int(opening)
+            ])
         }
-
-        return .array([space, Self.written(called), Self.written(closing), .int(opening)])
     }
 
     init(written value: Value) throws {
         var fields = try Fields(value, of: "numbering")
-        var space = try Fields(try fields.next(), of: "numbering space")
 
-        switch try space.tag() {
-        case 0:
-            self.space = .document(try space.list(Reference.init(written:)))
-
-        case 1:
-            self.space = .table
-
-        default:
-            throw ArtifactRefused("'numbering' is counted from nothing this reads")
-        }
-
-        try space.end()
-
+        space = .document(try fields.list(Reference.init(written:)))
         called = try Self.read(try fields.next(), of: "numbering names")
         closing = try Self.read(try fields.next(), of: "numbering closures")
         opening = try fields.count()

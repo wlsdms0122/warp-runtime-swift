@@ -172,13 +172,21 @@ struct ArtifactCoverageTests {
     private static func row(label: Name, body: Bool) -> Judged {
         Judged(
             label: label,
-            signature: Signature(receiver: body ? "self" : nil, parameters: ["p": parameter], returns: .int),
+            signature: Signature(receiver: body ? "p" : nil, parameters: ["p": parameter], returns: .int),
             purity: body ? .pure : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
             sends: [Sent(row: 1, offers: [0, 2])],
             implementation: body
-                ? .body(everyOperation, Frame(size: 12, parameters: [0], variables: [(variable: 1, slot: 2)], names: ["p"]))
+                ? .body(
+                    everyOperation,
+                    Frame(
+                        size: 12,
+                        parameters: [0],
+                        variables: [(variable: 1, slot: 2)],
+                        names: (0 ..< 12).map { at in Name(normal: "s\(at)") }
+                    )
+                )
                 : .native(sending: [Native.Send(position: 3, selector: "a.twelve", offers: ["x", "y"])])
         )
     }

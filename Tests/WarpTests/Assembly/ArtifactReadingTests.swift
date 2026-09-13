@@ -169,6 +169,75 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a layout's names are not in order")
+    func aLayoutOutOfOrder() throws {
+        // Given. A declaration that writes no `returns`, so what the build read
+        // off its body stands in the artifact as a lowered record, layout and
+        // types apart.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    body: [],
+                    result: .record(["a": .literal(.int(1)), "b": .literal(.string("s"))])
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(answers) = parts[9],
+              case var .array(entry) = answers[0],
+              case var .array(answer) = entry[1],
+              case var .array(record) = answer[1],
+              case var .array(layout) = record[0],
+              case let .array(names) = layout[1],
+              names.count > 1
+        else {
+            Issue.record("a declaration that wrote no answer stands one as a lowered record")
+
+            return
+        }
+
+        // The names swapped and the types left where they were. A reading that
+        // put the names back in order would pair each with the other's type.
+        layout[1] = .array(names.reversed())
+        record[0] = .array(layout)
+        answer[1] = .array(record)
+        entry[1] = .array(answer)
+        answers[0] = .array(entry)
+        parts[9] = .array(answers)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a frame names fewer slots than it holds")
+    func aFrameNamingTooFew() throws {
+        guard case var .array(parts) = try parts(),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(frame) = implementation[2],
+              case let .array(names) = frame[3],
+              !names.isEmpty
+        else {
+            Issue.record("an artifact writes a row's frame beside its body")
+
+            return
+        }
+
+        frame[3] = .array(names.dropLast())
+        implementation[2] = .array(frame)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken
