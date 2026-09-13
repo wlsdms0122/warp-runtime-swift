@@ -348,8 +348,10 @@ struct ArtifactReadingTests {
         // know: which row the call reaches is the link's answer.
         let read = try Compiled(written: stamped(parts))
 
-        // Then. The link refuses it, and no run begins.
-        #expect(throws: ArtifactRefused.self) {
+        // Then. The link refuses it, and no run begins. A link refusal, not an
+        // artifact's: this one asks the same of a document nobody wrote down,
+        // and it says which call it is about.
+        #expect(throws: BuildError.self) {
             try Builder().link([read], entry: "app.entry", supplying: .none)
         }
     }

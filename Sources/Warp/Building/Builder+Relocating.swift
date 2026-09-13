@@ -488,9 +488,10 @@ struct Relocating {
         // The row is this link's answer and is known here, so the question is
         // asked once rather than at every call the run makes of it.
         guard call.arguments.count == table[procedure].slots.count else {
-            throw ArtifactRefused(
+            throw BuildError(
                 "a call stands \(call.arguments.count) argument(s) where the"
-                    + " \(table[procedure].slots.count) its callee declares stand"
+                    + " \(table[procedure].slots.count) its callee declares stand",
+                at: standing.place
             )
         }
 

@@ -122,16 +122,11 @@ extension Fields {
     }
 
     static func double(_ value: Value, of part: String) throws -> Double {
-        switch value {
-        case let .double(double):
-            return double
-
-        case let .int(integer):
-            return Double(integer)
-
-        default:
-            throw ArtifactRefused("'\(part)' writes something other than a number where one stands")
+        guard case let .double(double) = value else {
+            throw ArtifactRefused("'\(part)' writes something other than a fraction where one stands")
         }
+
+        return double
     }
 
     static func text(_ value: Value, of part: String) throws -> String {
