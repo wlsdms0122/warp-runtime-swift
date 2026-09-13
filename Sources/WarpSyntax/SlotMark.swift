@@ -26,24 +26,24 @@ enum SlotMark: String, CaseIterable, Sendable {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // The mark a type was written under, and the type under it.
+    // The mark a type was written under, where it was written under one.
     //
     // No `default`: a type nobody thought about has to be a compile error here
     // rather than an answer of "unmarked", which is the answer every reading of
     // a marked slot would then get.
-    static func marked(_ type: TypeExpression) -> (mark: SlotMark, inner: TypeExpression)? {
+    static func marked(_ type: TypeExpression) -> SlotMark? {
         switch type {
-        case let .variable(inner):
-            return (.variable, inner)
+        case .variable:
+            return .variable
 
-        case let .inout(inner):
-            return (.inout, inner)
+        case .inout:
+            return .inout
 
-        case let .consuming(inner):
-            return (.consuming, inner)
+        case .consuming:
+            return .consuming
 
-        case let .borrowing(inner):
-            return (.borrowing, inner)
+        case .borrowing:
+            return .borrowing
 
         case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number, .ranged,
             .array, .dictionary, .record, .procedure, .linear, .nullable, .named, .parameter,

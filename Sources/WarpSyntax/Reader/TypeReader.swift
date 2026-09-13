@@ -54,11 +54,12 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            let (wrap, purity, isolation) = Self.procedureKeywords(of: key.stringValue)
+            let (mark, purity, isolation) = try Self.procedureKeywords(of: key.stringValue)
         {
             let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
+            let written = TypeExpression.procedure(signature.signature, purity, isolation)
 
-            self.type = wrap(.procedure(signature.signature, purity, isolation))
+            self.type = mark?.marking(written) ?? written
 
             return
         }
@@ -114,7 +115,7 @@ public struct TypeReader: Decodable {
 
             let inner = try parse(String(bare))
 
-            if let inside = SlotMark.marked(inner)?.mark {
+            if let inside = SlotMark.marked(inner) {
                 throw TypeFormError(
                     "type '\(text)' writes `\(inside.rawValue)` inside"
                         + " `\(mark.rawValue)`. A slot says one thing about what it takes"
@@ -305,21 +306,36 @@ public struct TypeReader: Decodable {
         )
     }
 
-    // What a procedure form's key says, read front to back: a slot keyword if
-    // one is written, the modifiers in either order, and `procedure`. Nil
-    // where the key is not a procedure form's.
+    // What a procedure form's key says, read front to back: a slot's mark if one
+    // is written, the modifiers in either order, and `procedure`. Nil where the
+    // key is not a procedure form's.
+    //
+    // The mark comes back as itself rather than as something that applies it,
+    // so that what was read stays a value the caller can ask about.
     static func procedureKeywords(
         of key: String
-    ) -> (wrap: (TypeExpression) -> TypeExpression, purity: Purity, isolation: Isolation)? {
+    ) throws -> (mark: SlotMark?, purity: Purity, isolation: Isolation)? {
         var rest = key
-        var wrap: (TypeExpression) -> TypeExpression = { inner in inner }
+        var mark: SlotMark?
 
-        for mark in SlotMark.allCases {
-            guard let bare = rest.dropPrefixed("\(mark.rawValue) ") else { continue }
+        for one in SlotMark.allCases {
+            guard let bare = rest.dropPrefixed("\(one.rawValue) ") else { continue }
 
             rest = String(bare)
-            wrap = mark.marking
+            mark = one
             break
+        }
+
+        // The same rule the spelling of a whole type is read by, on the key a
+        // procedure form is written under. Without it a second mark leaves the
+        // key unread and the form comes back as a record named after it.
+        if let mark, let inside = SlotMark.allCases.first(where: { one in
+            rest.hasPrefix("\(one.rawValue) ")
+        }) {
+            throw TypeFormError(
+                "type '\(key)' writes `\(inside.rawValue)` inside `\(mark.rawValue)`."
+                    + " A slot says one thing about what it takes"
+            )
         }
 
         guard
@@ -329,7 +345,7 @@ public struct TypeReader: Decodable {
             return nil
         }
 
-        return (wrap, purity, isolation)
+        return (mark, purity, isolation)
     }
 
     // The one spelling of a procedure type's head: `pure` before `isolated`,

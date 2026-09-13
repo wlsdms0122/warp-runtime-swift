@@ -327,6 +327,17 @@ public struct Writer: Sendable {
     // its one key. An inline record has no front to write a mark on, and a
     // declaration's field is the one place a procedure type goes anyway.
     private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
+        // The same thing the reading refuses, refused where the writing is: a
+        // slot says one thing about what it takes. Both marks would land in one
+        // key, and a key the reading cannot take apart comes back as a record
+        // whose field is named after them.
+        if let inside = SlotMark.marked(inner) {
+            throw WritingError(
+                "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
+                    + " A slot says one thing about what it takes"
+            )
+        }
+
         switch try value(of: inner) {
         case let .string(written):
             return .string("\(mark.rawValue) \(written)")
@@ -340,8 +351,8 @@ public struct Writer: Sendable {
         default:
             throw WritingError(
                 "`\(mark.rawValue)` is written in front of a type name, and"
-                    + " \(inner.rendered) is written as a record. Declare the"
-                    + " record under a name and write `\(mark.rawValue)` on the name"
+                    + " \(inner.rendered) is not written as one. Declare it under a"
+                    + " name and write `\(mark.rawValue)` on the name"
             )
         }
     }
