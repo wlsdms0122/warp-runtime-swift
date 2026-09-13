@@ -100,8 +100,11 @@ struct Bench {
         // already measured with it.
         print(Self.table(
             measured,
-            against: printed?["workload"],
-            from: against,
+            against: Comparison(
+                printed?["workload"],
+                over: ["ns/round", "load us", "build us", "baked us"],
+                from: against
+            ),
             rounds: rounds,
             repeats: repeats
         ))
@@ -118,7 +121,15 @@ struct Bench {
         }
 
         print("")
-        print(Self.table(spread: spread, gathered: gathered, against: printed?["procedures"]))
+        print(Self.table(
+            spread: spread,
+            gathered: gathered,
+            against: Comparison(
+                printed?["procedures"],
+                over: ["spread us", "gathered us"],
+                from: against
+            )
+        ))
 
         var costs: [Int: Cost] = [:]
 
@@ -135,7 +146,15 @@ struct Bench {
         }
 
         print("")
-        print(Self.table(costs, of: fanoutWords, against: printed?["documents"]))
+        print(Self.table(
+            costs,
+            of: fanoutWords,
+            against: Comparison(
+                printed?["documents"],
+                over: ["build us", "compile us", "alone us", "link us"],
+                from: against
+            )
+        ))
     }
 
     // MARK: - Private
@@ -232,49 +251,88 @@ struct Bench {
         return read
     }
 
+    // A table read to compare a run against, and what it turned out not to
+    // carry.
+    //
+    // A table taken before a figure existed is not a table this run moved from,
+    // and the figure beside a missing one is the worst of it: the columns keep
+    // their spellings while what they measure is split, so the arithmetic runs
+    // and reads as a change. So a table that is missing any figure this one
+    // prints is not compared at all, and the reader is told which figure said
+    // so.
+    private struct Comparison {
+        // MARK: - Property
+        let rows: [String: [String: Double]]?
+
+        private let missing: String?
+        private let path: String?
+
+        // MARK: - Initializer
+        init(_ read: [String: [String: Double]]?, over figures: [String], from path: String?) {
+            self.path = path
+
+            guard let path else {
+                self.rows = nil
+                self.missing = nil
+
+                return
+            }
+
+            guard let read else {
+                self.rows = nil
+                self.missing = "does not carry this table"
+
+                return
+            }
+
+            let absent = figures.filter { figure in
+                read.values.allSatisfy { row in row[figure] == nil }
+            }
+
+            guard absent.isEmpty else {
+                self.rows = nil
+                self.missing = "carries no "
+                    + absent.map { figure in "`\(figure)`" }.joined(separator: ", ")
+
+                return
+            }
+
+            self.rows = read
+            self.missing = nil
+        }
+
+        // MARK: - Public
+        // The heading, saying what this run was read against or why it was not.
+        func said(beside heading: String) -> String {
+            guard let path else { return heading }
+
+            guard let missing else { return heading + "; against \(path)" }
+
+            return heading + "\n\nNot compared against \(path): it \(missing)."
+                + " Take it again before reading this against it."
+        }
+
+        // MARK: - Private
+    }
+
     private static func moved(_ now: Double, from before: Double?) -> String {
         guard let before, before > 0 else { return "" }
 
         return String(format: "%+.1f%%", (now - before) / before * 100)
     }
 
-    // The figures this table compares, which is also what it asks a table it is
-    // compared against to carry.
-    private static let figures = ["ns/round", "load us", "build us", "baked us"]
-
     private static func table(
         _ measured: [String: Measurement],
-        against read: [String: [String: Double]]?,
-        from path: String?,
+        against comparison: Comparison,
         rounds: Int,
         repeats: Int
     ) -> String {
         let loop = measured[baseline]?.perRound ?? 0
+        let against = comparison.rows
         let heading = "rounds \(rounds), fastest of \(repeats);"
             + " load, build, baked and once are the fastest of \(buildSamples)"
 
-        // A table taken before a figure existed is not a table this one moved
-        // from. The figure beside a missing one is the worst of it: the columns
-        // kept their spellings while what they measure was split, so the
-        // arithmetic would run and read as a change. So the comparison is
-        // dropped whole and the figures stand on their own.
-        let missing = read.map { read in
-            figures.filter { figure in read.values.allSatisfy { row in row[figure] == nil } }
-        } ?? []
-        let against = missing.isEmpty ? read : nil
-
-        var lines = [against == nil ? heading : heading + "; against \(path ?? "")", ""]
-
-        if !missing.isEmpty {
-            lines = [
-                heading,
-                "",
-                "Not compared against \(path ?? ""): it carries no"
-                    + " \(missing.map { figure in "`\(figure)`" }.joined(separator: ", "))."
-                    + " Take it again before reading this against it.",
-                ""
-            ]
-        }
+        var lines = [comparison.said(beside: heading), ""]
 
         lines += against == nil
             ? [
@@ -327,8 +385,9 @@ struct Bench {
     private static func table(
         spread: [Int: Double],
         gathered: [Int: Double],
-        against: [String: [String: Double]]?
+        against comparison: Comparison
     ) -> String {
+        let against = comparison.rows
         let counts = spread.keys.sorted()
 
         guard
@@ -338,8 +397,9 @@ struct Bench {
         else { return "" }
 
         var lines = [
-            "building a chain of procedures, each calling the one in front of it;"
-                + " spread one to a document and gathered into one; fastest of \(buildSamples)",
+            comparison.said(beside: "building a chain of procedures, each calling the one in"
+                + " front of it; spread one to a document and gathered into one; fastest of"
+                + " \(buildSamples)"),
             "",
             against == nil
                 ? "| procedures | spread us | spread each | gathered us | gathered each |"
@@ -392,11 +452,14 @@ struct Bench {
     private static func table(
         _ costs: [Int: Cost],
         of procedures: Int,
-        against: [String: [String: Double]]?
+        against comparison: Comparison
     ) -> String {
+        let against = comparison.rows
+
         var lines = [
-            "building \(procedures) procedures that call nothing, dealt into documents,"
-                + " against a vocabulary compiled once; fastest of \(buildSamples)",
+            comparison.said(beside: "building \(procedures) procedures that call nothing,"
+                + " dealt into documents, against a vocabulary compiled once; fastest of"
+                + " \(buildSamples)"),
             "",
             "`alone` is the documents compiled one at a time rather than together."
                 + " `spread` is one document's share of that plus the link, which is"
