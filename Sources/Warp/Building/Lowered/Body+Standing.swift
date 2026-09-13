@@ -36,6 +36,11 @@ extension Body {
         // and where what it takes with it stands in the closure's own frame.
         private(set) var closures: [(number: Int, inner: [Int])] = []
 
+        // The numbers its calls reach, as its document gave them. What each
+        // one stands for is the link's answer, so what is asked of them here
+        // is only that this document gave them at all.
+        private(set) var calls: [Int] = []
+
         // MARK: - Initializer
         // MARK: - Internal
         mutating func stand(on slot: Int) {
@@ -44,6 +49,10 @@ extension Body {
 
         mutating func stand(over run: Range<Int>) {
             extents.append(run)
+        }
+
+        mutating func stand(calling number: Int) {
+            calls.append(number)
         }
 
         mutating func stand(up number: Int, taking inner: [Int]) {
@@ -161,6 +170,7 @@ extension Operation {
             standing.stand(on: failure)
 
         case let .call(call):
+            standing.stand(calling: call.procedure)
             call.receiver?.stand(in: &standing)
             call.arguments.forEach { argument in argument?.stand(in: &standing) }
             call.handed.forEach { handed in handed.address.stand(in: &standing) }

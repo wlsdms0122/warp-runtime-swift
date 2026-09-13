@@ -149,7 +149,11 @@ struct Judged: Sendable {
     // the boxes a document holds and the frames its closures stand in. A list
     // written short is an array read past its end rather than a row that
     // answers wrongly.
-    func judge(standingIn frames: (Int) -> Frame?, holding variables: Int) throws {
+    func judge(
+        standingIn frames: (Int) -> Frame?,
+        reaching given: (Int) -> Bool,
+        holding variables: Int
+    ) throws {
         guard case let .body(body, frame) = implementation else { return }
 
         let standing = body.standing
@@ -166,6 +170,13 @@ struct Judged: Sendable {
             throw ArtifactRefused(
                 "a body stands on a variable past the \(variables) its document holds"
             )
+        }
+
+        // A number a call reaches is one this document gave. Which row that
+        // is, is the link's answer, but a number the document never gave is
+        // one no link can answer.
+        guard standing.calls.allSatisfy(given) else {
+            throw ArtifactRefused("a body calls a number its document never gave")
         }
 
         for closure in standing.closures {

@@ -146,6 +146,13 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
+        // What a variable is, is where it stands in this list: a body reaches
+        // one by its number and never by its name. So the order is the fact,
+        // and two entries swapped are two variables reading each other's start.
+        guard variables.map(\.name).ordered else {
+            throw ArtifactRefused("this document writes its variables out of name order")
+        }
+
         // Which row a spelling stands for is read off where it stands in this
         // list, and which code a native row brings is read off the row's own
         // label. The two answer the same question, so a list that names them
@@ -178,6 +185,7 @@ public struct Compiled: Sendable, Declaring {
         for row in table {
             try row.judge(
                 standingIn: { number in frame(ofClosure: number, written: row.label) },
+                reaching: reaches(_:),
                 holding: variables.count
             )
         }
@@ -261,6 +269,15 @@ public struct Compiled: Sendable, Declaring {
     // The frame of the row a body's closure number stands, or nothing where
     // this document numbers no closure there or numbers it for some other
     // declaration. Which row that is, is this document's own arithmetic.
+    // Whether a number a body carries is one this document gave, and where it
+    // stands for a closure, one this document stood up.
+    private func reaches(_ number: Int) -> Bool {
+        guard numbering.gave(number) else { return false }
+        guard let written = numbering.lifted(number) else { return true }
+
+        return written < lifted.count
+    }
+
     private func frame(ofClosure number: Int, written by: Name) -> Frame? {
         guard let written = numbering.lifted(number), written < lifted.count,
               numbering.writing(written) == by,

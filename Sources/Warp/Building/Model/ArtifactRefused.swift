@@ -9,8 +9,10 @@ import Foundation
 
 // An artifact handed back that is not one: a field missing, a tag no writing
 // gives, a number where a name was written, or parts that each read and do not
-// stand to each other. And the other way, where what a caller asked to be
-// written down is not something an artifact can hold.
+// stand to each other.
+//
+// Only that way. A document that cannot be one answers no writing at all,
+// which is a property of the document rather than something that went wrong.
 //
 // An artifact is this runtime's own writing read back by this runtime, so
 // nothing here is an author's mistake. What it says is which part of the

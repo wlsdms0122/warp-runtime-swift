@@ -832,6 +832,85 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where the variables stand out of name order")
+    func variablesOutOfOrder() throws {
+        // Given. Two module variables with the pair swapped. A body reaches one
+        // by its number and never by its name, so the order is the fact and the
+        // two would read each other's start.
+        let sut = try Module(
+            variables: ["app.one": .literal(.int(1)), "app.two": .literal(.int(2))],
+            procedures: [
+                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: reference("app.one"))
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case let .array(variables) = parts[12],
+              variables.count == 2
+        else {
+            Issue.record("an artifact writes what its variables start holding")
+
+            return
+        }
+
+        parts[12] = .array(variables.reversed())
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
+    @Test("is refused where a call reaches a number the document never gave")
+    func aCallOffTheNumbering() throws {
+        // Given. A body that calls one of its own declarations, with the number
+        // moved past everything this document numbered. What a number stands
+        // for is the link's answer, but one never given is one no link answers.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "app.twice", arguments: ["n": .literal(.int(2))]))
+                ),
+                "app.twice": Procedure(
+                    signature: Signature(parameters: ["n": Parameter(type: .int)], returns: .int),
+                    body: [],
+                    result: reference("n")
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(body) = implementation[1],
+              case var .array(result) = body[1],
+              case var .array(operation) = result[0],
+              case let .int(11) = operation[0],
+              case var .array(call) = operation[1]
+        else {
+            Issue.record("an artifact writes a body whose result is a call")
+
+            return
+        }
+
+        call[0] = .int(9999)
+        operation[1] = .array(call)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

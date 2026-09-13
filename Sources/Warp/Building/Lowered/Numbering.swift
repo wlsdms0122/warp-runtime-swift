@@ -198,6 +198,15 @@ struct Numbering: Sendable {
         return references.count - opening
     }
 
+    // Whether this document gave a number at all. What it stands for is the
+    // link's answer and moves with the link; that it was given is the
+    // document's own fact and does not.
+    func gave(_ number: Int) -> Bool {
+        guard case let .document(references) = space else { return true }
+
+        return references.indices.contains(number)
+    }
+
     // Which declaration wrote the closure standing at a number of this
     // document's own, or nothing where no declaration did.
     //
