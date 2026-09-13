@@ -18,18 +18,17 @@ public struct ArtifactRefused: WarpError {
     // MARK: - Property
     public let message: String
 
-    public let place: Place?
+    // Nothing, and never anything. A place is an address in a document, and
+    // what is refused here is bytes this runtime wrote: there is no text for
+    // a reader to be pointed back into, so a door that took one would promise
+    // what it cannot hold.
+    public let place: Place? = nil
 
     // MARK: - Initializer
-    public init(_ message: String, at place: Place? = nil) {
+    public init(_ message: String) {
         self.message = message
-        self.place = place
     }
 
     // MARK: - Public
-    public func placed(_ place: Place) -> ArtifactRefused {
-        ArtifactRefused(message, at: place)
-    }
-
     // MARK: - Private
 }

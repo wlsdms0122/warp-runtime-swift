@@ -69,7 +69,6 @@ struct ConformanceTests {
         return try await Executor().run(image, arguments: sut.arguments)
     }
 
-
     // How far a case got before it was refused. The stage is part of the answer:
     // stopping at a run what another implementation stops at a build means
     // something already happened, and what already happened cannot be taken back.
@@ -370,7 +369,7 @@ struct Case: Sendable, CustomStringConvertible {
     // to be named. Empty where the case asked for none.
     var brought: [Module] {
         get throws {
-                guard let vocabulary else { return [] }
+            guard let vocabulary else { return [] }
 
             let loader = Loader()
 
