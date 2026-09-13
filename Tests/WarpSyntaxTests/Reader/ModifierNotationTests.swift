@@ -91,7 +91,7 @@ struct ModifierNotationTests {
                 try Name("\(mark.rawValue) \(inside.rawValue) procedure"): .dictionary(["returns": "int"])
             ])
 
-            #expect(throws: (any Error).self) {
+            #expect(throws: ReadingError.self) {
                 try Loader().load([
                     "warp": 1,
                     "imports": [],
@@ -101,6 +101,22 @@ struct ModifierNotationTests {
                 ])
             }
         }
+    }
+
+    @Test("a marked type is not written under a `?`", arguments: SlotMark.allCases)
+    func aMarkIsNotWrittenUnderADoubt(mark: SlotMark) throws {
+        // Given. `var Task?` reads as a `var` of a nullable, so a nullable of a
+        // `var` has no spelling of its own: writing it would hand two types one
+        // spelling and bring only one of them back
+        let type = TypeExpression.nullable(mark.marking(.named("Task")))
+
+        // When / Then
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: type)
+        }
+
+        // And the same spelling read back is the mark outside the doubt
+        #expect(try TypeReader.parse("\(mark.rawValue) Task?") == mark.marking(.nullable(.named("Task"))))
     }
 
     @Test("isolated is read in either order and written in one", arguments: [

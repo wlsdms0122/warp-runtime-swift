@@ -24,6 +24,10 @@ enum SlotMark: String, CaseIterable, Sendable {
     case borrowing
 
     // MARK: - Property
+    // Why two marks on one slot refuse, said once for the reading and the
+    // writing alike.
+    static let saysOneThing = "A slot says one thing about what it takes"
+
     // MARK: - Initializer
     // MARK: - Public
     // The mark a type was written under, where it was written under one.

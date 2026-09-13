@@ -241,7 +241,20 @@ public struct Writer: Sendable {
         // Spelt with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own. A record has no spelling
         // for a `?` to trail.
+        // A mark stands in front of the whole spelling, the trailing `?`
+        // included, so `var Task?` is read as a `var` of a nullable and there
+        // is no spelling left for a nullable of a `var`. Refused rather than
+        // written, or two types would share one spelling and only one of them
+        // would come back.
         case let .nullable(inner):
+            if let inside = SlotMark.marked(inner) {
+                throw WritingError(
+                    "`?` is written on \(inner.rendered), and a `\(inside.rawValue)`"
+                        + " stands in front of the `?` rather than under it."
+                        + " \(SlotMark.saysOneThing)"
+                )
+            }
+
             return .string(
                 "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
@@ -334,7 +347,7 @@ public struct Writer: Sendable {
         if let inside = SlotMark.marked(inner) {
             throw WritingError(
                 "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
-                    + " A slot says one thing about what it takes"
+                    + " \(SlotMark.saysOneThing)"
             )
         }
 
