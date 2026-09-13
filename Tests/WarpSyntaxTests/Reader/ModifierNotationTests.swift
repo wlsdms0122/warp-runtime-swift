@@ -37,7 +37,7 @@ struct ModifierNotationTests {
         // Then
         #expect(try TypeReader.parse("\(mark.rawValue) Handle") == type)
         #expect(written == .string("\(mark.rawValue) Handle"))
-        #expect(type.slotMark == mark)
+        #expect(SlotMark.marked(type)?.mark == mark)
     }
 
     @Test("a mark inside a mark is refused, whichever two they are", arguments: SlotMark.allCases)

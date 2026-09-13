@@ -114,7 +114,7 @@ public struct TypeReader: Decodable {
 
             let inner = try parse(String(bare))
 
-            if let inside = inner.slotMark {
+            if let inside = SlotMark.marked(inner)?.mark {
                 throw TypeFormError(
                     "type '\(text)' writes `\(inside.rawValue)` inside"
                         + " `\(mark.rawValue)`. A slot says one thing about what it takes"
