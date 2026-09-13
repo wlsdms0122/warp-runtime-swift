@@ -165,9 +165,10 @@ extension Builder {
             // and a body cannot give away what it never took.
             var borrowed: Set<Name> = []
 
-            // Whether this way through ended by leaving. No run comes back from
-            // one, so it is not a way a reading after the construct stands on.
-            var leaves = false
+            // Whether this way through ended the body. Only leaving the
+            // procedure does: a run comes back out of a loop from a `break`
+            // still holding what the way through held.
+            var endsTheBody = false
 
             // How a name is being held, where it is one of these at all. One
             // reading, so every judgment about an operand is made from the
@@ -196,7 +197,7 @@ extension Builder {
                     live: live,
                     moved: moved.union(other.moved),
                     borrowed: borrowed.union(other.borrowed),
-                    leaves: leaves && other.leaves
+                    endsTheBody: endsTheBody && other.endsTheBody
                 )
             }
         }
@@ -429,14 +430,15 @@ extension Builder {
             // Every way through has to be holding the same thing at the end of
             // it, or what a body holds after the conditional would depend on
             // which arm ran, which is not something the text shows. An arm that
-            // leaves is not one of those ways: no run comes back from it, so
-            // what the body holds afterwards stands on the arms that finish.
+            // ends the body is not one of those ways: no run comes back from
+            // it, so what the body holds afterwards stands on the arms that
+            // finish.
             case let .conditional(condition, then, otherwise):
                 let asked = try moving(condition, held: held, guarded: guarded)
                 let taken = try through(Block(body: then), held: asked, guarded: guarded)
                 let left = try through(Block(body: otherwise ?? []), held: asked, guarded: guarded)
 
-                switch (taken.leaves, left.leaves) {
+                switch (taken.endsTheBody, left.endsTheBody) {
                 case (true, false):
                     return left
 
@@ -468,7 +470,7 @@ extension Builder {
 
                 // A round may not run at all, so a loop is a way through
                 // whatever its body does.
-                rounds.leaves = false
+                rounds.endsTheBody = false
 
                 return rounds
 
@@ -480,7 +482,7 @@ extension Builder {
                 let attempted = try through(body, held: held, guarded: "inside an attempt")
                 var rescued = try through(rescue, held: held, guarded: "inside an attempt")
 
-                rescued.leaves = attempted.leaves && rescued.leaves
+                rescued.endsTheBody = attempted.endsTheBody && rescued.endsTheBody
 
                 return rescued
 
@@ -493,8 +495,6 @@ extension Builder {
                     try moving(value, held: held, guarded: guarded)
                 } ?? held
 
-                carried.leaves = true
-
                 // A `return` hands a value to the caller the way a result does,
                 // so it is asked the same question at the same moment: after
                 // the move, where a name that was handed on reads as gone.
@@ -502,6 +502,8 @@ extension Builder {
                 // construct and a `continue` ends the round, and what the body
                 // was holding it holds still on the other side of either.
                 guard leave.reach == .procedure else { return carried }
+
+                carried.endsTheBody = true
 
                 if let value = leave.value, carriesObligation(value, held: carried) {
                     handsOut = true

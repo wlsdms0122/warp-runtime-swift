@@ -1192,6 +1192,53 @@ struct LinearTests {
         }
     }
 
+    @Test("a break carries what the arm opened out of the loop, and it is still owed")
+    func aBreakDoesNotExcuseTheArmItLeavesFrom() throws {
+        // Given. A run does come back from a `break`: it comes back out of the
+        // loop still holding what the arm opened, so such an arm is judged the
+        // way any other is
+        let sut = try holding(
+            body: [
+                Statement(
+                    binding: .constant("spin"),
+                    expression: .loop(
+                        while: .literal(.bool(true)),
+                        body: Block(
+                            body: [
+                                Statement(
+                                    binding: .none,
+                                    expression: .conditional(
+                                        .literal(.bool(true)),
+                                        then: [
+                                            Statement(
+                                                binding: .constant("own"),
+                                                expression: .call(Call(selector: "app.open"))
+                                            ),
+                                            Statement(
+                                                binding: .none,
+                                                expression: .leave(Leave(reach: .construct))
+                                            )
+                                        ],
+                                        else: nil
+                                    )
+                                )
+                            ]
+                        ),
+                        round: "round"
+                    )
+                )
+            ],
+            result: .literal(.null)
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("in one arm and not in the other")
+        }
+    }
+
     @Test("a `?` does not stand on a type handed on once")
     func aNullableOfOneRefuses() throws {
         // Given. The doubt and the mark say opposite things about the same
