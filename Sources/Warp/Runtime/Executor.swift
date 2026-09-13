@@ -1020,12 +1020,17 @@ public struct Executor: Sendable {
 
         // Null is being sent to nothing, said as a value rather than by leaving
         // it out, so a procedure that declares nothing to be sent to is told
-        // nothing by it.
-        guard callee.receiverPosition != nil || receiver == .null else {
-            throw ExecutionError(
-                "'\(callee.label)' is sent to something, and it declares nothing to be"
-                    + " sent to"
-            )
+        // nothing by it. It answers as nothing here rather than further down,
+        // so what every kind of callee is handed says the same thing.
+        guard callee.receiverPosition != nil else {
+            guard receiver == .null else {
+                throw ExecutionError(
+                    "'\(callee.label)' is sent to something, and it declares nothing to be"
+                        + " sent to"
+                )
+            }
+
+            return nil
         }
 
         return try callee.settling(receiver: receiver)

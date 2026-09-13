@@ -281,6 +281,26 @@ struct ProcedureSendsTests {
         #expect(answer == .string("sent to nothing"))
     }
 
+    @Test("an effect that declares nothing to be sent to is sent to nothing too")
+    func anEffectSentNullIsSentToNothing() async throws {
+        // Given. What a query reads and what an effect reads say the same
+        // thing, so the fact is settled where the send crosses rather than
+        // beside each kind of callee
+        let image = try Builder().build(
+            [try Module(procedures: ["entry": Procedure(
+                body: [],
+                result: .call(Call(selector: "app.nullingToAnEffect"))
+            )])] + [.nullingToAnEffect, .plainlyRunning],
+            entry: "entry"
+        )
+
+        // When
+        let answer = try await Executor().run(image)
+
+        // Then
+        #expect(answer == .string("sent to nothing"))
+    }
+
     // MARK: - Private
 }
 
@@ -601,6 +621,41 @@ private struct PlainQuery: Query {
     // MARK: - Private
 }
 
+
+// Sends null to a procedure that runs rather than one that answers as data.
+private struct NullingToAnEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case running
+
+        var selector: Name { "app.running" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.running, to: .null)
+    }
+
+    // MARK: - Private
+}
+
+// Declares nothing to be sent to, runs, and says what it was sent to.
+private struct PlainlyRunningEffect: Effect {
+    typealias Parameters = NoParameters
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        invocation.receiver == nil ? .string("sent to nothing") : .string("sent to something")
+    }
+
+    // MARK: - Private
+}
+
 private extension Module {
     static let sending = try! Module(
         procedures: [
@@ -773,6 +828,24 @@ private extension Module {
             "app.nulling": Procedure(
                 signature: Signature(returns: .string),
                 implementation: .effect(NullingEffect())
+            )
+        ]
+    )
+
+    static let plainlyRunning = try! Module(
+        procedures: [
+            "app.running": Procedure(
+                signature: Signature(returns: .string),
+                implementation: .effect(PlainlyRunningEffect())
+            )
+        ]
+    )
+
+    static let nullingToAnEffect = try! Module(
+        procedures: [
+            "app.nullingToAnEffect": Procedure(
+                signature: Signature(returns: .string),
+                implementation: .effect(NullingToAnEffect())
             )
         ]
     )
