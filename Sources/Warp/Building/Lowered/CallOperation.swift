@@ -56,16 +56,6 @@ struct CallOperation: Sendable {
             )
         }
 
-        // Written in front of a procedure that receives by no name, the value
-        // has nowhere to land: the walk below reads what was written in front
-        // only at the slot the callee receives by, and there is no such slot.
-        guard receiver == nil || callee.signature.receiver != nil else {
-            throw BuildError.unjudged(
-                "a receiver for '\(callee.label)', which \(BuildError.receivesByNoName)",
-                at: place
-            )
-        }
-
         var sent: Operation?
         var placed: [Operation?] = []
         var handed: [Handed] = []
