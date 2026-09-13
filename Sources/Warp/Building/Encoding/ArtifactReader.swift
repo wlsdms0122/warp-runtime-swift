@@ -41,8 +41,7 @@ struct ArtifactReader {
             answers: try keyed(fields.next(), of: "answers", lowered),
             numbering: try Numbering(written: fields.next()),
             typeNumbering: try typeNumbering(fields.next()),
-            variables: try fields.list(variable),
-            judging: ()
+            judging: try fields.list(variable)
         )
 
         try fields.end()
@@ -559,8 +558,7 @@ private extension ArtifactReader {
             isolation: try isolation(fields.next()),
             failing: try failing(fields.next()),
             sends: try Fields.list(fields.next(), of: "row", sent),
-            implementation: try implementation(fields.next()),
-            judging: ()
+            judging: try implementation(fields.next())
         )
 
         try fields.end()
@@ -835,8 +833,7 @@ private extension ArtifactReader {
                 try held.end()
 
                 return taken
-            },
-            judging: ()
+            }
         ) }
 
         try fields.end()

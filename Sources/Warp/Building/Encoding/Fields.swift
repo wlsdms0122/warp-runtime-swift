@@ -95,11 +95,6 @@ struct Fields {
 }
 
 extension Fields {
-    // What a writing lays down for a field that may hold nothing.
-    static func maybe<T>(_ value: T?, _ write: (T) -> Value) -> Value {
-        value.map { held in .array([write(held)]) } ?? .array([])
-    }
-
     // What one written value is, said once. The cursor reads the next field
     // and a list reads each of its elements, and both ask these: one judgement
     // to a kind, so one damaged writing is answered the same way whichever way
@@ -179,7 +174,8 @@ extension Fields {
     }
 
     // A writing that may hold nothing: a list of none or one, so a value that
-    // is itself null is told from no value at all.
+    // is itself null is told from no value at all. What lays one down is
+    // `ArtifactWriter.maybe`, and the two are one rule said from each side.
     static func maybe<T>(_ value: Value, of part: String, _ read: (Value) throws -> T) throws -> T? {
         let written = try list(value, of: part) { held in held }
 

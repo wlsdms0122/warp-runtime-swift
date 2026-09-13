@@ -63,8 +63,7 @@ struct ArtifactCoverageTests {
             answers: ["a.ten": everyLoweredType],
             numbering: Numbering(imports: ["a.twelve"], declared: ["a.ten", "a.eleven"], closures: ["a.ten": 2]),
             typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
-            variables: [(name: "a.thirteen", value: .int(13)), (name: "a.fourteen", value: .string("x"))],
-            judging: ()
+            judging: [(name: "a.thirteen", value: .int(13)), (name: "a.fourteen", value: .string("x"))]
         )
     }()
 

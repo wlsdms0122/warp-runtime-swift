@@ -31,8 +31,7 @@ struct CallOperation: Sendable {
         procedure: Int,
         receiver: Operation?,
         arguments: [Operation?],
-        handed: [Handed],
-        judging: Void
+        judging handed: [Handed]
     ) throws {
         guard handed.allSatisfy({ one in one.position < arguments.count }) else {
             throw ValueRefused(

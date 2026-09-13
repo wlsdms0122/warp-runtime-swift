@@ -80,8 +80,7 @@ struct Judged: Sendable {
         isolation: Isolation,
         failing: Failing,
         sends: [Sent],
-        implementation: Implementation,
-        judging: Void
+        judging implementation: Implementation
     ) throws {
         if case let .body(body, frame) = implementation {
             guard frame.names.count == frame.size else {

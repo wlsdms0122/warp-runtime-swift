@@ -18,6 +18,15 @@ import Foundation
 // Every list a name keys is written in name order, so one artifact is one
 // value and one value is one writing of bytes.
 struct ArtifactWriter {
+    // MARK: - Property
+    // What a field that may hold nothing is laid down as: a list of none or
+    // one, so a value that is itself null is told from no value at all. The
+    // reading of it is `Fields.maybe`, and the two are one rule said from
+    // each side.
+    static func maybe<T>(_ value: T?, _ write: (T) -> Value) -> Value {
+        value.map { held in .array([write(held)]) } ?? .array([])
+    }
+
     // MARK: - Initializer
     init() { }
 
@@ -73,7 +82,7 @@ struct ArtifactWriter {
     }
 
     private func document(_ document: Place.Document) -> Value {
-        Fields.maybe(document.identity) { identity in .bytes(identity.bytes) }
+        ArtifactWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
     private func type(_ expression: TypeExpression) -> Value {
@@ -120,7 +129,7 @@ struct ArtifactWriter {
         case let .procedure(written, purity, isolation):
             return .array([
                 .int(13),
-                Fields.maybe(written, signature),
+                ArtifactWriter.maybe(written, signature),
                 self.purity(purity),
                 self.isolation(isolation)
             ])
@@ -147,7 +156,7 @@ struct ArtifactWriter {
             return .array([.int(20), name(spelling)])
 
         case let .parameter(spelling, constraint):
-            return .array([.int(21), name(spelling), Fields.maybe(constraint, name)])
+            return .array([.int(21), name(spelling), ArtifactWriter.maybe(constraint, name)])
 
         case let .reading(of: read, path: path):
             return .array([.int(22), name(read), .array(path.map(segment))])
@@ -159,15 +168,15 @@ struct ArtifactWriter {
         case let .whole(from, to):
             return .array([
                 .int(0),
-                Fields.maybe(from) { floor in .int(floor) },
-                Fields.maybe(to) { ceiling in edge(ceiling) { bound in .int(bound) } }
+                ArtifactWriter.maybe(from) { floor in .int(floor) },
+                ArtifactWriter.maybe(to) { ceiling in edge(ceiling) { bound in .int(bound) } }
             ])
 
         case let .fraction(from, to):
             return .array([
                 .int(1),
-                Fields.maybe(from) { floor in .double(floor) },
-                Fields.maybe(to) { ceiling in edge(ceiling) { bound in .double(bound) } }
+                ArtifactWriter.maybe(from) { floor in .double(floor) },
+                ArtifactWriter.maybe(to) { ceiling in edge(ceiling) { bound in .double(bound) } }
             ])
         }
     }
@@ -200,18 +209,18 @@ struct ArtifactWriter {
 
     private func signature(_ signature: Signature) -> Value {
         .array([
-            Fields.maybe(signature.receiver, name),
+            ArtifactWriter.maybe(signature.receiver, name),
             keyed(signature.parameters, parameter),
-            Fields.maybe(signature.returns, type)
+            ArtifactWriter.maybe(signature.returns, type)
         ])
     }
 
     private func parameter(_ parameter: Parameter) -> Value {
         .array([
-            Fields.maybe(parameter.type, type),
-            Fields.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
-            Fields.maybe(parameter.default) { held in held },
-            Fields.maybe(parameter.description, Value.string)
+            ArtifactWriter.maybe(parameter.type, type),
+            ArtifactWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
+            ArtifactWriter.maybe(parameter.default) { held in held },
+            ArtifactWriter.maybe(parameter.description, Value.string)
         ])
     }
 
@@ -266,7 +275,7 @@ private extension ArtifactWriter {
             return .array([.int(3), .int(index)])
 
         case let .statement(spelling, at):
-            return .array([.int(4), Fields.maybe(spelling, Value.string), .int(at)])
+            return .array([.int(4), ArtifactWriter.maybe(spelling, Value.string), .int(at)])
 
         case let .landmark(spelling):
             return .array([.int(5), .string(spelling)])
@@ -332,7 +341,7 @@ private extension ArtifactWriter {
     }
 
     func layout(_ layout: Layout) -> Value {
-        .array([Fields.maybe(layout.name, name), .array(layout.fields.map(name))])
+        .array([ArtifactWriter.maybe(layout.name, name), .array(layout.fields.map(name))])
     }
 }
 
@@ -381,7 +390,7 @@ private extension ArtifactWriter {
         case let .procedure(parameters, returns, purity, isolation):
             return .array([
                 .int(13),
-                Fields.maybe(parameters) { written in
+                ArtifactWriter.maybe(parameters) { written in
                     .array(written.map { parameter in
                         .array([
                             name(parameter.name),
@@ -390,7 +399,7 @@ private extension ArtifactWriter {
                         ])
                     })
                 },
-                Fields.maybe(returns, lowered),
+                ArtifactWriter.maybe(returns, lowered),
                 self.purity(purity),
                 self.isolation(isolation)
             ])
@@ -408,7 +417,7 @@ private extension ArtifactWriter {
             return .array([.int(17), .int(row)])
 
         case let .parameter(label, bound):
-            return .array([.int(18), name(label), Fields.maybe(bound, self.bound)])
+            return .array([.int(18), name(label), ArtifactWriter.maybe(bound, self.bound)])
 
         case let .reading(of: read, path: path):
             return .array([.int(19), name(read), .array(path.map(segment))])
@@ -486,13 +495,13 @@ private extension ArtifactWriter {
     func body(_ body: Body) -> Value {
         .array([
             .array(body.instructions.map(instruction)),
-            Fields.maybe(body.result, operation)
+            ArtifactWriter.maybe(body.result, operation)
         ])
     }
 
     func instruction(_ instruction: Instruction) -> Value {
         .array([
-            Fields.maybe(instruction.binding, binding),
+            ArtifactWriter.maybe(instruction.binding, binding),
             operation(instruction.code),
             .string(instruction.label)
         ])
@@ -501,13 +510,13 @@ private extension ArtifactWriter {
     func binding(_ binding: Instruction.Binding) -> Value {
         switch binding {
         case let .bind(slot, settling):
-            return .array([.int(0), .int(slot), Fields.maybe(settling, lowered)])
+            return .array([.int(0), .int(slot), ArtifactWriter.maybe(settling, lowered)])
 
         case let .declare(slot, settling):
-            return .array([.int(1), .int(slot), Fields.maybe(settling, lowered)])
+            return .array([.int(1), .int(slot), ArtifactWriter.maybe(settling, lowered)])
 
         case let .assign(address, settling):
-            return .array([.int(2), self.address(address), Fields.maybe(settling, lowered)])
+            return .array([.int(2), self.address(address), ArtifactWriter.maybe(settling, lowered)])
         }
     }
 
@@ -574,7 +583,7 @@ private extension ArtifactWriter {
                 .int(8),
                 self.operation(condition),
                 .array(then.map(instruction)),
-                Fields.maybe(otherwise) { written in .array(written.map(instruction)) }
+                ArtifactWriter.maybe(otherwise) { written in .array(written.map(instruction)) }
             ])
 
         case let .loop(while: condition, body: body, round: round, keeps: keeps):
@@ -583,7 +592,7 @@ private extension ArtifactWriter {
                 self.operation(condition),
                 self.body(body),
                 .int(round),
-                Fields.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
+                ArtifactWriter.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
             ])
 
         case let .attempt(body, rescue: rescue, failure: failure):
@@ -599,8 +608,8 @@ private extension ArtifactWriter {
             return .array([
                 .int(13),
                 self.reach(reach),
-                Fields.maybe(target, name),
-                Fields.maybe(read, self.operation)
+                ArtifactWriter.maybe(target, name),
+                ArtifactWriter.maybe(read, self.operation)
             ])
         }
     }
@@ -612,8 +621,8 @@ private extension ArtifactWriter {
     func callOperation(_ call: CallOperation) -> Value {
         .array([
             .int(call.procedure),
-            Fields.maybe(call.receiver, operation),
-            .array(call.arguments.map { argument in Fields.maybe(argument, self.operation) }),
+            ArtifactWriter.maybe(call.receiver, operation),
+            .array(call.arguments.map { argument in ArtifactWriter.maybe(argument, self.operation) }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
             })

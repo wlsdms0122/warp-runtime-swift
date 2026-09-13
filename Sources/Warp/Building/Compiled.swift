@@ -132,8 +132,7 @@ public struct Compiled: Sendable, Declaring {
         answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
-        variables: [(name: Name, value: Value)],
-        judging: Void
+        judging variables: [(name: Name, value: Value)]
     ) throws {
         guard declared.count <= table.count else {
             throw ArtifactRefused(
