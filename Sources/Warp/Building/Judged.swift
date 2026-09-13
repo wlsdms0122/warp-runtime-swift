@@ -51,6 +51,26 @@ struct Judged: Sendable {
     // MARK: - Initializer
     // What of a row its document settled. What is left behind is a reading of
     // this against a table, which any table gives again.
+    // Each part stated. What a reading of an artifact has: the row was
+    // settled once and written down, so nothing here is settled again.
+    init(
+        label: Name,
+        signature: Signature,
+        purity: Purity,
+        isolation: Isolation,
+        failing: Failing,
+        sends: [Sent],
+        implementation: Implementation
+    ) {
+        self.label = label
+        self.signature = signature
+        self.purity = purity
+        self.isolation = isolation
+        self.failing = failing
+        self.sends = sends
+        self.implementation = implementation
+    }
+
     init(_ row: Linked) {
         self.label = row.label
         self.signature = row.signature
