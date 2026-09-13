@@ -38,7 +38,23 @@ struct ArtifactReader {
         // The spellings this document declares, read before the parts that
         // stand on them: what a body's number reaches is the numbering's
         // answer, and what the numbering may say is this list.
+        //
+        // Every part is named as it is read, and the names run in the order
+        // the writing lays them down. The order is the agreement with the
+        // writing, so it is said here in sentences rather than left standing
+        // in the order some initialiser happens to declare.
         let declared = try fields.list(name)
+
+        guard declared.ordered else {
+            throw ArtifactRefused("'artifact' writes its declared spellings out of order")
+        }
+
+        let table = try fields.list(judged)
+        let calls = try fields.list { written in try Fields.list(written, of: "calls", name) }
+        let answers = try keyed(fields.next(), of: "answers", lowered)
+        let numbering = try Numbering(written: fields.next(), declaring: declared)
+        let typeNumbering = try typeNumbering(fields.next())
+        let variables = try fields.list(variable)
         let read = try Compiled(
             document: document,
             types: types,
@@ -47,12 +63,12 @@ struct ArtifactReader {
             claims: claims,
             leaned: leaned,
             declared: declared,
-            table: try fields.list(judged),
-            calls: try fields.list { written in try Fields.list(written, of: "calls", name) },
-            answers: try keyed(fields.next(), of: "answers", lowered),
-            numbering: try Numbering(written: fields.next(), declaring: declared),
-            typeNumbering: try typeNumbering(fields.next()),
-            judging: try fields.list(variable)
+            table: table,
+            calls: calls,
+            answers: answers,
+            numbering: numbering,
+            typeNumbering: typeNumbering,
+            judging: variables
         )
 
         try fields.end()

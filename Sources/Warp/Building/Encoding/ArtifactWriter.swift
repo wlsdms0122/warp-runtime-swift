@@ -30,7 +30,6 @@ struct ArtifactWriter {
         value.map { held in .array([write(held)]) } ?? .array([])
     }
 
-
     func value(of compiled: Compiled) throws -> Value {
         let written: Value = .array([
             document(compiled.document),

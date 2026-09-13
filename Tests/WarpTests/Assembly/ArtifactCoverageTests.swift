@@ -50,18 +50,18 @@ struct ArtifactCoverageTests {
             contracts: ["a.five": ["a.six": Signature(receiver: "r", parameters: ["p": parameter], returns: .bool)]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
-            declared: ["a.ten", "a.eleven"],
+            declared: ["a.eleven", "a.ten"],
             // Two declarations and the two closures their bodies lifted, which
             // is the order a document numbers its rows in.
             table: [
-                row(label: "a.ten", body: true),
-                row(label: "a.eleven", body: false),
+                row(label: "a.eleven", body: true),
+                row(label: "a.ten", body: false),
                 lifted(label: "a.twenty"),
                 lifted(label: "a.twentyOne")
             ],
             calls: [["a.twelve"], []],
-            answers: ["a.ten": everyLoweredType],
-            numbering: Numbering(imports: ["a.twelve"], declared: ["a.ten", "a.eleven"], closures: ["a.ten": 2]),
+            answers: ["a.eleven": everyLoweredType],
+            numbering: Numbering(imports: ["a.twelve"], declared: ["a.eleven", "a.ten"], closures: ["a.ten": 2]),
             typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
             judging: [(name: "a.thirteen", value: .int(13)), (name: "a.fourteen", value: .string("x"))]
         )
