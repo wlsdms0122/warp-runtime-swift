@@ -14,6 +14,14 @@ import Foundation
 // isolation and failing are what its code turns out to do and a link works
 // them out; a native says, and the row a compile settles records what it said.
 enum Native: Sendable {
+    // One of the procedures it declared it sends: the spelling it reaches,
+    // where it stands among them, and the names it hands over there.
+    struct Send: Hashable, Sendable {
+        let position: Int
+        let selector: Name
+        let offers: [Name]
+    }
+
     case query(any Query)
     case effect(any Effect)
 
@@ -66,7 +74,7 @@ enum Native: Sendable {
     }
 
     // The procedures it sends, in the places it names them at.
-    var imports: [(position: Int, selector: Name)] {
+    var imports: [Send] {
         switch self {
         case let .query(query):
             return sends(of: query)
@@ -76,11 +84,11 @@ enum Native: Sendable {
         }
     }
 
-    // The procedures it sends as a link compares them: in position order,
-    // spellings only. A row records these where it was compiled, and a procedure
-    // brought later naming others sends where the row does not stand.
-    var sending: [Name] {
-        imports.sorted { left, right in left.position < right.position }.map(\.selector)
+    // The procedures it sends as a link compares them: in position order. A row
+    // records these where it was compiled, and a procedure brought later naming
+    // others, or handing others over, sends where the row does not stand.
+    var sending: [Send] {
+        imports.sorted { left, right in left.position < right.position }
     }
 
     // MARK: - Initializer
@@ -92,7 +100,9 @@ enum Native: Sendable {
         P.Parameters.allCases.map { key in (position: key.position, name: key.name) }
     }
 
-    private func sends<P: NativeProcedure>(of procedure: P) -> [(position: Int, selector: Name)] {
-        P.Imports.allCases.map { key in (position: key.position, selector: key.selector) }
+    private func sends<P: NativeProcedure>(of procedure: P) -> [Send] {
+        P.Imports.allCases.map { key in
+            Send(position: key.position, selector: key.selector, offers: key.offers)
+        }
     }
 }

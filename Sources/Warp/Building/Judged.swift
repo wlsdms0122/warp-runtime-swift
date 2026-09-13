@@ -30,7 +30,7 @@ struct Judged: Sendable {
         // sends, in the places it names them at. What it reads is the
         // declaration's parameters in order, which the row's own slots
         // stand in, so only the sends are written down.
-        case native(sending: [Name])
+        case native(sending: [Native.Send])
     }
 
     // MARK: - Property
@@ -40,10 +40,11 @@ struct Judged: Sendable {
     let isolation: Isolation
     let failing: Failing
 
-    // The rows this row's procedure sends, in the places the procedure names them at,
-    // numbered by the document. Empty for a body, whose sends are calls its
-    // own code carries.
-    let sends: [Int]
+    // The sends this row's procedure declared, in the places the procedure names them
+    // at: the row each reaches, numbered by the document, and where what it
+    // hands over stands. Empty for a body, whose sends are calls its own code
+    // carries.
+    let sends: [Sent]
 
     let implementation: Implementation
 
@@ -181,7 +182,7 @@ struct Judged: Sendable {
 
     private func brought(
         otherwise brought: Supplying.Brought,
-        sending: [Name],
+        sending: [Native.Send],
         in document: Place.Document
     ) -> BuildError {
         let differing = [

@@ -326,7 +326,7 @@ struct Relocating {
             place: .procedure(row.label.spelling, in: .assembled),
             loweredTypes: typeRows[row.origin]
         )
-        let sends = try row.sends.map { number in try self.row(number, in: standing) }
+        let sends = try row.sends.map { sent in sent.reaching(try self.row(sent.row, in: standing)) }
 
         guard case let .body(body, frame) = row.implementation else {
             guard sends != row.sends else { return row }

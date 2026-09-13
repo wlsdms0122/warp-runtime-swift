@@ -58,9 +58,10 @@ public final class Linked: Sendable {
     // so a run that is handed one asks whether it was made by the same link.
     let table: LoweredTypeTable
 
-    // The rows this row's procedure sends, in the places the procedure names them at.
-    // Empty for a body, whose sends are calls its own code carries.
-    let sends: [Int]
+    // The sends this row's procedure declared, in the places the procedure names them
+    // at: the row each reaches and where what it hands over stands. Empty for a
+    // body, whose sends are calls its own code carries.
+    let sends: [Sent]
 
     let implementation: Implementation
 
@@ -73,7 +74,7 @@ public final class Linked: Sendable {
         isolation: Isolation,
         failing: Failing,
         implementation: Implementation,
-        sends: [Int] = [],
+        sends: [Sent] = [],
         in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
@@ -120,7 +121,7 @@ public final class Linked: Sendable {
     // signature is the signature's, and neither lowering a body nor answering
     // the numbers in one touches the signature, so the slots are carried over
     // rather than worked out again.
-    init(_ row: Linked, implementation: Implementation, sends: [Int]) {
+    init(_ row: Linked, implementation: Implementation, sends: [Sent]) {
         self.label = row.label
         self.origin = row.origin
         self.signature = row.signature
@@ -147,7 +148,7 @@ public final class Linked: Sendable {
         pure: Bool,
         isolated: Bool,
         failing: Failing,
-        sends: [Int],
+        sends: [Sent],
         in table: LoweredTypeTable
     ) -> Linked {
         Linked(

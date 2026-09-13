@@ -926,19 +926,21 @@ public struct Executor: Sendable {
         return row
     }
 
-    // Sending a procedure a procedure declared it sends. The number is the sender's
-    // document's, the same as one written in a body. The arguments are offered
-    // rather than settled strictly, for the reason a closure's are: a Swift
-    // body is not text the link could read the names out of, so what the procedure
-    // gives and what the callee declared are matched where both exist.
+    // Sending a procedure a procedure declared it sends. The row the send reaches is
+    // numbered by the sender's document, the same as one written in a body, and
+    // the arguments arrive at the places the build worked out.
+    //
+    // They are still offered rather than settled strictly: a procedure may hand over
+    // fewer than the callee declares, and a place it never handed is a place
+    // nothing was given for.
     func send(
-        _ number: Int,
+        _ sending: Sent,
         from origin: Int,
         to receiver: Value?,
-        offering arguments: [(name: Name, value: Value)],
+        offering arguments: [(position: Int, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        let callee = linked[try row(number, from: origin)]
+        let callee = linked[try row(sending.row, from: origin)]
         let settled = try settled(callee, to: receiver, offering: arguments)
 
         switch callee.implementation {
@@ -981,12 +983,12 @@ public struct Executor: Sendable {
     // refused a query sending anything that runs, so what reaches here answers
     // as data.
     func send(
-        _ number: Int,
+        _ sending: Sent,
         from origin: Int,
         to receiver: Value?,
-        offering arguments: [(name: Name, value: Value)]
+        offering arguments: [(position: Int, value: Value)]
     ) throws -> Value {
-        let callee = linked[try row(number, from: origin)]
+        let callee = linked[try row(sending.row, from: origin)]
 
         guard callee.purity == .pure else {
             throw ExecutionError(
@@ -998,17 +1000,34 @@ public struct Executor: Sendable {
         return try answer(callee, for: receiver, with: try settled(callee, to: receiver, offering: arguments))
     }
 
-    // A send's arguments over the callee's boundary. A receiver stands apart
-    // the way it does for a call written in a document, so the slot it names
-    // is filled by it rather than by the offered list.
+    // A send's arguments over the callee's boundary, each already standing at
+    // the place the build read for it. A receiver stands apart the way it does
+    // for a call written in a document, so the slot it names is filled by it
+    // rather than by what was handed over.
+    //
+    // A place nothing was handed at answers nil, which is what tells the
+    // boundary the sender offered nothing there.
     private func settled(
         _ callee: Linked,
         to receiver: Value?,
-        offering arguments: [(name: Name, value: Value)]
+        offering arguments: [(position: Int, value: Value)]
     ) throws -> Settled {
-        Settled(
+        var given: [Value?] = Array(repeating: nil, count: callee.slots.count)
+
+        for (position, value) in arguments {
+            guard given.indices.contains(position) else {
+                throw ExecutionError(
+                    "'\(callee.label)' is handed something standing at \(position),"
+                        + " which is not one of its places"
+                )
+            }
+
+            given[position] = value
+        }
+
+        return Settled(
             values: try callee.settle(
-                arguments,
+                given,
                 offered: true,
                 skipping: { position in receiver != nil && position == callee.receiverPosition }
             )

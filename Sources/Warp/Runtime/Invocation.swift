@@ -35,9 +35,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // The variables handed in place, by parameter position.
     private let holds: [(position: Int, handle: Handle)]
 
-    // The rows this procedure's declared sends reach, in the places the procedure names
-    // them at.
-    private let sends: [Int]
+    // The sends this procedure declared, in the places it names them at: the row
+    // each reaches and where what it hands over stands.
+    private let sends: [Sent]
 
     // Which document numbered them. A procedure's declared sends are numbered the
     // way a call written in a body is, by the document that declared it.
@@ -52,7 +52,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         receiver: Value?,
         settled: Settled,
         holds: [(position: Int, handle: Handle)],
-        sends: [Int],
+        sends: [Sent],
         from origin: Int,
         trace: Trace,
         executor: Executor
@@ -114,16 +114,20 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         }
     }
 
-    // Sending a procedure this procedure declared it sends. The link resolved the row,
-    // so what happens here is an index and not a lookup, and a procedure this one
-    // never declared is a procedure that does not compile.
+    // Sending a procedure this procedure declared it sends. The link resolved the row
+    // and the place each handed argument stands at, so what happens here is
+    // indexing twice and looking nothing up; a procedure this one never declared is
+    // a procedure that does not compile.
+    //
+    // The arguments stand in the order the key declared it hands them, which is
+    // the order the build read the places off.
     //
     // The label names which piece of this procedure's work the send is, the way it
     // does for a closure, so a refusal from inside says where it happened.
     public func send(
         _ key: P.Imports,
         to receiver: Value? = nil,
-        offering arguments: [(name: Name, value: Value)] = [],
+        offering arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
         guard sends.indices.contains(key.position) else {
@@ -134,7 +138,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             sends[key.position],
             from: origin,
             to: receiver,
-            offering: arguments,
+            offering: try sends[key.position].handing(arguments, to: key.selector),
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }

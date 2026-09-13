@@ -29,7 +29,7 @@ public struct Supplying: Sendable {
         // stands on the declaration it was compiled against, so this is what
         // says the two are one procedure.
         let signature: Signature
-        let sending: [Name]
+        let sending: [Native.Send]
 
     }
 

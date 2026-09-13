@@ -7,9 +7,11 @@
 
 import Foundation
 
-// Where a native procedure's declared sends stand in its document's numbering. A
-// procedure names the spellings it sends and this answers with numbers, so the run
-// reads a number where the procedure wrote a spelling.
+// Where a native procedure's declared sends stand in its document's numbering,
+// and where the names each one hands over stand among the parameters it reaches.
+// A procedure names the spellings it sends and the arguments it hands at each, and
+// this answers with numbers, so the run reads numbers where the procedure wrote
+// spellings.
 //
 // Which row a number is stays the link's answer, the same as for a call a body
 // wrote. A spelling nothing declares is refused there.
@@ -36,15 +38,26 @@ struct Sending {
     // time, where the build has worked it out.
     private let isolated: Set<Name>?
 
+    // What a selector this document may send takes, where the build has the
+    // declaration in hand. Nil for a spelling nothing standing so far declares,
+    // which is only reachable for a send that hands nothing over.
+    private let taking: @Sendable (Name) -> Signature?
+
     // MARK: - Initializer
-    init(numbering: Numbering, pure: Set<Name>? = nil, isolated: Set<Name>? = nil) {
+    init(
+        numbering: Numbering,
+        pure: Set<Name>? = nil,
+        isolated: Set<Name>? = nil,
+        taking: @escaping @Sendable (Name) -> Signature? = { _ in nil }
+    ) {
         self.numbering = numbering
         self.pure = pure
         self.isolated = isolated
+        self.taking = taking
     }
 
     // MARK: - Public
-    func rows(of procedure: Procedure, called label: Name) throws -> [Int] {
+    func rows(of procedure: Procedure, called label: Name) throws -> [Sent] {
         guard let sends = procedure.implementation.nativeImports else { return [] }
 
         // Only a query claims to answer without running. An effect runs, so
@@ -86,11 +99,41 @@ struct Sending {
                 )
             }
 
-            return stands
+            return Sent(row: stands, offers: try offered(send, called: label))
         }
     }
 
     // MARK: - Private
+    // Where each name a send hands over stands among the parameters it reaches.
+    // The order is the callee's declared names sorted, which is the order its
+    // slots stand in and the order a run reads them at, so this is the same
+    // answer a call written in a body gets from the build.
+    private func offered(_ send: Native.Send, called label: Name) throws -> [Int] {
+        guard !send.offers.isEmpty else { return [] }
+
+        guard let signature = taking(send.selector) else {
+            throw BuildError(
+                "'\(label)' hands \(send.offers.map(\.spelling).joined(separator: ", ")) to"
+                    + " '\(send.selector)', and nothing standing here declares what it takes",
+                at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+            )
+        }
+
+        let names = signature.names
+
+        return try send.offers.map { offered in
+            guard let position = names.firstIndex(of: offered) else {
+                throw BuildError(
+                    "'\(label)' hands '\(offered)' to '\(send.selector)', which declares"
+                        + " no parameter under that name",
+                    at: Place.procedure(label.spelling, in: .assembled).part(.imports)
+                )
+            }
+
+            return position
+        }
+    }
+
     private func answersOnlyByRunning(_ selector: Name) -> Bool {
         guard let pure else { return false }
 

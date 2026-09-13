@@ -13,10 +13,10 @@ public struct Question<P: NativeProcedure>: Sendable {
     // name where a caller asks the procedure directly, with no declaration and no
     // run behind them.
     private enum Arguments: Sendable {
-        // The numbers this procedure's declared sends stand at travel with the run,
-        // since they are the sender's document's numbers and only a run can
-        // say which rows they are.
-        case settled(Settled, sends: [Int], from: Int, Executor)
+        // The sends this procedure declared travel with the run, since the rows they
+        // reach are the sender's document's numbers and only a run can say
+        // which rows they are.
+        case settled(Settled, sends: [Sent], from: Int, Executor)
         case offered([Name: Value])
     }
 
@@ -42,7 +42,7 @@ public struct Question<P: NativeProcedure>: Sendable {
         self.arguments = .offered(arguments)
     }
 
-    init(receiver: Value?, settled: Settled, sends: [Int], from origin: Int, executor: Executor) {
+    init(receiver: Value?, settled: Settled, sends: [Sent], from origin: Int, executor: Executor) {
         self.receiver = receiver
         self.arguments = .settled(settled, sends: sends, from: origin, executor)
     }
@@ -65,16 +65,20 @@ public struct Question<P: NativeProcedure>: Sendable {
         }
     }
 
-    // Sending a procedure this procedure declared it sends. The link resolved the row,
-    // so what happens here is an index and not a lookup, and a procedure this one
-    // never declared is a procedure that does not compile.
+    // Sending a procedure this procedure declared it sends. The link resolved the row
+    // and the place each handed argument stands at, so what happens here is
+    // indexing twice and looking nothing up; a procedure this one never declared is
+    // a procedure that does not compile.
+    //
+    // The arguments stand in the order the key declared it hands them, which is
+    // the order the build read the places off.
     //
     // Synchronous, because a query answers without running and the link
     // refused a query declaring it sends anything that runs.
     public func send(
         _ key: P.Imports,
         to receiver: Value? = nil,
-        offering arguments: [(name: Name, value: Value)] = []
+        offering arguments: [Value] = []
     ) throws -> Value {
         guard case let .settled(_, sends, origin, executor) = self.arguments,
             sends.indices.contains(key.position)
@@ -86,7 +90,12 @@ public struct Question<P: NativeProcedure>: Sendable {
             )
         }
 
-        return try executor.send(sends[key.position], from: origin, to: receiver, offering: arguments)
+        return try executor.send(
+            sends[key.position],
+            from: origin,
+            to: receiver,
+            offering: try sends[key.position].handing(arguments, to: key.selector)
+        )
     }
 
     // Running a procedure this procedure was handed. What may be handed is what the

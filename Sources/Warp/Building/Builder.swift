@@ -518,7 +518,10 @@ public struct Builder: Sendable {
         let sending = Sending(
             numbering: numbering,
             pure: compiling.pure,
-            isolated: compiling.isolated
+            isolated: compiling.isolated,
+            taking: { [rows = compiling.lowering.rows, table = compiling.lowering.table] selector in
+                own[selector] ?? rows[selector].map { row in table[row].signature }
+            }
         )
 
         // This document's block of the table, in name order. What a

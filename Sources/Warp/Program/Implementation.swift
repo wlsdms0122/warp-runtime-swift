@@ -67,7 +67,7 @@ public enum Implementation: Sendable {
 
     // The procedures a native procedure sends, in the places it names them at. Nil for
     // a body, whose sends are read off its text.
-    var nativeImports: [(position: Int, selector: Name)]? {
+    var nativeImports: [Native.Send]? {
         native?.imports
     }
 
