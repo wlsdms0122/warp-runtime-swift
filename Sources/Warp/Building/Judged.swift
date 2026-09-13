@@ -151,7 +151,9 @@ struct Judged: Sendable {
     // answers wrongly.
     func judge(
         standingIn frames: (Int) -> Frame?,
-        reaching given: (Int) -> Bool,
+        reaching given: (Int) -> (taking: Int, standing: Bool)?,
+        numbering types: (Int) -> Bool,
+        membering memberships: (Int) -> Bool,
         holding variables: Int
     ) throws {
         guard case let .body(body, frame) = implementation else { return }
@@ -175,8 +177,26 @@ struct Judged: Sendable {
         // A number a call reaches is one this document gave. Which row that
         // is, is the link's answer, but a number the document never gave is
         // one no link can answer.
-        guard standing.calls.allSatisfy(given) else {
-            throw ArtifactRefused("a body calls a number its document never gave")
+        for call in standing.calls {
+            guard let reached = given(call.number) else {
+                throw ArtifactRefused("a body calls a number its document never gave")
+            }
+
+            // What it hands over fills the slots the row it reaches declares.
+            // Answered where the row is this document's own; a row another
+            // document holds is the link's answer and is asked there.
+            guard !reached.standing || reached.taking == call.arguments else {
+                throw ArtifactRefused(
+                    "a call stands \(call.arguments) argument(s) where the"
+                        + " \(reached.taking) its callee declares stand"
+                )
+            }
+        }
+
+        // The same of the numbers its types stand at. A document numbers its
+        // types and its memberships apart, so the two are asked apart.
+        guard standing.types.allSatisfy(types), standing.memberships.allSatisfy(memberships) else {
+            throw ArtifactRefused("a body stands on a type number its document never gave")
         }
 
         for closure in standing.closures {

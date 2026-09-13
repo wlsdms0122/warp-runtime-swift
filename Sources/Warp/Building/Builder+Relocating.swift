@@ -488,15 +488,15 @@ struct Relocating {
         // The row is this link's answer and is known here, so the question is
         // asked once rather than at every call the run makes of it.
         //
-        // Refused as an artifact rather than as a document. A call the
-        // lowering makes takes its arguments from the callee's own slots, so
-        // a document cannot write this wrong; what can is a Compiled whose
-        // parts no longer stand to each other, and that is what an artifact
-        // is whichever way the caller came by one.
+        // What is left after a document has judged its own calls: a call
+        // reaching a row some other document holds. Which row that is, is this
+        // link's answer, so this is the one that can ask, and it says which
+        // call it is about the way the refusals beside it do.
         guard call.arguments.count == table[procedure].slots.count else {
-            throw ArtifactRefused(
+            throw BuildError(
                 "a call stands \(call.arguments.count) argument(s) where the"
-                    + " \(table[procedure].slots.count) its callee declares stand"
+                    + " \(table[procedure].slots.count) its callee declares stand",
+                at: standing.place
             )
         }
 

@@ -305,7 +305,7 @@ struct ArtifactReadingTests {
         }
     }
 
-    @Test("is refused at the link where a call stands more arguments than its callee takes")
+    @Test("is refused where a call stands more arguments than its callee takes")
     func aCallStandingTooMany() throws {
         // Given. A document whose body calls one of its own declarations, with
         // one argument added to what the call stands. The row it reaches is the
@@ -349,15 +349,10 @@ struct ArtifactReadingTests {
         table[0] = .array(row)
         parts[7] = .array(table)
 
-        // When. The artifact reads, because nothing here is the reading's to
-        // know: which row the call reaches is the link's answer.
-        let read = try Compiled(written: stamped(parts), of: nil)
-
-        // Then. The link refuses it, and no run begins. An artifact's refusal:
-        // a lowering takes a call's arguments from the callee's own slots, so
-        // no document writes this and only an artifact can hold it.
+        // When / Then. The row the call reaches is this document's own, so the
+        // reading answers it and no link is needed.
         #expect(throws: ArtifactRefused.self) {
-            try Builder().link([read], entry: "app.entry", supplying: .none)
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -904,6 +899,107 @@ struct ArtifactReadingTests {
         row[6] = .array(implementation)
         table[0] = .array(row)
         parts[7] = .array(table)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
+    @Test("is refused where a body stands on a type number the document never gave")
+    func aTypeNumberOffTheNumbering() throws {
+        // Given. A body that casts to a declared type, with the number moved
+        // past everything this document numbered.
+        let sut = try Module(
+            types: ["app.Point": .record(["x": .int])],
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(parameters: ["p": Parameter(type: .any)], returns: .named("app.Point")),
+                    body: [],
+                    result: .cast(reference("p"), as: .named("app.Point"), optional: false)
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(body) = implementation[1],
+              case var .array(result) = body[1],
+              case var .array(operation) = result[0],
+              case let .int(6) = operation[0],
+              case var .array(type) = operation[2],
+              case let .int(17) = type[0]
+        else {
+            Issue.record("an artifact writes a body that casts to a declared type")
+
+            return
+        }
+
+        type[1] = .int(9999)
+        operation[2] = .array(type)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
+    @Test("is refused where a place inside it addresses another document")
+    func aPlaceOfAnotherDocument() throws {
+        // Given. A document that leans a type on a contract, so the artifact
+        // holds a place, with that place moved onto some other document.
+        let sut = try Module(
+            types: ["app.Box": .record(["v": .int])],
+            contracts: ["app.Show": ["show": Signature(returns: .int)]],
+            claims: ["app.Box": ["app.Show"]],
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("box"),
+                        expression: .cast(
+                            .record(["v": .literal(.int(1))]),
+                            as: .named("app.Box"),
+                            optional: false
+                        )
+                    )],
+                    result: .call(Call(receiver: reference("box"), selector: "app.Show.show"))
+                ),
+                "app.Box.show": Procedure(
+                    signature: Signature(
+                        receiver: "of",
+                        parameters: ["of": Parameter(type: .named("app.Box"))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(leaned) = parts[5],
+              case var .array(entry) = leaned.first,
+              case var .array(place) = entry[2],
+              leaned.count == 1
+        else {
+            Issue.record("an artifact writes where each pair its bodies lean on was written")
+
+            return
+        }
+
+        place[0] = .array([.bytes([0x07])])
+        entry[2] = .array(place)
+        leaned[0] = .array(entry)
+        parts[5] = .array(leaned)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {

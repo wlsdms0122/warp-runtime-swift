@@ -207,6 +207,19 @@ struct Numbering: Sendable {
         return references.indices.contains(number)
     }
 
+    // Which spelling a number stands for, or nothing where it stands for a
+    // closure instead.
+    func reaching(_ number: Int) -> Name? {
+        guard case let .document(references) = space,
+              references.indices.contains(number),
+              case let .sent(name) = references[number]
+        else {
+            return nil
+        }
+
+        return name
+    }
+
     // Which declaration wrote the closure standing at a number of this
     // document's own, or nothing where no declaration did.
     //
@@ -308,11 +321,6 @@ struct Numbering: Sendable {
         case table
     }
 
-    private static func written(_ places: [Name: Int]) -> Value {
-        .array(places.keys.sorted().map { name in
-            .array([.string(name.spelling), .int(places[name]!)])
-        })
-    }
 
     private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
         guard case let .array(written) = value else {

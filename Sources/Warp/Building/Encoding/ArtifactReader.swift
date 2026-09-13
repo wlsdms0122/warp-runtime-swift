@@ -15,8 +15,17 @@ import Foundation
 // reading that a writing was laid out by some other pair is the format
 // `Compiled` stamps before handing anything here.
 struct ArtifactReader {
+    // MARK: - Property
+    // Which document this is reading an artifact of. Every identity a reading
+    // makes is made here, and an identity is worth having because it is
+    // derived and never declared: an artifact writes one down, so the reading
+    // holds it to the one the artifact was kept under.
+    private let identity: Identity?
+
     // MARK: - Initializer
-    init() { }
+    init(of identity: Identity?) {
+        self.identity = identity
+    }
 
     // MARK: - Internal
     func compiled(from value: Value) throws -> Compiled {
@@ -104,11 +113,33 @@ struct ArtifactReader {
     }
 
     private func document(_ value: Value) throws -> Place.Document {
-        Place.Document(
-            identity: try Fields.maybe(value, of: "document") { written in
-                Identity(try Fields.bytes(written, of: "document"))
-            }
-        )
+        let read = try Fields.maybe(value, of: "document") { written in
+            Identity(try Fields.bytes(written, of: "document"))
+        }
+
+        guard read == identity else {
+            throw ArtifactRefused(
+                "this artifact stands against a document other than the one it was kept under"
+            )
+        }
+
+        return Place.Document(identity: read)
+    }
+
+    // The document a place inside this artifact is an address in. Every one of
+    // them is this document, or none at all where the program was never
+    // written down. A place naming some third document addresses a text this
+    // link was never handed.
+    private func held(_ value: Value) throws -> Place.Document {
+        let read = try Fields.maybe(value, of: "place document") { written in
+            Identity(try Fields.bytes(written, of: "place document"))
+        }
+
+        guard read == nil || read == identity else {
+            throw ArtifactRefused("a place inside this artifact addresses another document")
+        }
+
+        return Place.Document(identity: read)
     }
 
     private func leaned(_ value: Value) throws -> [Claim: Place] {
@@ -327,8 +358,8 @@ private extension ArtifactReader {
 private extension ArtifactReader {
     func place(_ value: Value) throws -> Place {
         var fields = try Fields(value, of: "place")
-        let held = try document(fields.next())
-        let read = Place(try Fields.list(fields.next(), of: "place", step), in: held)
+        let stands = try held(fields.next())
+        let read = Place(try Fields.list(fields.next(), of: "place", step), in: stands)
 
         try fields.end()
 

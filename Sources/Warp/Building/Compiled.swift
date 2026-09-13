@@ -186,6 +186,8 @@ public struct Compiled: Sendable, Declaring {
             try row.judge(
                 standingIn: { number in frame(ofClosure: number, written: row.label) },
                 reaching: reaches(_:),
+                numbering: typeNumbering.types.indices.contains,
+                membering: typeNumbering.memberships.indices.contains,
                 holding: variables.count
             )
         }
@@ -254,15 +256,7 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
-        let read = try ArtifactReader().compiled(from: written)
-
-        guard read.document.identity == identity else {
-            throw ArtifactRefused(
-                "this artifact stands against a document other than the one it was kept under"
-            )
-        }
-
-        self = read
+        self = try ArtifactReader(of: identity).compiled(from: written)
     }
 
     // MARK: - Private
@@ -271,11 +265,22 @@ public struct Compiled: Sendable, Declaring {
     // declaration. Which row that is, is this document's own arithmetic.
     // Whether a number a body carries is one this document gave, and where it
     // stands for a closure, one this document stood up.
-    private func reaches(_ number: Int) -> Bool {
-        guard numbering.gave(number) else { return false }
-        guard let written = numbering.lifted(number) else { return true }
+    private func reaches(_ number: Int) -> (taking: Int, standing: Bool)? {
+        guard numbering.gave(number) else { return nil }
 
-        return written < lifted.count
+        guard let written = numbering.lifted(number) else {
+            // A spelling, which this document may or may not declare. Where it
+            // does, the row is here and what it takes is known.
+            guard let name = numbering.reaching(number), let row = declared.firstIndex(of: name) else {
+                return (taking: 0, standing: false)
+            }
+
+            return (taking: table[row].signature.names.count, standing: true)
+        }
+
+        guard written < lifted.count else { return nil }
+
+        return (taking: table[lifted.lowerBound + written].signature.names.count, standing: true)
     }
 
     private func frame(ofClosure number: Int, written by: Name) -> Frame? {

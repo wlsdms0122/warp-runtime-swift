@@ -39,7 +39,12 @@ extension Body {
         // The numbers its calls reach, as its document gave them. What each
         // one stands for is the link's answer, so what is asked of them here
         // is only that this document gave them at all.
-        private(set) var calls: [Int] = []
+        private(set) var calls: [(number: Int, arguments: Int)] = []
+
+        // The type numbers its code stands on, kept apart because a document
+        // numbers its types and its memberships in two spaces.
+        private(set) var types: [Int] = []
+        private(set) var memberships: [Int] = []
 
         // MARK: - Initializer
         // MARK: - Internal
@@ -51,8 +56,34 @@ extension Body {
             extents.append(run)
         }
 
-        mutating func stand(calling number: Int) {
-            calls.append(number)
+        mutating func stand(calling number: Int, handing arguments: Int) {
+            calls.append((number: number, arguments: arguments))
+        }
+
+        mutating func stand(on type: LoweredType) {
+            switch type {
+            case let .named(number), let .member(number):
+                types.append(number)
+
+            case let .parameter(_, bound):
+                guard case let .membership(number)? = bound else { return }
+
+                memberships.append(number)
+
+            case let .array(held), let .dictionary(held), let .variable(held),
+                let .inout(held), let .nullable(held):
+                stand(on: held)
+
+            case let .record(record):
+                record.fields.forEach { field in stand(on: field) }
+
+            case let .procedure(parameters, returns, _, _):
+                parameters?.forEach { parameter in stand(on: parameter.type) }
+                returns.map { answer in stand(on: answer) }
+
+            default:
+                return
+            }
         }
 
         mutating func stand(up number: Int, taking inner: [Int]) {
@@ -79,11 +110,13 @@ extension Body {
 extension Instruction {
     func stand(in standing: inout Body.Standing) {
         switch binding {
-        case let .bind(slot, _)?, let .declare(slot, _)?:
+        case let .bind(slot, settling)?, let .declare(slot, settling)?:
             standing.stand(on: slot)
+            settling.map { type in standing.stand(on: type) }
 
-        case let .assign(address, _)?:
+        case let .assign(address, settling)?:
             address.stand(in: &standing)
+            settling.map { type in standing.stand(on: type) }
 
         case nil:
             break
@@ -145,8 +178,9 @@ extension Operation {
             callee.stand(in: &standing)
             arguments.forEach { _, argument in argument.stand(in: &standing) }
 
-        case let .cast(read, _, _):
+        case let .cast(read, type, _):
             read.stand(in: &standing)
+            standing.stand(on: type)
 
         case let .block(body):
             body.stand(in: &standing)
@@ -170,7 +204,7 @@ extension Operation {
             standing.stand(on: failure)
 
         case let .call(call):
-            standing.stand(calling: call.procedure)
+            standing.stand(calling: call.procedure, handing: call.arguments.count)
             call.receiver?.stand(in: &standing)
             call.arguments.forEach { argument in argument?.stand(in: &standing) }
             call.handed.forEach { handed in handed.address.stand(in: &standing) }

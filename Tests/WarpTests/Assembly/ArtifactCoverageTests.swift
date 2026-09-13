@@ -174,7 +174,7 @@ struct ArtifactCoverageTests {
         + Self.everyConstruct.map(Place.Step.construct)
 
         return [
-            Claim(type: "a.seventeen", contract: "a.five"): Place(steps, in: Place.Document(identity: Identity([9]))),
+            Claim(type: "a.seventeen", contract: "a.five"): Place(steps, in: Place.Document(identity: Identity([1, 2, 3]))),
             Claim(type: "a.eighteen", contract: "a.five"): Place([], in: .assembled)
         ]
     }()
@@ -304,8 +304,10 @@ struct ArtifactCoverageTests {
         fields: [.literal(.int(10)), .literal(.int(11))]
     )
 
+    // Reaching the one name this document sends rather than one it declares,
+    // so what the call hands over is the link's to judge.
     private static let callOperation = CallOperation(
-        procedure: 2,
+        procedure: 0,
         receiver: .literal(.int(12)),
         arguments: [.literal(.int(13)), nil],
         handed: [CallOperation.Handed(position: 1, address: Address(slot: 5, steps: []))]
