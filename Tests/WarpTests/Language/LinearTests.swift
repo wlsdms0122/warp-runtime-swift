@@ -1239,6 +1239,74 @@ struct LinearTests {
         }
     }
 
+    @Test("an attempt ends the body only where its body and its rescue both do")
+    func anAttemptEndsTheBodyWhereBothDo() throws {
+        // Given. A failure lands anywhere in the body, so the rescue is a way
+        // through unless the body ends on its own end too. This arm closes the
+        // handle and then ends the body; the arm beside it still holds one, so
+        // whether the two are asked to agree is what the propagation decides
+        func body(rescueEnds: Bool) -> [Statement] {
+            let ending = Statement(
+                binding: .none,
+                expression: .leave(Leave(reach: .procedure, value: .literal(.null)))
+            )
+
+            return [
+                Statement(binding: .constant("handle"), expression: .call(Call(selector: "app.open"))),
+                Statement(
+                    binding: .none,
+                    expression: .conditional(
+                        .literal(.bool(true)),
+                        then: [
+                            Statement(
+                                expression: .call(Call(receiver: reference("handle"), selector: "app.close"))
+                            ),
+                            Statement(
+                                binding: .none,
+                                expression: .attempt(
+                                    Block(body: [mayFail(), ending]),
+                                    rescue: Block(
+                                        body: rescueEnds
+                                            ? [ending]
+                                            : [
+                                                Statement(
+                                                    binding: .constant("seen"),
+                                                    expression: .literal(.int(1))
+                                                )
+                                            ]
+                                    ),
+                                    failure: "why"
+                                )
+                            )
+                        ],
+                        else: nil
+                    )
+                ),
+                Statement(expression: .call(Call(receiver: reference("handle"), selector: "app.close")))
+            ]
+        }
+
+        // When / Then. Where the rescue ends the body too, no run comes back
+        // from the arm and the arm beside it says what is held
+        #expect(throws: Never.self) {
+            try Builder().build(
+                [try holding(body: body(rescueEnds: true), result: .literal(.null))] + Module.standard,
+                entry: entryName
+            )
+        }
+
+        // Where it does not, the arm comes back having handed the handle on
+        // and the arm beside it has not
+        #expect {
+            try Builder().build(
+                [try holding(body: body(rescueEnds: false), result: .literal(.null))] + Module.standard,
+                entry: entryName
+            )
+        } throws: { error in
+            "\(error)".contains("in one arm and not in the other")
+        }
+    }
+
     @Test("a `?` does not stand on a type handed on once")
     func aNullableOfOneRefuses() throws {
         // Given. The doubt and the mark say opposite things about the same

@@ -445,8 +445,9 @@ extension Builder {
                 case (false, true):
                     return taken
 
-                // Nothing is read after either arm, so there is nothing for
-                // the two of them to agree on.
+                // Both arms ended the body, and a body is not ended while
+                // still holding one, so there is nothing left for the two of
+                // them to disagree about.
                 case (true, true):
                     return taken.merged(with: left)
 
