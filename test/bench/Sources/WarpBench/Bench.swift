@@ -100,11 +100,8 @@ struct Bench {
         // already measured with it.
         print(Self.table(
             measured,
-            against: Comparison(
-                printed?["workload"],
-                over: ["ns/round", "load us", "build us", "baked us"],
-                from: against
-            ),
+            against: printed?["workload"],
+            from: against,
             rounds: rounds,
             repeats: repeats
         ))
@@ -124,11 +121,8 @@ struct Bench {
         print(Self.table(
             spread: spread,
             gathered: gathered,
-            against: Comparison(
-                printed?["procedures"],
-                over: ["spread us", "gathered us"],
-                from: against
-            )
+            against: printed?["procedures"],
+            from: against
         ))
 
         var costs: [Int: Cost] = [:]
@@ -146,15 +140,7 @@ struct Bench {
         }
 
         print("")
-        print(Self.table(
-            costs,
-            of: fanoutWords,
-            against: Comparison(
-                printed?["documents"],
-                over: ["build us", "compile us", "alone us", "link us"],
-                from: against
-            )
-        ))
+        print(Self.table(costs, of: fanoutWords, against: printed?["documents"], from: against))
     }
 
     // MARK: - Private
@@ -257,9 +243,12 @@ struct Bench {
     // A table taken before a figure existed is not a table this run moved from,
     // and the figure beside a missing one is the worst of it: the columns keep
     // their spellings while what they measure is split, so the arithmetic runs
-    // and reads as a change. So a table that is missing any figure this one
-    // prints is not compared at all, and the reader is told which figure said
-    // so.
+    // and reads as a change. So a table that is missing any figure the table
+    // asking compares is not compared at all, and the reader is told which
+    // figure said so.
+    //
+    // Which figures those are is the asking table's, said beside the rows that
+    // read them.
     private struct Comparison {
         // MARK: - Property
         let rows: [String: [String: Double]]?
@@ -323,10 +312,18 @@ struct Bench {
 
     private static func table(
         _ measured: [String: Measurement],
-        against comparison: Comparison,
+        against read: [String: [String: Double]]?,
+        from path: String?,
         rounds: Int,
         repeats: Int
     ) -> String {
+        // Declared beside the rows that read them, so a column added below is
+        // a column this asks a table it is compared against to carry.
+        let comparison = Comparison(
+            read,
+            over: ["ns/round", "load us", "build us", "baked us"],
+            from: path
+        )
         let loop = measured[baseline]?.perRound ?? 0
         let against = comparison.rows
         let heading = "rounds \(rounds), fastest of \(repeats);"
@@ -385,8 +382,10 @@ struct Bench {
     private static func table(
         spread: [Int: Double],
         gathered: [Int: Double],
-        against comparison: Comparison
+        against read: [String: [String: Double]]?,
+        from path: String?
     ) -> String {
+        let comparison = Comparison(read, over: ["spread us", "gathered us"], from: path)
         let against = comparison.rows
         let counts = spread.keys.sorted()
 
@@ -452,8 +451,14 @@ struct Bench {
     private static func table(
         _ costs: [Int: Cost],
         of procedures: Int,
-        against comparison: Comparison
+        against read: [String: [String: Double]]?,
+        from path: String?
     ) -> String {
+        let comparison = Comparison(
+            read,
+            over: ["build us", "compile us", "alone us", "link us"],
+            from: path
+        )
         let against = comparison.rows
 
         var lines = [
