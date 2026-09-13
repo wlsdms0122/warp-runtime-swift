@@ -144,18 +144,43 @@ struct ModifierNotationTests {
         #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == type)
     }
 
-    @Test("a record's only field is not a key the reading takes some other way")
-    func aRecordIsNotWrittenUnderAKeyTheReadingTakes() throws {
+    @Test(
+        "a record's only field is not a key the reading keeps for itself",
+        arguments: ["procedure", "var procedure", "pure isolated procedure", "linear"]
+    )
+    func aRecordIsNotWrittenUnderAReservedKey(spelling: String) throws {
         // Given. The writer asks the reading itself rather than a list beside
-        // it, so a key the reading refuses is refused here too rather than
-        // written and then unreadable
-        for spelling in ["procedure", "var procedure", "pure isolated procedure", "linear"] {
-            let type = TypeExpression.record([try Name(spelling): .int])
+        // it, so a key the reading takes some other way is refused here rather
+        // than written and read back as that other thing
+        let type = TypeExpression.record([try Name(spelling): .int])
 
-            #expect(throws: WritingError.self) {
-                try Writer().value(of: type)
-            }
+        // When / Then
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: type)
         }
+    }
+
+    @Test(
+        "a name is written only where the reading takes the spelling back as it",
+        arguments: ["var Task", "array<int>", "some T", "int", "Task?"]
+    )
+    func aNameTheReadingTakesOtherwiseIsNotWritten(spelling: String) throws {
+        // Given. A name is written as itself, so a spelling the reading makes
+        // anything else of is a name no document can say
+        let type = TypeExpression.named(try Name(spelling))
+
+        // When / Then
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: type)
+        }
+    }
+
+    @Test("a plain name is written as itself and read back as itself")
+    func aPlainNameRoundTrips() throws {
+        let type = TypeExpression.named("app.Task")
+
+        #expect(try Writer().value(of: type) == .string("app.Task"))
+        #expect(try TypeReader.parse("app.Task") == type)
     }
 
     @Test("isolated is read in either order and written in one", arguments: [

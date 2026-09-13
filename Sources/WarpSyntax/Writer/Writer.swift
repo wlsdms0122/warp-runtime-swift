@@ -192,16 +192,20 @@ public struct Writer: Sendable {
 
             return .string(type.rendered)
 
-        // A declared name is written as itself, and a document reads a name it
-        // knows as the type it knows. Nothing stops a module declaring a type
-        // called `int`; a document just has no way to say which one it meant.
+        // A declared name is written as itself, so the reading has to take that
+        // spelling back as the same name. Nothing stops a module declaring a
+        // type called `int`, or `var Task`, or `array<int>`; a document just
+        // has no way to say which one it meant.
         case let .named(name):
-            guard TypeReader.builtinNames.contains(name) else { return .string(name.spelling) }
+            guard TypeReader.readsBackAsAName(name) else {
+                throw WritingError(
+                    "a type declared as '\(name)' is written the same way the reading"
+                        + " takes for something else, and a document has no way to tell"
+                        + " them apart"
+                )
+            }
 
-            throw WritingError(
-                "a type declared as '\(name)' is written the same way the built-in one is,"
-                    + " and a document has no way to tell them apart"
-            )
+            return .string(name.spelling)
 
         // Bare, because an occurrence names the parameter and its constraint is
         // written once, in the `bounds` of the signature that declares the
@@ -250,8 +254,8 @@ public struct Writer: Sendable {
             if let inside = SlotMark.marked(inner) {
                 throw WritingError(
                     "`?` is written on \(inner.rendered), and a `\(inside.rawValue)`"
-                        + " stands in front of the `?` rather than under it."
-                        + " \(SlotMark.saysOneThing)"
+                        + " stands in front of the `?` rather than under it, so the two"
+                        + " would share one spelling and only one would come back"
                 )
             }
 
@@ -354,12 +358,12 @@ public struct Writer: Sendable {
 
         switch try value(of: inner) {
         case let .string(written):
-            return .string("\(mark.rawValue) \(written)")
+            return .string(mark.marking(written))
 
         case let .dictionary(form) where form.count == 1
             && TypeReader.readsAsAProcedure(form.entries[0].name):
             return .dictionary([
-                try Name("\(mark.rawValue) \(form.entries[0].name)"): form.entries[0].value
+                try Name(mark.marking(form.entries[0].name.spelling)): form.entries[0].value
             ])
 
         default:

@@ -224,9 +224,14 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // The names this notation answers with a type of its own. They decide what
-    // a document cannot say, so writing one asks for them.
-    public static var builtinNames: Set<Name> { Set(builtins.keys) }
+    // Whether the reading takes this spelling back as the name it is. A name
+    // is written as itself, so a spelling the reading makes anything else of
+    // (a built-in, a mark in front of something, brackets, a type parameter)
+    // is a name no document can say. Asked of the reading rather than of a
+    // list, because a list and a parser drift.
+    public static func readsBackAsAName(_ name: Name) -> Bool {
+        ((try? parse(name.spelling)) ?? nil) == .named(name)
+    }
 
     // Whether the reading takes this key as a procedure form's. Asked of the
     // reading itself rather than of a list beside it, because a list and a

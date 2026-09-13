@@ -62,12 +62,21 @@ enum SlotMark: String, CaseIterable, Sendable {
     // spelling so the question is the same one twice.
     static func leading(of text: String) -> (mark: SlotMark, rest: String)? {
         for mark in allCases {
-            guard text.hasPrefix(mark.written) else { continue }
+            let front = mark.marking("")
 
-            return (mark, String(text.dropFirst(mark.written.count)))
+            guard text.hasPrefix(front) else { continue }
+
+            return (mark, String(text.dropFirst(front.count)))
         }
 
         return nil
+    }
+
+    // The mark as it stands in front of a spelling, the space included. The
+    // reading takes this off the front and the writing puts it there, so the
+    // shape of a marked spelling is said once.
+    func marking(_ spelling: String) -> String {
+        "\(rawValue) \(spelling)"
     }
 
     // The type a slot marked this way holds.
@@ -88,6 +97,4 @@ enum SlotMark: String, CaseIterable, Sendable {
     }
 
     // MARK: - Private
-    // The mark as it stands in front of a type, the space included.
-    private var written: String { "\(rawValue) " }
 }
