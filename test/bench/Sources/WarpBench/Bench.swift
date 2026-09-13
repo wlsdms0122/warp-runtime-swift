@@ -304,6 +304,58 @@ struct Bench {
         // MARK: - Private
     }
 
+    // One column of the workload table: what it is called, what it reads for a
+    // workload, and what a table compared against is asked for where the
+    // column moves at all.
+    //
+    // A column named once is a column that cannot be printed and not compared,
+    // which is what happened twice while the name lived in five places.
+    private struct Column: Sendable {
+        let heading: String
+        let text: @Sendable (Measurement, Double) -> String
+        let moves: (@Sendable (Measurement) -> Double)?
+    }
+
+    private static let columns: [Column] = [
+        Column(
+            heading: "ns/round",
+            text: { measurement, _ in String(format: "%.0f", measurement.perRound) },
+            moves: { measurement in measurement.perRound }
+        ),
+        Column(
+            heading: "minus loop",
+            text: { measurement, loop in String(format: "%.0f", measurement.perRound - loop) },
+            moves: nil
+        ),
+        Column(
+            heading: "x loop",
+            text: { measurement, loop in
+                String(format: "%.2f", loop > 0 ? measurement.perRound / loop : 0)
+            },
+            moves: nil
+        ),
+        Column(
+            heading: "load us",
+            text: { measurement, _ in String(format: "%.0f", measurement.load / 1000) },
+            moves: { measurement in measurement.load / 1000 }
+        ),
+        Column(
+            heading: "build us",
+            text: { measurement, _ in String(format: "%.0f", measurement.build / 1000) },
+            moves: { measurement in measurement.build / 1000 }
+        ),
+        Column(
+            heading: "baked us",
+            text: { measurement, _ in String(format: "%.0f", measurement.baked / 1000) },
+            moves: { measurement in measurement.baked / 1000 }
+        ),
+        Column(
+            heading: "once us",
+            text: { measurement, _ in String(format: "%.0f", measurement.once / 1000) },
+            moves: { measurement in measurement.once / 1000 }
+        )
+    ]
+
     private static func moved(_ now: Double, from before: Double?) -> String {
         guard let before, before > 0 else { return "" }
 
@@ -317,11 +369,9 @@ struct Bench {
         rounds: Int,
         repeats: Int
     ) -> String {
-        // Declared beside the rows that read them, so a column added below is
-        // a column this asks a table it is compared against to carry.
         let comparison = Comparison(
             read,
-            over: ["ns/round", "load us", "build us", "baked us", "once us"],
+            over: columns.compactMap { column in column.moves == nil ? nil : column.heading },
             from: path
         )
         let loop = measured[baseline]?.perRound ?? 0
@@ -329,42 +379,31 @@ struct Bench {
         let heading = "rounds \(rounds), fastest of \(repeats);"
             + " load, build, baked and once are the fastest of \(buildSamples)"
 
-        var lines = [comparison.said(beside: heading), ""]
+        // Heading, rule and rows all read the same list, so a column is added
+        // once and a column that moves is compared because it said it does.
+        let headings = columns.flatMap { column in
+            against == nil || column.moves == nil ? [column.heading] : [column.heading, "moved"]
+        }
 
-        lines += against == nil
-            ? [
-                "| workload | ns/round | minus loop | x loop | load us | build us | baked us | once us |",
-                "|---|---|---|---|---|---|---|---|"
-            ]
-            : [
-                "| workload | ns/round | moved | x loop | load us | moved | build us | moved"
-                    + " | baked us | moved | once us | moved |",
-                "|---|---|---|---|---|---|---|---|---|---|---|---|"
-            ]
+        var lines = [
+            comparison.said(beside: heading),
+            "",
+            "| workload | " + headings.joined(separator: " | ") + " |",
+            "|---" + String(repeating: "|---", count: headings.count) + "|"
+        ]
 
         for (name, measurement) in measured.sorted(by: { $0.key < $1.key }) {
-            let ratio = loop > 0 ? measurement.perRound / loop : 0
+            let before = against?[name]
 
-            guard let before = against?[name] else {
-                lines.append(String(
-                    format: "| %@ | %.0f | %.0f | %.2f | %.0f | %.0f | %.0f | %.0f |",
-                    name, measurement.perRound, measurement.perRound - loop, ratio,
-                    measurement.load / 1000, measurement.build / 1000,
-                    measurement.baked / 1000, measurement.once / 1000
-                ))
+            let cells = columns.flatMap { column -> [String] in
+                let read = column.text(measurement, loop)
 
-                continue
+                guard against != nil, let moves = column.moves else { return [read] }
+
+                return [read, Self.moved(moves(measurement), from: before?[column.heading])]
             }
 
-            lines.append(String(
-                format: "| %@ | %.0f | %@ | %.2f | %.0f | %@ | %.0f | %@ | %.0f | %@ | %.0f | %@ |",
-                name, measurement.perRound, Self.moved(measurement.perRound, from: before["ns/round"]),
-                ratio,
-                measurement.load / 1000, Self.moved(measurement.load / 1000, from: before["load us"]),
-                measurement.build / 1000, Self.moved(measurement.build / 1000, from: before["build us"]),
-                measurement.baked / 1000, Self.moved(measurement.baked / 1000, from: before["baked us"]),
-                measurement.once / 1000, Self.moved(measurement.once / 1000, from: before["once us"])
-            ))
+            lines.append("| " + name + " | " + cells.joined(separator: " | ") + " |")
         }
 
         return lines.joined(separator: "\n")
