@@ -222,8 +222,21 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
-        self = try ArtifactReader().compiled(from: try fields.next())
+        let written = try fields.next()
 
         try fields.end()
+
+        // The same question the writing asks of what it lays down, asked of
+        // what came back. A procedure is not data, and one read in would be
+        // one this could never write out again: a reading whose answer will
+        // not go back out the way it came in has read something else.
+        guard !written.holdsProcedure else {
+            throw ArtifactRefused(
+                "this artifact settles a procedure into a value, and an"
+                    + " artifact carries values as data"
+            )
+        }
+
+        self = try ArtifactReader().compiled(from: written)
     }
 }

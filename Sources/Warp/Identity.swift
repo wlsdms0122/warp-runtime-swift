@@ -45,11 +45,15 @@ public struct Identity: Sendable, Equatable, Hashable {
     }
 
     // MARK: - Initializer
-    // Not public. What makes an identity worth having is that it is derived and
-    // never declared, and a public door taking any bytes at all is a way to
-    // declare one. A caller could assemble a place addressing a document it
-    // never held. `Identity.of` is the only way in from outside, and it takes a
-    // document.
+    // What makes an identity worth having is that it is derived and never
+    // declared. This door cannot say so: what derives one reads a document as
+    // bytes, and reading bytes is another package's, so the door it needs is
+    // open to every caller.
+    //
+    // What keeps the rule is that nothing here asks an identity to prove
+    // itself. An artifact records the one its document had, and a caller
+    // holding both compares them; a caller that wrote a number in is a caller
+    // whose cache answers for a document it never compiled.
     public init(_ bytes: [UInt8]) {
         self.bytes = bytes
     }

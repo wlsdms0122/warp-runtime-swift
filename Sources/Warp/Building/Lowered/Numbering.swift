@@ -110,27 +110,29 @@ struct Numbering: Sendable {
     // Where each declaration's closures begin is neither: folding runs a
     // dependency's body against this, and lowering a closure literal there
     // asks it. So it is written and held to standing among the closures.
-    var written: Value {
-        get throws {
-            guard case let .document(references) = space else {
-                throw ArtifactRefused(
-                    "this numbering counts from a link's own rows, and an"
-                        + " artifact carries a document's numbers"
-                )
+    func written(declaring declared: Int) throws -> Value {
+        guard case let .document(references) = space else {
+            throw ArtifactRefused(
+                "this numbering counts from a link's own rows, and an"
+                    + " artifact carries a document's numbers"
+            )
+        }
+
+        let spellings = try references.prefix(opening).map { reference -> Name in
+            guard case let .sent(name) = reference else {
+                throw ArtifactRefused("a numbering counts a closure among its spellings")
             }
 
-            return .array([
-                .array(try references.prefix(opening).map { reference in
-                    guard case let .sent(name) = reference else {
-                        throw ArtifactRefused("a numbering counts a closure among its spellings")
-                    }
-
-                    return .string(name.spelling)
-                }),
-                Self.written(closing),
-                .int(references.count - opening)
-            ])
+            return name
         }
+        let own = spellings.suffix(declared)
+
+        return .array([
+            .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
+            .array(own.map { name in .string(name.spelling) }),
+            Self.written(closing),
+            .int(references.count - opening)
+        ])
     }
 
     // Read back beside the spellings the document declares, because what a
@@ -140,15 +142,27 @@ struct Numbering: Sendable {
     // every other part of the artifact stays in step.
     init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
-        let spellings = try fields.list { written in try Fields.name(written, of: "numbering") }
+
+        // Two runs of names, not one. What a document sends stands first and
+        // what it declares stands behind, each in its own order, so a reading
+        // that took them as one list would have to take them out of order to
+        // take them at all. Each is judged as what it is.
+        let sent = try Fields.ordered(fields.next(), of: "numbering imports") { written in
+            try Fields.name(written, of: "numbering imports")
+        }
+        let own = try Fields.ordered(fields.next(), of: "numbering declarations") { written in
+            try Fields.name(written, of: "numbering declarations")
+        }
         let closing = try Self.read(try fields.next(), of: "numbering closures")
         let closures = try fields.count()
 
         try fields.end()
 
-        guard spellings.suffix(declared.count) == ArraySlice(declared) else {
+        guard own == declared else {
             throw ArtifactRefused("a numbering counts spellings its document does not declare")
         }
+
+        let spellings = sent + own
 
         // Where each declaration's closures begin stands among the closures
         // and nowhere else. A start outside them is a body reaching a row this

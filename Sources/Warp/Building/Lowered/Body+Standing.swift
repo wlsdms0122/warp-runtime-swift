@@ -10,11 +10,9 @@ import Foundation
 // What a body stands on: the frame slots it names, and the closures it stands
 // up beside what each of those takes with it.
 //
-// One walk answers all of them, because they are read off the same places. Two
-// doors ask it: the row judges what it stands on against its own frame, and
-// the list judges what it stands up against the rows beside it. Each walks for
-// what it owns, since a door holding an answer it cannot check is a door that
-// has taken somebody else's fact.
+// One walk answers all of them, because they are read off the same places, and
+// one door asks it: the row the body belongs to, handed what only the list
+// beside it knows.
 //
 // `reads` asks a further question over the same shape and stays apart: it
 // counts only the slots a body's value depends on, and leaves out the ones it

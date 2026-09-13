@@ -9,6 +9,11 @@ import Foundation
 
 // The fields of one written part, handed back in the order they were written.
 //
+// Its vocabulary is the value model's: one reading to each kind a value can
+// be, so a part reaching for its next field never has to step around the
+// cursor to get at one. Which of them an artifact happens to write today is
+// not what decides that.
+//
 // A writing lays a part down as an array and says nothing about what each
 // place holds, so a reading that runs short or finds the wrong kind is
 // refused here rather than further in, where the sentence would be about

@@ -28,14 +28,14 @@ struct ArtifactReadingTests {
         // Given. A real artifact whose numbering counts its closures below zero.
         guard case var .array(parts) = try parts(),
               case var .array(numbering) = parts[10],
-              numbering.count == 3
+              numbering.count == 4
         else {
             Issue.record("an artifact writes its numbering as a part")
 
             return
         }
 
-        numbering[2] = .int(-1)
+        numbering[3] = .int(-1)
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -382,7 +382,7 @@ struct ArtifactReadingTests {
         // would reach whatever the link answers that name with.
         guard case var .array(parts) = try parts(),
               case var .array(numbering) = parts[10],
-              case let .array(spellings) = numbering[0],
+              case let .array(spellings) = numbering[1],
               !spellings.isEmpty
         else {
             Issue.record("an artifact writes its numbering as a part")
@@ -390,7 +390,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        numbering[0] = .array(spellings.dropLast() + [.string("std.math.add")])
+        numbering[1] = .array(spellings.dropLast() + [.string("std.math.add")])
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -594,7 +594,7 @@ struct ArtifactReadingTests {
 
         guard case var .array(parts) = try parts(of: sut),
               case var .array(numbering) = parts[10],
-              case let .array(closing) = numbering[1],
+              case let .array(closing) = numbering[2],
               closing.count == 2
         else {
             Issue.record("an artifact writes where each declaration's closures begin")
@@ -602,7 +602,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        numbering[1] = .array(closing.reversed())
+        numbering[2] = .array(closing.reversed())
         parts[10] = .array(numbering)
 
         // When / Then.
@@ -671,6 +671,81 @@ struct ArtifactReadingTests {
         // Then. The run refuses rather than answering the other field.
         await #expect(throws: (any Error).self) {
             try await Executor().run(image, arguments: [:])
+        }
+    }
+
+    @Test("is refused where a numbering's imports stand out of order")
+    func numberingImportsOutOfOrder() throws {
+        // Given. A document that sends two procedures, with the two swapped in
+        // the numbering. What a name stands at is read off this list, so a name
+        // written twice or out of place rewires a call rather than refusing it.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(
+                        receiver: .call(Call(
+                            receiver: .literal(.int(1)),
+                            selector: "std.math.plus",
+                            arguments: ["value": .literal(.int(2))]
+                        )),
+                        selector: "std.math.minus",
+                        arguments: ["value": .literal(.int(3))]
+                    ))
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(numbering) = parts[10],
+              case let .array(sent) = numbering[0],
+              sent.count == 2
+        else {
+            Issue.record("an artifact writes what its document sends")
+
+            return
+        }
+
+        numbering[0] = .array(sent.reversed())
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a value settles a procedure into it")
+    func aValueHoldingAProcedure() throws {
+        // Given. A real artifact with a module variable standing a value no
+        // writing of one could lay down. The writing refuses it, so a reading
+        // that took it would hold what it could never write out again.
+        let holding = try Module(
+            variables: [
+                "app.later": .closure(
+                    Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+                )
+            ],
+            procedures: [
+                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
+        let settled = try builder.compile([holding] + Module.standard)
+            .flatMap(\.variables)
+            .first { entry in entry.value.holdsProcedure }
+
+        guard case var .array(parts) = try parts(), let settled else {
+            Issue.record("a module variable that starts as a closure settles one into a value")
+
+            return
+        }
+
+        parts[12] = .array([.array([.string(settled.name.spelling), settled.value])])
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
         }
     }
 
