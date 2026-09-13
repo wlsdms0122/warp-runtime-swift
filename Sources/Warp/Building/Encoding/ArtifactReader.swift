@@ -212,6 +212,16 @@ private extension ArtifactReader {
         return held
     }
 
+    func counted(_ value: Value) throws -> Int {
+        let read = try integer(value)
+
+        guard read >= 0 else {
+            throw ArtifactRefused("a count is written as \(read)")
+        }
+
+        return read
+    }
+
     func integer(_ value: Value) throws -> Int {
         guard case let .int(integer) = value else {
             throw ArtifactRefused("a number is not written as one")
@@ -440,14 +450,26 @@ private extension ArtifactReader {
 
     func layout(_ value: Value) throws -> Layout {
         var fields = try Fields(value, of: "layout")
-        let read = Layout(
-            name: try fields.maybe(name),
-            ordered: try list(fields.next(), of: "layout", name)
-        )
+        let named = try fields.maybe(name)
+        let written = try list(fields.next(), of: "layout", name)
 
         try fields.end()
 
-        return read
+        // Through the door that judges, so that what a layout promises about
+        // its names is asked of bytes the way it is asked of a document. The
+        // inner door is reached with what that one ordered, which is what makes
+        // its promise true rather than assumed.
+        let ordered: Layout
+
+        do {
+            ordered = try Layout(fields: written)
+        } catch let refused as ValueRefused {
+            throw ArtifactRefused(refused.message)
+        }
+
+        guard let named else { return ordered }
+
+        return Layout(name: named, ordered: ordered.fields)
     }
 }
 
@@ -494,7 +516,7 @@ private extension ArtifactReader {
         case 14: read = .variable(try lowered(fields.next()))
         case 15: read = .inout(try lowered(fields.next()))
         case 16: read = .nullable(try lowered(fields.next()))
-        case 17: read = .named(try fields.integer())
+        case 17: read = .named(try fields.count())
         case 18: read = .parameter(label: try name(fields.next()), bound: try fields.maybe(bound))
         case 19:
             read = .reading(
@@ -502,7 +524,7 @@ private extension ArtifactReader {
                 path: try list(fields.next(), of: "path", segment)
             )
 
-        case 20: read = .member(try fields.integer())
+        case 20: read = .member(try fields.count())
         case 21: read = .undeclared(label: try fields.text(), refusal: try fields.text())
         default: throw ArtifactRefused("'lowered type' names a kind this reads none of")
         }
@@ -517,7 +539,7 @@ private extension ArtifactReader {
         let read: LoweredType.Bound
 
         switch try fields.tag() {
-        case 0: read = .membership(try fields.integer())
+        case 0: read = .membership(try fields.count())
         case 1: read = .contract(try name(fields.next()))
         default: throw ArtifactRefused("'bound' holds a parameter to nothing this reads")
         }
@@ -588,8 +610,8 @@ private extension ArtifactReader {
     func sent(_ value: Value) throws -> Sent {
         var fields = try Fields(value, of: "send")
         let read = Sent(
-            row: try fields.integer(),
-            offers: try list(fields.next(), of: "send", integer)
+            row: try fields.count(),
+            offers: try list(fields.next(), of: "send", counted)
         )
 
         try fields.end()
@@ -600,7 +622,7 @@ private extension ArtifactReader {
     func send(_ value: Value) throws -> Native.Send {
         var fields = try Fields(value, of: "native send")
         let read = Native.Send(
-            position: try fields.integer(),
+            position: try fields.count(),
             selector: try name(fields.next()),
             offers: try list(fields.next(), of: "native send", name)
         )
@@ -613,11 +635,11 @@ private extension ArtifactReader {
     func frame(_ value: Value) throws -> Frame {
         var fields = try Fields(value, of: "frame")
         let read = Frame(
-            size: try fields.integer(),
-            parameters: try list(fields.next(), of: "frame", integer),
+            size: try fields.count(),
+            parameters: try list(fields.next(), of: "frame", counted),
             variables: try list(fields.next(), of: "frame") { written in
                 var held = try Fields(written, of: "frame variable")
-                let taken = (variable: try held.integer(), slot: try held.integer())
+                let taken = (variable: try held.count(), slot: try held.count())
 
                 try held.end()
 
@@ -661,8 +683,8 @@ private extension ArtifactReader {
         let read: Instruction.Binding
 
         switch try fields.tag() {
-        case 0: read = .bind(try fields.integer(), settling: try fields.maybe(lowered))
-        case 1: read = .declare(try fields.integer(), settling: try fields.maybe(lowered))
+        case 0: read = .bind(try fields.count(), settling: try fields.maybe(lowered))
+        case 1: read = .declare(try fields.count(), settling: try fields.maybe(lowered))
         case 2: read = .assign(try address(fields.next()), settling: try fields.maybe(lowered))
         default: throw ArtifactRefused("'binding' binds in a way this reads none of")
         }
@@ -675,7 +697,7 @@ private extension ArtifactReader {
     func address(_ value: Value) throws -> Address {
         var fields = try Fields(value, of: "address")
         let read = Address(
-            slot: try fields.integer(),
+            slot: try fields.count(),
             steps: try list(fields.next(), of: "address", walk)
         )
 
@@ -690,7 +712,7 @@ private extension ArtifactReader {
 
         switch try fields.tag() {
         case 0:
-            read = .field(try fields.integer(), try name(fields.next()), optional: try fields.flag())
+            read = .field(try fields.count(), try name(fields.next()), optional: try fields.flag())
 
         case 1: read = .key(try name(fields.next()), optional: try fields.flag())
         case 2: read = .index(try fields.integer(), optional: try fields.flag())
@@ -716,10 +738,10 @@ private extension ArtifactReader {
         case 3: read = .record(try recordOperation(fields.next()))
         case 4:
             read = .closure(
-                try fields.integer(),
+                try fields.count(),
                 captures: try list(fields.next(), of: "captures") { written in
                     var held = try Fields(written, of: "capture")
-                    let taken = (try held.integer(), try held.integer())
+                    let taken = (try held.count(), try held.count())
 
                     try held.end()
 
@@ -761,11 +783,11 @@ private extension ArtifactReader {
             read = .loop(
                 while: try operation(fields.next()),
                 body: try body(fields.next()),
-                round: try fields.integer(),
+                round: try fields.count(),
                 keeps: try fields.maybe { written in
                     var held = try Fields(written, of: "keeps")
-                    let low = try held.integer()
-                    let high = try held.integer()
+                    let low = try held.count()
+                    let high = try held.count()
 
                     try held.end()
 
@@ -781,7 +803,7 @@ private extension ArtifactReader {
             read = .attempt(
                 try body(fields.next()),
                 rescue: try body(fields.next()),
-                failure: try fields.integer()
+                failure: try fields.count()
             )
 
         case 11: read = .call(try callOperation(fields.next()))
@@ -817,7 +839,7 @@ private extension ArtifactReader {
     func callOperation(_ value: Value) throws -> CallOperation {
         var fields = try Fields(value, of: "call")
         let read = CallOperation(
-            procedure: try fields.integer(),
+            procedure: try fields.count(),
             receiver: try fields.maybe(operation),
             arguments: try list(fields.next(), of: "arguments") { written in
                 var held = try Fields(.array([written]), of: "argument")
@@ -827,7 +849,7 @@ private extension ArtifactReader {
             handed: try list(fields.next(), of: "handed") { written in
                 var held = try Fields(written, of: "handed")
                 let taken = CallOperation.Handed(
-                    position: try held.integer(),
+                    position: try held.count(),
                     address: try address(held.next())
                 )
 

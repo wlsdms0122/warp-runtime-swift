@@ -48,7 +48,7 @@ struct Numbering: Sendable {
                 self = .sent(Name(normal: try fields.text()))
 
             case 1:
-                self = .closure(try fields.integer())
+                self = .closure(try fields.count())
 
             default:
                 throw ArtifactRefused("'numbering reference' names nothing this reads")
@@ -163,7 +163,7 @@ struct Numbering: Sendable {
 
         called = try Self.read(try fields.next(), of: "numbering names")
         closing = try Self.read(try fields.next(), of: "numbering closures")
-        opening = try fields.integer()
+        opening = try fields.count()
 
         try fields.end()
     }
@@ -182,7 +182,7 @@ struct Numbering: Sendable {
         return try written.reduce(into: [Name: Int]()) { places, entry in
             var place = try Fields(entry, of: part)
 
-            places[Name(normal: try place.text())] = try place.integer()
+            places[Name(normal: try place.text())] = try place.count()
 
             try place.end()
         }

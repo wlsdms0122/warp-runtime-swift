@@ -61,6 +61,20 @@ struct Fields {
         }
     }
 
+    // A number that counts or stands somewhere: a slot, a row, a position, a
+    // size. Below zero is refused here because further in it is not a number
+    // that is wrong but an array subscripted out of itself, and the sentence
+    // there would be about something else.
+    mutating func count() throws -> Int {
+        let read = try integer()
+
+        guard read >= 0 else {
+            throw ArtifactRefused("'\(of)' writes \(read) where a count stands")
+        }
+
+        return read
+    }
+
     mutating func text() throws -> String {
         guard case let .string(text) = try next() else {
             throw ArtifactRefused("'\(of)' writes something other than a text where one stands")
