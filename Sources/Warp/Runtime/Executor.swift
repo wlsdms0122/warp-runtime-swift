@@ -1018,7 +1018,10 @@ public struct Executor: Sendable {
     private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
         guard let receiver else { return nil }
 
-        guard callee.receiverPosition != nil else {
+        // Null is being sent to nothing, said as a value rather than by leaving
+        // it out, so a procedure that declares nothing to be sent to is told
+        // nothing by it.
+        guard callee.receiverPosition != nil || receiver == .null else {
             throw ExecutionError(
                 "'\(callee.label)' is sent to something, and it declares nothing to be"
                     + " sent to"

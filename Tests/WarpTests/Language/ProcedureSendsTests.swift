@@ -262,6 +262,25 @@ struct ProcedureSendsTests {
         }
     }
 
+    @Test("sending null to one that declares nothing to be sent to is being sent to nothing")
+    func sendingNullCountsAsSendingToNothing() async throws {
+        // Given. Null is what being sent to nothing looks like as a value, so
+        // saying it and leaving it out are one fact
+        let image = try Builder().build(
+            [try Module(procedures: ["entry": Procedure(
+                body: [],
+                result: .call(Call(selector: "app.nulling"))
+            )])] + [.nulling, .plain],
+            entry: "entry"
+        )
+
+        // When
+        let answer = try await Executor().run(image)
+
+        // Then
+        #expect(answer == .string("sent to nothing"))
+    }
+
     // MARK: - Private
 }
 
@@ -547,6 +566,41 @@ private struct UnreceivingEffect: Effect {
     // MARK: - Private
 }
 
+
+// Sends null rather than leaving the receiver out.
+private struct NullingEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case plain
+
+        var selector: Name { "app.plain" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.plain, to: .null)
+    }
+
+    // MARK: - Private
+}
+
+// Declares nothing to be sent to, and says what it was sent to.
+private struct PlainQuery: Query {
+    typealias Parameters = NoParameters
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        question.receiver == nil ? .string("sent to nothing") : .string("sent to something")
+    }
+
+    // MARK: - Private
+}
+
 private extension Module {
     static let sending = try! Module(
         procedures: [
@@ -701,6 +755,24 @@ private extension Module {
             "app.unreceiving": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(UnreceivingEffect())
+            )
+        ]
+    )
+
+    static let plain = try! Module(
+        procedures: [
+            "app.plain": Procedure(
+                signature: Signature(returns: .string),
+                implementation: .query(PlainQuery())
+            )
+        ]
+    )
+
+    static let nulling = try! Module(
+        procedures: [
+            "app.nulling": Procedure(
+                signature: Signature(returns: .string),
+                implementation: .effect(NullingEffect())
             )
         ]
     )

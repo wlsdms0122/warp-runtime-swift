@@ -711,6 +711,16 @@ extension Builder {
             )
         }
 
+        // A procedure that receives by no name has no slot for what stands in
+        // front of the dot, so what was written there would go nowhere.
+        guard site.received == nil || declared.receiver != nil else {
+            throw BuildError(
+                "'\(call.selector)' is sent to something, and it declares nothing to be"
+                    + " sent to",
+                at: site.place.part(.receiver)
+            )
+        }
+
         // The receiver is written on the other side of the dot and checked the
         // same way.
         if
