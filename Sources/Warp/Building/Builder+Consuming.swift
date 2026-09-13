@@ -166,6 +166,10 @@ extension Builder {
             // and a body cannot give away what it never took.
             var borrowed: Set<Name> = []
 
+            // Whether this way through ended by leaving. No run comes back from
+            // one, so it is not a way a reading after the construct stands on.
+            var leaves = false
+
             // How a name is being held, where it is one of these at all. One
             // reading, so every judgment about an operand is made from the
             // same fact rather than each asking the sets again.
@@ -192,7 +196,8 @@ extension Builder {
                 Held(
                     live: live,
                     moved: moved.union(other.moved),
-                    borrowed: borrowed.union(other.borrowed)
+                    borrowed: borrowed.union(other.borrowed),
+                    leaves: leaves && other.leaves
                 )
             }
         }
@@ -424,44 +429,72 @@ extension Builder {
 
             // Every way through has to be holding the same thing at the end of
             // it, or what a body holds after the conditional would depend on
-            // which arm ran, which is not something the text shows.
+            // which arm ran, which is not something the text shows. An arm that
+            // leaves is not one of those ways: no run comes back from it, so
+            // what the body holds afterwards stands on the arms that finish.
             case let .conditional(condition, then, otherwise):
                 let asked = try moving(condition, held: held, guarded: guarded)
                 let taken = try through(Block(body: then), held: asked, guarded: guarded)
                 let left = try through(Block(body: otherwise ?? []), held: asked, guarded: guarded)
 
-                guard taken.live == left.live else {
-                    let parted = taken.live.symmetricDifference(left.live).sorted()
+                switch (taken.leaves, left.leaves) {
+                case (true, false):
+                    return left
 
-                    throw refusal(
-                        "hands '\(parted[0])' on in one arm and not in the other."
-                            + " What a body holds after a conditional is the same"
-                            + " whichever arm ran"
-                    )
+                case (false, true):
+                    return taken
+
+                // Nothing is read after either arm, so there is nothing for
+                // the two of them to agree on.
+                case (true, true):
+                    return taken.merged(with: left)
+
+                case (false, false):
+                    guard taken.live == left.live else {
+                        let parted = taken.live.symmetricDifference(left.live).sorted()
+
+                        throw refusal(
+                            "hands '\(parted[0])' on in one arm and not in the other."
+                                + " What a body holds after a conditional is the same"
+                                + " whichever arm ran"
+                        )
+                    }
+
+                    return taken.merged(with: left)
                 }
-
-                return taken.merged(with: left)
 
             case let .loop(condition, body, _):
                 let asked = try moving(condition, held: held, guarded: guarded)
+                var rounds = try through(body, held: asked, guarded: "inside a loop")
 
-                return try through(body, held: asked, guarded: "inside a loop")
+                // A round may not run at all, so a loop is a way through
+                // whatever its body does.
+                rounds.leaves = false
+
+                return rounds
 
             // A failure lands between statements, so which of the body's moves
-            // happened is not something the text shows.
+            // happened is not something the text shows. What finishes is the
+            // body's own end or the rescue's, so an attempt leaves where both
+            // of them do.
             case let .attempt(body, rescue, _):
-                _ = try through(body, held: held, guarded: "inside an attempt")
+                let attempted = try through(body, held: held, guarded: "inside an attempt")
+                var rescued = try through(rescue, held: held, guarded: "inside an attempt")
 
-                return try through(rescue, held: held, guarded: "inside an attempt")
+                rescued.leaves = attempted.leaves && rescued.leaves
+
+                return rescued
 
             case let .leave(leave):
                 if let value = leave.value, case (let name, .borrowed)? = operand(value, held: held) {
                     throw refusal(answered: name)
                 }
 
-                let carried = try leave.value.map { value in
+                var carried = try leave.value.map { value in
                     try moving(value, held: held, guarded: guarded)
                 } ?? held
+
+                carried.leaves = true
 
                 // A `return` hands a value to the caller the way a result does,
                 // so it is asked the same question at the same moment: after

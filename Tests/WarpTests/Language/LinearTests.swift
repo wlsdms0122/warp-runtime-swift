@@ -1089,6 +1089,109 @@ struct LinearTests {
         }
     }
 
+    @Test("an arm that returns does not have to hold what the arms that finish hold")
+    func anArmThatLeavesHoldsNothingAfterwards() throws {
+        // Given. Each way through hands the handle on exactly once: the way out
+        // by answering it, the way on by closing it. No run comes back from the
+        // arm that returns, so what it was holding is not what the body holds
+        // afterwards
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make"))),
+                Statement(expression: .call(Call(receiver: reference("held"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(returns: .named("app.Handle")),
+                    body: [
+                        Statement(binding: .constant("own"), expression: .call(Call(selector: "app.open"))),
+                        Statement(
+                            binding: .none,
+                            expression: .conditional(
+                                .literal(.bool(true)),
+                                then: [
+                                    Statement(
+                                        binding: .none,
+                                        expression: .leave(Leave(reach: .procedure, value: reference("own")))
+                                    )
+                                ],
+                                else: nil
+                            )
+                        ),
+                        Statement(expression: .call(Call(receiver: reference("own"), selector: "app.close"))),
+                        Statement(
+                            binding: .none,
+                            expression: .leave(
+                                Leave(reach: .procedure, value: .call(Call(selector: "app.open")))
+                            )
+                        )
+                    ],
+                    result: nil
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        }
+    }
+
+    @Test("an arm that leaves is still holding nothing when it leaves")
+    func anArmThatLeavesIsStillJudged() throws {
+        // Given. Contributing nothing afterwards is not being let off: the arm
+        // answers a handle it does not hold and drops the one it does
+        let sut = try holding(
+            body: [
+                Statement(binding: .constant("held"), expression: .call(Call(selector: "app.make"))),
+                Statement(expression: .call(Call(receiver: reference("held"), selector: "app.close")))
+            ],
+            result: .literal(.null),
+            beside: [
+                "app.make": Procedure(
+                    signature: Signature(returns: .named("app.Handle")),
+                    body: [
+                        Statement(binding: .constant("own"), expression: .call(Call(selector: "app.open"))),
+                        Statement(
+                            binding: .none,
+                            expression: .conditional(
+                                .literal(.bool(true)),
+                                then: [
+                                    Statement(
+                                        binding: .none,
+                                        expression: .leave(
+                                            Leave(
+                                                reach: .procedure,
+                                                value: .call(Call(selector: "app.open"))
+                                            )
+                                        )
+                                    )
+                                ],
+                                else: nil
+                            )
+                        ),
+                        Statement(expression: .call(Call(receiver: reference("own"), selector: "app.close"))),
+                        Statement(
+                            binding: .none,
+                            expression: .leave(
+                                Leave(reach: .procedure, value: .call(Call(selector: "app.open")))
+                            )
+                        )
+                    ],
+                    result: nil
+                )
+            ]
+        )
+
+        // When / Then
+        #expect {
+            try Builder().build([sut] + Module.standard, entry: entryName)
+        } throws: { error in
+            "\(error)".contains("leaves while still holding 'own'")
+        }
+    }
+
     @Test("a `?` does not stand on a type handed on once")
     func aNullableOfOneRefuses() throws {
         // Given. The doubt and the mark say opposite things about the same
