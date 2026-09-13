@@ -26,18 +26,18 @@ struct ArtifactReader {
             document: try document(fields.next()),
             types: try keyed(fields.next(), of: "types", expression),
             constraints: try keyed(fields.next(), of: "constraints") { written in
-                try list(written, of: "constraints", expression)
+                try Fields.list(written, of: "constraints", expression)
             },
             contracts: try keyed(fields.next(), of: "contracts") { written in
                 try keyed(written, of: "contract", signature)
             },
             claims: try keyed(fields.next(), of: "claims") { written in
-                Set(try list(written, of: "claims", name))
+                Set(try Fields.list(written, of: "claims", name))
             },
             leaned: try leaned(fields.next()),
             declared: try fields.list(name),
             table: try fields.list(judged),
-            calls: try fields.list { written in try list(written, of: "calls", name) },
+            calls: try fields.list { written in try Fields.list(written, of: "calls", name) },
             answers: try keyed(fields.next(), of: "answers", lowered),
             numbering: try Numbering(written: fields.next()),
             typeNumbering: try typeNumbering(fields.next()),
@@ -50,20 +50,12 @@ struct ArtifactReader {
     }
 
     // MARK: - Private
-    private func list<T>(_ value: Value, of part: String, _ read: (Value) throws -> T) throws -> [T] {
-        guard case let .array(written) = value else {
-            throw ArtifactRefused("'\(part)' is not written as a list")
-        }
-
-        return try written.map(read)
-    }
-
     private func keyed<T>(
         _ value: Value,
         of part: String,
         _ read: (Value) throws -> T
     ) throws -> [Name: T] {
-        try gathered(try list(value, of: part) { entry in
+        try gathered(try Fields.list(value, of: part) { entry in
             var fields = try Fields(entry, of: part)
             let held = (Name(normal: try fields.text()), try read(fields.next()))
 
@@ -96,10 +88,8 @@ struct ArtifactReader {
     }
 
     private func document(_ value: Value) throws -> Place.Document {
-        var fields = try Fields(.array([value]), of: "document")
-
-        return Place.Document(
-            identity: try fields.maybe { written in
+        Place.Document(
+            identity: try Fields.maybe(value, of: "document") { written in
                 guard case let .bytes(bytes) = written else {
                     throw ArtifactRefused("'document' writes an identity that is not bytes")
                 }
@@ -110,7 +100,7 @@ struct ArtifactReader {
     }
 
     private func leaned(_ value: Value) throws -> [Claim: Place] {
-        try gathered(try list(value, of: "leaned") { entry in
+        try gathered(try Fields.list(value, of: "leaned") { entry in
             var fields = try Fields(entry, of: "leaned")
             let claim = Claim(type: try name(fields.next()), contract: try name(fields.next()))
             let where_ = try place(fields.next())
@@ -168,7 +158,7 @@ private extension ArtifactReader {
         case 22:
             read = .reading(
                 of: try name(fields.next()),
-                path: try list(fields.next(), of: "path", segment)
+                path: try Fields.list(fields.next(), of: "path", segment)
             )
 
         default:
@@ -275,7 +265,7 @@ private extension ArtifactReader {
         case 1: read = .index(try fields.integer(), optional: try fields.flag())
         case 2:
             read = .indexRef(
-                try list(fields.next(), of: "path", segment),
+                try Fields.list(fields.next(), of: "path", segment),
                 optional: try fields.flag()
             )
 
@@ -305,7 +295,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "parameter")
         let read = Parameter(
             type: try fields.maybe(expression),
-            candidates: try fields.maybe { written in try list(written, of: "candidates", text) },
+            candidates: try fields.maybe { written in try Fields.list(written, of: "candidates", text) },
             default: try fields.maybe { written in written },
             description: try fields.maybe(text)
         )
@@ -337,7 +327,7 @@ private extension ArtifactReader {
 
         switch try fields.tag() {
         case 0: read = .unstated
-        case 1: read = .these(Set(try list(fields.next(), of: "failing", text)))
+        case 1: read = .these(Set(try Fields.list(fields.next(), of: "failing", text)))
         default: throw ArtifactRefused("'failing' says neither nothing nor which failures")
         }
 
@@ -351,7 +341,7 @@ private extension ArtifactReader {
     func place(_ value: Value) throws -> Place {
         var fields = try Fields(value, of: "place")
         let held = try document(fields.next())
-        let read = Place(try list(fields.next(), of: "place", step), in: held)
+        let read = Place(try Fields.list(fields.next(), of: "place", step), in: held)
 
         try fields.end()
 
@@ -463,7 +453,7 @@ private extension ArtifactReader {
     func layout(_ value: Value) throws -> Layout {
         var fields = try Fields(value, of: "layout")
         let named = try fields.maybe(name)
-        let written = try list(fields.next(), of: "layout", name)
+        let written = try Fields.list(fields.next(), of: "layout", name)
 
         try fields.end()
 
@@ -507,7 +497,7 @@ private extension ArtifactReader {
         case 13:
             read = .procedure(
                 parameters: try fields.maybe { written in
-                    try list(written, of: "parameters") { parameter in
+                    try Fields.list(written, of: "parameters") { parameter in
                         var held = try Fields(parameter, of: "parameter")
                         let taken = (
                             name: try name(held.next()),
@@ -533,7 +523,7 @@ private extension ArtifactReader {
         case 19:
             read = .reading(
                 of: try name(fields.next()),
-                path: try list(fields.next(), of: "path", segment)
+                path: try Fields.list(fields.next(), of: "path", segment)
             )
 
         case 20: read = .member(try fields.count())
@@ -565,7 +555,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "record")
         let read = LoweredRecord(
             layout: try layout(fields.next()),
-            fields: try list(fields.next(), of: "record", lowered)
+            fields: try Fields.list(fields.next(), of: "record", lowered)
         )
 
         try fields.end()
@@ -576,8 +566,8 @@ private extension ArtifactReader {
     func typeNumbering(_ value: Value) throws -> LoweredTypeNumbering {
         var fields = try Fields(value, of: "type numbering")
         let read = LoweredTypeNumbering(
-            types: Set(try list(fields.next(), of: "type numbering", name)),
-            memberships: Set(try list(fields.next(), of: "type numbering", name))
+            types: Set(try Fields.list(fields.next(), of: "type numbering", name)),
+            memberships: Set(try Fields.list(fields.next(), of: "type numbering", name))
         )
 
         try fields.end()
@@ -595,7 +585,7 @@ private extension ArtifactReader {
             purity: try purity(fields.next()),
             isolation: try isolation(fields.next()),
             failing: try failing(fields.next()),
-            sends: try list(fields.next(), of: "row", sent),
+            sends: try Fields.list(fields.next(), of: "row", sent),
             implementation: try implementation(fields.next())
         )
 
@@ -610,7 +600,7 @@ private extension ArtifactReader {
 
         switch try fields.tag() {
         case 0: read = .body(try body(fields.next()), try frame(fields.next()))
-        case 1: read = .native(sending: try list(fields.next(), of: "sending", send))
+        case 1: read = .native(sending: try Fields.list(fields.next(), of: "sending", send))
         default: throw ArtifactRefused("'implementation' answers in a way this reads none of")
         }
 
@@ -623,7 +613,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "send")
         let read = Sent(
             row: try fields.count(),
-            offers: try list(fields.next(), of: "send", counted)
+            offers: try Fields.list(fields.next(), of: "send", counted)
         )
 
         try fields.end()
@@ -636,7 +626,7 @@ private extension ArtifactReader {
         let read = Native.Send(
             position: try fields.count(),
             selector: try name(fields.next()),
-            offers: try list(fields.next(), of: "native send", name)
+            offers: try Fields.list(fields.next(), of: "native send", name)
         )
 
         try fields.end()
@@ -648,8 +638,8 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "frame")
         let read = Frame(
             size: try fields.count(),
-            parameters: try list(fields.next(), of: "frame", counted),
-            variables: try list(fields.next(), of: "frame") { written in
+            parameters: try Fields.list(fields.next(), of: "frame", counted),
+            variables: try Fields.list(fields.next(), of: "frame") { written in
                 var held = try Fields(written, of: "frame variable")
                 let taken = (variable: try held.count(), slot: try held.count())
 
@@ -657,7 +647,7 @@ private extension ArtifactReader {
 
                 return taken
             },
-            names: try list(fields.next(), of: "frame", name)
+            names: try Fields.list(fields.next(), of: "frame", name)
         )
 
         try fields.end()
@@ -668,7 +658,7 @@ private extension ArtifactReader {
     func body(_ value: Value) throws -> Body {
         var fields = try Fields(value, of: "body")
         let read = Body(
-            instructions: try list(fields.next(), of: "body", instruction),
+            instructions: try Fields.list(fields.next(), of: "body", instruction),
             result: try fields.maybe(operation)
         )
 
@@ -710,7 +700,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "address")
         let read = Address(
             slot: try fields.count(),
-            steps: try list(fields.next(), of: "address", walk)
+            steps: try Fields.list(fields.next(), of: "address", walk)
         )
 
         try fields.end()
@@ -746,12 +736,12 @@ private extension ArtifactReader {
         switch try fields.tag() {
         case 0: read = .literal(try fields.next())
         case 1: read = .local(try address(fields.next()))
-        case 2: read = .array(try list(fields.next(), of: "array", operation))
+        case 2: read = .array(try Fields.list(fields.next(), of: "array", operation))
         case 3: read = .record(try recordOperation(fields.next()))
         case 4:
             read = .closure(
                 try fields.count(),
-                captures: try list(fields.next(), of: "captures") { written in
+                captures: try Fields.list(fields.next(), of: "captures") { written in
                     var held = try Fields(written, of: "capture")
                     let taken = (try held.count(), try held.count())
 
@@ -764,7 +754,7 @@ private extension ArtifactReader {
         case 5:
             read = .apply(
                 try operation(fields.next()),
-                arguments: try list(fields.next(), of: "arguments") { written in
+                arguments: try Fields.list(fields.next(), of: "arguments") { written in
                     var held = try Fields(written, of: "argument")
                     let taken = (try name(held.next()), try operation(held.next()))
 
@@ -785,9 +775,9 @@ private extension ArtifactReader {
         case 8:
             read = .conditional(
                 try operation(fields.next()),
-                then: try list(fields.next(), of: "then", instruction),
+                then: try Fields.list(fields.next(), of: "then", instruction),
                 else: try fields.maybe { written in
-                    try list(written, of: "otherwise", instruction)
+                    try Fields.list(written, of: "otherwise", instruction)
                 }
             )
 
@@ -840,7 +830,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "record")
         let read = RecordOperation(
             layout: try layout(fields.next()),
-            fields: try list(fields.next(), of: "record", operation)
+            fields: try Fields.list(fields.next(), of: "record", operation)
         )
 
         try fields.end()
@@ -853,12 +843,10 @@ private extension ArtifactReader {
         let read = CallOperation(
             procedure: try fields.count(),
             receiver: try fields.maybe(operation),
-            arguments: try list(fields.next(), of: "arguments") { written in
-                var held = try Fields(.array([written]), of: "argument")
-
-                return try held.maybe(operation)
+            arguments: try Fields.list(fields.next(), of: "arguments") { written in
+                try Fields.maybe(written, of: "argument", operation)
             },
-            handed: try list(fields.next(), of: "handed") { written in
+            handed: try Fields.list(fields.next(), of: "handed") { written in
                 var held = try Fields(written, of: "handed")
                 let taken = CallOperation.Handed(
                     position: try held.count(),
