@@ -611,6 +611,69 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("refuses at the run where a field step names one place and stands at another")
+    func aFieldStepOffItsName() async throws {
+        // Given. A body that reads one field of a record of two. The step holds
+        // where the link put it and what it is called, and a write lands on the
+        // name while a read stands at the place, so the two saying different
+        // things is a value that comes back wrong rather than refused.
+        let sut = try Module(
+            types: ["app.Pair": .record(["x": .int, "y": .int])],
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("pair"),
+                        expression: .cast(
+                            .record(["x": .literal(.int(1)), "y": .literal(.int(2))]),
+                            as: .named("app.Pair"),
+                            optional: false
+                        )
+                    )],
+                    result: reference("pair", "x")
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(body) = implementation[1],
+              case var .array(result) = body[1],
+              case var .array(operation) = result[0],
+              case let .int(1) = operation[0],
+              case var .array(address) = operation[1],
+              case let .array(steps) = address[1],
+              case var .array(step) = steps.first,
+              case let .int(0) = step[0]
+        else {
+            Issue.record("an artifact writes a body that reads a field of a record")
+
+            return
+        }
+
+        // The place moved off the name it is written beside.
+        step[1] = .int(1)
+        address[1] = .array([.array(step)])
+        operation[1] = .array(address)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When. Nothing here is the reading's to know, so it reads.
+        let read = try Compiled(written: stamped(parts))
+        let image = try Builder().link([read], entry: "app.entry", supplying: .none)
+
+        // Then. The run refuses rather than answering the other field.
+        await #expect(throws: (any Error).self) {
+            try await Executor().run(image, arguments: [:])
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

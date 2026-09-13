@@ -1172,18 +1172,22 @@ public struct Executor: Sendable {
                     return .unfit(reason)
                 }
 
-            // The place the link proved. A value settles to the type the
-            // link laid out, so the field stands where its layout puts it and
-            // there is no name to find.
-            case let .field(position, _, _):
+            // The place the link proved, held to the name beside it. Two
+            // grounds for one field would let a writing say one of them and
+            // mean the other, and what came back then would not be refused
+            // but wrong. The name is what a write lands on, so the read is
+            // held to it here.
+            case let .field(position, name, _):
                 guard case let .record(record) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.type)")
                 }
 
-                guard record.values.indices.contains(position) else {
+                guard record.layout.fields.indices.contains(position),
+                      record.layout.fields[position] == name
+                else {
                     return .unfit(
-                        "\(walked().rendered) drills to a field a record of"
-                            + " \(record.values.count) does not hold"
+                        "\(walked().rendered) drills to a field this record"
+                            + " names otherwise"
                     )
                 }
 
