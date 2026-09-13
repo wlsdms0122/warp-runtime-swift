@@ -57,10 +57,8 @@ public struct TypeReader: Decodable {
         // whole spelling is one. `inout` and `var` stand in front of the whole
         // type, including a trailing `?`, so they are read before anything else
         // is.
-        for mark in SlotMark.allCases {
-            guard let bare = text.dropPrefixed("\(mark.rawValue) ") else { continue }
-
-            let inner = try parse(String(bare))
+        if let (mark, bare) = marked(text) {
+            let inner = try parse(bare)
 
             if let inside = SlotMark.marked(inner) {
                 throw TypeFormError(
@@ -262,23 +260,21 @@ public struct TypeReader: Decodable {
     static func procedureKeywords(
         of key: String
     ) throws -> (mark: SlotMark?, purity: Purity, isolation: Isolation)? {
-        var rest = key
-        var mark: SlotMark?
-
-        for one in SlotMark.allCases {
-            guard let bare = rest.dropPrefixed("\(one.rawValue) ") else { continue }
-
-            rest = String(bare)
-            mark = one
-            break
-        }
+        let (mark, rest) = marked(key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
 
         // The same rule the spelling of a whole type is read by, on the key a
         // procedure form is written under. Without it a second mark leaves the
         // key unread and the form comes back as a record named after it.
-        if let mark, let inside = SlotMark.allCases.first(where: { one in
-            rest.hasPrefix("\(one.rawValue) ")
-        }) {
+        //
+        // Asked only of a key that is otherwise a procedure form's. Any other
+        // key is a record's field name, and a field is named whatever a
+        // document named it.
+        if
+            let mark,
+            let inside = marked(rest)?.mark,
+            let (_, _, head) = modifiers(of: unmarked(rest)),
+            head == "procedure"
+        {
             throw TypeFormError(
                 "type '\(key)' writes `\(inside.rawValue)` inside `\(mark.rawValue)`."
                     + " \(SlotMark.saysOneThing)"
@@ -344,6 +340,30 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Private
+    // The mark a spelling begins with, and the spelling under it. Read off the
+    // text rather than off a type, because a mark stands in front of a whole
+    // spelling and this is asked before anything has been made of it.
+    private static func marked(_ text: String) -> (mark: SlotMark, rest: String)? {
+        for mark in SlotMark.allCases {
+            guard let bare = text.dropPrefixed("\(mark.rawValue) ") else { continue }
+
+            return (mark, String(bare))
+        }
+
+        return nil
+    }
+
+    // The spelling with every mark taken off the front of it.
+    private static func unmarked(_ text: String) -> String {
+        var bare = text
+
+        while let (_, rest) = marked(bare) {
+            bare = rest
+        }
+
+        return bare
+    }
+
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         if let written = try? decoder.singleValueContainer().decode(String.self) {
             return try parse(written)

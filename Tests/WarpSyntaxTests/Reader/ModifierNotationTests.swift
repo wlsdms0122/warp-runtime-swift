@@ -119,6 +119,25 @@ struct ModifierNotationTests {
         #expect(try TypeReader.parse("\(mark.rawValue) Task?") == mark.marking(.nullable(.named("Task"))))
     }
 
+    @Test("a record's field is named whatever the document named it")
+    func aFieldNamedLikeTwoMarksIsStillAField() throws {
+        // Given. The rule about two marks is a procedure form's, and a key is
+        // only that form's once what is under the marks says `procedure`.
+        // Anything else is a field name, and the writer writes one back
+        let type = TypeExpression.record([try Name("var inout x"): .int])
+
+        // When
+        let written = try Writer().value(of: type)
+        let read = try Loader().load([
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]
+        ])
+
+        // Then
+        #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == type)
+    }
+
     @Test("isolated is read in either order and written in one", arguments: [
         ("isolated procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated procedure"),
         ("pure isolated procedure", .procedure(nil, .pure, .isolated), "pure isolated procedure"),
