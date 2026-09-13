@@ -37,7 +37,7 @@ struct ArtifactCoverageTests {
             return
         }
 
-        let read = try Compiled(written: written)
+        let read = try Compiled(written: written, of: sut.identity)
 
         // Then. One artifact is one writing, and a pair that disagreed about
         // any one kind would part here.

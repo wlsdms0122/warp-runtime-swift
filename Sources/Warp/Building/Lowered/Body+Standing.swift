@@ -165,10 +165,12 @@ extension Operation {
             call.arguments.forEach { argument in argument?.stand(in: &standing) }
             call.handed.forEach { handed in handed.address.stand(in: &standing) }
 
+        // What a call through a contract hands over is in `arguments`. The
+        // calls beside it are the link's copy of the same, so walking those
+        // too would count one fact twice.
         case let .dispatch(dispatch):
             dispatch.receiver.stand(in: &standing)
             dispatch.arguments.forEach { _, argument in argument.stand(in: &standing) }
-            dispatch.calls.forEach { _, call in Operation.call(call).stand(in: &standing) }
 
         case let .leave(_, _, read):
             read?.stand(in: &standing)

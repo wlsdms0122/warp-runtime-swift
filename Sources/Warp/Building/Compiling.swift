@@ -160,14 +160,16 @@ struct Compiling {
 
     // One document laid down: its declarations take the rows after the ones
     // already here, and its numbering says what the bodies it lowers are
-    // written with.
+    // written with. Which rows those are is answered here rather than looked
+    // up again, since laying them down is what decided it.
+    @discardableResult
     mutating func hold(
         _ origin: Int,
         standing block: [Linked],
         closures lifted: [Linked] = [],
         numbering: Numbering,
         variables ordered: [Name]
-    ) {
+    ) -> Range<Int> {
         lowering.hold(
             origin,
             standing: block,

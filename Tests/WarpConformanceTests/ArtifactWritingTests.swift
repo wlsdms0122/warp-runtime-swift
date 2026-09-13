@@ -40,8 +40,8 @@ struct ArtifactWritingTests {
 
             return try BinaryEncoding.data(from: written)
         }
-        let read = try bytes.map { written in
-            try Compiled(written: try BinaryEncoding.value(from: written))
+        let read = try zip(bytes, compiled).map { written, one in
+            try Compiled(written: try BinaryEncoding.value(from: written), of: one.identity)
         }
 
         // Then. One artifact is one writing, both ways.

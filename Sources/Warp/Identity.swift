@@ -50,10 +50,10 @@ public struct Identity: Sendable, Equatable, Hashable {
     // bytes, and reading bytes is another package's, so the door it needs is
     // open to every caller.
     //
-    // What keeps the rule is that nothing here asks an identity to prove
-    // itself. An artifact records the one its document had, and a caller
-    // holding both compares them; a caller that wrote a number in is a caller
-    // whose cache answers for a document it never compiled.
+    // What keeps the rule is that the one place an identity arrives already
+    // written down is the reading of an artifact, and that reading is handed
+    // the identity the artifact was kept under and refuses any other. A
+    // number written in reaches no build.
     public init(_ bytes: [UInt8]) {
         self.bytes = bytes
     }

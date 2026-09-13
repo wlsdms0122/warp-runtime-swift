@@ -116,13 +116,14 @@ struct Lowering {
     //
     // A document being compiled lifts its closures as it lowers, so it hands
     // none over here. One already compiled hands over the block it left.
+    @discardableResult
     mutating func hold(
         _ origin: Int,
         standing block: [Linked],
         closures lifted: [Linked] = [],
         numbering held: Numbering,
         variables ordered: [Name]
-    ) {
+    ) -> Range<Int> {
         let start = table.count
 
         for (offset, row) in block.enumerated() {
@@ -137,6 +138,8 @@ struct Lowering {
         variables[origin] = ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
             positions[name.element] = name.offset
         }
+
+        return start ..< start + block.count
     }
 
     // A type the build read off a body rather than out of a signature. It is

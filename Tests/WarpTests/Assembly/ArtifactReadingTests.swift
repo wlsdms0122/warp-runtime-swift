@@ -45,7 +45,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -65,7 +65,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -80,7 +80,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(Array(parts.dropLast())))
+            try Compiled(written: stamped(Array(parts.dropLast())), of: nil)
         }
     }
 
@@ -93,7 +93,7 @@ struct ArtifactReadingTests {
         }
 
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts + [.null]))
+            try Compiled(written: stamped(parts + [.null]), of: nil)
         }
     }
 
@@ -117,7 +117,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -157,7 +157,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -173,7 +173,7 @@ struct ArtifactReadingTests {
         // When / Then. The fields behind the stamp are this reading's own, so
         // what refuses is the stamp and nothing further in.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array([.int(Compiled.format + 1), .array(parts)]))
+            try Compiled(written: .array([.int(Compiled.format + 1), .array(parts)]), of: nil)
         }
     }
 
@@ -216,7 +216,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -242,7 +242,7 @@ struct ArtifactReadingTests {
         parts[7] = .array(table)
 
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -257,7 +257,7 @@ struct ArtifactReadingTests {
         parts[7] = .array(table.dropLast())
 
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -272,7 +272,7 @@ struct ArtifactReadingTests {
         parts[8] = .array(calls + [.array([])])
 
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -301,7 +301,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -351,7 +351,7 @@ struct ArtifactReadingTests {
 
         // When. The artifact reads, because nothing here is the reading's to
         // know: which row the call reaches is the link's answer.
-        let read = try Compiled(written: stamped(parts))
+        let read = try Compiled(written: stamped(parts), of: nil)
 
         // Then. The link refuses it, and no run begins. An artifact's refusal:
         // a lowering takes a call's arguments from the callee's own slots, so
@@ -376,7 +376,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -400,7 +400,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -429,7 +429,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -486,7 +486,7 @@ struct ArtifactReadingTests {
 
         // When / Then. Refused, rather than reaching the run that reads it.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -512,7 +512,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -568,7 +568,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -612,7 +612,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -670,7 +670,7 @@ struct ArtifactReadingTests {
         parts[7] = .array(table)
 
         // When. Nothing here is the reading's to know, so it reads.
-        let read = try Compiled(written: stamped(parts))
+        let read = try Compiled(written: stamped(parts), of: nil)
         let image = try Builder().link([read], entry: "app.entry", supplying: .none)
 
         // Then. The run refuses rather than answering the other field.
@@ -717,7 +717,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -750,7 +750,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
         }
     }
 
@@ -791,7 +791,44 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: stamped(parts))
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
+    @Test("is refused where it stands against a document other than the one it was kept under")
+    func anArtifactOfAnotherDocument() throws {
+        // Given. A document with an identity, and its artifact.
+        let sut = try Module(
+            try Module(
+                procedures: [
+                    "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                ]
+            ).draft,
+            identity: Identity([0x01, 0x02, 0x03])
+        )
+        let compiled = try builder.compile([sut] + Module.standard)
+
+        guard let mine = compiled.first(where: { one in one.identity != nil }),
+              let written = mine.written
+        else {
+            Issue.record("a document with an identity compiles to an artifact standing against it")
+
+            return
+        }
+
+        // When / Then. Read under the identity it stands against, and refused
+        // under any other: what an artifact says about which document it is,
+        // is the one thing about it nothing else can check.
+        #expect(throws: Never.self) {
+            try Compiled(written: written, of: Identity([0x01, 0x02, 0x03]))
+        }
+
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: written, of: Identity([0x09]))
+        }
+
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: written, of: nil)
         }
     }
 

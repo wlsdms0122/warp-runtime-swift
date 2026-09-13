@@ -184,6 +184,12 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Public
+    // Which document this stands against, which is what a caller keeps it
+    // under and hands back when it reads one.
+    public var identity: Identity? {
+        document.identity
+    }
+
     // How an artifact is laid out, which is not how the language is versioned.
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an artifact stand, and it moves when they move
@@ -206,7 +212,16 @@ public struct Compiled: Sendable, Declaring {
         ArtifactWriter().value(of: self).map { written in .array([.int(Self.format), written]) }
     }
 
-    public init(written value: Value) throws {
+    // Read back beside the document it was filed under, because what an
+    // artifact says about which document it is, is the one thing about it
+    // nothing else can check.
+    //
+    // An identity is derived and never declared, which is what makes it worth
+    // having: nobody writes one down, so nobody writes one down wrongly. An
+    // artifact does write one down. So a caller hands over the one it keeps
+    // the artifact under, and an artifact saying it belongs somewhere else is
+    // one that belongs to no cache this caller holds.
+    public init(written value: Value, of identity: Identity?) throws {
         var fields = try Fields(value, of: "artifact format")
         let format = try fields.count()
 
@@ -231,7 +246,15 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
-        self = try ArtifactReader().compiled(from: written)
+        let read = try ArtifactReader().compiled(from: written)
+
+        guard read.document.identity == identity else {
+            throw ArtifactRefused(
+                "this artifact stands against a document other than the one it was kept under"
+            )
+        }
+
+        self = read
     }
 
     // MARK: - Private

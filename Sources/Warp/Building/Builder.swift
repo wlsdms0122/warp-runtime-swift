@@ -531,7 +531,7 @@ public struct Builder: Sendable {
         // it is from the start; a written body stands as the refusal it
         // would earn until it is lowered, so nothing folds through a body
         // half-made.
-        compiling.hold(
+        let block = compiling.hold(
             origin,
             standing: try holding.map { symbol in
                 Linked.standing(
@@ -640,16 +640,7 @@ public struct Builder: Sendable {
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
-            try declared.map { name in
-                guard let row = compiling.lowering.rows[name] else {
-                    throw BuildError.unjudged(
-                        "'\(name)', which this document declares and the lowering has no row for",
-                        at: .procedure(name.spelling, in: module.document)
-                    )
-                }
-
-                return row
-            } + (compiling.lowering.closureRows[origin] ?? []),
+            Array(block) + (compiling.lowering.closureRows[origin] ?? []),
             of: origin,
             answering: read
         )
