@@ -110,16 +110,26 @@ struct ArtifactReader {
         }
     }
 
-    // A reading that goes through a door the value layer judges. What that
-    // door refuses is refused of these bytes, said in the words this reading
-    // answers in: a caller holding a cache is told to build again, not to go
-    // looking at a document.
+    // A reading that goes through a door the value layer judges. A type of
+    // that layer knows nothing of artifacts, so what it refuses is said again
+    // in the words this reading answers in. The build's own types say it
+    // themselves and are called plainly.
     private func refusing<T>(_ read: () throws -> T) throws -> T {
         do {
             return try read()
         } catch let refused as ValueRefused {
             throw ArtifactRefused(refused.message)
         }
+    }
+
+    // A written list a set is made of. The writing puts it in order, and a
+    // reading that took any order would let two writings say one artifact.
+    private func ordered<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
+        guard written.ordered else {
+            throw ArtifactRefused("'\(part)' writes its names out of order, or one of them twice")
+        }
+
+        return written
     }
 
     private func name(_ value: Value) throws -> Name {
@@ -336,7 +346,8 @@ private extension ArtifactReader {
 
         switch try fields.tag() {
         case 0: read = .unstated
-        case 1: read = .these(Set(try Fields.list(fields.next(), of: "failing", text)))
+        case 1:
+            read = .these(Set(try ordered(try Fields.list(fields.next(), of: "failing", text), of: "failing")))
         default: throw ArtifactRefused("'failing' says neither nothing nor which failures")
         }
 
@@ -553,12 +564,10 @@ private extension ArtifactReader {
     func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var fields = try Fields(value, of: "record")
         let held = try layout(fields.next())
-        let read = try refusing {
-            try LoweredRecord(
-                layout: held,
-                judging: try Fields.list(fields.next(), of: "record", lowered)
-            )
-        }
+        let read = try LoweredRecord(
+            layout: held,
+            judging: try Fields.list(fields.next(), of: "record", lowered)
+        )
 
         try fields.end()
 
@@ -569,7 +578,7 @@ private extension ArtifactReader {
         var fields = try Fields(value, of: "type numbering")
         let types = try Fields.list(fields.next(), of: "type numbering", name)
         let memberships = try Fields.list(fields.next(), of: "type numbering", name)
-        let read = try refusing { try LoweredTypeNumbering(ordered: types, memberships: memberships) }
+        let read = try LoweredTypeNumbering(ordered: types, memberships: memberships)
 
         try fields.end()
 
@@ -834,12 +843,10 @@ private extension ArtifactReader {
     func recordOperation(_ value: Value) throws -> RecordOperation {
         var fields = try Fields(value, of: "record")
         let held = try layout(fields.next())
-        let read = try refusing {
-            try RecordOperation(
-                layout: held,
-                judging: try Fields.list(fields.next(), of: "record", operation)
-            )
-        }
+        let read = try RecordOperation(
+            layout: held,
+            judging: try Fields.list(fields.next(), of: "record", operation)
+        )
 
         try fields.end()
 
@@ -848,13 +855,13 @@ private extension ArtifactReader {
 
     func callOperation(_ value: Value) throws -> CallOperation {
         var fields = try Fields(value, of: "call")
-        let read = try refusing { try CallOperation(
+        let read = try CallOperation(
             procedure: try fields.count(),
             receiver: try fields.maybe(operation),
             arguments: try Fields.list(fields.next(), of: "arguments") { written in
                 try Fields.maybe(written, of: "argument", operation)
             },
-            handed: try Fields.list(fields.next(), of: "handed") { written in
+            judging: try Fields.list(fields.next(), of: "handed") { written in
                 var held = try Fields(written, of: "handed")
                 let taken = CallOperation.Handed(
                     position: try held.count(),
@@ -865,7 +872,7 @@ private extension ArtifactReader {
 
                 return taken
             }
-        ) }
+        )
 
         try fields.end()
 

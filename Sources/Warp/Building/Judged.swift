@@ -82,7 +82,11 @@ struct Judged: Sendable {
         sends: [Sent],
         judging implementation: Implementation
     ) throws {
-        if case let .body(body, frame) = implementation {
+        if case let .body(_, frame) = implementation {
+            guard sends.isEmpty else {
+                throw ArtifactRefused("a body stands sends its own code carries")
+            }
+
             guard frame.names.count == frame.size else {
                 throw ArtifactRefused(
                     "a frame of \(frame.size) names \(frame.names.count) slot(s)"
@@ -101,16 +105,6 @@ struct Judged: Sendable {
             else {
                 throw ArtifactRefused(
                     "a frame of \(frame.size) stands a parameter or a variable past its end"
-                )
-            }
-
-            let standing = body.standing
-
-            guard standing.slots.allSatisfy({ slot in slot < frame.size }),
-                  standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
-            else {
-                throw ArtifactRefused(
-                    "a body stands on a slot its frame of \(frame.size) does not hold"
                 )
             }
         }
@@ -142,6 +136,51 @@ struct Judged: Sendable {
 
         case let .native(procedure):
             self.implementation = Self.native(procedure)
+        }
+    }
+
+    // MARK: - Internal
+    // What the body stands on, judged against the frame it stands in and
+    // against the rows beside it. One walk answers all of them, so the walk is
+    // here rather than split between this row and the list that holds it, and
+    // what the list alone knows is handed in.
+    //
+    // A frame is reached by position everywhere a run touches it, and so are
+    // the boxes a document holds and the frames its closures stand in. A list
+    // written short is an array read past its end rather than a row that
+    // answers wrongly.
+    func judge(standingIn frames: (Int) -> Frame?, holding variables: Int) throws {
+        guard case let .body(body, frame) = implementation else { return }
+
+        let standing = body.standing
+
+        guard standing.slots.allSatisfy({ slot in slot < frame.size }),
+              standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
+        else {
+            throw ArtifactRefused(
+                "a body stands on a slot its frame of \(frame.size) does not hold"
+            )
+        }
+
+        guard frame.variables.allSatisfy({ variable, _ in variable < variables }) else {
+            throw ArtifactRefused(
+                "a body stands on a variable past the \(variables) its document holds"
+            )
+        }
+
+        for closure in standing.closures {
+            guard let standing = frames(closure.number) else {
+                throw ArtifactRefused(
+                    "a body stands up a closure at \(closure.number), where this"
+                        + " document numbers none that a body stands"
+                )
+            }
+
+            guard closure.inner.allSatisfy({ slot in slot < standing.size }) else {
+                throw ArtifactRefused(
+                    "a closure takes something into a slot its own frame does not hold"
+                )
+            }
         }
     }
 

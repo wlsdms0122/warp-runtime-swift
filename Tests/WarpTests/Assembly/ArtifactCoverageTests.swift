@@ -202,7 +202,7 @@ struct ArtifactCoverageTests {
             purity: body ? .pure : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            sends: [Sent(row: 1, offers: [0, 2])],
+            sends: body ? [] : [Sent(row: 1, offers: [0, 2])],
             implementation: body
                 ? .body(
                     everyOperation,

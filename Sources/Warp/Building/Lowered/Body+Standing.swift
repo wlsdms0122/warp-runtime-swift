@@ -153,7 +153,9 @@ extension Operation {
             condition.stand(in: &standing)
             body.stand(in: &standing)
             standing.stand(on: round)
-            keeps.map { kept in standing.stand(over: kept) }
+            if let kept = keeps {
+                standing.stand(over: kept)
+            }
 
         case let .attempt(body, rescue: rescue, failure: failure):
             body.stand(in: &standing)

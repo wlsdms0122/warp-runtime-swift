@@ -100,7 +100,7 @@ extension Operation {
         // stops at the dot.
         case let .dispatch(dispatch):
             return dispatch.receiver.reads(slots)
-                || dispatch.arguments.contains { _, argument in argument.reads(slots) }
+                || dispatch.arguments.contains { _, argument in argument.read.reads(slots) }
 
         case let .leave(_, _, value):
             return value?.reads(slots) == true

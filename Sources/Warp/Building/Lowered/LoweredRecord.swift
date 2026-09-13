@@ -27,7 +27,7 @@ struct LoweredRecord: Sendable, Equatable {
     // makes its promise a fact rather than an assumption.
     init(layout: Layout, judging fields: [LoweredType]) throws {
         guard layout.fields.count == fields.count else {
-            throw ValueRefused(
+            throw ArtifactRefused(
                 "a record names \(layout.fields.count) field(s) and holds \(fields.count)"
             )
         }

@@ -485,6 +485,32 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a body stands sends of its own")
+    func aBodyThatStandsSends() throws {
+        // Given. A real artifact with one send added to a row that has a body.
+        // A body's calls are in its own code, so a list here is a fact about
+        // some other kind of row.
+        guard case var .array(parts) = try parts(),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case let .array(sends) = row[5],
+              sends.isEmpty
+        else {
+            Issue.record("an artifact writes a row's sends beside its implementation")
+
+            return
+        }
+
+        row[5] = .array([.array([.int(0), .array([])])])
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

@@ -155,50 +155,6 @@ public struct Compiled: Sendable, Declaring {
             throw ArtifactRefused("an artifact declares its rows in an order its table does not")
         }
 
-        // What a body reaches through a box of its own document. A run reads
-        // one by standing at its number, so a number past the ones written
-        // here is an array reached past its end.
-        let holding = table.allSatisfy { row in
-            guard case let .body(_, frame) = row.implementation else { return true }
-
-            return frame.variables.allSatisfy { variable, _ in variable < variables.count }
-        }
-
-        guard holding else {
-            throw ArtifactRefused(
-                "a body stands on a variable past the \(variables.count) this document holds"
-            )
-        }
-
-        // A closure stands its own row, and what it takes with it stands in
-        // that row's frame. Which row it is, is this document's arithmetic:
-        // the closures follow the declarations, in the order the document
-        // numbered them. Only a list that has them all can ask this.
-        let lifted = declared.count ..< table.count
-
-        for row in table {
-            guard case let .body(body, _) = row.implementation else { continue }
-
-            for closure in body.standing.closures {
-                guard let written = numbering.lifted(closure.number), written < lifted.count else {
-                    throw ArtifactRefused(
-                        "a body stands up a closure at \(closure.number), where this"
-                            + " document numbers none"
-                    )
-                }
-
-                guard case let .body(_, frame) = table[lifted.lowerBound + written].implementation else {
-                    throw ArtifactRefused("a closure stands a row no body stands on")
-                }
-
-                guard closure.inner.allSatisfy({ slot in slot < frame.size }) else {
-                    throw ArtifactRefused(
-                        "a closure takes something into a slot its own frame does not hold"
-                    )
-                }
-            }
-        }
-
         self.init(
             document: document,
             types: types,
@@ -214,6 +170,28 @@ public struct Compiled: Sendable, Declaring {
             typeNumbering: typeNumbering,
             variables: variables
         )
+
+        // What each row stands on, judged against the rows beside it. Asked
+        // after the value stands, so the range its closures are cut by is the
+        // one this type already says rather than the same arithmetic written
+        // out again. A door that throws lets nothing past it.
+        for row in table {
+            try row.judge(standingIn: frame(ofClosure:), holding: variables.count)
+        }
+    }
+
+    // MARK: - Internal
+    // The frame of the row a body's closure number stands, or nothing where
+    // this document numbers no closure there. Which row that is, is this
+    // document's own arithmetic.
+    private func frame(ofClosure number: Int) -> Frame? {
+        guard let written = numbering.lifted(number), written < lifted.count,
+              case let .body(_, frame) = table[lifted.lowerBound + written].implementation
+        else {
+            return nil
+        }
+
+        return frame
     }
 
     // MARK: - Public
