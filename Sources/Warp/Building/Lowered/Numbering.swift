@@ -110,21 +110,16 @@ struct Numbering: Sendable {
     // Where each declaration's closures begin is neither: folding runs a
     // dependency's body against this, and lowering a closure literal there
     // asks it. So it is written and held to standing among the closures.
-    func written(declaring declared: Int) throws -> Value {
-        guard case let .document(references) = space else {
-            throw ArtifactRefused(
-                "this numbering counts from a link's own rows, and an"
-                    + " artifact carries a document's numbers"
-            )
-        }
+    func written(declaring declared: Int) -> Value? {
+        guard case let .document(references) = space else { return nil }
 
-        let spellings = try references.prefix(opening).map { reference -> Name in
-            guard case let .sent(name) = reference else {
-                throw ArtifactRefused("a numbering counts a closure among its spellings")
-            }
+        let spellings = references.prefix(opening).compactMap { reference -> Name? in
+            guard case let .sent(name) = reference else { return nil }
 
             return name
         }
+
+        guard spellings.count == opening else { return nil }
 
         // How many each declaration wrote, not where each one's begin. Where
         // they begin is one arithmetic over these, and writing it down would
@@ -171,6 +166,12 @@ struct Numbering: Sendable {
             throw ArtifactRefused("a numbering counts spellings its document does not declare")
         }
 
+        // A closure belongs to a declaration, so a count standing over a name
+        // this document does not declare counts closures nobody wrote.
+        guard counts.keys.allSatisfy(Set(own).contains) else {
+            throw ArtifactRefused("a numbering counts closures for a name its document does not declare")
+        }
+
         // Through the door that numbers a document, so that what a reading
         // stands up is a numbering that counting could have reached. A
         // beginning written down is a beginning that can disagree with the one
@@ -195,6 +196,20 @@ struct Numbering: Sendable {
         guard case let .document(references) = space else { return 0 }
 
         return references.count - opening
+    }
+
+    // Which declaration wrote the closure standing at a number of this
+    // document's own, or nothing where no declaration did.
+    //
+    // The closures run in declaration order behind the spellings, so which
+    // one owns a number is where that number falls among the runs. A body
+    // standing up a number outside its own run is a body reaching a closure
+    // some other declaration wrote.
+    func writing(_ written: Int) -> Name? {
+        closing
+            .filter { _, start in start - opening <= written }
+            .max { one, other in one.value < other.value }?
+            .key
     }
 
     // Which of this document's closures a number stands for, or nothing where

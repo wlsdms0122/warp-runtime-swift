@@ -487,11 +487,16 @@ struct Relocating {
         // What a call hands over fills the slots the row it reaches declares.
         // The row is this link's answer and is known here, so the question is
         // asked once rather than at every call the run makes of it.
+        //
+        // Refused as an artifact rather than as a document. A call the
+        // lowering makes takes its arguments from the callee's own slots, so
+        // a document cannot write this wrong; what can is a Compiled whose
+        // parts no longer stand to each other, and that is what an artifact
+        // is whichever way the caller came by one.
         guard call.arguments.count == table[procedure].slots.count else {
-            throw BuildError(
+            throw ArtifactRefused(
                 "a call stands \(call.arguments.count) argument(s) where the"
-                    + " \(table[procedure].slots.count) its callee declares stand",
-                at: standing.place
+                    + " \(table[procedure].slots.count) its callee declares stand"
             )
         }
 

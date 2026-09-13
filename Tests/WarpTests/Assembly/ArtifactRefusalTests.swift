@@ -44,9 +44,8 @@ struct ArtifactRefusalTests {
             try builder.link(compiled, entry: "app.entry", supplying: Supplying(Module.standard))
         }
 
-        #expect(throws: ArtifactRefused.self) {
-            try compiled.map { one in try one.written }
-        }
+        #expect(compiled.allSatisfy { one in one.written == nil } == false)
+        #expect(compiled.contains { one in one.written == nil })
     }
 
     @Test("is refused where a body folds one into a literal")
@@ -65,9 +64,7 @@ struct ArtifactRefusalTests {
         )
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
-            try builder.compile([sut] + Module.standard).map { one in try one.written }
-        }
+        #expect(try builder.compile([sut] + Module.standard).contains { one in one.written == nil })
     }
 
     // MARK: - Public

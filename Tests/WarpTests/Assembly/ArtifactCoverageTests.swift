@@ -30,12 +30,18 @@ struct ArtifactCoverageTests {
     func everyKindSurvives() throws {
         // Given / When. Written, read, and written again.
         let sut = Self.everything
-        let written = try sut.written
+
+        guard let written = sut.written else {
+            Issue.record("an artifact of one of everything is one an artifact can hold")
+
+            return
+        }
+
         let read = try Compiled(written: written)
 
         // Then. One artifact is one writing, and a pair that disagreed about
         // any one kind would part here.
-        #expect(try read.written == written)
+        #expect(read.written == written)
     }
 
     // MARK: - Public
@@ -61,7 +67,13 @@ struct ArtifactCoverageTests {
             ],
             calls: [["a.twelve"], []],
             answers: ["a.eleven": everyLoweredType],
-            numbering: Numbering(imports: ["a.twelve"], declared: ["a.eleven", "a.ten"], closures: ["a.ten": 2]),
+            // The two closures behind the spellings belong to the declaration whose
+            // body stands them up, which is the one with a body.
+            numbering: Numbering(
+                imports: ["a.twelve"],
+                declared: ["a.eleven", "a.ten"],
+                closures: ["a.eleven": 2]
+            ),
             typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
             judging: [(name: "a.thirteen", value: .int(13)), (name: "a.fourteen", value: .string("x"))]
         )

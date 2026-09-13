@@ -353,10 +353,10 @@ struct ArtifactReadingTests {
         // know: which row the call reaches is the link's answer.
         let read = try Compiled(written: stamped(parts))
 
-        // Then. The link refuses it, and no run begins. A link refusal, not an
-        // artifact's: this one asks the same of a document nobody wrote down,
-        // and it says which call it is about.
-        #expect(throws: BuildError.self) {
+        // Then. The link refuses it, and no run begins. An artifact's refusal:
+        // a lowering takes a call's arguments from the callee's own slots, so
+        // no document writes this and only an artifact can hold it.
+        #expect(throws: ArtifactRefused.self) {
             try Builder().link([read], entry: "app.entry", supplying: .none)
         }
     }
@@ -754,6 +754,47 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a closure is counted for a declaration that did not write it")
+    func aClosureCountedForAnother() throws {
+        // Given. Two declarations, one of which writes a closure, with the
+        // count moved onto the other. Every number still stands somewhere, so
+        // nothing is out of range; what moves is which body owns it.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(
+                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                        )
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                ),
+                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(numbering) = parts[10],
+              case let .array(counts) = numbering[2],
+              case let .array(entry) = counts.first,
+              counts.count == 1
+        else {
+            Issue.record("an artifact writes how many closures each declaration wrote")
+
+            return
+        }
+
+        numbering[2] = .array([.array([.string("app.other"), entry[1]])])
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken
@@ -775,7 +816,7 @@ struct ArtifactReadingTests {
         let compiled = try builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
-              case let .array(written) = try mine.written,
+              case let .array(written) = mine.written,
               written.count == 2
         else {
             throw ArtifactMissing()

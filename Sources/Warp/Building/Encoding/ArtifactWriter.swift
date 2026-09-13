@@ -30,7 +30,14 @@ struct ArtifactWriter {
         value.map { held in .array([write(held)]) } ?? .array([])
     }
 
-    func value(of compiled: Compiled) throws -> Value {
+    func value(of compiled: Compiled) -> Value? {
+        // A numbering counting from a link's own rows belongs to no document,
+        // so a caller holding one is a caller that assembled something no
+        // compile makes.
+        guard let numbering = compiled.numbering.written(declaring: compiled.declared.count) else {
+            preconditionFailure("an artifact carries a document's numbers")
+        }
+
         let written: Value = .array([
             document(compiled.document),
             keyed(compiled.types, type),
@@ -44,7 +51,7 @@ struct ArtifactWriter {
             .array(compiled.table.map(judged)),
             .array(compiled.calls.map { called in .array(called.map(name)) }),
             keyed(compiled.answers, lowered),
-            try compiled.numbering.written(declaring: compiled.declared.count),
+            numbering,
             typeNumbering(compiled.typeNumbering),
             .array(compiled.variables.map { entry in
                 .array([name(entry.name), entry.value])
@@ -55,13 +62,8 @@ struct ArtifactWriter {
         // link gave it. Asked of what came out rather than of each place a
         // value is embedded: a folded closure reaches an artifact through a
         // module variable and through a body's literal both, and a third way
-        // would be refused here without this having to hear about it.
-        guard !written.holdsProcedure else {
-            throw ArtifactRefused(
-                "this document settles a procedure into a value, and an"
-                    + " artifact carries values as data"
-            )
-        }
+        // would be answered here without this having to hear about it.
+        guard !written.holdsProcedure else { return nil }
 
         return written
     }

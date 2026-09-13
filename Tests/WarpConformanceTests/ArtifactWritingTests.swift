@@ -32,15 +32,21 @@ struct ArtifactWritingTests {
         let modules = try sut.modules()
         let compiled = try builder.compile(modules)
 
-        // When. Each artifact written to bytes and read back out of them.
-        let bytes = try compiled.map { one in try BinaryEncoding.data(from: try one.written) }
+        // When. Each artifact written to bytes and read back out of them. A
+        // document of the specification's is one an artifact can hold, so one
+        // that answers nothing here is the failure rather than a case to skip.
+        let bytes = try compiled.map { one in
+            guard let written = one.written else { throw ArtifactUnwritable() }
+
+            return try BinaryEncoding.data(from: written)
+        }
         let read = try bytes.map { written in
             try Compiled(written: try BinaryEncoding.value(from: written))
         }
 
         // Then. One artifact is one writing, both ways.
         for (before, after) in zip(bytes, read) {
-            #expect(before == (try? BinaryEncoding.data(from: try after.written)), "\(sut.name)")
+            #expect(before == (try? BinaryEncoding.data(from: after.written ?? .null)), "\(sut.name)")
         }
 
         // And the program those artifacts build answers what the written ones
@@ -54,3 +60,5 @@ struct ArtifactWritingTests {
     // MARK: - Public
     // MARK: - Private
 }
+
+private struct ArtifactUnwritable: Error { }

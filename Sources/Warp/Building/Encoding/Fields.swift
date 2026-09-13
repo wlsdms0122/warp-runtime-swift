@@ -37,7 +37,9 @@ struct Fields {
     // MARK: - Internal
     mutating func next() throws -> Value {
         guard at < written.count else {
-            throw ArtifactRefused("'\(of)' ends before its \(at + 1)th field")
+            throw ArtifactRefused(
+                "'\(of)' writes \(written.count) field(s) and one more was read"
+            )
         }
 
         defer { at += 1 }

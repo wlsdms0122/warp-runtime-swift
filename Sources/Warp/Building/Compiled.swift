@@ -176,7 +176,10 @@ public struct Compiled: Sendable, Declaring {
         // one this type already says rather than the same arithmetic written
         // out again. A door that throws lets nothing past it.
         for row in table {
-            try row.judge(standingIn: frame(ofClosure:), holding: variables.count)
+            try row.judge(
+                standingIn: { number in frame(ofClosure: number, written: row.label) },
+                holding: variables.count
+            )
         }
     }
 
@@ -194,8 +197,13 @@ public struct Compiled: Sendable, Declaring {
     // Which document it belongs to is the first thing written, so an artifact
     // says which text it stands against and a caller holding two of them
     // cannot mistake one for the other.
-    public var written: Value {
-        get throws { .array([.int(Self.format), try ArtifactWriter().value(of: self)]) }
+    // Nothing where this document cannot be one. A document that settles a
+    // procedure into a value holds what an artifact carries as data and a
+    // procedure is not data, so it has no writing: that is a property of the
+    // document and not something that went wrong, and a caller told to build
+    // again would build the same document again.
+    public var written: Value? {
+        ArtifactWriter().value(of: self).map { written in .array([.int(Self.format), written]) }
     }
 
     public init(written value: Value) throws {
@@ -228,10 +236,11 @@ public struct Compiled: Sendable, Declaring {
 
     // MARK: - Private
     // The frame of the row a body's closure number stands, or nothing where
-    // this document numbers no closure there. Which row that is, is this
-    // document's own arithmetic.
-    private func frame(ofClosure number: Int) -> Frame? {
+    // this document numbers no closure there or numbers it for some other
+    // declaration. Which row that is, is this document's own arithmetic.
+    private func frame(ofClosure number: Int, written by: Name) -> Frame? {
         guard let written = numbering.lifted(number), written < lifted.count,
+              numbering.writing(written) == by,
               case let .body(_, frame) = table[lifted.lowerBound + written].implementation
         else {
             return nil
