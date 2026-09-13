@@ -229,7 +229,9 @@ struct Bench {
             guard let rows = headings.first else { continue }
 
             read[rows, default: [:]][label] = Dictionary(
-                zip(headings, cells).compactMap { heading, cell in Double(cell).map { read in (heading, read) } },
+                zip(headings, cells).compactMap { heading, cell in
+                    Double(cell).map { figure in (heading, figure) }
+                },
                 uniquingKeysWith: { first, _ in first }
             )
         }
@@ -312,47 +314,64 @@ struct Bench {
     // which is what happened twice while the name lived in five places.
     private struct Column: Sendable {
         let heading: String
-        let text: @Sendable (Measurement, Double) -> String
-        let moves: (@Sendable (Measurement) -> Double)?
+
+        // What it reads, said once: the cell and the comparison stand on the
+        // same arithmetic rather than on two copies of it.
+        let read: @Sendable (Measurement, Double) -> Double
+
+        let decimals: Int
+
+        // Whether a table compared against is asked for this. A column read
+        // off the loop of this same run has nothing to move from.
+        let moves: Bool
+
+        func text(_ measurement: Measurement, over loop: Double) -> String {
+            String(format: "%.\(decimals)f", read(measurement, loop))
+        }
     }
 
     private static let columns: [Column] = [
         Column(
             heading: "ns/round",
-            text: { measurement, _ in String(format: "%.0f", measurement.perRound) },
-            moves: { measurement in measurement.perRound }
+            read: { measurement, _ in measurement.perRound },
+            decimals: 0,
+            moves: true
         ),
         Column(
             heading: "minus loop",
-            text: { measurement, loop in String(format: "%.0f", measurement.perRound - loop) },
-            moves: nil
+            read: { measurement, loop in measurement.perRound - loop },
+            decimals: 0,
+            moves: false
         ),
         Column(
             heading: "x loop",
-            text: { measurement, loop in
-                String(format: "%.2f", loop > 0 ? measurement.perRound / loop : 0)
-            },
-            moves: nil
+            read: { measurement, loop in loop > 0 ? measurement.perRound / loop : 0 },
+            decimals: 2,
+            moves: false
         ),
         Column(
             heading: "load us",
-            text: { measurement, _ in String(format: "%.0f", measurement.load / 1000) },
-            moves: { measurement in measurement.load / 1000 }
+            read: { measurement, _ in measurement.load / 1000 },
+            decimals: 0,
+            moves: true
         ),
         Column(
             heading: "build us",
-            text: { measurement, _ in String(format: "%.0f", measurement.build / 1000) },
-            moves: { measurement in measurement.build / 1000 }
+            read: { measurement, _ in measurement.build / 1000 },
+            decimals: 0,
+            moves: true
         ),
         Column(
             heading: "baked us",
-            text: { measurement, _ in String(format: "%.0f", measurement.baked / 1000) },
-            moves: { measurement in measurement.baked / 1000 }
+            read: { measurement, _ in measurement.baked / 1000 },
+            decimals: 0,
+            moves: true
         ),
         Column(
             heading: "once us",
-            text: { measurement, _ in String(format: "%.0f", measurement.once / 1000) },
-            moves: { measurement in measurement.once / 1000 }
+            read: { measurement, _ in measurement.once / 1000 },
+            decimals: 0,
+            moves: true
         )
     ]
 
@@ -371,7 +390,7 @@ struct Bench {
     ) -> String {
         let comparison = Comparison(
             read,
-            over: columns.compactMap { column in column.moves == nil ? nil : column.heading },
+            over: columns.filter(\.moves).map(\.heading),
             from: path
         )
         let loop = measured[baseline]?.perRound ?? 0
@@ -382,7 +401,7 @@ struct Bench {
         // Heading, rule and rows all read the same list, so a column is added
         // once and a column that moves is compared because it said it does.
         let headings = columns.flatMap { column in
-            against == nil || column.moves == nil ? [column.heading] : [column.heading, "moved"]
+            against == nil || !column.moves ? [column.heading] : [column.heading, "moved"]
         }
 
         var lines = [
@@ -396,11 +415,14 @@ struct Bench {
             let before = against?[name]
 
             let cells = columns.flatMap { column -> [String] in
-                let read = column.text(measurement, loop)
+                let cell = column.text(measurement, over: loop)
 
-                guard against != nil, let moves = column.moves else { return [read] }
+                guard against != nil, column.moves else { return [cell] }
 
-                return [read, Self.moved(moves(measurement), from: before?[column.heading])]
+                return [
+                    cell,
+                    Self.moved(column.read(measurement, loop), from: before?[column.heading])
+                ]
             }
 
             lines.append("| " + name + " | " + cells.joined(separator: " | ") + " |")
