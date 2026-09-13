@@ -24,6 +24,31 @@ struct ModifierNotationTests {
         #expect(try TypeReader.parse(written) == expected)
     }
 
+    @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
+    func everyMarkRoundTrips(mark: SlotMark) throws {
+        // Given. The reading, the writing and the document's vocabulary all
+        // come off one list, so a mark added to it is asked these questions
+        // without anyone remembering to ask
+        let type = mark.marking(.named("Handle"))
+
+        // When
+        let written = try Writer().value(of: type)
+
+        // Then
+        #expect(try TypeReader.parse("\(mark.rawValue) Handle") == type)
+        #expect(written == .string("\(mark.rawValue) Handle"))
+        #expect(type.slotMark == mark)
+    }
+
+    @Test("a mark inside a mark is refused, whichever two they are", arguments: SlotMark.allCases)
+    func aMarkInsideAMarkIsRefused(mark: SlotMark) throws {
+        for inside in SlotMark.allCases {
+            #expect(throws: TypeFormError.self) {
+                try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle")
+            }
+        }
+    }
+
     @Test("isolated is read in either order and written in one", arguments: [
         ("isolated procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated procedure"),
         ("pure isolated procedure", .procedure(nil, .pure, .isolated), "pure isolated procedure"),

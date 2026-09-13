@@ -339,24 +339,29 @@ extension TypeExpression {
         return false
     }
 
-    // The keyword a slot mark is written as, for the four that stand in front
-    // of the whole type. Empty for everything else, which is not one.
-    public var slotKeyword: String {
+    // The mark this slot wrote in front of the whole type, where it wrote one.
+    //
+    // No `default`: a type nobody thought about has to be a compile error here
+    // rather than an answer of "unmarked", which is what a document writes and
+    // what every reading of a marked slot would then miss.
+    public var slotMark: SlotMark? {
         switch self {
         case .variable:
-            return "var"
+            return .variable
 
         case .inout:
-            return "inout"
+            return .inout
 
         case .consuming:
-            return "consuming"
+            return .consuming
 
         case .borrowing:
-            return "borrowing"
+            return .borrowing
 
-        default:
-            return ""
+        case .any, .never, .null, .bool, .int, .double, .string, .bytes, .number, .ranged,
+            .array, .dictionary, .record, .procedure, .linear, .nullable, .named, .parameter,
+            .reading:
+            return nil
         }
     }
 

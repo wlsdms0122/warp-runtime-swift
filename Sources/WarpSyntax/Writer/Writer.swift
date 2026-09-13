@@ -260,36 +260,26 @@ public struct Writer: Sendable {
 
             return .dictionary(try fields.mapValues(value(of:)))
 
-        // A slot's `var` or `inout` is written in front of the inner type,
-        // whichever form the inner type takes: a bare name, or a procedure
-        // form under its one key. An inline record has no front to write it
-        // on, and a declaration's field is the one place the procedures go anyway.
         // Written under its own key, which is where a record can carry it: the
         // type a declared type is handed on once is usually written inline,
         // and there is no front of a record to write a keyword on.
         case let .linear(inner):
             return .dictionary([try Name(TypeReader.linearKey): try value(of: inner)])
 
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            let keyword = type.slotKeyword
+        // All four marks are written the same way, so the writing is said once
+        // below. They are matched one to a case because the mark a case carries
+        // is what the writing needs and a pattern cannot hand it over.
+        case let .variable(inner):
+            return try value(of: inner, under: .variable)
 
-            switch try value(of: inner) {
-            case let .string(written):
-                return .string("\(keyword) \(written)")
+        case let .inout(inner):
+            return try value(of: inner, under: .inout)
 
-            case let .dictionary(form) where form.count == 1
-                && TypeReader.procedureKeys.contains(form.entries[0].name):
-                return .dictionary([
-                    try Name("\(keyword) \(form.entries[0].name)"): form.entries[0].value
-                ])
+        case let .consuming(inner):
+            return try value(of: inner, under: .consuming)
 
-            default:
-                throw WritingError(
-                    "`\(keyword)` is written in front of a type name, and"
-                        + " \(inner.rendered) is written as a record. Declare the"
-                        + " record under a name and write `\(keyword)` on the name"
-                )
-            }
+        case let .borrowing(inner):
+            return try value(of: inner, under: .borrowing)
 
         case let .procedure(signature, purity, isolation):
             let spelling = TypeReader.procedureSpelling(purity, isolation)
@@ -332,6 +322,30 @@ public struct Writer: Sendable {
     }
 
     // MARK: - Private
+    // A marked slot is written with the mark in front of the inner type,
+    // whichever form that type takes: a bare name, or a procedure form under
+    // its one key. An inline record has no front to write a mark on, and a
+    // declaration's field is the one place a procedure type goes anyway.
+    private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
+        switch try value(of: inner) {
+        case let .string(written):
+            return .string("\(mark.rawValue) \(written)")
+
+        case let .dictionary(form) where form.count == 1
+            && TypeReader.procedureKeys.contains(form.entries[0].name):
+            return .dictionary([
+                try Name("\(mark.rawValue) \(form.entries[0].name)"): form.entries[0].value
+            ])
+
+        default:
+            throw WritingError(
+                "`\(mark.rawValue)` is written in front of a type name, and"
+                    + " \(inner.rendered) is written as a record. Declare the"
+                    + " record under a name and write `\(mark.rawValue)` on the name"
+            )
+        }
+    }
+
     // A signature is written flat into whatever declares it. A procedure and a
     // procedure type both spell it as their own keys rather than nesting it.
     func fields(of signature: Signature) throws -> [Name: Value] {

@@ -109,19 +109,19 @@ public struct TypeReader: Decodable {
         // whole spelling is one. `inout` and `var` stand in front of the whole
         // type, including a trailing `?`, so they are read before anything else
         // is.
-        for (keyword, wrap) in Self.slotKeywords {
-            guard let bare = text.dropPrefixed("\(keyword) ") else { continue }
+        for mark in SlotMark.allCases {
+            guard let bare = text.dropPrefixed("\(mark.rawValue) ") else { continue }
 
             let inner = try parse(String(bare))
 
-            guard inner.slotKeyword.isEmpty else {
+            if let inside = inner.slotMark {
                 throw TypeFormError(
-                    "type '\(text)' writes `\(inner.slotKeyword)` inside"
-                        + " `\(keyword)`. A slot says one thing about what it takes"
+                    "type '\(text)' writes `\(inside.rawValue)` inside"
+                        + " `\(mark.rawValue)`. A slot says one thing about what it takes"
                 )
             }
 
-            return wrap(inner)
+            return mark.marking(inner)
         }
 
         guard let (purity, isolation, rest) = Self.modifiers(of: text) else {
@@ -297,8 +297,8 @@ public struct TypeReader: Decodable {
         return Set(
             (
                 spellings
-                    + slotKeywords.flatMap { slot, _ in
-                        spellings.map { spelling in "\(slot) \(spelling)" }
+                    + SlotMark.allCases.flatMap { mark in
+                        spellings.map { spelling in "\(mark.rawValue) \(spelling)" }
                     }
             )
                 .map(Name.init(normal:))
@@ -314,11 +314,11 @@ public struct TypeReader: Decodable {
         var rest = key
         var wrap: (TypeExpression) -> TypeExpression = { inner in inner }
 
-        for (keyword, wrapping) in slotKeywords {
-            guard let bare = rest.dropPrefixed("\(keyword) ") else { continue }
+        for mark in SlotMark.allCases {
+            guard let bare = rest.dropPrefixed("\(mark.rawValue) ") else { continue }
 
             rest = String(bare)
-            wrap = wrapping
+            wrap = mark.marking
             break
         }
 
@@ -361,14 +361,6 @@ public struct TypeReader: Decodable {
             }
         }
     }
-
-    // The keywords a slot writes about itself, and what each wraps.
-    static let slotKeywords: [(String, @Sendable (TypeExpression) -> TypeExpression)] = [
-        ("inout", { inner in .inout(inner) }),
-        ("var", { inner in .variable(inner) }),
-        ("consuming", { inner in .consuming(inner) }),
-        ("borrowing", { inner in .borrowing(inner) })
-    ]
 
     // A written type's name, said in this notation's own terms: every other
     // refusal a type's spelling earns is a `TypeFormError`.
