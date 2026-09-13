@@ -225,6 +225,43 @@ struct ProcedureSendsTests {
         }
     }
 
+    @Test("a procedure sending to something the callee cannot take is refused at the boundary")
+    func aMistypedReceiverIsRefused() async throws {
+        // Given. `app.mistyping` sends an int to a procedure whose receiver is
+        // declared string
+        let image = try Builder().build(
+            [try Module(procedures: ["entry": Procedure(
+                body: [],
+                result: .call(Call(selector: "app.mistyping"))
+            )])] + [.mistyping, .spoken],
+            entry: "entry"
+        )
+
+        // When / Then. The same refusal a call written in a document earns, and
+        // it names the parameter rather than the answer
+        await #expect(throws: ArgumentError.self) {
+            try await Executor().run(image)
+        }
+    }
+
+    @Test("a procedure sending to one that declares nothing to be sent to is refused")
+    func sendingToOneThatTakesNoReceiverIsRefused() async throws {
+        // Given. A value handed under no name at all: the callee would read it
+        // as a receiver it never declared
+        let image = try Builder().build(
+            [try Module(procedures: ["entry": Procedure(
+                body: [],
+                result: .call(Call(selector: "app.unreceiving"))
+            )])] + [.unreceiving, .picked],
+            entry: "entry"
+        )
+
+        // When / Then
+        await #expect(throws: ExecutionError.self) {
+            try await Executor().run(image)
+        }
+    }
+
     // MARK: - Private
 }
 
@@ -469,6 +506,47 @@ private struct ReceivingEffect: Effect {
     // MARK: - Private
 }
 
+
+// Sends an int to a procedure whose receiver is declared string.
+private struct MistypingEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case speak
+
+        var selector: Name { "app.speak" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.speak, to: .int(7))
+    }
+
+    // MARK: - Private
+}
+
+// Sends to a procedure that declares nothing to be sent to.
+private struct UnreceivingEffect: Effect {
+    typealias Parameters = NoParameters
+
+    enum Imports: Int, ImportSet {
+        case pick
+
+        var selector: Name { "app.pick" }
+    }
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    func run(_ invocation: Invocation<Self>) async throws -> Value {
+        try await invocation.send(.pick, to: .int(7))
+    }
+
+    // MARK: - Private
+}
+
 private extension Module {
     static let sending = try! Module(
         procedures: [
@@ -591,6 +669,38 @@ private extension Module {
             "app.receiving": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(ReceivingEffect())
+            )
+        ]
+    )
+
+    static let spoken = try! Module(
+        procedures: [
+            "app.speak": Procedure(
+                signature: Signature(
+                    receiver: "said",
+                    parameters: ["said": Parameter(type: .string)],
+                    returns: .string
+                ),
+                body: [],
+                result: .reference([.key("said")])
+            )
+        ]
+    )
+
+    static let mistyping = try! Module(
+        procedures: [
+            "app.mistyping": Procedure(
+                signature: Signature(returns: .string),
+                implementation: .effect(MistypingEffect())
+            )
+        ]
+    )
+
+    static let unreceiving = try! Module(
+        procedures: [
+            "app.unreceiving": Procedure(
+                signature: Signature(returns: .int),
+                implementation: .effect(UnreceivingEffect())
             )
         ]
     )

@@ -941,17 +941,18 @@ public struct Executor: Sendable {
         at trace: Trace
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
-        let settled = try settled(callee, to: receiver, sending: sending, offering: values)
+        let sentTo = try received(receiver, of: callee)
+        let settled = try settled(callee, to: sentTo, sending: sending, offering: values)
 
         switch callee.implementation {
         case .native(.query):
-            return try answer(callee, for: receiver, with: settled)
+            return try answer(callee, for: sentTo, with: settled)
 
         case let .native(.effect(effect)):
             return try await run(
                 effect,
                 of: callee,
-                receiver: sent(to: callee, receiver: receiver, arguments: settled),
+                receiver: sent(to: callee, receiver: sentTo, arguments: settled),
                 settled: settled,
                 holds: [],
                 trace: trace.appending(.procedure(callee.label.spelling))
@@ -960,8 +961,8 @@ public struct Executor: Sendable {
         case let .body(body, frame):
             var inner = try activation(of: callee, in: frame)
 
-            if let position = callee.receiverPosition, let receiver {
-                inner.cells[frame.parameters[position]] = .value(receiver)
+            if let position = callee.receiverPosition, let sentTo {
+                inner.cells[frame.parameters[position]] = .value(sentTo)
             }
 
             for (position, value) in settled.values.enumerated() {
@@ -997,11 +998,34 @@ public struct Executor: Sendable {
             )
         }
 
+        let sentTo = try received(receiver, of: callee)
+
         return try answer(
             callee,
-            for: receiver,
-            with: try settled(callee, to: receiver, sending: sending, offering: values)
+            for: sentTo,
+            with: try settled(callee, to: sentTo, sending: sending, offering: values)
         )
+    }
+
+    // The receiver of a send, over the callee's boundary. A call written in a
+    // document goes through `received(_:of:handed:in:)`; a send a procedure
+    // declared comes through here, and the two hold a value that does not fit
+    // to the same thing.
+    //
+    // Whether a send carries one at all is the sending body's, so a procedure
+    // declaring nothing to be sent to is told rather than handed a value it
+    // has no name for.
+    private func received(_ receiver: Value?, of callee: Linked) throws -> Value? {
+        guard let receiver else { return nil }
+
+        guard callee.receiverPosition != nil else {
+            throw ExecutionError(
+                "'\(callee.label)' is sent to something, and it declares nothing to be"
+                    + " sent to"
+            )
+        }
+
+        return try callee.settling(receiver: receiver)
     }
 
     // A send's arguments over the callee's boundary. The build read where each
