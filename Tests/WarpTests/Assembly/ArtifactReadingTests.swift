@@ -26,7 +26,7 @@ struct ArtifactReadingTests {
     @Test("is refused where a count is written below zero")
     func aCountBelowZero() throws {
         // Given. A real artifact whose numbering opens at a number below zero.
-        guard case var .array(parts) = try written(), case var .array(numbering) = parts[10] else {
+        guard case var .array(parts) = try parts(), case var .array(numbering) = parts[10] else {
             Issue.record("an artifact writes its numbering as a part")
 
             return
@@ -37,16 +37,17 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array(parts))
+            try Compiled(written: stamped(parts))
         }
     }
 
     @Test("is refused where a name keys two entries")
     func aNameWrittenTwice() throws {
         // Given. A real artifact whose declared types list repeats one entry.
-        let written = try written()
-
-        guard case var .array(parts) = written, case let .array(types) = parts[1], let first = types.first else {
+        guard case var .array(parts) = try parts(),
+              case let .array(types) = parts[1],
+              let first = types.first
+        else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -56,14 +57,14 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array(parts))
+            try Compiled(written: stamped(parts))
         }
     }
 
     @Test("is refused where a part is written short")
     func aPartWrittenShort() throws {
         // Given. A real artifact with its last part dropped.
-        guard case let .array(parts) = try written() else {
+        guard case let .array(parts) = try parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -71,20 +72,20 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array(parts.dropLast()))
+            try Compiled(written: stamped(Array(parts.dropLast())))
         }
     }
 
     @Test("is refused where a part is written long")
     func aPartWrittenLong() throws {
-        guard case let .array(parts) = try written() else {
+        guard case let .array(parts) = try parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
         }
 
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array(parts + [.null]))
+            try Compiled(written: stamped(parts + [.null]))
         }
     }
 
@@ -93,7 +94,7 @@ struct ArtifactReadingTests {
         // Given. A real artifact whose type numbering lists one name twice. The
         // numbering answers by position, so a swallowed name moves every number
         // after it onto some other declaration.
-        guard case var .array(parts) = try written(),
+        guard case var .array(parts) = try parts(),
               case var .array(numbering) = parts[11],
               case let .array(types) = numbering[0],
               let first = types.first
@@ -108,7 +109,7 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array(parts))
+            try Compiled(written: stamped(parts))
         }
     }
 
@@ -127,7 +128,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try artifact(of: sut),
+        guard case var .array(parts) = try parts(of: sut),
               case var .array(table) = parts[7],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -148,14 +149,32 @@ struct ArtifactReadingTests {
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
-            try Compiled(written: .array(parts))
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where the format it is laid out as is not this one")
+    func aFormatThisDoesNotRead() throws {
+        // Given. A real artifact stamped with a format this does not lay out.
+        guard case let .array(parts) = try parts() else {
+            Issue.record("an artifact is written as a list of parts")
+
+            return
+        }
+
+        // When / Then. The fields behind the stamp are this reading's own, so
+        // what refuses is the stamp and nothing further in.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: .array([.int(Compiled.format + 1), .array(parts)]))
         }
     }
 
     // MARK: - Public
     // MARK: - Private
-    private func written() throws -> Value {
-        try artifact(of: try Module(
+    // The parts an artifact writes, with the format it is stamped with taken
+    // off, so that a test bends what it means to bend.
+    private func parts() throws -> Value {
+        try parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],
             procedures: [
                 "app.entry": Procedure(
@@ -167,15 +186,22 @@ struct ArtifactReadingTests {
         ))
     }
 
-    private func artifact(of module: Module) throws -> Value {
+    private func parts(of module: Module) throws -> Value {
         let compiled = try builder.compile([module] + Module.standard)
 
-        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }) else {
-            throw ConformanceMissing()
+        guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
+              case let .array(written) = try mine.written,
+              written.count == 2
+        else {
+            throw ArtifactMissing()
         }
 
-        return try mine.written
+        return written[1]
+    }
+
+    private func stamped(_ parts: [Value]) -> Value {
+        .array([.int(Compiled.format), .array(parts)])
     }
 }
 
-private struct ConformanceMissing: Error { }
+private struct ArtifactMissing: Error { }

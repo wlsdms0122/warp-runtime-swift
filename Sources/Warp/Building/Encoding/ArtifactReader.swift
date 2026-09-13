@@ -10,10 +10,10 @@ import Foundation
 // A value read back as the artifact it was written from.
 //
 // The order of the fields is the whole of the agreement with the writing
-// beside it, so this holds no names and asks the value for none. What that
-// agreement rests on is that the two are compiled together: an artifact a
-// different runtime wrote is refused where its identity is checked, before
-// any of this runs.
+// beside it, so this holds no names and asks the value for none. What holds
+// the two together is that they are compiled as a pair, and what tells a
+// reading that a writing was laid out by some other pair is the format
+// `Compiled` stamps before handing anything here.
 struct ArtifactReader {
     // MARK: - Initializer
     init() { }

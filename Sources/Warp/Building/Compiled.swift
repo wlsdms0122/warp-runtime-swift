@@ -113,18 +113,35 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Public
+    // How an artifact is laid out, which is not how the language is versioned.
+    // What a program needs of its runtime is said in the document; this says
+    // only where the fields of an artifact stand, and it moves when they move
+    // and for no other reason.
+    static let format = 1
+
     // This artifact said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.
     //
-    // Which runtime wrote it is not in here. An artifact is read back by the
-    // runtime that wrote it, and a caller keeping one beside a document it no
-    // longer matches is why what this is kept under says so.
+    // Which document it belongs to is not in here. An artifact stands against
+    // the text it was compiled from, and which text that is, is what a caller
+    // keeping one has it filed under.
     public var written: Value {
-        get throws { try ArtifactWriter().value(of: self) }
+        get throws { .array([.int(Self.format), try ArtifactWriter().value(of: self)]) }
     }
 
     public init(written value: Value) throws {
-        self = try ArtifactReader().compiled(from: value)
+        var fields = try Fields(value, of: "artifact")
+        let format = try fields.count()
+
+        guard format == Self.format else {
+            throw ArtifactRefused(
+                "the artifact is laid out as format \(format), and this reads format \(Self.format)"
+            )
+        }
+
+        self = try ArtifactReader().compiled(from: try fields.next())
+
+        try fields.end()
     }
 }
