@@ -49,10 +49,8 @@ struct Judged: Sendable {
     let implementation: Implementation
 
     // MARK: - Initializer
-    // What of a row its document settled. What is left behind is a reading of
-    // this against a table, which any table gives again.
-    // Each part stated. What a reading of an artifact has: the row was
-    // settled once and written down, so nothing here is settled again.
+    // Each part stated. What a reading of an artifact has: the row was settled
+    // once and written down, so nothing here is settled again.
     init(
         label: Name,
         signature: Signature,
@@ -71,6 +69,8 @@ struct Judged: Sendable {
         self.implementation = implementation
     }
 
+    // What of a row its document settled. What is left behind is a reading of
+    // this against a table, which any table gives again.
     init(_ row: Linked) {
         self.label = row.label
         self.signature = row.signature

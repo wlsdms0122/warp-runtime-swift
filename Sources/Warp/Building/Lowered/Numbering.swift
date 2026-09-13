@@ -126,7 +126,6 @@ struct Numbering: Sendable {
         opening = 0
     }
 
-
     // MARK: - Internal
     // What this counts from, said as a value, so an artifact carries the
     // numbering its bodies were lowered against. Written here because what it
@@ -159,29 +158,6 @@ struct Numbering: Sendable {
         opening = try fields.count()
 
         try fields.end()
-    }
-
-    private static func written(_ places: [Name: Int]) -> Value {
-        .array(places.keys.sorted().map { name in
-            .array([.string(name.spelling), .int(places[name]!)])
-        })
-    }
-
-    private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
-        guard case let .array(written) = value else {
-            throw ArtifactRefused("'\(part)' is not written as a list")
-        }
-
-        return try written.reduce(into: [Name: Int]()) { places, entry in
-            var place = try Fields(entry, of: part)
-            let name = Name(normal: try place.text())
-
-            guard places.updateValue(try place.count(), forKey: name) == nil else {
-                throw ArtifactRefused("'\(part)' writes '\(name)' twice")
-            }
-
-            try place.end()
-        }
     }
 
     // MARK: - Public
@@ -274,6 +250,29 @@ struct Numbering: Sendable {
     private enum Space: Sendable {
         case document([Reference])
         case table
+    }
+
+    private static func written(_ places: [Name: Int]) -> Value {
+        .array(places.keys.sorted().map { name in
+            .array([.string(name.spelling), .int(places[name]!)])
+        })
+    }
+
+    private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
+        guard case let .array(written) = value else {
+            throw ArtifactRefused("'\(part)' is not written as a list")
+        }
+
+        return try written.reduce(into: [Name: Int]()) { places, entry in
+            var place = try Fields(entry, of: part)
+            let name = Name(normal: try place.text())
+
+            guard places.updateValue(try place.count(), forKey: name) == nil else {
+                throw ArtifactRefused("'\(part)' writes '\(name)' twice")
+            }
+
+            try place.end()
+        }
     }
 
     private static func placed(_ names: [Name], from start: Int) -> [Name: Int] {

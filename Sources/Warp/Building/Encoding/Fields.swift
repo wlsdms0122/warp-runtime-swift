@@ -41,66 +41,31 @@ struct Fields {
     }
 
     mutating func integer() throws -> Int {
-        guard case let .int(integer) = try next() else {
-            throw ArtifactRefused("'\(of)' writes something other than a number where one stands")
-        }
-
-        return integer
+        try Fields.integer(try next(), of: of)
     }
 
     mutating func double() throws -> Double {
-        switch try next() {
-        case let .double(double):
-            return double
-
-        case let .int(integer):
-            return Double(integer)
-
-        default:
-            throw ArtifactRefused("'\(of)' writes something other than a number where one stands")
-        }
+        try Fields.double(try next(), of: of)
     }
 
-    // A number that counts or stands somewhere: a slot, a row, a position, a
-    // size. Below zero is refused here because further in it is not a number
-    // that is wrong but an array subscripted out of itself, and the sentence
-    // there would be about something else.
     mutating func count() throws -> Int {
-        let read = try integer()
-
-        guard read >= 0 else {
-            throw ArtifactRefused("'\(of)' writes \(read) where a count stands")
-        }
-
-        return read
+        try Fields.count(try next(), of: of)
     }
 
     mutating func text() throws -> String {
-        guard case let .string(text) = try next() else {
-            throw ArtifactRefused("'\(of)' writes something other than a text where one stands")
-        }
-
-        return text
+        try Fields.text(try next(), of: of)
     }
 
     mutating func flag() throws -> Bool {
-        guard case let .bool(flag) = try next() else {
-            throw ArtifactRefused("'\(of)' writes something other than a yes or no where one stands")
-        }
-
-        return flag
+        try Fields.flag(try next(), of: of)
     }
 
     mutating func name() throws -> Name {
-        Name(normal: try text())
+        try Fields.name(try next(), of: of)
     }
 
     mutating func bytes() throws -> [UInt8] {
-        guard case let .bytes(bytes) = try next() else {
-            throw ArtifactRefused("'\(of)' writes something other than bytes where they stand")
-        }
-
-        return bytes
+        try Fields.bytes(try next(), of: of)
     }
 
     // The next field as a written list, and the one in hand. Two ways to reach
@@ -133,6 +98,73 @@ extension Fields {
     // What a writing lays down for a field that may hold nothing.
     static func maybe<T>(_ value: T?, _ write: (T) -> Value) -> Value {
         value.map { held in .array([write(held)]) } ?? .array([])
+    }
+
+    // What one written value is, said once. The cursor reads the next field
+    // and a list reads each of its elements, and both ask these: one judgement
+    // to a kind, so one damaged writing is answered the same way whichever way
+    // it was reached.
+    static func integer(_ value: Value, of part: String) throws -> Int {
+        guard case let .int(integer) = value else {
+            throw ArtifactRefused("'\(part)' writes something other than a number where one stands")
+        }
+
+        return integer
+    }
+
+    // A number that counts or stands somewhere: a slot, a row, a position, a
+    // size. Below zero is refused here because further in it is not a number
+    // that is wrong but an array subscripted out of itself, and the sentence
+    // there would be about something else.
+    static func count(_ value: Value, of part: String) throws -> Int {
+        let read = try integer(value, of: part)
+
+        guard read >= 0 else {
+            throw ArtifactRefused("'\(part)' writes \(read) where a count stands")
+        }
+
+        return read
+    }
+
+    static func double(_ value: Value, of part: String) throws -> Double {
+        switch value {
+        case let .double(double):
+            return double
+
+        case let .int(integer):
+            return Double(integer)
+
+        default:
+            throw ArtifactRefused("'\(part)' writes something other than a number where one stands")
+        }
+    }
+
+    static func text(_ value: Value, of part: String) throws -> String {
+        guard case let .string(text) = value else {
+            throw ArtifactRefused("'\(part)' writes something other than a text where one stands")
+        }
+
+        return text
+    }
+
+    static func name(_ value: Value, of part: String) throws -> Name {
+        Name(normal: try text(value, of: part))
+    }
+
+    static func flag(_ value: Value, of part: String) throws -> Bool {
+        guard case let .bool(flag) = value else {
+            throw ArtifactRefused("'\(part)' writes something other than a yes or no where one stands")
+        }
+
+        return flag
+    }
+
+    static func bytes(_ value: Value, of part: String) throws -> [UInt8] {
+        guard case let .bytes(bytes) = value else {
+            throw ArtifactRefused("'\(part)' writes something other than bytes where they stand")
+        }
+
+        return bytes
     }
 
     // Each element of a written list, read the same way. The reading of one

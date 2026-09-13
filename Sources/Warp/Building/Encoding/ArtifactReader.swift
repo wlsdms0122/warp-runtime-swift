@@ -92,11 +92,7 @@ struct ArtifactReader {
     }
 
     private func name(_ value: Value) throws -> Name {
-        guard case let .string(spelling) = value else {
-            throw ArtifactRefused("a name is not written as a text")
-        }
-
-        return Name(normal: spelling)
+        try Fields.name(value, of: "a name")
     }
 
     private func document(_ value: Value) throws -> Place.Document {
@@ -227,45 +223,23 @@ private extension ArtifactReader {
     }
 
     func counted(_ value: Value) throws -> Int {
-        let read = try integer(value)
-
-        guard read >= 0 else {
-            throw ArtifactRefused("a count is written as \(read)")
-        }
-
-        return read
+        try Fields.count(value, of: "a count")
     }
 
     func integer(_ value: Value) throws -> Int {
-        guard case let .int(integer) = value else {
-            throw ArtifactRefused("a number is not written as one")
-        }
-
-        return integer
+        try Fields.integer(value, of: "a number")
     }
 
     func fraction(_ value: Value) throws -> Double {
-        switch value {
-        case let .double(double): return double
-        case let .int(integer): return Double(integer)
-        default: throw ArtifactRefused("a fraction is not written as a number")
-        }
+        try Fields.double(value, of: "a fraction")
     }
 
     func text(_ value: Value) throws -> String {
-        guard case let .string(text) = value else {
-            throw ArtifactRefused("a text is not written as one")
-        }
-
-        return text
+        try Fields.text(value, of: "a text")
     }
 
     func flag(_ value: Value) throws -> Bool {
-        guard case let .bool(flag) = value else {
-            throw ArtifactRefused("a yes or no is not written as one")
-        }
-
-        return flag
+        try Fields.flag(value, of: "a yes or no")
     }
 
     func segment(_ value: Value) throws -> PathSegment {
