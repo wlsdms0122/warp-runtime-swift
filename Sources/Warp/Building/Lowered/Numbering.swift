@@ -181,8 +181,11 @@ struct Numbering: Sendable {
 
         return try written.reduce(into: [Name: Int]()) { places, entry in
             var place = try Fields(entry, of: part)
+            let name = Name(normal: try place.text())
 
-            places[Name(normal: try place.text())] = try place.count()
+            guard places.updateValue(try place.count(), forKey: name) == nil else {
+                throw ArtifactRefused("'\(part)' writes '\(name)' twice")
+            }
 
             try place.end()
         }

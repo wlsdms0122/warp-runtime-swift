@@ -63,15 +63,28 @@ struct ArtifactReader {
         of part: String,
         _ read: (Value) throws -> T
     ) throws -> [Name: T] {
-        try list(value, of: part) { entry in
+        try gathered(try list(value, of: part) { entry in
             var fields = try Fields(entry, of: part)
             let held = (Name(normal: try fields.text()), try read(fields.next()))
 
             try fields.end()
 
             return held
+        }, of: part)
+    }
+
+    // A list a key stands over, gathered into what a key answers. A key written
+    // twice is refused rather than settled by which came last: what a writing
+    // of this holds is a table, and a table has one answer to a key.
+    private func gathered<Key: Hashable, T>(
+        _ entries: [(Key, T)],
+        of part: String
+    ) throws -> [Key: T] {
+        try entries.reduce(into: [Key: T]()) { gathered, entry in
+            guard gathered.updateValue(entry.1, forKey: entry.0) == nil else {
+                throw ArtifactRefused("'\(part)' writes one key twice")
+            }
         }
-        .reduce(into: [Name: T]()) { entries, entry in entries[entry.0] = entry.1 }
     }
 
     private func name(_ value: Value) throws -> Name {
@@ -97,7 +110,7 @@ struct ArtifactReader {
     }
 
     private func leaned(_ value: Value) throws -> [Claim: Place] {
-        try list(value, of: "leaned") { entry in
+        try gathered(try list(value, of: "leaned") { entry in
             var fields = try Fields(entry, of: "leaned")
             let claim = Claim(type: try name(fields.next()), contract: try name(fields.next()))
             let where_ = try place(fields.next())
@@ -105,8 +118,7 @@ struct ArtifactReader {
             try fields.end()
 
             return (claim, where_)
-        }
-        .reduce(into: [Claim: Place]()) { leaned, entry in leaned[entry.0] = entry.1 }
+        }, of: "leaned")
     }
 
     private func variable(_ value: Value) throws -> (name: Name, value: Value) {
