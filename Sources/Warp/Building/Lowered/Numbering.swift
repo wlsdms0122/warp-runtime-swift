@@ -125,13 +125,23 @@ struct Numbering: Sendable {
 
             return name
         }
-        let own = spellings.suffix(declared)
+
+        // How many each declaration wrote, not where each one's begin. Where
+        // they begin is one arithmetic over these, and writing it down would
+        // make a numbering whose closures overlap something an artifact can
+        // hold.
+        let begins = closing.sorted { one, other in one.value < other.value }
+        let ends = begins.dropFirst().map(\.value) + [references.count]
+        let counts = zip(begins, ends).map { begin, end in
+            (name: begin.key, count: end - begin.value)
+        }
 
         return .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
-            .array(own.map { name in .string(name.spelling) }),
-            Self.written(closing),
-            .int(references.count - opening)
+            .array(spellings.suffix(declared).map { name in .string(name.spelling) }),
+            .array(counts.sorted { one, other in one.name < other.name }.map { written in
+                .array([.string(written.name.spelling), .int(written.count)])
+            })
         ])
     }
 
@@ -153,8 +163,7 @@ struct Numbering: Sendable {
         let own = try Fields.ordered(fields.next(), of: "numbering declarations") { written in
             try Fields.name(written, of: "numbering declarations")
         }
-        let closing = try Self.read(try fields.next(), of: "numbering closures")
-        let closures = try fields.count()
+        let counts = try Self.read(try fields.next(), of: "numbering closures")
 
         try fields.end()
 
@@ -162,23 +171,11 @@ struct Numbering: Sendable {
             throw ArtifactRefused("a numbering counts spellings its document does not declare")
         }
 
-        let spellings = sent + own
-
-        // Where each declaration's closures begin stands among the closures
-        // and nowhere else. A start outside them is a body reaching a row this
-        // numbering never gave.
-        guard closing.values.allSatisfy({ start in
-            start >= spellings.count && start < spellings.count + closures
-        }) else {
-            throw ArtifactRefused("a numbering opens a declaration's closures outside its own")
-        }
-
-        space = .document(
-            spellings.map(Reference.sent) + (0 ..< closures).map(Reference.closure)
-        )
-        called = Self.placed(spellings, from: 0)
-        self.closing = closing
-        opening = spellings.count
+        // Through the door that numbers a document, so that what a reading
+        // stands up is a numbering that counting could have reached. A
+        // beginning written down is a beginning that can disagree with the one
+        // beside it; a count is not.
+        self.init(imports: Set(sent), declared: own, closures: counts)
     }
 
     // MARK: - Public

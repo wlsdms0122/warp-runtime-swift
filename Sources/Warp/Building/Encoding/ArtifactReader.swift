@@ -852,8 +852,7 @@ private extension ArtifactReader {
             contract: try name(fields.next()),
             procedure: try name(fields.next()),
             receiver: try operation(fields.next()),
-            arguments: try keyed(fields.next(), of: "arguments", argument),
-            calls: try keyed(fields.next(), of: "calls", callOperation)
+            arguments: try keyed(fields.next(), of: "arguments", argument)
         )
 
         try fields.end()

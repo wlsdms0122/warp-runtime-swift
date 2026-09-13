@@ -180,20 +180,6 @@ public struct Compiled: Sendable, Declaring {
         }
     }
 
-    // MARK: - Internal
-    // The frame of the row a body's closure number stands, or nothing where
-    // this document numbers no closure there. Which row that is, is this
-    // document's own arithmetic.
-    private func frame(ofClosure number: Int) -> Frame? {
-        guard let written = numbering.lifted(number), written < lifted.count,
-              case let .body(_, frame) = table[lifted.lowerBound + written].implementation
-        else {
-            return nil
-        }
-
-        return frame
-    }
-
     // MARK: - Public
     // How an artifact is laid out, which is not how the language is versioned.
     // What a program needs of its runtime is said in the document; this says
@@ -238,5 +224,19 @@ public struct Compiled: Sendable, Declaring {
         }
 
         self = try ArtifactReader().compiled(from: written)
+    }
+
+    // MARK: - Private
+    // The frame of the row a body's closure number stands, or nothing where
+    // this document numbers no closure there. Which row that is, is this
+    // document's own arithmetic.
+    private func frame(ofClosure number: Int) -> Frame? {
+        guard let written = numbering.lifted(number), written < lifted.count,
+              case let .body(_, frame) = table[lifted.lowerBound + written].implementation
+        else {
+            return nil
+        }
+
+        return frame
     }
 }

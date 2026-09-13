@@ -628,13 +628,15 @@ private extension ArtifactWriter {
         ])
     }
 
+    // Without the calls beside it. Which row answers a contract is the link's
+    // answer and an artifact stands before one, so writing them down would be
+    // writing a fact this document does not hold.
     func dispatchOperation(_ dispatch: DispatchOperation) -> Value {
         .array([
             name(dispatch.contract),
             name(dispatch.procedure),
             operation(dispatch.receiver),
-            keyed(dispatch.arguments, argument),
-            keyed(dispatch.calls, callOperation)
+            keyed(dispatch.arguments, argument)
         ])
     }
 

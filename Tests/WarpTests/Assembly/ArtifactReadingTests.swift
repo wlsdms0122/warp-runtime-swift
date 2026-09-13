@@ -25,18 +25,23 @@ struct ArtifactReadingTests {
     // MARK: - Test
     @Test("is refused where a count is written below zero")
     func aCountBelowZero() throws {
-        // Given. A real artifact whose numbering counts its closures below zero.
+        // Given. A real artifact whose frame counts its slots below zero.
         guard case var .array(parts) = try parts(),
-              case var .array(numbering) = parts[10],
-              numbering.count == 4
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(frame) = implementation[2]
         else {
-            Issue.record("an artifact writes its numbering as a part")
+            Issue.record("an artifact writes a row's frame beside its body")
 
             return
         }
 
-        numbering[3] = .int(-1)
-        parts[10] = .array(numbering)
+        frame[0] = .int(-1)
+        implementation[2] = .array(frame)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {

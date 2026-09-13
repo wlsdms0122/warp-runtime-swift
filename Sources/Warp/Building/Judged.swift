@@ -169,14 +169,14 @@ struct Judged: Sendable {
         }
 
         for closure in standing.closures {
-            guard let standing = frames(closure.number) else {
+            guard let stands = frames(closure.number) else {
                 throw ArtifactRefused(
                     "a body stands up a closure at \(closure.number), where this"
                         + " document numbers none that a body stands"
                 )
             }
 
-            guard closure.inner.allSatisfy({ slot in slot < standing.size }) else {
+            guard closure.inner.allSatisfy({ slot in slot < stands.size }) else {
                 throw ArtifactRefused(
                     "a closure takes something into a slot its own frame does not hold"
                 )
