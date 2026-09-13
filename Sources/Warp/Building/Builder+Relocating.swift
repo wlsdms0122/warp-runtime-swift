@@ -482,8 +482,20 @@ struct Relocating {
         _ call: CallOperation,
         in standing: Standing
     ) throws -> CallOperation {
-        CallOperation(
-            procedure: try row(call.procedure, in: standing),
+        let procedure = try row(call.procedure, in: standing)
+
+        // What a call hands over fills the slots the row it reaches declares.
+        // The row is this link's answer and is known here, so the question is
+        // asked once rather than at every call the run makes of it.
+        guard call.arguments.count == table[procedure].slots.count else {
+            throw ArtifactRefused(
+                "a call stands \(call.arguments.count) argument(s) where the"
+                    + " \(table[procedure].slots.count) its callee declares stand"
+            )
+        }
+
+        return CallOperation(
+            procedure: procedure,
             receiver: try call.receiver.map { receiver in try filled(receiver, in: standing) },
             arguments: try call.arguments.map { argument in
                 try argument.map { operation in try filled(operation, in: standing) }

@@ -300,6 +300,60 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused at the link where a call stands more arguments than its callee takes")
+    func aCallStandingTooMany() throws {
+        // Given. A document whose body calls one of its own declarations, with
+        // one argument added to what the call stands. The row it reaches is the
+        // link's answer, so the link is where this is asked.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "app.twice", arguments: ["n": .literal(.int(2))]))
+                ),
+                "app.twice": Procedure(
+                    signature: Signature(parameters: ["n": Parameter(type: .int)], returns: .int),
+                    body: [],
+                    result: reference("n")
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(table) = parts[7],
+              case var .array(row) = table[0],
+              case var .array(implementation) = row[6],
+              case var .array(body) = implementation[1],
+              case var .array(result) = body[1],
+              case var .array(operation) = result[0],
+              case var .array(call) = operation[1],
+              case let .array(arguments) = call[2]
+        else {
+            Issue.record("an artifact writes a body whose result is a call")
+
+            return
+        }
+
+        call[2] = .array(arguments + [.array([])])
+        operation[1] = .array(call)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts[7] = .array(table)
+
+        // When. The artifact reads, because nothing here is the reading's to
+        // know: which row the call reaches is the link's answer.
+        let read = try Compiled(written: stamped(parts))
+
+        // Then. The link refuses it, and no run begins.
+        #expect(throws: ArtifactRefused.self) {
+            try Builder().link([read], entry: "app.entry", supplying: .none)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

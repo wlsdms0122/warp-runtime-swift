@@ -257,15 +257,6 @@ public struct Signature: Sendable, Equatable {
         // and a null it offered is a value, an element of the walked
         // collection and not a blank, so only a position it never offered is
         // missing.
-        // One for every slot, because what follows reads them by standing at
-        // each in turn. A list shorter than the slots is an array reached past
-        // its end rather than a call that hands over too little.
-        guard given.count == slots.count else {
-            throw ArgumentError(
-                "parameters: \(slots.count) declared, and \(given.count) stand here"
-            )
-        }
-
         var missing: [Name] = []
 
         for (position, slot) in slots.enumerated() where !skipping(position) {
