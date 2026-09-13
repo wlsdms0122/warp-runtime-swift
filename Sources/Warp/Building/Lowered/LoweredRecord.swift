@@ -22,6 +22,19 @@ struct LoweredRecord: Sendable, Equatable {
     }
 
     // MARK: - Initializer
+    // The same, where the two were read apart and the pairing is what has to be
+    // true. The inner door is reached with a pairing this proved, which is what
+    // makes its promise a fact rather than an assumption.
+    init(layout: Layout, judging fields: [LoweredType]) throws {
+        guard layout.fields.count == fields.count else {
+            throw ValueRefused(
+                "a record names \(layout.fields.count) field(s) and holds \(fields.count)"
+            )
+        }
+
+        self.init(layout: layout, fields: fields)
+    }
+
     init(layout: Layout, fields: [LoweredType]) {
         precondition(
             layout.fields.count == fields.count,

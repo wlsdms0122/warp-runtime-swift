@@ -94,9 +94,30 @@ struct LoweredTypeNumbering: Sendable {
     let memberships: [Name]
 
     // MARK: - Initializer
+    // The lists as they were numbered, where they were read rather than
+    // gathered. What a number means is a position in these, so a list that
+    // repeats a name is one whose every later number stands somewhere else.
+    init(ordered types: [Name], memberships: [Name]) throws {
+        self.types = try Self.judged(types, of: "types")
+        self.memberships = try Self.judged(memberships, of: "memberships")
+    }
+
     init(types: Set<Name>, memberships: Set<Name>) {
         self.types = types.sorted()
         self.memberships = memberships.sorted()
+    }
+
+    // MARK: - Internal
+    private static func judged(_ names: [Name], of part: String) throws -> [Name] {
+        guard names == names.sorted() else {
+            throw ValueRefused("a numbering's \(part) are not in name order")
+        }
+
+        if let repeated = zip(names, names.dropFirst()).first(where: { one, other in one == other }) {
+            throw ValueRefused("a numbering names '\(repeated.0)' twice among its \(part)")
+        }
+
+        return names
     }
 
     // MARK: - Public

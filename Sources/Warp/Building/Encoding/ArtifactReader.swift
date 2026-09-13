@@ -79,6 +79,18 @@ struct ArtifactReader {
         }
     }
 
+    // A reading that goes through a door the value layer judges. What that
+    // door refuses is refused of these bytes, said in the words this reading
+    // answers in: a caller holding a cache is told to build again, not to go
+    // looking at a document.
+    private func judged<T>(_ read: () throws -> T) throws -> T {
+        do {
+            return try read()
+        } catch let refused as ValueRefused {
+            throw ArtifactRefused(refused.message)
+        }
+    }
+
     private func name(_ value: Value) throws -> Name {
         guard case let .string(spelling) = value else {
             throw ArtifactRefused("a name is not written as a text")
@@ -461,13 +473,7 @@ private extension ArtifactReader {
         // its names is asked of bytes the way it is asked of a document. The
         // inner door is reached with what that one ordered, which is what makes
         // its promise true rather than assumed.
-        let ordered: Layout
-
-        do {
-            ordered = try Layout(fields: written)
-        } catch let refused as ValueRefused {
-            throw ArtifactRefused(refused.message)
-        }
+        let ordered = try judged { try Layout(fields: written) }
 
         guard let named else { return ordered }
 
@@ -553,10 +559,13 @@ private extension ArtifactReader {
 
     func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var fields = try Fields(value, of: "record")
-        let read = LoweredRecord(
-            layout: try layout(fields.next()),
-            fields: try Fields.list(fields.next(), of: "record", lowered)
-        )
+        let held = try layout(fields.next())
+        let read = try judged {
+            try LoweredRecord(
+                layout: held,
+                judging: try Fields.list(fields.next(), of: "record", lowered)
+            )
+        }
 
         try fields.end()
 
@@ -565,10 +574,9 @@ private extension ArtifactReader {
 
     func typeNumbering(_ value: Value) throws -> LoweredTypeNumbering {
         var fields = try Fields(value, of: "type numbering")
-        let read = LoweredTypeNumbering(
-            types: Set(try Fields.list(fields.next(), of: "type numbering", name)),
-            memberships: Set(try Fields.list(fields.next(), of: "type numbering", name))
-        )
+        let types = try Fields.list(fields.next(), of: "type numbering", name)
+        let memberships = try Fields.list(fields.next(), of: "type numbering", name)
+        let read = try judged { try LoweredTypeNumbering(ordered: types, memberships: memberships) }
 
         try fields.end()
 
@@ -828,10 +836,13 @@ private extension ArtifactReader {
 
     func recordOperation(_ value: Value) throws -> RecordOperation {
         var fields = try Fields(value, of: "record")
-        let read = RecordOperation(
-            layout: try layout(fields.next()),
-            fields: try Fields.list(fields.next(), of: "record", operation)
-        )
+        let held = try layout(fields.next())
+        let read = try judged {
+            try RecordOperation(
+                layout: held,
+                judging: try Fields.list(fields.next(), of: "record", operation)
+            )
+        }
 
         try fields.end()
 

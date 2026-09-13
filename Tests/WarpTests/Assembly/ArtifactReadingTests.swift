@@ -88,6 +88,30 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a numbering names one type twice")
+    func aNumberingThatRepeats() throws {
+        // Given. A real artifact whose type numbering lists one name twice. The
+        // numbering answers by position, so a swallowed name moves every number
+        // after it onto some other declaration.
+        guard case var .array(parts) = try written(),
+              case var .array(numbering) = parts[11],
+              case let .array(types) = numbering[0],
+              let first = types.first
+        else {
+            Issue.record("an artifact writes its type numbering as a part")
+
+            return
+        }
+
+        numbering[0] = .array(types + [first])
+        parts[11] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: .array(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     private func written() throws -> Value {
@@ -95,9 +119,9 @@ struct ArtifactReadingTests {
             types: ["app.Point": .record(["x": .int, "y": .int])],
             procedures: [
                 "app.entry": Procedure(
-                    signature: Signature(parameters: ["n": Parameter(type: .int)], returns: .int),
+                    signature: Signature(parameters: ["p": Parameter(type: .any)], returns: .named("app.Point")),
                     body: [],
-                    result: reference("n")
+                    result: .cast(reference("p"), as: .named("app.Point"), optional: false)
                 )
             ]
         )

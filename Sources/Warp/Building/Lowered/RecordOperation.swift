@@ -17,6 +17,19 @@ struct RecordOperation: Sendable {
     let fields: [Operation]
 
     // MARK: - Initializer
+    // The same, where the two were read apart and the pairing is what has to be
+    // true. The inner door is reached with a pairing this proved, which is what
+    // makes its promise a fact rather than an assumption.
+    init(layout: Layout, judging fields: [Operation]) throws {
+        guard layout.fields.count == fields.count else {
+            throw ValueRefused(
+                "a record literal names \(layout.fields.count) field(s) and holds \(fields.count)"
+            )
+        }
+
+        self.init(layout: layout, fields: fields)
+    }
+
     init(layout: Layout, fields: [Operation]) {
         precondition(
             layout.fields.count == fields.count,
