@@ -70,17 +70,6 @@ enum SlotMark: String, CaseIterable, Sendable {
         return nil
     }
 
-    // The spelling with every mark taken off the front of it.
-    static func unmarked(_ text: String) -> String {
-        var bare = text
-
-        while let (_, rest) = leading(of: bare) {
-            bare = rest
-        }
-
-        return bare
-    }
-
     // The type a slot marked this way holds.
     func marking(_ inner: TypeExpression) -> TypeExpression {
         switch self {

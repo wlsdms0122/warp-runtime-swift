@@ -57,50 +57,56 @@ struct ModifierNotationTests {
         #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == form)
     }
 
-    @Test("a mark is not written inside a mark either", arguments: SlotMark.allCases)
-    func aMarkIsNotWrittenInsideAMark(mark: SlotMark) throws {
-        // Given. What the reading refuses the writing refuses too: a key
-        // carrying two marks comes back as a record named after them
-        for inside in SlotMark.allCases {
-            #expect(throws: WritingError.self) {
-                try Writer().value(of: mark.marking(inside.marking(.named("Handle"))))
-            }
+    @Test(
+        "a mark is not written inside a mark either",
+        arguments: SlotMark.allCases, SlotMark.allCases
+    )
+    func aMarkIsNotWrittenInsideAMark(mark: SlotMark, inside: SlotMark) throws {
+        // Given. What the reading refuses the writing refuses too, in both the
+        // forms a marked type is written in
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: mark.marking(inside.marking(.named("Handle"))))
+        }
 
-            #expect(throws: WritingError.self) {
-                try Writer().value(of: mark.marking(inside.marking(.procedure(nil))))
-            }
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: mark.marking(inside.marking(.procedure(nil))))
         }
     }
 
-    @Test("a mark inside a mark is refused, whichever two they are", arguments: SlotMark.allCases)
-    func aMarkInsideAMarkIsRefused(mark: SlotMark) throws {
-        for inside in SlotMark.allCases {
-            #expect(throws: TypeFormError.self) {
-                try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle")
-            }
+    @Test(
+        "a mark inside a mark is refused, whichever two they are",
+        arguments: SlotMark.allCases, SlotMark.allCases
+    )
+    func aMarkInsideAMarkIsRefused(mark: SlotMark, inside: SlotMark) throws {
+        #expect(throws: TypeFormError.self) {
+            try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle")
         }
     }
 
-    @Test("a procedure form's key carrying two marks is refused", arguments: SlotMark.allCases)
-    func twoMarksOnAProcedureKeyAreRefused(mark: SlotMark) throws {
-        // Given. The key is the one place a mark is not written in front of a
-        // spelling, so the rule the spelling is read by has to be written here
-        // too. Without it the form comes back as a record named after the key
-        for inside in SlotMark.allCases {
-            let written = Value.dictionary([
-                try Name("\(mark.rawValue) \(inside.rawValue) procedure"): .dictionary(["returns": "int"])
-            ])
+    @Test(
+        "a key carrying two marks is a field's name, whichever two they are",
+        arguments: SlotMark.allCases, SlotMark.allCases
+    )
+    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) throws {
+        // Given. A slot writes one mark, so a key carrying two is not a
+        // procedure form's, and a key that is not one is a field's name like
+        // any other. The writing never makes one: a marked type holding a
+        // marked type is refused before it gets here
+        let key = try Name("\(mark.rawValue) \(inside.rawValue) procedure")
+        let type = TypeExpression.record([key: .record(["returns": .int])])
 
-            #expect(throws: ReadingError.self) {
-                try Loader().load([
-                    "warp": 1,
-                    "imports": [],
-                    "procedures": [
-                        "entry": ["parameters": ["f": ["type": written]], "result": Value.null]
-                    ]
-                ])
-            }
-        }
+        // When
+        let written = try Writer().value(of: type)
+        let read = try Loader().load([
+            "warp": 1,
+            "imports": [],
+            "procedures": [
+                "entry": ["parameters": ["f": ["type": written]], "result": Value.null]
+            ]
+        ])
+
+        // Then
+        #expect(read.procedures["entry"]?.signature.parameters["f"]?.type == type)
     }
 
     @Test("a marked type is not written under a `?`", arguments: SlotMark.allCases)
@@ -143,7 +149,7 @@ struct ModifierNotationTests {
         // Given. The writer asks the reading itself rather than a list beside
         // it, so a key the reading refuses is refused here too rather than
         // written and then unreadable
-        for spelling in ["var inout procedure", "procedure", "var procedure", "linear"] {
+        for spelling in ["procedure", "var procedure", "pure isolated procedure", "linear"] {
             let type = TypeExpression.record([try Name(spelling): .int])
 
             #expect(throws: WritingError.self) {

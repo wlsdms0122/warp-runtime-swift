@@ -264,10 +264,10 @@ public struct Writer: Sendable {
         // field is a key the reading takes some other way would come back as
         // that other thing, or not come back at all.
         case let .record(fields):
-            guard fields.count != 1 || !TypeReader.readsPastARecord(fields.keys.first!) else {
+            guard fields.count != 1 || !TypeReader.reserves(fields.keys.first!) else {
                 throw WritingError(
                     "a record whose only field is '\(fields.keys.first!)' is read as"
-                        + " something other than a record, and a document has no way"
+                        + " the form that key belongs to, and a document has no way"
                         + " to tell the two apart"
                 )
             }

@@ -224,9 +224,8 @@ public struct TypeReader: Decodable {
         }
     }
 
-    // The names this notation answers with a type of its own, and the keys that
-    // make a mapping a procedure rather than a record. Both are read here and
-    // both decide what a document *cannot* say, so writing one asks for them.
+    // The names this notation answers with a type of its own. They decide what
+    // a document cannot say, so writing one asks for them.
     public static var builtinNames: Set<Name> { Set(builtins.keys) }
 
     // Whether the reading takes this key as a procedure form's. Asked of the
@@ -234,49 +233,30 @@ public struct TypeReader: Decodable {
     // parser drift and what they disagree about is a document one of them
     // writes and the other refuses.
     public static func readsAsAProcedure(_ key: Name) -> Bool {
-        ((try? procedureKeywords(of: key.spelling)) ?? nil) != nil
+        procedureKeywords(of: key.spelling) != nil
     }
 
-    // Whether the reading takes this key as anything but a record's field
-    // name, the keys it refuses outright included: a record written under one
-    // would come back as something else, or not come back.
-    public static func readsPastARecord(_ key: Name) -> Bool {
-        do {
-            return try procedureKeywords(of: key.spelling) != nil || key.spelling == linearKey
-        } catch {
-            return true
-        }
+    // Whether the reading keeps this key for a form of its own. A record whose
+    // only field is one would come back as that other form.
+    public static func reserves(_ key: Name) -> Bool {
+        readsAsAProcedure(key) || key.spelling == linearKey
     }
 
     // What a procedure form's key says, read front to back: a slot's mark if one
     // is written, the modifiers in either order, and `procedure`. Nil where the
-    // key is not a procedure form's.
+    // key is not a procedure form's, which a record's field name is.
+    //
+    // One mark, because that is what a slot writes. A key carrying two is not
+    // this form's and so is a field name, the way any other key that is not
+    // this form's is: what the spelling of a whole type refuses, a key that
+    // never claimed to be one is not asked.
     //
     // The mark comes back as itself rather than as something that applies it,
     // so that what was read stays a value the caller can ask about.
     static func procedureKeywords(
         of key: String
-    ) throws -> (mark: SlotMark?, purity: Purity, isolation: Isolation)? {
+    ) -> (mark: SlotMark?, purity: Purity, isolation: Isolation)? {
         let (mark, rest) = SlotMark.leading(of: key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
-
-        // The same rule the spelling of a whole type is read by, on the key a
-        // procedure form is written under. Without it a second mark leaves the
-        // key unread and the form comes back as a record named after it.
-        //
-        // Asked only of a key that is otherwise a procedure form's. Any other
-        // key is a record's field name, and a field is named whatever a
-        // document named it.
-        if
-            let mark,
-            let inside = SlotMark.leading(of: rest)?.mark,
-            let (_, _, head) = modifiers(of: SlotMark.unmarked(rest)),
-            head == "procedure"
-        {
-            throw TypeFormError(
-                "type '\(key)' writes `\(inside.rawValue)` inside `\(mark.rawValue)`."
-                    + " \(SlotMark.saysOneThing)"
-            )
-        }
 
         guard
             let (purity, isolation, head) = modifiers(of: rest),
@@ -353,7 +333,7 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            let (mark, purity, isolation) = try procedureKeywords(of: key.stringValue)
+            let (mark, purity, isolation) = procedureKeywords(of: key.stringValue)
         {
             let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
             let written = TypeExpression.procedure(signature.signature, purity, isolation)
