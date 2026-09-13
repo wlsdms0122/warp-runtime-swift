@@ -18,7 +18,10 @@ import Foundation
 // Every list a name keys is written in name order, so one artifact is one
 // value and one value is one writing of bytes.
 struct ArtifactWriter {
-    // MARK: - Property
+    // MARK: - Initializer
+    init() { }
+
+    // MARK: - Internal
     // What a field that may hold nothing is laid down as: a list of none or
     // one, so a value that is itself null is told from no value at all. The
     // reading of it is `Fields.maybe`, and the two are one rule said from
@@ -27,8 +30,6 @@ struct ArtifactWriter {
         value.map { held in .array([write(held)]) } ?? .array([])
     }
 
-    // MARK: - Initializer
-    init() { }
 
     // MARK: - Internal
     func value(of compiled: Compiled) throws -> Value {

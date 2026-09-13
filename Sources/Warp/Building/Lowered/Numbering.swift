@@ -133,13 +133,22 @@ struct Numbering: Sendable {
         }
     }
 
-    init(written value: Value) throws {
+    // Read back beside the spellings the document declares, because what a
+    // body's number reaches is answered from here rather than from those: the
+    // declarations stand at the end of this list, and a list whose tail is
+    // some other module's names sends every self call somewhere else while
+    // every other part of the artifact stays in step.
+    init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
         let spellings = try fields.list { written in try Fields.name(written, of: "numbering") }
         let closing = try Self.read(try fields.next(), of: "numbering closures")
         let closures = try fields.count()
 
         try fields.end()
+
+        guard spellings.suffix(declared.count) == ArraySlice(declared) else {
+            throw ArtifactRefused("a numbering counts spellings its document does not declare")
+        }
 
         // Where each declaration's closures begin stands among the closures
         // and nowhere else. A start outside them is a body reaching a row this
@@ -277,7 +286,7 @@ struct Numbering: Sendable {
 
         return try written.reduce(into: [Name: Int]()) { places, entry in
             var place = try Fields(entry, of: part)
-            let name = Name(normal: try place.text())
+            let name = try place.name()
 
             guard places.updateValue(try place.count(), forKey: name) == nil else {
                 throw ArtifactRefused("'\(part)' writes '\(name)' twice")

@@ -25,13 +25,7 @@ extension Argument {
     // What a contract's call hands over is one of these, so a walk that asks
     // an operation has to ask these too or it stops at the dot.
     func reads(_ slots: Range<Int>) -> Bool {
-        switch self {
-        case let .value(operation):
-            return operation.reads(slots)
-
-        case let .reference(address):
-            return address.reads(slots)
-        }
+        read.reads(slots)
     }
 
     // The argument read as a value, for a slot that does not take it in place.

@@ -137,8 +137,18 @@ extension Fields {
         return text
     }
 
+    // Through the door every spelling from outside comes through. An artifact
+    // is this runtime's own writing, but the bytes it was kept in are not: a
+    // spelling that is not in normal form makes two names that read alike and
+    // compare apart, and every order and lookup built on them goes quiet.
     static func name(_ value: Value, of part: String) throws -> Name {
-        Name(normal: try text(value, of: part))
+        let spelling = try text(value, of: part)
+
+        do {
+            return try Name(spelling)
+        } catch let refused as NameRefused {
+            throw ArtifactRefused(refused.message)
+        }
     }
 
     static func flag(_ value: Value, of part: String) throws -> Bool {

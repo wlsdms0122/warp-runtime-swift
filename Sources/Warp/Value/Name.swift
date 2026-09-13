@@ -131,12 +131,6 @@ public struct Name: Sendable, Hashable, Comparable {
         Name.compared(lhs.spelling, rhs.spelling) < 0
     }
 
-    // Whether names stand in order, none of them twice. The two are one
-    // question: a list that never goes back is a list that never repeats.
-    static func ordered(_ names: [Name]) -> Bool {
-        zip(names, names.dropFirst()).allSatisfy { one, other in one < other }
-    }
-
     // Two names are one name by their bytes, for the same reason.
     public static func == (lhs: Name, rhs: Name) -> Bool {
         lhs.digest == rhs.digest && Name.compared(lhs.spelling, rhs.spelling) == 0

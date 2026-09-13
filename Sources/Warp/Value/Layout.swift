@@ -48,7 +48,7 @@ public struct Layout: Sendable, Hashable {
     // rather than something to put right. A reading that sorted them would
     // pair them with values it read somewhere else.
     init(name: Name?, judging fields: [Name]) throws {
-        guard Name.ordered(fields) else {
+        guard fields.ordered else {
             throw ValueRefused("a layout's fields are not in name order")
         }
 
@@ -57,7 +57,7 @@ public struct Layout: Sendable, Hashable {
 
     // The inner door: names already in order, none repeating.
     init(name: Name?, ordered fields: [Name]) {
-        precondition(Name.ordered(fields), "a layout's fields are ordered by name")
+        precondition(fields.ordered, "a layout's fields are ordered by name")
 
         self.name = name
         self.fields = fields

@@ -22,24 +22,35 @@ struct ArtifactReader {
     func compiled(from value: Value) throws -> Compiled {
         var fields = try Fields(value, of: "artifact")
 
+        let document = try document(fields.next())
+        let types = try keyed(fields.next(), of: "types", expression)
+        let constraints = try keyed(fields.next(), of: "constraints") { written in
+            try Fields.list(written, of: "constraints", expression)
+        }
+        let contracts = try keyed(fields.next(), of: "contracts") { written in
+            try keyed(written, of: "contract", signature)
+        }
+        let claims = try keyed(fields.next(), of: "claims") { written in
+            Set(try Fields.list(written, of: "claims", name))
+        }
+        let leaned = try leaned(fields.next())
+
+        // The spellings this document declares, read before the parts that
+        // stand on them: what a body's number reaches is the numbering's
+        // answer, and what the numbering may say is this list.
+        let declared = try fields.list(name)
         let read = try Compiled(
-            document: try document(fields.next()),
-            types: try keyed(fields.next(), of: "types", expression),
-            constraints: try keyed(fields.next(), of: "constraints") { written in
-                try Fields.list(written, of: "constraints", expression)
-            },
-            contracts: try keyed(fields.next(), of: "contracts") { written in
-                try keyed(written, of: "contract", signature)
-            },
-            claims: try keyed(fields.next(), of: "claims") { written in
-                Set(try Fields.list(written, of: "claims", name))
-            },
-            leaned: try leaned(fields.next()),
-            declared: try fields.list(name),
+            document: document,
+            types: types,
+            constraints: constraints,
+            contracts: contracts,
+            claims: claims,
+            leaned: leaned,
+            declared: declared,
             table: try fields.list(judged),
             calls: try fields.list { written in try Fields.list(written, of: "calls", name) },
             answers: try keyed(fields.next(), of: "answers", lowered),
-            numbering: try Numbering(written: fields.next()),
+            numbering: try Numbering(written: fields.next(), declaring: declared),
             typeNumbering: try typeNumbering(fields.next()),
             judging: try fields.list(variable)
         )
@@ -57,7 +68,7 @@ struct ArtifactReader {
     ) throws -> [Name: T] {
         try gathered(try Fields.list(value, of: part) { entry in
             var fields = try Fields(entry, of: part)
-            let held = (Name(normal: try fields.text()), try read(fields.next()))
+            let held = (try fields.name(), try read(fields.next()))
 
             try fields.end()
 
@@ -65,17 +76,21 @@ struct ArtifactReader {
         }, of: part)
     }
 
-    // A list a key stands over, gathered into what a key answers. A key written
-    // twice is refused rather than settled by which came last: what a writing
-    // of this holds is a table, and a table has one answer to a key.
-    private func gathered<Key: Hashable, T>(
+    // A list a name stands over, gathered into what a name answers. The
+    // writing puts them in name order, and out of order is refused rather than
+    // taken: one artifact is one writing of bytes, and a reading that took any
+    // order would let two writings say one artifact. A name written twice is
+    // the same refusal, since a list in order never goes back.
+    private func gathered<Key: Hashable & Comparable, T>(
         _ entries: [(Key, T)],
         of part: String
     ) throws -> [Key: T] {
-        try entries.reduce(into: [Key: T]()) { gathered, entry in
-            guard gathered.updateValue(entry.1, forKey: entry.0) == nil else {
-                throw ArtifactRefused("'\(part)' writes one key twice")
-            }
+        guard entries.map(\.0).ordered else {
+            throw ArtifactRefused("'\(part)' writes its names out of order, or one of them twice")
+        }
+
+        return entries.reduce(into: [Key: T]()) { gathered, entry in
+            gathered[entry.0] = entry.1
         }
     }
 

@@ -356,6 +356,78 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a name is not in normal form")
+    func aNameNotInNormalForm() throws {
+        // Given. A real artifact whose declared spelling is written in the
+        // decomposed form. It reads alike and compares apart, so every order
+        // and every lookup built on it would go quiet.
+        guard case var .array(parts) = try parts(), case let .array(declared) = parts[6], !declared.isEmpty else {
+            Issue.record("an artifact writes its declared spellings as a part")
+
+            return
+        }
+
+        parts[6] = .array([.string("app.entr\u{0079}\u{0301}")])
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a numbering counts a spelling the document does not declare")
+    func aNumberingOffItsDocument() throws {
+        // Given. A real artifact whose numbering ends on some other spelling.
+        // The declarations stand at the end of that list, so every self call
+        // would reach whatever the link answers that name with.
+        guard case var .array(parts) = try parts(),
+              case var .array(numbering) = parts[10],
+              case let .array(spellings) = numbering[0],
+              !spellings.isEmpty
+        else {
+            Issue.record("an artifact writes its numbering as a part")
+
+            return
+        }
+
+        numbering[0] = .array(spellings.dropLast() + [.string("std.math.add")])
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
+    @Test("is refused where a name keys a list out of order")
+    func keysOutOfOrder() throws {
+        // Given. A real artifact whose declared types stand in some other
+        // order. The values read alike either way, so what breaks is quieter:
+        // one artifact would have two writings and a cache key two answers.
+        let sut = try Module(
+            types: ["app.One": .record(["x": .int]), "app.Two": .record(["y": .int])],
+            procedures: [
+                "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case let .array(types) = parts[1],
+              types.count == 2
+        else {
+            Issue.record("an artifact writes its declared types in name order")
+
+            return
+        }
+
+        parts[1] = .array(types.reversed())
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts))
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

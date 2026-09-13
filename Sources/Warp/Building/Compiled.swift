@@ -225,9 +225,9 @@ public struct Compiled: Sendable, Declaring {
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.
     //
-    // Which document it belongs to is not in here. An artifact stands against
-    // the text it was compiled from, and which text that is, is what a caller
-    // keeping one has it filed under.
+    // Which document it belongs to is the first thing written, so an artifact
+    // says which text it stands against and a caller holding two of them
+    // cannot mistake one for the other.
     public var written: Value {
         get throws { .array([.int(Self.format), try ArtifactWriter().value(of: self)]) }
     }
