@@ -349,11 +349,8 @@ public struct Writer: Sendable {
         // slot says one thing about what it takes. Both marks would land in one
         // key, and a key the reading cannot take apart comes back as a record
         // whose field is named after them.
-        if let inside = SlotMark.marked(inner) {
-            throw WritingError(
-                "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
-                    + " \(SlotMark.saysOneThing)"
-            )
+        if let refusal = SlotMark.refusal(marking: inner, under: mark) {
+            throw WritingError(refusal)
         }
 
         switch try value(of: inner) {

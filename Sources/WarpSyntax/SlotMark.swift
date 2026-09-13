@@ -24,10 +24,6 @@ enum SlotMark: String, CaseIterable, Sendable {
     case borrowing
 
     // MARK: - Property
-    // Why two marks on one slot refuse, said once for the reading and the
-    // writing alike.
-    static let saysOneThing = "A slot says one thing about what it takes"
-
     // MARK: - Initializer
     // MARK: - Public
     // The mark a type was written under, where it was written under one.
@@ -56,27 +52,37 @@ enum SlotMark: String, CaseIterable, Sendable {
         }
     }
 
+    // Why a mark may not stand in front of this type, and nothing where it
+    // may. One statement, so the reading and the writing refuse the same thing
+    // in the same words and a place that asks later asks the same question.
+    static func refusal(marking inner: TypeExpression, under mark: SlotMark) -> String? {
+        guard let inside = marked(inner) else { return nil }
+
+        return "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
+            + " A slot says one thing about what it takes"
+    }
+
     // The mark a spelling begins with, and the spelling under it. The other
     // half of `marked(_:)`: one asks a type that has been made, this asks text
     // that has not been read yet, and a mark stands in front of a whole
     // spelling so the question is the same one twice.
     static func leading(of text: String) -> (mark: SlotMark, rest: String)? {
         for mark in allCases {
-            let front = mark.marking("")
+            guard text.hasPrefix(mark.front) else { continue }
 
-            guard text.hasPrefix(front) else { continue }
-
-            return (mark, String(text.dropFirst(front.count)))
+            return (mark, String(text.dropFirst(mark.front.count)))
         }
 
         return nil
     }
 
-    // The mark as it stands in front of a spelling, the space included. The
-    // reading takes this off the front and the writing puts it there, so the
-    // shape of a marked spelling is said once.
+    // The mark as it stands in front of a spelling. The reading takes this off
+    // the front and the writing puts it there, so the shape of a marked
+    // spelling is said once.
+    var front: String { "\(rawValue) " }
+
     func marking(_ spelling: String) -> String {
-        "\(rawValue) \(spelling)"
+        "\(front)\(spelling)"
     }
 
     // The type a slot marked this way holds.

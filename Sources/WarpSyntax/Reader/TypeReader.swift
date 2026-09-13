@@ -60,11 +60,8 @@ public struct TypeReader: Decodable {
         if let (mark, bare) = SlotMark.leading(of: text) {
             let inner = try parse(bare)
 
-            if let inside = SlotMark.marked(inner) {
-                throw TypeFormError(
-                    "type '\(text)' writes `\(inside.rawValue)` inside"
-                        + " `\(mark.rawValue)`. \(SlotMark.saysOneThing)"
-                )
+            if let refusal = SlotMark.refusal(marking: inner, under: mark) {
+                throw TypeFormError(refusal)
             }
 
             return mark.marking(inner)
