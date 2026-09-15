@@ -29,20 +29,9 @@ import Foundation
 // implementation gets this right by getting the wire right. This type is here
 // so that a place can carry one without the language learning how bytes are
 // written.
-public struct Identity: Sendable, Equatable, Hashable {
+public struct Identity: ContentAddress {
     // MARK: - Property
     public let bytes: [UInt8]
-
-    // How the identity reads where a person sees one: the first few bytes, the
-    // way every content-addressed thing is quoted in prose. Enough to tell two
-    // documents apart by eye and never enough to be mistaken for the whole.
-    public var short: String {
-        String(rendered.prefix(12))
-    }
-
-    public var rendered: String {
-        bytes.map { byte in String(format: "%02x", byte) }.joined()
-    }
 
     // MARK: - Initializer
     // What makes an identity worth having is that it is derived and never
@@ -60,8 +49,4 @@ public struct Identity: Sendable, Equatable, Hashable {
 
     // MARK: - Public
     // MARK: - Private
-}
-
-extension Identity: CustomStringConvertible {
-    public var description: String { short }
 }

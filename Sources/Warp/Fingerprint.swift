@@ -25,19 +25,9 @@ import Foundation
 // answer is about bytes, and an artifact already has exactly one writing of
 // them. This type is here so that an artifact can carry one without the
 // language learning how bytes are written.
-public struct Fingerprint: Sendable, Equatable, Hashable, Comparable {
+public struct Fingerprint: ContentAddress, Comparable {
     // MARK: - Property
     public let bytes: [UInt8]
-
-    // How it reads where a person sees one: the first few bytes, the way every
-    // content-addressed thing is quoted in prose.
-    public var short: String {
-        String(rendered.prefix(12))
-    }
-
-    public var rendered: String {
-        bytes.map { byte in String(format: "%02x", byte) }.joined()
-    }
 
     // MARK: - Initializer
     public init(_ bytes: [UInt8]) {
