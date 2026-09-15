@@ -19,7 +19,11 @@ import WarpStandard
 @Suite("An artifact whose writing is not one")
 struct ArtifactReadingTests {
     // MARK: - Property
-    private let builder = Builder()
+    // A stand-in for what a caller works out from the bytes, which this
+    // package does not write. What these ask is what a reading refuses, so any
+    // answer stands as long as an artifact compiled against another one can be
+    // written down at all.
+    private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
 
     // MARK: - Initializer
     // MARK: - Test
@@ -27,7 +31,7 @@ struct ArtifactReadingTests {
     func aCountBelowZero() throws {
         // Given. A real artifact whose frame counts its slots below zero.
         guard case var .array(parts) = try parts(),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2]
@@ -41,7 +45,7 @@ struct ArtifactReadingTests {
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -53,7 +57,7 @@ struct ArtifactReadingTests {
     func aNameWrittenTwice() throws {
         // Given. A real artifact whose declared types list repeats one entry.
         guard case var .array(parts) = try parts(),
-              case let .array(types) = parts[1],
+              case let .array(types) = parts[2],
               let first = types.first
         else {
             Issue.record("an artifact is written as a list of parts")
@@ -61,7 +65,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        parts[1] = .array(types + [first])
+        parts[2] = .array(types + [first])
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -103,7 +107,7 @@ struct ArtifactReadingTests {
         // numbering answers by position, so a swallowed name moves every number
         // after it onto some other declaration.
         guard case var .array(parts) = try parts(),
-              case var .array(numbering) = parts[11],
+              case var .array(numbering) = parts[12],
               case let .array(types) = numbering[0],
               let first = types.first
         else {
@@ -113,7 +117,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[0] = .array(types + [first])
-        parts[11] = .array(numbering)
+        parts[12] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -137,7 +141,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2],
@@ -153,7 +157,7 @@ struct ArtifactReadingTests {
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -192,7 +196,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(answers) = parts[9],
+              case var .array(answers) = parts[10],
               case var .array(entry) = answers[0],
               case var .array(answer) = entry[1],
               case var .array(record) = answer[1],
@@ -212,7 +216,7 @@ struct ArtifactReadingTests {
         answer[1] = .array(record)
         entry[1] = .array(answer)
         answers[0] = .array(entry)
-        parts[9] = .array(answers)
+        parts[10] = .array(answers)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -223,7 +227,7 @@ struct ArtifactReadingTests {
     @Test("is refused where a frame names fewer slots than it holds")
     func aFrameNamingTooFew() throws {
         guard case var .array(parts) = try parts(),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2],
@@ -239,7 +243,7 @@ struct ArtifactReadingTests {
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         #expect(throws: ArtifactRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
@@ -248,13 +252,13 @@ struct ArtifactReadingTests {
 
     @Test("is refused where a table is shorter than what it stands for")
     func aTableTooShort() throws {
-        guard case var .array(parts) = try parts(), case let .array(table) = parts[7], !table.isEmpty else {
+        guard case var .array(parts) = try parts(), case let .array(table) = parts[8], !table.isEmpty else {
             Issue.record("an artifact writes its rows as a part")
 
             return
         }
 
-        parts[7] = .array(table.dropLast())
+        parts[8] = .array(table.dropLast())
 
         #expect(throws: ArtifactRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
@@ -263,13 +267,13 @@ struct ArtifactReadingTests {
 
     @Test("is refused where a call list stands for no declaration")
     func callsThatStandForNothing() throws {
-        guard case var .array(parts) = try parts(), case let .array(calls) = parts[8] else {
+        guard case var .array(parts) = try parts(), case let .array(calls) = parts[9] else {
             Issue.record("an artifact writes what each declaration calls as a part")
 
             return
         }
 
-        parts[8] = .array(calls + [.array([])])
+        parts[9] = .array(calls + [.array([])])
 
         #expect(throws: ArtifactRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
@@ -289,7 +293,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case let .array(declared) = parts[6],
+              case let .array(declared) = parts[7],
               declared.count == 2
         else {
             Issue.record("an artifact writes its declared spellings as a part")
@@ -297,7 +301,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        parts[6] = .array(declared.reversed())
+        parts[7] = .array(declared.reversed())
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -326,7 +330,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -347,7 +351,7 @@ struct ArtifactReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then. The row the call reaches is this document's own, so the
         // reading answers it and no link is needed.
@@ -361,13 +365,13 @@ struct ArtifactReadingTests {
         // Given. A real artifact whose declared spelling is written in the
         // decomposed form. It reads alike and compares apart, so every order
         // and every lookup built on it would go quiet.
-        guard case var .array(parts) = try parts(), case let .array(declared) = parts[6], !declared.isEmpty else {
+        guard case var .array(parts) = try parts(), case let .array(declared) = parts[7], !declared.isEmpty else {
             Issue.record("an artifact writes its declared spellings as a part")
 
             return
         }
 
-        parts[6] = .array([.string("app.entr\u{0079}\u{0301}")])
+        parts[7] = .array([.string("app.entr\u{0079}\u{0301}")])
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -381,7 +385,7 @@ struct ArtifactReadingTests {
         // The declarations stand at the end of that list, so every self call
         // would reach whatever the link answers that name with.
         guard case var .array(parts) = try parts(),
-              case var .array(numbering) = parts[10],
+              case var .array(numbering) = parts[11],
               case let .array(spellings) = numbering[1],
               !spellings.isEmpty
         else {
@@ -391,7 +395,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[1] = .array(spellings.dropLast() + [.string("std.math.add")])
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -412,7 +416,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case let .array(types) = parts[1],
+              case let .array(types) = parts[2],
               types.count == 2
         else {
             Issue.record("an artifact writes its declared types in name order")
@@ -420,7 +424,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        parts[1] = .array(types.reversed())
+        parts[2] = .array(types.reversed())
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -456,7 +460,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -477,7 +481,7 @@ struct ArtifactReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then. Refused, rather than reaching the run that reads it.
         #expect(throws: ArtifactRefused.self) {
@@ -491,7 +495,7 @@ struct ArtifactReadingTests {
         // A body's calls are in its own code, so a list here is a fact about
         // some other kind of row.
         guard case var .array(parts) = try parts(),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case let .array(sends) = row[5],
               sends.isEmpty
@@ -503,7 +507,7 @@ struct ArtifactReadingTests {
 
         row[5] = .array([.array([.int(0), .array([])])])
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -547,7 +551,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(claims) = parts[4],
+              case var .array(claims) = parts[5],
               case var .array(entry) = claims[0],
               case let .array(contracts) = entry[1],
               contracts.count == 2
@@ -559,7 +563,7 @@ struct ArtifactReadingTests {
 
         entry[1] = .array(contracts.reversed())
         claims[0] = .array(entry)
-        parts[4] = .array(claims)
+        parts[5] = .array(claims)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -593,7 +597,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10],
+              case var .array(numbering) = parts[11],
               case let .array(closing) = numbering[2],
               closing.count == 2
         else {
@@ -603,7 +607,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[2] = .array(closing.reversed())
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -636,7 +640,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -662,7 +666,7 @@ struct ArtifactReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When. Nothing here is the reading's to know, so it reads.
         let read = try Compiled(written: stamped(parts), of: nil)
@@ -698,7 +702,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10],
+              case var .array(numbering) = parts[11],
               case let .array(sent) = numbering[0],
               sent.count == 2
         else {
@@ -708,7 +712,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[0] = .array(sent.reversed())
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -741,7 +745,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        parts[12] = .array([.array([.string(settled.name.spelling), settled.value])])
+        parts[13] = .array([.array([.string(settled.name.spelling), settled.value])])
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -771,7 +775,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10],
+              case var .array(numbering) = parts[11],
               case let .array(counts) = numbering[2],
               case let .array(entry) = counts.first,
               counts.count == 1
@@ -782,7 +786,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[2] = .array([.array([.string("app.other"), entry[1]])])
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -812,7 +816,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10]
+              case var .array(numbering) = parts[11]
         else {
             Issue.record("an artifact writes how many closures each declaration wrote")
 
@@ -823,7 +827,7 @@ struct ArtifactReadingTests {
             .array([.string("app.entry"), .int(.max - 1)]),
             .array([.string("app.other"), .int(1)])
         ])
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -853,7 +857,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10],
+              case var .array(numbering) = parts[11],
               case let .array(counts) = numbering[2],
               counts.count == 1
         else {
@@ -863,7 +867,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[2] = .array(counts + [.array([.string("app.other"), .int(0)])])
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -892,7 +896,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10],
+              case var .array(numbering) = parts[11],
               case let .array(counts) = numbering[2],
               case let .array(entry) = counts.first,
               counts.count == 1
@@ -903,7 +907,7 @@ struct ArtifactReadingTests {
         }
 
         numbering[2] = .array([.array([entry[0], .int(4)])])
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -933,7 +937,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(numbering) = parts[10]
+              case var .array(numbering) = parts[11]
         else {
             Issue.record("an artifact writes how many closures each declaration wrote")
 
@@ -944,7 +948,7 @@ struct ArtifactReadingTests {
             .array([.string("app.entry"), .int(.max)]),
             .array([.string("app.other"), .int(.max)])
         ])
-        parts[10] = .array(numbering)
+        parts[11] = .array(numbering)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -1002,7 +1006,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case let .array(variables) = parts[12],
+              case let .array(variables) = parts[13],
               variables.count == 2
         else {
             Issue.record("an artifact writes what its variables start holding")
@@ -1010,7 +1014,7 @@ struct ArtifactReadingTests {
             return
         }
 
-        parts[12] = .array(variables.reversed())
+        parts[13] = .array(variables.reversed())
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -1039,7 +1043,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -1060,7 +1064,7 @@ struct ArtifactReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -1084,7 +1088,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(table) = parts[7],
+              case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(body) = implementation[1],
@@ -1106,7 +1110,7 @@ struct ArtifactReadingTests {
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)
-        parts[7] = .array(table)
+        parts[8] = .array(table)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {
@@ -1148,7 +1152,7 @@ struct ArtifactReadingTests {
         )
 
         guard case var .array(parts) = try parts(of: sut),
-              case var .array(leaned) = parts[5],
+              case var .array(leaned) = parts[6],
               case var .array(entry) = leaned.first,
               case var .array(place) = entry[2],
               leaned.count == 1
@@ -1161,7 +1165,7 @@ struct ArtifactReadingTests {
         place[0] = .array([.bytes([0x07])])
         entry[2] = .array(place)
         leaned[0] = .array(entry)
-        parts[5] = .array(leaned)
+        parts[6] = .array(leaned)
 
         // When / Then.
         #expect(throws: ArtifactRefused.self) {

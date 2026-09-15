@@ -37,8 +37,14 @@ struct ArtifactWriter {
             return nil
         }
 
+        // A document compiled against an artifact nobody worked a fingerprint
+        // out for cannot say what it is true against, and an artifact that says
+        // less than it leans on is one a cache would hand back wrongly.
+        guard let dependencies = compiled.dependencies else { return nil }
+
         let written: Value = .array([
             document(compiled.document),
+            .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) }),
             keyed(compiled.types, type),
             keyed(compiled.constraints) { types in .array(types.map(type)) },
             keyed(compiled.contracts) { procedures in keyed(procedures, signature) },

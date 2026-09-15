@@ -47,8 +47,19 @@ import Foundation
 // judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
+    // How an artifact's fingerprint is worked out, where a caller wants its
+    // artifacts to say what they are true against.
+    //
+    // Taken rather than done here. A fingerprint is about bytes, and what
+    // writes bytes is another package: this one is the language and does not
+    // know how a value is laid down. A caller that never files an artifact
+    // hands nothing over and is handed artifacts that say they cannot be
+    // filed, which is what they are.
+    private let fingerprinting: (@Sendable (Value) throws -> Fingerprint)?
+
     // MARK: - Initializer
-    public init() {
+    public init(fingerprinting: (@Sendable (Value) throws -> Fingerprint)? = nil) {
+        self.fingerprinting = fingerprinting
     }
 
     // MARK: - Public
@@ -175,6 +186,15 @@ public struct Builder: Sendable {
             signatures: signatures,
             linkage: linkage
         )
+    }
+
+    // An artifact said as what it is, where the caller handed over how that is
+    // worked out. One that cannot be written down has nothing to work it out
+    // from, which is the same absence said one step earlier.
+    private func fingerprinted(_ artifact: Compiled) throws -> Compiled {
+        guard let fingerprinting, let written = artifact.written else { return artifact }
+
+        return artifact.fingerprinted(try fingerprinting(written))
     }
 
     // Every declaration a compiled document made, under the spelling it was
@@ -336,14 +356,29 @@ public struct Builder: Sendable {
             naming: documents.map(\.document)
         )
 
+        // What each document turned out to be, as they are laid down. A
+        // document laid here may be what the next one leans on, and what it
+        // leaned on is part of what it is, so the two grow together.
+        var leaning = Leaning()
+
+        for artifact in compiled {
+            leaning.lay(artifact)
+        }
+
         return try laying.indices.map { offset in
-            try compile(
+            let artifact = try compile(
                 laying[offset],
                 at: compiled.count + offset,
                 declaring: holding[offset],
+                leaning: leaning.leaned(by: laying[offset]),
                 in: &compiling,
                 writing: fulfillment
             )
+            let known = try fingerprinted(artifact)
+
+            leaning.lay(known)
+
+            return known
         }
     }
 
@@ -355,6 +390,7 @@ public struct Builder: Sendable {
         _ module: Module,
         at origin: Int,
         declaring holding: [Symbol],
+        leaning dependencies: [Fingerprint]?,
         in compiling: inout Compiling,
         writing fulfillment: Fulfillment
     ) throws -> Compiled {
@@ -658,7 +694,8 @@ public struct Builder: Sendable {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            variables: boxes.map { name in (name: name, value: variables[name] ?? .null) }
+            variables: boxes.map { name in (name: name, value: variables[name] ?? .null) },
+            dependencies: dependencies
         )
     }
 

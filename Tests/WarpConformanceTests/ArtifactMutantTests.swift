@@ -42,7 +42,7 @@ struct ArtifactMutantTests {
         // it is refused is the runner's question rather than this one.
         guard case .answers = sut.expectation else { return }
 
-        let builder = Builder()
+        let builder = Builder(fingerprinting: Fingerprint.of)
         let supplying = try Supplying(sut.modules())
         let behind = try builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
         let own = try builder.compile(

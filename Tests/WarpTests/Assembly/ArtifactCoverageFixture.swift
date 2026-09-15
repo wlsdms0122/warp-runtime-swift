@@ -44,7 +44,9 @@ enum ArtifactCoverageFixture {
                 closures: ["a.eleven": 2]
             ),
             typeNumbering: try! LoweredTypeNumbering(ordered: ["a.one", "a.two"], memberships: ["a.four"]),
-            judging: [(name: "a.fourteen", value: .string("x")), (name: "a.thirteen", value: .int(13))]
+            judging: [(name: "a.fourteen", value: .string("x")), (name: "a.thirteen", value: .int(13))],
+            // In byte order, which is the order a writing lays a set down in.
+            dependencies: [Fingerprint([0x01, 0x02]), Fingerprint([0x03])]
         )
     }()
 

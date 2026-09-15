@@ -28,7 +28,7 @@ struct ArtifactWritingTests {
         // is refused is the runner's question rather than this one.
         guard case let .answers(expected) = sut.expectation else { return }
 
-        let builder = Builder()
+        let builder = Builder(fingerprinting: Fingerprint.of)
         let modules = try sut.modules()
         let compiled = try builder.compile(modules)
 

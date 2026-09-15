@@ -22,9 +22,15 @@ struct ArtifactReader {
     // holds it to the one the artifact was kept under.
     private let identity: Identity?
 
+    // What the caller kept this artifact under. Carried in for the reason the
+    // identity is: what an artifact is, is worked out from its bytes, and
+    // reading bytes is another package's.
+    private let fingerprint: Fingerprint?
+
     // MARK: - Initializer
-    init(of identity: Identity?) {
+    init(of identity: Identity?, fingerprint: Fingerprint?) {
         self.identity = identity
+        self.fingerprint = fingerprint
     }
 
     // MARK: - Internal
@@ -32,6 +38,9 @@ struct ArtifactReader {
         var fields = try Fields(value, of: "artifact")
 
         let document = try document(fields.next())
+        let dependencies = try Fields.list(fields.next(), of: "dependencies") { written in
+            Fingerprint(try Fields.bytes(written, of: "dependencies"))
+        }
         let types = try keyed(fields.next(), of: "types", expression)
         let constraints = try keyed(fields.next(), of: "constraints") { written in
             try Fields.list(written, of: "constraints", expression)
@@ -72,7 +81,9 @@ struct ArtifactReader {
             answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,
-            judging: variables
+            judging: variables,
+            dependencies: dependencies,
+            fingerprint: fingerprint
         )
 
         try fields.end()

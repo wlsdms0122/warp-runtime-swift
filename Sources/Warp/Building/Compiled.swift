@@ -81,6 +81,30 @@ public struct Compiled: Sendable, Declaring {
     // the layouts read them.
     let variables: [(name: Name, value: Value)]
 
+    // What this was compiled against: the artifacts behind the declarations
+    // this document named, each by its own fingerprint.
+    //
+    // Named and not every artifact the compile was handed. What a document
+    // reaches outside itself is the procedures it calls and the types its
+    // signatures name, and a document laid beside it that it never names
+    // decides nothing about what it compiled to.
+    //
+    // Nothing where one of them has no fingerprint. An artifact says what it
+    // is true against, and one that named some of what it leaned on and not
+    // the rest would say it is true against less than it is. So it is not
+    // written down at all, the same way a document that settles a procedure
+    // into a value has no writing.
+    let dependencies: [Fingerprint]?
+
+    // What this artifact is, where a caller worked it out. Derived from the
+    // bytes and so not something this can answer for itself: reading bytes is
+    // another package's, and nothing here is allowed to learn how they are
+    // written.
+    //
+    // A caller compiling against this hands it over as it kept it, and that is
+    // what the next artifact records leaning on.
+    public let fingerprint: Fingerprint?
+
     // MARK: - Initializer
     init(
         document: Place.Document,
@@ -95,7 +119,9 @@ public struct Compiled: Sendable, Declaring {
         answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
-        variables: [(name: Name, value: Value)]
+        variables: [(name: Name, value: Value)],
+        dependencies: [Fingerprint]?,
+        fingerprint: Fingerprint? = nil
     ) {
         self.document = document
         self.types = types
@@ -110,6 +136,8 @@ public struct Compiled: Sendable, Declaring {
         self.numbering = numbering
         self.typeNumbering = typeNumbering
         self.variables = variables
+        self.dependencies = dependencies
+        self.fingerprint = fingerprint
     }
 
     // The same, where the parts were read apart and what has to be true is how
@@ -132,7 +160,9 @@ public struct Compiled: Sendable, Declaring {
         answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
-        judging variables: [(name: Name, value: Value)]
+        judging variables: [(name: Name, value: Value)],
+        dependencies: [Fingerprint]?,
+        fingerprint: Fingerprint? = nil
     ) throws {
         guard declared.count <= table.count else {
             throw ArtifactRefused(
@@ -186,7 +216,9 @@ public struct Compiled: Sendable, Declaring {
             answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,
-            variables: variables
+            variables: variables,
+            dependencies: dependencies,
+            fingerprint: fingerprint
         )
 
         // What each row stands on, judged against the rows beside it. Asked
@@ -215,15 +247,15 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an artifact stand, and it moves when they move
     // and for no other reason.
-    static let format = 1
+    static let format = 2
 
     // This artifact said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.
     //
-    // Which document it belongs to is the first thing written, so an artifact
-    // says which text it stands against and a caller holding two of them
-    // cannot mistake one for the other.
+    // Which document it belongs to and what it was compiled against are the
+    // first two things written, so an artifact says what it stands against
+    // before it says anything it stood on that.
     // Nothing where this document cannot be one. A document that settles a
     // procedure into a value holds what an artifact carries as data and a
     // procedure is not data, so it has no writing: that is a property of the
@@ -231,6 +263,29 @@ public struct Compiled: Sendable, Declaring {
     // again would build the same document again.
     public var written: Value? {
         ArtifactWriter().value(of: self).map { written in .array([.int(Self.format), written]) }
+    }
+
+    // The same artifact, said as what a caller worked out it is. Deriving that
+    // answer reads bytes, so this is the door it arrives through, and a
+    // document compiled against this one records what arrived here.
+    public func fingerprinted(_ fingerprint: Fingerprint) -> Compiled {
+        Compiled(
+            document: document,
+            types: types,
+            constraints: constraints,
+            contracts: contracts,
+            claims: claims,
+            leaned: leaned,
+            declared: declared,
+            table: table,
+            calls: calls,
+            answers: answers,
+            numbering: numbering,
+            typeNumbering: typeNumbering,
+            variables: variables,
+            dependencies: dependencies,
+            fingerprint: fingerprint
+        )
     }
 
     // Read back beside the document it was filed under, because what an
@@ -242,7 +297,10 @@ public struct Compiled: Sendable, Declaring {
     // artifact does write one down. So a caller hands over the one it keeps
     // the artifact under, and an artifact saying it belongs somewhere else is
     // one that belongs to no cache this caller holds.
-    public init(written value: Value, of identity: Identity?) throws {
+    // `fingerprint` is what the caller kept it under, carried in the same way
+    // and for the same reason: an artifact cannot work out what it is, because
+    // that answer is about bytes and reading bytes is another package's.
+    public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
         var fields = try Fields(value, of: "artifact format")
         let format = try fields.count()
 
@@ -267,7 +325,7 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
-        self = try ArtifactReader(of: identity).compiled(from: written)
+        self = try ArtifactReader(of: identity, fingerprint: fingerprint).compiled(from: written)
     }
 
     // MARK: - Private
