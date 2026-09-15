@@ -521,7 +521,7 @@ struct Lowering {
 
             let held = numbered(slots.origin)
             let row = table.count
-            let stands: (number: Int, written: Int)?
+            let stands: (number: Int, nth: Int)?
 
             if held.numbersAreRows {
                 stands = nil
@@ -548,11 +548,11 @@ struct Lowering {
 
             var taken = closureRows[slots.origin] ?? []
 
-            if taken.count <= stands.written {
-                taken.append(contentsOf: Array(repeating: row, count: stands.written + 1 - taken.count))
+            if taken.count <= stands.nth {
+                taken.append(contentsOf: Array(repeating: row, count: stands.nth + 1 - taken.count))
             }
 
-            taken[stands.written] = row
+            taken[stands.nth] = row
             closureRows[slots.origin] = taken
 
             return .closure(stands.number, captures: inner.captures)

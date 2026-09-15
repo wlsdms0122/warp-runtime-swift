@@ -245,11 +245,11 @@ struct Numbering: Sendable {
             return rows[declared].map(Answer.row) ?? .unfound(.sent(declared))
         }
 
-        let written = number - spellings.count
+        let nth = number - spellings.count
 
-        guard closures.indices.contains(written) else { return .unfound(.closure(written)) }
+        guard closures.indices.contains(nth) else { return .unfound(.closure(nth)) }
 
-        return .row(closures[written])
+        return .row(closures[nth])
     }
 
     // Which row of a link each number this document gave stands for, in
@@ -280,10 +280,10 @@ struct Numbering: Sendable {
     // carries, and which of the document's closures that is. Nil where the
     // document was never read for that declaration's closures, which is a link
     // lowering a body it never scanned.
-    func closure(_ nth: Int, of declared: Name) -> (number: Int, written: Int)? {
+    func closure(_ nth: Int, of declared: Name) -> (number: Int, nth: Int)? {
         guard let start = beginning(of: declared) else { return nil }
 
-        return (number: opening + start + nth, written: start + nth)
+        return (number: opening + start + nth, nth: start + nth)
     }
 
     // MARK: - Private
