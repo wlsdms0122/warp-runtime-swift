@@ -32,10 +32,9 @@ struct ArtifactWriter {
 
     func value(of compiled: Compiled) -> Value? {
         // A numbering counting from a link's own rows belongs to no document,
-        // so a caller holding one is a caller that assembled something no
-        // compile makes.
+        // so what holds one is not an artifact and there is none to write.
         guard let numbering = compiled.numbering.written(declaring: compiled.declared.count) else {
-            preconditionFailure("an artifact carries a document's numbers")
+            return nil
         }
 
         let written: Value = .array([

@@ -48,9 +48,7 @@ extension Double {
         let plain = "\(magnitude)"
         let halves = plain.split(separator: "e", maxSplits: 1)
 
-        guard let shift = halves.count == 2 ? Int(halves[1]) : 0 else {
-            preconditionFailure("a finite fraction rendered an unreadable exponent")
-        }
+        guard let shift = halves.count == 2 ? Int(halves[1]) : 0 else { return nil }
         let pieces = halves[0].split(separator: ".", maxSplits: 1)
         let whole = pieces[0]
         let fractional = pieces.count == 2 ? pieces[1] : ""
