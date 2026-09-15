@@ -259,10 +259,14 @@ public struct Compiled: Sendable, Declaring {
     // Declared and not worked out. Every build system does it this way and none
     // of them asks the tool to prove what it is: rustc records the version that
     // made an `.rlib`, a `.swiftmodule` is bound to the compiler that wrote it,
-    // and Cargo hashes what `rustc -vV` prints. What makes declaring safe is
-    // that nobody types the value in. The release writes it, and it carries the
-    // commit rather than the release alone, because a value a person remembers
-    // to raise goes stale on the one commit it mattered.
+    // and Cargo hashes what `rustc -vV` prints.
+    //
+    // So what it tells apart is releases. Two builds between one release and the
+    // next write the same stamp and read each other's artifacts, and a reading
+    // cannot see that the rules moved under them: what a body reaches decides
+    // purity, isolation and failure, and moving how that is read leaves every
+    // byte where it was. Anyone changing those and reading an artifact from
+    // before builds again rather than reads.
     public static let runtime = "warp-swift 0.0.0-dev"
 
     // This artifact said as a value, so a caller can keep it where bytes are
