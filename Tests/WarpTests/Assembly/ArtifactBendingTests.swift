@@ -43,10 +43,19 @@ struct ArtifactBendingTests {
             do {
                 let read = try Compiled(written: bent, of: Self.everything.identity)
 
-                // Whatever it stood up is written again, because a reading
-                // that admits a value it cannot write back has taken the
-                // artifact somewhere the pair does not agree on.
-                #expect(read.written != nil, "bend at \(path) read back as an artifact that cannot be written")
+                // Whatever it stood up is written again and read again, because
+                // a reading that admits a value it cannot write back, or writes
+                // back as something else, has taken the artifact somewhere the
+                // pair does not agree on.
+                guard let once = read.written else {
+                    Issue.record("bend at \(path) read back as an artifact that cannot be written")
+
+                    continue
+                }
+
+                let twice = try Compiled(written: once, of: Self.everything.identity).written
+
+                #expect(twice == once, "bend at \(path) is written one way and read back as another")
             } catch is ArtifactRefused {
             } catch {
                 Issue.record("bend at \(path) was refused as \(type(of: error)), not as an artifact")
