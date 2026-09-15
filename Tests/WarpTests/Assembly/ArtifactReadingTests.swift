@@ -855,7 +855,6 @@ struct ArtifactReadingTests {
         guard case var .array(parts) = try parts(of: sut),
               case var .array(numbering) = parts[10],
               case let .array(counts) = numbering[2],
-              case let .array(entry) = counts.first,
               counts.count == 1
         else {
             Issue.record("an artifact writes how many closures each declaration wrote")
