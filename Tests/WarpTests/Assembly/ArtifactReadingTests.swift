@@ -1195,6 +1195,43 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where what it leaned on stands out of order")
+    func dependenciesOutOfOrder() throws {
+        // Given. A real artifact whose two dependencies are written the other
+        // way round. Both name the same pair, so a reading that took either
+        // order would let two writings say one artifact.
+        guard case var .array(parts) = try parts() else {
+            Issue.record("an artifact is written as a list of parts")
+
+            return
+        }
+
+        parts[1] = .array([.bytes([0x02]), .bytes([0x01])])
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
+    @Test("is refused where it leans on one artifact twice")
+    func dependenciesRepeated() throws {
+        // Given. A real artifact naming one of them twice. What it leaned on is
+        // a set, and a set written down twice is a writing no set makes.
+        guard case var .array(parts) = try parts() else {
+            Issue.record("an artifact is written as a list of parts")
+
+            return
+        }
+
+        parts[1] = .array([.bytes([0x01]), .bytes([0x01])])
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken

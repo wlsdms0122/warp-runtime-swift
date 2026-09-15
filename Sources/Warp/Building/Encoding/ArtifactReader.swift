@@ -38,7 +38,7 @@ struct ArtifactReader {
         var fields = try Fields(value, of: "artifact")
 
         let document = try document(fields.next())
-        let dependencies = try Fields.list(fields.next(), of: "dependencies") { written in
+        let dependencies = try Fields.ordered(fields.next(), of: "dependencies") { written in
             Fingerprint(try Fields.bytes(written, of: "dependencies"))
         }
         let types = try keyed(fields.next(), of: "types", expression)
