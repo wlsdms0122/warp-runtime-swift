@@ -790,6 +790,47 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where the numbers behind the spellings run past what an int holds")
+    func closureNumbersPastAnInt() throws {
+        // Given. Two declarations whose counts add up to exactly what an int
+        // holds. The sum stands, and the number the second closure takes is
+        // that sum counted from behind the spellings, which does not.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(
+                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                        )
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                ),
+                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(numbering) = parts[10]
+        else {
+            Issue.record("an artifact writes how many closures each declaration wrote")
+
+            return
+        }
+
+        numbering[2] = .array([
+            .array([.string("app.entry"), .int(.max - 1)]),
+            .array([.string("app.other"), .int(1)])
+        ])
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
     @Test("is refused where a numbering counts a declaration for no closures")
     func aDeclarationCountedForNone() throws {
         // Given. One declaration writing one closure, with a second name

@@ -161,16 +161,17 @@ struct Numbering: Sendable {
             throw ArtifactRefused("a numbering counts no closures for a name it counts")
         }
 
-        // What a document numbers is its spellings and then one number per
-        // closure, so the counts are added up here. A sum past what an int
-        // holds is a numbering no document stands.
-        var standing = 0
+        // A closure's number stands behind the spellings, so the last number
+        // this numbering gives is the spellings and every closure counted
+        // together. Counted here, because the door below reaches that number
+        // by adding and a sum that leaves an int is not one.
+        var standing = sent.count + own.count
 
         for count in counts.values {
             let (summed, overflowed) = standing.addingReportingOverflow(count)
 
             guard !overflowed else {
-                throw ArtifactRefused("a numbering counts more closures than a document numbers")
+                throw ArtifactRefused("a numbering gives numbers past what an int holds")
             }
 
             standing = summed
