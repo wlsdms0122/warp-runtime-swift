@@ -270,12 +270,11 @@ public struct Compiled: Sendable, Declaring {
     // artifact another build wrote would be reading a table laid out by rules
     // it no longer holds.
     //
-    // Declared and not worked out. Every build system does it this way and none
-    // of them asks the tool to prove what it is: rustc records the version that
-    // made an `.rlib`, a `.swiftmodule` is bound to the compiler that wrote it,
-    // and Cargo hashes what `rustc -vV` prints. Nobody types the whole string
-    // either: the number is edited in `version`, the commit beside it is the
-    // release script's, and a test holds this to the number that file holds.
+    // Declared and not derived. What an implementation is cannot be read off
+    // what it produces, so this is the one place a build says what it is, and
+    // what makes that safe is that nobody types the whole string: the release
+    // number is edited in `version`, the commit beside it is written where a
+    // release is cut, and a test holds this to the number that file holds.
     //
     // So what it tells apart is releases. Two builds between one release and the
     // next write the same stamp and read each other's artifacts, and a reading

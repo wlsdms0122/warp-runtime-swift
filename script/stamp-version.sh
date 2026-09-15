@@ -1,7 +1,7 @@
 #!/bin/bash
-# Writes the release number beside the commit it was built from, the way a
-# compiler's build system does it: the number is edited by a person in
-# `version`, the commit comes from git, and nobody types the whole string.
+# Writes the release number beside the commit it was built from. The number is
+# edited by a person in `version`, the commit comes from git, and nobody types
+# the whole string.
 #
 # Run it where a release is cut. A working tree that is not a release keeps
 # whatever the last run wrote, which is the number alone.
