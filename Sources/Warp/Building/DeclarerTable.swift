@@ -1,5 +1,5 @@
 //
-//  Leaning.swift
+//  DeclarerTable.swift
 //  Warp
 //
 //  Created by JSilver on 9/16/26.
@@ -12,14 +12,15 @@ import Foundation
 //
 // A document reaches outside itself through the procedures it calls and the
 // types its signatures name, which is what `Module.uses` already holds: every
-// procedure and type it names and does not declare. So what a document leaned
-// on is read off the document rather than tracked through the compile.
+// procedure and type it names and does not declare. So what a document was
+// compiled against is read off the document rather than tracked through the
+// compile.
 //
 // It grows as the compile lays documents down, because a document laid here may
-// be what the next one leans on. The order the compile lays them in already
+// be what the next one is compiled against. The order the compile lays them in already
 // stands each one's needs before it, so a name is in here by the time anything
 // asks for it.
-struct Leaning {
+struct DeclarerTable {
     // MARK: - Property
     // Nothing for a document that has no fingerprint. The name is declared and
     // the answer is that there is nothing to record, which is not the same as
@@ -35,8 +36,8 @@ struct Leaning {
 
     // What this document was compiled against, or nothing where one of the
     // artifacts it named has no fingerprint.
-    func leaned(by module: Module) -> [Fingerprint]? {
-        var leaned: Set<Fingerprint> = []
+    func dependencies(of module: Module) -> [Fingerprint]? {
+        var against: Set<Fingerprint> = []
 
         for used in module.uses {
             // A name nothing here declares is left alone. The link refuses it,
@@ -46,12 +47,12 @@ struct Leaning {
 
             guard let fingerprint = declared else { return nil }
 
-            leaned.insert(fingerprint)
+            against.insert(fingerprint)
         }
 
         // In byte order, so a set leaves as one sequence however it was
         // gathered.
-        return leaned.sorted()
+        return against.sorted()
     }
 
     // MARK: - Private

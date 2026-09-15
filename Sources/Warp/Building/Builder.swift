@@ -359,10 +359,10 @@ public struct Builder: Sendable {
         // What each document turned out to be, as they are laid down. A
         // document laid here may be what the next one leans on, and what it
         // leaned on is part of what it is, so the two grow together.
-        var leaning = Leaning()
+        var declarers = DeclarerTable()
 
         for artifact in compiled {
-            leaning.lay(artifact)
+            declarers.lay(artifact)
         }
 
         return try laying.indices.map { offset in
@@ -370,13 +370,13 @@ public struct Builder: Sendable {
                 laying[offset],
                 at: compiled.count + offset,
                 declaring: holding[offset],
-                leaning: leaning.leaned(by: laying[offset]),
+                leaning: declarers.dependencies(of: laying[offset]),
                 in: &compiling,
                 writing: fulfillment
             )
             let known = try fingerprinted(artifact)
 
-            leaning.lay(known)
+            declarers.lay(known)
 
             return known
         }
