@@ -33,8 +33,11 @@ public struct Mutator: Sendable {
     public func mutations(of value: Value) -> [(path: String, value: Value)] {
         var mutations: [(path: String, value: Value)] = []
 
+        // A neighbour that is the value again is not one. An empty list
+        // shortened is still empty, and a place left as it was asks the reading
+        // what it already answered rather than anything new.
         walk(value, at: "") { path, held in
-            for mutated in self.mutations(ofPlace: held) {
+            for mutated in self.mutations(ofPlace: held) where mutated != held {
                 mutations.append((path, replacing(path, in: value, with: mutated)))
             }
         }
@@ -42,8 +45,10 @@ public struct Mutator: Sendable {
         return mutations
     }
 
-    // How many places the value holds, which is what a walk of it reaches.
-    public func places(of value: Value) -> Int {
+    // How many places the value holds, which is what a walk of it reaches. A
+    // caller asking how far a walk should have got reads it off the value
+    // rather than off a number somebody counted once.
+    public func placeCount(of value: Value) -> Int {
         var places = 0
 
         walk(value, at: "") { _, _ in places += 1 }
