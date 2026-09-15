@@ -56,11 +56,7 @@ struct ArtifactReader {
         let table = try fields.list(judged)
         let calls = try fields.list { written in try Fields.list(written, of: "calls", name) }
         let answers = try keyed(fields.next(), of: "answers", lowered)
-        let numbering = try Numbering(
-            written: fields.next(),
-            declaring: declared,
-            standing: table.count - declared.count
-        )
+        let numbering = try Numbering(written: fields.next(), declaring: declared)
         let typeNumbering = try typeNumbering(fields.next())
         let variables = try fields.list(variable)
         let read = try Compiled(

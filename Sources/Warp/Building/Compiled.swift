@@ -140,6 +140,17 @@ public struct Compiled: Sendable, Declaring {
             )
         }
 
+        // The rows behind the declarations are the closures this document's
+        // bodies lifted, and a numbering stands one number for each of them.
+        // Two counts of the same run, so a numbering counting some other
+        // number of them is numbering a table that is not this one.
+        guard numbering.closureCount == table.count - declared.count else {
+            throw ArtifactRefused(
+                "an artifact numbers \(numbering.closureCount) closure(s) behind"
+                    + " \(table.count - declared.count) row(s)"
+            )
+        }
+
         guard calls.count == declared.count else {
             throw ArtifactRefused(
                 "an artifact writes \(calls.count) call list(s) for \(declared.count) declaration(s)"

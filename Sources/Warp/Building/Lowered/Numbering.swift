@@ -48,10 +48,6 @@ struct Numbering: Sendable {
     // the order the link happened to lower in.
     private let closing: [Name: Int]
 
-    // The first number the closures take. What a body carries is a number of
-    // this document; which of its closures that is, is the number less this.
-    private let opening: Int
-
     // MARK: - Initializer
     // A document's own. The imports, its own declarations, and the closures
     // those declarations wrote, each in name order: the numbering is the
@@ -79,15 +75,10 @@ struct Numbering: Sendable {
             written += count
         }
 
-        space = .document(
-            sent.map(Reference.sent)
-                + declared.map(Reference.sent)
-                + (0..<written).map(Reference.closure)
-        )
+        space = .document(spellings: sent + declared, closures: written)
         called = Self.placed(sent, from: 0)
             .merging(Self.placed(declared, from: sent.count)) { _, own in own }
         closing = starting
-        self.opening = opening
     }
 
     // A table's own. The number a body carries here is the row.
@@ -95,7 +86,6 @@ struct Numbering: Sendable {
         space = .table
         called = rows
         closing = [:]
-        opening = 0
     }
 
     // MARK: - Internal
@@ -111,22 +101,14 @@ struct Numbering: Sendable {
     // dependency's body against this, and lowering a closure literal there
     // asks it. So it is written and held to standing among the closures.
     func written(declaring declared: Int) -> Value? {
-        guard case let .document(references) = space else { return nil }
-
-        let spellings = references.prefix(opening).compactMap { reference -> Name? in
-            guard case let .sent(name) = reference else { return nil }
-
-            return name
-        }
-
-        guard spellings.count == opening else { return nil }
+        guard case let .document(spellings, closures) = space else { return nil }
 
         // How many each declaration wrote, not where each one's begin. Where
         // they begin is one arithmetic over these, and writing it down would
         // make a numbering whose closures overlap something an artifact can
         // hold.
         let begins = closing.sorted { one, other in one.value < other.value }
-        let ends = begins.dropFirst().map(\.value) + [references.count]
+        let ends = begins.dropFirst().map(\.value) + [spellings.count + closures]
         let counts = zip(begins, ends).map { begin, end in
             (name: begin.key, count: end - begin.value)
         }
@@ -145,7 +127,7 @@ struct Numbering: Sendable {
     // declarations stand at the end of this list, and a list whose tail is
     // some other module's names sends every self call somewhere else while
     // every other part of the artifact stays in step.
-    init(written value: Value, declaring declared: [Name], standing closures: Int) throws {
+    init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
 
         // Two runs of names, not one. What a document sends stands first and
@@ -172,16 +154,19 @@ struct Numbering: Sendable {
             throw ArtifactRefused("a numbering counts closures for a name its document does not declare")
         }
 
-        // The rows behind the declarations are the closures, so how many were
-        // written is a number the artifact already carries. Held to it before
-        // any of it is counted out: a numbering stands one reference per
-        // closure, and a count read off the writing decides how many that is.
-        guard counts.values.allSatisfy({ $0 <= closures }),
-              counts.values.reduce(0, +) == closures
-        else {
-            throw ArtifactRefused(
-                "a numbering counts closures the table does not carry \(closures) rows for"
-            )
+        // What a document numbers is its spellings and then one number per
+        // closure, so the counts are added up here. A sum past what an int
+        // holds is a numbering no document stands.
+        var standing = 0
+
+        for count in counts.values {
+            let (summed, overflowed) = standing.addingReportingOverflow(count)
+
+            guard !overflowed else {
+                throw ArtifactRefused("a numbering counts more closures than a document numbers")
+            }
+
+            standing = summed
         }
 
         // Through the door that numbers a document, so that what a reading
@@ -205,31 +190,28 @@ struct Numbering: Sendable {
     // they took, and a list shorter than this is a document whose bodies are
     // not all lowered yet.
     var closureCount: Int {
-        guard case let .document(references) = space else { return 0 }
+        guard case let .document(_, closures) = space else { return 0 }
 
-        return references.count - opening
+        return closures
     }
 
     // Whether this document gave a number at all. What it stands for is the
     // link's answer and moves with the link; that it was given is the
     // document's own fact and does not.
     func gave(_ number: Int) -> Bool {
-        guard case let .document(references) = space else { return true }
+        guard case let .document(spellings, closures) = space else { return true }
 
-        return references.indices.contains(number)
+        return number >= 0 && number < spellings.count + closures
     }
 
     // Which spelling a number stands for, or nothing where it stands for a
     // closure instead.
     func reaching(_ number: Int) -> Name? {
-        guard case let .document(references) = space,
-              references.indices.contains(number),
-              case let .sent(name) = references[number]
-        else {
+        guard case let .document(spellings, _) = space, spellings.indices.contains(number) else {
             return nil
         }
 
-        return name
+        return spellings[number]
     }
 
     // Which declaration wrote the closure standing at a number of this
@@ -250,33 +232,33 @@ struct Numbering: Sendable {
     // it stands for a spelling instead. A body carries reference numbers, and
     // which closure one of them is, is this document's own arithmetic.
     func lifted(_ number: Int) -> Int? {
-        guard case let .document(references) = space,
-              references.indices.contains(number),
-              case .closure = references[number]
+        guard case let .document(spellings, closures) = space,
+              number >= spellings.count,
+              number < spellings.count + closures
         else {
             return nil
         }
 
-        return number - opening
+        return number - spellings.count
     }
 
     // Which row of a link the number stands for, read from the tables that
     // link built.
     func row(_ number: Int, rows: [Name: Int], closures: [Int]) -> Answer {
-        guard case let .document(references) = space else { return .row(number) }
-        guard references.indices.contains(number) else { return .unnumbered }
+        guard case let .document(spellings, standing) = space else { return .row(number) }
+        guard number >= 0, number < spellings.count + standing else { return .unnumbered }
 
-        let reference = references[number]
+        guard number >= spellings.count else {
+            let declared = spellings[number]
 
-        switch reference {
-        case let .sent(declared):
-            return rows[declared].map(Answer.row) ?? .unfound(reference)
-
-        case let .closure(written):
-            guard closures.indices.contains(written) else { return .unfound(reference) }
-
-            return .row(closures[written])
+            return rows[declared].map(Answer.row) ?? .unfound(.sent(declared))
         }
+
+        let written = number - spellings.count
+
+        guard closures.indices.contains(written) else { return .unfound(.closure(written)) }
+
+        return .row(closures[written])
     }
 
     // Which row of a link each number this document gave stands for, in
@@ -314,22 +296,23 @@ struct Numbering: Sendable {
     }
 
     // MARK: - Private
-    private init(
-        space: Space,
-        called: [Name: Int],
-        closing: [Name: Int],
-        opening: Int
-    ) {
-        self.space = space
-        self.called = called
-        self.closing = closing
-        self.opening = opening
+    // The first number the closures take. What a body carries is a number of
+    // this document; which of its closures that is, is the number less this.
+    private var opening: Int {
+        guard case let .document(spellings, _) = space else { return 0 }
+
+        return spellings.count
     }
 
     // What a number is counted from. The document's list is the whole of the
     // difference: the tables below answer a spelling either way.
+    //
+    // The closures are a count and not a list. A closure's reference is the
+    // position it stands at, so a row per closure would hold nothing the
+    // count does not already say, and a number read off an artifact would
+    // decide how many of them to stand up.
     private enum Space: Sendable {
-        case document([Reference])
+        case document(spellings: [Name], closures: Int)
         case table
     }
 
