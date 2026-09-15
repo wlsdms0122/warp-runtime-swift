@@ -18,13 +18,13 @@ extension Double {
     // message shows whatever it was handed, and a document may only carry what
     // reads back.
     var shown: String {
-        guard let spelling else {
+        guard isFinite else {
             guard !isNaN else { return "<not a number>" }
 
             return self > 0 ? "<infinity>" : "<-infinity>"
         }
 
-        return spelling
+        return spelling ?? "\(self)"
     }
 
     // The one spelling a document writes a fraction in, and every judge of a
@@ -48,6 +48,8 @@ extension Double {
         let plain = "\(magnitude)"
         let halves = plain.split(separator: "e", maxSplits: 1)
 
+        // The exponent behind `e` is the host's own rendering, so no finite
+        // fraction takes this way out.
         guard let shift = halves.count == 2 ? Int(halves[1]) : 0 else { return nil }
         let pieces = halves[0].split(separator: ".", maxSplits: 1)
         let whole = pieces[0]
