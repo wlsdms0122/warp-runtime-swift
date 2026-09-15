@@ -93,16 +93,7 @@ public struct Executor: Sendable {
             activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
-        // The construct a leave names is what catches it, and a document is
-        // held to naming one the validator can see. An artifact carries the
-        // lowered body and not the document, so what is read back out of a
-        // cache never stood in front of that judge. A run answers in this
-        // language's own words either way.
-        do {
-            return try await executor.answer(body, of: entry, in: &activation, at: Trace())
-        } catch is Leaving {
-            throw ExecutionError("a leave reached the run it started, and nothing there answers one")
-        }
+        return try await executor.answer(body, of: entry, in: &activation, at: Trace())
     }
 
     // MARK: - Internal
@@ -208,6 +199,18 @@ public struct Executor: Sendable {
             // A closure is a procedure, so this is also what stops a `return`
             // written inside one from answering for the procedure around it.
             returned = leaving.value
+        } catch is Leaving {
+            // A loop is inside one body, so one reaching here named a loop no
+            // body around it opened. A document is held to naming one the
+            // validator can see; an artifact carries the lowered body and not
+            // the document, so what is read back out of a cache never stood in
+            // front of that judge.
+            //
+            // Answered here rather than where a caller happens to stand,
+            // because what a frame does at its edge is this function's. Going
+            // on would let a loop further out take a leave that was never
+            // about it, which reads as an answer rather than as a refusal.
+            throw ExecutionError("a leave reached the frame it started in, and nothing there answers one")
         }
 
         return try callee.settling(returned: returned)
