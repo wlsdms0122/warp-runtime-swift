@@ -790,6 +790,87 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where a numbering counts more closures than the table carries rows")
+    func moreClosuresThanRows() throws {
+        // Given. One declaration writing one closure, with the count raised.
+        // The table behind the declarations is where the closures stand, so a
+        // count above it numbers closures no row holds.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(
+                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                        )
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                )
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(numbering) = parts[10],
+              case let .array(counts) = numbering[2],
+              case let .array(entry) = counts.first,
+              counts.count == 1
+        else {
+            Issue.record("an artifact writes how many closures each declaration wrote")
+
+            return
+        }
+
+        numbering[2] = .array([.array([entry[0], .int(4)])])
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
+    @Test("is refused where the closure counts add up past what an int holds")
+    func closureCountsPastAnInt() throws {
+        // Given. Two declarations, each counted for as many closures as an int
+        // holds. Neither count is a number on its own, and their sum is the
+        // one a numbering would have to count out.
+        let sut = try Module(
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [Statement(
+                        binding: .constant("made"),
+                        expression: .closure(
+                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                        )
+                    )],
+                    result: .apply(reference("made"), arguments: [:])
+                ),
+                "app.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+            ]
+        )
+
+        guard case var .array(parts) = try parts(of: sut),
+              case var .array(numbering) = parts[10]
+        else {
+            Issue.record("an artifact writes how many closures each declaration wrote")
+
+            return
+        }
+
+        numbering[2] = .array([
+            .array([.string("app.entry"), .int(.max)]),
+            .array([.string("app.other"), .int(.max)])
+        ])
+        parts[10] = .array(numbering)
+
+        // When / Then.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: stamped(parts), of: nil)
+        }
+    }
+
     @Test("is refused where it stands against a document other than the one it was kept under")
     func anArtifactOfAnotherDocument() throws {
         // Given. A document with an identity, and its artifact.
