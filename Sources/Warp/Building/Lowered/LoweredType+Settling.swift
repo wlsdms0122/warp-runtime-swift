@@ -651,12 +651,14 @@ extension LoweredType {
                 )
 
                 // `byte`'s own judge stands between: what it settles is an
-                // int inside 0...255, which the canonical small form holds.
+                // int inside 0...255, which the canonical small form holds. A
+                // miss is this file's own, so what goes out says that rather
+                // than telling a caller the type they gave was wrong.
                 guard
                     case let .int(number) = settled,
                     let byte = UInt8(exactly: number)
                 else {
-                    throw mismatch(item, at: "\(path())[\(index)]", in: table)
+                    throw ArgumentError("\(path())[\(index)]: did not settle as a byte")
                 }
 
                 return byte
