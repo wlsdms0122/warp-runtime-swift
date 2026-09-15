@@ -42,11 +42,10 @@ struct Numbering: Sendable {
     private let space: Space
     private let called: [Name: Int]
 
-    // Where each declaration's closures start, by the declaration. A closure
-    // is the nth one its declaration wrote, and the declarations run in name
-    // order, so which number a closure takes is the document's text and not
-    // the order the link happened to lower in.
-    private let closing: [Name: Int]
+    // How many closures each declaration wrote, by the declaration, over the
+    // ones that wrote any. This is what the document says; where a run begins
+    // is one arithmetic over these and is worked out where it is asked.
+    private let written: [Name: Int]
 
     // MARK: - Initializer
     // A document's own. The imports, its own declarations, and the closures
@@ -62,30 +61,19 @@ struct Numbering: Sendable {
         let sent = imports.sorted()
         let opening = sent.count + declared.count
 
-        // In name order, over whatever wrote one. A procedure, a constant and
-        // a variable are all names the document declared, and a name holds one
-        // thing, so the three are one order.
-        var starting: [Name: Int] = [:]
-        var written = 0
+        let counted = closures.filter { _, count in count > 0 }
 
-        for name in closures.keys.sorted() {
-            guard let count = closures[name], count > 0 else { continue }
-
-            starting[name] = opening + written
-            written += count
-        }
-
-        space = .document(spellings: sent + declared, closures: written)
+        space = .document(spellings: sent + declared, closures: counted.values.reduce(0, +))
         called = Self.placed(sent, from: 0)
             .merging(Self.placed(declared, from: sent.count)) { _, own in own }
-        closing = starting
+        written = counted
     }
 
     // A table's own. The number a body carries here is the row.
     init(rows: [Name: Int]) {
         space = .table
         called = rows
-        closing = [:]
+        written = [:]
     }
 
     // MARK: - Internal
@@ -97,27 +85,17 @@ struct Numbering: Sendable {
     // over the spellings, so writing them down would make a numbering whose
     // parts disagree something an artifact can hold.
     //
-    // Where each declaration's closures begin is neither: folding runs a
+    // How many closures each declaration wrote is neither: folding runs a
     // dependency's body against this, and lowering a closure literal there
-    // asks it. So it is written and held to standing among the closures.
+    // asks where that declaration's run begins.
     func written(declaring declared: Int) -> Value? {
-        guard case let .document(spellings, closures) = space else { return nil }
-
-        // How many each declaration wrote, not where each one's begin. Where
-        // they begin is one arithmetic over these, and writing it down would
-        // make a numbering whose closures overlap something an artifact can
-        // hold.
-        let begins = closing.sorted { one, other in one.value < other.value }
-        let ends = begins.dropFirst().map(\.value) + [spellings.count + closures]
-        let counts = zip(begins, ends).map { begin, end in
-            (name: begin.key, count: end - begin.value)
-        }
+        guard case let .document(spellings, _) = space else { return nil }
 
         return .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
             .array(spellings.suffix(declared).map { name in .string(name.spelling) }),
-            .array(counts.sorted { one, other in one.name < other.name }.map { written in
-                .array([.string(written.name.spelling), .int(written.count)])
+            .array(written.sorted { one, other in one.key < other.key }.map { name, count in
+                .array([.string(name.spelling), .int(count)])
             })
         ])
     }
@@ -229,11 +207,16 @@ struct Numbering: Sendable {
     // one owns a number is where that number falls among the runs. A body
     // standing up a number outside its own run is a body reaching a closure
     // some other declaration wrote.
-    func writing(_ written: Int) -> Name? {
-        closing
-            .filter { _, start in start - opening <= written }
-            .max { one, other in one.value < other.value }?
-            .key
+    func writing(_ lifted: Int) -> Name? {
+        var standing = 0
+
+        for name in written.keys.sorted() {
+            standing += written[name] ?? 0
+
+            if lifted < standing { return name }
+        }
+
+        return nil
     }
 
     // Which of this document's closures a number stands for, or nothing where
@@ -297,13 +280,25 @@ struct Numbering: Sendable {
     // carries, and which of the document's closures that is. Nil where the
     // document was never read for that declaration's closures, which is a link
     // lowering a body it never scanned.
-    func closure(_ written: Int, of declared: Name) -> (number: Int, written: Int)? {
-        guard let start = closing[declared] else { return nil }
+    func closure(_ nth: Int, of declared: Name) -> (number: Int, written: Int)? {
+        guard let start = beginning(of: declared) else { return nil }
 
-        return (number: start + written, written: start + written - opening)
+        return (number: opening + start + nth, written: start + nth)
     }
 
     // MARK: - Private
+    // Which of this document's closures a declaration's first one is. The runs
+    // stand in name order, so a declaration's own begins behind everything the
+    // names before it wrote. Nil where the document was never read for that
+    // declaration's closures.
+    private func beginning(of declared: Name) -> Int? {
+        guard written[declared] != nil else { return nil }
+
+        return written.keys.sorted()
+            .prefix { name in name < declared }
+            .reduce(0) { standing, name in standing + (written[name] ?? 0) }
+    }
+
     // The first number the closures take. What a body carries is a number of
     // this document; which of its closures that is, is the number less this.
     private var opening: Int {
