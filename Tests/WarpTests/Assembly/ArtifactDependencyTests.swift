@@ -100,6 +100,41 @@ struct ArtifactDependencyTests {
         #expect(compiled[0].written == nil)
     }
 
+    @Test("tells a document written in Warp from one the host answers")
+    func tellsTheTwoKindsApart() throws {
+        // Given. One declaration made twice: once as a body this language
+        // lowers, once as a procedure the host answers. A caller may build the
+        // same thing either way.
+        let lowered = try Module(
+            procedures: [
+                "box.peek": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+            ]
+        )
+        let answered = try Module(
+            procedures: [
+                "box.peek": Procedure(signature: Signature(returns: .int), implementation: .query(PeekQuery()))
+            ]
+        )
+
+        // When.
+        let asLowered = try written(calling: "box.peek", behind: lowered)
+        let asAnswered = try written(calling: "box.peek", behind: answered)
+
+        // Then. The two stand as different artifacts, and so does what calls
+        // them.
+        #expect(asLowered.behind != asAnswered.behind)
+        #expect(asLowered.calling != asAnswered.calling)
+
+        // And what carries that into the caller is the record and nothing else.
+        // The call is the same call either way: a body reaches a row by number
+        // and the number does not move. So a caller that kept no record of what
+        // it leaned on would read one kind's artifact for the other's.
+        #expect(
+            besideDependencies(asLowered.calling) == besideDependencies(asAnswered.calling),
+            "the caller told the two kinds apart by itself"
+        )
+    }
+
     @Test("reads back saying what it was written saying")
     func survivesTheRoundTrip() throws {
         // Given.
@@ -116,5 +151,49 @@ struct ArtifactDependencyTests {
 
         // Then.
         #expect(read.dependencies == compiled[0].dependencies)
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // Everything an artifact says but what it leaned on.
+    private func besideDependencies(_ value: Value?) -> [Value] {
+        guard case let .array(stamped) = value, stamped.count == 3,
+              case let .array(written) = stamped[2]
+        else {
+            return []
+        }
+
+        return Array(written[2...])
+    }
+
+    private func written(
+        calling selector: Name,
+        behind vocabulary: Module
+    ) throws -> (behind: Value?, calling: Value?) {
+        let caller = try Module(
+            procedures: [
+                "app.main": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: selector))
+                )
+            ]
+        )
+        let behind = try builder.compile([vocabulary])
+        let compiled = try builder.compile(
+            [caller],
+            against: behind,
+            supplying: Supplying([vocabulary, caller])
+        )
+
+        return (behind: behind[0].written, calling: compiled[0].written)
+    }
+}
+
+private struct PeekQuery: Query {
+    typealias Parameters = NoParameters
+
+    func evaluate(_ question: Question<Self>) throws -> Value? {
+        .int(7)
     }
 }
