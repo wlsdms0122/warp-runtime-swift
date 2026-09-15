@@ -61,6 +61,18 @@ let package = Package(
                 "Warp"
             ]
         ),
+        // What a value looks like with one place of it replaced, over every
+        // place it holds. A test target cannot be depended on, and the two that
+        // ask this question stand on different sides of the package's own line:
+        // one reaches inside an artifact, the other only through the doors a
+        // caller has. So the instrument they share stands here rather than
+        // twice.
+        .target(
+            name: "WarpMutation",
+            dependencies: [
+                "Warp"
+            ]
+        ),
         // One test target per target, and the dependencies are the point: a test
         // that cannot import the syntax can only be saying something about the
         // language. Where a behaviour is tested is then a fact anyone reads off
@@ -70,6 +82,7 @@ let package = Package(
             name: "WarpTests",
             dependencies: [
                 "Warp",
+                "WarpMutation",
                 "WarpStandard"
             ]
         ),
@@ -100,6 +113,7 @@ let package = Package(
             name: "WarpConformanceTests",
             dependencies: [
                 "Warp",
+                "WarpMutation",
                 "WarpSyntax",
                 "WarpStandard"
             ]
