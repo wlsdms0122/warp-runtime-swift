@@ -42,10 +42,12 @@ struct Numbering: Sendable {
     private let space: Space
     private let called: [Name: Int]
 
-    // How many closures each declaration wrote, by the declaration, over the
-    // ones that wrote any. This is what the document says; where a run begins
-    // is one arithmetic over these and is worked out where it is asked.
-    private let written: [Name: Int]
+    // How many closures each declaration wrote, in name order, over the ones
+    // that wrote any. The order is the document's own: a closure is the nth
+    // one its declaration wrote, and the declarations run in name order, so
+    // which number a closure takes is the document's text and not the order
+    // the link happened to lower in.
+    private let runs: [(name: Name, count: Int)]
 
     // MARK: - Initializer
     // A document's own. The imports, its own declarations, and the closures
@@ -66,14 +68,14 @@ struct Numbering: Sendable {
         space = .document(spellings: sent + declared, closures: counted.values.reduce(0, +))
         called = Self.placed(sent, from: 0)
             .merging(Self.placed(declared, from: sent.count)) { _, own in own }
-        written = counted
+        runs = counted.keys.sorted().map { name in (name: name, count: counted[name] ?? 0) }
     }
 
     // A table's own. The number a body carries here is the row.
     init(rows: [Name: Int]) {
         space = .table
         called = rows
-        written = [:]
+        runs = []
     }
 
     // MARK: - Internal
@@ -94,9 +96,7 @@ struct Numbering: Sendable {
         return .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
             .array(spellings.suffix(declared).map { name in .string(name.spelling) }),
-            .array(written.sorted { one, other in one.key < other.key }.map { name, count in
-                .array([.string(name.spelling), .int(count)])
-            })
+            .array(runs.map { run in .array([.string(run.name.spelling), .int(run.count)]) })
         ])
     }
 
@@ -207,13 +207,13 @@ struct Numbering: Sendable {
     // one owns a number is where that number falls among the runs. A body
     // standing up a number outside its own run is a body reaching a closure
     // some other declaration wrote.
-    func writing(_ lifted: Int) -> Name? {
+    func writing(_ nth: Int) -> Name? {
         var standing = 0
 
-        for name in written.keys.sorted() {
-            standing += written[name] ?? 0
+        for run in runs {
+            standing += run.count
 
-            if lifted < standing { return name }
+            if nth < standing { return run.name }
         }
 
         return nil
@@ -292,11 +292,15 @@ struct Numbering: Sendable {
     // names before it wrote. Nil where the document was never read for that
     // declaration's closures.
     private func beginning(of declared: Name) -> Int? {
-        guard written[declared] != nil else { return nil }
+        var standing = 0
 
-        return written.keys.sorted()
-            .prefix { name in name < declared }
-            .reduce(0) { standing, name in standing + (written[name] ?? 0) }
+        for run in runs {
+            guard run.name != declared else { return standing }
+
+            standing += run.count
+        }
+
+        return nil
     }
 
     // The first number the closures take. What a body carries is a number of
