@@ -237,6 +237,20 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Public
+    // Every name this document declares, as a link asks for them. The exact
+    // dual of a module's `uses`, and held here for the reason that one is held
+    // there: a reader assembling it from the four tables is one more place to
+    // fix when a fifth kind of declaration arrives, and forgetting that place
+    // is a name that quietly declares nothing.
+    var declares: Set<Reference> {
+        Set(
+            declared.map(Reference.procedure)
+                + types.keys.map(Reference.type)
+                + constraints.keys.map(Reference.type)
+                + contracts.keys.map(Reference.type)
+        )
+    }
+
     // Which document this stands against, which is what a caller keeps it
     // under and hands back when it reads one.
     public var identity: Identity? {

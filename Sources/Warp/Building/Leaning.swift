@@ -30,13 +30,7 @@ struct Leaning {
     // MARK: - Internal
     // One document laid down, under what it turned out to be.
     mutating func lay(_ document: Compiled) {
-        hold(
-            document.declared.map(Reference.procedure)
-                + document.types.keys.map(Reference.type)
-                + document.constraints.keys.map(Reference.type)
-                + document.contracts.keys.map(Reference.type),
-            as: document.fingerprint
-        )
+        hold(document.declares, as: document.fingerprint)
     }
 
     // What this document was compiled against, or nothing where one of the
@@ -63,7 +57,7 @@ struct Leaning {
     // MARK: - Private
     // A name two documents declare is held to one declarer before this is
     // asked, so the first answer stands.
-    private mutating func hold(_ declared: [Reference], as fingerprint: Fingerprint?) {
+    private mutating func hold(_ declared: Set<Reference>, as fingerprint: Fingerprint?) {
         for reference in declared where declares[reference] == nil {
             declares[reference] = .some(fingerprint)
         }
