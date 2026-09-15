@@ -154,6 +154,13 @@ struct Numbering: Sendable {
             throw ArtifactRefused("a numbering counts closures for a name its document does not declare")
         }
 
+        // A writing counts a name only where that name wrote one, so a count
+        // of none is a count no writing lays down. Two writings for one
+        // numbering otherwise, and the reading answers them the same.
+        guard counts.values.allSatisfy({ $0 > 0 }) else {
+            throw ArtifactRefused("a numbering counts no closures for a name it counts")
+        }
+
         // What a document numbers is its spellings and then one number per
         // closure, so the counts are added up here. A sum past what an int
         // holds is a numbering no document stands.
