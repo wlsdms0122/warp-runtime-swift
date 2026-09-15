@@ -273,7 +273,9 @@ public struct Compiled: Sendable, Declaring {
     // Declared and not worked out. Every build system does it this way and none
     // of them asks the tool to prove what it is: rustc records the version that
     // made an `.rlib`, a `.swiftmodule` is bound to the compiler that wrote it,
-    // and Cargo hashes what `rustc -vV` prints.
+    // and Cargo hashes what `rustc -vV` prints. Nobody types the whole string
+    // either: the number is edited in `version`, the commit beside it is the
+    // release script's, and a test holds this to the number that file holds.
     //
     // So what it tells apart is releases. Two builds between one release and the
     // next write the same stamp and read each other's artifacts, and a reading
@@ -281,7 +283,7 @@ public struct Compiled: Sendable, Declaring {
     // purity, isolation and failure, and moving how that is read leaves every
     // byte where it was. Anyone changing those and reading an artifact from
     // before builds again rather than reads.
-    public static let runtime = "warp-swift 0.0.0-dev"
+    public static let runtime = "warp-swift 0.1.0"
 
     // This artifact said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
