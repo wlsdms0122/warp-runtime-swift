@@ -287,10 +287,13 @@ public struct Compiled: Sendable, Declaring {
         }
     }
 
-    // The same artifact, said as what a caller worked out it is. Deriving that
-    // answer reads bytes, so this is the door it arrives through, and a
-    // document compiled against this one records what arrived here.
-    public func fingerprinted(_ fingerprint: Fingerprint) -> Compiled {
+    // The same artifact, said as what it was worked out to be.
+    //
+    // Reached through the build and not on its own. A document is compiled
+    // against what stands before it, so what it leaned on has to be known while
+    // it compiles: an artifact fingerprinted after the fact is one every
+    // document beside it already finished leaning on nothing it could name.
+    func fingerprinted(_ fingerprint: Fingerprint) -> Compiled {
         Compiled(
             document: document,
             types: types,
