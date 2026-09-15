@@ -58,6 +58,7 @@ struct ArtifactMutantTests {
         }
 
         var ran = 0
+        var answered = 0
 
         // When. Each place of the writing replaced in turn, and whatever
         // stands after that carried to the next stage.
@@ -88,12 +89,14 @@ struct ArtifactMutantTests {
 
             ran += 1
 
-            await running(image, arguments: sut.arguments, of: sut, at: path)
+            if await running(image, arguments: sut.arguments, of: sut, at: path) { answered += 1 }
         }
 
-        // Then. Mutants reached the run. A walk that read nothing would make
-        // every sentence above true by asking nothing.
+        // Then. Mutants reached the run, and the run reached an end. A walk
+        // that read nothing would make every sentence above true by asking
+        // nothing, and so would one whose every mutant met the clock instead.
         #expect(ran > 0, "\(sut.name): no mutant of this artifact was read back and linked")
+        #expect(answered > 0, "\(sut.name): every one of \(ran) mutants met the clock rather than an answer")
     }
 
     // MARK: - Public
@@ -107,8 +110,8 @@ struct ArtifactMutantTests {
         arguments: [Name: Value],
         of sut: Case,
         at path: String
-    ) async {
-        let refused: (any Error)? = await withTaskGroup(of: Result<Value, any Error>?.self) { racing in
+    ) async -> Bool {
+        let raced: Result<Value, any Error>?? = await withTaskGroup(of: Result<Value, any Error>?.self) { racing in
             racing.addTask {
                 do {
                     return .success(try await Executor().run(image, arguments: arguments))
@@ -126,13 +129,19 @@ struct ArtifactMutantTests {
 
             racing.cancelAll()
 
-            guard case let .failure(error) = first else { return nil }
-
-            return error
+            return first
         }
 
-        guard let refused, !(refused is any WarpError), !(refused is CancellationError) else { return }
+        // The clock came first. A mutant that does not finish is not a defect,
+        // because stopping work that runs away is the host's.
+        guard let raced, let answer = raced else { return false }
 
-        Issue.record("\(sut.name) at \(path): the run refused as \(type(of: refused))")
+        guard case let .failure(error) = answer else { return true }
+
+        guard !(error is any WarpError), !(error is CancellationError) else { return true }
+
+        Issue.record("\(sut.name) at \(path): the run refused as \(type(of: error))")
+
+        return true
     }
 }

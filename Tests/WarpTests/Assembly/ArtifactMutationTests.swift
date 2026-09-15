@@ -62,7 +62,15 @@ struct ArtifactMutationTests {
             }
         }
 
-        #expect(mutations > 500, "the walk reached \(mutations) places, which is fewer than this fixture holds")
+        // Every place the fixture holds is walked, and a place yields at least
+        // one neighbour, so a walk that reached fewer mutations than the
+        // fixture has places is a walk that stopped somewhere.
+        let places = mutator.placeCount(of: written)
+
+        #expect(
+            mutations >= places,
+            "the walk made \(mutations) mutations of a writing standing in \(places) places"
+        )
     }
 
     // MARK: - Public
