@@ -16,10 +16,10 @@ import Foundation
 // no rescue, which is the whole reason the language needed this and could not
 // go on borrowing the failure channel to say it.
 //
-// Nothing catches it but the construct it names. Reaching a boundary that does
-// not answer to it is impossible rather than unhandled: a body may only write
-// one that something around it will catch, and the validator settles that before
-// anything runs.
+// Nothing catches it but the construct it names. A document may only write one
+// that something around it will catch, which the validator settles before
+// anything runs; an artifact carries the lowered body rather than the document,
+// so the run's own door answers one that reaches it.
 struct Leaving: Error {
     // MARK: - Property
     let reach: Leave.Reach

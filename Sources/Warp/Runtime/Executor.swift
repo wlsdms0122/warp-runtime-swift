@@ -93,7 +93,16 @@ public struct Executor: Sendable {
             activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
-        return try await executor.answer(body, of: entry, in: &activation, at: Trace())
+        // The construct a leave names is what catches it, and a document is
+        // held to naming one the validator can see. An artifact carries the
+        // lowered body and not the document, so what is read back out of a
+        // cache never stood in front of that judge. A run answers in this
+        // language's own words either way.
+        do {
+            return try await executor.answer(body, of: entry, in: &activation, at: Trace())
+        } catch is Leaving {
+            throw ExecutionError("a leave reached the run it started, and nothing there answers one")
+        }
     }
 
     // MARK: - Internal
