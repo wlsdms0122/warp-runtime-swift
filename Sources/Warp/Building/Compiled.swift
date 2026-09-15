@@ -290,11 +290,13 @@ public struct Compiled: Sendable, Declaring {
     // Which document it belongs to and what it was compiled against are the
     // first two things written, so an artifact says what it stands against
     // before it says anything it stood on that.
-    // Nothing where this document cannot be one. A document that settles a
-    // procedure into a value holds what an artifact carries as data and a
-    // procedure is not data, so it has no writing: that is a property of the
-    // document and not something that went wrong, and a caller told to build
-    // again would build the same document again.
+    // Nothing on either of two counts, and neither is something that went
+    // wrong. A document that settles a procedure into a value holds what an
+    // artifact carries as data and a procedure is not data, which is a property
+    // of the document: a caller told to build again would build the same
+    // document again. And a build handed no way to work a fingerprint out
+    // leaves every document that leaned on another unable to say what it is
+    // true against, which is a property of the build.
     public var written: Value? {
         ArtifactWriter().value(of: self).map { written in
             .array([.int(Self.format), .string(Self.runtime), written])
