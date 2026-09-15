@@ -145,7 +145,7 @@ struct Numbering: Sendable {
     // declarations stand at the end of this list, and a list whose tail is
     // some other module's names sends every self call somewhere else while
     // every other part of the artifact stays in step.
-    init(written value: Value, declaring declared: [Name]) throws {
+    init(written value: Value, declaring declared: [Name], standing closures: Int) throws {
         var fields = try Fields(value, of: "numbering")
 
         // Two runs of names, not one. What a document sends stands first and
@@ -170,6 +170,18 @@ struct Numbering: Sendable {
         // this document does not declare counts closures nobody wrote.
         guard counts.keys.allSatisfy(Set(own).contains) else {
             throw ArtifactRefused("a numbering counts closures for a name its document does not declare")
+        }
+
+        // The rows behind the declarations are the closures, so how many were
+        // written is a number the artifact already carries. Held to it before
+        // any of it is counted out: a numbering stands one reference per
+        // closure, and a count read off the writing decides how many that is.
+        guard counts.values.allSatisfy({ $0 <= closures }),
+              counts.values.reduce(0, +) == closures
+        else {
+            throw ArtifactRefused(
+                "a numbering counts closures the table does not carry \(closures) rows for"
+            )
         }
 
         // Through the door that numbers a document, so that what a reading
