@@ -24,7 +24,7 @@ extension Double {
             return self > 0 ? "<infinity>" : "<-infinity>"
         }
 
-        return spelling ?? "\(self)"
+        return spelling ?? "<unspellable>"
     }
 
     // The one spelling a document writes a fraction in, and every judge of a
