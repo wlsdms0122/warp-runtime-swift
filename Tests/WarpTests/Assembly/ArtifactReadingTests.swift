@@ -1173,6 +1173,28 @@ struct ArtifactReadingTests {
         }
     }
 
+    @Test("is refused where another Warp wrote it")
+    func anotherRuntime() throws {
+        // Given. A real artifact, stamped as the work of a build this is not.
+        guard case let .array(parts) = try parts() else {
+            Issue.record("an artifact is written as a list of parts")
+
+            return
+        }
+
+        let elsewhere: Value = .array([
+            .int(Compiled.format),
+            .string("warp-swift 99.0.0 (0000000)"),
+            .array(parts)
+        ])
+
+        // When / Then. Refused before anything laid out by this runtime's rules
+        // is read against them.
+        #expect(throws: ArtifactRefused.self) {
+            try Compiled(written: elsewhere, of: nil)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken
@@ -1195,16 +1217,16 @@ struct ArtifactReadingTests {
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
               case let .array(written) = mine.written,
-              written.count == 2
+              written.count == 3
         else {
             throw ArtifactMissing()
         }
 
-        return written[1]
+        return written[2]
     }
 
     private func stamped(_ parts: [Value]) -> Value {
-        .array([.int(Compiled.format), .array(parts)])
+        .array([.int(Compiled.format), .string(Compiled.runtime), .array(parts)])
     }
 }
 

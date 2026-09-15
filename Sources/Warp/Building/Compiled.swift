@@ -249,6 +249,22 @@ public struct Compiled: Sendable, Declaring {
     // and for no other reason.
     static let format = 2
 
+    // Which Warp wrote it. An artifact is what one implementation made of a
+    // document, and what it made moves when that implementation moves: what a
+    // body reaches decides purity, isolation and failure, and a declaration
+    // that wrote no answer is read off its body. A reading that took an
+    // artifact another build wrote would be reading a table laid out by rules
+    // it no longer holds.
+    //
+    // Declared and not worked out. Every build system does it this way and none
+    // of them asks the tool to prove what it is: rustc records the version that
+    // made an `.rlib`, a `.swiftmodule` is bound to the compiler that wrote it,
+    // and Cargo hashes what `rustc -vV` prints. What makes declaring safe is
+    // that nobody types the value in. The release writes it, and it carries the
+    // commit rather than the release alone, because a value a person remembers
+    // to raise goes stale on the one commit it mattered.
+    public static let runtime = "warp-swift 0.0.0-dev"
+
     // This artifact said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.
@@ -262,7 +278,9 @@ public struct Compiled: Sendable, Declaring {
     // document and not something that went wrong, and a caller told to build
     // again would build the same document again.
     public var written: Value? {
-        ArtifactWriter().value(of: self).map { written in .array([.int(Self.format), written]) }
+        ArtifactWriter().value(of: self).map { written in
+            .array([.int(Self.format), .string(Self.runtime), written])
+        }
     }
 
     // The same artifact, said as what a caller worked out it is. Deriving that
@@ -307,6 +325,17 @@ public struct Compiled: Sendable, Declaring {
         guard format == Self.format else {
             throw ArtifactRefused(
                 "the artifact is laid out as format \(format), and this reads format \(Self.format)"
+            )
+        }
+
+        // Asked after the layout and before anything laid out by it. The layout
+        // says where this field stands, and what it says is whether the rest of
+        // them mean what this reading takes them to mean.
+        let runtime = try fields.text()
+
+        guard runtime == Self.runtime else {
+            throw ArtifactRefused(
+                "the artifact was compiled by \(runtime), and this is \(Self.runtime)"
             )
         }
 
