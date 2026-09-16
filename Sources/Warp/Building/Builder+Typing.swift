@@ -1362,7 +1362,14 @@ extension Builder {
                 reading = context.variables
             }
 
-            let pure = body.map { block in isPure(block, given: context.pure, reading: reading) } ?? false
+            let pure = body.map { block in
+                isPure(
+                    block,
+                    given: context.pure,
+                    reading: reading,
+                    applying: procedure.signature.pureProcedures
+                )
+            } ?? false
             let isolated = body.map { block in
                 isIsolated(
                     block,

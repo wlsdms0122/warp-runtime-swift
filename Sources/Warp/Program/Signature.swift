@@ -59,6 +59,12 @@ public struct Signature: Sendable, Equatable {
         ordered({ name, _ in name }, standing: { name in name })
     }
 
+    // The parameters asking for a procedure that answers without running. A
+    // body may apply a name standing in one and still answer without running.
+    var pureProcedures: Set<Name> {
+        Set(parameters.compactMap { name, parameter in parameter.type?.isPureProcedure == true ? name : nil })
+    }
+
     // MARK: - Initializer
     public init(
         receiver: Name? = nil,

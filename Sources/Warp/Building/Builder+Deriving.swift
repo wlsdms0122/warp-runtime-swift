@@ -35,8 +35,13 @@ extension Builder {
         settling pure: inout Set<Name>,
         reading variables: Set<Name>
     ) {
-        let bodies = symbols.reduce(into: [Name: Block]()) { table, symbol in
-            table[symbol.declared] = symbol.procedure.block
+        // The body beside the names its own declaration said hold a procedure
+        // answering without running, since applying one of those is what the
+        // body is judged on.
+        let bodies = symbols.reduce(into: [Name: (block: Block, applying: Set<Name>)]()) { table, symbol in
+            guard let block = symbol.procedure.block else { return }
+
+            table[symbol.declared] = (block, symbol.procedure.signature.pureProcedures)
         }
 
         pure.formUnion(
@@ -50,8 +55,14 @@ extension Builder {
         // here, and asking after those again is asking the whole graph once
         // per document.
         while true {
-            let struck = bodies.compactMap { name, block in
-                pure.contains(name) && !isPure(block, given: pure, reading: variables) ? name : nil
+            let struck = bodies.compactMap { name, written in
+                pure.contains(name)
+                    && !isPure(
+                        written.block,
+                        given: pure,
+                        reading: variables,
+                        applying: written.applying
+                    ) ? name : nil
             }
 
             guard !struck.isEmpty else { return }
@@ -176,12 +187,35 @@ extension Builder {
     // The names a block binds are its own. A `let` and a `var` both introduce
     // one, and neither leaves the block, so declaring either says nothing about
     // what the block reaches.
-    func isPure(_ block: Block, given pure: Set<Name>, reading variables: Set<Name>) -> Bool {
-        block.body.allSatisfy { statement in
-            isPure(statement.binding, reading: variables)
-                && isPure(statement.expression, given: pure, reading: variables)
+    func isPure(
+        _ block: Block,
+        given pure: Set<Name>,
+        reading variables: Set<Name>,
+        applying procedures: Set<Name>
+    ) -> Bool {
+        var procedures = procedures
+
+        for statement in block.body {
+            guard
+                isPure(statement.binding, reading: variables),
+                isPure(statement.expression, given: pure, reading: variables, applying: procedures)
+            else { return false }
+
+            guard let introduced = statement.binding?.introduced else { continue }
+
+            // A name says what it holds, and a later name of the same spelling
+            // is a different name. So the set is read forward: what a name
+            // said is what stands until something else takes the spelling.
+            if statement.binding?.declared?.isPureProcedure == true {
+                procedures.insert(introduced)
+            } else {
+                procedures.remove(introduced)
+            }
         }
-            && (block.result.map { result in isPure(result, given: pure, reading: variables) } ?? true)
+
+        return block.result.map { result in
+            isPure(result, given: pure, reading: variables, applying: procedures)
+        } ?? true
     }
 
     // What a binding reaches. Introducing a name reaches nothing; writing one
@@ -243,13 +277,18 @@ extension Builder {
         }
     }
 
-    func isPure(_ expression: Expression, given pure: Set<Name>, reading variables: Set<Name>) -> Bool {
+    func isPure(
+        _ expression: Expression,
+        given pure: Set<Name>,
+        reading variables: Set<Name>,
+        applying procedures: Set<Name>
+    ) -> Bool {
         func isPure(_ inner: Expression) -> Bool {
-            self.isPure(inner, given: pure, reading: variables)
+            self.isPure(inner, given: pure, reading: variables, applying: procedures)
         }
 
         func isPure(_ statements: [Statement]) -> Bool {
-            self.isPure(Block(body: statements), given: pure, reading: variables)
+            self.isPure(Block(body: statements), given: pure, reading: variables, applying: procedures)
         }
 
         switch expression {
@@ -282,15 +321,22 @@ extension Builder {
                 && (call.receiver.map(isPure) ?? true)
                 && call.arguments.values.allSatisfy(isPure)
 
-        // Calling a value is settled at run time, so nothing here can say what
-        // it reaches. A body that does it is not answerable purely.
-        case .apply:
-            return false
+        // Calling a value is settled at run time, so what it reaches is said
+        // by the slot the value came out of and nowhere else. A slot asking
+        // for a procedure that answers without running says it; anything else
+        // says nothing, and a body applying one of those is not answerable
+        // purely.
+        case let .apply(callee, arguments):
+            guard case let .reference(path) = callee, let head = path.head, path.count == 1 else {
+                return false
+            }
+
+            return procedures.contains(head) && arguments.values.allSatisfy(isPure)
 
         // Control flow reaches nothing on its own: which part runs is decided
         // inside the body, so a construct is as pure as the parts it holds.
         case let .block(block):
-            return self.isPure(block, given: pure, reading: variables)
+            return self.isPure(block, given: pure, reading: variables, applying: procedures)
 
         case let .conditional(condition, then, otherwise):
             return isPure(condition)
@@ -298,11 +344,12 @@ extension Builder {
                 && (otherwise.map(isPure) ?? true)
 
         case let .loop(condition, body, _):
-            return isPure(condition) && self.isPure(body, given: pure, reading: variables)
+            return isPure(condition)
+                && self.isPure(body, given: pure, reading: variables, applying: procedures)
 
         case let .attempt(body, rescue, _):
-            return self.isPure(body, given: pure, reading: variables)
-                && self.isPure(rescue, given: pure, reading: variables)
+            return self.isPure(body, given: pure, reading: variables, applying: procedures)
+                && self.isPure(rescue, given: pure, reading: variables, applying: procedures)
         }
     }
 }

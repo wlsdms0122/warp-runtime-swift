@@ -376,6 +376,16 @@ extension TypeExpression {
         }
     }
 
+    // Whether a slot declaring this asks for a procedure that answers without
+    // running. A name standing in one may be applied where a body must answer
+    // without running: what fills it passed that judgement where it was handed
+    // over.
+    var isPureProcedure: Bool {
+        guard case .procedure(_, .pure, _) = self else { return false }
+
+        return true
+    }
+
     // Whether this type proves nothing about the value it holds. The three
     // that stop a walk, named once because they are one question asked twice. A
     // dot needs a type the types prove, and a cast is the door onto one: what

@@ -155,6 +155,104 @@ struct PurityTests {
         }
     }
 
+    @Test("a body applying a name a slot said holds a pure procedure answers without running")
+    func aBodyApplyingAPureProcedureSlotAnswers() async throws {
+        // Given. `asking` applies what it was handed, and its slot asks for a
+        // procedure that answers without running. A closure calling `asking`
+        // therefore answers without running too, and standing in that same
+        // slot is where that is asked.
+        let handed = try Module(
+            procedures: [
+                "asking": asking,
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("answering"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .literal(.string("answered"))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("relaying"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .call(
+                                        Call(selector: "asking", arguments: ["body": reference("answering")])
+                                    )
+                                )
+                            )
+                        )
+                    ],
+                    result: .call(Call(selector: "asking", arguments: ["body": reference("relaying")]))
+                )
+            ]
+        )
+
+        // When
+        let answer = try await run(handed)
+
+        // Then
+        #expect(answer == .string("answered"))
+    }
+
+    @Test("a body applying a name no slot said anything about is refused")
+    func aBodyApplyingAnUndeclaredNameIsRefused() async throws {
+        // Given. The same apply, on a name whose slot says only `procedure`.
+        // Nothing before the run says which procedure that holds.
+        let relaying = Procedure(
+            signature: Signature(
+                parameters: ["body": Parameter(type: .procedure(nil))],
+                returns: .string
+            ),
+            body: [],
+            result: .apply(reference("body"), arguments: [:])
+        )
+        let handed = try Module(
+            procedures: [
+                "asking": asking,
+                "relaying": relaying,
+                entryName: Procedure(
+                    body: [
+                        Statement(
+                            binding: .constant("answering"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .literal(.string("answered"))
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("given"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [],
+                                    result: .call(
+                                        Call(selector: "relaying", arguments: ["body": reference("answering")])
+                                    )
+                                )
+                            )
+                        )
+                    ],
+                    result: .call(Call(selector: "asking", arguments: ["body": reference("given")]))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([handed] + Module.standard, entry: entryName)
+        }
+    }
+
     @Test("a variable's starting value is read rather than run")
     func aVariableStartingFromAConstructIsRefused() async throws {
         // Given. A module variable written from a construct. A construct runs
