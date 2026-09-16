@@ -19,12 +19,9 @@ public extension Module {
     // `trimmed` stands here for a smaller reason: nothing names the characters
     // it removes, so a body written in Warp would have to invent the list.
     //
-    // Two are in neither set. `regex` cannot be written in Warp and is asked
+    // One is in neither set. `regex` cannot be written in Warp and is asked
     // of no implementation, since what a pattern means differs between the
-    // engines a host would reach for. `contains` is native here for a reason
-    // that belongs to this package rather than to the language: it would have
-    // to reach `std.logic` and `std.text`, and both of those already reach
-    // `std.collection`.
+    // engines a host would reach for.
     static let builtin: Set<Name> = [
         "std.logic.equal",
 
@@ -44,7 +41,7 @@ public extension Module {
 
     // What is in neither set: not required of an implementation, and not
     // written in Warp here either.
-    static let unwritten: Set<Name> = ["std.text.regex", "std.collection.contains"]
+    static let unwritten: Set<Name> = ["std.text.regex"]
 
     // The procedures that are written in Warp from the builtin ones. Named by
     // what is left rather than listed, so a procedure added to a bundle lands

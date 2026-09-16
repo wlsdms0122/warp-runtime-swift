@@ -19,11 +19,6 @@ public extension Module {
                 signature: Signature(of: CountQuery.self, receiver: .of, returns: .int),
                 implementation: .query(CountQuery())
             ),
-            "std.collection.contains": Procedure(
-                description: "Whether a string or an array holds a value.",
-                signature: Signature(of: ContainsQuery.self, receiver: .of, returns: .bool),
-                implementation: .query(ContainsQuery())
-            ),
             "std.collection.appending": Procedure(
                 description: "The elements with one more at the end.",
                 signature: Signature(

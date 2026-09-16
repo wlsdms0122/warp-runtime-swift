@@ -19,6 +19,7 @@ enum Library {
                 "std.collection.count"
                 "std.collection.gathering"
                 "std.collection.keys"
+                "std.logic.equal"
                 "std.math.lessThan"
                 "std.math.minus"
                 "std.math.plus"
@@ -51,6 +52,81 @@ enum Library {
                   receiver "to"
                   result null
                   returns "null"
+                }
+                "std.collection.contains" {
+                  body [
+                    {
+                      value false
+                      var "found"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              value {
+                                conditional {
+                                  then [
+                                    {
+                                      set "found"
+                                      value true
+                                    }
+                                    {
+                                      value {
+                                        break null
+                                      }
+                                    }
+                                  ]
+                                  when {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "value"
+                                        }
+                                      }
+                                      of {
+                                        ref "of[walk.index]"
+                                      }
+                                      procedure "std.logic.equal"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "of"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "Whether an array holds a value."
+                  parameters {
+                    of "array<some Element>"
+                    value "some Element"
+                  }
+                  receiver "of"
+                  result {
+                    ref "found"
+                  }
+                  returns "bool"
                 }
                 "std.collection.dropFirst" {
                   body [
@@ -1720,11 +1796,194 @@ enum Library {
                 "std.logic.equal"
                 "std.logic.not"
                 "std.math.lessThan"
+                "std.math.minus"
                 "std.math.plus"
                 "std.text.characters"
                 "std.text.joined"
               ]
               procedures {
+                "std.text.contains" {
+                  body [
+                    {
+                      let "held"
+                      value {
+                        call {
+                          of {
+                            ref "of"
+                          }
+                          procedure "std.text.characters"
+                        }
+                      }
+                    }
+                    {
+                      let "wanted"
+                      value {
+                        call {
+                          of {
+                            ref "value"
+                          }
+                          procedure "std.text.characters"
+                        }
+                      }
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              value true
+                              var "same"
+                            }
+                            {
+                              let "probe"
+                              value {
+                                loop {
+                                  body [
+                                    {
+                                      let "at"
+                                      value {
+                                        call {
+                                          arguments {
+                                            value {
+                                              ref "probe.index"
+                                            }
+                                          }
+                                          of {
+                                            ref "walk.index"
+                                          }
+                                          procedure "std.math.plus"
+                                        }
+                                      }
+                                    }
+                                    {
+                                      value {
+                                        conditional {
+                                          then [
+                                            {
+                                              set "same"
+                                              value false
+                                            }
+                                            {
+                                              value {
+                                                break null
+                                              }
+                                            }
+                                          ]
+                                          when {
+                                            call {
+                                              of {
+                                                call {
+                                                  arguments {
+                                                    value {
+                                                      ref "wanted[probe.index]"
+                                                    }
+                                                  }
+                                                  of {
+                                                    ref "held[at]"
+                                                  }
+                                                  procedure "std.logic.equal"
+                                                }
+                                              }
+                                              procedure "std.logic.not"
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                  while {
+                                    call {
+                                      arguments {
+                                        value {
+                                          call {
+                                            of {
+                                              ref "wanted"
+                                            }
+                                            procedure "std.collection.count"
+                                          }
+                                        }
+                                      }
+                                      of {
+                                        ref "probe.index"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                conditional {
+                                  then [
+                                    {
+                                      value {
+                                        return true
+                                      }
+                                    }
+                                  ]
+                                  when {
+                                    ref "same"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    arguments {
+                                      value 1
+                                    }
+                                    of {
+                                      call {
+                                        arguments {
+                                          value {
+                                            call {
+                                              of {
+                                                ref "wanted"
+                                              }
+                                              procedure "std.collection.count"
+                                            }
+                                          }
+                                        }
+                                        of {
+                                          call {
+                                            of {
+                                              ref "held"
+                                            }
+                                            procedure "std.collection.count"
+                                          }
+                                        }
+                                        procedure "std.math.minus"
+                                      }
+                                    }
+                                    procedure "std.math.plus"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "Whether a string holds another inside it."
+                  parameters {
+                    of "string"
+                    value "string"
+                  }
+                  receiver "of"
+                  result false
+                  returns "bool"
+                }
                 "std.text.replacing" {
                   body [
                     {

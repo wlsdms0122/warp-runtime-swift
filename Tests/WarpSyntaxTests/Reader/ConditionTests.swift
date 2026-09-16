@@ -100,7 +100,7 @@ struct ConditionTests {
 
         // Then
         #expect(try await sut.evaluate(
-            .call(Call(receiver: .reference(path("title")), selector: "std.collection.contains", arguments: ["value": .literal(.string("spec"))]))
+            .call(Call(receiver: .reference(path("title")), selector: "std.text.contains", arguments: ["value": .literal(.string("spec"))]))
         ))
         #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("tags")), selector: "std.collection.contains", arguments: ["value": .literal(.string("b"))]))
@@ -111,9 +111,14 @@ struct ConditionTests {
         #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("title")), selector: "std.text.regex", arguments: ["value": .literal(.string("sp.c$"))]))
         ))
-        #expect(try await !sut.evaluate(
-            .call(Call(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
-        ))
+        // Absence is not an empty collection. `contains` walks what it was
+        // handed, the way every other collection procedure does, so asking it
+        // of nothing is refused rather than answered false.
+        await #expect(throws: (any Error).self) {
+            try await sut.evaluate(
+                .call(Call(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
+            )
+        }
 
         // A text atom asking a number is type misuse, not a false answer
         await #expect(throws: ReferenceUnfit.self) {
