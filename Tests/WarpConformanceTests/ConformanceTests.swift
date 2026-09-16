@@ -537,7 +537,7 @@ struct SuppliedQuery<Parameters: ParameterSet>: Query {
     let isolated: Bool
     let failing: Failing
 
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         answers
     }
 }

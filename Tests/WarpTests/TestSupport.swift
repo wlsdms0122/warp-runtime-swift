@@ -225,13 +225,12 @@ final class TicketQuery: Query, @unchecked Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<TicketQuery>) throws -> Value? {
-        lock.lock()
-        defer { lock.unlock() }
+    func evaluate(_ question: Question<TicketQuery>) async throws -> Value? {
+        .int(lock.withLock {
+            issued += 1
 
-        issued += 1
-
-        return .int(issued)
+            return issued
+        })
     }
 
     // MARK: - Private

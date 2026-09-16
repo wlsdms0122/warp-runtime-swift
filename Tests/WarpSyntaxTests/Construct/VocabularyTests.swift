@@ -107,7 +107,7 @@ private struct FirstQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard case let .array(elements) = question.receiver else { return nil }
 
         return elements.first
@@ -145,7 +145,7 @@ private struct LongerThanQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard
             case let .string(text) = question.receiver,
             case let .int(limit) = question[.value]

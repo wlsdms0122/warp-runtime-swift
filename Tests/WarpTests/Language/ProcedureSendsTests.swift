@@ -629,7 +629,7 @@ private struct PlainQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         question.receiver == nil ? .string("sent to nothing") : .string("sent to something")
     }
 

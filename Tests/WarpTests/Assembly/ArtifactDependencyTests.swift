@@ -193,7 +193,7 @@ struct ArtifactDependencyTests {
 private struct PeekQuery: Query {
     typealias Parameters = NoParameters
 
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         .int(7)
     }
 }
