@@ -206,7 +206,10 @@ extension Builder {
             // A name says what it holds, and a later name of the same spelling
             // is a different name. So the set is read forward: what a name
             // said is what stands until something else takes the spelling.
-            if statement.binding?.declared?.isPureProcedure == true {
+            if
+                statement.binding?.declared?.isPureProcedure == true
+                    || applies(statement.expression, given: procedures)
+            {
                 procedures.insert(introduced)
             } else {
                 procedures.remove(introduced)
@@ -216,6 +219,18 @@ extension Builder {
         return block.result.map { result in
             isPure(result, given: pure, reading: variables, applying: procedures)
         } ?? true
+    }
+
+    // Whether what this reads came out of a slot that said its procedures
+    // answer without running. The head is the name the slot gave, and indexing
+    // past it keeps the claim, since a slot asking for an array of them says
+    // it about every element. Reading a field walks into a value the slot said
+    // nothing about, and so does anything that is not a name at all.
+    private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
+        guard case let .reference(path) = expression, let head = path.head else { return false }
+
+        return procedures.contains(head)
+            && path.dropFirst().allSatisfy { segment in segment.named == nil }
     }
 
     // What a binding reaches. Introducing a name reaches nothing; writing one
@@ -326,12 +341,13 @@ extension Builder {
         // for a procedure that answers without running says it; anything else
         // says nothing, and a body applying one of those is not answerable
         // purely.
+        //
+        // Indexing past the head keeps the claim, since a slot asking for an
+        // array of them says it about every element. Anything else on the path
+        // walks into a value the slot said nothing about.
         case let .apply(callee, arguments):
-            guard case let .reference(path) = callee, let head = path.head, path.count == 1 else {
-                return false
-            }
-
-            return procedures.contains(head) && arguments.values.allSatisfy(isPure)
+            return applies(callee, given: procedures)
+                && arguments.values.allSatisfy(isPure)
 
         // Control flow reaches nothing on its own: which part runs is decided
         // inside the body, so a construct is as pure as the parts it holds.

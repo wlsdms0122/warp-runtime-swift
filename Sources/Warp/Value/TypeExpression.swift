@@ -376,14 +376,21 @@ extension TypeExpression {
         }
     }
 
-    // Whether a slot declaring this asks for a procedure that answers without
-    // running. A name standing in one may be applied where a body must answer
-    // without running: what fills it passed that judgement where it was handed
-    // over.
+    // Whether a slot declaring this asks for procedures that answer without
+    // running, holding one or an array of them. A name standing in such a slot
+    // may be applied where a body must answer without running: what fills it
+    // passed that judgement where it was handed over.
     var isPureProcedure: Bool {
-        guard case .procedure(_, .pure, _) = self else { return false }
+        switch self {
+        case .procedure(_, .pure, _):
+            return true
 
-        return true
+        case let .array(element):
+            return element.isPureProcedure
+
+        default:
+            return false
+        }
     }
 
     // Whether this type proves nothing about the value it holds. The three
