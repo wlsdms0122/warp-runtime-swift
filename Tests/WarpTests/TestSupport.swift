@@ -376,6 +376,7 @@ extension Closure {
                     Body(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], names: [])
                 ),
+                foldable: true,
                 in: table
             ),
             captured: []

@@ -535,7 +535,7 @@ struct IndexReferenceJudgmentTests {
     private let entryName: Name = "entry"
 
     // MARK: - Test
-    @Test("a constant settles from native procedures alone")
+    @Test("a constant does not run a body its own document declares")
     func aConstantDoesNotRunAWrittenBody() async throws {
         // Given. `shout` has a written body, still being resolved beside the
         // constants it may read; a constant that runs it is a cycle with no
@@ -569,7 +569,7 @@ struct IndexReferenceJudgmentTests {
         await #expect {
             try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("native procedures alone")
+            error is BuildError && "\(error)".contains("a circle with no start")
         }
     }
 

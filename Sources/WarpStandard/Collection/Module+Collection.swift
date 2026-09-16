@@ -55,6 +55,7 @@ public extension Module {
                 ),
                 implementation: .query(SettingQuery())
             )
-        ]
+        ],
+        builtin: true
     )
 }

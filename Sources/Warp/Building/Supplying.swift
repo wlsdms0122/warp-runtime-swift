@@ -31,6 +31,9 @@ public struct Supplying: Sendable {
         let signature: Signature
         let sending: [Native.Send]
 
+        // Whether the module bringing it is one the specification names. What
+        // a constant settles from is read off this.
+        let builtin: Bool
     }
 
     // MARK: - Property
@@ -67,7 +70,8 @@ public struct Supplying: Sendable {
                 procedures[name] = Brought(
                     native: native,
                     signature: procedure.signature,
-                    sending: native.sending
+                    sending: native.sending,
+                    builtin: module.builtin
                 )
             }
         }

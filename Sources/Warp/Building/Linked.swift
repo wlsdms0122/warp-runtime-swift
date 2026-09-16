@@ -65,6 +65,13 @@ public final class Linked: Sendable {
 
     let implementation: Implementation
 
+    // Whether a fold may run this. A body is read from the text an object is
+    // keyed by and the specification says what its own procedures answer, so
+    // both fold to a value that means the same wherever the object is read. A
+    // procedure a caller brought answers what its code answers, which is
+    // written down nowhere the object goes.
+    let foldable: Bool
+
     // MARK: - Initializer
     init(
         label: Name,
@@ -74,6 +81,7 @@ public final class Linked: Sendable {
         isolation: Isolation,
         failing: Failing,
         implementation: Implementation,
+        foldable: Bool,
         sends: [Sent] = [],
         in table: LoweredTypeTable
     ) {
@@ -93,6 +101,7 @@ public final class Linked: Sendable {
         self.table = table
         self.sends = sends
         self.implementation = implementation
+        self.foldable = foldable
     }
 
     // The same row read against another table. A compile that lays more
@@ -115,6 +124,7 @@ public final class Linked: Sendable {
         self.table = table
         self.sends = row.sends
         self.implementation = row.implementation
+        self.foldable = row.foldable
     }
 
     // The same row holding different code. What a row lowered from its
@@ -134,6 +144,7 @@ public final class Linked: Sendable {
         self.table = row.table
         self.sends = sends
         self.implementation = implementation
+        self.foldable = row.foldable
     }
 
     // MARK: - Public
@@ -148,20 +159,32 @@ public final class Linked: Sendable {
         const: Bool,
         isolated: Bool,
         failing: Failing,
+        builtin: Bool,
         sends: [Sent],
         in table: LoweredTypeTable
     ) -> Linked {
-        Linked(
+        let native = procedure.implementation.native
+
+        return Linked(
             label: label,
             origin: origin,
             signature: procedure.signature,
             constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
-            implementation: .native(procedure.implementation.native ?? .query(UnsettledProcedure())),
+            implementation: .native(native ?? .query(UnsettledProcedure())),
+            foldable: native == nil || builtin,
             sends: sends,
             in: table
         )
+    }
+
+    // The same row as a fold reads it: what a caller brought answers with the
+    // refusal it earns there, and everything else answers as it is.
+    var folding: Linked {
+        guard !foldable else { return self }
+
+        return Linked(self, implementation: .native(.query(UnfoldableProcedure(label))), sends: sends)
     }
 
     // The boundary this row keeps, over arguments standing at their slot's

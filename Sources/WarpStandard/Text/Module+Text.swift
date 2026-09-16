@@ -63,6 +63,7 @@ public extension Module {
                 signature: Signature(of: JoinedQuery.self, receiver: .of, returns: .string),
                 implementation: .query(JoinedQuery())
             )
-        ]
+        ],
+        builtin: true
     )
 }

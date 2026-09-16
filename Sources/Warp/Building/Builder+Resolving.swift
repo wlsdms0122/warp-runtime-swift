@@ -405,7 +405,7 @@ extension Builder {
     }
 
     // What a document's variables start a run holding. Settled the way a
-    // constant is, from native procedures alone, reading the constants beside it
+    // constant is, from what a constant settles from, reading those beside it
     // and no variable; the starting value is a fact the link reads, and a
     // variable's type is the type of that value.
     func variables(

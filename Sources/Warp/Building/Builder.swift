@@ -580,6 +580,7 @@ public struct Builder: Sendable {
                     const: compiling.const.contains(symbol.declared),
                     isolated: compiling.isolated.contains(symbol.declared),
                     failing: compiling.failing[symbol.declared] ?? .unstated,
+                    builtin: module.builtin,
                     sends: try sending.rows(of: symbol.procedure, called: symbol.declared),
                     in: loweredTypes
                 )

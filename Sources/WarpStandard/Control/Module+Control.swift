@@ -22,6 +22,7 @@ public extension Module {
                 signature: Signature(of: AbortQuery.self, receiver: .of, returns: .never),
                 implementation: .query(AbortQuery())
             )
-        ]
+        ],
+        builtin: true
     )
 }

@@ -47,6 +47,7 @@ public extension Module {
                 signature: Signature(of: FirstEffect.self, receiver: .of, returns: .any),
                 implementation: .effect(FirstEffect())
             )
-        ]
+        ],
+        builtin: true
     )
 }

@@ -31,6 +31,8 @@ public extension Module {
             // themselves, and strings among themselves.
             "std.Comparable": [.int, .double, .string]
         ],
-        procedures: [:]
+        procedures: [:],
+
+        builtin: true
     )
 }

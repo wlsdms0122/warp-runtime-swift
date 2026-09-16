@@ -400,7 +400,7 @@ struct LoweringTests {
         await #expect {
             try await builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
-            "\(error)".contains("runs after the build")
+            "\(error)".contains("a circle with no start")
         }
     }
 

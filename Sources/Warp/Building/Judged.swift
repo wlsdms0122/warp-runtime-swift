@@ -256,7 +256,7 @@ struct Judged: Sendable {
     ) throws -> Linked {
         switch implementation {
         case let .body(body, frame):
-            return row(.body(body, frame), of: origin, in: table)
+            return row(.body(body, frame), of: origin, foldable: true, in: table)
 
         case let .native(sending):
             guard let brought = supplied[label] else {
@@ -268,6 +268,7 @@ struct Judged: Sendable {
                 return row(
                     .native(constness == .const ? .query(UnbroughtProcedure(label)) : .effect(UnbroughtEffect(label))),
                     of: origin,
+                    foldable: true,
                     in: table
                 )
             }
@@ -287,13 +288,14 @@ struct Judged: Sendable {
                 throw self.brought(otherwise: brought, sending: sending, in: document)
             }
 
-            return row(.native(brought.native), of: origin, in: table)
+            return row(.native(brought.native), of: origin, foldable: brought.builtin, in: table)
         }
     }
 
     private func row(
         _ implementation: Linked.Implementation,
         of origin: Int,
+        foldable: Bool,
         in table: LoweredTypeTable
     ) -> Linked {
         Linked(
@@ -304,6 +306,7 @@ struct Judged: Sendable {
             isolation: isolation,
             failing: failing,
             implementation: implementation,
+            foldable: foldable,
             sends: sends,
             in: table
         )

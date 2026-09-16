@@ -293,6 +293,7 @@ extension Closure {
                     Body(instructions: [], result: nil),
                     Frame(size: 0, parameters: [], variables: [], names: [])
                 ),
+                foldable: true,
                 in: .empty
             ),
             captured: []

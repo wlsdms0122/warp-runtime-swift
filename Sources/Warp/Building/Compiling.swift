@@ -104,7 +104,7 @@ struct Compiling {
 
         // Every body laid down is lowered already, so all of them are
         // something the next document may fold through.
-        self.foldingRows = lowering.table
+        self.foldingRows = lowering.table.map(\.folding)
     }
 
     // MARK: - Public
@@ -253,10 +253,10 @@ struct Compiling {
 
     // What has been lowered since the last phase, written in.
     mutating func foldable() {
-        foldingRows.append(contentsOf: lowering.table[foldingRows.count...])
+        foldingRows.append(contentsOf: lowering.table[foldingRows.count...].map(\.folding))
 
         for row in loweredRows {
-            foldingRows[row] = lowering.table[row]
+            foldingRows[row] = lowering.table[row].folding
         }
 
         loweredRows.removeAll(keepingCapacity: true)

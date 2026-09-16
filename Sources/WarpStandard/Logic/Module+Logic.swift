@@ -19,6 +19,7 @@ public extension Module {
                 signature: Signature(of: EqualQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(EqualQuery())
             )
-        ]
+        ],
+        builtin: true
     )
 }

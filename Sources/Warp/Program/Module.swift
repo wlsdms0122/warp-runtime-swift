@@ -102,6 +102,17 @@ public struct Module: Sendable {
     // document is for.
     public let identity: Identity?
 
+    // Whether these are the procedures the specification names rather than
+    // ones a caller brought. A constant settles from a body in the link and
+    // from these alone: what one of these answers is the same in every
+    // implementation, so a value folded through one still means what it says
+    // wherever the object it was written into is read.
+    //
+    // A document cannot say it about itself. It is what an implementation
+    // brings, so it is written where the module is assembled and does not
+    // travel with the draft.
+    public let builtin: Bool
+
     // MARK: - Initializer
     // Making one is checking one, so a module that exists has been checked
     // against itself.
@@ -131,7 +142,8 @@ public struct Module: Sendable {
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure],
-        identity: Identity? = nil
+        identity: Identity? = nil,
+        builtin: Bool = false
     ) throws {
         try self.init(
             Draft(
@@ -145,16 +157,18 @@ public struct Module: Sendable {
                 variables: variables,
                 procedures: procedures
             ),
-            identity: identity
+            identity: identity,
+            builtin: builtin
         )
     }
 
     // A draft, checked. Which text it came out of is beside it rather than in
     // it: a draft is what a document declares, and which document that was is
     // the reader's to say.
-    public init(_ draft: Draft, identity: Identity? = nil) throws {
+    public init(_ draft: Draft, identity: Identity? = nil, builtin: Bool = false) throws {
         self.source = draft
         self.identity = identity
+        self.builtin = builtin
         let reading = draft.read()
 
         self.sends = reading.sends

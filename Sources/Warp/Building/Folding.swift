@@ -57,8 +57,10 @@ struct Folding {
 
     // Against native procedures alone: every declaration of the modules by its
     // spelling, a written body standing as the refusal it earns before it is
-    // lowered. What a constant settles from. A native's constness is its own; a
-    // written body is never run here, so its constness is not asked.
+    // lowered. A native's constness is its own; a written body is never run
+    // here, so its constness is not asked. A procedure a caller brought stands
+    // as its own refusal, since a constant settles from the standard vocabulary
+    // and from bodies in the link.
     init(bindings: [Name: Value], natives modules: [Module]) {
         // The natives declare the types their own signatures name, so the
         // table is theirs.
@@ -80,12 +82,13 @@ struct Folding {
                         const: procedure.implementation.isNativelyConst == true,
                         isolated: false,
                         failing: procedure.implementation.nativelyFailing ?? .unstated,
+                        builtin: module.builtin,
                         // A constant settles before the link's table exists, so
                         // a procedure that sends has no row to send to. It refuses
                         // when it tries, the way one with a written body does.
                         sends: [],
                         in: loweredTypes
-                    )
+                    ).folding
                 )
             }
         }
@@ -121,10 +124,13 @@ struct Folding {
             at: place
         )
 
+        // The table as a fold reads it. Lowering holds the rows a run reads,
+        // and the two differ in one place: a procedure a caller brought
+        // answers a run and stands as its refusal here.
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table, closures: lowering.closureRows)
+            of: answered.holding(lowering.table.map(\.folding), closures: lowering.closureRows)
         )
     }
 

@@ -540,6 +540,7 @@ struct Lowering {
                     isolation: procedure.isolation,
                     failing: procedure.failing,
                     implementation: .body(body, inner.frame),
+                    foldable: true,
                     in: loweredTypes
                 )
             )

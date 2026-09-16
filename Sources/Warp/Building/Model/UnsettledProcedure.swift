@@ -21,8 +21,8 @@ struct UnsettledProcedure: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
         throw ExecutionError(
-            "this procedure has a written body, which runs after the build."
-                + " A constant settles from native procedures alone"
+            "this procedure's body is being resolved beside the constants it"
+                + " may read, so a constant that runs it is a circle with no start"
         )
     }
 

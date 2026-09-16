@@ -70,6 +70,7 @@ public extension Module {
                 signature: Signature(of: LessThanQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(LessThanQuery())
             )
-        ]
+        ],
+        builtin: true
     )
 }
