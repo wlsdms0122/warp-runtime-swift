@@ -14,7 +14,9 @@ public extension Module {
     // no procedures (what it gives a link is memberships) and a
     // bundle whose signatures mention these needs this module in the link,
     // which is the one dependency the standard modules have.
-    static let foundation = try! Module(
+    static let foundation: [Module] = [nativeFoundation]
+
+    private static let nativeFoundation = try! Module(
         description: "The shared ground: what counts as a number, and what orders.",
         types: [
             // One element of bytes. A whole number a range refines, not a kind

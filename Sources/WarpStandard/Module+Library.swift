@@ -26,22 +26,20 @@ extension Module {
         try! Loader().load(try! TextEncoding.value(from: text), identity: nil)
     }
 
-    // A bundle and what `lib/std` writes for it, as one module. A bundle is
-    // taken whole, so which of its procedures the host wrote and which the
-    // language did is not a thing a caller picks apart.
-    static func bundled(_ bundle: Module, with written: String) -> Module {
-        guard let document = library[written] else { return bundle }
+    // A bundle and what `lib/std` writes for it. A bundle is taken whole, so
+    // which of its procedures the host wrote and which the language did is not
+    // a thing a caller picks apart; it is two modules rather than one because
+    // a module is compiled against the modules standing before it, and a
+    // declaration the host answers has no body to compile.
+    //
+    // Merged into one, a bundle would need whatever its written half sends to,
+    // and the bundles it declares for stand above it: `std.logic` walks, so it
+    // sends `std.collection.count`, and a collection procedure comparing two
+    // elements sends `std.logic.equal`. Apart, `equal` stands first with
+    // nothing to wait for and the ring never forms.
+    static func bundled(_ bundle: Module, with written: String) -> [Module] {
+        guard let document = library[written] else { return [bundle] }
 
-        let procedures = bundle.procedures.merging(document.procedures) { _, new in new }
-
-        return try! Module(
-            description: bundle.description,
-            // What the pair reaches outside itself. A name one of them declared
-            // is no longer sent anywhere but inside.
-            imports: bundle.imports.union(document.imports).subtracting(procedures.keys),
-            types: bundle.types.merging(document.types) { first, _ in first },
-            constraints: bundle.constraints.merging(document.constraints) { first, _ in first },
-            procedures: procedures
-        )
+        return [bundle, document]
     }
 }

@@ -429,13 +429,13 @@ struct DeclaredSpellingTests {
         // When / Then, without the foundation the constraint name resolves to
         // nothing, and the declaration that mentions it is refused
         await #expect {
-            try await builder.build([sut, .collection], entry: entryName)
+            try await builder.build([sut] + Module.collection, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
         }
 
         await #expect(throws: Never.self) {
-            try await builder.build([sut, .collection, .math, .foundation], entry: entryName)
+            try await builder.build([sut] + Module.collection + Module.math + Module.foundation, entry: entryName)
         }
     }
 }

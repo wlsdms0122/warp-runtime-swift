@@ -83,7 +83,8 @@ struct SwiftAuthoringTests {
         // one, and the bundles that bundle leans on. The control flow beside it
         // needs nothing.
         let image = try await builder.build(
-            [try Module(procedures: ["entry": procedure]), .logic, .math, .collection, .foundation],
+            [try Module(procedures: ["entry": procedure])]
+                + Module.logic + Module.math + Module.collection + Module.foundation,
             entry: "entry"
         )
         let outputs = try await Executor().run(

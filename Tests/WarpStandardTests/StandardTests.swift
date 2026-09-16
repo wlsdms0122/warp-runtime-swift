@@ -72,11 +72,11 @@ struct StandardTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await builder.build([sut, .math, .text, .foundation], entry: entryName)
+            try await builder.build([sut] + Module.math + Module.text + Module.foundation, entry: entryName)
         }
 
         await #expect(throws: Never.self) {
-            try await builder.build([sut, .collection, .math, .foundation], entry: entryName)
+            try await builder.build([sut] + Module.collection + Module.math + Module.foundation, entry: entryName)
         }
     }
 

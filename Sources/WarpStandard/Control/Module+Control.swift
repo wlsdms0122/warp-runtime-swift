@@ -12,7 +12,9 @@ public extension Module {
     // Procedures about whether a body goes on, rather than about what it computes.
     // The other bundles are named for what they read (truths, numbers, text,
     // containers) and this one reads nothing.
-    static let control = try! Module(
+    static let control: [Module] = [nativeControl]
+
+    private static let nativeControl = try! Module(
         description: "Leaving instead of answering.",
         procedures: [
             "std.control.abort": Procedure(

@@ -409,7 +409,11 @@ struct WriterTests {
         // Given. What a caller brings is declared where the run is assembled,
         // not carried in the program. Writing its name alone would make a
         // document that loads into a body nobody wrote.
-        let module = try Module(procedures: Module.logic.procedures)
+        let module = try Module(
+            procedures: Module.logic.reduce(into: [Name: Procedure]()) { held, bundle in
+                held.merge(bundle.procedures) { first, _ in first }
+            }
+        )
 
         // When / Then
         #expect(throws: WritingError.self) {
