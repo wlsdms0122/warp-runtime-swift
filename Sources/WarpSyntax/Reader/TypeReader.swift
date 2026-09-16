@@ -44,6 +44,11 @@ public struct TypeReader: Decodable {
     // The one key a type handed on once is written under.
     public static let linearKey = "linear"
 
+    // A built-in taking another type, written under its own key where the
+    // inner type has no spelling of its own. `array<string>` is a name; an
+    // array of procedures is not, and this is the form that carries it.
+    public static let holdingKeys = ["array", "dictionary"]
+
     public static func parse(_ written: String) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: .whitespaces)
 
@@ -241,7 +246,9 @@ public struct TypeReader: Decodable {
     // Whether the reading keeps this key for a form of its own. A record whose
     // only field is one would come back as that other form.
     public static func reserves(_ key: Name) -> Bool {
-        readsAsAProcedure(key) || key.spelling == linearKey
+        readsAsAProcedure(key)
+            || key.spelling == linearKey
+            || holdingKeys.contains(key.spelling)
     }
 
     // What a procedure form's key says, read front to back: a slot's mark if one
@@ -353,6 +360,20 @@ public struct TypeReader: Decodable {
             key.stringValue == linearKey
         {
             return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
+        }
+
+        // An array or a dictionary of something with no spelling of its own,
+        // told apart the same way. `array<string>` is written as the name it
+        // is; an array of procedures has no name, so it is written here.
+        if
+            let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
+            keyed.allKeys.count == 1,
+            let key = keyed.allKeys.first,
+            holdingKeys.contains(key.stringValue)
+        {
+            let inner = try keyed.decode(TypeReader.self, forKey: key).type
+
+            return key.stringValue == "array" ? .array(inner) : .dictionary(inner)
         }
 
         guard

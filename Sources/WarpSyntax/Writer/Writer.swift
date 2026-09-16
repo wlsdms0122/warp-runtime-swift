@@ -236,11 +236,22 @@ public struct Writer: Sendable {
 
             return .string("some \(name)")
 
+        // Written as the name it is where the element has one, and under its
+        // own key where the element has none. An array of procedures is the
+        // case with none.
         case let .array(element):
-            return .string("array<\(try spelt(element, at: "inside array<…>"))>")
+            guard let spelling = try named(element) else {
+                return .dictionary([try Name("array"): try value(of: element)])
+            }
+
+            return .string("array<\(spelling)>")
 
         case let .dictionary(element):
-            return .string("dictionary<\(try spelt(element, at: "inside dictionary<…>"))>")
+            guard let spelling = try named(element) else {
+                return .dictionary([try Name("dictionary"): try value(of: element)])
+            }
+
+            return .string("dictionary<\(spelling)>")
 
         // Spelt with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own. A record has no spelling
@@ -487,6 +498,14 @@ public struct Writer: Sendable {
 
     // One fact (only a type with a spelling of its own composes) said with the
     // place the author wrote, so the refusal points at their text.
+    // The name this type is written as, or nil where it is written as a
+    // mapping instead.
+    private func named(_ type: TypeExpression) throws -> String? {
+        guard case let .string(name) = try value(of: type) else { return nil }
+
+        return name
+    }
+
     private func spelt(_ type: TypeExpression, at context: String) throws -> String {
         guard case let .string(name) = try value(of: type) else {
             throw WritingError("only a type with a name is written \(context)")
