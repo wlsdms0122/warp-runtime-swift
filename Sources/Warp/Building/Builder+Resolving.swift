@@ -436,6 +436,10 @@ extension Builder {
 
                 try checked(calls, in: context, writing: fulfillment)
 
+                // A variable's starting value settles at the build the way a
+                // constant's does, so it passes the same gate.
+                try settles(judged, at: place, given: context, writing: fulfillment)
+
                 do {
                     started[name] = try await Folding(
                         constants: known,
