@@ -20,6 +20,18 @@ struct StandardTests {
 
     // MARK: - Lifecycle
     // MARK: - Test
+    @Test("every procedure that ships is builtin, written in Warp, or the one that is neither")
+    func everyProcedureIsPlaced() throws {
+        // Given. What the bundles declare, and how the two lists cut them
+        let shipped = Set(Module.standard.flatMap(\.procedures.keys))
+
+        // Then. A name in `builtin` that nothing declares is a list gone stale,
+        // and a name in neither list is one nobody decided about
+        #expect(Module.builtin.subtracting(shipped).isEmpty)
+        #expect(Module.builtin.count == 26)
+        #expect(Module.builtin.union(Module.derived).union(["std.text.regex"]) == shipped)
+    }
+
     @Test("a bundle left out is a bundle whose names do not resolve")
     func aBundleLeftOutDoesNotResolve() async throws {
         // Given. A program that only counts, linked without the bundle that
