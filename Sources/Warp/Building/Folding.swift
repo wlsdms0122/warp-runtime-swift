@@ -42,6 +42,19 @@ struct Folding {
         self.answered = answered
     }
 
+    // Against a link already made: every declaration it holds answers here the
+    // way it answers a body, whether the host wrote it or a document did. The
+    // numbers a body carries are rows after a link, which is the same reading
+    // a run makes of them.
+    init(bindings: [Name: Value], in image: Image) {
+        self.init(
+            constants: bindings,
+            origin: 0,
+            in: .unanswerable(image.linked, rows: image.rows),
+            loweredTypes: image.loweredTypes
+        )
+    }
+
     // Against native procedures alone: every declaration of the modules by its
     // spelling, a written body standing as the refusal it earns before it is
     // lowered. What a constant settles from. A native's purity is its own; a

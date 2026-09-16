@@ -21,7 +21,7 @@ struct ConditionTests {
     @Test("predicates evaluate against scope values")
     func predicatesEvaluateAgainstScope() async throws {
         // Given
-        let sut = Folding(bindings: scope, natives: Module.standard)
+        let sut = try await folding(scope)
 
         // Then
         #expect(try await sut.evaluate(
@@ -47,11 +47,11 @@ struct ConditionTests {
     @Test("both sides of a predicate are expressions")
     func bothSidesAreExpressions() async throws {
         // Given
-        let sut = Folding(bindings: [
+        let sut = try await folding([
             "left": .string("same"),
             "right": .string("same"),
             "candidates": .array([.string("same"), .string("other")])
-        ], natives: Module.standard)
+        ])
 
         // Then. A reference compares against another reference
         #expect(try await sut.evaluate(
@@ -67,7 +67,7 @@ struct ConditionTests {
     @Test("numeric equality crosses int and double")
     func numericEqualityCrossesIntAndDouble() async throws {
         // Given
-        let sut = Folding(bindings: scope, natives: Module.standard)
+        let sut = try await folding(scope)
 
         // Then
         #expect(try await sut.evaluate(
@@ -78,7 +78,7 @@ struct ConditionTests {
     @Test("combinators compose nested conditions")
     func combinatorsCompose() async throws {
         // Given
-        let sut = Folding(bindings: scope, natives: Module.standard)
+        let sut = try await folding(scope)
         let condition = every(
             equals(.reference(path("kind")), .literal(.string("a"))),
             negating(equals(.reference(path("n")), .literal(.int(4))))
@@ -91,12 +91,12 @@ struct ConditionTests {
     @Test("text atoms evaluate on strings; asking a number is unfit")
     func textAtomsEvaluateOnStrings() async throws {
         // Given
-        let sut = Folding(bindings: [
+        let sut = try await folding([
             "title": .string("hello, spec"),
             "tags": .array([.string("a"), .string("b")]),
             "n": .int(3),
             "gone": .null
-        ], natives: Module.standard)
+        ])
 
         // Then
         #expect(try await sut.evaluate(
@@ -152,7 +152,7 @@ struct ConditionTests {
     @Test("type misuse in a condition is unfit, not false")
     func conditionTypeMisuseThrowsUnfit() async throws {
         // Given
-        let sut = Folding(bindings: scope, natives: Module.standard)
+        let sut = try await folding(scope)
 
         // When / Then. A typo'd drill must not silently read as false
         await #expect(throws: ReferenceUnfit.self) {
@@ -181,6 +181,20 @@ struct ConditionTests {
         #expect(throws: ReadingError.self) {
             try Loader.testing.loadProcedure(fixture)
         }
+    }
+
+    // MARK: - Private
+    // A fold against the standard vocabulary as a caller gets it: built, so
+    // the procedures written in Warp answer here the way the native ones do.
+    private func folding(_ bindings: [Name: Value]) async throws -> Folding {
+        Folding(
+            bindings: bindings,
+            in: try await Builder().build(
+                [try Module(procedures: [entryName: Procedure(body: [], result: .literal(.null))])]
+                    + Module.standard,
+                entry: entryName
+            )
+        )
     }
 
     @Test("validation covers both sides of a predicate")

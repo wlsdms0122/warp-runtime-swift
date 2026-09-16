@@ -39,7 +39,8 @@ let package = Package(
         .target(
             name: "WarpStandard",
             dependencies: [
-                "Warp"
+                "Warp",
+                "WarpSyntax"
             ]
         ),
         // What a document is: the bytes and the text one is carried in, which

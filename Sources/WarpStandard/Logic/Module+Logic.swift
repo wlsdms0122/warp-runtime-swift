@@ -22,11 +22,6 @@ public extension Module {
                 signature: Signature(of: NotEqualQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(NotEqualQuery())
             ),
-            "std.logic.not": Procedure(
-                description: "The opposite of a truth.",
-                signature: Signature(of: NotQuery.self, receiver: .of, returns: .bool),
-                implementation: .query(NotQuery())
-            ),
             // `and`/`or` rather than `all`/`any`: the connectives' universal
             // names, and they leave `all` free for `std.concurrent`, whose
             // meaning is the one everybody else calls `all`.

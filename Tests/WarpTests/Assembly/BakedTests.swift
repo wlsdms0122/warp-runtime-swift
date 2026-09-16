@@ -167,12 +167,13 @@ struct BakedTests {
 
     @Test("a compiled document names its native procedures and holds none of their code")
     func anArtifactHoldsNoNativeCode() async throws {
-        // Given. The standard vocabulary, which is native the whole way down.
+        // Given. The standard vocabulary: its builtin procedures are the
+        // host's, and the rest are written in Warp and carry their bodies.
         let baked = try await builder.compile(Module.standard)
 
-        // Then. Every row it settled says the code is the host's.
+        // Then. Every builtin row it settled says the code is the host's.
         for document in baked {
-            for row in document.table {
+            for row in document.table where Module.builtin.contains(row.label) {
                 guard case .native = row.implementation else {
                     Issue.record("\(row.label) carries code")
                     continue
