@@ -9,7 +9,9 @@ import Foundation
 import Warp
 
 public extension Module {
-    static let text = try! Module(
+    static let text = bundled(nativeText, with: "text")
+
+    private static let nativeText = try! Module(
         description: "Procedures about strings.",
         procedures: [
             "std.text.decoded": Procedure(
@@ -26,11 +28,6 @@ public extension Module {
                 description: "How a value reads as text.",
                 signature: Signature(of: SpellingQuery.self, receiver: .of, returns: .string),
                 implementation: .query(SpellingQuery())
-            ),
-            "std.text.startsWith": Procedure(
-                description: "Whether a string begins with another.",
-                signature: Signature(of: StartsWithQuery.self, receiver: .of, returns: .bool),
-                implementation: .query(StartsWithQuery())
             ),
             "std.text.regex": Procedure(
                 description: "Whether a string matches a pattern.",
@@ -61,24 +58,10 @@ public extension Module {
                 signature: Signature(of: TrimmedQuery.self, receiver: .of, returns: .string),
                 implementation: .query(TrimmedQuery())
             ),
-            "std.text.split": Procedure(
-                description: "The text cut on a separator.",
-                signature: Signature(
-                    of: SplitQuery.self,
-                    receiver: .of,
-                    returns: .array(.string)
-                ),
-                implementation: .query(SplitQuery())
-            ),
             "std.text.joined": Procedure(
                 description: "The strings written one after another.",
                 signature: Signature(of: JoinedQuery.self, receiver: .of, returns: .string),
                 implementation: .query(JoinedQuery())
-            ),
-            "std.text.replacing": Procedure(
-                description: "Every occurrence of a piece swapped for another.",
-                signature: Signature(of: ReplacingQuery.self, receiver: .of, returns: .string),
-                implementation: .query(ReplacingQuery())
             )
         ]
     )
