@@ -1100,6 +1100,139 @@ enum Library {
               warp 1
             }
             """,
+        "concurrent": """
+            warpt 1
+            {
+              description "Running one closure once per element, written from the fan-out that runs a list of them."
+              imports [
+                "std.collection.appending"
+                "std.collection.count"
+                "std.concurrent.all"
+                "std.math.lessThan"
+              ]
+              procedures {
+                "std.concurrent.map" {
+                  body [
+                    {
+                      value []
+                      var "pieces"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "item"
+                              value {
+                                ref "over[walk.index]"
+                              }
+                            }
+                            {
+                              let "index"
+                              value {
+                                ref "walk.index"
+                              }
+                            }
+                            {
+                              let "piece"
+                              value {
+                                closure {
+                                  body [
+                                    {
+                                      let "answered"
+                                      value {
+                                        apply {
+                                          arguments {
+                                            index {
+                                              ref "index"
+                                            }
+                                            item {
+                                              ref "item"
+                                            }
+                                          }
+                                          procedure {
+                                            ref "by"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ]
+                                  result {
+                                    ref "answered"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              set "pieces"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      ref "piece"
+                                    }
+                                  }
+                                  of {
+                                    ref "pieces"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "over"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "Each element answered by a procedure, run at once, in the collection's order."
+                  parameters {
+                    by {
+                      type {
+                        "isolated procedure" {
+                          parameters {
+                            index "int"
+                            item "some Element"
+                          }
+                          returns "some Answer"
+                        }
+                      }
+                    }
+                    over "array<some Element>"
+                  }
+                  receiver "over"
+                  result {
+                    call {
+                      of {
+                        ref "pieces"
+                      }
+                      procedure "std.concurrent.all"
+                    }
+                  }
+                  returns "array<some Answer>"
+                }
+              }
+              warp 1
+            }
+            """,
         "logic": """
             warpt 1
             {

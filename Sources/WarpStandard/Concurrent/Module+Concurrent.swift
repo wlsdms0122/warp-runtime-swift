@@ -12,7 +12,9 @@ public extension Module {
     // Procedures that run closures at once. Vocabulary rather than grammar, so
     // running things concurrently is something a caller grants by linking this
     // bundle. A program whose caller left it out cannot fan out at all.
-    static let concurrent = try! Module(
+    static let concurrent = bundled(nativeConcurrent, with: "concurrent")
+
+    private static let nativeConcurrent = try! Module(
         description: "Running closures at once.",
         constraints: [
             // What a fan-out is handed: closures under keys, or closures in
@@ -44,17 +46,6 @@ public extension Module {
                     + " one fact here that is.",
                 signature: Signature(of: FirstEffect.self, receiver: .of, returns: .any),
                 implementation: .effect(FirstEffect())
-            ),
-            "std.concurrent.map": Procedure(
-                description: "Runs one closure once per element, offering each"
-                    + " call `item` and `index`, and answers in the"
-                    + " collection's order.",
-                signature: Signature(
-                    of: MapEffect.self,
-                    receiver: .over,
-                    returns: .array(.parameter(name: "Answer"))
-                ),
-                implementation: .effect(MapEffect())
             )
         ]
     )

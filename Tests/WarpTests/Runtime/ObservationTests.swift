@@ -125,7 +125,9 @@ struct ObservationTests {
 
     @Test("a piece of a fan-out is announced under which piece it is")
     func piecesAreToldApart() async throws {
-        // Given
+        // Given. `std.concurrent.map` is written in Warp, so the walk that
+        // builds the pieces stands in the path too. What tells the pieces
+        // apart is the number the fan-out put on each
         let observer = RecordingObserver()
         let sut = try Module(
             procedures: [
@@ -166,8 +168,8 @@ struct ObservationTests {
         _ = try await Executor(observer: observer).run(image)
 
         // Then
-        #expect(await observer.events.contains(.completed("both[0].step", .int(1))))
-        #expect(await observer.events.contains(.completed("both[1].step", .int(2))))
+        #expect(await observer.events.contains(.completed("both.std.concurrent.map[0].answered.step", .int(1))))
+        #expect(await observer.events.contains(.completed("both.std.concurrent.map[1].answered.step", .int(2))))
     }
 
     @Test("a call into a body keeps the statement that called it")
