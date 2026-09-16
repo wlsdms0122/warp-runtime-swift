@@ -8,7 +8,13 @@
 import Foundation
 import Warp
 
-// The text without surrounding whitespace.
+// The text without the whitespace at either end.
+//
+// What counts as whitespace is Unicode's `White_Space` property and nothing
+// a platform adds to it: a character goes only if every one of its code points
+// has it. That is what keeps `\r\n`, which is one character and two code
+// points, removable, and what keeps a space carrying a combining mark, which is
+// also one character and two code points, where it was written.
 struct TrimmedQuery: Query {
     typealias Parameters = StringReceiver
 
@@ -20,8 +26,14 @@ struct TrimmedQuery: Query {
         // of a number reads as absence, the same as a field never set.
         guard case let .string(text) = question.receiver else { return nil }
 
-        return .string(text.trimmingCharacters(in: .whitespacesAndNewlines))
+        let trimmed = text.drop(while: Self.isWhitespace)
+            .reversed().drop(while: Self.isWhitespace).reversed()
+
+        return .string(String(trimmed))
     }
 
     // MARK: - Private
+    private static func isWhitespace(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy { scalar in scalar.properties.isWhitespace }
+    }
 }
