@@ -93,6 +93,173 @@ enum Library {
                   }
                   returns "some Element"
                 }
+                "std.collection.map" {
+                  body [
+                    {
+                      value []
+                      var "answers"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "answered"
+                              value {
+                                apply {
+                                  arguments {
+                                    item {
+                                      ref "of[walk.index]"
+                                    }
+                                  }
+                                  procedure {
+                                    ref "value"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              set "answers"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      ref "answered"
+                                    }
+                                  }
+                                  of {
+                                    ref "answers"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "of"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "Each element answered by a procedure, in order."
+                  parameters {
+                    of "array<some Element>"
+                    value {
+                      type {
+                        "pure procedure" {
+                          parameters {
+                            item "some Element"
+                          }
+                          returns "some Answer"
+                        }
+                      }
+                    }
+                  }
+                  receiver "of"
+                  result {
+                    ref "answers"
+                  }
+                  returns "array<some Answer>"
+                }
+                "std.collection.reduce" {
+                  body [
+                    {
+                      value {
+                        ref "from"
+                      }
+                      var "carried"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "answered"
+                              value {
+                                apply {
+                                  arguments {
+                                    carried {
+                                      ref "carried"
+                                    }
+                                    item {
+                                      ref "of[walk.index]"
+                                    }
+                                  }
+                                  procedure {
+                                    ref "value"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              set "carried"
+                              value {
+                                ref "answered"
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "of"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "The elements folded into one, starting from a value."
+                  parameters {
+                    from "some Carried"
+                    of "array<some Element>"
+                    value {
+                      type {
+                        "pure procedure" {
+                          parameters {
+                            carried "some Carried"
+                            item "some Element"
+                          }
+                          returns "some Carried"
+                        }
+                      }
+                    }
+                  }
+                  receiver "of"
+                  result {
+                    ref "carried"
+                  }
+                  returns "some Carried"
+                }
                 "std.collection.values" {
                   body [
                     {

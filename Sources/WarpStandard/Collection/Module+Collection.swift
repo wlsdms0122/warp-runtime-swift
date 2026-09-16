@@ -78,15 +78,6 @@ public extension Module {
                 ),
                 implementation: .query(SortedQuery())
             ),
-            "std.collection.map": Procedure(
-                description: "Each element answered by a procedure, in order.",
-                signature: Signature(
-                    of: MapQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Answer"))
-                ),
-                implementation: .query(MapQuery())
-            ),
             "std.collection.filter": Procedure(
                 description: "The elements a procedure answers true for.",
                 signature: Signature(
@@ -95,15 +86,6 @@ public extension Module {
                     returns: .array(.parameter(name: "Element"))
                 ),
                 implementation: .query(FilterQuery())
-            ),
-            "std.collection.reduce": Procedure(
-                description: "The elements folded into one, starting from a value.",
-                signature: Signature(
-                    of: ReduceQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "Carried")
-                ),
-                implementation: .query(ReduceQuery())
             ),
             "std.collection.keys": Procedure(
                 description: "The names a record holds, in order.",
