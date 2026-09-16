@@ -1136,7 +1136,7 @@ public struct Executor: Sendable {
                 read = indexed(current, at: index, walked: walked)
 
             // The name is a path of its own, read against the same frame.
-            case let .at(inner, _):
+            case let .at(inner, optional):
                 func name() -> String {
                     spelled(inner, in: activation).rendered
                 }
@@ -1144,6 +1144,17 @@ public struct Executor: Sendable {
                 switch lookup(inner, in: activation) {
                 case let .found(.int(index)):
                     read = indexed(current, at: index, walked: walked)
+
+                // A dictionary's names are data, so a key the run settled
+                // reads an entry the way a written key does.
+                case let .found(.string(key)):
+                    read = keyed(
+                        current,
+                        at: key,
+                        optional: optional,
+                        walked: walked,
+                        segment: segment
+                    )
 
                 case let .found(.double(double)):
                     switch Int.reading(double) {
@@ -1160,7 +1171,9 @@ public struct Executor: Sendable {
                     }
 
                 case let .found(value):
-                    return .unfit("index reference \(name()) is \(value.type), expected int")
+                    return .unfit(
+                        "index reference \(name()) is \(value.type), expected int or string"
+                    )
 
                 case let .unfit(reason):
                     return .unfit(reason)
@@ -1234,6 +1247,37 @@ public struct Executor: Sendable {
         }
 
         return .found(elements[elements.index(elements.startIndex, offsetBy: index)])
+    }
+
+    // One reading for a key the run settled. What is keyed is whatever holds
+    // fields, and an absent entry follows the mark the way a written key does.
+    private func keyed(
+        _ current: Value,
+        at key: String,
+        optional: Bool,
+        walked: () -> [PathSegment],
+        segment: () -> PathSegment
+    ) -> Walk {
+        guard current.holdsFields else {
+            return .unfit("\(walked().rendered) drills a field into \(current.type)")
+        }
+
+        guard let name = try? Name(key) else {
+            return .unfit("\(walked().rendered) reads '\(key)', which is not a name")
+        }
+
+        guard let next = current[name] else {
+            guard optional else {
+                return .unfit(
+                    "\(walked().rendered): '\(key)' is not there."
+                        + " Only `\(segment().mark)` reads absence"
+                )
+            }
+
+            return .found(.null)
+        }
+
+        return .found(next)
     }
 
     // Every index reference read to a position: a write lands on one

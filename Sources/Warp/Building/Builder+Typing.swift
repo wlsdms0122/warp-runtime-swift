@@ -593,10 +593,27 @@ extension Builder {
 
                 resolved.append(segment)
 
+            // A dictionary's names are data, so a key the run settles reads an
+            // entry the way a written key does. Absence follows the mark, the
+            // rule every entry reading shares.
+            case let (.indexRef(inner, optionally), .dictionary(entry)):
+                switch keyReference(inner, in: environment, with: context, at: place, writing: fulfillment) {
+                case let .refused(reason):
+                    return .refused(reason)
+
+                case let .judged(innerResolved):
+                    if let refusal = needless(.entry) { return refusal }
+
+                    if optionally { optional = true }
+
+                    current = entry
+                    resolved.append(.indexRef(innerResolved, optional: optionally))
+                }
+
             case (.index, _), (.indexRef, _):
                 return .refused(
                     "\(walked.rendered) indexes into \(current.rendered(in: context.loweredTypes)),"
-                        + " and only an array is indexed"
+                        + " and only an array or a dictionary is indexed"
                 )
 
             // A dictionary holds entries of one type under names that are
@@ -715,6 +732,35 @@ extension Builder {
                 return .refused(
                     "index reference \(inner.rendered) reads"
                         + " \(innerType.rendered(in: context.loweredTypes)), expected int"
+                )
+            }
+        }
+    }
+
+    // The one machine that judges a key the run settles. A dictionary's names
+    // are strings, so what stands between the brackets has to be able to be
+    // one; what the walk could not read might be anything, and everything else
+    // provably is not.
+    private func keyReference(
+        _ inner: [PathSegment],
+        in environment: [Name: LoweredType],
+        with context: TypingContext,
+        at place: Place,
+        writing fulfillment: Fulfillment?
+    ) -> IndexReading {
+        switch reading(of: inner, in: environment, with: context, at: place, writing: fulfillment) {
+        case let .refused(reason):
+            return .refused(reason)
+
+        case let .reads(innerResolved, innerType):
+            switch context.resolve(innerType) {
+            case .string, .any, .never, .parameter:
+                return .judged(innerResolved)
+
+            default:
+                return .refused(
+                    "key reference \(inner.rendered) reads"
+                        + " \(innerType.rendered(in: context.loweredTypes)), expected string"
                 )
             }
         }

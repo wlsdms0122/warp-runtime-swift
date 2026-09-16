@@ -210,6 +210,11 @@ indirect enum LoweredType: Sendable {
         case let .array(element):
             return element
 
+        // A dictionary's names are data, so a key the run computes reads an
+        // entry the way an index reads an element.
+        case let .dictionary(entry):
+            return entry
+
         case .bytes:
             return .byteElement
 

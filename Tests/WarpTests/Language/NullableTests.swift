@@ -880,7 +880,7 @@ struct IndexReferenceJudgmentTests {
         await #expect {
             try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
-            error is BuildError && "\(error)".contains("only an array is indexed")
+            error is BuildError && "\(error)".contains("only an array or a dictionary is indexed")
         }
     }
 }
