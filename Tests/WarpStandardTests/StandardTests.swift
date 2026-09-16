@@ -899,8 +899,17 @@ struct StandardTests {
 
         // min and max pick between the values as they arrived. The int wins
         // here, and no conversion flattens it into a tie.
-        let picked = try await MaxQuery().evaluate(
-            Question(receiver: above, arguments: ["value": below])
+        let picked = try await run(
+            Procedure(
+                body: [],
+                result: .call(
+                    Call(
+                        receiver: .literal(above),
+                        selector: "std.math.max",
+                        arguments: ["value": .literal(below)]
+                    )
+                )
+            )
         )
 
         #expect(picked == above)

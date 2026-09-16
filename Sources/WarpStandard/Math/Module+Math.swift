@@ -9,7 +9,9 @@ import Foundation
 import Warp
 
 public extension Module {
-    static let math = try! Module(
+    static let math = bundled(nativeMath, with: "math")
+
+    private static let nativeMath = try! Module(
         description: "Arithmetic, and the ordering of numbers and strings.",
         procedures: [
             "std.math.plus": Procedure(
@@ -53,33 +55,6 @@ public extension Module {
                 ),
                 implementation: .query(RemainderQuery())
             ),
-            "std.math.min": Procedure(
-                description: "The smaller of two of a kind, by the one order.",
-                signature: Signature(
-                    of: MinQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "T", constraint: "std.Comparable")
-                ),
-                implementation: .query(MinQuery())
-            ),
-            "std.math.max": Procedure(
-                description: "The larger of two of a kind, by the one order.",
-                signature: Signature(
-                    of: MaxQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "T", constraint: "std.Comparable")
-                ),
-                implementation: .query(MaxQuery())
-            ),
-            "std.math.absolute": Procedure(
-                description: "The number without its sign.",
-                signature: Signature(
-                    of: AbsoluteQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "N", constraint: "std.Numeric")
-                ),
-                implementation: .query(AbsoluteQuery())
-            ),
             "std.math.floored": Procedure(
                 description: "The whole number at or below this one.",
                 signature: Signature(of: FlooredQuery.self, receiver: .of, returns: .int),
@@ -94,11 +69,6 @@ public extension Module {
                 description: "Whether this orders before another.",
                 signature: Signature(of: LessThanQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(LessThanQuery())
-            ),
-            "std.math.greaterThan": Procedure(
-                description: "Whether this orders after another.",
-                signature: Signature(of: GreaterThanQuery.self, receiver: .of, returns: .bool),
-                implementation: .query(GreaterThanQuery())
             )
         ]
     )

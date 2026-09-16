@@ -20,5 +20,5 @@ public extension Module {
     // the language.
     static let standard: [Module] = [
         .foundation, .logic, .math, .text, .collection, .control, .concurrent
-    ] + library
+    ]
 }

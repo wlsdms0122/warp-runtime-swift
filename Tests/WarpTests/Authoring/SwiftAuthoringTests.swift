@@ -79,10 +79,11 @@ struct SwiftAuthoringTests {
             result: .record(["verdict": .reference([.key("verdict")])])
         )
 
-        // When Comparing is a procedure, so this links the bundle that declares one.
-        // The control flow beside it needs nothing.
+        // When Comparing is a procedure, so this links the bundle that declares
+        // one, and the bundles that bundle leans on. The control flow beside it
+        // needs nothing.
         let image = try await builder.build(
-            [try Module(procedures: ["entry": procedure]), .logic],
+            [try Module(procedures: ["entry": procedure]), .logic, .math, .collection, .foundation],
             entry: "entry"
         )
         let outputs = try await Executor().run(
