@@ -778,7 +778,7 @@ public struct Executor: Sendable {
                 activation.cells[frame.parameters[position]] = .value(sent)
             }
 
-            return try callee.settling(returned: try await run(body, in: &activation, at: trace))
+            return try await answer(body, of: callee, in: &activation, at: trace)
 
         case .native(.effect):
             throw ExecutionError(
@@ -804,7 +804,7 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         var (body, activation) = try enter(closure, given: arguments, offered: true)
 
-        return try closure.settling(returned: try await run(body, in: &activation, at: trace))
+        return try await answer(body, of: closure.linked, in: &activation, at: trace)
     }
 
     private func bool(_ value: Value) throws -> Bool {

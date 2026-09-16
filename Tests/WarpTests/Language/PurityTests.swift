@@ -99,6 +99,40 @@ struct PurityTests {
         #expect(answer == .string("second"))
     }
 
+    @Test("a body a native procedure calls leaves for itself, not for the procedure around it")
+    func aBodyANativeProcedureCallsLeavesForItself() async throws {
+        // Given. The same early leave, reached through a native procedure that
+        // calls the body once per element rather than through `apply`.
+        let judging = Procedure(
+            signature: Signature(parameters: ["item": Parameter(type: .int)], returns: .bool),
+            body: [
+                Statement(expression: .conditional(
+                    equals(reference("item"), .literal(.int(2))),
+                    then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.bool(true)))))],
+                    else: nil
+                ))
+            ],
+            result: .literal(.bool(false))
+        )
+        let asking = Procedure(
+            body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
+            result: .call(
+                Call(
+                    receiver: .array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]),
+                    selector: "std.collection.filter",
+                    arguments: ["value": reference("judging")]
+                )
+            )
+        )
+
+        // When
+        let answer = try await run(asking)
+
+        // Then. A leave answering for the procedure around it would end the
+        // whole run at the first element instead.
+        #expect(answer == .array([.int(2)]))
+    }
+
     @Test("a body reaching the module's own state does not answer without running")
     func aBodyReadingAModuleVariableIsRefused() async throws {
         // Given. The same shape, reading a name the module holds rather than
