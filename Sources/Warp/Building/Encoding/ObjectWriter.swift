@@ -482,11 +482,11 @@ private extension ObjectWriter {
     }
 
     func sent(_ sent: Sent) -> Value {
-        .array([.int(sent.row), .array(sent.offers.map(Value.int))])
+        .array([.int(sent.row), .array(sent.handing.map(Value.int))])
     }
 
     func send(_ send: Native.Send) -> Value {
-        .array([.int(send.position), name(send.selector), .array(send.offers.map(name))])
+        .array([.int(send.position), name(send.selector), .array(send.handing.map(name))])
     }
 
     func frame(_ frame: Frame) -> Value {

@@ -20,19 +20,19 @@ struct Sent: Sendable, Equatable {
     let row: Int
 
     // Where the handed names stand, in the order the procedure hands them.
-    let offers: [Int]
+    let handing: [Int]
 
     // MARK: - Initializer
-    init(row: Int, offers: [Int]) {
+    init(row: Int, handing: [Int]) {
         self.row = row
-        self.offers = offers
+        self.handing = handing
     }
 
     // MARK: - Public
     // The same send reaching another row, which is what relocating a document's
     // number to this link's row leaves.
     func reaching(_ row: Int) -> Sent {
-        Sent(row: row, offers: offers)
+        Sent(row: row, handing: handing)
     }
 
     // MARK: - Private

@@ -1038,16 +1038,16 @@ public struct Executor: Sendable {
     ) throws -> Settled {
         // How many a Swift body builds is the body's, so this is the one thing
         // about a send the build cannot read.
-        guard values.count == sending.offers.count else {
+        guard values.count == sending.handing.count else {
             throw ExecutionError(
                 "'\(callee.label)' is handed \(values.count) here, and the procedure sending"
-                    + " it declares it hands \(sending.offers.count)"
+                    + " it declares it hands \(sending.handing.count)"
             )
         }
 
         var given: [Value?] = Array(repeating: nil, count: callee.slots.count)
 
-        for (position, value) in zip(sending.offers, values) {
+        for (position, value) in zip(sending.handing, values) {
             // A row taking fewer parameters than the build read them off is a
             // row this send was not compiled against.
             guard given.indices.contains(position) else {

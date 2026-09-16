@@ -30,13 +30,13 @@ public protocol ImportSet: CaseIterable, Hashable, Sendable {
 
     // The arguments handed over at this send, in the order the procedure hands
     // them.
-    var offers: [Name] { get }
+    var handing: [Name] { get }
 }
 
 public extension ImportSet {
     // A send that says nothing about what it hands over hands nothing, which is
     // what most of them do.
-    var offers: [Name] { [] }
+    var handing: [Name] { [] }
 }
 
 public extension ImportSet where Self: RawRepresentable, RawValue == Int {

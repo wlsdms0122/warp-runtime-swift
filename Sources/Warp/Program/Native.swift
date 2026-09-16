@@ -19,7 +19,7 @@ enum Native: Sendable {
     struct Send: Hashable, Sendable {
         let position: Int
         let selector: Name
-        let offers: [Name]
+        let handing: [Name]
     }
 
     case query(any Query)
@@ -102,7 +102,7 @@ enum Native: Sendable {
 
     private func sends<P: NativeProcedure>(of procedure: P) -> [Send] {
         P.Imports.allCases.map { key in
-            Send(position: key.position, selector: key.selector, offers: key.offers)
+            Send(position: key.position, selector: key.selector, handing: key.handing)
         }
     }
 }

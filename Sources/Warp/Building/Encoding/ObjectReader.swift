@@ -635,7 +635,7 @@ private extension ObjectReader {
         var fields = try Fields(value, of: "send")
         let read = Sent(
             row: try fields.count(),
-            offers: try Fields.list(fields.next(), of: "send", counted)
+            handing: try Fields.list(fields.next(), of: "send", counted)
         )
 
         try fields.end()
@@ -648,7 +648,7 @@ private extension ObjectReader {
         let read = Native.Send(
             position: try fields.count(),
             selector: try name(fields.next()),
-            offers: try Fields.list(fields.next(), of: "native send", name)
+            handing: try Fields.list(fields.next(), of: "native send", name)
         )
 
         try fields.end()

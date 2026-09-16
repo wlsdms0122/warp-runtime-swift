@@ -99,7 +99,7 @@ struct Sending {
                 )
             }
 
-            return Sent(row: stands, offers: try offered(send, called: label))
+            return Sent(row: stands, handing: try positions(of: send, called: label))
         }
     }
 
@@ -108,12 +108,12 @@ struct Sending {
     // The order is the callee's declared names sorted, which is the order its
     // slots stand in and the order a run reads them at, so this is the same
     // answer a call written in a body gets from the build.
-    private func offered(_ send: Native.Send, called label: Name) throws -> [Int] {
-        guard !send.offers.isEmpty else { return [] }
+    private func positions(of send: Native.Send, called label: Name) throws -> [Int] {
+        guard !send.handing.isEmpty else { return [] }
 
         guard let signature = taking(send.selector) else {
             throw BuildError(
-                "'\(label)' hands \(send.offers.map(\.spelling).joined(separator: ", ")) to"
+                "'\(label)' hands \(send.handing.map(\.spelling).joined(separator: ", ")) to"
                     + " '\(send.selector)', and nothing standing here declares what it takes",
                 at: Place.procedure(label.spelling, in: .assembled).part(.imports)
             )
@@ -124,10 +124,10 @@ struct Sending {
 
         // A name handed twice is two instructions for one place, and neither is
         // the one to keep. The same rule a call written in a body is held to.
-        return try send.offers.map { offered in
-            guard let position = names.firstIndex(of: offered) else {
+        return try send.handing.map { handed in
+            guard let position = names.firstIndex(of: handed) else {
                 throw BuildError(
-                    "'\(label)' hands '\(offered)' to '\(send.selector)', which declares"
+                    "'\(label)' hands '\(handed)' to '\(send.selector)', which declares"
                         + " no parameter under that name",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)
                 )
@@ -135,7 +135,7 @@ struct Sending {
 
             guard taken.insert(position).inserted else {
                 throw BuildError(
-                    "'\(label)' hands '\(offered)' to '\(send.selector)' more than once",
+                    "'\(label)' hands '\(handed)' to '\(send.selector)' more than once",
                     at: Place.procedure(label.spelling, in: .assembled).part(.imports)
                 )
             }

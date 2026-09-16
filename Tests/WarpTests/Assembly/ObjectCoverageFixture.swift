@@ -185,7 +185,7 @@ enum ObjectCoverageFixture {
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            sends: body ? [] : [Sent(row: 1, offers: [0, 2])],
+            sends: body ? [] : [Sent(row: 1, handing: [0, 2])],
             implementation: body
                 ? .body(
                     everyOperation,
@@ -196,7 +196,7 @@ enum ObjectCoverageFixture {
                         names: (0 ..< 12).map { at in Name(normal: "s\(at)") }
                     )
                 )
-                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", offers: ["x", "y"])])
+                : .native(sending: [Native.Send(position: 3, selector: "a.twelve", handing: ["x", "y"])])
         )
     }
 

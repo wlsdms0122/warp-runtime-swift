@@ -341,7 +341,7 @@ private struct TwiceQuery: Query {
 
         var selector: Name { "std.math.times" }
 
-        var offers: [Name] { ["value"] }
+        var handing: [Name] { ["value"] }
     }
 
     // MARK: - Property
@@ -370,7 +370,7 @@ private struct AnnounceEffect: Effect {
 
         var selector: Name { "app.shout" }
 
-        var offers: [Name] { ["text"] }
+        var handing: [Name] { ["text"] }
     }
 
     // MARK: - Property
@@ -461,7 +461,7 @@ private struct PickingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var offers: [Name] { ["z", "a"] }
+        var handing: [Name] { ["z", "a"] }
     }
 
     // MARK: - Property
@@ -483,7 +483,7 @@ private struct MisnamingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var offers: [Name] { ["nowhere"] }
+        var handing: [Name] { ["nowhere"] }
     }
 
     // MARK: - Property
@@ -505,7 +505,7 @@ private struct OverhandingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var offers: [Name] { ["z"] }
+        var handing: [Name] { ["z"] }
     }
 
     // MARK: - Property
@@ -527,7 +527,7 @@ private struct DoublingEffect: Effect {
 
         var selector: Name { "app.pick" }
 
-        var offers: [Name] { ["z", "z"] }
+        var handing: [Name] { ["z", "z"] }
     }
 
     // MARK: - Property
@@ -549,7 +549,7 @@ private struct ReceivingEffect: Effect {
 
         var selector: Name { "app.greet" }
 
-        var offers: [Name] { ["subject"] }
+        var handing: [Name] { ["subject"] }
     }
 
     // MARK: - Property
