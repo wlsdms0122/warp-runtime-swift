@@ -277,10 +277,10 @@ public struct TypeReader: Decodable {
         return (mark, purity, isolation)
     }
 
-    // The one spelling of a procedure type's head: `pure` before `isolated`,
+    // The one spelling of a procedure type's head: `const` before `isolated`,
     // both before `procedure`.
     public static func procedureSpelling(_ purity: Purity, _ isolation: Isolation) -> String {
-        [purity == .pure ? "pure" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
+        [purity == .pure ? "const" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")
     }
@@ -293,7 +293,7 @@ public struct TypeReader: Decodable {
         var isolation = Isolation.unstated
 
         while true {
-            if let bare = rest.dropPrefixed("pure ") {
+            if let bare = rest.dropPrefixed("const ") {
                 guard purity == .unstated else { return nil }
                 purity = .pure
                 rest = String(bare)

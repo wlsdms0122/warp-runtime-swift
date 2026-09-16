@@ -826,7 +826,7 @@ public struct Executor: Sendable {
 
     // Running a closure here rather than in `evaluate`, which is what makes a
     // procedure able to take one. What may be called is what the link proved
-    // answers, and a slot declaring `pure procedure` is how a procedure says so.
+    // answers, and a slot declaring `const procedure` is how a procedure says so.
     func call(
         _ closure: Closure,
         with arguments: [(name: Name, value: Value)],

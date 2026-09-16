@@ -249,7 +249,7 @@ struct StandardTests {
 
     @Test("a walk refuses a procedure that reaches outside")
     func aWalkRefusesAnImpureProcedure() async throws {
-        // Given. `map` declares `pure procedure`, so a body that shouts is
+        // Given. `map` declares `const procedure`, so a body that shouts is
         // refused before any run rather than suspending inside a path
         let loud = Procedure(
             signature: Signature(parameters: ["item": Parameter(type: .string)]),

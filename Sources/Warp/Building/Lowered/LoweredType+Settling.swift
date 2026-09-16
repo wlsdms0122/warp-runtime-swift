@@ -326,7 +326,7 @@ extension LoweredType {
 
         case let .procedure(parameters, returns, purity, isolation):
             let spelling = [
-                purity == .pure ? "pure" : nil,
+                purity == .pure ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
                 "procedure"
             ]

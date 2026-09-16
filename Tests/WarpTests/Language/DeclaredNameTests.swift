@@ -266,7 +266,7 @@ struct DeclaredNameTests {
 
     @Test("a closure under a name that says what it holds is handed in place, and the procedure writes it back")
     func aDeclaredClosureIsHandedInPlace() async throws {
-        // Given. The build derives `pure isolated` for a closure literal, and an
+        // Given. The build derives `const isolated` for a closure literal, and an
         // `inout` slot takes the same type. The name says what it holds, so
         // what the slot asks and what the name is are one type
         let sut = try Module(
@@ -308,7 +308,7 @@ struct DeclaredNameTests {
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
     func anUndeclaredClosureDoesNotFitTheSlot() async throws {
         // Given. The same program with the declaration left off. The build works
-        // out `pure isolated procedure` for the literal, and the slot asks for
+        // out `const isolated procedure` for the literal, and the slot asks for
         // `procedure`
         let sut = try Module(
             procedures: [

@@ -260,7 +260,7 @@ public indirect enum TypeExpression: Sendable, Equatable {
 
         case let .procedure(signature, purity, isolation):
             let spelling = [
-                purity == .pure ? "pure" : nil,
+                purity == .pure ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
                 "procedure"
             ]

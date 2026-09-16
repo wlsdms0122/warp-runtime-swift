@@ -634,7 +634,7 @@ struct WriterTests {
                     "of": "string",
                     "how": [
                         "type": [
-                            "pure procedure": [
+                            "const procedure": [
                                 "receiver": "it",
                                 "parameters": ["it": "int"],
                                 "returns": "bool"
@@ -879,7 +879,7 @@ struct WriterTests {
                 ],
                 "typed": [
                     "parameters": [
-                        "how": ["type": ["pure procedure": ["parameters": ["it": "int"], "returns": "bool"]]],
+                        "how": ["type": ["const procedure": ["parameters": ["it": "int"], "returns": "bool"]]],
                         "anything": ["type": "procedure"],
                         "parameter": "some Element"
                     ],

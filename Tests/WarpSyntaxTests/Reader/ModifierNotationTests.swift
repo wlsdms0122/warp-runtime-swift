@@ -146,7 +146,7 @@ struct ModifierNotationTests {
 
     @Test(
         "a record's only field is not a key the reading keeps for itself",
-        arguments: ["procedure", "var procedure", "pure isolated procedure", "linear"]
+        arguments: ["procedure", "var procedure", "const isolated procedure", "linear"]
     )
     func aRecordIsNotWrittenUnderAReservedKey(spelling: String) throws {
         // Given. The writer asks the reading itself rather than a list beside
@@ -185,8 +185,8 @@ struct ModifierNotationTests {
 
     @Test("isolated is read in either order and written in one", arguments: [
         ("isolated procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated procedure"),
-        ("pure isolated procedure", .procedure(nil, .pure, .isolated), "pure isolated procedure"),
-        ("isolated pure procedure", .procedure(nil, .pure, .isolated), "pure isolated procedure")
+        ("const isolated procedure", .procedure(nil, .pure, .isolated), "const isolated procedure"),
+        ("isolated const procedure", .procedure(nil, .pure, .isolated), "const isolated procedure")
     ])
     func isolationIsReadEitherWay(written: String, expected: TypeExpression, canonical: String) throws {
         let parsed = try TypeReader.parse(written)
@@ -197,7 +197,7 @@ struct ModifierNotationTests {
 
     @Test("a mark and a modifier on one procedure form survive the round trip")
     func aMarkAndAModifierRoundTrip() async throws {
-        // Given. A parameter typed `inout pure procedure<...>`, which the
+        // Given. A parameter typed `inout const procedure<...>`, which the
         // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))
 
@@ -210,12 +210,12 @@ struct ModifierNotationTests {
         ])
 
         // Then
-        #expect(written == .dictionary(["inout pure procedure": .dictionary(["returns": "int"])]))
+        #expect(written == .dictionary(["inout const procedure": .dictionary(["returns": "int"])]))
         #expect(module.procedures["entry"]?.signature.parameters["f"]?.type == type)
     }
 
     @Test("a procedure written twice is refused", arguments: [
-        "inout inout int", "var var int", "pure pure procedure", "isolated isolated procedure",
+        "inout inout int", "var var int", "const const procedure", "isolated isolated procedure",
         "consuming consuming Handle", "consuming borrowing Handle", "borrowing inout Handle"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {

@@ -297,7 +297,7 @@ enum Library {
                     of "array<some Element>"
                     value {
                       type {
-                        "pure procedure" {
+                        "const procedure" {
                           parameters {
                             item "some Element"
                           }
@@ -435,7 +435,7 @@ enum Library {
                     of "array<some Element>"
                     value {
                       type {
-                        "pure procedure" {
+                        "const procedure" {
                           parameters {
                             item "some Element"
                           }
@@ -562,7 +562,7 @@ enum Library {
                     of "array<some Element>"
                     value {
                       type {
-                        "pure procedure" {
+                        "const procedure" {
                           parameters {
                             carried "some Carried"
                             item "some Element"
@@ -1318,7 +1318,7 @@ enum Library {
                     of {
                       type {
                         array {
-                          "pure procedure" {
+                          "const procedure" {
                             returns "bool"
                           }
                         }
@@ -1451,7 +1451,7 @@ enum Library {
                     of {
                       type {
                         array {
-                          "pure procedure" {
+                          "const procedure" {
                             returns "bool"
                           }
                         }
@@ -1507,7 +1507,7 @@ enum Library {
                   parameters {
                     else {
                       type {
-                        "pure procedure" {
+                        "const procedure" {
                           returns "some Answer"
                         }
                       }
@@ -1515,7 +1515,7 @@ enum Library {
                     of "bool"
                     then {
                       type {
-                        "pure procedure" {
+                        "const procedure" {
                           returns "some Answer"
                         }
                       }

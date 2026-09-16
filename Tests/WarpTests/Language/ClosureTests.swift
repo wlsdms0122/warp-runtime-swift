@@ -160,7 +160,7 @@ struct ClosureTests {
         }
     }
 
-    @Test("a slot asking for a pure procedure refuses one that reaches outside")
+    @Test("a slot asking for a const procedure refuses one that reaches outside")
     func anImpureClosureIsRefusedWherePurityIsAsked() async throws {
         // Given. `twice` declares that whatever it is handed answers without
         // running. The closure handed to it shouts, and shouting is an effect
@@ -207,7 +207,7 @@ struct ClosureTests {
         }
     }
 
-    @Test("a slot asking for a pure procedure takes one that answers")
+    @Test("a slot asking for a const procedure takes one that answers")
     func aPureClosureFitsWherePurityIsAsked() async throws {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(

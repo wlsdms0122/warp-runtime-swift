@@ -100,7 +100,7 @@ public struct Question<P: NativeProcedure>: Sendable {
 
     // Running a procedure this procedure was handed. What may be handed is what the
     // link proved answers without running, which a procedure states by declaring the
-    // parameter `pure procedure`, so reaching here means the judgement was
+    // parameter `const procedure`, so reaching here means the judgement was
     // already made.
     public func call(_ procedure: Value, with arguments: [(name: Name, value: Value)] = []) async throws -> Value {
         guard case let .procedure(closure) = procedure else {

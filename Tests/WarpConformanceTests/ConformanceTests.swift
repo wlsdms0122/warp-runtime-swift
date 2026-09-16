@@ -170,7 +170,7 @@ struct Case: Sendable, CustomStringConvertible {
         let answers: Value
 
         // Whether it reaches outside the run. One that does not is what a
-        // constant may settle from, what a `pure procedure` slot takes, and
+        // constant may settle from, what a `const procedure` slot takes, and
         // what an operand may call.
         let runs: Bool
 
