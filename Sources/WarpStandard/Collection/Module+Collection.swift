@@ -9,15 +9,11 @@ import Foundation
 import Warp
 
 public extension Module {
-    static let collection = try! Module(
+    static let collection = bundled(nativeCollection, with: "collection")
+
+    private static let nativeCollection = try! Module(
         description: "Procedures about arrays and records. A string counts and contains too.",
         procedures: [
-            "std.collection.append": Procedure(
-                description: "Writes one element onto the end of the array a variable"
-                    + " holds, in place.",
-                signature: Signature(of: AppendEffect.self, receiver: .to, returns: .null),
-                implementation: .effect(AppendEffect())
-            ),
             "std.collection.count": Procedure(
                 description: "How many, for a type that has a count.",
                 signature: Signature(of: CountQuery.self, receiver: .of, returns: .int),
@@ -27,24 +23,6 @@ public extension Module {
                 description: "Whether a string or an array holds a value.",
                 signature: Signature(of: ContainsQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(ContainsQuery())
-            ),
-            "std.collection.first": Procedure(
-                description: "The first element, or nothing.",
-                signature: Signature(
-                    of: FirstQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "Element")
-                ),
-                implementation: .query(FirstQuery())
-            ),
-            "std.collection.last": Procedure(
-                description: "The last element, or nothing.",
-                signature: Signature(
-                    of: LastQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "Element")
-                ),
-                implementation: .query(LastQuery())
             ),
             "std.collection.reversed": Procedure(
                 description: "The elements back to front.",
@@ -135,15 +113,6 @@ public extension Module {
                     returns: .array(.string)
                 ),
                 implementation: .query(KeysQuery())
-            ),
-            "std.collection.values": Procedure(
-                description: "What a record holds, by its names in order.",
-                signature: Signature(
-                    of: ValuesQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Entry"))
-                ),
-                implementation: .query(ValuesQuery())
             ),
             "std.collection.setting": Procedure(
                 description: "The record with one name bound to another value.",

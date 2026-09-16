@@ -435,7 +435,7 @@ struct DeclaredSpellingTests {
         }
 
         await #expect(throws: Never.self) {
-            try await builder.build([sut, .collection, .foundation], entry: entryName)
+            try await builder.build([sut, .collection, .math, .foundation], entry: entryName)
         }
     }
 }

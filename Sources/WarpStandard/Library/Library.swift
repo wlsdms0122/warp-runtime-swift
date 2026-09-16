@@ -10,6 +10,170 @@ import Foundation
 // The documents of `lib/std`, as they stand in the repository.
 enum Library {
     static let documents: [String: String] = [
+        "collection": """
+            warpt 1
+            {
+              description "Reading a collection by walking it, written from its count and its index."
+              imports [
+                "std.collection.appending"
+                "std.collection.count"
+                "std.collection.keys"
+                "std.math.lessThan"
+                "std.math.minus"
+              ]
+              procedures {
+                "std.collection.append" {
+                  body [
+                    {
+                      set "to"
+                      value {
+                        call {
+                          arguments {
+                            value {
+                              ref "value"
+                            }
+                          }
+                          of {
+                            ref "to"
+                          }
+                          procedure "std.collection.appending"
+                        }
+                      }
+                    }
+                  ]
+                  description "Writes one element onto the end of the array a variable holds, in place."
+                  parameters {
+                    to "inout array<some Element>"
+                    value "some Element"
+                  }
+                  receiver "to"
+                  result null
+                  returns "null"
+                }
+                "std.collection.first" {
+                  description "The first element, or nothing."
+                  parameters {
+                    of "array<some Element>"
+                  }
+                  receiver "of"
+                  result {
+                    ref "of[0]"
+                  }
+                  returns "some Element"
+                }
+                "std.collection.last" {
+                  body [
+                    {
+                      let "at"
+                      value {
+                        call {
+                          arguments {
+                            value 1
+                          }
+                          of {
+                            call {
+                              of {
+                                ref "of"
+                              }
+                              procedure "std.collection.count"
+                            }
+                          }
+                          procedure "std.math.minus"
+                        }
+                      }
+                    }
+                  ]
+                  description "The last element, or nothing."
+                  parameters {
+                    of "array<some Element>"
+                  }
+                  receiver "of"
+                  result {
+                    ref "of[at]"
+                  }
+                  returns "some Element"
+                }
+                "std.collection.values" {
+                  body [
+                    {
+                      let "names"
+                      value {
+                        call {
+                          of {
+                            ref "of"
+                          }
+                          procedure "std.collection.keys"
+                        }
+                      }
+                    }
+                    {
+                      value []
+                      var "held"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "name"
+                              value {
+                                ref "names[walk.index]"
+                              }
+                            }
+                            {
+                              set "held"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      ref "of[name]"
+                                    }
+                                  }
+                                  of {
+                                    ref "held"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "names"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "What a record holds, by its names in order."
+                  parameters {
+                    of "dictionary<some Entry>"
+                  }
+                  receiver "of"
+                  result {
+                    ref "held"
+                  }
+                  returns "array<some Entry>"
+                }
+              }
+              warp 1
+            }
+            """,
         "logic": """
             warpt 1
             {
