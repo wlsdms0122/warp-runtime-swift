@@ -393,6 +393,21 @@ extension TypeExpression {
         }
     }
 
+    // The same, for the other claim a slot may make about a procedure it
+    // holds.
+    var isIsolatedProcedure: Bool {
+        switch self {
+        case .procedure(_, _, .isolated):
+            return true
+
+        case let .array(element):
+            return element.isIsolatedProcedure
+
+        default:
+            return false
+        }
+    }
+
     // Whether this type proves nothing about the value it holds. The three
     // that stop a walk, named once because they are one question asked twice. A
     // dot needs a type the types prove, and a cast is the door onto one: what

@@ -1408,12 +1408,21 @@ extension Builder {
                 reading = context.variables
             }
 
+            // A name this closure captured carries what the slot it came from
+            // said about it. The claim is the slot's, so it stands wherever the
+            // name is read, and a closure that applies a captured one is judged
+            // on that word exactly as the body around it would be.
+            let captured = environment.filter { _, held in
+                held.isPureProcedure || held.isIsolatedProcedure
+            }
+
             let pure = body.map { block in
                 isPure(
                     block,
                     given: context.pure,
                     reading: reading,
                     applying: procedure.signature.pureProcedures
+                        .union(captured.filter { _, held in held.isPureProcedure }.keys)
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1421,6 +1430,8 @@ extension Builder {
                     block,
                     declaring: Set(procedure.signature.parameters.keys),
                     given: context.isolated,
+                    applying: procedure.signature.isolatedProcedures
+                        .union(captured.filter { _, held in held.isIsolatedProcedure }.keys),
                     taking: { selector in context.signature(of: selector) }
                 )
             } ?? false

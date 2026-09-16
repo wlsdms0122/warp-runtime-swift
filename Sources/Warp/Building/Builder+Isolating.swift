@@ -19,10 +19,16 @@ extension Builder {
         settling isolated: inout Set<Name>,
         taking asked: @escaping (Name) -> Signature?
     ) {
-        let bodies = symbols.reduce(into: [Name: (block: Block, declaring: Set<Name>)]()) { table, symbol in
+        let bodies = symbols.reduce(
+            into: [Name: (block: Block, declaring: Set<Name>, applying: Set<Name>)]()
+        ) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
-            table[symbol.declared] = (block, Set(symbol.procedure.signature.parameters.keys))
+            table[symbol.declared] = (
+                block,
+                Set(symbol.procedure.signature.parameters.keys),
+                symbol.procedure.signature.isolatedProcedures
+            )
         }
 
         isolated.formUnion(
@@ -37,7 +43,13 @@ extension Builder {
         while true {
             let struck = bodies.compactMap { name, body in
                 isolated.contains(name)
-                    && !isIsolated(body.block, declaring: body.declaring, given: isolated, taking: asked)
+                    && !isIsolated(
+                        body.block,
+                        declaring: body.declaring,
+                        given: isolated,
+                        applying: body.applying,
+                        taking: asked
+                    )
                     ? name
                     : nil
             }
@@ -59,9 +71,14 @@ extension Builder {
         _ block: Block,
         declaring parameters: Set<Name>,
         given isolated: Set<Name>,
+        applying procedures: Set<Name>,
         taking asked: @escaping (Name) -> Signature?
     ) -> Bool {
-        Isolating(isolated: isolated, asked: asked).holds(block, declared: parameters)
+        Isolating(isolated: isolated, asked: asked).holds(
+            block,
+            declared: parameters,
+            applying: procedures
+        )
     }
 
     // MARK: - Private
@@ -74,16 +91,25 @@ extension Builder {
         // link's rows once they stand, and the documents themselves before.
         let asked: (Name) -> Signature?
 
-        func holds(_ block: Block, declared: Set<Name>) -> Bool {
+        func holds(_ block: Block, declared: Set<Name>, applying procedures: Set<Name>) -> Bool {
             var declared = declared
+            var procedures = procedures
 
-            return holds(block.body, declared: &declared)
-                && (block.result.map { result in holds(result, declared: declared) } ?? true)
+            return holds(block.body, declared: &declared, applying: &procedures)
+                && (
+                    block.result.map { result in
+                        holds(result, declared: declared, applying: procedures)
+                    } ?? true
+                )
         }
 
         // A body in order. Each statement is judged against what was declared
         // before it, and a variable it introduces is declared for the rest.
-        private func holds(_ body: [Statement], declared: inout Set<Name>) -> Bool {
+        private func holds(
+            _ body: [Statement],
+            declared: inout Set<Name>,
+            applying procedures: inout Set<Name>
+        ) -> Bool {
             for statement in body {
                 switch statement.binding {
                 case let .assignment(path)?:
@@ -93,38 +119,79 @@ extension Builder {
                     break
                 }
 
-                guard holds(statement.expression, declared: declared) else { return false }
+                guard holds(statement.expression, declared: declared, applying: procedures) else {
+                    return false
+                }
 
                 if case let .variable(name, _)? = statement.binding {
                     declared.insert(name)
+                }
+
+                guard let introduced = statement.binding?.introduced else { continue }
+
+                // Read forward, the way purity reads it: what a name said is
+                // what stands until something else takes the spelling.
+                if
+                    statement.binding?.declared?.isIsolatedProcedure == true
+                        || applies(statement.expression, given: procedures)
+                {
+                    procedures.insert(introduced)
+                } else {
+                    procedures.remove(introduced)
                 }
             }
 
             return true
         }
 
-        private func holds(_ body: [Statement], declared: Set<Name>) -> Bool {
-            var inner = declared
+        // Whether what this reads came out of a slot that said its procedures
+        // touch no name another body could touch at the same time. The head is
+        // the name the slot gave, and indexing past it keeps the claim.
+        private func applies(_ expression: Expression, given procedures: Set<Name>) -> Bool {
+            guard case let .reference(path) = expression, let head = path.head else { return false }
 
-            return holds(body, declared: &inner)
+            return procedures.contains(head)
+                && path.dropFirst().allSatisfy { segment in segment.named == nil }
         }
 
-        private func holds(_ expression: Expression, declared: Set<Name>) -> Bool {
+        private func holds(
+            _ body: [Statement],
+            declared: Set<Name>,
+            applying procedures: Set<Name>
+        ) -> Bool {
+            var inner = declared
+            var applying = procedures
+
+            return holds(body, declared: &inner, applying: &applying)
+        }
+
+        private func holds(
+            _ expression: Expression,
+            declared: Set<Name>,
+            applying procedures: Set<Name>
+        ) -> Bool {
             switch expression {
             case .literal, .reference:
                 return true
 
-            case .apply:
-                return false
+            // Applying a name a slot said holds an isolated procedure runs a
+            // body that writes only its own names, which is the whole of what
+            // is asked here. Any other value is the run's answer and says
+            // nothing.
+            case let .apply(callee, arguments):
+                return applies(callee, given: procedures)
+                    && arguments.values.allSatisfy { argument in
+                        holds(argument, declared: declared, applying: procedures)
+                    }
 
             case let .cast(value, _, _):
-                return holds(value, declared: declared)
+                return holds(value, declared: declared, applying: procedures)
 
             case let .array(array):
-                return array.allSatisfy { element in holds(element, declared: declared) }
+                return array.allSatisfy { element in holds(element, declared: declared, applying: procedures) }
 
             case let .record(record):
-                return record.values.allSatisfy { field in holds(field, declared: declared) }
+                return record.values.allSatisfy { field in holds(field, declared: declared, applying: procedures) }
 
             // A closure written here is judged for its own isolation when it is
             // made; making it touches nothing.
@@ -148,25 +215,25 @@ extension Builder {
                     guard declared.contains(head) else { return false }
                 }
 
-                return (call.receiver.map { receiver in holds(receiver, declared: declared) } ?? true)
-                    && call.arguments.values.allSatisfy { argument in holds(argument, declared: declared) }
+                return (call.receiver.map { receiver in holds(receiver, declared: declared, applying: procedures) } ?? true)
+                    && call.arguments.values.allSatisfy { argument in holds(argument, declared: declared, applying: procedures) }
 
             case let .block(block):
-                return holds(block, declared: declared)
+                return holds(block, declared: declared, applying: procedures)
 
             case let .conditional(condition, then, otherwise):
-                return holds(condition, declared: declared)
-                    && holds(then, declared: declared)
-                    && (otherwise.map { arm in holds(arm, declared: declared) } ?? true)
+                return holds(condition, declared: declared, applying: procedures)
+                    && holds(then, declared: declared, applying: procedures)
+                    && (otherwise.map { arm in holds(arm, declared: declared, applying: procedures) } ?? true)
 
             case let .loop(condition, body, _):
-                return holds(condition, declared: declared) && holds(body, declared: declared)
+                return holds(condition, declared: declared, applying: procedures) && holds(body, declared: declared, applying: procedures)
 
             case let .attempt(body, rescue, _):
-                return holds(body, declared: declared) && holds(rescue, declared: declared)
+                return holds(body, declared: declared, applying: procedures) && holds(rescue, declared: declared, applying: procedures)
 
             case let .leave(leave):
-                return leave.value.map { value in holds(value, declared: declared) } ?? true
+                return leave.value.map { value in holds(value, declared: declared, applying: procedures) } ?? true
             }
         }
     }

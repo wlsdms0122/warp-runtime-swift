@@ -65,6 +65,11 @@ public struct Signature: Sendable, Equatable {
         Set(parameters.compactMap { name, parameter in parameter.type?.isPureProcedure == true ? name : nil })
     }
 
+    // The same, for the claim isolation reads.
+    var isolatedProcedures: Set<Name> {
+        Set(parameters.compactMap { name, parameter in parameter.type?.isIsolatedProcedure == true ? name : nil })
+    }
+
     // MARK: - Initializer
     public init(
         receiver: Name? = nil,

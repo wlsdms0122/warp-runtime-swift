@@ -768,3 +768,35 @@ extension LoweredType {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
     }
 }
+
+// What a slot said about the procedures it holds. A body applying a name a
+// slot declared this way is judged on the slot's word, since the slot is what
+// says which values may arrive there. An array or a dictionary of them says it
+// about every element.
+extension LoweredType {
+    var isPureProcedure: Bool {
+        switch self {
+        case .procedure(_, _, .pure, _):
+            return true
+
+        case let .array(element), let .dictionary(element):
+            return element.isPureProcedure
+
+        default:
+            return false
+        }
+    }
+
+    var isIsolatedProcedure: Bool {
+        switch self {
+        case .procedure(_, _, _, .isolated):
+            return true
+
+        case let .array(element), let .dictionary(element):
+            return element.isIsolatedProcedure
+
+        default:
+            return false
+        }
+    }
+}
