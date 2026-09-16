@@ -13,7 +13,8 @@ public extension Module {
     // one of these builtin is that the language cannot express it: arithmetic
     // and ordering are the machine's, case mapping and encoding carry
     // Unicode's tables with them, running at once is the host's scheduler, and
-    // `appending` is the only way an array grows.
+    // `appending` is the only way an array grows and `gathering` the only way
+    // an answer keeps the spelling its receiver arrived in.
     //
     // `trimmed` stands here for a smaller reason: nothing names the characters
     // it removes, so a body written in Warp would have to invent the list.
@@ -30,8 +31,8 @@ public extension Module {
         "std.text.text", "std.text.joined", "std.text.characters", "std.text.uppercased",
         "std.text.lowercased", "std.text.encoded", "std.text.decoded", "std.text.trimmed",
 
-        "std.collection.count", "std.collection.appending", "std.collection.keys",
-        "std.collection.setting",
+        "std.collection.count", "std.collection.appending", "std.collection.gathering",
+        "std.collection.keys", "std.collection.setting",
 
         "std.control.abort",
 

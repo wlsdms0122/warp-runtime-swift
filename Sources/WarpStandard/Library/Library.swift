@@ -17,9 +17,11 @@ enum Library {
               imports [
                 "std.collection.appending"
                 "std.collection.count"
+                "std.collection.gathering"
                 "std.collection.keys"
                 "std.math.lessThan"
                 "std.math.minus"
+                "std.math.plus"
               ]
               procedures {
                 "std.collection.append" {
@@ -49,6 +51,276 @@ enum Library {
                   receiver "to"
                   result null
                   returns "null"
+                }
+                "std.collection.dropFirst" {
+                  body [
+                    {
+                      value []
+                      var "places"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              set "places"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      call {
+                                        arguments {
+                                          value 1
+                                        }
+                                        of {
+                                          ref "walk.index"
+                                        }
+                                        procedure "std.math.plus"
+                                      }
+                                    }
+                                  }
+                                  of {
+                                    ref "places"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    arguments {
+                                      value 1
+                                    }
+                                    of {
+                                      call {
+                                        of {
+                                          ref "of"
+                                        }
+                                        procedure "std.collection.count"
+                                      }
+                                    }
+                                    procedure "std.math.minus"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "The elements after the first."
+                  parameters {
+                    of "array<some Element>"
+                  }
+                  receiver "of"
+                  result {
+                    call {
+                      arguments {
+                        value {
+                          ref "places"
+                        }
+                      }
+                      of {
+                        ref "of"
+                      }
+                      procedure "std.collection.gathering"
+                    }
+                  }
+                  returns "array<some Element>"
+                }
+                "std.collection.dropLast" {
+                  body [
+                    {
+                      value []
+                      var "places"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              set "places"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      ref "walk.index"
+                                    }
+                                  }
+                                  of {
+                                    ref "places"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    arguments {
+                                      value 1
+                                    }
+                                    of {
+                                      call {
+                                        of {
+                                          ref "of"
+                                        }
+                                        procedure "std.collection.count"
+                                      }
+                                    }
+                                    procedure "std.math.minus"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "The elements before the last."
+                  parameters {
+                    of "array<some Element>"
+                  }
+                  receiver "of"
+                  result {
+                    call {
+                      arguments {
+                        value {
+                          ref "places"
+                        }
+                      }
+                      of {
+                        ref "of"
+                      }
+                      procedure "std.collection.gathering"
+                    }
+                  }
+                  returns "array<some Element>"
+                }
+                "std.collection.filter" {
+                  body [
+                    {
+                      value []
+                      var "places"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "kept"
+                              value {
+                                apply {
+                                  arguments {
+                                    item {
+                                      ref "of[walk.index]"
+                                    }
+                                  }
+                                  procedure {
+                                    ref "value"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                conditional {
+                                  then [
+                                    {
+                                      set "places"
+                                      value {
+                                        call {
+                                          arguments {
+                                            value {
+                                              ref "walk.index"
+                                            }
+                                          }
+                                          of {
+                                            ref "places"
+                                          }
+                                          procedure "std.collection.appending"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                  when {
+                                    ref "kept"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "of"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "The elements a procedure answers true for."
+                  parameters {
+                    of "array<some Element>"
+                    value {
+                      type {
+                        "pure procedure" {
+                          parameters {
+                            item "some Element"
+                          }
+                          returns "bool"
+                        }
+                      }
+                    }
+                  }
+                  receiver "of"
+                  result {
+                    call {
+                      arguments {
+                        value {
+                          ref "places"
+                        }
+                      }
+                      of {
+                        ref "of"
+                      }
+                      procedure "std.collection.gathering"
+                    }
+                  }
+                  returns "array<some Element>"
                 }
                 "std.collection.first" {
                   description "The first element, or nothing."
@@ -178,6 +450,52 @@ enum Library {
                   }
                   returns "array<some Answer>"
                 }
+                "std.collection.prepending" {
+                  body [
+                    {
+                      let "back"
+                      value {
+                        call {
+                          of {
+                            ref "of"
+                          }
+                          procedure "std.collection.reversed"
+                        }
+                      }
+                    }
+                    {
+                      let "grown"
+                      value {
+                        call {
+                          arguments {
+                            value {
+                              ref "value"
+                            }
+                          }
+                          of {
+                            ref "back"
+                          }
+                          procedure "std.collection.appending"
+                        }
+                      }
+                    }
+                  ]
+                  description "The elements with one more at the front."
+                  parameters {
+                    of "array<some Element>"
+                    value "some Element"
+                  }
+                  receiver "of"
+                  result {
+                    call {
+                      of {
+                        ref "grown"
+                      }
+                      procedure "std.collection.reversed"
+                    }
+                  }
+                  returns "array<some Element>"
+                }
                 "std.collection.reduce" {
                   body [
                     {
@@ -259,6 +577,447 @@ enum Library {
                     ref "carried"
                   }
                   returns "some Carried"
+                }
+                "std.collection.reversed" {
+                  body [
+                    {
+                      value []
+                      var "places"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              set "places"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      call {
+                                        arguments {
+                                          value {
+                                            call {
+                                              arguments {
+                                                value 1
+                                              }
+                                              of {
+                                                ref "walk.index"
+                                              }
+                                              procedure "std.math.plus"
+                                            }
+                                          }
+                                        }
+                                        of {
+                                          call {
+                                            of {
+                                              ref "of"
+                                            }
+                                            procedure "std.collection.count"
+                                          }
+                                        }
+                                        procedure "std.math.minus"
+                                      }
+                                    }
+                                  }
+                                  of {
+                                    ref "places"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  call {
+                                    of {
+                                      ref "of"
+                                    }
+                                    procedure "std.collection.count"
+                                  }
+                                }
+                              }
+                              of {
+                                ref "walk.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "The elements back to front."
+                  parameters {
+                    of "array<some Element>"
+                  }
+                  receiver "of"
+                  result {
+                    call {
+                      arguments {
+                        value {
+                          ref "places"
+                        }
+                      }
+                      of {
+                        ref "of"
+                      }
+                      procedure "std.collection.gathering"
+                    }
+                  }
+                  returns "array<some Element>"
+                }
+                "std.collection.sorted" {
+                  body [
+                    {
+                      let "total"
+                      value {
+                        call {
+                          of {
+                            ref "of"
+                          }
+                          procedure "std.collection.count"
+                        }
+                      }
+                    }
+                    {
+                      value []
+                      var "ranks"
+                    }
+                    {
+                      let "outer"
+                      value {
+                        loop {
+                          body [
+                            {
+                              value 0
+                              var "rank"
+                            }
+                            {
+                              let "inner"
+                              value {
+                                loop {
+                                  body [
+                            {
+                              value true
+                              var "tie"
+                            }
+                              {
+                                value {
+                                  conditional {
+                                    then [
+                                  {
+                                    set "rank"
+                                    value {
+                                      call {
+                                        arguments {
+                                          value 1
+                                        }
+                                        of {
+                                          ref "rank"
+                                        }
+                                        procedure "std.math.plus"
+                                      }
+                                    }
+                                  }
+                                  {
+                                    set "tie"
+                                    value false
+                                  }
+                                    ]
+                                    when {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "of[outer.index]"
+                                        }
+                                      }
+                                      of {
+                                        ref "of[inner.index]"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                    }
+                                  }
+                                }
+                              }
+                              {
+                                value {
+                                  conditional {
+                                    then [
+                                  {
+                                    set "tie"
+                                    value false
+                                  }
+                                    ]
+                                    when {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "of[inner.index]"
+                                        }
+                                      }
+                                      of {
+                                        ref "of[outer.index]"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                    }
+                                  }
+                                }
+                              }
+                              {
+                                value {
+                                  conditional {
+                                    then [
+                                  {
+                                    value {
+                                      conditional {
+                                        then [
+                                      {
+                                        set "rank"
+                                        value {
+                                          call {
+                                            arguments {
+                                              value 1
+                                            }
+                                            of {
+                                              ref "rank"
+                                            }
+                                            procedure "std.math.plus"
+                                          }
+                                        }
+                                      }
+                                        ]
+                                        when {
+                                        call {
+                                          arguments {
+                                            value {
+                                              ref "outer.index"
+                                            }
+                                          }
+                                          of {
+                                            ref "inner.index"
+                                          }
+                                          procedure "std.math.lessThan"
+                                        }
+                                        }
+                                      }
+                                    }
+                                  }
+                                    ]
+                                    when {
+                                    ref "tie"
+                                    }
+                                  }
+                                }
+                              }
+                                  ]
+                                  while {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "total"
+                                        }
+                                      }
+                                      of {
+                                        ref "inner.index"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              set "ranks"
+                              value {
+                                call {
+                                  arguments {
+                                    value {
+                                      ref "rank"
+                                    }
+                                  }
+                                  of {
+                                    ref "ranks"
+                                  }
+                                  procedure "std.collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  ref "total"
+                                }
+                              }
+                              of {
+                                ref "outer.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                    {
+                      value []
+                      var "places"
+                    }
+                    {
+                      let "pick"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "scan"
+                              value {
+                                loop {
+                                  body [
+                            {
+                              value true
+                              var "same"
+                            }
+                              {
+                                value {
+                                  conditional {
+                                    then [
+                                  {
+                                    set "same"
+                                    value false
+                                  }
+                                    ]
+                                    when {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "pick.index"
+                                        }
+                                      }
+                                      of {
+                                        ref "ranks[scan.index]"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                    }
+                                  }
+                                }
+                              }
+                              {
+                                value {
+                                  conditional {
+                                    then [
+                                  {
+                                    set "same"
+                                    value false
+                                  }
+                                    ]
+                                    when {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "ranks[scan.index]"
+                                        }
+                                      }
+                                      of {
+                                        ref "pick.index"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                    }
+                                  }
+                                }
+                              }
+                              {
+                                value {
+                                  conditional {
+                                    then [
+                                  {
+                                    set "places"
+                                    value {
+                                      call {
+                                        arguments {
+                                          value {
+                                            ref "scan.index"
+                                          }
+                                        }
+                                        of {
+                                          ref "places"
+                                        }
+                                        procedure "std.collection.appending"
+                                      }
+                                    }
+                                  }
+                                    ]
+                                    when {
+                                    ref "same"
+                                    }
+                                  }
+                                }
+                              }
+                                  ]
+                                  while {
+                                    call {
+                                      arguments {
+                                        value {
+                                          ref "total"
+                                        }
+                                      }
+                                      of {
+                                        ref "scan.index"
+                                      }
+                                      procedure "std.math.lessThan"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments {
+                                value {
+                                  ref "total"
+                                }
+                              }
+                              of {
+                                ref "pick.index"
+                              }
+                              procedure "std.math.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  bounds {
+                    Element "std.Comparable"
+                  }
+                  description "The elements in order, for numbers or for strings."
+                  parameters {
+                    of "array<some Element>"
+                  }
+                  receiver "of"
+                  result {
+                    call {
+                      arguments {
+                        value {
+                          ref "places"
+                        }
+                      }
+                      of {
+                        ref "of"
+                      }
+                      procedure "std.collection.gathering"
+                    }
+                  }
+                  returns "array<some Element>"
                 }
                 "std.collection.values" {
                   body [
@@ -569,6 +1328,71 @@ enum Library {
                   receiver "of"
                   result false
                   returns "bool"
+                }
+                "std.logic.select" {
+                  body [
+                    {
+                      value {
+                        conditional {
+                          then [
+                            {
+                              let "taken"
+                              value {
+                                apply {
+                                  procedure {
+                                    ref "then"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                return {
+                                  ref "taken"
+                                }
+                              }
+                            }
+                          ]
+                          when {
+                            ref "of"
+                          }
+                        }
+                      }
+                    }
+                    {
+                      let "left"
+                      value {
+                        apply {
+                          procedure {
+                            ref "else"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  description "The value one of two sides answers, chosen by a truth."
+                  parameters {
+                    else {
+                      type {
+                        "pure procedure" {
+                          returns "some Answer"
+                        }
+                      }
+                    }
+                    of "bool"
+                    then {
+                      type {
+                        "pure procedure" {
+                          returns "some Answer"
+                        }
+                      }
+                    }
+                  }
+                  receiver "of"
+                  result {
+                    ref "left"
+                  }
+                  returns "some Answer"
                 }
               }
               warp 1

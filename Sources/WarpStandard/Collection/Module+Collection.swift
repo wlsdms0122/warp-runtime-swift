@@ -24,15 +24,6 @@ public extension Module {
                 signature: Signature(of: ContainsQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(ContainsQuery())
             ),
-            "std.collection.reversed": Procedure(
-                description: "The elements back to front.",
-                signature: Signature(
-                    of: ReversedQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Element"))
-                ),
-                implementation: .query(ReversedQuery())
-            ),
             "std.collection.appending": Procedure(
                 description: "The elements with one more at the end.",
                 signature: Signature(
@@ -42,50 +33,14 @@ public extension Module {
                 ),
                 implementation: .query(AppendingQuery())
             ),
-            "std.collection.prepending": Procedure(
-                description: "The elements with one more at the front.",
+            "std.collection.gathering": Procedure(
+                description: "The receiver's own elements, at the positions given.",
                 signature: Signature(
-                    of: PrependingQuery.self,
+                    of: GatheringQuery.self,
                     receiver: .of,
                     returns: .array(.parameter(name: "Element"))
                 ),
-                implementation: .query(PrependingQuery())
-            ),
-            "std.collection.dropFirst": Procedure(
-                description: "The elements after the first.",
-                signature: Signature(
-                    of: DropFirstQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Element"))
-                ),
-                implementation: .query(DropFirstQuery())
-            ),
-            "std.collection.dropLast": Procedure(
-                description: "The elements before the last.",
-                signature: Signature(
-                    of: DropLastQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Element"))
-                ),
-                implementation: .query(DropLastQuery())
-            ),
-            "std.collection.sorted": Procedure(
-                description: "The elements in order, for numbers or for strings.",
-                signature: Signature(
-                    of: SortedQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Element", constraint: "std.Comparable"))
-                ),
-                implementation: .query(SortedQuery())
-            ),
-            "std.collection.filter": Procedure(
-                description: "The elements a procedure answers true for.",
-                signature: Signature(
-                    of: FilterQuery.self,
-                    receiver: .of,
-                    returns: .array(.parameter(name: "Element"))
-                ),
-                implementation: .query(FilterQuery())
+                implementation: .query(GatheringQuery())
             ),
             "std.collection.keys": Procedure(
                 description: "The names a record holds, in order.",

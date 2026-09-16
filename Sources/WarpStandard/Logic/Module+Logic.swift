@@ -18,18 +18,6 @@ public extension Module {
                 description: "Whether two values are the same.",
                 signature: Signature(of: EqualQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(EqualQuery())
-            ),
-            // `and`/`or` rather than `all`/`any`: the connectives' universal
-            // names, and they leave `all` free for `std.concurrent`, whose
-            // meaning is the one everybody else calls `all`.
-            "std.logic.select": Procedure(
-                description: "What one of two sides answers, chosen by a truth.",
-                signature: Signature(
-                    of: SelectQuery.self,
-                    receiver: .of,
-                    returns: .parameter(name: "Answer")
-                ),
-                implementation: .query(SelectQuery())
             )
         ]
     )

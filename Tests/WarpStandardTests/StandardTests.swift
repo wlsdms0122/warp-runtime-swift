@@ -28,7 +28,7 @@ struct StandardTests {
         // Then. A name in `builtin` that nothing declares is a list gone stale,
         // and a name in neither list is one nobody decided about
         #expect(Module.builtin.subtracting(shipped).isEmpty)
-        #expect(Module.builtin.count == 24)
+        #expect(Module.builtin.count == 25)
         #expect(Module.builtin.union(Module.derived).union(["std.text.regex"]) == shipped)
     }
 
@@ -921,11 +921,20 @@ struct StandardTests {
         // order sorted could not answer for; refused, the way a mixed array is,
         // rather than placed arbitrarily
         await #expect {
-            try await SortedQuery().evaluate(
-                Question(receiver: .array([.double(1.5), .double(.nan)]))
+            try await run(
+                Procedure(
+                    signature: Signature(returns: .array(.double)),
+                    body: [],
+                    result: .call(
+                        Call(
+                            receiver: .literal(.array([.double(1.5), .double(.nan)])),
+                            selector: "std.collection.sorted"
+                        )
+                    )
+                )
             )
         } throws: { error in
-            "\(error)".contains("ordering with the rest")
+            "\(error)".contains("which have no order")
         }
     }
 
