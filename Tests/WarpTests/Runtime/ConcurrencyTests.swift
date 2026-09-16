@@ -73,7 +73,10 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any)]
+                                    parameters: [
+                                        "index": Parameter(type: .any),
+                                        "item": Parameter(type: .any)
+                                    ]
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -91,10 +94,11 @@ struct ConcurrencyTests {
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
     }
 
-    @Test("a map call is offered where its element sat")
-    func mapOffersTheIndex() async throws {
-        // Given. The closure asks for `index` and not `item`, and the offer
-        // covers it: which of the two the author reads is the author's business
+    @Test("a closure a walk calls declares every name the walk hands over")
+    func mapHandsOverEveryName() async throws {
+        // Given. `std.concurrent.map` hands over `item` and `index`, and this
+        // closure declares only the second. A name nothing can receive is not
+        // one to hand over quietly
         let sut = Statement(binding: .constant("placed"), expression: .call(
                 Call(
                     receiver: .literal(.array([.string("a"), .string("b")])),
@@ -114,11 +118,12 @@ struct ConcurrencyTests {
             )
         )
 
-        // When
-        let answer = try await answer(of: [sut], result: reference("placed"))
-
-        // Then
-        #expect(answer == .array([.int(0), .int(1)]))
+        // When / Then
+        await #expect {
+            try await answer(of: [sut], result: reference("placed"))
+        } throws: { error in
+            "\(error)".contains("not declared in the signature: item")
+        }
     }
 
     @Test("a null element is an element, not a missing argument")
@@ -134,7 +139,10 @@ struct ConcurrencyTests {
                         "by": .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .any)]
+                                    parameters: [
+                                        "index": Parameter(type: .any),
+                                        "item": Parameter(type: .any)
+                                    ]
                                 ),
                                 body: [],
                                 result: reference("item")

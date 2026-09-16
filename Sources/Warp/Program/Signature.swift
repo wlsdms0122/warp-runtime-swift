@@ -165,20 +165,7 @@ public struct Signature: Sendable, Equatable {
     ) throws -> [Name: Value] {
         let slots = lowered(in: types.loweredTypes)
 
-        return named(try settle(given, over: slots, offered: false, in: types.loweredTypes), over: slots)
-    }
-
-    // The same, for a caller that hands over more than the body asked for. A
-    // procedure walking an array offers the element and whatever else it has, and
-    // which of those the author wanted is the author's business: declaring a
-    // name only to leave it unread is a declaration nobody meant.
-    public func settle(
-        offered given: [Name: Value],
-        in types: TypeTable = .empty
-    ) throws -> [Name: Value] {
-        let slots = lowered(in: types.loweredTypes)
-
-        return named(try settle(given, over: slots, offered: true, in: types.loweredTypes), over: slots)
+        return named(try settle(given, over: slots, in: types.loweredTypes), over: slots)
     }
 
     // MARK: - Internal
@@ -191,14 +178,13 @@ public struct Signature: Sendable, Equatable {
     }
 
     // Arguments given by name, settled into the order a run keeps them in.
-    // A name the declaration lacks is refused unless the caller offers.
+    // A name the declaration lacks is refused.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
-        offered: Bool,
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        try settle(given.map { name, value in (name: name, value: value) }, over: slots, offered: offered, in: table)
+        try settle(given.map { name, value in (name: name, value: value) }, over: slots, in: table)
     }
 
     // Arguments given as a list of names and values, the way a procedure hands
@@ -207,22 +193,19 @@ public struct Signature: Sendable, Equatable {
     func settle(
         _ given: [(name: Name, value: Value)],
         over slots: [Slot],
-        offered: Bool,
         skipping: (Int) -> Bool = { _ in false },
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        if !offered {
-            let undeclared = given
-                .map { entry in entry.name }
-                .filter { name in !slots.contains { slot in slot.name == name } }
-                .sorted()
+        let undeclared = given
+            .map { entry in entry.name }
+            .filter { name in !slots.contains { slot in slot.name == name } }
+            .sorted()
 
-            guard undeclared.isEmpty else {
-                throw ArgumentError(
-                    "parameters: not declared in the signature:"
-                        + " \(undeclared.map(\.spelling).joined(separator: ", "))"
-                )
-            }
+        guard undeclared.isEmpty else {
+            throw ArgumentError(
+                "parameters: not declared in the signature:"
+                    + " \(undeclared.map(\.spelling).joined(separator: ", "))"
+            )
         }
 
         // A name given twice is two instructions for one slot, and neither
@@ -236,7 +219,6 @@ public struct Signature: Sendable, Equatable {
         return try settle(
             slots.map { slot in given.first { entry in entry.name == slot.name }?.value },
             over: slots,
-            offered: offered,
             skipping: skipping,
             in: table
         )
@@ -251,24 +233,16 @@ public struct Signature: Sendable, Equatable {
     func settle(
         _ given: [Value?],
         over slots: [Slot],
-        offered: Bool,
         skipping: (Int) -> Bool = { _ in false },
         in table: LoweredTypeTable
     ) throws -> [Value?] {
-        // What "nothing was given" means differs by who is giving. An author's
-        // argument space folds null and unwritten into one instruction: a
-        // reference that names nothing reads as null, and requiring the author
-        // to know which is which would make absence observable. A procedure that
-        // *offers* is the other way: it hands over values it actually holds,
-        // and a null it offered is a value, an element of the walked
-        // collection and not a blank, so only a position it never offered is
-        // missing.
+        // Nothing given is a slot no argument stands at. A null standing at one
+        // was given: null is a value the way any other is, and a caller that
+        // holds one hands it over rather than falling silent.
         var missing: [Name] = []
 
         for (position, slot) in slots.enumerated() where !skipping(position) {
-            let blank = offered ? given[position] == nil : (given[position] ?? .null) == .null
-
-            if blank, slot.mustBeGiven(in: table) {
+            if given[position] == nil, slot.mustBeGiven(in: table) {
                 missing.append(slot.name)
             }
         }
@@ -283,15 +257,7 @@ public struct Signature: Sendable, Equatable {
         var settled: [Value?] = Array(repeating: nil, count: slots.count)
 
         for (position, slot) in slots.enumerated() where !skipping(position) {
-            // An offered null passes through as the value it is, for the same
-            // reason it counted as given above.
-            if offered, given[position] == .null {
-                settled[position] = .null
-
-                continue
-            }
-
-            settled[position] = try slot.taking(given[position] ?? .null, in: table)
+            settled[position] = try slot.taking(given[position], in: table)
         }
 
         return settled

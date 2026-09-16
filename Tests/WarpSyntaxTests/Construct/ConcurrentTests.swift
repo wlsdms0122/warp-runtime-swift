@@ -147,7 +147,7 @@ struct ConcurrentTests {
                         "arguments": [
                             "by": [
                                 "closure": [
-                                    "parameters": ["item": "string"],
+                                    "parameters": ["index": "int", "item": "string"],
                                     "body": [
                                         [
                                             "let": "line",

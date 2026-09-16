@@ -9,7 +9,7 @@ import Foundation
 
 public struct Question<P: NativeProcedure>: Sendable {
     // The arguments a procedure reads: settled by the row a run sent, with the
-    // run as the way back in for a procedure handed a procedure, or offered by
+    // run as the way back in for a procedure handed a procedure, or given by
     // name where a caller asks the procedure directly, with no declaration and no
     // run behind them.
     private enum Arguments: Sendable {
@@ -17,7 +17,7 @@ public struct Question<P: NativeProcedure>: Sendable {
         // reach are the sender's document's numbers and only a run can say
         // which rows they are.
         case settled(Settled, sends: [Sent], from: Int, Executor)
-        case offered([Name: Value])
+        case given([Name: Value])
     }
 
     // MARK: - Property
@@ -39,7 +39,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // declaration, and a question built beside that skips it.
     init(receiver: Value? = nil, arguments: [Name: Value] = [:]) {
         self.receiver = receiver
-        self.arguments = .offered(arguments)
+        self.arguments = .given(arguments)
     }
 
     init(receiver: Value?, settled: Settled, sends: [Sent], from origin: Int, executor: Executor) {
@@ -53,15 +53,15 @@ public struct Question<P: NativeProcedure>: Sendable {
     // are everywhere else.
     //
     // A settled question reads the place the key stands at, since the run
-    // ordered the arguments by the declaration this key belongs to. An offered
+    // ordered the arguments by the declaration this key belongs to. A given
     // one was asked with no declaration behind it, so there are only names.
     public subscript(key: P.Parameters) -> Value {
         switch arguments {
         case let .settled(settled, _, _, _):
             return settled[key.position]
 
-        case let .offered(offered):
-            return offered[key.name] ?? .null
+        case let .given(given):
+            return given[key.name] ?? .null
         }
     }
 
@@ -78,7 +78,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     public func send(
         _ key: P.Imports,
         to receiver: Value? = nil,
-        offering arguments: [Value] = []
+        handing arguments: [Value] = []
     ) async throws -> Value {
         guard case let .settled(_, sends, origin, executor) = self.arguments,
             sends.indices.contains(key.position)
@@ -94,7 +94,7 @@ public struct Question<P: NativeProcedure>: Sendable {
             sends[key.position],
             from: origin,
             to: receiver,
-            offering: arguments
+            handing: arguments
         )
     }
 

@@ -139,7 +139,10 @@ struct ObservationTests {
                                         "by": .closure(
                                             Procedure(
                                                 signature: Signature(
-                                                    parameters: ["item": Parameter(type: .any)]
+                                                    parameters: [
+                                                        "index": Parameter(type: .any),
+                                                        "item": Parameter(type: .any)
+                                                    ]
                                                 ),
                                                 body: [
                                                     Statement(binding: .constant("step"), expression: reference("item")

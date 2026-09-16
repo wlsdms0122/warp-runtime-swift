@@ -170,10 +170,9 @@ public final class Linked: Sendable {
     // another way.
     func settle(
         _ given: [Value?],
-        offered: Bool,
         skipping: (Int) -> Bool = { _ in false }
     ) throws -> [Value?] {
-        try signature.settle(given, over: slots, offered: offered, skipping: skipping, in: table)
+        try signature.settle(given, over: slots, skipping: skipping, in: table)
     }
 
     // The same, over arguments given by name. `skipping` names the positions
@@ -181,10 +180,9 @@ public final class Linked: Sendable {
     // does.
     func settle(
         _ given: [(name: Name, value: Value)],
-        offered: Bool,
         skipping: (Int) -> Bool = { _ in false }
     ) throws -> [Value?] {
-        try signature.settle(given, over: slots, offered: offered, skipping: skipping, in: table)
+        try signature.settle(given, over: slots, skipping: skipping, in: table)
     }
 
     // The receiver settled against the slot at this row's receiver

@@ -86,7 +86,7 @@ public struct Executor: Sendable {
             throw ExecutionError("a run starts from a body, and this declaration is native")
         }
 
-        let settled = try entry.settle(arguments.map { name, value in (name: name, value: value) }, offered: false)
+        let settled = try entry.settle(arguments.map { name, value in (name: name, value: value) })
         var activation = try executor.activation(of: entry, in: frame)
 
         for (position, value) in settled.enumerated() {
@@ -97,15 +97,15 @@ public struct Executor: Sendable {
     }
 
     // MARK: - Internal
-    // Calling a closure a procedure holds. Arguments are offered rather than
-    // settled strictly: the procedure decides what it has to give, and which of
-    // those the closure's author wanted is the author's business.
+    // Calling a closure a procedure holds. The arguments settle against the
+    // closure's declaration the way a written call's do, so a closure written
+    // for this procedure declares every name it is handed.
     func call(
         _ closure: Closure,
-        offering arguments: [(name: Name, value: Value)],
+        handing arguments: [(name: Name, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        try await answer(closure, given: arguments, offered: true, at: trace)
+        try await answer(closure, given: arguments, at: trace)
     }
 
     // One code read against one frame, for a caller outside a run: what a
@@ -481,7 +481,7 @@ public struct Executor: Sendable {
             resolved.append((name: name, value: try await evaluate(argument, in: &activation, at: trace)))
         }
 
-        return try await answer(closure, given: resolved, offered: false, at: trace)
+        return try await answer(closure, given: resolved, at: trace)
     }
 
     // The one way a closure is called: the arguments settled by the closure's
@@ -494,7 +494,6 @@ public struct Executor: Sendable {
     private func answer(
         _ closure: Closure,
         given arguments: [(name: Name, value: Value)],
-        offered: Bool,
         at trace: Trace
     ) async throws -> Value {
         guard case let .body(body, frame) = closure.linked.implementation else {
@@ -506,7 +505,7 @@ public struct Executor: Sendable {
             throw ExecutionError("this call \(Linked.unreadable)")
         }
 
-        let settled = try closure.linked.settle(arguments, offered: offered)
+        let settled = try closure.linked.settle(arguments)
         var activation = try self.activation(of: closure.linked, in: frame)
 
         for (slot, cell) in closure.captured {
@@ -760,7 +759,7 @@ public struct Executor: Sendable {
         given: [Value?],
         skipping: Skipped
     ) throws -> Settled {
-        Settled(values: try callee.settle(given, offered: false, skipping: skipping.contains))
+        Settled(values: try callee.settle(given, skipping: skipping.contains))
     }
 
     // Every argument an operand wrote, in the order the row reads them. A loop
@@ -833,7 +832,7 @@ public struct Executor: Sendable {
         with arguments: [(name: Name, value: Value)],
         at trace: Trace = Trace()
     ) async throws -> Value {
-        try await answer(closure, given: arguments, offered: true, at: trace)
+        try await answer(closure, given: arguments, at: trace)
     }
 
     private func bool(_ value: Value) throws -> Bool {
@@ -923,19 +922,19 @@ public struct Executor: Sendable {
     // numbered by the sender's document, the same as one written in a body, and
     // the arguments arrive at the places the build worked out.
     //
-    // They are still offered rather than settled strictly: a procedure may hand over
-    // fewer than the callee declares, and a place it never handed is a place
-    // nothing was given for.
+    // A procedure may hand over fewer than the callee declares, and a place it
+    // never handed is a place nothing was given for. Which is the one thing
+    // absence means at any boundary.
     func send(
         _ sending: Sent,
         from origin: Int,
         to receiver: Value?,
-        offering values: [Value],
+        handing values: [Value],
         at trace: Trace
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
         let sentTo = try received(receiver, of: callee)
-        let settled = try settled(callee, to: sentTo, sending: sending, offering: values)
+        let settled = try settled(callee, to: sentTo, sending: sending, handing: values)
 
         switch callee.implementation {
         case .native(.query):
@@ -980,7 +979,7 @@ public struct Executor: Sendable {
         _ sending: Sent,
         from origin: Int,
         to receiver: Value?,
-        offering values: [Value]
+        handing values: [Value]
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
 
@@ -996,7 +995,7 @@ public struct Executor: Sendable {
         return try await answer(
             callee,
             for: sentTo,
-            with: try settled(callee, to: sentTo, sending: sending, offering: values),
+            with: try settled(callee, to: sentTo, sending: sending, handing: values),
             at: Trace()
         )
     }
@@ -1030,12 +1029,12 @@ public struct Executor: Sendable {
     // the values the sender built.
     //
     // A place nothing was handed at answers nil, which is what tells the
-    // boundary the sender offered nothing there.
+    // boundary nothing was given there.
     private func settled(
         _ callee: Linked,
         to receiver: Value?,
         sending: Sent,
-        offering values: [Value]
+        handing values: [Value]
     ) throws -> Settled {
         // How many a Swift body builds is the body's, so this is the one thing
         // about a send the build cannot read.
@@ -1076,7 +1075,6 @@ public struct Executor: Sendable {
         return Settled(
             values: try callee.settle(
                 given,
-                offered: true,
                 skipping: { position in receiver != nil && position == callee.receiverPosition }
             )
         )

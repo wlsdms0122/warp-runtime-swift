@@ -31,17 +31,19 @@ final class Slot: Sendable {
         type.mustBeGiven(default: `default`, in: table)
     }
 
-    // An argument as given, or the default where nothing was.
-    func taking(_ value: Value, in table: LoweredTypeTable) throws -> Value {
-        guard value != .null else {
+    // An argument as given, or the default where nothing was. Nil is the
+    // absence: a key the call never wrote. A null is a value like any other
+    // and goes to the type, which says whether it holds one.
+    func taking(_ value: Value?, in table: LoweredTypeTable) throws -> Value {
+        guard let value else {
             guard let fallback = self.default else {
-                // A type that declares null holds it as a value, so a null
-                // here is what was given rather than the absence of anything.
+                // A type that declares null answers omission with the null it
+                // holds.
                 guard type.declaresNull(in: table) else {
                     throw ArgumentError("input '\(name)': required, and nothing was given")
                 }
 
-                return try checking(value, in: table)
+                return try checking(.null, in: table)
             }
 
             // The fallback walks through the same gate an argument does, so
@@ -69,7 +71,7 @@ final class Slot: Sendable {
             // Null passes where the declaration says it is a value: a `T?`
             // slot, or the legacy spelling of the same fact, an explicitly
             // null default.
-            guard self.default == .null || type.declaresNull(in: table) else {
+            guard self.default == .null || type.admitsNull(in: table) else {
                 throw ArgumentError("input '\(name)': expected \(type.rendered(in: table)), got null")
             }
 

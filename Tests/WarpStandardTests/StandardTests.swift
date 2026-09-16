@@ -183,14 +183,14 @@ struct StandardTests {
         )
     }
 
-    @Test("a walk declares what it hands over, and a body reads what it wants")
-    func aWalkOffersRatherThanRequires() async throws {
-        // Given. `reduce` hands over `carried` and `item`. Counting only needs
-        // the first, and declaring the second to leave it unread would be a
-        // declaration the author never meant
+    @Test("a body a walk calls declares every name the walk hands over")
+    func aWalkRequiresWhatItHandsOver() async throws {
+        // Given. `reduce` hands over `carried` and `item`. Counting reads only
+        // the first and declares both: a name is written where it arrives,
+        // whether or not the body goes on to read it
         let counting = Procedure(
             signature: Signature(
-                parameters: ["carried": Parameter(type: .int)],
+                parameters: ["carried": Parameter(type: .int), "item": Parameter(type: .int)],
                 returns: .int
             ),
             body: [],

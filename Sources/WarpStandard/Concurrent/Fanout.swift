@@ -266,7 +266,7 @@ struct Fanout: Sendable {
         guard let environment = invocation.environment else {
             return try await invocation.call(
                 piece.closure,
-                offering: piece.arguments,
+                handing: piece.arguments,
                 piece: frame
             )
         }
@@ -274,7 +274,7 @@ struct Fanout: Sendable {
         return try await environment.isolateConcurrentWork {
             try await invocation.call(
                 piece.closure,
-                offering: piece.arguments,
+                handing: piece.arguments,
                 piece: frame
             )
         }

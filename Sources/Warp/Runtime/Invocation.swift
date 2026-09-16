@@ -127,7 +127,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     public func send(
         _ key: P.Imports,
         to receiver: Value? = nil,
-        offering arguments: [Value] = [],
+        handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
         guard sends.indices.contains(key.position) else {
@@ -138,7 +138,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             sends[key.position],
             from: origin,
             to: receiver,
-            offering: arguments,
+            handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }
@@ -148,12 +148,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // where it happened rather than only which procedure was running.
     public func call(
         _ closure: Closure,
-        offering arguments: [(name: Name, value: Value)],
+        handing arguments: [(name: Name, value: Value)],
         piece label: String? = nil
     ) async throws -> Value {
         try await executor.call(
             closure,
-            offering: arguments,
+            handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace
         )
     }

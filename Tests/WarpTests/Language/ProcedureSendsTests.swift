@@ -348,7 +348,7 @@ private struct TwiceQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        try await question.send(.times, to: question.receiver, offering: [.int(2)])
+        try await question.send(.times, to: question.receiver, handing: [.int(2)])
     }
 
     // MARK: - Private
@@ -377,7 +377,7 @@ private struct AnnounceEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.shout, offering: [invocation.receiver ?? .null])
+        try await invocation.send(.shout, handing: [invocation.receiver ?? .null])
     }
 
     // MARK: - Private
@@ -468,7 +468,7 @@ private struct PickingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, offering: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(9), .int(1)])
     }
 
     // MARK: - Private
@@ -490,7 +490,7 @@ private struct MisnamingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, offering: [.int(1)])
+        try await invocation.send(.pick, handing: [.int(1)])
     }
 
     // MARK: - Private
@@ -512,7 +512,7 @@ private struct OverhandingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, offering: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(9), .int(1)])
     }
 
     // MARK: - Private
@@ -534,7 +534,7 @@ private struct DoublingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.pick, offering: [.int(9), .int(1)])
+        try await invocation.send(.pick, handing: [.int(9), .int(1)])
     }
 
     // MARK: - Private
@@ -556,7 +556,7 @@ private struct ReceivingEffect: Effect {
     // MARK: - Initializer
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
-        try await invocation.send(.greet, to: .int(7), offering: [.int(9)])
+        try await invocation.send(.greet, to: .int(7), handing: [.int(9)])
     }
 
     // MARK: - Private

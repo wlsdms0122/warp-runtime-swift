@@ -804,7 +804,10 @@ struct ConstraintTests {
                         arguments: [
                             "by": .closure(Procedure(
                                 signature: Signature(
-                                    parameters: ["item": Parameter(type: .int)],
+                                    parameters: [
+                                        "index": Parameter(type: .int),
+                                        "item": Parameter(type: .int)
+                                    ],
                                     returns: .int
                                 ),
                                 body: [],

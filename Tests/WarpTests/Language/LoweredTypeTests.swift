@@ -208,7 +208,6 @@ struct LoweredTypeTests {
             try signature.settle(
                 [(name: "item", value: .int(1)), (name: "item", value: .int(2))],
                 over: signature.lowered(in: table),
-                offered: true,
                 in: table
             )
         } throws: { error in

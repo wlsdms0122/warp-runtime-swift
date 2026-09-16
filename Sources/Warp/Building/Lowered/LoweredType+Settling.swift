@@ -83,6 +83,33 @@ extension LoweredType {
         }
     }
 
+    // Whether a null that arrives is one of this type's values. `any` is
+    // here and not below: it accepts what it is handed, null included, while
+    // saying nothing about what a caller may leave out.
+    func admitsNull(in table: LoweredTypeTable) -> Bool {
+        switch self {
+        case .any:
+            return true
+
+        case let .named(row):
+            return table.loweredTypes[row].admitsNull(in: table)
+
+        case let .member(constraint):
+            return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
+
+        // A parameter stands for what arrived and does not settle it, so an
+        // unbounded one holds a null the way it holds anything. A bounded one
+        // asks the membership, the way a member does.
+        case let .parameter(_, bound):
+            guard case let .membership(constraint)? = bound else { return true }
+
+            return table.constraints[constraint].contains { member in member.admitsNull(in: table) }
+
+        default:
+            return declaresNull(in: table)
+        }
+    }
+
     // Whether null is one of this type's values rather than an absence: the
     // fact `T?` exists to declare, and the boundary reads it. `any` is not
     // this: an undeclared type accepts a null that arrives, but it does not
