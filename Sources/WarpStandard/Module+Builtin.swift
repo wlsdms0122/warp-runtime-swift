@@ -15,9 +15,8 @@ public extension Module {
     // Unicode's tables with them, running at once is the host's scheduler, and
     // `appending` is the only way an array grows.
     //
-    // `split`, `startsWith` and `trimmed` stand here for a smaller reason:
-    // text cannot be read as an array of its elements, so the three have
-    // nothing to be written from.
+    // `trimmed` stands here for a smaller reason: nothing names the characters
+    // it removes, so a body written in Warp would have to invent the list.
     //
     // `regex` is in neither set. It cannot be written in Warp and it is asked
     // of no implementation, since what a pattern means differs between the
@@ -28,9 +27,8 @@ public extension Module {
         "std.math.plus", "std.math.minus", "std.math.times", "std.math.dividedBy",
         "std.math.remainder", "std.math.lessThan", "std.math.floored", "std.math.rounded",
 
-        "std.text.text", "std.text.joined", "std.text.uppercased", "std.text.lowercased",
-        "std.text.encoded", "std.text.decoded", "std.text.split", "std.text.startsWith",
-        "std.text.trimmed",
+        "std.text.text", "std.text.joined", "std.text.characters", "std.text.uppercased",
+        "std.text.lowercased", "std.text.encoded", "std.text.decoded", "std.text.trimmed",
 
         "std.collection.count", "std.collection.appending", "std.collection.keys",
         "std.collection.setting",

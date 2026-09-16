@@ -37,6 +37,15 @@ public extension Module {
                 signature: Signature(of: RegexQuery.self, receiver: .of, returns: .bool),
                 implementation: .query(RegexQuery())
             ),
+            "std.text.characters": Procedure(
+                description: "The text as an array of its characters.",
+                signature: Signature(
+                    of: CharactersQuery.self,
+                    receiver: .of,
+                    returns: .array(.string)
+                ),
+                implementation: .query(CharactersQuery())
+            ),
             "std.text.uppercased": Procedure(
                 description: "The text in upper case.",
                 signature: Signature(of: UppercasedQuery.self, receiver: .of, returns: .string),

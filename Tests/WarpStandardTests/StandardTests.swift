@@ -28,7 +28,7 @@ struct StandardTests {
         // Then. A name in `builtin` that nothing declares is a list gone stale,
         // and a name in neither list is one nobody decided about
         #expect(Module.builtin.subtracting(shipped).isEmpty)
-        #expect(Module.builtin.count == 25)
+        #expect(Module.builtin.count == 24)
         #expect(Module.builtin.union(Module.derived).union(["std.text.regex"]) == shipped)
     }
 
