@@ -1731,8 +1731,8 @@ extension Builder {
             try held(condition, asOperand: place.part(.condition(of: .loop)), given: context, when: ask)
             try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
 
-            let rounds = await ask.rewrites
-                ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
+            let rounds = ask.rewrites
+                ? try await inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
                 : probed
 
             // The result runs once, at whichever exit the run takes (a
