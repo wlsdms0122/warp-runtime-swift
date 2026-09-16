@@ -105,9 +105,7 @@ public struct Executor: Sendable {
         offering arguments: [(name: Name, value: Value)],
         at trace: Trace
     ) async throws -> Value {
-        var (body, activation) = try enter(closure, given: arguments, offered: true)
-
-        return try await answer(body, of: closure.linked, in: &activation, at: trace)
+        try await answer(closure, given: arguments, offered: true, at: trace)
     }
 
     // One code read against one frame, for a caller outside a run: what a
@@ -138,9 +136,10 @@ public struct Executor: Sendable {
     // answers is settled against what it declared.
     //
     // Both halves are the frame, and neither works without the other, so there
-    // is one of these rather than one per way of reaching a body. There are
-    // three ways: a run starting here, a procedure whose implementation is written,
-    // and a closure being invoked.
+    // is one of these rather than one per way of reaching a body. A body is
+    // reached three ways, and each makes its frame in one place that ends
+    // here: a run starting, a written procedure being called, and a closure
+    // being invoked.
     private func answer(
         _ body: Body,
         of callee: Linked,
@@ -437,36 +436,23 @@ public struct Executor: Sendable {
             )
 
         case let .body(body, frame):
-            var inner = try self.activation(of: callee, in: frame)
-
-            // A parameter handed in place takes no value: it takes a hold on
-            // the caller's variable, and what the hold reaches is read only
-            // where the body reads it.
-            for (position, handle) in try holds(call.handed, of: callee, in: activation) {
-                inner.cells[frame.parameters[position]] = .hold(handle)
-            }
-
-            // A receiver is written on the other side of the dot rather than by
-            // name. It is not settled as an argument, since being sent to
-            // nothing is something a procedure answers rather than refuses, but the
-            // body reads it under the name its signature gave it.
-            if let position = callee.receiverPosition, let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace) {
-                inner.cells[frame.parameters[position]] = .value(receiver)
-            }
-
+            let holds = try holds(call.handed, of: callee, in: activation)
+            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
             let settled = try settled(
                 callee,
                 given: try await given(call.arguments, in: &activation, at: trace),
                 skipping: skipped(call, of: callee, holding: true, receiving: handed)
             )
 
-            for (position, value) in settled.values.enumerated() {
-                guard let value else { continue }
-
-                inner.cells[frame.parameters[position]] = .value(value)
-            }
-
-            return try await answer(body, of: callee, in: &inner, at: trace.appending(.procedure(callee.label.spelling)))
+            return try await answer(
+                callee,
+                running: body,
+                in: frame,
+                settled: settled,
+                receiver: receiver,
+                holding: holds,
+                at: trace.appending(.procedure(callee.label.spelling))
+            )
         }
     }
 
@@ -495,20 +481,22 @@ public struct Executor: Sendable {
             resolved.append((name: name, value: try await evaluate(argument, in: &activation, at: trace)))
         }
 
-        var (body, inner) = try enter(closure, given: resolved, offered: false)
-
-        return try await answer(body, of: closure.linked, in: &inner, at: trace)
+        return try await answer(closure, given: resolved, offered: false, at: trace)
     }
 
-    // The one way a closure's frame is made: the arguments settled by the
-    // closure's own row, the captured cells in their slots, the parameters
-    // in theirs. The row is asked whether this run may read it before
-    // anything reads its rows.
-    private func enter(
+    // The one way a closure is called: the arguments settled by the closure's
+    // own row, the captured cells in their slots, the parameters in theirs,
+    // and the body answered in the frame that was just made. The row is asked
+    // whether this run may read it before anything reads its rows.
+    //
+    // Making the frame and answering from it are one act here, so no caller
+    // holds a frame it has not answered from.
+    private func answer(
         _ closure: Closure,
         given arguments: [(name: Name, value: Value)],
-        offered: Bool
-    ) throws -> (Body, Activation) {
+        offered: Bool,
+        at trace: Trace
+    ) async throws -> Value {
         guard case let .body(body, frame) = closure.linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
         }
@@ -529,7 +517,46 @@ public struct Executor: Sendable {
             activation.cells[frame.parameters[position]] = .value(value ?? .null)
         }
 
-        return (body, activation)
+        return try await answer(body, of: closure.linked, in: &activation, at: trace)
+    }
+
+    // The one way a written procedure is called: its frame, the settled
+    // arguments in their slots, the receiver in the slot its signature named,
+    // whatever the call handed in place held as a box, and the body answered
+    // in that frame.
+    private func answer(
+        _ callee: Linked,
+        running body: Body,
+        in frame: Frame,
+        settled arguments: Settled,
+        receiver: Value?,
+        holding holds: [(position: Int, handle: Handle)],
+        at trace: Trace
+    ) async throws -> Value {
+        var activation = try self.activation(of: callee, in: frame)
+
+        // A parameter handed in place takes no value: it takes a hold on the
+        // caller's variable, and what the hold reaches is read only where the
+        // body reads it.
+        for (position, handle) in holds {
+            activation.cells[frame.parameters[position]] = .hold(handle)
+        }
+
+        for (position, value) in arguments.values.enumerated() {
+            guard let value else { continue }
+
+            activation.cells[frame.parameters[position]] = .value(value)
+        }
+
+        // A receiver is written on the other side of the dot rather than by
+        // name. It is not settled as an argument, since being sent to nothing
+        // is something a procedure answers rather than refuses, but the body
+        // reads it under the name its signature gave it.
+        if let position = callee.receiverPosition, let receiver {
+            activation.cells[frame.parameters[position]] = .value(receiver)
+        }
+
+        return try await answer(body, of: callee, in: &activation, at: trace)
     }
 
     private func loop(
@@ -774,19 +801,15 @@ public struct Executor: Sendable {
             return try await evaluate(query, of: callee, receiver: sent, settled: arguments) ?? .null
 
         case let .body(body, frame):
-            var activation = try self.activation(of: callee, in: frame)
-
-            for (position, value) in arguments.values.enumerated() {
-                guard let value else { continue }
-
-                activation.cells[frame.parameters[position]] = .value(value)
-            }
-
-            if let position = callee.receiverPosition, let sent {
-                activation.cells[frame.parameters[position]] = .value(sent)
-            }
-
-            return try await answer(body, of: callee, in: &activation, at: trace)
+            return try await answer(
+                callee,
+                running: body,
+                in: frame,
+                settled: arguments,
+                receiver: sent,
+                holding: [],
+                at: trace
+            )
 
         case .native(.effect):
             throw ExecutionError(
@@ -810,9 +833,7 @@ public struct Executor: Sendable {
         with arguments: [(name: Name, value: Value)],
         at trace: Trace = Trace()
     ) async throws -> Value {
-        var (body, activation) = try enter(closure, given: arguments, offered: true)
-
-        return try await answer(body, of: closure.linked, in: &activation, at: trace)
+        try await answer(closure, given: arguments, offered: true, at: trace)
     }
 
     private func bool(_ value: Value) throws -> Bool {
