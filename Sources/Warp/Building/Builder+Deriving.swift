@@ -167,19 +167,30 @@ extension Builder {
         }
     }
 
-    // A block answers without running when every part of it is something the
-    // pure evaluator can answer, and every name it sends to is pure. Control
-    // flow is not in that set, not because running a conditional is impure, but
-    // because the surface that answers purely does not run bodies at all. A
-    // selector is the declared spelling it names, so the table is asked by the
-    // selector as written. `reading` is the module's variables: a body reading
-    // one answers by the run's state, so it does not answer without running.
+    // A block answers without running when nothing it reaches is outside the
+    // run. A selector is the declared spelling it names, so the table is asked
+    // by the selector as written. `reading` is the module's variables: a body
+    // reading one answers by the run's state, so it does not answer without
+    // running, and a write reaching one is the same fact from the other side.
+    //
+    // The names a block binds are its own. A `let` and a `var` both introduce
+    // one, and neither leaves the block, so declaring either says nothing about
+    // what the block reaches.
     func isPure(_ block: Block, given pure: Set<Name>, reading variables: Set<Name>) -> Bool {
         block.body.allSatisfy { statement in
-            statement.binding?.isConstant != false
+            isPure(statement.binding, reading: variables)
                 && isPure(statement.expression, given: pure, reading: variables)
         }
             && (block.result.map { result in isPure(result, given: pure, reading: variables) } ?? true)
+    }
+
+    // What a binding reaches. Introducing a name reaches nothing; writing one
+    // reaches whatever the path's head names, and a module variable is the
+    // run's state.
+    private func isPure(_ binding: Statement.Binding?, reading variables: Set<Name>) -> Bool {
+        guard case let .assignment(path)? = binding else { return true }
+
+        return path.head.map { head in !variables.contains(head) } ?? true
     }
 
     // What an operand or a condition answers only by running, if anything. An
@@ -237,6 +248,10 @@ extension Builder {
             self.isPure(inner, given: pure, reading: variables)
         }
 
+        func isPure(_ statements: [Statement]) -> Bool {
+            self.isPure(Block(body: statements), given: pure, reading: variables)
+        }
+
         switch expression {
         case .literal, .closure:
             return true
@@ -246,12 +261,10 @@ extension Builder {
                 inner.head.map { head in !variables.contains(head) } ?? true
             }
 
-        // Leaving is not a computation, and what it does is not something the
-        // pure evaluator can do: purity here means "can be answered without
-        // running", and this one answers by not answering. Asking only what it
-        // carries would let it through to a slot the resolver then refuses.
-        case .leave:
-            return false
+        // Leaving is how a body answers from the middle. Where it goes is
+        // inside the body, so what it reaches is what it carries.
+        case let .leave(leave):
+            return leave.value.map(isPure) ?? true
 
         // Judging a value against a type reaches nothing outside itself, so a
         // cast is as pure as what it reads.
@@ -274,8 +287,22 @@ extension Builder {
         case .apply:
             return false
 
-        case .block, .conditional, .loop, .attempt:
-            return false
+        // Control flow reaches nothing on its own: which part runs is decided
+        // inside the body, so a construct is as pure as the parts it holds.
+        case let .block(block):
+            return self.isPure(block, given: pure, reading: variables)
+
+        case let .conditional(condition, then, otherwise):
+            return isPure(condition)
+                && isPure(then)
+                && (otherwise.map(isPure) ?? true)
+
+        case let .loop(condition, body, _):
+            return isPure(condition) && self.isPure(body, given: pure, reading: variables)
+
+        case let .attempt(body, rescue, _):
+            return self.isPure(body, given: pure, reading: variables)
+                && self.isPure(rescue, given: pure, reading: variables)
         }
     }
 }
