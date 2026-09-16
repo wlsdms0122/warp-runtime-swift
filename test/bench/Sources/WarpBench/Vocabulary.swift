@@ -19,5 +19,11 @@ import WarpStandard
 // against are one thing.
 enum Vocabulary {
     static let brought = try! Supplying(Module.standard)
-    static let laid = try! Builder().lay(Builder().compile(Module.standard), supplying: brought)
+
+    // Settled once and awaited by everyone who reads it. A compile suspends
+    // and a stored property cannot, so what is held here is the settling
+    // rather than the answer.
+    static let laid = Task {
+        try Builder().lay(try await Builder().compile(Module.standard), supplying: brought)
+    }
 }

@@ -41,8 +41,8 @@ struct Chain {
 
     // MARK: - Public
     // How long one build of this world takes.
-    func build() throws -> Duration {
-        try elapsed { _ = try Builder().build(world, entry: entry) }
+    func build() async throws -> Duration {
+        try await elapsed { _ = try await Builder().build(world, entry: entry) }
     }
 
     // MARK: - Private

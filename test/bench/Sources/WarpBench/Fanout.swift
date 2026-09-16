@@ -39,28 +39,31 @@ struct Fanout {
     // for every sample would only be time spent outside the clock.
     private let compiled: [Compiled]
 
+    // The vocabulary these were compiled against, held so that every door
+    // times the same build rather than settling it again.
+    private let laid: Laid
+
     // MARK: - Initializer
-    init(_ dealing: Dealing) throws {
+    init(_ dealing: Dealing) async throws {
         let modules = try (0 ..< dealing.documents).map { document in
             try Self.document(dealing.held(by: document))
         }
+        let laid = try await Vocabulary.laid.value
 
         self.entry = try Self.name(0)
         self.modules = modules
-        self.compiled = Vocabulary.laid.compiled + (try Builder().compile(
-            modules,
-            against: Vocabulary.laid
-        ))
+        self.laid = laid
+        self.compiled = laid.compiled + (try await Builder().compile(modules, against: laid))
     }
 
     // MARK: - Public
     // How long compiling these documents and then linking them takes.
-    func build() throws -> Duration {
+    func build() async throws -> Duration {
         let builder = Builder()
 
-        return try elapsed {
+        return try await elapsed {
             _ = try builder.link(
-                Vocabulary.laid.compiled + builder.compile(modules, against: Vocabulary.laid),
+                laid.compiled + (try await builder.compile(modules, against: laid)),
                 entry: entry,
                 supplying: Vocabulary.brought
             )
@@ -68,21 +71,21 @@ struct Fanout {
     }
 
     // How long compiling every document together takes.
-    func compile() throws -> Duration {
+    func compile() async throws -> Duration {
         let builder = Builder()
 
-        return try elapsed {
-            _ = try builder.compile(modules, against: Vocabulary.laid)
+        return try await elapsed {
+            _ = try await builder.compile(modules, against: laid)
         }
     }
 
     // How long the same documents cost compiled one at a time, added up.
-    func alone() throws -> Duration {
+    func alone() async throws -> Duration {
         let builder = Builder()
 
-        return try elapsed {
+        return try await elapsed {
             for module in modules {
-                _ = try builder.compile([module], against: Vocabulary.laid)
+                _ = try await builder.compile([module], against: laid)
             }
         }
     }

@@ -61,7 +61,7 @@ struct Bench {
         let repeats = numbers.dropFirst().first.flatMap(Int.init) ?? defaultRepeats
         let against = arguments.firstIndex(of: "--against").map { at in arguments[at + 1] }
         let printed = try against.map(Self.reading)
-        let workloads = try Self.workloads()
+        let workloads = try await Self.workloads()
 
         var measured: [String: Measurement] = [:]
 
@@ -81,8 +81,8 @@ struct Bench {
 
             for _ in 0 ..< buildSamples {
                 loads.append(try workload.load())
-                builds.append(try workload.build())
-                bakes.append(try workload.baked())
+                builds.append(try await workload.build())
+                bakes.append(try await workload.baked())
                 onces.append(try await workload.once())
             }
 
@@ -113,8 +113,8 @@ struct Bench {
             let apart = try Dealing(of: count, across: count)
             let together = try Dealing(of: count, across: 1)
 
-            spread[apart.procedures] = try Self.fastest(Chain(apart).build)
-            gathered[together.procedures] = try Self.fastest(Chain(together).build)
+            spread[apart.procedures] = try await Self.fastest(Chain(apart).build)
+            gathered[together.procedures] = try await Self.fastest(Chain(together).build)
         }
 
         print("")
@@ -129,12 +129,12 @@ struct Bench {
 
         for count in documentCounts {
             let dealing = try Dealing(of: fanoutWords, across: count)
-            let fanout = try Fanout(dealing)
+            let fanout = try await Fanout(dealing)
 
             costs[dealing.documents] = Cost(
-                build: try Self.fastest(fanout.build),
-                compile: try Self.fastest(fanout.compile),
-                alone: try Self.fastest(fanout.alone),
+                build: try await Self.fastest(fanout.build),
+                compile: try await Self.fastest(fanout.compile),
+                alone: try await Self.fastest(fanout.alone),
                 link: try Self.fastest(fanout.link)
             )
         }
@@ -160,7 +160,7 @@ struct Bench {
         let link: Double
     }
 
-    private static func workloads() throws -> [Workload] {
+    private static func workloads() async throws -> [Workload] {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -171,7 +171,13 @@ struct Bench {
             .filter { $0.pathExtension == "warpt" }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
 
-        return try files.map(Workload.init(reading:))
+        var workloads: [Workload] = []
+
+        for file in files {
+            workloads.append(try await Workload(reading: file))
+        }
+
+        return workloads
     }
 
     // Nanoseconds the fastest of many samples of one act took. Warmed up once
@@ -183,6 +189,19 @@ struct Bench {
 
         for _ in 0 ..< buildSamples {
             samples.append(try act())
+        }
+
+        return Self.nanoseconds(Self.fastest(samples))
+    }
+
+    // The same, for an act that suspends.
+    private static func fastest(_ act: () async throws -> Duration) async throws -> Double {
+        _ = try await act()
+
+        var samples: [Duration] = []
+
+        for _ in 0 ..< buildSamples {
+            samples.append(try await act())
         }
 
         return Self.nanoseconds(Self.fastest(samples))

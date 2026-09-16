@@ -31,13 +31,13 @@ struct Workload {
     private let image: Image
 
     // MARK: - Initializer
-    init(reading url: URL) throws {
+    init(reading url: URL) async throws {
         let text = try String(contentsOf: url, encoding: .utf8)
 
         self.name = url.deletingPathExtension().lastPathComponent
         self.text = text
         self.module = try Loader().load(try TextEncoding.value(from: text), identity: nil)
-        self.image = try Self.built(module)
+        self.image = try await Self.built(module)
     }
 
     // MARK: - Public
@@ -55,19 +55,21 @@ struct Workload {
     }
 
     // How long one build of this module takes.
-    func build() throws -> Duration {
-        try elapsed { _ = try Self.built(module) }
+    func build() async throws -> Duration {
+        try await elapsed { _ = try await Self.built(module) }
     }
 
     // The same build where the vocabulary was compiled and laid down already,
     // which is what a caller building many documents against one vocabulary
     // pays.
-    func baked() throws -> Duration {
-        try elapsed {
+    func baked() async throws -> Duration {
+        let laid = try await Vocabulary.laid.value
+
+        return try await elapsed {
             let builder = Builder()
 
             _ = try builder.link(
-                Vocabulary.laid.compiled + (try builder.compile([module], against: Vocabulary.laid)),
+                laid.compiled + (try await builder.compile([module], against: laid)),
                 entry: "entry",
                 supplying: Vocabulary.brought
             )
@@ -79,12 +81,12 @@ struct Workload {
     // nothing between them is left out. What arriving costs is `load()`.
     func once() async throws -> Duration {
         try await elapsed {
-            _ = try await Executor().run(try Self.built(module), arguments: ["rounds": .int(1)])
+            _ = try await Executor().run(try await Self.built(module), arguments: ["rounds": .int(1)])
         }
     }
 
     // MARK: - Private
-    private static func built(_ module: Module) throws -> Image {
-        try Builder().build([module] + Module.standard, entry: "entry")
+    private static func built(_ module: Module) async throws -> Image {
+        try await Builder().build([module] + Module.standard, entry: "entry")
     }
 }
