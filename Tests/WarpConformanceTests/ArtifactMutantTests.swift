@@ -43,9 +43,9 @@ struct ArtifactMutantTests {
         guard case .answers = sut.expectation else { return }
 
         let builder = Builder(fingerprinting: Fingerprint.of)
-        let supplying = try Supplying(sut.modules())
-        let behind = try builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
-        let own = try builder.compile(
+        let supplying = try await Supplying(sut.modules())
+        let behind = try await builder.compile(try sut.brought + Module.standard, against: [], supplying: supplying)
+        let own = try await builder.compile(
             [try Loader().load(sut.program, identity: nil)],
             against: behind,
             supplying: supplying

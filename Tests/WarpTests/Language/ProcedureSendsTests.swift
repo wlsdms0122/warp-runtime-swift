@@ -21,7 +21,7 @@ struct ProcedureSendsTests {
     @Test("a procedure answers through the procedure it declared it sends")
     func aProcedureReachesWhatItDeclared() async throws {
         // Given
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(receiver: .literal(.int(2)), selector: "app.twice"))
@@ -39,7 +39,7 @@ struct ProcedureSendsTests {
     @Test("an effect reaches a procedure that runs")
     func anEffectReachesAProcedureThatRuns() async throws {
         // Given
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(receiver: .literal(.string("hi")), selector: "app.announce"))
@@ -55,10 +55,10 @@ struct ProcedureSendsTests {
     }
 
     @Test("a procedure sending a spelling nothing declares is refused at the build")
-    func anUndeclaredSendIsRefused() {
+    func anUndeclaredSendIsRefused() async {
         // Given / When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.strayed],
                 entry: "entry"
             )
@@ -66,11 +66,11 @@ struct ProcedureSendsTests {
     }
 
     @Test("a query sending something that answers only by running is refused")
-    func aQuerySendingAnEffectIsRefused() {
+    func aQuerySendingAnEffectIsRefused() async {
         // Given. `app.shouting` claims it answers without running and sends
         // `app.shout`, which does not
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.contradicting, .shouting],
                 entry: "entry"
             )
@@ -78,12 +78,12 @@ struct ProcedureSendsTests {
     }
 
     @Test("an isolated procedure sending one that keeps state is refused")
-    func anIsolatedProcedureSendingSharedStateIsRefused() {
+    func anIsolatedProcedureSendingSharedStateIsRefused() async {
         // Given / When / Then. `app.counting` says it touches nothing shared
         // and sends `app.ticket`, which answers from a box it keeps between
         // calls
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.claims, .ticketing],
                 entry: "entry"
             )
@@ -93,7 +93,7 @@ struct ProcedureSendsTests {
     @Test("a procedure that says it touches shared state may send one that does")
     func aSharedProcedureSendingSharedStateStands() async throws {
         // Given
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.counted"))
@@ -151,7 +151,7 @@ struct ProcedureSendsTests {
     func handedArgumentsStandWhereTheCalleeKeepsThem() async throws {
         // Given. `app.picking` hands `z` before `a`, and the callee keeps them
         // the other way round
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.picking"))
@@ -167,10 +167,10 @@ struct ProcedureSendsTests {
     }
 
     @Test("a procedure handing a name the callee never declared is refused at the build")
-    func anUnknownHandedNameIsRefused() {
+    func anUnknownHandedNameIsRefused() async {
         // Given / When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.misnaming, .picked],
                 entry: "entry"
             )
@@ -181,7 +181,7 @@ struct ProcedureSendsTests {
     func handingMoreThanDeclaredIsRefused() async throws {
         // Given. How many a Swift body builds is the body's, so this is the one
         // thing about a send the build cannot read
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.overhanding"))
@@ -196,11 +196,11 @@ struct ProcedureSendsTests {
     }
 
     @Test("a procedure handing one name twice is refused at the build")
-    func aDoubledHandedNameIsRefused() {
+    func aDoubledHandedNameIsRefused() async {
         // Given / When / Then. Two instructions for one place, and neither is
         // the one to keep
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])])] + [.doubling, .picked],
                 entry: "entry"
             )
@@ -211,7 +211,7 @@ struct ProcedureSendsTests {
     func handingTheReceiversNameIsRefused() async throws {
         // Given. Whether a send carries a receiver is the Swift body's, so this
         // is not a thing the build can read off the declaration
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.receiving"))
@@ -229,7 +229,7 @@ struct ProcedureSendsTests {
     func aMistypedReceiverIsRefused() async throws {
         // Given. `app.mistyping` sends an int to a procedure whose receiver is
         // declared string
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.mistyping"))
@@ -248,7 +248,7 @@ struct ProcedureSendsTests {
     func sendingToOneThatTakesNoReceiverIsRefused() async throws {
         // Given. A value handed under no name at all: the callee would read it
         // as a receiver it never declared
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.unreceiving"))
@@ -266,7 +266,7 @@ struct ProcedureSendsTests {
     func sendingNullCountsAsSendingToNothing() async throws {
         // Given. Null is what being sent to nothing looks like as a value, so
         // saying it and leaving it out are one fact
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.nulling"))
@@ -286,7 +286,7 @@ struct ProcedureSendsTests {
         // Given. What a query reads and what an effect reads say the same
         // thing, so the fact is settled where the send crosses rather than
         // beside each kind of callee
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.nullingToAnEffect"))
@@ -305,7 +305,7 @@ struct ProcedureSendsTests {
     func aDeclaredReceiverSentNullReadsAsNothing() async throws {
         // Given. The branch a callee with a receiver of its own takes, which is
         // the one the door rather than the boundary answers
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 body: [],
                 result: .call(Call(selector: "app.nullingToAReceiver"))
@@ -347,8 +347,8 @@ private struct TwiceQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
-        try question.send(.times, to: question.receiver, offering: [.int(2)])
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.times, to: question.receiver, offering: [.int(2)])
     }
 
     // MARK: - Private
@@ -404,8 +404,8 @@ private struct CountedQuery: Query {
     }
 
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
-        try question.send(.ticket)
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.ticket)
     }
 
     // MARK: - Private
@@ -424,8 +424,8 @@ private struct StrayQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
-        try question.send(.nowhere)
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.nowhere)
     }
 
     // MARK: - Private
@@ -444,8 +444,8 @@ private struct ShoutingQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
-        try question.send(.shout)
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.shout)
     }
 
     // MARK: - Private
@@ -663,7 +663,7 @@ private struct PlainlyRunningEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         invocation.receiver == nil ? .string("sent to nothing") : .string("sent to something")
     }
 
@@ -703,7 +703,7 @@ private struct ReceivingReporter: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         invocation.receiver == nil ? .string("sent to nothing") : .string("sent to something")
     }
 
@@ -945,8 +945,8 @@ private struct ScatteredQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
-        try question.send(.first)
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        try await question.send(.first)
     }
 
     // MARK: - Private

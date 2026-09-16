@@ -35,7 +35,7 @@ struct NeverTests {
     }
 
     @Test("a statement after a call that never finishes is refused at link")
-    func nothingRunsAfterANeverCall() throws {
+    func nothingRunsAfterANeverCall() async throws {
         // Given. `std.control.abort` declares never, so the statement after it
         // would never run, and a name written there would never bind
         let sut = try Module(
@@ -51,15 +51,15 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("what follows it here would never run")
         }
     }
 
     @Test("a name on the last statement is still refused when it never finishes")
-    func aNamedNeverLastStatementIsRefused() throws {
+    func aNamedNeverLastStatementIsRefused() async throws {
         // Given. Last in the body, so the "nothing after" rule has nothing to
         // say; only the name itself is wrong
         let sut = try Module(
@@ -74,8 +74,8 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("binds nothing and takes no name")
         }
@@ -190,8 +190,8 @@ struct NeverTests {
             ]
         )
 
-        #expect {
-            try Builder().build([refusing] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([refusing] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("holds string")
         }
@@ -272,7 +272,7 @@ struct NeverTests {
     }
 
     @Test("such a loop's name holds what the result reads")
-    func aNeverBodiedLoopStillReadsAsItsResult() throws {
+    func aNeverBodiedLoopStillReadsAsItsResult() async throws {
         // Given. The result reads in what the entry left, and the reading says
         // so: `kept` holds the result's string, and a slot that declared int
         // refuses it by that reading rather than by `never`
@@ -304,15 +304,15 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("holds string")
         }
     }
 
     @Test("a result after a statement that never finishes is refused at link")
-    func aResultAfterNeverIsRefused() throws {
+    func aResultAfterNeverIsRefused() async throws {
         // Given. The result runs after the body, so it is "after" the same way
         // a trailing statement is; the type reading already knows it (a block
         // ending in never types never), and the refusal must know it too
@@ -328,8 +328,8 @@ struct NeverTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("never finishes before it")
         }

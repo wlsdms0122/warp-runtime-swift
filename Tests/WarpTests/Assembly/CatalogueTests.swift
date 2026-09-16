@@ -25,7 +25,7 @@ struct CatalogueTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a type a signature mentions brings the module that declares it")
-    func aMentionedTypeBringsItsModule() throws {
+    func aMentionedTypeBringsItsModule() async throws {
         // Given. `types` declares the type, `users` declares against it and
         // carries nothing.
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
@@ -44,11 +44,11 @@ struct CatalogueTests {
 
         // Then. The build has both, and it links.
         #expect(closed.count == 2)
-        #expect(try builder.build(closed, entry: entryName).rows[entryName] != nil)
+        #expect(try await builder.build(closed, entry: entryName).rows[entryName] != nil)
     }
 
     @Test("a procedure a body sends brings the module that declares it")
-    func aSentProcedureBringsItsModule() throws {
+    func aSentProcedureBringsItsModule() async throws {
         let program = try Module(
             procedures: [
                 entryName: Procedure(
@@ -71,11 +71,11 @@ struct CatalogueTests {
         // Then. `math` came for the procedure, and `foundation` came after it for
         // the constraint `math`'s own signatures mention.
         #expect(closed.count == 3)
-        #expect(try builder.build(closed, entry: entryName).rows["std.math.plus"] != nil)
+        #expect(try await builder.build(closed, entry: entryName).rows["std.math.plus"] != nil)
     }
 
     @Test("supply handed over as well as held is supply standing twice")
-    func supplyListedBesideTheCatalogueStandsTwice() throws {
+    func supplyListedBesideTheCatalogueStandsTwice() async throws {
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
         let users = try Module(
             procedures: [
@@ -95,11 +95,11 @@ struct CatalogueTests {
         // Then. The build says so, rather than the catalogue quietly keeping
         // one of them.
         #expect(closed.count == 3)
-        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
     }
 
     @Test("a caller cannot supply a granted procedure to a granted module")
-    func aWantedModuleDoesNotStandInForTheCatalogue() throws {
+    func aWantedModuleDoesNotStandInForTheCatalogue() async throws {
         // Given. `supplier` sends a procedure the catalogue declares, and the
         // program declares that same procedure itself.
         let real = try Module(
@@ -122,11 +122,11 @@ struct CatalogueTests {
         // Then. The build meets both and refuses, rather than binding
         // `lib.run` to the procedure the program wrote.
         #expect(closed.count == 3)
-        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
     }
 
     @Test("a name the catalogue does not declare is left to the build")
-    func anUndeclaredNameIsLeftToTheLink() throws {
+    func anUndeclaredNameIsLeftToTheLink() async throws {
         let users = try Module(
             procedures: [
                 entryName: Procedure(
@@ -142,11 +142,11 @@ struct CatalogueTests {
 
         // Then. What comes back is what was asked for, and the refusal is the build's.
         #expect(closed.count == 1)
-        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
     }
 
     @Test("the caller listing one module twice is not quietly folded")
-    func aCallerListingOneModuleTwiceIsNotFolded() throws {
+    func aCallerListingOneModuleTwiceIsNotFolded() async throws {
         let loweredTypes = try Module(types: ["Age": .int], procedures: [:])
 
         // When.
@@ -154,11 +154,11 @@ struct CatalogueTests {
 
         // Then. Both copies stand, and the build says what is wrong with that.
         #expect(closed.count == 2)
-        #expect(throws: BuildError.self) { try builder.build(closed, entry: entryName) }
+        await #expect(throws: BuildError.self) { try await builder.build(closed, entry: entryName) }
     }
 
     @Test("two modules declaring one name leave the catalogue no answer")
-    func twoModulesDeclaringOneNameAreRefused() throws {
+    func twoModulesDeclaringOneNameAreRefused() async throws {
         let mine = try Module(types: ["Age": .int], procedures: [:])
         let theirs = try Module(types: ["Age": .string], procedures: [:])
 
@@ -173,7 +173,7 @@ struct CatalogueTests {
     }
 
     @Test("what a module needs is closed through the modules brought for it")
-    func needsAreClosedThroughWhatWasBrought() throws {
+    func needsAreClosedThroughWhatWasBrought() async throws {
         // Given. `program` names a procedure of `text`, which declares nothing of
         // `foundation` itself but mentions its constraints in signatures.
         let program = try Module(
@@ -191,11 +191,11 @@ struct CatalogueTests {
         let closed = try Catalogue(Module.standard).closing([program])
 
         // Then. Whatever came, the build is satisfied by it.
-        #expect(throws: Never.self) { try builder.build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await builder.build(closed, entry: entryName) }
     }
 
     @Test("a claim brings the documents that answer it")
-    func aClaimBringsItsWitnesses() throws {
+    func aClaimBringsItsWitnesses() async throws {
         // Given. Three documents: the type and the claim in one, the contract
         // in another, and the declaration that answers it in a third. The
         // program names the type and never the contract.
@@ -242,13 +242,13 @@ struct CatalogueTests {
         // A claim nothing answers refuses, so a closing that left it out would
         // refuse a program that says nothing about the contract at all
         #expect(closed.count == 4)
-        #expect(throws: Never.self) {
-            try builder.build(closed + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build(closed + Module.standard, entry: entryName)
         }
     }
 
     @Test("a claim is followed when the program itself declares the contract")
-    func aClaimIsFollowedThroughTheProgramsOwnContract() throws {
+    func aClaimIsFollowedThroughTheProgramsOwnContract() async throws {
         // Given. The catalogue holds the type and the declaration that answers
         // the claim. The contract, and the claim itself, are the program's.
         let holding = try Module(
@@ -290,13 +290,13 @@ struct CatalogueTests {
 
         // Then
         #expect(closed.count == 3)
-        #expect(throws: Never.self) {
-            try builder.build(closed + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build(closed + Module.standard, entry: entryName)
         }
     }
 
     @Test("what a claim brought is asked for its own needs in turn")
-    func aClaimsAnswerIsClosedOverToo() throws {
+    func aClaimsAnswerIsClosedOverToo() async throws {
         // Given. The declaration answering the claim names a type no other
         // document does, so what the claim brought has a need of its own. The
         // walk that finds it has already run by the time the claim is
@@ -346,8 +346,8 @@ struct CatalogueTests {
 
         // Then. The answer came, and so did the type its signature names
         #expect(closed.count == 5)
-        #expect(throws: Never.self) {
-            try builder.build(closed + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build(closed + Module.standard, entry: entryName)
         }
     }
 

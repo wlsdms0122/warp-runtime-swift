@@ -19,33 +19,33 @@ struct ConditionTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("predicates evaluate against scope values")
-    func predicatesEvaluateAgainstScope() throws {
+    func predicatesEvaluateAgainstScope() async throws {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)
 
         // Then
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             equals(.reference(path("kind")), .literal(.string("a")))
         ))
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             differs(.reference(path("kind")), .literal(.string("b")))
         ))
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             .call(Call(receiver: .array([.literal(.int(3)), .literal(.int(4))]), selector: "std.collection.contains", arguments: ["value": .reference(path("n"))]))
         ))
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             differs(.reference(path("n")), .literal(.null))
         ))
-        #expect(try !sut.evaluate(
+        #expect(try await !sut.evaluate(
             differs(.reference(path("none")), .literal(.null))
         ))
-        #expect(try !sut.evaluate(
+        #expect(try await !sut.evaluate(
             differs(.reference(path("gone")), .literal(.null))
         ))
     }
 
     @Test("both sides of a predicate are expressions")
-    func bothSidesAreExpressions() throws {
+    func bothSidesAreExpressions() async throws {
         // Given
         let sut = Folding(bindings: [
             "left": .string("same"),
@@ -54,29 +54,29 @@ struct ConditionTests {
         ], natives: Module.standard)
 
         // Then. A reference compares against another reference
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             equals(.reference(path("left")), .reference(path("right")))
         ))
 
         // And one_of can draw its candidates from the scope
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("candidates")), selector: "std.collection.contains", arguments: ["value": .reference(path("left"))]))
         ))
     }
 
     @Test("numeric equality crosses int and double")
-    func numericEqualityCrossesIntAndDouble() throws {
+    func numericEqualityCrossesIntAndDouble() async throws {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)
 
         // Then
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             equals(.reference(path("n")), .literal(.double(3.0)))
         ))
     }
 
     @Test("combinators compose nested conditions")
-    func combinatorsCompose() throws {
+    func combinatorsCompose() async throws {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)
         let condition = every(
@@ -85,11 +85,11 @@ struct ConditionTests {
             )
 
         // Then
-        #expect(try sut.evaluate(condition))
+        #expect(try await sut.evaluate(condition))
     }
 
     @Test("text atoms evaluate on strings; asking a number is unfit")
-    func textAtomsEvaluateOnStrings() throws {
+    func textAtomsEvaluateOnStrings() async throws {
         // Given
         let sut = Folding(bindings: [
             "title": .string("hello, spec"),
@@ -99,32 +99,32 @@ struct ConditionTests {
         ], natives: Module.standard)
 
         // Then
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("title")), selector: "std.collection.contains", arguments: ["value": .literal(.string("spec"))]))
         ))
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("tags")), selector: "std.collection.contains", arguments: ["value": .literal(.string("b"))]))
         ))
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("title")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("hello"))]))
         ))
-        #expect(try sut.evaluate(
+        #expect(try await sut.evaluate(
             .call(Call(receiver: .reference(path("title")), selector: "std.text.regex", arguments: ["value": .literal(.string("sp.c$"))]))
         ))
-        #expect(try !sut.evaluate(
+        #expect(try await !sut.evaluate(
             .call(Call(receiver: .reference(path("gone")), selector: "std.collection.contains", arguments: ["value": .literal(.string("x"))]))
         ))
 
         // A text atom asking a number is type misuse, not a false answer
-        #expect(throws: ReferenceUnfit.self) {
-            try sut.evaluate(
+        await #expect(throws: ReferenceUnfit.self) {
+            try await sut.evaluate(
                 .call(Call(receiver: .reference(path("n")), selector: "std.text.startsWith", arguments: ["value": .literal(.string("3"))]))
             )
         }
     }
 
     @Test("an invalid regex pattern is rejected at link")
-    func invalidRegexRejectedAtLink() {
+    func invalidRegexRejectedAtLink() async {
         // Given
         let fixture: Value = [
             "parameters": ["title": "string"],
@@ -141,8 +141,8 @@ struct ConditionTests {
         // When / Then. The pattern compiles before any run. Checking it while
         // decoding would make the notation hold the vocabulary; it is checked
         // where names resolve.
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Loader.testing.loadProcedure(fixture, importing: ["regex"])] + Module.standard,
                 entry: entryName
             )
@@ -150,13 +150,13 @@ struct ConditionTests {
     }
 
     @Test("type misuse in a condition is unfit, not false")
-    func conditionTypeMisuseThrowsUnfit() throws {
+    func conditionTypeMisuseThrowsUnfit() async throws {
         // Given
         let sut = Folding(bindings: scope, natives: Module.standard)
 
         // When / Then. A typo'd drill must not silently read as false
-        #expect(throws: ReferenceUnfit.self) {
-            try sut.evaluate(
+        await #expect(throws: ReferenceUnfit.self) {
+            try await sut.evaluate(
                 differs(.reference(path("n.field")), .literal(.null))
             )
         }

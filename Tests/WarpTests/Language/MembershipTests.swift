@@ -44,7 +44,7 @@ struct MembershipTests {
     }
 
     @Test("what the membership does not admit refuses at the build")
-    func anOutsiderRefuses() throws {
+    func anOutsiderRefuses() async throws {
         // Given
         let sut = try Module(
             constraints: ["app.Text": [.string, .bytes]],
@@ -62,13 +62,13 @@ struct MembershipTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a value of a membership stands only where every member would")
-    func aMembershipStandsWhereAllMembersDo() throws {
+    func aMembershipStandsWhereAllMembersDo() async throws {
         // Given. `string` takes one of the two, so the whole membership does
         // not fit it
         let sut = try Module(
@@ -88,15 +88,15 @@ struct MembershipTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a cast to a member opens it, and a cast to an outsider refuses")
-    func aCastTellsTheMembersApart() throws {
+    func aCastTellsTheMembersApart() async throws {
         // Given
-        func module(reading type: TypeExpression) throws -> Module {
+        func module(reading type: TypeExpression) async throws -> Module {
             try Module(
                 constraints: ["app.Text": [.string, .bytes]],
                 procedures: [
@@ -114,11 +114,11 @@ struct MembershipTests {
         }
 
         // When / Then
-        #expect(throws: Never.self) {
-            try Builder().build([try module(reading: .string)] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await Builder().build([try module(reading: .string)] + Module.standard, entry: entryName)
         }
-        #expect(throws: BuildError.self) {
-            try Builder().build([try module(reading: .int)] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([try module(reading: .int)] + Module.standard, entry: entryName)
         }
     }
 

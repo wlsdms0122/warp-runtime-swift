@@ -11,7 +11,7 @@ struct CatalogueClaimTests {
     private let entryName: Name = "app.main"
 
     @Test("closing brings a claim about two types the list has")
-    func closingBringsAClaimAboutTypesTheListHas() throws {
+    func closingBringsAClaimAboutTypesTheListHas() async throws {
         // Given. Two libraries that know nothing of each other, a third
         // claiming one's type answers the other's contract, and a program
         // naming neither the claim nor the procedure that answers it.
@@ -73,6 +73,6 @@ struct CatalogueClaimTests {
         // Then. The claim stands in the link, so the pair the program leans on
         // is answered.
         #expect(closed.contains { module in module.claims.isEmpty == false })
-        #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(closed, entry: entryName) }
     }
 }

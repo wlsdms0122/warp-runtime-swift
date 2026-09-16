@@ -52,7 +52,7 @@ final class Fulfillment: @unchecked Sendable {
     // it found it. Outside every scope the answer is the document, which is
     // what a pair turned up by something other than settling one declaration
     // stands on.
-    func folding<Answer>(_ place: Place, _ body: () throws -> Answer) rethrows -> Answer {
+    func folding<Answer>(_ place: Place, _ body: () async throws -> Answer) async rethrows -> Answer {
         let previous = lock.withLock {
             let previous = folding
             folding = place
@@ -62,7 +62,7 @@ final class Fulfillment: @unchecked Sendable {
 
         defer { lock.withLock { folding = previous } }
 
-        return try body()
+        return try await body()
     }
 
     func claims(of origin: Int) -> [Claim: Place] {

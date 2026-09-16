@@ -28,7 +28,7 @@ struct SortedQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, and answered in the spelling the receiver arrived in.
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }

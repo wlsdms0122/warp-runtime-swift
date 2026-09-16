@@ -45,12 +45,12 @@ struct ArtifactDependencyTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("names the artifact behind a procedure it calls")
-    func namesWhatItCalls() throws {
+    func namesWhatItCalls() async throws {
         // Given. The document it calls, compiled and worked out.
-        let behind = try builder.compile([used])
+        let behind = try await builder.compile([used])
 
         // When.
-        let compiled = try builder.compile(
+        let compiled = try await builder.compile(
             [program],
             against: behind,
             supplying: Supplying([used, program])
@@ -61,12 +61,12 @@ struct ArtifactDependencyTests {
     }
 
     @Test("says nothing about a document laid beside it that it never names")
-    func saysNothingAboutTheUnnamed() throws {
+    func saysNothingAboutTheUnnamed() async throws {
         // Given. Both laid down, and only one of them named.
-        let behind = try builder.compile([used, unrelated])
+        let behind = try await builder.compile([used, unrelated])
 
         // When.
-        let compiled = try builder.compile(
+        let compiled = try await builder.compile(
             [program],
             against: behind,
             supplying: Supplying([used, unrelated, program])
@@ -79,16 +79,16 @@ struct ArtifactDependencyTests {
     }
 
     @Test("has no writing where what it leaned on cannot be named")
-    func hasNoWritingWithoutOne() throws {
+    func hasNoWritingWithoutOne() async throws {
         // Given. A builder that works nothing out, so what it compiles stands
         // as an artifact with no fingerprint.
         let unknowing = Builder()
-        let behind = try unknowing.compile([used])
+        let behind = try await unknowing.compile([used])
 
         #expect(behind[0].fingerprint == nil)
 
         // When.
-        let compiled = try unknowing.compile(
+        let compiled = try await unknowing.compile(
             [program],
             against: behind,
             supplying: Supplying([used, program])
@@ -101,7 +101,7 @@ struct ArtifactDependencyTests {
     }
 
     @Test("tells a document written in Warp from one the host answers")
-    func tellsTheTwoKindsApart() throws {
+    func tellsTheTwoKindsApart() async throws {
         // Given. One declaration made twice: once as a body this language
         // lowers, once as a procedure the host answers. A caller may build the
         // same thing either way.
@@ -117,8 +117,8 @@ struct ArtifactDependencyTests {
         )
 
         // When.
-        let asLowered = try written(calling: "box.peek", behind: lowered)
-        let asAnswered = try written(calling: "box.peek", behind: answered)
+        let asLowered = try await written(calling: "box.peek", behind: lowered)
+        let asAnswered = try await written(calling: "box.peek", behind: answered)
 
         // Then. The two stand as different artifacts, and so does what calls
         // them.
@@ -136,10 +136,10 @@ struct ArtifactDependencyTests {
     }
 
     @Test("reads back saying what it was written saying")
-    func survivesTheRoundTrip() throws {
+    func survivesTheRoundTrip() async throws {
         // Given.
-        let behind = try builder.compile([used])
-        let compiled = try builder.compile(
+        let behind = try await builder.compile([used])
+        let compiled = try await builder.compile(
             [program],
             against: behind,
             supplying: Supplying([used, program])
@@ -169,7 +169,7 @@ struct ArtifactDependencyTests {
     private func written(
         calling selector: Name,
         behind vocabulary: Module
-    ) throws -> (behind: Value?, calling: Value?) {
+    ) async throws -> (behind: Value?, calling: Value?) {
         let caller = try Module(
             procedures: [
                 "app.main": Procedure(
@@ -179,8 +179,8 @@ struct ArtifactDependencyTests {
                 )
             ]
         )
-        let behind = try builder.compile([vocabulary])
-        let compiled = try builder.compile(
+        let behind = try await builder.compile([vocabulary])
+        let compiled = try await builder.compile(
             [caller],
             against: behind,
             supplying: Supplying([vocabulary, caller])

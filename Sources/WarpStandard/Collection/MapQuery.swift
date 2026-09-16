@@ -54,7 +54,7 @@ struct MapQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so a walk reads bytes the way `each` does.
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
@@ -64,11 +64,14 @@ struct MapQuery: Query {
         // What the procedure answered is its own value, whatever it was reached
         // from, which is why the declaration names a second parameter for it
         // and why the receiver's spelling has nothing to say here.
-        return .array(
-            try elements.map { element in
-                try question.call(body, with: [(name: "item", value: element)])
-            }
-        )
+        var answers: [Value] = []
+        answers.reserveCapacity(elements.count)
+
+        for element in elements {
+            answers.append(try await question.call(body, with: [(name: "item", value: element)]))
+        }
+
+        return .array(answers)
     }
 
     // MARK: - Private

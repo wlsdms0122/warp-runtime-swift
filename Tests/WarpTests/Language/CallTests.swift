@@ -83,7 +83,7 @@ struct CallTests {
     }
 
     @Test("two declarations of one spelling are refused at link")
-    func oneNameIsDeclaredOnce() throws {
+    func oneNameIsDeclaredOnce() async throws {
         // Given / When / Then, which one runs must never be a link-order
         // accident, and an implementation is not a spelling: a body and a
         // native answering one name collide the same way two bodies would
@@ -96,8 +96,8 @@ struct CallTests {
             ]
         )
 
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(body: [])]), rival] + Module.standard,
                 entry: "entry"
             )

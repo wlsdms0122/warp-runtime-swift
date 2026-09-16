@@ -337,7 +337,7 @@ struct BytesTests {
     @Test("decoded and encoded are two directions of one named mapping")
     func decodedAndEncodedRoundTrip() async throws {
         // Given
-        func procedure(_ selector: Name, on receiver: Value) throws -> Module {
+        func procedure(_ selector: Name, on receiver: Value) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -365,7 +365,7 @@ struct BytesTests {
     }
 
     @Test("an encoding the procedures do not name refuses at the build")
-    func anUnknownEncodingRefuses() throws {
+    func anUnknownEncodingRefuses() async throws {
         // Given. The enum names the encodings, and a constant is judged at the
         // link
         let sut = try Module(
@@ -382,8 +382,8 @@ struct BytesTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 

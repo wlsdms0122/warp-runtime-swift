@@ -99,7 +99,7 @@ struct Folding {
         as label: Name,
         writing lowering: inout Lowering,
         at place: Place
-    ) throws -> Value {
+    ) async throws -> Value {
         let (code, frame) = try lowering.lower(
             expression,
             reading: names,
@@ -108,7 +108,7 @@ struct Folding {
             at: place
         )
 
-        return try read(
+        return try await read(
             code,
             in: frame,
             of: answered.holding(lowering.table, closures: lowering.closureRows)
@@ -121,15 +121,15 @@ struct Folding {
     }
 
     // What a path reads here.
-    func read(_ path: [PathSegment], at place: Place) throws -> Value {
-        try read(.reference(path), at: place)
+    func read(_ path: [PathSegment], at place: Place) async throws -> Value {
+        try await read(.reference(path), at: place)
     }
 
     // What an expression reads here, lowered into a table of its own. For what
     // is folded where no declaration is being read: a path a body writes, and a
     // condition a caller hands over. A closure written in one is numbered by
     // nothing this document holds and is refused where it is lowered.
-    func read(_ expression: Expression, at place: Place = .given(Folding.assembled.spelling)) throws -> Value {
+    func read(_ expression: Expression, at place: Place = .given(Folding.assembled.spelling)) async throws -> Value {
         guard let numbering = answered.numbering(of: origin) else {
             throw BuildError.unjudged("an expression in a document that numbered nothing", at: place)
         }
@@ -150,7 +150,7 @@ struct Folding {
 
         // Against the table lowering just grew: what it wrote takes rows of
         // that table and nothing else answers them.
-        return try read(
+        return try await read(
             code,
             in: frame,
             of: answered.holding(lowering.table, closures: lowering.closureRows)
@@ -158,7 +158,7 @@ struct Folding {
     }
 
     // MARK: - Private
-    private func read(_ code: Operation, in frame: Frame, of answered: Answered) throws -> Value {
+    private func read(_ code: Operation, in frame: Frame, of answered: Answered) async throws -> Value {
         var activation = Activation(frame, of: origin)
 
         for (slot, cell) in cells.enumerated() {
@@ -173,6 +173,6 @@ struct Folding {
             loweredTypes: loweredTypes
         )
 
-        return try executor.read(code, in: activation)
+        return try await executor.read(code, in: activation)
     }
 }

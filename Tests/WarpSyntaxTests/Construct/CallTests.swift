@@ -57,7 +57,7 @@ struct CallTests {
     }
 
     @Test("a constant argument violating the callee signature is rejected at link")
-    func signatureViolationRejectsCall() throws {
+    func signatureViolationRejectsCall() async throws {
         // Given
         let sut = try loader.loadDocument([
             "procedures": [
@@ -78,8 +78,8 @@ struct CallTests {
 
         // When / Then. Nothing runs: the argument is a constant, so its type is
         // knowable before the run and the refusal happens there
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut], entry: "caller")
         }
     }
 
@@ -183,7 +183,7 @@ struct CallTests {
         let module = try loader.loadDocument([
             "procedures": ["loopy": ["body": [["let": "again", "value": ["call": ["procedure": "loopy"]]]]]]
         ])
-        let image = try Builder().build([module], entry: "loopy")
+        let image = try await Builder().build([module], entry: "loopy")
         let sut = Executor()
 
         // When

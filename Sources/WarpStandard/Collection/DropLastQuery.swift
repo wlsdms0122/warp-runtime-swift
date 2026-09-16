@@ -15,7 +15,7 @@ struct DropLastQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Through the one projection that owns the `bytes = array<byte>`
         // equation, so bytes are read where an array is.
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }

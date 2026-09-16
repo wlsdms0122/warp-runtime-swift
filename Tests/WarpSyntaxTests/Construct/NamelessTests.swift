@@ -65,9 +65,9 @@ struct NamelessTests {
     }
 
     @Test("two naming keys are refused")
-    func twoNamingKeysAreRefused() {
-        #expect(throws: ReadingError.self) {
-            try loader.loadProcedure([
+    func twoNamingKeysAreRefused() async {
+        await #expect(throws: ReadingError.self) {
+            try await loader.loadProcedure([
                 "body": [["let": "one", "var": "another", "value": 1]]
             ])
         }
@@ -164,7 +164,7 @@ struct NamelessTests {
     }
 
     @Test("a nameless statement written and read back is the same statement")
-    func aNamelessStatementRoundTrips() throws {
+    func aNamelessStatementRoundTrips() async throws {
         // Given. The reader's set of legal documents and the writer's must be
         // one set; a document that reads but does not write back broke that
         let document: Value = [
@@ -184,13 +184,13 @@ struct NamelessTests {
         let loaded = try loader.loadDocument(document)
         let written = try Writer(registry: loader.registry).value(of: loaded)
 
-        #expect(try Writer(registry: loader.registry).value(of: try loader.load(written)) == written)
+        await #expect(try await Writer(registry: loader.registry).value(of: try loader.load(written)) == written)
     }
 
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [Name: Value] = [:]) async throws -> Value {
-        let image = try Builder().build([module] + Module.standard, entry: "entry")
+        let image = try await Builder().build([module] + Module.standard, entry: "entry")
 
         return try await Executor().run(image, arguments: arguments)
     }

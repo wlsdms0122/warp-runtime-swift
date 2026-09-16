@@ -139,7 +139,7 @@ struct TypeTests {
     }
 
     @Test("the builder refuses a signature that names a type nobody declared")
-    func unknownTypeIsABuildError() throws {
+    func unknownTypeIsABuildError() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -153,8 +153,8 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut], entry: "entry")
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut], entry: "entry")
         }
     }
 
@@ -167,7 +167,7 @@ struct TypeTests {
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at link")
-    func mismatchedCallIsABuildError() {
+    func mismatchedCallIsABuildError() async {
         // Given. Nothing runs here. Both sides are declarations, and a
         // declaration is text, so this is the half of checking the builder can
         // do
@@ -195,8 +195,8 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -204,7 +204,7 @@ struct TypeTests {
     }
 
     @Test("an undeclared answer is read off the body, and held to the same rule")
-    func undeclaredAnswerIsReadOffTheBody() throws {
+    func undeclaredAnswerIsReadOffTheBody() async throws {
         // Given. `counts` declares nothing, and its body answers a whole
         // number. The declaration stays as the author left it; what the build
         // reads a call as is what the body hands back, so the same disagreement
@@ -229,8 +229,8 @@ struct TypeTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build(
+        await #expect {
+            try await Builder().build(
                 [try Module(procedures: ["entry": entry, "wants": wants, "counts": counts])],
                 entry: "entry"
             )
@@ -245,7 +245,7 @@ struct TypeTests {
             result: .call(Call(selector: "counts"))
         )
 
-        _ = try Builder().build(
+        _ = try await Builder().build(
             [try Module(procedures: ["entry": entry, "wants": wants, "counts": cycling])],
             entry: "entry"
         )

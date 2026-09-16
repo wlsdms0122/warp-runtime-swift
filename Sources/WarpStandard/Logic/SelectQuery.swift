@@ -52,10 +52,10 @@ struct SelectQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard case let .bool(taken) = question.receiver else { return nil }
 
-        return try question.call(question[taken ? .then : .else])
+        return try await question.call(question[taken ? .then : .else])
     }
 
     // MARK: - Private

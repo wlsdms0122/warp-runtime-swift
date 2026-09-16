@@ -79,7 +79,7 @@ public struct Question<P: NativeProcedure>: Sendable {
         _ key: P.Imports,
         to receiver: Value? = nil,
         offering arguments: [Value] = []
-    ) throws -> Value {
+    ) async throws -> Value {
         guard case let .settled(_, sends, origin, executor) = self.arguments,
             sends.indices.contains(key.position)
         else {
@@ -90,7 +90,7 @@ public struct Question<P: NativeProcedure>: Sendable {
             )
         }
 
-        return try executor.send(
+        return try await executor.send(
             sends[key.position],
             from: origin,
             to: receiver,
@@ -102,7 +102,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // link proved answers without running, which a procedure states by declaring the
     // parameter `pure procedure`, so reaching here means the judgement was
     // already made.
-    public func call(_ procedure: Value, with arguments: [(name: Name, value: Value)] = []) throws -> Value {
+    public func call(_ procedure: Value, with arguments: [(name: Name, value: Value)] = []) async throws -> Value {
         guard case let .procedure(closure) = procedure else {
             throw ExecutionError(
                 "this call names \(procedure.type), and only a procedure can be called"
@@ -113,6 +113,6 @@ public struct Question<P: NativeProcedure>: Sendable {
             throw ExecutionError("this question was asked with no way back into the run")
         }
 
-        return try executor.call(closure, with: arguments)
+        return try await executor.call(closure, with: arguments)
     }
 }

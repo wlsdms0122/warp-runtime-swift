@@ -43,7 +43,7 @@ struct FailEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }
@@ -198,7 +198,7 @@ func run(
     vocabulary: [Module] = Module.standard + [.testing],
     environment: (any Environment)? = nil
 ) async throws -> [Name: Value] {
-    let image = try Builder().build(modules + vocabulary, entry: entry)
+    let image = try await Builder().build(modules + vocabulary, entry: entry)
 
     let answer = try await Executor(environment: environment)
         .run(image, arguments: arguments)
@@ -302,8 +302,8 @@ extension Closure {
 
 extension Folding {
     // A condition read here, as the bool it answers.
-    func evaluate(_ condition: Warp.Expression) throws -> Bool {
-        guard case let .bool(answer) = try read(condition) else {
+    func evaluate(_ condition: Warp.Expression) async throws -> Bool {
+        guard case let .bool(answer) = try await read(condition) else {
             throw ReadingError("a condition must answer bool")
         }
 

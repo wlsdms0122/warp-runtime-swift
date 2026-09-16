@@ -55,7 +55,7 @@ extension Builder {
         of unsaid: [Unsaid],
         reading context: () -> TypingContext,
         recording: (Name, LoweredType) -> Void
-    ) {
+    ) async {
         let declared = Dictionary(
             unsaid.map { one in (one.symbol.declared, one) },
             uniquingKeysWith: { first, _ in first }
@@ -84,7 +84,7 @@ extension Builder {
             // at its own place. Raising one here would put the first refusal
             // an author sees somewhere the frontier never decided, so what
             // this pass cannot read it treats as unread.
-            let read = try? reading(
+            let read = try? await reading(
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,

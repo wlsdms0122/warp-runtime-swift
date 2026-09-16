@@ -72,8 +72,8 @@ public struct Builder: Sendable {
     //
     // A bundled vocabulary is one of those modules, and a caller that leaves it
     // out is a caller whose `count` does not resolve.
-    public func build(_ modules: [Module], entry: Name) throws -> Image {
-        try link(compile(modules), entry: entry, supplying: Supplying(modules))
+    public func build(_ modules: [Module], entry: Name) async throws -> Image {
+        try await link(compile(modules), entry: entry, supplying: Supplying(modules))
     }
 
     // Documents compiled and handed back, for a caller that means to build
@@ -90,8 +90,8 @@ public struct Builder: Sendable {
     // procedures it sends and the types its signatures name, neither of which a
     // caller wrote down, so a caller has nothing to sort by.
     //
-    public func compile(_ modules: [Module]) throws -> [Compiled] {
-        try compile(modules, against: [], supplying: .none)
+    public func compile(_ modules: [Module]) async throws -> [Compiled] {
+        try await compile(modules, against: [], supplying: .none)
     }
 
     // The same, against documents the caller already holds.
@@ -108,8 +108,8 @@ public struct Builder: Sendable {
         _ modules: [Module],
         against compiled: [Compiled],
         supplying natives: Supplying
-    ) throws -> [Compiled] {
-        try compile(modules, against: try lay(compiled, supplying: natives))
+    ) async throws -> [Compiled] {
+        try await compile(modules, against: try lay(compiled, supplying: natives))
     }
 
     // Documents already compiled, with the rows they stand as made once, so a
@@ -217,7 +217,7 @@ public struct Builder: Sendable {
     }
 
     // The same, against documents a caller already laid down.
-    public func compile(_ modules: [Module], against laid: Laid) throws -> [Compiled] {
+    public func compile(_ modules: [Module], against laid: Laid) async throws -> [Compiled] {
         let compiled = laid.compiled
 
         try once(modules, against: compiled)
@@ -230,7 +230,7 @@ public struct Builder: Sendable {
         let held = try symbols(of: modules, after: compiled.count)
         let declared = try declared(in: compiled + modules)
         let standing = try ModuleGraph(modules, after: compiled.count).standing
-        let lowered = try compile(
+        let lowered = try await compile(
             modules,
             at: standing,
             declaring: held,
@@ -271,7 +271,7 @@ public struct Builder: Sendable {
             claims: [Placed<Claim>]
         ),
         against laid: Laid
-    ) throws -> [Compiled] {
+    ) async throws -> [Compiled] {
         let compiled = laid.compiled
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
@@ -365,8 +365,10 @@ public struct Builder: Sendable {
             declarers.lay(artifact)
         }
 
-        return try laying.indices.map { offset in
-            let artifact = try compile(
+        var built: [Compiled] = []
+
+        for offset in laying.indices {
+            let artifact = try await compile(
                 laying[offset],
                 at: compiled.count + offset,
                 declaring: holding[offset],
@@ -377,9 +379,10 @@ public struct Builder: Sendable {
             let known = try fingerprinted(artifact)
 
             declarers.lay(known)
-
-            return known
+            built.append(known)
         }
+
+        return built
     }
 
     // One document compiled against what stands before it, and what it proves
@@ -393,7 +396,7 @@ public struct Builder: Sendable {
         leaning dependencies: [Fingerprint]?,
         in compiling: inout Compiling,
         writing fulfillment: Fulfillment
-    ) throws -> Compiled {
+    ) async throws -> Compiled {
         fulfillment.laying(origin, at: Place(in: .of(module)))
 
         let loweredTypes = compiling.loweredTypes
@@ -453,7 +456,7 @@ public struct Builder: Sendable {
         // this body in the image, the body runs, so the frontier's promise
         // (callee declared, arguments taken) is kept per body rather than per
         // reachability.
-        func resolved(_ symbol: Symbol) throws -> (procedure: Procedure, calls: [CallSite]) {
+        func resolved(_ symbol: Symbol) async throws -> (procedure: Procedure, calls: [CallSite]) {
             if let done = resolvedBodies[symbol.declared] { return done }
 
             let declaration = symbol.procedure
@@ -473,7 +476,7 @@ public struct Builder: Sendable {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered) = try resolvedSites(
+                let (rewritten, gathered) = try await resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -598,7 +601,7 @@ public struct Builder: Sendable {
         //
         // The context is read before the lowering is handed over, since one of
         // the tables a context stands on is the lowering this writes into.
-        constants = try self.constants(
+        constants = try await self.constants(
             of: module,
             at: origin,
             folding: compiling.folding(),
@@ -607,7 +610,7 @@ public struct Builder: Sendable {
             in: context()
         )
 
-        variables = try self.variables(
+        variables = try await self.variables(
             of: module,
             at: origin,
             beside: constants,
@@ -619,7 +622,7 @@ public struct Builder: Sendable {
 
         // What every declaration of this document whose `returns` nobody
         // wrote answers, read off its body.
-        answers(
+        await answers(
             of: holding.compactMap { symbol -> Unsaid? in
                 guard
                     symbol.procedure.signature.returns == nil,
@@ -646,8 +649,8 @@ public struct Builder: Sendable {
         // whether or not this entry walks that way, so which declarations
         // are judged is not a question the entry answers.
         for symbol in holding {
-            try fulfillment.folding(symbol.place) {
-                let (procedure, gathered) = try resolved(symbol)
+            try await fulfillment.folding(symbol.place) {
+                let (procedure, gathered) = try await resolved(symbol)
 
                 calls[symbol.declared] = gathered.map { call in call.callee }
 

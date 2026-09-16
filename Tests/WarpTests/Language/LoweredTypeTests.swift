@@ -141,7 +141,7 @@ struct LoweredTypeTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
         let row = try #require(image["std.math.lessThan"])
         let ordered = try #require(image.loweredTypes.constraintRow(named: "std.Comparable"))
 
@@ -181,7 +181,7 @@ struct LoweredTypeTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(11), .int(12)]))
@@ -293,7 +293,7 @@ struct LoweredTypeTests {
     }
 
     @Test("the build refuses a chain of names that comes back on itself under a wrapper")
-    func theLinkRefusesACycleUnderAWrapper() throws {
+    func theLinkRefusesACycleUnderAWrapper() async throws {
         // Given
         let sut = try Module(
             imports: [],
@@ -302,8 +302,8 @@ struct LoweredTypeTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("through nothing but names")
         }
@@ -344,7 +344,7 @@ struct LoweredTypeTests {
             ]
         )
         let made = try await Executor().run(try builder.build([maker] + Module.standard, entry: "entry"))
-        let taking = try builder.build([taker] + Module.standard, entry: "entry")
+        let taking = try await builder.build([taker] + Module.standard, entry: "entry")
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -376,7 +376,7 @@ struct LoweredTypeTests {
             ]
         )
         let made = try await Executor().run(try builder.build([maker], entry: "entry"))
-        let taking = try builder.build([taker], entry: "entry")
+        let taking = try await builder.build([taker], entry: "entry")
 
         // When / Then
         await #expect(throws: ArgumentError.self) {

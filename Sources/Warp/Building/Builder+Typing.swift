@@ -51,8 +51,8 @@ extension Builder {
         at place: Place,
         in environment: [Name: LoweredType],
         with context: TypingContext
-    ) throws -> LoweredType {
-        let walked = try inspected(
+    ) async throws -> LoweredType {
+        let walked = try await inspected(
             block: block,
             at: place,
             in: environment,
@@ -104,8 +104,8 @@ extension Builder {
         folding: Folding?,
         origin: Int? = nil,
         writing fulfillment: Fulfillment
-    ) throws -> (block: Block, calls: [CallSite]) {
-        let inner = try inspected(
+    ) async throws -> (block: Block, calls: [CallSite]) {
+        let inner = try await inspected(
             block: block,
             at: place,
             in: environment,
@@ -132,8 +132,8 @@ extension Builder {
         with context: TypingContext,
         folding: Folding?,
         writing fulfillment: Fulfillment
-    ) throws -> (Expression, [CallSite]) {
-        let inner = try inspected(
+    ) async throws -> (Expression, [CallSite]) {
+        let inner = try await inspected(
             expression,
             at: place,
             in: environment,
@@ -728,61 +728,72 @@ extension Builder {
         _ segments: [PathSegment],
         at place: Place,
         folding: Folding
-    ) throws -> [PathSegment] {
-        try segments.map { segment in
-            guard case let .indexRef(inner, optionally) = segment else { return segment }
+    ) async throws -> [PathSegment] {
+        var folded: [PathSegment] = []
 
-            guard
-                case let .key(head, _)? = inner.first,
-                folding.holds(head)
-            else {
-                return .indexRef(
-                    try foldedIndexReferences(inner, at: place, folding: folding),
-                    optional: optionally
-                )
-            }
+        for segment in segments {
+            folded.append(try await self.folded(segment, at: place, folding: folding))
+        }
 
-            let settled: Value
+        return folded
+    }
 
-            do {
-                settled = try folding.read(inner, at: place)
-            } catch {
-                throw BuildError("reading constant '\(head)': \(error)", at: place)
-            }
+    // One index path a fold settles. The recursion of the gathering above,
+    // written out because reading a constant runs, and what runs is a call.
+    private func folded(
+        _ segment: PathSegment,
+        at place: Place,
+        folding: Folding
+    ) async throws -> PathSegment {
+        guard case let .indexRef(inner, optionally) = segment else { return segment }
 
-            // The mark rides the fold: which element is read settles now,
-            // whether the array is there to be read stays the run's question.
-            switch settled {
-            case let .int(index):
-                return .index(index, optional: optionally)
+        guard
+            case let .key(head, _)? = inner.first,
+            folding.holds(head)
+        else {
+            return .indexRef(
+                try await foldedIndexReferences(inner, at: place, folding: folding),
+                optional: optionally
+            )
+        }
 
-            case let .double(fraction):
-                switch Int.reading(fraction) {
-                case let .int(whole):
-                    return .index(whole, optional: optionally)
+        let settled: Value
 
-                case .notANumber, .fractional:
-                    throw BuildError(
-                        "index reference \(inner.rendered)"
-                            + " is not a whole number",
-                        at: place
-                    )
+        do {
+            settled = try await folding.read(inner, at: place)
+        } catch {
+            throw BuildError("reading constant \'\(head)\': \(error)", at: place)
+        }
 
-                case .overflow:
-                    throw BuildError(
-                        "index reference \(inner.rendered)"
-                            + " indexes past the end of any array",
-                        at: place
-                    )
-                }
+        // The mark rides the fold: which element is read settles now,
+        // whether the array is there to be read stays the run\'s question.
+        switch settled {
+        case let .int(index):
+            return .index(index, optional: optionally)
 
-            default:
+        case let .double(fraction):
+            switch Int.reading(fraction) {
+            case let .int(whole):
+                return .index(whole, optional: optionally)
+
+            case .notANumber, .fractional:
                 throw BuildError(
-                    "index reference \(inner.rendered) is"
-                        + " \(settled.type), expected int",
+                    "index reference \(inner.rendered) is not a whole number",
+                    at: place
+                )
+
+            case .overflow:
+                throw BuildError(
+                    "index reference \(inner.rendered) indexes past the end of any array",
                     at: place
                 )
             }
+
+        default:
+            throw BuildError(
+                "index reference \(inner.rendered) is \(settled.type), expected int",
+                at: place
+            )
         }
     }
 
@@ -929,6 +940,24 @@ extension Builder {
         throw BuildError(reason(), at: place)
     }
 
+    // A constant settles at the build, so what it is written from is read
+    // rather than run. The same gate an operand passes, asked where a constant
+    // is settled, because those are the two places the build reads an
+    // expression instead of running it.
+    func settles(
+        _ expression: Expression,
+        at place: Place,
+        given context: TypingContext,
+        writing fulfillment: Fulfillment
+    ) throws {
+        try held(
+            expression,
+            asOperand: place,
+            given: context,
+            when: .judging(folding: nil, origin: nil, writing: fulfillment)
+        )
+    }
+
     // An operand is data: the run reads it rather than running it. A call to a
     // declaration that answers only by running is refused here, where the
     // operand is written, rather than found when the reading reaches it.
@@ -1003,7 +1032,7 @@ extension Builder {
         in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
-    ) throws -> Inspection {
+    ) async throws -> Inspection {
         switch expression {
         case let .literal(value):
             return Inspection(rewritten: expression, reading: type(of: value, in: context.loweredTypes))
@@ -1033,7 +1062,7 @@ extension Builder {
                 )
             }
 
-            let carried = try inspected(value, at: place, in: environment, with: context, ask: ask)
+            let carried = try await inspected(value, at: place, in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1070,7 +1099,7 @@ extension Builder {
                 // An inner index path may read a constant too. `items[C]` folds
                 // its index the way a whole constant path folds, so no constant
                 // name survives into the image.
-                let settled = try foldedIndexReferences(resolved, at: place, folding: folding)
+                let settled = try await foldedIndexReferences(resolved, at: place, folding: folding)
 
                 guard
                     case let .key(head, _)? = settled.first,
@@ -1080,7 +1109,7 @@ extension Builder {
                 }
 
                 do {
-                    let value = try folding.read(settled, at: place)
+                    let value = try await folding.read(settled, at: place)
 
                     return Inspection(rewritten: .literal(value), reading: type(of: value, in: context.loweredTypes))
                 } catch {
@@ -1096,7 +1125,7 @@ extension Builder {
             var element: LoweredType?
 
             for (position, member) in array.enumerated() {
-                let inner = try inspected(
+                let inner = try await inspected(
                     member,
                     at: place.index(position),
                     in: environment,
@@ -1128,7 +1157,7 @@ extension Builder {
         // a spelling that says nothing is a reading gone wrong. `as: any` lands
         // here too, and rightly. Every reading fits it.
         case let .cast(value, type, optional):
-            let inner = try inspected(
+            let inner = try await inspected(
                 value,
                 at: place.part(.receiver),
                 in: environment,
@@ -1252,7 +1281,7 @@ extension Builder {
             var fields: [Name: LoweredType] = [:]
 
             for (name, field) in record.sorted { $0.key < $1.key } {
-                let inner = try inspected(
+                let inner = try await inspected(
                     field,
                     at: place.key(name.spelling),
                     in: environment,
@@ -1288,7 +1317,7 @@ extension Builder {
             var body = procedure.block
 
             if case .judging = ask, let written = procedure.block {
-                let inner = try inspected(
+                let inner = try await inspected(
                     block: written,
                     at: place.part(.closure),
                     in: environment.merging(self.environment(of: procedure.signature, in: context.loweredTypes)) {
@@ -1385,7 +1414,7 @@ extension Builder {
                 try held(argument, asOperand: place.argument(name.spelling), given: context, when: ask)
             }
 
-            let called = try inspected(
+            let called = try await inspected(
                 callee,
                 at: place.part(.callee),
                 in: environment,
@@ -1396,7 +1425,7 @@ extension Builder {
             var calls = called.calls
 
             for (name, argument) in arguments.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(
+                let inner = try await inspected(
                     argument,
                     at: place.argument(name.spelling),
                     in: environment,
@@ -1429,6 +1458,30 @@ extension Builder {
                 ?? context.contractProcedures[call.selector]?.signature
 
             guard case .judging = ask else {
+                var readings: [Name: LoweredType] = [:]
+
+                for argument in call.arguments {
+                    readings[argument.key] = try await inspected(
+                        argument.value,
+                        at: place.argument(argument.key.spelling),
+                        in: environment,
+                        with: context,
+                        ask: ask
+                    ).reading
+                }
+
+                var receiver: LoweredType?
+
+                if let written = call.receiver {
+                    receiver = try await inspected(
+                        written,
+                        at: place.part(.receiver),
+                        in: environment,
+                        with: context,
+                        ask: ask
+                    ).reading
+                }
+
                 return Inspection(
                     rewritten: expression,
                     reading: try answered(
@@ -1436,24 +1489,8 @@ extension Builder {
                         over: context.slots(of: call.selector),
                         answering: context.answer(of: call.selector),
                         at: call,
-                        readings: try call.arguments.reduce(into: [:]) { read, argument in
-                            read[argument.key] = try inspected(
-                                argument.value,
-                                at: place.argument(argument.key.spelling),
-                                in: environment,
-                                with: context,
-                                ask: ask
-                            ).reading
-                        },
-                        receiver: try call.receiver.map { receiver in
-                            try inspected(
-                                receiver,
-                                at: place.part(.receiver),
-                                in: environment,
-                                with: context,
-                                ask: ask
-                            ).reading
-                        },
+                        readings: readings,
+                        receiver: receiver,
                         in: context.loweredTypes
                     )
                 )
@@ -1476,7 +1513,7 @@ extension Builder {
             // is the receiver's own type, so it is judged here against what
             // the contract said and nowhere against a callee.
             if let asked = context.contractProcedures[call.selector] {
-                return try inspected(
+                return try await inspected(
                     contract: asked,
                     call: call,
                     at: place,
@@ -1500,7 +1537,7 @@ extension Builder {
             var receiver: Inspection?
 
             if let written = call.receiver {
-                receiver = try inspected(
+                receiver = try await inspected(
                     written,
                     at: place.part(.receiver),
                     in: environment,
@@ -1514,7 +1551,7 @@ extension Builder {
             var calls = receiver?.calls ?? []
 
             for (name, argument) in call.arguments.sorted(by: { $0.key < $1.key }) {
-                let inner = try inspected(
+                let inner = try await inspected(
                     argument,
                     at: place.argument(name.spelling),
                     in: environment,
@@ -1565,7 +1602,7 @@ extension Builder {
             )
 
         case let .block(block):
-            let inner = try inspected(block: block, at: place, in: environment, with: context, ask: ask)
+            let inner = try await inspected(block: block, at: place, in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites ? .block(inner.block) : expression,
@@ -1594,7 +1631,7 @@ extension Builder {
             // A condition is data and writes nothing (the construct rule above
             // is what makes that a fact) so the arms stand in the environment
             // the conditional stands in.
-            let head = try inspected(
+            let head = try await inspected(
                 condition,
                 at: place.part(.condition(of: .conditional)),
                 in: environment,
@@ -1607,7 +1644,7 @@ extension Builder {
 
             let inside = environment
 
-            let taken = try inspected(then, at: place.part(.then), in: inside, with: context, ask: ask)
+            let taken = try await inspected(then, at: place.part(.then), in: inside, with: context, ask: ask)
 
             guard let otherwise else {
                 return Inspection(
@@ -1620,7 +1657,7 @@ extension Builder {
                 )
             }
 
-            let declined = try inspected(
+            let declined = try await inspected(
                 otherwise,
                 at: place.part(.otherwise),
                 in: inside,
@@ -1659,10 +1696,10 @@ extension Builder {
             // leave things for one another, and the result never runs between
             // rounds. The probe reads, so a reading asker takes the settled
             // probe as its own walk; judging walks once more for the rewrite.
-            let (seeded, probed, converged) = try settled(
+            let (seeded, probed, converged) = try await settled(
                 from: rounded(environment, as: round)
             ) { entry -> (round: BodyWalk, flow: Flow) in
-                let walk = try inspected(
+                let walk = try await inspected(
                     body.body,
                     at: place.part(.body),
                     in: entry,
@@ -1683,7 +1720,7 @@ extension Builder {
                 )
             }
 
-            let head = try inspected(
+            let head = try await inspected(
                 condition,
                 at: place.part(.condition(of: .loop)),
                 in: seeded,
@@ -1694,7 +1731,7 @@ extension Builder {
             try held(condition, asOperand: place.part(.condition(of: .loop)), given: context, when: ask)
             try held(head.reading, asCondition: place.part(.condition(of: .loop)), in: context, when: ask)
 
-            let rounds = ask.rewrites
+            let rounds = await ask.rewrites
                 ? try inspected(body.body, at: place.part(.body), in: seeded, with: context, ask: ask)
                 : probed
 
@@ -1715,7 +1752,7 @@ extension Builder {
                         ?? join(.null, written)
                 }
 
-                tail = try inspected(result, at: place.part(.result), in: exit, with: context, ask: ask)
+                tail = try await inspected(result, at: place.part(.result), in: exit, with: context, ask: ask)
             }
 
             return Inspection(
@@ -1760,14 +1797,14 @@ extension Builder {
                 )
             }
 
-            let attempted = try inspected(
+            let attempted = try await inspected(
                 block: block,
                 at: place,
                 in: environment,
                 with: context,
                 ask: ask
             )
-            let rescued = try inspected(
+            let rescued = try await inspected(
                 block: rescue,
                 at: place.part(.rescue),
                 in: caught(soaking: attempted.flow, failure: failure, in: environment, with: context),
@@ -1799,7 +1836,7 @@ extension Builder {
         in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
-    ) throws -> Inspection {
+    ) async throws -> Inspection {
         guard let written = call.receiver else {
             throw BuildError(
                 "sends '\(call.selector)' with nothing in front of it."
@@ -1809,7 +1846,7 @@ extension Builder {
             )
         }
 
-        let receiver = try inspected(
+        let receiver = try await inspected(
             written,
             at: place.part(.receiver),
             in: environment,
@@ -1847,7 +1884,7 @@ extension Builder {
                 )
             }
 
-            let inner = try inspected(
+            let inner = try await inspected(
                 argument,
                 at: place.argument(name.spelling),
                 in: environment,
@@ -1899,8 +1936,8 @@ extension Builder {
         in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
-    ) throws -> (block: Block, calls: [CallSite], reading: LoweredType, flow: Flow) {
-        let body = try inspected(
+    ) async throws -> (block: Block, calls: [CallSite], reading: LoweredType, flow: Flow) {
+        let body = try await inspected(
             block.body,
             at: place.part(.body),
             in: environment,
@@ -1931,7 +1968,7 @@ extension Builder {
             reading = .never
             flow = body.flow
         } else if let result = block.result {
-            let read = try inspected(
+            let read = try await inspected(
                 result,
                 at: place.part(.result),
                 in: body.environment,
@@ -1981,7 +2018,7 @@ extension Builder {
         in environment: [Name: LoweredType],
         with context: TypingContext,
         ask: Ask
-    ) throws -> BodyWalk {
+    ) async throws -> BodyWalk {
         var environment = environment
         var locals: Set<Name> = []
         var flowed = Flow()
@@ -1991,7 +2028,7 @@ extension Builder {
         for (position, statement) in body.enumerated() {
             let here = place.statement(statement, at: position)
 
-            let inner = try inspected(
+            let inner = try await inspected(
                 statement.expression,
                 at: here,
                 in: environment,
@@ -2334,10 +2371,10 @@ extension Builder {
     // ask answers that state out loud, where it can refuse.
     private func settled<Round>(
         from entry: [Name: LoweredType],
-        read: ([Name: LoweredType]) throws -> (round: Round, flow: Flow)
-    ) rethrows -> (environment: [Name: LoweredType], last: Round, converged: Bool) {
+        read: ([Name: LoweredType]) async throws -> (round: Round, flow: Flow)
+    ) async rethrows -> (environment: [Name: LoweredType], last: Round, converged: Bool) {
         var seeded = entry
-        var (last, flow) = try read(seeded)
+        var (last, flow) = try await read(seeded)
         var steps = 0
 
         while true {
@@ -2350,7 +2387,7 @@ extension Builder {
 
             steps += 1
             seeded = next
-            (last, flow) = try read(seeded)
+            (last, flow) = try await read(seeded)
         }
 
         var widened = entry
@@ -2361,7 +2398,7 @@ extension Builder {
 
         // One more look in the widened environment, so what is handed back
         // was read where the caller will stand.
-        let (settled, _) = try read(widened)
+        let (settled, _) = try await read(widened)
 
         return (widened, settled, false)
     }

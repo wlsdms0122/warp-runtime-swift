@@ -42,7 +42,7 @@ struct JoinedQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         // The `.array` case and not the elements projection, because this procedure
         // declares `array<string>` and bytes cross an `array<…>` slot whole
         // only where the element declaration leaves every byte alone. `string`

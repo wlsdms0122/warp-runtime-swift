@@ -52,7 +52,7 @@ struct ContractTests {
     }
 
     @Test("a type that does not answer every procedure does not stand in the slot")
-    func anUnsatisfyingTypeRefuses() throws {
+    func anUnsatisfyingTypeRefuses() async throws {
         // Given. `bank.Plain` declares no `describe`
         let sut = try describing(
             types: ["bank.Plain": .record(["note": .string])],
@@ -70,8 +70,8 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("procedures.entry.result")
                 && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
@@ -79,7 +79,7 @@ struct ContractTests {
     }
 
     @Test("a declaration cannot take a contract procedure's spelling")
-    func aDeclarationCannotTakeAContractProcedureSpelling() throws {
+    func aDeclarationCannotTakeAContractProcedureSpelling() async throws {
         // Given. `app.Describable.describe` is both a contract's procedure and a
         // declaration, so a call writing that spelling has two readings
         let sut = try describing(
@@ -100,15 +100,15 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("A contract's procedure and a declaration cannot take one spelling")
         }
     }
 
     @Test("a procedure sent through a contract is judged against what the contract said")
-    func theContractOwnsTheJudgment() throws {
+    func theContractOwnsTheJudgment() async throws {
         // Given. The contract says `describe` answers a string and takes
         // nothing, so a call handing it something refuses
         let sut = try describing(
@@ -132,15 +132,15 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("'style', which 'app.Describable' does not name")
         }
     }
 
     @Test("a declaration named for a type and a procedure is held to the contract")
-    func aMismatchedWitnessRefuses() throws {
+    func aMismatchedWitnessRefuses() async throws {
         // Given. `bank.Account.describe` answers an int where the contract
         // writes a string
         let sut = try Module(
@@ -161,8 +161,8 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".hasPrefix("procedures.entry.result: the module at 0 in this link")
                 && "\(error)".contains("declares 'bank.Account.describe', which is named for")
@@ -171,7 +171,7 @@ struct ContractTests {
     }
 
     @Test("a declaration named for a type and a procedure answers nothing nobody claimed")
-    func anUnclaimedSpellingIsAnOrdinaryProcedure() throws {
+    func anUnclaimedSpellingIsAnOrdinaryProcedure() async throws {
         // Given. One document declares `bank.Account.describe` and says
         // nothing about any contract. Another, which it never names, declares
         // a contract asking `describe` and answering a string
@@ -199,13 +199,13 @@ struct ContractTests {
 
         // When / Then. The spelling is that document's procedure, so a contract
         // arriving beside it reserves nothing
-        #expect(throws: Never.self) {
-            try Builder().build([held, asking] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await Builder().build([held, asking] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a claim is held to every procedure the contract asks")
-    func aClaimMissingAProcedureRefuses() throws {
+    func aClaimMissingAProcedureRefuses() async throws {
         // Given. `bank.Plain` is said to answer, and nothing declares
         // `bank.Plain.describe`
         let sut = try Module(
@@ -216,15 +216,15 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
         }
     }
 
     @Test("a document declaring neither the type nor the contract may claim the pair")
-    func aThirdDocumentMayClaimThePair() throws {
+    func aThirdDocumentMayClaimThePair() async throws {
         // Given. Two libraries that know nothing of each other, and a third
         // that says one's type answers the other's contract and writes the
         // procedure that answers it.
@@ -284,11 +284,11 @@ struct ContractTests {
         // When / Then
         let modules = [charting, banking, adapting, program] + Module.standard
 
-        #expect(throws: Never.self) { try Builder().build(modules, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(modules, entry: entryName) }
     }
 
     @Test("two documents saying one type answers one contract is one claim")
-    func twoDocumentsClaimingOnePairIsOneClaim() throws {
+    func twoDocumentsClaimingOnePairIsOneClaim() async throws {
         // Given. Two documents say the same type answers the same contract
         let held = try Module(
             types: ["bank.Account": .record(["balance": .int])],
@@ -314,13 +314,13 @@ struct ContractTests {
 
         // When / Then. A claim holds nothing but the pair, so the second says
         // what the first said and nothing is in question.
-        #expect(throws: Never.self) {
-            try Builder().build([held, again] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await Builder().build([held, again] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a claim names a type and a contract, and nothing else")
-    func aClaimNamesWhatItIsAbout() throws {
+    func aClaimNamesWhatItIsAbout() async throws {
         // Given. A constraint stands where the contract should
         let sut = try Module(
             types: ["bank.Account": .record(["balance": .int])],
@@ -330,15 +330,15 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("'app.Scalar' is not a contract this link declares")
         }
     }
 
     @Test("a contract asking nothing is refused, since every type answers it")
-    func anEmptyContractRefuses() throws {
+    func anEmptyContractRefuses() async throws {
         // Given
         let sut = try Module(
             contracts: ["app.Anything": [:]],
@@ -346,15 +346,15 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("asks nothing, so every type satisfies it")
         }
     }
 
     @Test("a name is a type or a membership or a contract, and never two of them")
-    func oneNameStandsForOneThing() throws {
+    func oneNameStandsForOneThing() async throws {
         // Given
         let sut = try Module(
             types: ["app.Thing": .int],
@@ -363,8 +363,8 @@ struct ContractTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("cannot be a type, a membership and a contract at once")
         }

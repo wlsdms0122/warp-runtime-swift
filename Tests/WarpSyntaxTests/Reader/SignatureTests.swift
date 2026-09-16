@@ -17,11 +17,11 @@ struct SignatureTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
-    func untypedParameterDeclaresNothing() throws {
+    func untypedParameterDeclaresNothing() async throws {
         // Given. `any` would say every type is welcome; this says nothing at
         // all, and the two are not the same declaration even though neither is
         // checked
-        let sut = try Loader.testing.loadDocument([
+        let sut = try await Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
                     "parameters": ["subject": [:], "labelled": "any"],
@@ -44,9 +44,9 @@ struct SignatureTests {
     }
 
     @Test("a procedure written without a return type declares nothing")
-    func untypedReturnDeclaresNothing() throws {
+    func untypedReturnDeclaresNothing() async throws {
         // Given
-        let sut = try Loader.testing.loadDocument([
+        let sut = try await Loader.testing.loadDocument([
             "procedures": [
                 "quiet": ["body": [["let": "done", "value": "end"]]],
                 "loud": ["returns": "any", "body": [["let": "done", "value": "end"]]]
@@ -139,10 +139,10 @@ struct SignatureTests {
     }
 
     @Test("a default failing its own gate is judged at the build")
-    func defaultFailingOwnGateIsALinkRefusal() throws {
+    func defaultFailingOwnGateIsALinkRefusal() async throws {
         // Given. The declaration is judged where declared type names resolve,
         // so the document reads fine and the build refuses it
-        let spec = try Loader.testing.loadProcedure([
+        let spec = try await Loader.testing.loadProcedure([
             "parameters": [
                 "mode": ["type": "string", "enum": ["fast", "slow"], "default": "medium"]
             ],
@@ -150,8 +150,8 @@ struct SignatureTests {
         ])
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([spec] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([spec] + Module.standard, entry: entryName)
         }
     }
 
@@ -160,7 +160,7 @@ struct SignatureTests {
         // Given. The document holds what was written; taking the default walks
         // the same gate an argument does, so the body still reads the declared
         // representation
-        let spec = try Loader.testing.loadProcedure([
+        let spec = try await Loader.testing.loadProcedure([
             "parameters": ["ratio": ["type": "double", "default": 3]],
             "body": [["let": "echo", "value": ["ref": "ratio"]]],
             "result": ["result": ["ref": "echo"]]
@@ -177,7 +177,7 @@ struct SignatureTests {
     @Test("no inputs declaration is still a closed contract, and strays are rejected")
     func strayInputRejectedOnEmptySignature() async throws {
         // Given. Absent `inputs:` is an empty signature, not an absent contract
-        let spec = try Loader.testing.loadProcedure(["body": [["let": "noop", "value": "ok"]]])
+        let spec = try await Loader.testing.loadProcedure(["body": [["let": "noop", "value": "ok"]]])
 
         // When / Then
         await #expect(throws: ArgumentError.self) {
@@ -186,10 +186,10 @@ struct SignatureTests {
     }
 
     @Test("a null default is a declared default, not an absent one")
-    func nullDefaultIsDeclared() throws {
+    func nullDefaultIsDeclared() async throws {
         // Given. Declaring `null` is what makes an input optional while still
         // saying what it is
-        let sut = try Loader.testing.loadProcedure([
+        let sut = try await Loader.testing.loadProcedure([
             "parameters": ["dir": ["type": "string", "default": .null]],
             "body": [["let": "seen", "value": ["ref": "dir"]]]
         ])
@@ -202,9 +202,9 @@ struct SignatureTests {
     }
 
     @Test("probe: a null default inside a whole module document")
-    func probeNullDefaultInModule() throws {
+    func probeNullDefaultInModule() async throws {
         // Given
-        let sut = try Loader.testing.loadDocument([
+        let sut = try await Loader.testing.loadDocument([
             "procedures": [
                 "nullcwd": [
                     "parameters": ["dir": ["type": "string", "default": .null]],

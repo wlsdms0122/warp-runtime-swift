@@ -34,7 +34,7 @@ struct Connective: Sendable {
     func answer<P: NativeProcedure>(
         _ receiver: Value?,
         asking question: Question<P>
-    ) throws -> Value? {
+    ) async throws -> Value? {
         // The `.array` case and not the elements projection, for the reason
         // `joined` gives: this declares `array<procedure>`, which leaves no
         // byte as it is, so a bytes receiver is read out and refused at the
@@ -42,7 +42,7 @@ struct Connective: Sendable {
         guard case let .array(links) = receiver else { return nil }
 
         for link in links {
-            let answer = try question.call(link)
+            let answer = try await question.call(link)
 
             guard case let .bool(settled) = answer else {
                 throw ExecutionError(

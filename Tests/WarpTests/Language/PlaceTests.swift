@@ -25,7 +25,7 @@ struct PlaceTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a place is spelled from the language's own names")
-    func aPlaceIsSpelledFromTheLanguagesNames() {
+    func aPlaceIsSpelledFromTheLanguagesNames() async {
         // Given. A slot a document calls something else. A loop's condition is
         // `where` in a document, and that procedure appears nowhere in what a caller
         // assembling this wrote.
@@ -43,7 +43,7 @@ struct PlaceTests {
     }
 
     @Test("what a call is written with is named under the key holding it")
-    func anArgumentIsNamedUnderItsKey() {
+    func anArgumentIsNamedUnderItsKey() async {
         // Given. An argument reported from the statement's own place says a
         // thing is wrong and does not say which of the several written there.
         let sut = place(
@@ -58,7 +58,7 @@ struct PlaceTests {
     }
 
     @Test("a statement is found by its name, and by its position when it has none")
-    func aStatementIsFoundByWhicheverItHas() {
+    func aStatementIsFoundByWhicheverItHas() async {
         // Given. A statement run for its effect alone fixes no name, and its
         // position is the only thing there is to call it.
         let named = place(refusing: Statement(binding: .constant("held"), expression: reference("missing")))
@@ -95,7 +95,7 @@ struct PlaceTests {
     }
 
     @Test("the place is carried as data, and the sentence is only the reason")
-    func aPlaceIsNotProse() throws {
+    func aPlaceIsNotProse() async throws {
         // Given. A place written into the message is a place nothing can read
         // back. A front end holding the file this was authored in has to walk
         // the steps to point at the line, and a sentence has no steps. When
@@ -110,7 +110,7 @@ struct PlaceTests {
     }
 
     @Test("what the build refuses is placed the way what the load refuses is")
-    func bothStagesSpellOnePlace() throws {
+    func bothStagesSpellOnePlace() async throws {
         // Given. One document, refused at the build: the two stages walk the
         // same text and an author reading both should not have to learn two
         // spellings of where they are.
@@ -123,8 +123,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -132,7 +132,7 @@ struct PlaceTests {
     }
 
     @Test("the build narrows to the argument it refused, not to the call holding it")
-    func aLinkRefusalNarrowsToTheArgument() throws {
+    func aLinkRefusalNarrowsToTheArgument() async throws {
         // Given. A call written with several arguments, one of which holds what
         // the declaration does not take. Reported from the call, an author is
         // told a thing is wrong and not which of the three it is.
@@ -160,8 +160,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -171,7 +171,7 @@ struct PlaceTests {
     }
 
     @Test("one place, whichever stage walked the text")
-    func theTwoStagesSpellOneSlotOneWay() throws {
+    func theTwoStagesSpellOneSlotOneWay() async throws {
         // Given. The same slot of the same statement, reached once by the walk
         // that checks a document against itself and once by the walk that
         // resolves its names. Two spellings of one place is two documents as
@@ -208,8 +208,8 @@ struct PlaceTests {
             )
         }
 
-        let link = #expect(throws: BuildError.self) {
-            try Builder().build([linked] + Module.standard, entry: entryName)
+        let link = await #expect(throws: BuildError.self) {
+            try await Builder().build([linked] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -218,7 +218,7 @@ struct PlaceTests {
     }
 
     @Test("every walk that reports a place steps through the same slots to reach one")
-    func theWalksAgreeOnHowDeepASlotIs() throws {
+    func theWalksAgreeOnHowDeepASlotIs() async throws {
         // Given. One call, held under an attempt's rescue: a slot no walk
         // reaches without stepping through the keys between. Four walks report
         // places and each destructures the language for itself, so what one of
@@ -262,15 +262,15 @@ struct PlaceTests {
             try Validator().validate(module(sending: "helper", with: reference("missing")))
         }
 
-        let bound = #expect(throws: BuildError.self) {
-            try Builder().build(
+        let bound = await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [module(sending: "nowhere", with: .literal(.int(1)))] + Module.standard,
                 entry: entryName
             )
         }
 
-        let typed = #expect(throws: BuildError.self) {
-            try Builder().build(
+        let typed = await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [module(
                     sending: "helper",
                     with: .cast(.literal(.int(1)), as: .int, optional: false)
@@ -285,7 +285,7 @@ struct PlaceTests {
         #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
 
         // And the walk that only gathers puts it in the same place
-        let gathered = try #require(
+        let gathered = try await #require(
             module(sending: "helper", with: .literal(.int(1)))
                 .procedures[entryName]?.block?
                 .subexpressions(at: .procedure(entryName.spelling, in: .assembled))
@@ -300,7 +300,7 @@ struct PlaceTests {
     }
 
     @Test("a declared spelling with a dot in it is one key in the place")
-    func aDottedSpellingIsOneKey() throws {
+    func aDottedSpellingIsOneKey() async throws {
         // Given. The same refusal from a declaration spelled `wallet.entry`.
         // The dot is part of the key the document wrote, so the place holds
         // that key whole rather than two steps.
@@ -314,8 +314,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: "wallet.entry")
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: "wallet.entry")
         }
 
         // Then
@@ -325,7 +325,7 @@ struct PlaceTests {
     }
 
     @Test("a program nobody wrote down says so, rather than saying no name")
-    func anAssembledProgramNamesNoDocument() {
+    func anAssembledProgramNamesNoDocument() async {
         // Given. The same program twice: once handed in as a caller assembling
         // one in memory holds it, and once read out of a document. There is no
         // text under the first, which is a different fact from a text that
@@ -378,7 +378,7 @@ struct PlaceTests {
     }
 
     @Test("a type is placed by the key it was declared under, dot and all")
-    func aTypeIsPlacedByItsDeclaredKey() throws {
+    func aTypeIsPlacedByItsDeclaredKey() async throws {
         // Given. A type declared as `wallet.Coin`. The place is spelled from
         // that key, which is what the document writes.
         let sut = try Module(
@@ -388,8 +388,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -397,7 +397,7 @@ struct PlaceTests {
     }
 
     @Test("a membership is placed the same way")
-    func aConstraintIsPlacedByItsDeclaredKey() throws {
+    func aConstraintIsPlacedByItsDeclaredKey() async throws {
         // Given. The other space. A membership admitting nothing is refused
         // from the table alone, which is the walk that has only the declared
         // keys to go on.
@@ -408,8 +408,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -417,7 +417,7 @@ struct PlaceTests {
     }
 
     @Test("a statement's construct is the language's name, and says so")
-    func aConstructIsNotClaimedAsTheDocumentsOwn() throws {
+    func aConstructIsNotClaimedAsTheDocumentsOwn() async throws {
         // Given. One construct, two texts: `{ call: … }` and `{ value: { call: … }
         // }` are both a call by the time anything here sees one, so the
         // name for the construct is this implementation's rather than something
@@ -445,7 +445,7 @@ struct PlaceTests {
     }
 
     @Test("what a return carries is checked, and placed where the return is")
-    func aReturnsValueIsWalked() throws {
+    func aReturnsValueIsWalked() async throws {
         // Given. The door a caller assembling a program itself passes. What
         // `return` carries is an operand like any other: a name it reads has to
         // be visible where it was written. When
@@ -462,7 +462,7 @@ struct PlaceTests {
     }
 
     @Test("both stages point at the statement that leaves, not at what follows it")
-    func theLeaveRuleIsPlacedOnTheLeavingStatement() throws {
+    func theLeaveRuleIsPlacedOnTheLeavingStatement() async throws {
         // Given. The one rule both stages hold: the load catches the leaves the
         // text shows, the build catches the procedure that declares `never`. What an
         // author has to change is the statement that ends the body, so that is
@@ -499,8 +499,8 @@ struct PlaceTests {
             )
         }
 
-        let link = #expect(throws: BuildError.self) {
-            try Builder().build([declared] + Module.standard, entry: entryName)
+        let link = await #expect(throws: BuildError.self) {
+            try await Builder().build([declared] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -509,7 +509,7 @@ struct PlaceTests {
     }
 
     @Test("a name two documents declare is refused at the one that could not be added")
-    func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() throws {
+    func aDeclarationDeclaredTwiceIsPlacedAtTheSecond() async throws {
         // Given. A caller receiving a module from somewhere else appends it to
         // what it already holds and links again. What that link refuses is a
         // collision between two documents, and only the caller knows which file
@@ -527,8 +527,8 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([held, sent, caller] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([held, sent, caller] + Module.standard, entry: entryName)
         }
 
         // Then. The place is the declaration that cannot be added
@@ -539,7 +539,7 @@ struct PlaceTests {
     }
 
     @Test("the same document handed to one link twice is refused as that")
-    func theSameDocumentHandedTwiceIsRefusedAsOneDocument() throws {
+    func theSameDocumentHandedTwiceIsRefusedAsOneDocument() async throws {
         // Given. A caller that appends what arrives without checking whether it
         // already holds it. An identity is derived from the text, so the two
         // are one document and every name in it collides with itself. Read as a
@@ -553,8 +553,8 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([module, module, caller] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([module, module, caller] + Module.standard, entry: entryName)
         }
 
         // Then. What is wrong is the second copy, not anything inside it
@@ -563,7 +563,7 @@ struct PlaceTests {
     }
 
     @Test("a type two documents declare is placed the same way a procedure is")
-    func aTypeDeclaredTwiceIsPlacedAtTheSecond() throws {
+    func aTypeDeclaredTwiceIsPlacedAtTheSecond() async throws {
         // Given. The same rule in the space a type is resolved in. The two
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
@@ -576,8 +576,8 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([held, sent, caller] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([held, sent, caller] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -586,7 +586,7 @@ struct PlaceTests {
     }
 
     @Test("a name written as a type in one document and a membership in another")
-    func aNameThatIsBothIsPlacedAtTheMembership() throws {
+    func aNameThatIsBothIsPlacedAtTheMembership() async throws {
         // Given. The two tables held against each other, which is the one
         // judgment that reads both tables. The membership is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
@@ -597,8 +597,8 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([type, membership, caller] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([type, membership, caller] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -607,7 +607,7 @@ struct PlaceTests {
     }
 
     @Test("constants that name each other are placed at one of the ring, and the same one")
-    func aConstantCycleIsPlacedInSortedOrder() throws {
+    func aConstantCycleIsPlacedInSortedOrder() async throws {
         // Given. A cycle has no first member, so which of them an author is
         // sent to is chosen rather than found. Read off a dictionary it would
         // be a different constant per run, and the two below are written in the
@@ -619,8 +619,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -629,7 +629,7 @@ struct PlaceTests {
     }
 
     @Test("a constant merely blocked by a ring is neither placed nor accused")
-    func aConstantWaitingOnARingIsNotOnIt() throws {
+    func aConstantWaitingOnARingIsNotOnIt() async throws {
         // Given. `aardvark` names one of a ring, so it never settles either and
         // is still waiting when the ring is refused. It is sorted first, which
         // is how it becomes the place if what is waiting is mistaken for what
@@ -645,8 +645,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -656,7 +656,7 @@ struct PlaceTests {
     }
 
     @Test("a constant on a cycle's edge is not counted as part of it")
-    func aConstantReadByACycleIsNotOnIt() throws {
+    func aConstantReadByACycleIsNotOnIt() async throws {
         // Given. `delta` is read by one of a cycle and settles perfectly well,
         // so the cycle is the only thing wrong here. Narrowing by what nothing
         // reads keeps it anyway, because something does read it.
@@ -676,8 +676,8 @@ struct PlaceTests {
         )
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
 
         // Then
@@ -686,7 +686,7 @@ struct PlaceTests {
     }
 
     @Test("two modules nobody wrote down are told apart by where the caller put them")
-    func modulesWithNoDocumentAreToldApartByPosition() throws {
+    func modulesWithNoDocumentAreToldApartByPosition() async throws {
         // Given. A caller assembling modules itself. Neither was read from
         // anything, so neither has an identity and both spell the same: the
         // sentence names two documents that read as one, and the place renders
@@ -698,8 +698,8 @@ struct PlaceTests {
         let caller = try Module(procedures: [entryName: Procedure(body: [])])
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try Builder().build([declaring(), declaring(), caller] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await Builder().build([declaring(), declaring(), caller] + Module.standard, entry: entryName)
         }
 
         // Then

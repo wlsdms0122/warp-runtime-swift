@@ -85,11 +85,11 @@ struct PlaceWrittenTests {
     }
 
     @Test("a link refusal reads in the document's keys where a reader is asked for it")
-    func aLinkRefusalIsSpelledForTheAuthor() throws {
+    func aLinkRefusalIsSpelledForTheAuthor() async throws {
         // Given. The stage that has no document of its own. What to link is the
         // caller's statement, so a link cannot know which text a module came
         // out of; the side that read the text can say.
-        let module = try loader.loadProcedure([
+        let module = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "sent",
@@ -99,8 +99,8 @@ struct PlaceWrittenTests {
         ], importing: ["nowhere"])
 
         // When
-        let error = #expect(throws: BuildError.self) {
-            try loader.reading { try Builder().build([module], entry: entryName) }
+        let error = await #expect(throws: BuildError.self) {
+            try await loader.reading { try await Builder().build([module], entry: entryName) }
         }
 
         // Then. `call` is the key the author wrote, and `call` is what the
@@ -108,8 +108,8 @@ struct PlaceWrittenTests {
         #expect(error?.place?.rendered == "procedures.entry.body.sent[0].call")
 
         // And unasked, the language answers in its own terms
-        let untranslated = #expect(throws: BuildError.self) {
-            try Builder().build([module], entry: entryName)
+        let untranslated = await #expect(throws: BuildError.self) {
+            try await Builder().build([module], entry: entryName)
         }
 
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")

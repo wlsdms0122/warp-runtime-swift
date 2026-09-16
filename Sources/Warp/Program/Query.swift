@@ -29,7 +29,7 @@ public protocol Query: NativeProcedure {
     // behind this one, so a procedure it was handed cannot be called.
     func validate(_ question: Question<Self>) throws
 
-    func evaluate(_ question: Question<Self>) throws -> Value?
+    func evaluate(_ question: Question<Self>) async throws -> Value?
 }
 
 public extension Query {

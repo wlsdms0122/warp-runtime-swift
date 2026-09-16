@@ -20,7 +20,7 @@ struct FailingTests {
     // MARK: - Lifecycle
     // MARK: - Test
     @Test("a body that casts and calls nothing that fails, fails nothing")
-    func aQuietBodyFailsNothing() throws {
+    func aQuietBodyFailsNothing() async throws {
         // Given. `plus` throws only at an author mistake, so it fails nothing
         let sut = try Module(
             imports: ["std.math.plus"],
@@ -39,14 +39,14 @@ struct FailingTests {
         )
 
         // When
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.failing == .these([]))
     }
 
     @Test("a procedure that raises is read through whatever calls it")
-    func aRaisingProcedureCarriesToItsCallers() throws {
+    func aRaisingProcedureCarriesToItsCallers() async throws {
         // Given
         let sut = try Module(
             imports: ["std.control.abort"],
@@ -65,7 +65,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image["app.reach"]?.failing == .these(["aborted"]))
@@ -73,7 +73,7 @@ struct FailingTests {
     }
 
     @Test("a plain cast is what the runtime itself may fail with")
-    func aPlainCastFails() throws {
+    func aPlainCastFails() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -86,14 +86,14 @@ struct FailingTests {
         )
 
         // When
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then. The optional spelling reads the mismatch as null instead
         #expect(image[entryName]?.failing == .these(["cast_refused"]))
     }
 
     @Test("a rescue takes the body's failures off, and adds its own")
-    func aRescueClearsWhatTheBodyRaises() throws {
+    func aRescueClearsWhatTheBodyRaises() async throws {
         // Given. The body aborts, the rescue casts
         let sut = try Module(
             imports: ["std.control.abort"],
@@ -121,14 +121,14 @@ struct FailingTests {
         )
 
         // When
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.failing == .these(["cast_refused"]))
     }
 
     @Test("a rescue over a body that cannot fail refuses")
-    func aDeadRescueRefuses() throws {
+    func aDeadRescueRefuses() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -149,15 +149,15 @@ struct FailingTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("attempts a body that cannot fail")
         }
     }
 
     @Test("calling a value leaves the question open, so an attempt over one stands")
-    func applyingAValueSaysNothing() throws {
+    func applyingAValueSaysNothing() async throws {
         // Given. Which value is called is settled at run time
         let sut = try Module(
             procedures: [
@@ -181,7 +181,7 @@ struct FailingTests {
         )
 
         // When
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // Then. The rescue caught an unknown, and what is left is the rescue's
         #expect(image[entryName]?.failing == .these([]))

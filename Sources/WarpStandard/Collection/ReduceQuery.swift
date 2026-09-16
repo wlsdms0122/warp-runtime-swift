@@ -59,17 +59,21 @@ struct ReduceQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
         let body = question[.value]
 
-        return try elements.reduce(question[.from]) { carried, element in
-            try question.call(
+        var carried = question[.from]
+
+        for element in elements {
+            carried = try await question.call(
                 body,
                 with: [(name: "carried", value: carried), (name: "item", value: element)]
             )
         }
+
+        return carried
     }
 
     // MARK: - Private

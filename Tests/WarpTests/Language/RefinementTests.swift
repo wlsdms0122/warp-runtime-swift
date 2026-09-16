@@ -86,7 +86,7 @@ struct RefinementTests {
     }
 
     @Test("a range whose bounds meet on an excluded edge admits nothing")
-    func anEmptyOpenRangeRefusesAtTheLink() throws {
+    func anEmptyOpenRangeRefusesAtTheLink() async throws {
         // Given. The far bound is outside, so a floor standing on it leaves
         // nothing between them. A slot no call could fill is refused where it
         // was written, the way a range below its own floor is.
@@ -104,15 +104,15 @@ struct RefinementTests {
             ]
         )
 
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
     @Test("a bound that is not a number admits nothing")
-    func aNanBoundAdmitsNothing() throws {
+    func aNanBoundAdmitsNothing() async throws {
         // Given. Nothing compares to a nan, so every ordering question about a
         // range bounded by one answers no and the range holds no value at all.
         // A document cannot spell one; a declaration assembled in the host can,
@@ -131,8 +131,8 @@ struct RefinementTests {
             ]
         )
 
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }

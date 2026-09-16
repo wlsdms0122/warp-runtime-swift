@@ -39,21 +39,21 @@ struct FingerprintTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("is the same twice for the same document behind the same artifact")
-    func isTheSameTwice() throws {
+    func isTheSameTwice() async throws {
         // Given / When.
-        let first = try fingerprint(of: program, against: answering(.int(1)))
-        let second = try fingerprint(of: program, against: answering(.int(1)))
+        let first = try await fingerprint(of: program, against: answering(.int(1)))
+        let second = try await fingerprint(of: program, against: answering(.int(1)))
 
         // Then.
         #expect(first == second)
     }
 
     @Test("moves when the artifact behind it moves")
-    func movesWithWhatItLeansOn() throws {
+    func movesWithWhatItLeansOn() async throws {
         // Given. The same document, compiled against two artifacts that declare
         // the same procedure and answer differently.
-        let first = try fingerprint(of: program, against: answering(.int(1)))
-        let second = try fingerprint(of: program, against: answering(.int(2)))
+        let first = try await fingerprint(of: program, against: answering(.int(1)))
+        let second = try await fingerprint(of: program, against: answering(.int(2)))
 
         // Then. Nothing in this document changed, and what it is true against
         // did.
@@ -61,7 +61,7 @@ struct FingerprintTests {
     }
 
     @Test("moves when the document moves")
-    func movesWithTheDocument() throws {
+    func movesWithTheDocument() async throws {
         // Given.
         let other = try Module(
             procedures: [
@@ -75,7 +75,7 @@ struct FingerprintTests {
 
         // When / Then.
         #expect(
-            try fingerprint(of: program, against: answering(.int(1)))
+            try await fingerprint(of: program, against: answering(.int(1)))
                 != fingerprint(of: other, against: answering(.int(1)))
         )
     }
@@ -90,9 +90,9 @@ struct FingerprintTests {
         )
     }
 
-    private func fingerprint(of module: Module, against used: Module) throws -> Fingerprint {
-        let behind = try builder.compile([used])
-        let compiled = try builder.compile(
+    private func fingerprint(of module: Module, against used: Module) async throws -> Fingerprint {
+        let behind = try await builder.compile([used])
+        let compiled = try await builder.compile(
             [module],
             against: behind,
             supplying: Supplying([used, module])

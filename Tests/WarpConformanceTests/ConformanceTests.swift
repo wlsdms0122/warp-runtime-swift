@@ -64,7 +64,7 @@ struct ConformanceTests {
     // MARK: - Private
     private func run(_ sut: Case) async throws -> Value {
         let builder = Builder()
-        let image = try builder.build(try sut.modules(), entry: "entry")
+        let image = try await builder.build(try sut.modules(), entry: "entry")
 
         return try await Executor().run(image, arguments: sut.arguments)
     }
@@ -74,7 +74,7 @@ struct ConformanceTests {
     // something already happened, and what already happened cannot be taken back.
     private func reached(_ sut: Case) async throws -> Case.Stage? {
         let builder = Builder()
-        let vocabulary = try sut.brought
+        let vocabulary = try await sut.brought
         let module: Module
 
         // The case's own document is read apart from the rest, because a
@@ -91,7 +91,7 @@ struct ConformanceTests {
         let image: Image
 
         do {
-            image = try builder.build(modules, entry: "entry")
+            image = try await builder.build(modules, entry: "entry")
         } catch {
             return .build
         }
@@ -360,15 +360,15 @@ struct Case: Sendable, CustomStringConvertible {
     // case's own document, and the standard vocabulary. The case describes the
     // vocabulary it asked for, so building it is the case's own answer and not
     // a runner's.
-    func modules() throws -> [Module] {
-        try brought + [try Loader().load(program, identity: nil)] + Module.standard
+    func modules() async throws -> [Module] {
+        try await brought + [try Loader().load(program, identity: nil)] + Module.standard
     }
 
     // The vocabulary the case asked the runner for, as a module standing in
     // front of the case's own document so that what the host brings is there
     // to be named. Empty where the case asked for none.
     var brought: [Module] {
-        get throws {
+        get async throws {
             guard let vocabulary else { return [] }
 
             let loader = Loader()
@@ -548,7 +548,7 @@ struct SuppliedEffect<Parameters: ParameterSet>: Effect {
     let isolated: Bool
     let failing: Failing
 
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         answers
     }
 }

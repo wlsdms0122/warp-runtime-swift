@@ -38,7 +38,7 @@ struct ReplacingQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard case let .string(text) = question.receiver else {
             throw ExecutionError(
                 "replacing asks \(question.receiver?.type.description ?? "nothing"), expected string"

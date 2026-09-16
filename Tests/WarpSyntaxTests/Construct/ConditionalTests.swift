@@ -21,7 +21,7 @@ struct ConditionalTests {
     func branchSelectsArm() async throws {
         // Given. An arm is statements alone: what it keeps it writes to an
         // outer variable, and the conditional itself answers nothing
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "parameters": ["kind": "string"],
             "body": [
                 ["var": "pick"],
@@ -69,7 +69,7 @@ struct ConditionalTests {
     func aBareVarDeclaresNull() async throws {
         // Given. `var` may stand alone: it introduces a name with nothing in it
         // yet, for the writes a conditional's arms make
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "body": [
                 ["var": "kept"]
             ],

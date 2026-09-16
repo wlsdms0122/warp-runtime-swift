@@ -40,7 +40,7 @@ struct DeclaredNameTests {
     }
 
     @Test("a name is refused what its declaration does not take")
-    func aDeclarationRefusesWhatItDoesNotTake() throws {
+    func aDeclarationRefusesWhatItDoesNotTake() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -54,15 +54,15 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("holds int, and what it was given is string")
         }
     }
 
     @Test("a declaration naming a type nothing declares is refused")
-    func aDeclarationNamingNothingIsRefused() throws {
+    func aDeclarationNamingNothingIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -79,13 +79,13 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect(throws: (any Error).self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: (any Error).self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a declaration is held where a body is read rather than where one is reached")
-    func aDeclarationIsHeldInABodyNothingReaches() throws {
+    func aDeclarationIsHeldInABodyNothingReaches() async throws {
         // Given. A procedure that runs an effect, so it is not in the pure set,
         // and that nothing calls, so it is not on the frontier. Its text still
         // has to compile
@@ -111,15 +111,15 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("app.Missing")
         }
     }
 
     @Test("a variable that says what it holds is held to it, and a write does not retype it")
-    func aDeclaredVariableIsNotRetypedByAWrite() throws {
+    func aDeclaredVariableIsNotRetypedByAWrite() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -134,8 +134,8 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("writes 'held' as string, and it holds int")
         }
@@ -181,7 +181,7 @@ struct DeclaredNameTests {
                 )
             ]
         )
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // When / Then
         await #expect {
@@ -192,7 +192,7 @@ struct DeclaredNameTests {
     }
 
     @Test("a construct that binds the name says what it holds, and the author does not")
-    func aConstructBoundNameTakesNoDeclaration() throws {
+    func aConstructBoundNameTakesNoDeclaration() async throws {
         // Given. A loop binds the round under the statement's name
         let sut = try Module(
             procedures: [
@@ -209,15 +209,15 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("this construct binds the name")
         }
     }
 
     @Test("a name declaring a type parameter is refused, because no call fills a name")
-    func aDeclaredTypeParameterIsRefused() throws {
+    func aDeclaredTypeParameterIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -231,13 +231,13 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect(throws: (any Error).self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: (any Error).self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a declaration inside a module variable is held the way one inside a procedure is")
-    func aDeclarationInsideAModuleVariableIsHeld() throws {
+    func aDeclarationInsideAModuleVariableIsHeld() async throws {
         // Given
         let sut = try Module(
             variables: [
@@ -257,8 +257,8 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("app.Missing")
         }
@@ -306,7 +306,7 @@ struct DeclaredNameTests {
     }
 
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
-    func anUndeclaredClosureDoesNotFitTheSlot() throws {
+    func anUndeclaredClosureDoesNotFitTheSlot() async throws {
         // Given. The same program with the declaration left off. The build works
         // out `pure isolated procedure` for the literal, and the slot asks for
         // `procedure`
@@ -335,8 +335,8 @@ struct DeclaredNameTests {
         )
 
         // When / Then
-        #expect(throws: (any Error).self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: (any Error).self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 }

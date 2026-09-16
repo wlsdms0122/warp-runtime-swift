@@ -40,7 +40,7 @@ struct VocabularyTests {
                 )
             ]
         )
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
                 ["var": "verdict"],
@@ -68,10 +68,10 @@ struct VocabularyTests {
     }
 
     @Test("a procedure left out of the link is a procedure that does not exist")
-    func omittedVocabularyDoesNotResolve() throws {
+    func omittedVocabularyDoesNotResolve() async throws {
         // Given. Nothing is privileged, so the standard module is a file like
         // any other and leaving it out means leaving out what it declares
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
                 ["let": "said", "value": ["call": ["procedure": "std.collection.count"]]]
@@ -79,8 +79,8 @@ struct VocabularyTests {
         ], importing: ["std.collection.count"])
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut], entry: entryName)
         }
     }
 

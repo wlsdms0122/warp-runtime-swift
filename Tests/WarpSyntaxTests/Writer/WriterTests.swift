@@ -26,19 +26,19 @@ struct WriterTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("every construct survives being written and read back", arguments: Self.corpus)
-    func writingIsAFixedPoint(_ document: Value) throws {
+    func writingIsAFixedPoint(_ document: Value) async throws {
         // Given
-        let once = try sut.value(of: try loader.loadDocument(document))
+        let once = try await sut.value(of: try loader.loadDocument(document))
 
         // When
-        let twice = try sut.value(of: try loader.load(once))
+        let twice = try await sut.value(of: try loader.load(once))
 
         // Then
         #expect(once == twice)
     }
 
     @Test("a program nobody wrote a document for still round-trips", arguments: Self.assembled)
-    func writingIsAFixedPointForAssembledPrograms(_ module: Module) throws {
+    func writingIsAFixedPointForAssembledPrograms(_ module: Module) async throws {
         // Given. Every other corpus here starts from a document, so what they
         // check is that documents survive. The half this direction exists for
         // is the other one: a program built by hand, which no reader has ever
@@ -46,32 +46,32 @@ struct WriterTests {
         let once = try sut.value(of: module)
 
         // When
-        let twice = try sut.value(of: try loader.load(once))
+        let twice = try await sut.value(of: try loader.load(once))
 
         // Then
         #expect(once == twice)
     }
 
     @Test("a canonical document is written back exactly as it was")
-    func aCanonicalDocumentIsWrittenBackUnchanged() throws {
+    func aCanonicalDocumentIsWrittenBackUnchanged() async throws {
         // Given. `canonical` is written in the types themselves, so reading it
         // and writing it must arrive at the same document. A fixed point only
         // says the writing settled; this says nothing was left behind, because
         // every slot the language has is written down here and a slot that
         // stopped being written would go missing from the answer.
-        let sut = try sut.value(of: try loader.load(Self.canonical))
+        let sut = try await sut.value(of: try loader.load(Self.canonical))
 
         // Then
         #expect(sut == Self.canonical)
     }
 
     @Test("nothing written is spelled", arguments: Self.corpus)
-    func nothingWrittenIsSpelled(_ document: Value) throws {
+    func nothingWrittenIsSpelled(_ document: Value) async throws {
         // Given. The corpus is written with every spelling the notation has.
         // What comes back may use none of them, because a spelling is a rule
         // the reading side would have to implement the same way, and the
         // reading side is somewhere else.
-        let written = try sut.value(of: try loader.loadDocument(document))
+        let written = try await sut.value(of: try loader.loadDocument(document))
 
         // When. The two template keys, which are reserved in every notation.
         // The condition spelling these are read with is recognised by `of`,
@@ -85,14 +85,14 @@ struct WriterTests {
     }
 
     @Test("a spelling whose key is nobody's procedure does not survive being written")
-    func aSpelledKeyIsNotWrittenBack() throws {
+    func aSpelledKeyIsNotWrittenBack() async throws {
         // Given. The corpus above cannot answer this. Its notation names the
         // procedure in the document (`{ of: x, equal: y }`), so a key that survived
         // and a procedure that was written look the same on the way out. This one
         // spells `holds` and reaches `example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
         let loader = Loader()
-        let module = try loader.loadProcedure([
+        let module = try await loader.loadProcedure([
             "parameters": ["ready": "bool"],
             "body": [
                 [
@@ -197,11 +197,11 @@ struct WriterTests {
     }
 
     @Test("a spelling is written back as the procedures it stood for")
-    func aSpellingIsWrittenPlainly() throws {
+    func aSpellingIsWrittenPlainly() async throws {
         // Given. `{ of: x, <procedure>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
-        let module = try loader.loadProcedure([
+        let module = try await loader.loadProcedure([
             "parameters": ["procedure": "string"],
             "body": [
                 [
@@ -265,12 +265,12 @@ struct WriterTests {
     }
 
     @Test("a notation that gave up a procedure cannot write what it said")
-    func aDroppedKeyCannotBeWritten() throws {
+    func aDroppedKeyCannotBeWritten() async throws {
         // Given. The registry is what a notation *is*, so a type whose procedure it
         // no longer registers is a type it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it
         // back through this same notation would refuse.
-        let module = try loader.loadProcedure([
+        let module = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "walked",

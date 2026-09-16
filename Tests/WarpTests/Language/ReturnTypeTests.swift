@@ -38,7 +38,7 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try builder.build([sut], entry: entryName)
+        let image = try await builder.build([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then. Settled to the declared representation, not merely waved past
@@ -58,12 +58,12 @@ struct ReturnTypeTests {
 
         await #expect(throws: (any Error).self) {
             try await Executor()
-                .run(try builder.build([narrowing], entry: entryName))
+                .run(try await builder.build([narrowing], entry: entryName))
         }
     }
 
     @Test("a body that answers something else is refused where both are written")
-    func wrongReturnFails() throws {
+    func wrongReturnFails() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -82,8 +82,8 @@ struct ReturnTypeTests {
 
         // When / Then. The body and the declaration beside it are one
         // document's text, so nothing has to run to find them disagreeing
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: entryName)
         }
     }
 
@@ -115,7 +115,7 @@ struct ReturnTypeTests {
         )
 
         // When
-        let image = try builder.build([sut], entry: entryName)
+        let image = try await builder.build([sut], entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then
@@ -123,7 +123,7 @@ struct ReturnTypeTests {
     }
 
     @Test("an answer naming a type nobody declared is refused at link")
-    func unknownReturnTypeIsABuildError() throws {
+    func unknownReturnTypeIsABuildError() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -140,8 +140,8 @@ struct ReturnTypeTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            _ = try builder.build([sut], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            _ = try await builder.build([sut], entry: entryName)
         }
     }
 }

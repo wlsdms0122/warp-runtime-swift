@@ -96,7 +96,7 @@ struct RangeTests {
     }
 
     @Test("a constant argument is judged at the build")
-    func aConstantArgumentIsJudgedAtTheLink() throws {
+    func aConstantArgumentIsJudgedAtTheLink() async throws {
         // Given. The argument is text, so the miss is the build's to see
         let sut = try Module(
             procedures: [
@@ -118,15 +118,15 @@ struct RangeTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("outside int(0...255)")
         }
     }
 
     @Test("a default outside its own range refuses at the build")
-    func aDefaultOutsideTheRangeRefuses() throws {
+    func aDefaultOutsideTheRangeRefuses() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -146,15 +146,15 @@ struct RangeTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("outside int(0...255)")
         }
     }
 
     @Test("a range that admits nothing refuses where it was written")
-    func anEmptyRangeRefusesAtTheLink() throws {
+    func anEmptyRangeRefusesAtTheLink() async throws {
         // Given. No whole number is at once at least 9 and at most 1
         let sut = try Module(
             procedures: [
@@ -169,18 +169,18 @@ struct RangeTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
     @Test("a enum entirely past the bounds admits nothing")
-    func aOneOfOutsideTheRangeRefuses() throws {
+    func aOneOfOutsideTheRangeRefuses() async throws {
         // Given. No candidate is a value the range could hold, so the parameter
         // fits no call: the same judgment an empty enum gets
-        func module(candidates candidates: [String]) throws -> Module {
+        func module(candidates candidates: [String]) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -200,16 +200,16 @@ struct RangeTests {
         }
 
         // When / Then
-        #expect {
-            try builder.build([module(candidates: ["300", "999"])] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([module(candidates: ["300", "999"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
 
         // A live candidate does not excuse a dead one: `300` is a member no
         // call could ever match, and the refusal names it.
-        #expect {
-            try builder.build([module(candidates: ["0", "300"])] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([module(candidates: ["0", "300"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'300'")
         }
@@ -217,8 +217,8 @@ struct RangeTests {
         // One value, one spelling: `+1` and `007` are second spellings of
         // numbers that already have one, so neither is a candidate an int slot
         // can spell. The enum admits nothing and refuses.
-        #expect {
-            try builder.build([module(candidates: ["+1", "007"])] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([module(candidates: ["+1", "007"])] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }

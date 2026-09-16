@@ -17,7 +17,7 @@ struct GreaterThanQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         let (order, _) = try ordering.of(question.receiver, and: question[.value])
 
         return .bool(order == .orderedDescending)

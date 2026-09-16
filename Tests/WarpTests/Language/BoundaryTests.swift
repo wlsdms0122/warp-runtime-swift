@@ -30,7 +30,7 @@ struct BoundaryTests {
     // MARK: - Lifecycle
     // MARK: - Test
     @Test("what arithmetic takes is decided before it runs")
-    func arithmeticIsCheckedBeforeRunning() throws {
+    func arithmeticIsCheckedBeforeRunning() async throws {
         // Given, while arithmetic declared `any`, a sum of a number and a piece
         // of text was found by running it. In a language whose whole claim is
         // that what can be decided before running is, that was the claim not
@@ -51,15 +51,15 @@ struct BoundaryTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect {
+            try await builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("'N' is read as")
         }
     }
 
     @Test("what a procedure answers is what it was given, not merely a number")
-    func arithmeticAnswersTheKindItWasGiven() throws {
+    func arithmeticAnswersTheKindItWasGiven() async throws {
         // Given. A whole number added to a whole number is a whole number, and
         // a declaration that only said "a number" would not fit anywhere asking
         // for one. Both sides and the answer are one reading, which is what a
@@ -95,8 +95,8 @@ struct BoundaryTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect(throws: Never.self) {
+            try await builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
@@ -129,7 +129,7 @@ struct BoundaryTests {
     }
 
     @Test("a type parameter read two ways that do not fit is a refusal, not a shrug")
-    func aDisagreeingHoleIsRefused() throws {
+    func aDisagreeingHoleIsRefused() async throws {
         // Given. Appending a whole number to a list of text. The hole is read
         // as text by the list and as a number by what is being appended, and
         // widening to `any` was the checker announcing it had stopped checking
@@ -151,8 +151,8 @@ struct BoundaryTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect {
+            try await builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("'Element' is read as")
                 && "\(error)".contains("int")
@@ -161,7 +161,7 @@ struct BoundaryTests {
     }
 
     @Test("a type parameter read as anything is anything")
-    func anyIsTheLoosestReading() throws {
+    func anyIsTheLoosestReading() async throws {
         // Given. A list of anything, added to twice with two kinds of value.
         // `accepts` cannot order `any` against a type, since everything takes
         // `any` and `any` takes everything, so asking which is looser answers
@@ -194,13 +194,13 @@ struct BoundaryTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect(throws: Never.self) {
+            try await builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
     @Test("a name a module declared and the type it stands for are one reading")
-    func aDeclaredNameIsNotADisagreement() throws {
+    func aDeclaredNameIsNotADisagreement() async throws {
         // Given. The parameter is read as `Tree` by the list and as the record
         // the call wrote. They are the same type, and calling them a
         // disagreement was asking the question without the table that answers
@@ -225,13 +225,13 @@ struct BoundaryTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect(throws: Never.self) {
+            try await builder.build([module] + Module.standard, entry: "entry")
         }
     }
 
     @Test("a type parameter read loosely and tightly holds the loose reading")
-    func aWiderReadingHolds() throws {
+    func aWiderReadingHolds() async throws {
         // Given. A list of numbers and a whole number are not a disagreement.
         // One reading takes the other, so the one that holds both is the
         // answer, and refusing here would refuse a program with nothing wrong
@@ -253,8 +253,8 @@ struct BoundaryTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect(throws: Never.self) {
+            try await builder.build([module] + Module.standard, entry: "entry")
         }
     }
 

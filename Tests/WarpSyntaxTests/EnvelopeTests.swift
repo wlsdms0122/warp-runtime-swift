@@ -29,7 +29,7 @@ struct EnvelopeTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a document written for a later reader is refused")
-    func aLaterDocumentIsRefused() {
+    func aLaterDocumentIsRefused() async {
         // Given. This is the failure the version exists to prevent. Without it
         // a reader meets a type it does not know, reads what it recognises and
         // ignores the rest, and runs a program nobody wrote.
@@ -43,7 +43,7 @@ struct EnvelopeTests {
         }
 
         // And one written for this reader is read
-        #expect(throws: Never.self) {
+        await #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
                 "imports": [],
@@ -114,7 +114,7 @@ struct EnvelopeTests {
     }
 
     @Test("a document that says nothing about what it imports is refused")
-    func aSilentManifestIsRefused() {
+    func aSilentManifestIsRefused() async {
         // Given. Silence is not a claim a caller can act on. The list is read
         // before the program and a grant is decided from it, so a document that
         // leaves it out is asking to be trusted about the one thing worth
@@ -131,7 +131,7 @@ struct EnvelopeTests {
 
         // And a program that sends nothing still says so, rather than saying
         // nothing. The empty list is a claim and the absent one is not.
-        #expect(throws: Never.self) {
+        await #expect(throws: Never.self) {
             try loader.load([
                 "warp": .int(Envelope.version),
                 "imports": [],
@@ -296,7 +296,7 @@ struct EnvelopeTests {
     }
 
     @Test("what a program can do to anything is what it sends")
-    func sendingBoundsWhatAProgramReaches() throws {
+    func sendingBoundsWhatAProgramReaches() async throws {
         // Given. A path reaches procedures too, and this is why the list can still
         // be read as the bounds of what a program is allowed to do. `count`
         // here is reached by walking rather than sending, and a path only ever
@@ -316,8 +316,8 @@ struct EnvelopeTests {
         #expect(module.imports.isEmpty)
 
         // And the build still holds it to that. The procedure has to be there
-        #expect(throws: BuildError.self) {
-            try Builder().build([module], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([module], entry: entryName)
         }
     }
 

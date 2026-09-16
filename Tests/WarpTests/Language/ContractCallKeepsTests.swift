@@ -101,7 +101,7 @@ struct ContractCallKeepsTests {
         )
 
         // When
-        let image = try Builder().build([sut] + Module.standard, entry: "app.entry")
+        let image = try await Builder().build([sut] + Module.standard, entry: "app.entry")
         let answered = try await Executor().run(image, arguments: [:])
 
         // Then. The second round is the last whole one, and what it bound is

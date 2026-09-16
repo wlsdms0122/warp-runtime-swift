@@ -17,7 +17,7 @@ struct MaxQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         let operand = question[.value]
         let (order, receiver) = try ordering.of(question.receiver, and: operand)
 

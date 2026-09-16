@@ -23,7 +23,7 @@ struct ArtifactRefusalTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("is refused where a module variable starts as one")
-    func aVariableThatStartsAsAProcedure() throws {
+    func aVariableThatStartsAsAProcedure() async throws {
         // Given. A variable whose starting value is a closure, which links and
         // runs: the refusal is about writing it down and not about the program.
         let sut = try Module(
@@ -37,11 +37,11 @@ struct ArtifactRefusalTests {
             ]
         )
 
-        let compiled = try builder.compile([sut] + Module.standard)
+        let compiled = try await builder.compile([sut] + Module.standard)
 
         // When / Then. The program stands, and no artifact of it is written.
-        #expect(throws: Never.self) {
-            try builder.link(compiled, entry: "app.entry", supplying: Supplying(Module.standard))
+        await #expect(throws: Never.self) {
+            try await builder.link(compiled, entry: "app.entry", supplying: Supplying(Module.standard))
         }
 
         #expect(compiled.allSatisfy { one in one.written == nil } == false)
@@ -49,7 +49,7 @@ struct ArtifactRefusalTests {
     }
 
     @Test("is refused where a body folds one into a literal")
-    func aLiteralFoldedFromAProcedure() throws {
+    func aLiteralFoldedFromAProcedure() async throws {
         // Given. A constant that is a closure, which folding stands in the body
         // that applies it.
         let sut = try Module(
@@ -64,7 +64,7 @@ struct ArtifactRefusalTests {
         )
 
         // When / Then.
-        #expect(try builder.compile([sut] + Module.standard).contains { one in one.written == nil })
+        #expect(try await builder.compile([sut] + Module.standard).contains { one in one.written == nil })
     }
 
     // MARK: - Public

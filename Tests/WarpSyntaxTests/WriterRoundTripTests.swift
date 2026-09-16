@@ -23,7 +23,7 @@ struct WriterRoundTripTests {
 
     // MARK: - Test
     @Test("a construct whose body is empty still writes the key its reader wants")
-    func anEmptyBodyIsStillWritten() throws {
+    func anEmptyBodyIsStillWritten() async throws {
         // Given. The three constructs whose `body` the document format calls
         // required. A block written as a `block` is the exception and stays
         // one: nothing there has to have it.
@@ -49,7 +49,7 @@ struct WriterRoundTripTests {
             let written = try sut.value(of: module)
 
             // Then
-            #expect(throws: Never.self) { try Loader().load(written, identity: nil) }
+            await #expect(throws: Never.self) { try Loader().load(written, identity: nil) }
         }
     }
 

@@ -30,7 +30,7 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try builder.build(
+        let image = try await builder.build(
             [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
@@ -81,7 +81,7 @@ struct SwiftAuthoringTests {
 
         // When Comparing is a procedure, so this links the bundle that declares one.
         // The control flow beside it needs nothing.
-        let image = try builder.build(
+        let image = try await builder.build(
             [try Module(procedures: ["entry": procedure]), .logic],
             entry: "entry"
         )
@@ -112,7 +112,7 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try builder.build(
+        let image = try await builder.build(
             [try Module(procedures: ["greet": procedure]), .shouting] + Module.standard,
             entry: "greet"
         )
@@ -161,7 +161,7 @@ struct SwiftAuthoringTests {
         )
 
         // When
-        let image = try builder.build(
+        let image = try await builder.build(
             [try Module(procedures: ["speak": procedure, "echo": echo]), .shouting] + Module.standard,
             entry: "speak"
         )

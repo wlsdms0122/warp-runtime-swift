@@ -22,7 +22,7 @@ struct ConstraintTests {
     // MARK: - Lifecycle
     // MARK: - Test
     @Test("a reading outside the constraint refuses at the build")
-    func aReadingOutsideTheConstraintRefusesAtTheLink() throws {
+    func aReadingOutsideTheConstraintRefusesAtTheLink() async throws {
         // Given. Both sides of `lessThan` are booleans, and `Comparable` admits
         // none of them. The reading is a literal, so the build can see it.
         let sut = try Module(
@@ -40,15 +40,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
         }
     }
 
     @Test("arithmetic on two strings refuses at the build")
-    func arithmeticOnTwoStringsRefusesAtTheLink() throws {
+    func arithmeticOnTwoStringsRefusesAtTheLink() async throws {
         // Given. The two sides agree, so the one type parameter reads one
         // thing. Agreement is not admission: `Numeric` does not admit text.
         let sut = try Module(
@@ -66,8 +66,8 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -136,7 +136,7 @@ struct ConstraintTests {
     }
 
     @Test("a reading a declared constraint does not admit refuses at the build")
-    func aDeclaredConstraintRefusesAtItsOwnBound() throws {
+    func aDeclaredConstraintRefusesAtItsOwnBound() async throws {
         // Given
         let sut = try Module(
             constraints: ["Scalar": [.int, .string]],
@@ -161,15 +161,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'Scalar' does not admit")
         }
     }
 
     @Test("a signature naming a constraint nobody declares refuses at the build")
-    func anUndeclaredConstraintRefusesAtTheLink() throws {
+    func anUndeclaredConstraintRefusesAtTheLink() async throws {
         // Given. Unreached code still has to compile, and a bound naming
         // nothing is a defect whether or not a call ever fills it
         let sut = try Module(
@@ -191,15 +191,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("names 'Sortable', which no module in this link declares")
         }
     }
 
     @Test("one parameter written with two constraints refuses at the build")
-    func twoBoundsOnOneParameterRefuseAtTheLink() throws {
+    func twoBoundsOnOneParameterRefuseAtTheLink() async throws {
         // Given. The bound is written inline, so two slots writing different
         // bounds for one name are two claims about one thing
         let sut = try Module(
@@ -224,15 +224,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("One parameter takes one constraint")
         }
     }
 
     @Test("a bare mention and a bounded mention are one bounded parameter")
-    func aBareMentionRidesTheBoundedOne() throws {
+    func aBareMentionRidesTheBoundedOne() async throws {
         // Given. A bounded `some T` in one slot and a bare one in another are
         // one parameter bounded once, so the bound judges both readings
         let sut = try Module(
@@ -263,15 +263,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'Scalar' does not admit")
         }
     }
 
     @Test("a name cannot be a type and a constraint at once")
-    func aNameDeclaredAsTypeAndConstraintRefuses() throws {
+    func aNameDeclaredAsTypeAndConstraintRefuses() async throws {
         // Given
         let sut = try Module(
             types: ["Scalar": .int],
@@ -286,8 +286,8 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("both a type and a constraint")
@@ -295,7 +295,7 @@ struct ConstraintTests {
     }
 
     @Test("a constraint admitting nothing refuses at the build")
-    func anEmptyConstraintRefusesAtTheLink() throws {
+    func anEmptyConstraintRefusesAtTheLink() async throws {
         // Given. No parameter it bounds could ever be filled, which is the same
         // fact an empty enum states
         let sut = try Module(
@@ -310,15 +310,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("admits nothing")
         }
     }
 
     @Test("a type parameter hidden in a declared type refuses at the build")
-    func aParameterInADeclaredTypeRefusesAtTheLink() throws {
+    func aParameterInADeclaredTypeRefusesAtTheLink() async throws {
         // Given. A declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
         let sut = try Module(
@@ -340,15 +340,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("A type parameter lives in a signature")
         }
     }
 
     @Test("a parameter behind a procedure type in a declared type refuses too")
-    func aParameterInADeclaredProcedureTypeRefusesAtTheLink() throws {
+    func aParameterInADeclaredProcedureTypeRefusesAtTheLink() async throws {
         // Given. A declared type is not a filling site however deep the
         // parameter hides: nothing ever binds it, so the claim would go
         // unjudged everywhere
@@ -371,15 +371,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("A type parameter lives in a signature")
         }
     }
 
     @Test("a name that reaches only names refuses at the build")
-    func aNameOnlyCycleRefusesAtTheLink() throws {
+    func aNameOnlyCycleRefusesAtTheLink() async throws {
         // Given. A type may name itself through a type, and a name that only
         // names names never becomes one
         let cycles: [[Name: TypeExpression]] = [
@@ -400,8 +400,8 @@ struct ConstraintTests {
             )
 
             // When / Then
-            #expect {
-                try builder.build([sut] + Module.standard, entry: entryName)
+            await #expect {
+                try await builder.build([sut] + Module.standard, entry: entryName)
             } throws: { error in
                 error is BuildError && "\(error)".contains("through nothing but names")
             }
@@ -419,13 +419,13 @@ struct ConstraintTests {
             ]
         )
 
-        #expect(throws: Never.self) {
-            try builder.build([tree] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([tree] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a constraint member is a concrete type")
-    func aConstraintMemberMustBeConcrete() throws {
+    func aConstraintMemberMustBeConcrete() async throws {
         // Given. `some` in member position stands for a type and names none;
         // admitting it would also let a membership chase itself forever
         for member in [TypeExpression.parameter(name: "S", constraint: "Loop"), .any, .never] {
@@ -441,8 +441,8 @@ struct ConstraintTests {
             )
 
             // When / Then
-            #expect {
-                try builder.build([sut] + Module.standard, entry: entryName)
+            await #expect {
+                try await builder.build([sut] + Module.standard, entry: entryName)
             } throws: { error in
                 error is BuildError && "\(error)".contains("a member is a concrete type")
             }
@@ -450,7 +450,7 @@ struct ConstraintTests {
     }
 
     @Test("a enum no member of the bound can spell refuses at the build")
-    func aOneOfOutsideTheBoundRefusesAtTheLink() throws {
+    func aOneOfOutsideTheBoundRefusesAtTheLink() async throws {
         // Given. Procedures on a Numeric slot: no member of the constraint can spell
         // them, so no call could ever fit this parameter
         let sut = try Module(
@@ -476,19 +476,19 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("enum admits nothing")
         }
     }
 
     @Test("a fraction candidate is judged by the fraction's one spelling")
-    func aFractionCandidateIsJudgedByItsSpelling() throws {
+    func aFractionCandidateIsJudgedByItsSpelling() async throws {
         // Given. A fraction spells with its point, so `1` on a double slot is
         // the int's spelling and a member no fraction could ever match, and
         // `1e0`/`1.00` are second spellings of a fraction that has one
-        func module(candidates candidates: [String]) throws -> Module {
+        func module(candidates candidates: [String]) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -505,8 +505,8 @@ struct ConstraintTests {
         }
 
         for dead in ["1", "1e0", "1.50", "1e-5"] {
-            #expect("\(dead)") {
-                try builder.build([module(candidates: ["2.0", dead])] + Module.standard, entry: entryName)
+            await #expect("\(dead)") {
+                try await builder.build([module(candidates: ["2.0", dead])] + Module.standard, entry: entryName)
             } throws: { error in
                 error is BuildError && "\(error)".contains("'\(dead)'")
             }
@@ -514,8 +514,8 @@ struct ConstraintTests {
 
         // The spellings a document itself writes are alive. The exponent form
         // included, sign and padding and all.
-        #expect(throws: Never.self) {
-            try builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([module(candidates: ["1.0", "1.5", "1e-05"])] + Module.standard, entry: entryName)
         }
     }
 
@@ -579,7 +579,7 @@ struct ConstraintTests {
     }
 
     @Test("a member hiding a refused type behind a name still refuses")
-    func aMemberBehindANameIsJudgedResolved() throws {
+    func aMemberBehindANameIsJudgedResolved() async throws {
         // Given. An alias is a name for a type, so what the type may not be
         // the alias may not be either
         let sut = try Module(
@@ -595,15 +595,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("a member is a concrete type")
         }
     }
 
     @Test("a recursive type compared with itself agrees instead of recursing")
-    func aRecursiveTypeAcceptsItself() throws {
+    func aRecursiveTypeAcceptsItself() async throws {
         // Given. A type that names itself walks back into the comparison it is
         // inside; meeting the pair again is agreement, not a regress
         let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
@@ -636,13 +636,13 @@ struct ConstraintTests {
             ]
         )
 
-        #expect(throws: Never.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a dot on a record is a read, and a procedure there is written as a call")
-    func aDotOnARecordDoesNotReachAProcedure() throws {
+    func aDotOnARecordDoesNotReachAProcedure() async throws {
         // Given. The record does not declare the name, and a type with fields
         // reads fields alone: the procedure by that name is not consulted, and the
         // refusal says to write the call
@@ -660,8 +660,8 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("does not declare")
@@ -670,7 +670,7 @@ struct ConstraintTests {
     }
 
     @Test("a dot on a type with no fields says to write the call")
-    func aDotOnAFieldlessTypeSaysToWriteTheCall() throws {
+    func aDotOnAFieldlessTypeSaysToWriteTheCall() async throws {
         // Given. Text has no name to read, so the refusal names the one
         // spelling that reaches the procedure: the written call
         let sut = try Module(
@@ -687,8 +687,8 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("string has no name there to read")
@@ -697,7 +697,7 @@ struct ConstraintTests {
     }
 
     @Test("a receiver written in front and by name is refused")
-    func aReceiverAndASameNamedArgumentAreOneSlot() throws {
+    func aReceiverAndASameNamedArgumentAreOneSlot() async throws {
         // Given. The dot writes the receiver and the arguments write `of`
         // again. One parameter takes one argument, and the one by name would be
         // neither read nor run, so the build refuses the call
@@ -716,15 +716,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("both in front and by name")
         }
     }
 
     @Test("a closure's signature is held to the same judgment as a declaration")
-    func aClosureSignatureIsJudgedAtTheLink() throws {
+    func aClosureSignatureIsJudgedAtTheLink() async throws {
         // Given. Unreached code still has to compile, and a signature written
         // inline is a declaration however deep a body buries it
         let sut = try Module(
@@ -749,15 +749,15 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("names 'Nope', which no module in this link declares")
         }
     }
 
     @Test("a receiver naming no parameter refuses where it is declared")
-    func aReceiverNamingNoParameterRefuses() throws {
+    func aReceiverNamingNoParameterRefuses() async throws {
         // Given. The declaration states a fact about its own parameters, and a
         // name pointing at none of them is judged where it is written
         let sut = try Module(
@@ -779,8 +779,8 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("receiver names 'of'")
         }
@@ -845,7 +845,7 @@ struct ConstraintTests {
     }
 
     @Test("a constrained reading fed to a looser bound passes")
-    func aConstrainedReadingFitsALooserBound() throws {
+    func aConstrainedReadingFitsALooserBound() async throws {
         // Given. Inside a generic body the argument reads as the enclosing
         // parameter, and its membership is a subset of what the callee asks
         let sut = try Module(
@@ -881,8 +881,8 @@ struct ConstraintTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 }

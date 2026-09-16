@@ -50,25 +50,25 @@ struct FoldedContractTests {
     // Given. A procedure answering `any` hands a string where a contract is asked,
     // and the reading says nothing about what arrives.
     @Test("a value wearing no name is refused however much of the list is in hand")
-    func aNamelessValueIsRefused() throws {
+    func aNamelessValueIsRefused() async throws {
         let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
 
         // When / Then. No claim puts a string under a contract, so a document
         // compiled against part of the list settles this where the whole list
         // would. The refusal stands where the constant is folded, which is the
         // compile itself.
-        #expect {
+        await #expect {
             var compiled: [Compiled] = []
 
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+                compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
             "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
         }
 
-        #expect {
-            try Builder().build(modules, entry: entryName)
+        await #expect {
+            try await Builder().build(modules, entry: entryName)
         } throws: { error in
             "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
         }
@@ -78,7 +78,7 @@ struct FoldedContractTests {
     // refusal the list makes stands where the pair was folded, which is the
     // constant that handed it and not whichever was settled last.
     @Test("a deferred pair stands where it was folded, not where the walk ended")
-    func aDeferredPairStandsWhereItWasFolded() throws {
+    func aDeferredPairStandsWhereItWasFolded() async throws {
         let asking = try Module(
             contracts: ["app.Describable": ["describe": Signature(returns: .string)]],
             procedures: [
@@ -123,8 +123,8 @@ struct FoldedContractTests {
             ]
         )
 
-        #expect {
-            try Builder().build([asking, typed, program] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([asking, typed, program] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("constants.app.zzz:")
                 && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
@@ -135,7 +135,7 @@ struct FoldedContractTests {
     // and the reading says nothing about what arrives, so nothing is written
     // down where the call is read.
     @Test("a value wearing a name is written down where the table cannot settle")
-    func aNamedValueIsWrittenDown() throws {
+    func aNamedValueIsWrittenDown() async throws {
         let typed = try Module(
             types: ["bank.Plain": .record(["note": .string])],
             procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
@@ -150,15 +150,15 @@ struct FoldedContractTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. The pair the fold handed over is answered by the list, which
         // is the same answer the whole graph gives, and both say which
         // declaration was being settled when the fold turned it up.
-        for link in [compiled, try Builder().compile(modules)] {
-            #expect {
-                try Builder().link(link, entry: entryName, supplying: Supplying(Module.standard))
+        for link in [compiled, try await Builder().compile(modules)] {
+            await #expect {
+                try await Builder().link(link, entry: entryName, supplying: Supplying(Module.standard))
             } throws: { error in
                 "\(error)".contains("constants.app.counted:")
                     && "\(error)".contains("no document in this link says 'bank.Plain' answers it")

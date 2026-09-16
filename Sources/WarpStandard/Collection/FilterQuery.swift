@@ -48,26 +48,30 @@ struct FilterQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         guard let receiver = question.receiver, let elements = receiver.elements else { return nil }
 
         let body = question[.value]
 
-        // The receiver's own elements, fewer of them, so the spelling stands.
-        return receiver.respelled(
-            try elements.filter { element in
-                let verdict = try question.call(body, with: [(name: "item", value: element)])
+        var kept: [Value] = []
 
-                guard case let .bool(kept) = verdict else {
-                    throw ExecutionError(
-                        "filter asks a procedure answering bool, and this one"
-                            + " answered \(verdict.type)"
-                    )
-                }
+        for element in elements {
+            let verdict = try await question.call(body, with: [(name: "item", value: element)])
 
-                return kept
+            guard case let .bool(keeping) = verdict else {
+                throw ExecutionError(
+                    "filter asks a procedure answering bool, and this one"
+                        + " answered \(verdict.type)"
+                )
             }
-        )
+
+            guard keeping else { continue }
+
+            kept.append(element)
+        }
+
+        // The receiver's own elements, fewer of them, so the spelling stands.
+        return receiver.respelled(kept)
     }
 
     // MARK: - Private

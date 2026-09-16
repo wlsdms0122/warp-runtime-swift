@@ -11,7 +11,7 @@ struct UnheldClaimTests {
     private let entryName: Name = "app.main"
 
     @Test("a claim with no procedure behind it refuses only what leans on it")
-    func anUnheldClaimRefusesOnlyWhatLeansOnIt() throws {
+    func anUnheldClaimRefusesOnlyWhatLeansOnIt() async throws {
         // Given. A contract, a type, and a claim about the two with no procedure
         // anywhere to answer it. The program names both for its own reasons
         // and hands the type nowhere.
@@ -76,11 +76,11 @@ struct UnheldClaimTests {
         // contract, and the program that never handed the type where the
         // contract is asked is not the one to hear about it.
         #expect(closed.contains { module in module.claims.isEmpty == false })
-        #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(closed, entry: entryName) }
     }
 
     @Test("a good claim beside an unheld one in the same document")
-    func aGoodClaimBesideAnUnheldOne() throws {
+    func aGoodClaimBesideAnUnheldOne() async throws {
         // Given. One document claiming two pairs, one of them with no procedure
         // behind it, and a program leaning on the other.
         let asking = try Module(
@@ -150,11 +150,11 @@ struct UnheldClaimTests {
 
         // Then. The pair the program leans on is answered, and the one beside
         // it that nothing can answer refuses nobody.
-        #expect(throws: Never.self) { try Builder().build(closed, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(closed, entry: entryName) }
     }
 
     @Test("an unheld claim refuses at the call that leaned on it")
-    func anUnheldClaimRefusesAtTheLeaningCall() throws {
+    func anUnheldClaimRefusesAtTheLeaningCall() async throws {
         // Given. The claim in one document with no procedure behind it, and the
         // program that hands the type in another.
         let asking = try Module(
@@ -205,8 +205,8 @@ struct UnheldClaimTests {
         // When / Then. The refusal says why the claim did not hold and stands
         // where the type was handed over, which is the document an author is
         // reading.
-        #expect {
-            try Builder().build([asking, typed, claims, program] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([asking, typed, claims, program] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("procedures.app.main.result")
                 && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
@@ -214,7 +214,7 @@ struct UnheldClaimTests {
     }
 
     @Test("a constant folded before the claim arrives is answered by the list")
-    func aFoldedConstantIsAnsweredByTheList() throws {
+    func aFoldedConstantIsAnsweredByTheList() async throws {
         // Given. A procedure bounded by a contract that answers without running, a
         // constant handing it a type, and the claim in a document the program
         // never names.
@@ -282,10 +282,10 @@ struct UnheldClaimTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         #expect(throws: Never.self) { try Builder().link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
-        #expect(throws: Never.self) { try Builder().build(modules, entry: entryName) }
+        await #expect(throws: Never.self) { try await Builder().build(modules, entry: entryName) }
     }
 }

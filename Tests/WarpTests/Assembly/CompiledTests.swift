@@ -22,7 +22,7 @@ struct CompiledTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("one graph compiled once answers every entry asked of it")
-    func oneCompileAnswersManyEntries() throws {
+    func oneCompileAnswersManyEntries() async throws {
         // Given. Two entries, neither reaching the other.
         let sut = try Module(
             procedures: [
@@ -32,7 +32,7 @@ struct CompiledTests {
         )
 
         // When. Compiled once, linked twice.
-        let compiled = try compiled([sut] + Module.standard)
+        let compiled = try await compiled([sut] + Module.standard)
 
         // Then. Each image starts where it was asked to.
         #expect(try builder.link(compiled, entry: "app.here", supplying: Supplying(Module.standard)).start == Assembled(compiled).rows["app.here"])
@@ -40,7 +40,7 @@ struct CompiledTests {
     }
 
     @Test("what a document says holds whichever entry a caller names")
-    func judgementDoesNotDependOnTheEntry() throws {
+    func judgementDoesNotDependOnTheEntry() async throws {
         // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
             procedures: [
@@ -54,13 +54,13 @@ struct CompiledTests {
         )
 
         // When / Then. Compiling refuses, and no entry was named to refuse it.
-        #expect(throws: BuildError.self) {
-            try compiled([sut] + Module.standard)
+        await #expect(throws: BuildError.self) {
+            try await compiled([sut] + Module.standard)
         }
     }
 
     @Test("a declaration an entry never calls is not reported as reached")
-    func reachIsStillTheEntrysOwn() throws {
+    func reachIsStillTheEntrysOwn() async throws {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(body: [], result: .literal(.int(1))),
@@ -68,27 +68,27 @@ struct CompiledTests {
             ]
         )
 
-        let image = try builder.link(try compiled([sut] + Module.standard), entry: entryName, supplying: Supplying(Module.standard))
+        let image = try await builder.link(try compiled([sut] + Module.standard), entry: entryName, supplying: Supplying(Module.standard))
 
         #expect(image.reached.contains(entryName))
         #expect(!image.reached.contains("app.aside"))
     }
 
     @Test("an entry no module declares is refused by the link and not by the compile")
-    func anUnknownEntryIsTheLinksRefusal() throws {
+    func anUnknownEntryIsTheLinksRefusal() async throws {
         let sut = try Module(
             procedures: [entryName: Procedure(body: [], result: .literal(.int(1)))]
         )
 
-        let compiled = try compiled([sut] + Module.standard)
+        let compiled = try await compiled([sut] + Module.standard)
 
-        #expect(throws: BuildError.self) {
-            try builder.link(compiled, entry: "app.nowhere", supplying: Supplying(Module.standard))
+        await #expect(throws: BuildError.self) {
+            try await builder.link(compiled, entry: "app.nowhere", supplying: Supplying(Module.standard))
         }
     }
 
     @Test("a document's declarations take a run of rows rather than scattering")
-    func aDocumentTakesABlockOfRows() throws {
+    func aDocumentTakesABlockOfRows() async throws {
         // Given. Two documents whose spellings interleave in name order, so a
         // table sorted by name alone would scatter both.
         let first = try Module(
@@ -105,11 +105,11 @@ struct CompiledTests {
         )
 
         // When.
-        let rows = try Assembled(compiled([first, second])).rows
+        let rows = try await Assembled(compiled([first, second])).rows
 
         // Then. Each document's rows are next to each other, and in name
         // order inside the run.
-        let ours = try #require(rows["a.one"])
+        let ours = try await #require(rows["a.one"])
 
         #expect(rows["c.three"] == ours + 1)
         #expect(rows["b.two"] == ours + 2)
@@ -118,7 +118,7 @@ struct CompiledTests {
     }
 
     @Test("a fact nobody declared crosses documents in the order they stand")
-    func aDerivedFactCrossesDocuments() throws {
+    func aDerivedFactCrossesDocuments() async throws {
         // Given. Three documents in a chain. The bottom one reads its own
         // variable, so it answers by the run's state rather than on its own,
         // and the two above reach it only through each other.
@@ -154,7 +154,7 @@ struct CompiledTests {
 
         // When. Handed over with the one that is needed last, so the standing
         // has to put it first for the answer to be there when it is asked.
-        let compiled = try compiled([top, middle, bottom])
+        let compiled = try await compiled([top, middle, bottom])
 
         func purity(of declared: Name) throws -> Purity {
             try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].purity
@@ -202,7 +202,7 @@ struct CompiledTests {
     }
 
     @Test("a document's types take a run of type rows of their own")
-    func aDocumentTakesABlockOfTypeRows() throws {
+    func aDocumentTakesABlockOfTypeRows() async throws {
         // Given. A document naming a type another declares, handed over first,
         // so the rows follow the documents and not what they name.
         let naming = try Module(
@@ -214,7 +214,7 @@ struct CompiledTests {
         let held = try Module(types: ["a.Held": .int], procedures: [:])
 
         // When.
-        let loweredTypes = try builder.link(compiled([naming, held]), entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes
+        let loweredTypes = try await builder.link(compiled([naming, held]), entry: entryName, supplying: Supplying(Module.standard)).types.loweredTypes
 
         // Then. Each document's rows are a run of their own, in name order
         // inside it, laid down in the order the caller handed the documents
@@ -226,13 +226,13 @@ struct CompiledTests {
     }
 
     @Test("compiling leaves which types answer a contract to the link")
-    func aContractCallIsFilledAtTheLink() throws {
+    func aContractCallIsFilledAtTheLink() async throws {
         // Given. A procedure calling through a contract, and two types answering it
         // from a document that procedure never names.
         let sut = try describing()
 
         // When. Compiled.
-        let compiled = try compiled(sut + Module.standard)
+        let compiled = try await compiled(sut + Module.standard)
 
         // Then. The call names the contract's procedure and no row.
         let compiledCall = try dispatch(in: code(of: "app.tell", in: compiled))
@@ -321,18 +321,18 @@ struct CompiledTests {
 
     // Each document compiled against the ones already compiled, in the order
     // the graph says they stand.
-    private func incremental(_ modules: [Module]) throws {
+    private func incremental(_ modules: [Module]) async throws {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         _ = try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
     }
 
     @Test("a claim answers a document that never names the one making it")
-    func aClaimAnswersADocumentThatDoesNotNameIt() throws {
+    func aClaimAnswersADocumentThatDoesNotNameIt() async throws {
         // Given
         let (typed, asking, claims, program) = try leaning()
 
@@ -340,42 +340,42 @@ struct CompiledTests {
         // claim standing before the program and after it. Nothing in the
         // program points at the claim, so the order the caller listed them in
         // is what decides which side it lands on, and it decides nothing.
-        #expect(throws: Never.self) {
-            try builder.build([typed, asking, claims, program] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([typed, asking, claims, program] + Module.standard, entry: entryName)
         }
-        #expect(throws: Never.self) {
-            try incremental([typed, asking, claims, program] + Module.standard)
+        await #expect(throws: Never.self) {
+            try await incremental([typed, asking, claims, program] + Module.standard)
         }
-        #expect(throws: Never.self) {
-            try incremental([typed, asking, program, claims] + Module.standard)
+        await #expect(throws: Never.self) {
+            try await incremental([typed, asking, program, claims] + Module.standard)
         }
     }
 
     @Test("a pair no claim answers is refused by the list and not by a compile")
-    func aPairNoClaimAnswersIsRefusedByTheList() throws {
+    func aPairNoClaimAnswersIsRefusedByTheList() async throws {
         // Given. The same, with nobody making the claim.
-        let (typed, asking, _, program) = try leaning()
+        let (typed, asking, _, program) = try await leaning()
         let modules = [typed, asking, program] + Module.standard
 
         // When. Compiled one at a time, which settles nothing about a claim.
         var compiled: [Compiled] = []
 
-        #expect(throws: Never.self) {
+        await #expect(throws: Never.self) {
             for origin in try ModuleGraph(modules).standing {
-                compiled.append(contentsOf: try builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+                compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         }
 
         // Then. The list refuses, naming the pair the program leaned on.
-        #expect {
-            try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
+        await #expect {
+            try await builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard))
         } throws: { error in
             "\(error)".contains("no document in this link says 'bank.Account' answers it")
         }
     }
 
     @Test("a claim is answered by the whole list, not by what a document was compiled against")
-    func aClaimIsBackedWhereTheListIsWhole() throws {
+    func aClaimIsBackedWhereTheListIsWhole() async throws {
         // Given. The claim and the declaration that answers it in two
         // documents. Neither names the other, so the standing may put the
         // claim first, and a document compiled against what stands before it
@@ -422,23 +422,23 @@ struct CompiledTests {
         // the order the graph says they stand.
         var compiled: [Compiled] = []
 
-        for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        for origin in try await ModuleGraph(modules).standing {
+            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. It links, and refusing a claim as unanswered is the whole
         // list's to do rather than a compile's.
         #expect(throws: Never.self) { try builder.link(compiled, entry: entryName, supplying: Supplying(Module.standard)) }
-        #expect(throws: Never.self) { try builder.build(modules, entry: entryName) }
+        await #expect(throws: Never.self) { try await builder.build(modules, entry: entryName) }
     }
 
     @Test("a document numbers its calls from itself, and the link answers with rows")
-    func aCallCarriesTheDocumentsOwnNumber() throws {
+    func aCallCarriesTheDocumentsOwnNumber() async throws {
         // Given. A document calling a procedure it does not declare.
-        let sut = try calling()
+        let sut = try await calling()
 
         // When. Compiled.
-        let compiled = try compiled(sut + Module.standard)
+        let compiled = try await compiled(sut + Module.standard)
 
         // Then. The call stands where the caller's imports put it, which is
         // not the row the graph gave the callee.
@@ -454,7 +454,7 @@ struct CompiledTests {
     }
 
     @Test("what a document lowers to does not move when the link grows")
-    func loweredNumbersDoNotFollowTheGraph() throws {
+    func loweredNumbersDoNotFollowTheGraph() async throws {
         // Given. The same two documents, compiled once alone and once beside a
         // third whose declarations sort in front of theirs.
         let sut = try calling()
@@ -465,8 +465,8 @@ struct CompiledTests {
         )
 
         // When.
-        let alone = try compiled(sut + Module.standard)
-        let beside = try compiled([ahead] + sut + Module.standard)
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled([ahead] + sut + Module.standard)
 
         // Then. The rows moved and the number the body carries did not.
         #expect(try Assembled(alone).rows["a.answers"] != Assembled(beside).rows["a.answers"])
@@ -477,7 +477,7 @@ struct CompiledTests {
     }
 
     @Test("a document's block is its own, whatever else the link holds")
-    func aDocumentsBlockDoesNotFollowTheGraph() throws {
+    func aDocumentsBlockDoesNotFollowTheGraph() async throws {
         // Given. The same two documents, compiled once alone and once beside a
         // third whose declarations sort in front of theirs.
         let sut = try calling()
@@ -488,8 +488,8 @@ struct CompiledTests {
         )
 
         // When.
-        let alone = try compiled(sut + Module.standard)
-        let beside = try compiled([ahead] + sut + Module.standard)
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled([ahead] + sut + Module.standard)
 
         // Then. The rows moved, and the block the document holds did not: the
         // same spellings in the same order, and its closures behind them.
@@ -498,12 +498,12 @@ struct CompiledTests {
     }
 
     @Test("a cast carries the number its own document gave the type")
-    func aCastCarriesTheDocumentsOwnTypeNumber() throws {
+    func aCastCarriesTheDocumentsOwnTypeNumber() async throws {
         // Given. A document casting to a type it declares.
         let sut = try casting()
 
         // When. Compiled.
-        let compiled = try compiled(sut + Module.standard)
+        let compiled = try await compiled(sut + Module.standard)
 
         // Then. The cast stands on the document's own number.
         let number = try #require(cast(in: code(of: entryName, in: compiled)).row)
@@ -520,7 +520,7 @@ struct CompiledTests {
     }
 
     @Test("what a document stands on does not move when the link grows")
-    func loweredTypesDoNotFollowTheGraph() throws {
+    func loweredTypesDoNotFollowTheGraph() async throws {
         // Given. The same document, compiled once alone and once beside one
         // whose type takes a row in front of its own.
         let sut = try casting()
@@ -532,8 +532,8 @@ struct CompiledTests {
         )
 
         // When.
-        let alone = try compiled(sut + Module.standard)
-        let beside = try compiled([ahead] + sut + Module.standard)
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled([ahead] + sut + Module.standard)
 
         // Then. The row moved and the number the cast stands on did not.
         #expect(
@@ -547,15 +547,15 @@ struct CompiledTests {
     }
 
     @Test("an answer the build read carries the number its own document gave")
-    func aReadAnswerCarriesTheDocumentsOwnTypeNumber() throws {
+    func aReadAnswerCarriesTheDocumentsOwnTypeNumber() async throws {
         // Given. A declaration writing no `returns`, whose body answers a type
         // its document declares.
         let sut = try casting()
 
         // When. Compiled alone, and again beside a document whose type takes a
         // type row in front of its own.
-        let alone = try compiled(sut + Module.standard)
-        let beside = try compiled(
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled(
             [
                 try Module(
                     types: ["aaa.Ahead": .record(["first": .int])],
@@ -623,7 +623,7 @@ struct CompiledTests {
         var compiled: [Compiled] = []
 
         for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
         }
 
         // Then. The image runs to what the whole graph compiled at once
@@ -635,7 +635,7 @@ struct CompiledTests {
 
         // And. The two ways of building the accumulator settle the documents
         // the same, name for name and number for number.
-        let whole = try self.compiled(modules)
+        let whole = try await self.compiled(modules)
 
         for (position, origin) in try ModuleGraph(modules).standing.enumerated() {
             let one = compiled[position]
@@ -653,7 +653,7 @@ struct CompiledTests {
     }
 
     @Test("a document cannot declare a name a document it is compiled against declared")
-    func aCompileAgainstRefusesADoubledName() throws {
+    func aCompileAgainstRefusesADoubledName() async throws {
         // Given. Two documents declaring one spelling.
         let first = try Module(
             procedures: [
@@ -675,17 +675,17 @@ struct CompiledTests {
         )
 
         // When. The first is compiled, the second against it.
-        let compiled = try builder.compile([first])
+        let compiled = try await builder.compile([first])
 
         // Then. Two declarations of a name have no way to be told apart,
         // whether the build reads them together or one after the other.
-        #expect(throws: BuildError.self) {
-            try builder.compile([second], against: compiled, supplying: Supplying(Module.standard))
+        await #expect(throws: BuildError.self) {
+            try await builder.compile([second], against: compiled, supplying: Supplying(Module.standard))
         }
     }
 
     @Test("a document laid before the one it imports still answers its numbers")
-    func aDocumentLaidBeforeWhatItImportsIsAnswered() throws {
+    func aDocumentLaidBeforeWhatItImportsIsAnswered() async throws {
         // Given. A document whose body sends a procedure another document declares.
         let library = try Module(
             procedures: [
@@ -704,7 +704,7 @@ struct CompiledTests {
                 )
             ]
         )
-        let compiled = try builder.compile([library] + Module.standard)
+        let compiled = try await builder.compile([library] + Module.standard)
 
         // When. Laid first, so what it sends stands after it. A caller hands
         // compiled documents over in whatever order it holds them, and nothing
@@ -721,7 +721,7 @@ struct CompiledTests {
     }
 
     @Test("a document laid without what it sends is refused by the spelling")
-    func aDocumentLaidWithoutItsSendsIsRefused() throws {
+    func aDocumentLaidWithoutItsSendsIsRefused() async throws {
         // Given. A document whose body sends a procedure another declares, laid on
         // its own. What it numbered reaches nothing.
         let library = try Module(
@@ -741,7 +741,7 @@ struct CompiledTests {
                 )
             ]
         )
-        let alone = try builder.compile([library] + Module.standard)
+        let alone = try await builder.compile([library] + Module.standard)
             .filter { document in document.declared.contains("lib.twice") }
 
         // When / Then. The refusal names the spelling, not the number a body
@@ -812,8 +812,8 @@ struct CompiledTests {
         return read
     }
 
-    private func compiled(_ modules: [Module]) throws -> [Compiled] {
-        try builder.compile(modules)
+    private func compiled(_ modules: [Module]) async throws -> [Compiled] {
+        try await builder.compile(modules)
     }
 
     // The block a document holds, by a spelling it declares: what it declared

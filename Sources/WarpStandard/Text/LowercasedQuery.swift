@@ -15,7 +15,7 @@ struct LowercasedQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Not a string is not a failure here. A path that asks a string procedure
         // of a number reads as absence, the same as a field never set.
         guard case let .string(text) = question.receiver else { return nil }

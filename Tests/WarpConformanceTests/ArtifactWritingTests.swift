@@ -29,8 +29,8 @@ struct ArtifactWritingTests {
         guard case let .answers(expected) = sut.expectation else { return }
 
         let builder = Builder(fingerprinting: Fingerprint.of)
-        let modules = try sut.modules()
-        let compiled = try builder.compile(modules)
+        let modules = try await sut.modules()
+        let compiled = try await builder.compile(modules)
 
         // When. Each artifact written to bytes and read back out of them. A
         // document of the specification's is one an artifact can hold, so one

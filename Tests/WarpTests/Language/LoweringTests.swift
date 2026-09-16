@@ -40,7 +40,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard case let .body(_, layout) = image.entry.implementation else {
@@ -78,14 +78,14 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .array([.int(1), .int(2)]))
     }
 
     @Test("a closure takes only the cells it reads")
-    func aClosureCapturesWhatItReads() throws {
+    func aClosureCapturesWhatItReads() async throws {
         // Given. Three names in scope, one read
         let module = try Module(
             procedures: [
@@ -104,7 +104,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -123,7 +123,7 @@ struct LoweringTests {
     }
 
     @Test("a loop keeps its round's slots only where its result reads them")
-    func aLoopKeepsOnlyWhereTheResultCouldTell() throws {
+    func aLoopKeepsOnlyWhereTheResultCouldTell() async throws {
         // Given. One loop whose result reads a body name; another whose result
         // reads nothing the body bound
         func loop(_ body: [Statement], result: Warp.Expression?) -> Warp.Expression {
@@ -162,7 +162,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -213,7 +213,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         guard
@@ -232,7 +232,7 @@ struct LoweringTests {
     }
 
     @Test("a body reading a module variable does not answer without running")
-    func aBodyReadingAVariableIsNotPure() throws {
+    func aBodyReadingAVariableIsNotPure() async throws {
         // Given. The variable's value is the run's, so folding the procedure at the
         // link would fix a value nothing at the run could change
         let module = try Module(
@@ -248,7 +248,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(image["app.tally"]?.purity != .pure)
@@ -278,13 +278,13 @@ struct LoweringTests {
         )
 
         // When / Then
-        let image = try builder.build([sut] + Module.standard, entry: "entry")
+        let image = try await builder.build([sut] + Module.standard, entry: "entry")
 
         #expect(try await Executor().run(image) == .int(1))
     }
 
     @Test("a name is what it names at whatever depth a type holds one")
-    func aHandedVariableReadsNamesAtDepth() throws {
+    func aHandedVariableReadsNamesAtDepth() async throws {
         // Given. The alias sits inside a procedure's parameter rather than at
         // the top of the slot. A name is what it names wherever it is written,
         // so the walk reaches it there too.
@@ -323,8 +323,8 @@ struct LoweringTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try builder.build([sut] + Module.standard, entry: "entry")
+        await #expect(throws: Never.self) {
+            try await builder.build([sut] + Module.standard, entry: "entry")
         }
     }
 
@@ -335,7 +335,7 @@ struct LoweringTests {
         // would answer it named; in place there is nothing to settle into. The
         // procedure writes through the caller's box, so what the caller reads back
         // is whatever the procedure left there.
-        func module(holding held: Warp.Expression) throws -> Module {
+        func module(holding held: Warp.Expression) async throws -> Module {
             try Module(
                 types: ["Tag": .record(["a": .int])],
                 procedures: [
@@ -364,11 +364,11 @@ struct LoweringTests {
 
         // When / Then. The unnamed record is refused, and the same record held
         // as a `Tag` stands
-        #expect(throws: BuildError.self) {
-            try builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard, entry: "entry")
         }
 
-        let image = try builder.build(
+        let image = try await builder.build(
             [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard,
             entry: "entry"
         )
@@ -377,7 +377,7 @@ struct LoweringTests {
     }
 
     @Test("a constant folding through a written procedure is refused whichever is declared first")
-    func aConstantFoldingThroughAProcedureIsRefusedInAnyOrder() throws {
+    func aConstantFoldingThroughAProcedureIsRefusedInAnyOrder() async throws {
         // Given. `J` settles by calling `app.alpha`, a written procedure; while the
         // constants settle every written body stands as its refusal, so the
         // order is not the text's
@@ -397,8 +397,8 @@ struct LoweringTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([module] + Module.standard, entry: "entry")
+        await #expect {
+            try await builder.build([module] + Module.standard, entry: "entry")
         } throws: { error in
             "\(error)".contains("runs after the build")
         }
@@ -424,7 +424,7 @@ struct LoweringTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: "entry")
+        let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
         #expect(try await Executor().run(image) == .int(5))
@@ -447,7 +447,7 @@ private struct EchoEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         invocation.receiver ?? .null
     }
 

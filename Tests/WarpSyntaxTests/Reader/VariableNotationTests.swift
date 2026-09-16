@@ -23,7 +23,7 @@ struct VariableNotationTests {
     func assignmentOutlivesItsBlock() async throws {
         // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["kind": "string"],
             "body": [
                 ["var": "verdict", "value": "untouched"],
@@ -47,7 +47,7 @@ struct VariableNotationTests {
     @Test("a conditional that did not run changes nothing")
     func untakenBranchLeavesVariableAlone() async throws {
         // Given
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["kind": "string"],
             "body": [
                 ["var": "verdict", "value": "untouched"],
@@ -95,7 +95,7 @@ struct VariableNotationTests {
     func innerVariableShadowsOuter() async throws {
         // Given. `var` always introduces, so the inner name is a different name
         // with a box of its own. Writing the outer one is `set`.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 ["var": "verdict", "value": "outer"],
                 [
@@ -173,7 +173,7 @@ struct VariableNotationTests {
     @Test("a closure may declare and write its own variable")
     func closureOwnsItsVariables() async throws {
         // Given. What is forbidden is reaching outward, not variables
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "both",

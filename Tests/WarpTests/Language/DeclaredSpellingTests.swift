@@ -52,7 +52,7 @@ struct DeclaredSpellingTests {
         )
 
         // When
-        let image = try builder.build([sut, store] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut, store] + Module.standard, entry: entryName)
 
         // Then. The declaration is under the declared spelling alone
         #expect(image.types.resolve("store.Task") == .record(["id": .string]))
@@ -88,7 +88,7 @@ struct DeclaredSpellingTests {
     }
 
     @Test("a bare name is not a spelling of any dotted declaration")
-    func aBareNameSpellsNoDottedDeclaration() throws {
+    func aBareNameSpellsNoDottedDeclaration() async throws {
         // Given. Two modules declare `one.Limit` and `two.Limit`, and a third
         // mentions `Limit`, which neither of those spellings is
         let one = try Module(
@@ -114,8 +114,8 @@ struct DeclaredSpellingTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut, one, two], entry: entryName)
+        await #expect {
+            try await builder.build([sut, one, two], entry: entryName)
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("names type 'Limit', which no module in this link declares")
@@ -154,7 +154,7 @@ struct DeclaredSpellingTests {
     }
 
     @Test("two modules declaring one name refuse")
-    func oneNameDeclaredTwiceRefuses() throws {
+    func oneNameDeclaredTwiceRefuses() async throws {
         // Given. Two modules declare one spelling, which collide the way two
         // `.c` files' symbols do
         let one = try Module(
@@ -171,8 +171,8 @@ struct DeclaredSpellingTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([one, two], entry: entryName)
+        await #expect {
+            try await builder.build([one, two], entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("declared more than once")
         }
@@ -212,7 +212,7 @@ struct DeclaredSpellingTests {
     }
 
     @Test("sorting what Comparable does not admit refuses at the build")
-    func sortingTheUnorderableRefuses() throws {
+    func sortingTheUnorderableRefuses() async throws {
         // Given. `sorted` is bounded by the shared ground's `Comparable`, and
         // booleans are a reading the build can see
         let sut = try Module(
@@ -229,8 +229,8 @@ struct DeclaredSpellingTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Comparable' does not admit")
         }
@@ -298,7 +298,7 @@ struct DeclaredSpellingTests {
     }
 
     @Test("a name declared as a type and a constraint refuses in either order")
-    func aCrossSpaceCollisionRefusesInEitherOrder() throws {
+    func aCrossSpaceCollisionRefusesInEitherOrder() async throws {
         // Given. One module declares `Limit` as a constraint, another as a type
         let membership = try Module(
             constraints: ["Limit": [.int]],
@@ -316,8 +316,8 @@ struct DeclaredSpellingTests {
         // When / Then. The build sees its whole graph at once, so the order the
         // caller listed the modules cannot change the conclusion
         for modules in [[membership, type], [type, membership]] {
-            #expect {
-                try builder.build(modules, entry: entryName)
+            await #expect {
+                try await builder.build(modules, entry: entryName)
             } throws: { error in
                 error is BuildError && "\(error)".contains("both a type and a constraint")
             }
@@ -378,8 +378,8 @@ struct DeclaredSpellingTests {
             ]
         )
 
-        #expect {
-            try builder.build([arithmetic] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([arithmetic] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
         }
@@ -410,7 +410,7 @@ struct DeclaredSpellingTests {
     }
 
     @Test("a bundle mentioning the shared constraints needs std in the link")
-    func aBundleNeedsTheSharedGround() throws {
+    func aBundleNeedsTheSharedGround() async throws {
         // Given. Collection's `sorted` mentions `Comparable`, which only the
         // foundation module declares
         let sut = try Module(
@@ -428,14 +428,14 @@ struct DeclaredSpellingTests {
 
         // When / Then, without the foundation the constraint name resolves to
         // nothing, and the declaration that mentions it is refused
-        #expect {
-            try builder.build([sut, .collection], entry: entryName)
+        await #expect {
+            try await builder.build([sut, .collection], entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("names 'std.Comparable', which no module in this link declares")
         }
 
-        #expect(throws: Never.self) {
-            try builder.build([sut, .collection, .foundation], entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([sut, .collection, .foundation], entry: entryName)
         }
     }
 }

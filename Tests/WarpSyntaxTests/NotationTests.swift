@@ -69,7 +69,7 @@ struct NotationTests {
         // Given. This is what makes the spellings a layer rather than a part of
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
-        let module = try sut.loadDocument([
+        let module = try await sut.loadDocument([
             "imports": ["std.logic.equal"],
             "procedures": [
                 "entry": [
@@ -103,12 +103,12 @@ struct NotationTests {
     }
 
     @Test("a record a notation does not claim is the expression it is")
-    func anUnclaimedRecordIsAnExpression() throws {
+    func anUnclaimedRecordIsAnExpression() async throws {
         // Given. A condition slot asks for an expression, and a spelling is one
         // way of arriving at one. A record carrying none of the notation's keys
         // never was a condition type, which is what keeps the spellings
         // optional wherever a condition is asked for.
-        let sut = try Loader.testing.loadProcedure([
+        let sut = try await Loader.testing.loadProcedure([
             "parameters": ["ready": "bool"],
             "body": [
                 [
@@ -154,7 +154,7 @@ struct NotationTests {
     }
 
     @Test("a record that some notation would read as a condition is still a record")
-    func aRecordInAConditionSlotStaysARecord() throws {
+    func aRecordInAConditionSlotStaysARecord() async throws {
         // Given. The same record, written for a document. A document's
         // condition slot is an expression like any other and no notation is
         // reading it back, so the record is data and is written as data.
@@ -178,7 +178,7 @@ struct NotationTests {
 
         // When. Written, and read back by a reader with no notation at all
         let written = try Writer().value(of: module)
-        let read = try sut.load(written)
+        let read = try await sut.load(written)
 
         // Then. The same record arrived, rather than a message
         guard
@@ -221,10 +221,10 @@ struct NotationTests {
     }
 
     @Test("a template is spelled with the procedures the notation names")
-    func aTemplateSpendsTheNotationsProcedures() throws {
+    func aTemplateSpendsTheNotationsProcedures() async throws {
         // Given, which procedures a template lowers to is the notation's answer, and
         // the reader carries none of its own
-        let sut = try Loader.testing.loadProcedure([
+        let sut = try await Loader.testing.loadProcedure([
             "parameters": ["procedure": "string"],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "procedure"]]]]
@@ -245,7 +245,7 @@ struct NotationTests {
     }
 
     @Test("a form key wins over a notation's condition, in every notation")
-    func aFormKeyIsReadAsAFormWhereverItIsWritten() throws {
+    func aFormKeyIsReadAsAFormWhereverItIsWritten() async throws {
         // Given. `{ as: <type>, of: <value> }` is a cast, and the form keys are
         // fixed. A notation that recognises its conditions by the subject key
         // sees the `of` and would claim the record; what it made of the `as`
@@ -266,7 +266,7 @@ struct NotationTests {
         // Then. Both readers arrive at the cast
         for notation in [Notation.canonical, .testing] {
             guard
-                case let .body(block) = try sut.loadProcedure(written, from: notation)
+                case let .body(block) = try await sut.loadProcedure(written, from: notation)
                     .procedures[entryName]?.implementation,
                 case let .conditional(condition, _, _) = block.body.first?.expression,
                 case .cast = condition
@@ -279,12 +279,12 @@ struct NotationTests {
     }
 
     @Test("reading a document is not a place a notation can reach")
-    func readingCarriesNoNotation() throws {
+    func readingCarriesNoNotation() async throws {
         // Given. The spelling these tests read with, left unlowered in a
         // document. `load` takes a document, and a document has no spellings,
         // so the record is the expression it is rather than the message some
         // table would have made of it.
-        let module = try sut.load([
+        let module = try await sut.load([
             "warp": .int(Envelope.version),
             "imports": [],
             "procedures": [

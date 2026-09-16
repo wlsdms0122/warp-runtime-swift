@@ -53,7 +53,7 @@ struct ModuleDeclarationTests {
     }
 
     @Test("a bare name for another module's procedure is refused at the build")
-    func aBareNameForAnotherModulesProcedureIsRefused() throws {
+    func aBareNameForAnotherModulesProcedureIsRefused() async throws {
         // Given
         let caller = try loader.loadDocument([
             "imports": ["greet"],
@@ -74,8 +74,8 @@ struct ModuleDeclarationTests {
         ])
 
         // When / Then
-        #expect {
-            try Builder().build([caller, library], entry: "caller.entry")
+        await #expect {
+            try await Builder().build([caller, library], entry: "caller.entry")
         } throws: { error in
             "\(error)".contains("sends 'greet', which no module in this link declares")
         }
@@ -160,8 +160,8 @@ struct ModuleDeclarationTests {
 
         #expect(outputs["result"] == .string("https://example.com/api"))
 
-        #expect(throws: BuildError.self) {
-            try Builder().build([cyclic], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([cyclic], entry: entryName)
         }
     }
 

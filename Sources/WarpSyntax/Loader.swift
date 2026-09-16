@@ -205,7 +205,7 @@ public struct Loader: Sendable {
     // is what they typed) and this is where a stage that has no document of its
     // own gets it.
     //
-    //     let image = try loader.reading { try Builder().build(modules, entry: "greet") }
+    //     let image = try await loader.reading { try await Builder().build(modules, entry: "greet") }
     //
     // The reading path takes it on its own; a link is the stage that does not,
     // because what to link is the caller's statement and the modules in it may
@@ -213,6 +213,18 @@ public struct Loader: Sendable {
     public func reading<T>(_ refused: () throws -> T) throws -> T {
         do {
             return try refused()
+        } catch let refusal as any WarpError {
+            guard let place = refusal.place else { throw refusal }
+
+            throw refusal.placed(place.written(by: registry))
+        }
+    }
+
+    // The same, for a caller whose reading runs. A build folds constants, which
+    // runs host procedures, so what it raises arrives here through a suspension.
+    public func reading<T>(_ refused: () async throws -> T) async throws -> T {
+        do {
+            return try await refused()
         } catch let refusal as any WarpError {
             guard let place = refusal.place else { throw refusal }
 

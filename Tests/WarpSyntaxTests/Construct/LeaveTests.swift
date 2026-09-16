@@ -32,7 +32,7 @@ struct LeaveTests {
     @Test("returning answers with what it carries")
     func returningAnswers() async throws {
         // Given
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["procedure": "string"],
             "returns": "string",
             "body": [
@@ -61,7 +61,7 @@ struct LeaveTests {
         // Given. The loop counts to ten and stops at three. What it answers is
         // its own `result:`, read in the round that stopped: ending early asks
         // nothing new of the type a loop already has.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
                 [
@@ -99,7 +99,7 @@ struct LeaveTests {
     func continuingSkipsARound() async throws {
         // Given. A round cut short wrote nothing further outward, which is what
         // skipping it means. So only the rounds that finished are seen.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
                 ["var": "seen", "value": ""],
@@ -156,7 +156,7 @@ struct LeaveTests {
         // Given. The loops already have names, because a statement names what
         // it binds and a loop binds its round state under that name. Reaching
         // past the nearest one is spelling the name that already exists.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 ["var": "count", "value": 0],
                 [
@@ -199,7 +199,7 @@ struct LeaveTests {
         // way out was to fail deliberately, which a rescue then caught, so a
         // successful early exit had to travel as a failure and could not be
         // told apart from one.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "returns": "string",
             "body": [
                 [
@@ -221,7 +221,7 @@ struct LeaveTests {
     }
 
     @Test("leaving is refused where there is nothing to leave")
-    func leavingNeedsSomethingToLeave() {
+    func leavingNeedsSomethingToLeave() async {
         // Given. A loop's name is not visible to a closure, because a closure
         // is a procedure and runs wherever it is called from
         #expect {
@@ -232,8 +232,8 @@ struct LeaveTests {
             "\(error)".contains("no loop here to leave")
         }
 
-        #expect {
-            try loader.loadProcedure([
+        await #expect {
+            try await loader.loadProcedure([
                 "body": [
                     [
                         "let": "walked",
@@ -327,7 +327,7 @@ struct LeaveTests {
     }
 
     @Test("a body naming no result is worth nothing to the checker too")
-    func theCheckerAgreesAboutWhatABodyAnswers() throws {
+    func theCheckerAgreesAboutWhatABodyAnswers() async throws {
         // Given. The run answers nothing here, so the checker has to say the
         // same. While it still read the last statement, this passed the block's
         // answer as an int and then handed null over at the run. A program that
@@ -353,8 +353,8 @@ struct LeaveTests {
         ]
 
         // When / Then
-        #expect {
-            try Builder().build(
+        await #expect {
+            try await Builder().build(
                 [try loader.loadDocument(sut)] + Module.standard,
                 entry: entryName
             )
@@ -368,7 +368,7 @@ struct LeaveTests {
         // Given. An `attempt` runs in step with the body around it, so a loop
         // around the attempt is a loop around its body. The run always allowed
         // this: a leaving is not a failure, so a rescue lets it past.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
                 [
@@ -411,7 +411,7 @@ struct LeaveTests {
         // Given. The checker shows the result what the body declared, so a
         // result naming one has to work. Reading the scope the round started in
         // would show it nothing the round bound.
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
                 [
@@ -500,7 +500,7 @@ struct LeaveTests {
     // MARK: - Public
     // MARK: - Private
     private func answer(_ module: Module, _ arguments: [Name: Value] = [:]) async throws -> Value {
-        let image = try Builder().build(
+        let image = try await Builder().build(
             [module] + Module.standard + [.testing],
             entry: entryName
         )

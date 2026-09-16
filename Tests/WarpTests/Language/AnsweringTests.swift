@@ -81,13 +81,13 @@ struct AnsweringTests {
     }
 
     @Test("every way out of a body is one of its answers")
-    func aReturnIsAnAnswerToo() throws {
+    func aReturnIsAnAnswerToo() async throws {
         // Given. A body whose result answers a record, with and without an
         // early `return` carrying a string. A body hands its caller either way
         // out, so the second answers what holds both, and a dot on that is
         // refused the way a dot on `any` is. Reading the result alone would
         // have called both a record and let both dots stand.
-        func module(leaving early: Bool) throws -> Module {
+        func module(leaving early: Bool) async throws -> Module {
             try Module(
                 procedures: [
                     "counts": Procedure(
@@ -130,18 +130,18 @@ struct AnsweringTests {
         }
 
         // When / Then. One way out, and the dot is judged against it
-        _ = try builder.build([module(leaving: false)] + Module.standard, entry: entryName)
+        _ = try await builder.build([module(leaving: false)] + Module.standard, entry: entryName)
 
         // Two, and what holds both says nothing about a field
-        #expect {
-            try builder.build([module(leaving: true)] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([module(leaving: true)] + Module.standard, entry: entryName)
         } throws: { error in
             error is BuildError && "\(error)".contains("which declares nothing")
         }
     }
 
     @Test("an answer that would come from itself says nothing")
-    func aCycleAnswersAny() throws {
+    func aCycleAnswersAny() async throws {
         // Given. Two declarations whose answers are each other's. Reading
         // either needs the other, so neither is read: an answer worked out from
         // itself is not one the text states, and a guess there would be a
@@ -161,12 +161,12 @@ struct AnsweringTests {
         )
 
         // When / Then. Nothing is claimed, so nothing is refused
-        _ = try builder.build([sut] + Module.standard, entry: entryName)
+        _ = try await builder.build([sut] + Module.standard, entry: entryName)
 
         // And a dot on it refuses, because `any` is what saying nothing looks
         // like at a call site. Where the same type with the cycle broken
         // reads the record `pong` answers.
-        func reading(cycling: Bool) throws -> Module {
+        func reading(cycling: Bool) async throws -> Module {
             try Module(
                 procedures: [
                     "ping": Procedure(body: [], result: .call(Call(selector: "pong"))),
@@ -187,22 +187,22 @@ struct AnsweringTests {
             )
         }
 
-        #expect(throws: BuildError.self) {
-            try builder.build([reading(cycling: true)] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([reading(cycling: true)] + Module.standard, entry: entryName)
         }
 
-        _ = try builder.build([reading(cycling: false)] + Module.standard, entry: entryName)
+        _ = try await builder.build([reading(cycling: false)] + Module.standard, entry: entryName)
     }
 
     @Test("an answer naming a type parameter is filled at the call, or fills with nothing")
-    func aParameterAnswerIsFilledWhereTheCallCanFillIt() throws {
+    func aParameterAnswerIsFilledWhereTheCallCanFillIt() async throws {
         // Given. `peek` declares no answer, and what its body hands back names
         // a type parameter. That goes through the same filling a declared
         // `returns: some T` does, so which of the two types it is decides
         // itself: the parameter is a slot the signature declares and the call
         // fills it, and what a walk *through* a parameter reached is named for
         // a path only that body can read, which nothing fills.
-        func module(reading path: [PathSegment], answering answer: [PathSegment]) throws -> Module {
+        func module(reading path: [PathSegment], answering answer: [PathSegment]) async throws -> Module {
             try Module(
                 procedures: [
                     "peek": Procedure(
@@ -230,14 +230,14 @@ struct AnsweringTests {
 
         // When / Then. The parameter itself: filled with what the call put
         // there, so the caller reads that record and is held to it
-        _ = try builder.build(
+        _ = try await builder.build(
             [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
                 + Module.standard,
             entry: entryName
         )
 
-        #expect {
-            try builder.build(
+        await #expect {
+            try await builder.build(
                 [module(reading: [.key("said"), .key("missing")], answering: [.key("of")])]
                     + Module.standard,
                 entry: entryName
@@ -248,8 +248,8 @@ struct AnsweringTests {
 
         // And a field of it: a name only `peek` could read, which no call
         // fills, so the caller reads `any` and the dot is refused
-        #expect {
-            try builder.build(
+        await #expect {
+            try await builder.build(
                 [module(
                     reading: [.key("said"), .key("inner")],
                     answering: [.key("of"), .key("inner")]
@@ -262,7 +262,7 @@ struct AnsweringTests {
     }
 
     @Test("what the author wrote is what the image carries")
-    func theDeclarationIsNotRewritten() throws {
+    func theDeclarationIsNotRewritten() async throws {
         // Given. The reading is the build's own note to itself. A declaration is
         // a promise, and one read off a body is not a promise anybody made:
         // writing it back would make the boundary check a type nobody wrote,
@@ -274,7 +274,7 @@ struct AnsweringTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image.entry.signature.returns == nil)

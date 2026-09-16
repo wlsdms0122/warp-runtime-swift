@@ -110,57 +110,13 @@ public struct Executor: Sendable {
         return try await answer(body, of: closure.linked, in: &activation, at: trace)
     }
 
-    // The synchronous reading of one code against one frame: the half of the
-    // language that answers without running.
-    func read(_ code: Operation, in activation: Activation) throws -> Value {
-        switch code {
-        case let .literal(value):
-            return value
+    // One code read against one frame, for a caller outside a run: what a
+    // constant settles to. It reaches the same evaluator a body reaches, so
+    // what a constant may hold and what a body may hold are one answer.
+    func read(_ code: Operation, in activation: Activation) async throws -> Value {
+        var activation = activation
 
-        case let .local(address):
-            return try found(address, in: activation)
-
-        case let .array(elements):
-            return .array(try elements.map { element in try read(element, in: activation) })
-
-        case let .record(held):
-            return .record(
-                Record(layout: held.layout, values: try held.fields.map { field in try read(field, in: activation) })
-            )
-
-        // Making a closure runs nothing: it is the capture, and the capture is
-        // these cells. Which is why it belongs to the pure half and a
-        // condition may hand one to a procedure.
-        case let .closure(number, captures):
-            return .procedure(
-                Closure(
-                    origin: activation.origin,
-                    number: number,
-                    linked: linked[try row(number, from: activation.origin)],
-                    captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
-                )
-            )
-
-        // Judging a value against a type runs nothing, so a cast is data the
-        // pure half can read.
-        case let .cast(value, type, optional):
-            return try type.reading(try read(value, in: activation), optional: optional, in: loweredTypes)
-
-        case let .call(call):
-            return try self.call(call, in: activation)
-
-        case let .dispatch(dispatch):
-            let (call, receiver) = try picked(dispatch, in: activation)
-
-            return try self.call(call, receiving: receiver, in: activation)
-
-        // Running a body or reaching outside is async and may fail in a way an
-        // attempt can catch, so it belongs to `evaluate`. The build refuses one
-        // of these where data is read, so what is left here is the floor under
-        // that refusal rather than a way a run reaches.
-        case .apply, .block, .conditional, .loop, .attempt, .leave:
-            throw ExecutionError("this expression runs, so it cannot be read as data here")
-        }
+        return try await evaluate(code, in: &activation, at: Trace())
     }
 
     // MARK: - Private
@@ -318,8 +274,23 @@ public struct Executor: Sendable {
         at trace: Trace
     ) async throws -> Value {
         switch code {
-        case .literal, .local, .closure:
-            return try read(code, in: activation)
+        case let .literal(value):
+            return value
+
+        case let .local(address):
+            return try found(address, in: activation)
+
+        // Making a closure runs nothing: it is the capture, and the capture is
+        // these cells.
+        case let .closure(number, captures):
+            return .procedure(
+                Closure(
+                    origin: activation.origin,
+                    number: number,
+                    linked: linked[try row(number, from: activation.origin)],
+                    captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
+                )
+            )
 
         case let .array(elements):
             var values: [Value] = []
@@ -356,7 +327,7 @@ public struct Executor: Sendable {
             return try await self.call(call, in: &activation, at: trace)
 
         case let .dispatch(dispatch):
-            let (call, receiver) = try picked(dispatch, in: activation)
+            let (call, receiver) = try await picked(dispatch, in: &activation, at: trace)
 
             return try await self.call(call, receiving: receiver, in: &activation, at: trace)
 
@@ -369,7 +340,7 @@ public struct Executor: Sendable {
         // A conditional answers nothing: the condition chooses a way through the
         // body, and what an arm keeps it writes to an outer variable.
         case let .conditional(condition, then, otherwise):
-            let take = try bool(try read(condition, in: activation))
+            let take = try bool(try await evaluate(condition, in: &activation, at: trace))
 
             if let taken = take ? then : otherwise {
                 try await perform(taken, in: &activation, at: trace)
@@ -418,13 +389,30 @@ public struct Executor: Sendable {
         // implementation. It is here only so that `x.count` and the same
         // procedure written as a statement mean the same thing.
         case .native(.query):
-            return try self.call(call, in: activation)
+            let settled = try settled(
+                callee,
+                given: try await given(call.arguments, in: &activation, at: trace),
+                skipping: skipped(call, of: callee, holding: false, receiving: handed)
+            )
+            let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace)
+
+            do {
+                return try await answer(callee, for: receiver, with: settled, at: trace)
+            } catch let unfit as ReferenceUnfit {
+                throw unfit
+            } catch {
+                // A procedure blaming a type is answerable only if the author
+                // can see which name held it.
+                guard case let .local(address)? = call.receiver else { throw error }
+
+                throw ReferenceUnfit(path: spelled(address, in: activation), reason: "\(error)")
+            }
 
         case let .native(.effect(effect)):
             let holds = try holds(call.handed, of: callee, in: activation)
             let settled = try settled(
                 callee,
-                given: try call.arguments.map { argument in try argument.map { try read($0, in: activation) } },
+                given: try await given(call.arguments, in: &activation, at: trace),
                 skipping: skipped(call, of: callee, holding: true, receiving: handed)
             )
             // A receiver handed in place is read for the effect as what its
@@ -434,7 +422,7 @@ public struct Executor: Sendable {
             return try await run(
                 effect,
                 of: callee,
-                receiver: sent(to: callee, receiver: try received(call, of: callee, handed: handed, in: activation) ?? held, arguments: settled),
+                receiver: sent(to: callee, receiver: try await received(call, of: callee, handed: handed, in: &activation, at: trace) ?? held, arguments: settled),
                 settled: settled,
                 holds: holds,
                 trace: trace
@@ -454,13 +442,13 @@ public struct Executor: Sendable {
             // name. It is not settled as an argument, since being sent to
             // nothing is something a procedure answers rather than refuses, but the
             // body reads it under the name its signature gave it.
-            if let position = callee.receiverPosition, let receiver = try received(call, of: callee, handed: handed, in: activation) {
+            if let position = callee.receiverPosition, let receiver = try await received(call, of: callee, handed: handed, in: &activation, at: trace) {
                 inner.cells[frame.parameters[position]] = .value(receiver)
             }
 
             let settled = try settled(
                 callee,
-                given: try call.arguments.map { argument in try argument.map { try read($0, in: activation) } },
+                given: try await given(call.arguments, in: &activation, at: trace),
                 skipping: skipped(call, of: callee, holding: true, receiving: handed)
             )
 
@@ -483,7 +471,7 @@ public struct Executor: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let value = try read(callee, in: activation)
+        let value = try await evaluate(callee, in: &activation, at: trace)
 
         guard case let .procedure(closure) = value else {
             throw ExecutionError(
@@ -493,7 +481,11 @@ public struct Executor: Sendable {
 
         // The signature is the value's, so the arguments travel by name and
         // find their slots here, along the list.
-        let resolved = try arguments.map { name, argument in (name: name, value: try read(argument, in: activation)) }
+        var resolved: [(name: Name, value: Value)] = []
+
+        for (name, argument) in arguments {
+            resolved.append((name: name, value: try await evaluate(argument, in: &activation, at: trace)))
+        }
 
         var (body, inner) = try enter(closure, given: resolved, offered: false)
 
@@ -548,7 +540,7 @@ public struct Executor: Sendable {
             // and the result reads it as it stands when the loop ends.
             activation.cells[round] = .value(.record(Record(layout: LoweredRecord.round.layout, values: [.int(index)])))
 
-            guard try bool(try read(condition, in: activation)) else {
+            guard try bool(try await evaluate(condition, in: &activation, at: trace)) else {
                 guard let result = body.result else { return .null }
 
                 return try await evaluate(result, in: &activation, at: trace)
@@ -653,9 +645,10 @@ public struct Executor: Sendable {
     // so nothing is resolved here.
     private func picked(
         _ dispatch: DispatchOperation,
-        in activation: Activation
-    ) throws -> (CallOperation, Value) {
-        let receiver = try read(dispatch.receiver, in: activation)
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> (CallOperation, Value) {
+        let receiver = try await evaluate(dispatch.receiver, in: &activation, at: trace)
 
         guard let name = receiver.nominal, let call = dispatch.calls[name] else {
             throw ExecutionError(
@@ -672,8 +665,9 @@ public struct Executor: Sendable {
         _ call: CallOperation,
         of callee: Linked,
         handed: Value?,
-        in activation: Activation
-    ) throws -> Value? {
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value? {
         // A dispatch read the receiver to pick this row, so what it read is
         // what the row is sent. Reading the operand again would run whatever
         // produced it a second time.
@@ -682,7 +676,7 @@ public struct Executor: Sendable {
         guard let receiver = call.receiver else { return nil }
 
         do {
-            return try callee.settling(receiver: try read(receiver, in: activation))
+            return try callee.settling(receiver: try await evaluate(receiver, in: &activation, at: trace))
         } catch let unfit as ReferenceUnfit {
             throw unfit
         } catch {
@@ -734,61 +728,43 @@ public struct Executor: Sendable {
         Settled(values: try callee.settle(given, offered: false, skipping: skipping.contains))
     }
 
-    // The pure half of a call. What the build resolves to a declaration it
-    // refuses where data is read; what reaches here is a call through a
-    // contract, whose declaration the arriving value picks, so whether it
-    // answers without running is the value's fact and this is where it is
-    // asked.
-    private func call(
-        _ call: CallOperation,
-        receiving handed: Value? = nil,
-        in activation: Activation
-    ) throws -> Value {
-        let callee = linked[try row(call.procedure, from: activation.origin)]
+    // Every argument an operand wrote, in the order the row reads them. A loop
+    // rather than a map, since reading one may run what produced it.
+    private func given(
+        _ arguments: [Operation?],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> [Value?] {
+        var given: [Value?] = []
+        given.reserveCapacity(arguments.count)
 
-        guard callee.purity == .pure else {
-            throw ExecutionError(
-                "'\(callee.label)' answers only by running, so it cannot be"
-                    + " read as data here"
-            )
+        for argument in arguments {
+            guard let argument else {
+                given.append(nil)
+                continue
+            }
+
+            given.append(try await evaluate(argument, in: &activation, at: trace))
         }
 
-        let receiver = try received(call, of: callee, handed: handed, in: activation)
-        var given = try call.arguments.map { argument in try argument.map { try read($0, in: activation) } }
-
-        // A pure body writes nothing, so a variable handed to it in place is
-        // read as what it holds, and settled the way any argument is.
-        for handed in call.handed {
-            given[handed.position] = try found(handed.address, in: activation)
-        }
-
-        let arguments = try settled(callee, given: given, skipping: skipped(call, of: callee, holding: false, receiving: handed))
-
-        do {
-            return try answer(callee, for: receiver, with: arguments)
-        } catch let unfit as ReferenceUnfit {
-            throw unfit
-        } catch {
-            // A procedure blaming a type is answerable only if the author can see
-            // which name held it.
-            guard case let .local(address)? = call.receiver else { throw error }
-
-            throw ReferenceUnfit(path: spelled(address, in: activation), reason: "\(error)")
-        }
+        return given
     }
 
-    // What a row answers, computed without running. Both types it can have
-    // are answerable without suspending: one because it is native and says
-    // so, the other because the link proved it.
-    private func answer(_ callee: Linked, for receiver: Value?, with arguments: Settled) throws -> Value {
+    // What a row answers where a caller reads it as data. A query answers
+    // through its own door and a body the link proved answers without running
+    // is run here, on a frame of its own.
+    private func answer(
+        _ callee: Linked,
+        for receiver: Value?,
+        with arguments: Settled,
+        at trace: Trace
+    ) async throws -> Value {
         let sent = sent(to: callee, receiver: receiver, arguments: arguments)
 
         switch callee.implementation {
         case let .native(.query(query)):
-            return try evaluate(query, of: callee, receiver: sent, settled: arguments) ?? .null
+            return try await evaluate(query, of: callee, receiver: sent, settled: arguments) ?? .null
 
-        // A body the link proved pure runs here, synchronously. Nothing in it
-        // can suspend, which is what the proof says.
         case let .body(body, frame):
             var activation = try self.activation(of: callee, in: frame)
 
@@ -802,7 +778,7 @@ public struct Executor: Sendable {
                 activation.cells[frame.parameters[position]] = .value(sent)
             }
 
-            return try callee.settling(returned: try read(body, in: &activation))
+            return try callee.settling(returned: try await run(body, in: &activation, at: trace))
 
         case .native(.effect):
             throw ExecutionError(
@@ -818,41 +794,17 @@ public struct Executor: Sendable {
         receiver ?? callee.receiverPosition.flatMap { position in arguments.values[position] }
     }
 
-    // A pure body, read without running. Instructions bind in order and the
-    // body answers what it declares, the same rule `run` follows, over the
-    // subset that cannot suspend.
-    private func read(_ body: Body, in activation: inout Activation) throws -> Value {
-        for instruction in body.instructions {
-            switch instruction.binding {
-            case .bind, nil:
-                break
-
-            case .declare, .assign:
-                throw ExecutionError(
-                    "'\(instruction.label)' writes a name, and what answers"
-                        + " without running only binds"
-                )
-            }
-
-            let value = try read(instruction.code, in: activation)
-
-            if case let .bind(slot, settling)? = instruction.binding {
-                activation.cells[slot] = .value(try held(value, as: settling, in: slot, of: activation))
-            }
-        }
-
-        guard let result = body.result else { return .null }
-
-        return try read(result, in: activation)
-    }
-
     // Running a closure here rather than in `evaluate`, which is what makes a
     // procedure able to take one. What may be called is what the link proved
     // answers, and a slot declaring `pure procedure` is how a procedure says so.
-    func call(_ closure: Closure, with arguments: [(name: Name, value: Value)]) throws -> Value {
+    func call(
+        _ closure: Closure,
+        with arguments: [(name: Name, value: Value)],
+        at trace: Trace = Trace()
+    ) async throws -> Value {
         var (body, activation) = try enter(closure, given: arguments, offered: true)
 
-        return try closure.settling(returned: try read(body, in: &activation))
+        return try closure.settling(returned: try await run(body, in: &activation, at: trace))
     }
 
     private func bool(_ value: Value) throws -> Bool {
@@ -884,8 +836,8 @@ public struct Executor: Sendable {
         of callee: Linked,
         receiver: Value?,
         settled: Settled
-    ) throws -> Value? {
-        try query.evaluate(
+    ) async throws -> Value? {
+        try await query.evaluate(
             Question(
                 receiver: nothingIfNull(receiver),
                 settled: settled,
@@ -958,7 +910,7 @@ public struct Executor: Sendable {
 
         switch callee.implementation {
         case .native(.query):
-            return try answer(callee, for: sentTo, with: settled)
+            return try await answer(callee, for: sentTo, with: settled, at: trace)
 
         case let .native(.effect(effect)):
             return try await run(
@@ -1000,7 +952,7 @@ public struct Executor: Sendable {
         from origin: Int,
         to receiver: Value?,
         offering values: [Value]
-    ) throws -> Value {
+    ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
 
         guard callee.purity == .pure else {
@@ -1012,10 +964,11 @@ public struct Executor: Sendable {
 
         let sentTo = try received(receiver, of: callee)
 
-        return try answer(
+        return try await answer(
             callee,
             for: sentTo,
-            with: try settled(callee, to: sentTo, sending: sending, offering: values)
+            with: try settled(callee, to: sentTo, sending: sending, offering: values),
+            at: Trace()
         )
     }
 

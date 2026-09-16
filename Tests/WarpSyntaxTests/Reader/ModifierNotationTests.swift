@@ -25,7 +25,7 @@ struct ModifierNotationTests {
     }
 
     @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
-    func everyMarkRoundTrips(mark: SlotMark) throws {
+    func everyMarkRoundTrips(mark: SlotMark) async throws {
         // Given. The reading, the writing and the document's vocabulary all
         // come off one list, so a mark added to it is asked these questions
         // without anyone remembering to ask. Both forms a marked type takes:
@@ -48,7 +48,7 @@ struct ModifierNotationTests {
             ])
         )
 
-        let read = try Loader().load([
+        let read = try await Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": ["f": ["type": writtenForm]], "result": Value.null]]
@@ -87,7 +87,7 @@ struct ModifierNotationTests {
         "a key carrying two marks is a field's name, whichever two they are",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
-    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) throws {
+    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) async throws {
         // Given. A slot writes one mark, so a key carrying two is not a
         // procedure form's, and a key that is not one is a field's name like
         // any other. The writing never makes one: a marked type holding a
@@ -97,7 +97,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try Loader().load([
+        let read = try await Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": [
@@ -126,7 +126,7 @@ struct ModifierNotationTests {
     }
 
     @Test("a record's field is named whatever the document named it")
-    func aFieldNamedLikeTwoMarksIsStillAField() throws {
+    func aFieldNamedLikeTwoMarksIsStillAField() async throws {
         // Given. The rule about two marks is a procedure form's, and a key is
         // only that form's once what is under the marks says `procedure`.
         // Anything else is a field name, and the writer writes one back
@@ -134,7 +134,7 @@ struct ModifierNotationTests {
 
         // When
         let written = try Writer().value(of: type)
-        let read = try Loader().load([
+        let read = try await Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]
@@ -196,14 +196,14 @@ struct ModifierNotationTests {
     }
 
     @Test("a mark and a modifier on one procedure form survive the round trip")
-    func aMarkAndAModifierRoundTrip() throws {
+    func aMarkAndAModifierRoundTrip() async throws {
         // Given. A parameter typed `inout pure procedure<...>`, which the
         // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))
 
         // When
         let written = try Writer().value(of: type)
-        let module = try Loader().load([
+        let module = try await Loader().load([
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["parameters": ["f": ["type": written]], "result": Value.null]]

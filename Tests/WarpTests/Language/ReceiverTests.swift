@@ -67,7 +67,7 @@ struct ReceiverTests {
     }
 
     @Test("a native procedure and a written one are declared the same way")
-    func nativeAndWrittenDeclareAlike() throws {
+    func nativeAndWrittenDeclareAlike() async throws {
         // Given
         let written = try Module(
             procedures: [
@@ -95,7 +95,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try builder.build([written] + Module.standard, entry: entryName)
+        let image = try await builder.build([written] + Module.standard, entry: entryName)
 
         // Then. One table, and what separates them is only how each is written
         let shout = try #require(image["shout"])
@@ -143,7 +143,7 @@ struct ReceiverTests {
     }
 
     @Test("what answers without running is worked out at link, not declared")
-    func purityIsALinkFact() throws {
+    func purityIsALinkFact() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -173,7 +173,7 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
 
         // Then. `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
@@ -184,7 +184,7 @@ struct ReceiverTests {
     }
 
     @Test("a body that sends a pure procedure is pure")
-    func aBodyThatSendsIsStillPure() throws {
+    func aBodyThatSendsIsStillPure() async throws {
         // Given. Purity is judged over the name a body wrote, and what that
         // name means depends on where it was written. `label` sends `joined`,
         // which is pure, so `label` is pure
@@ -211,14 +211,14 @@ struct ReceiverTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         #expect(image["label"]?.purity == .pure)
     }
 
     @Test("a dot on an undeclared type is refused")
-    func aDotOnAnyIsRefused() throws {
+    func aDotOnAnyIsRefused() async throws {
         // Given. `any` declares no field, so the dot has nothing to read, and
         // a procedure by that name is reached by writing the call rather than by
         // the dot finding it.
@@ -248,8 +248,8 @@ struct ReceiverTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("reads a dot on any, which declares nothing")
         }

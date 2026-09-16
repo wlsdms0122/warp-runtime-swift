@@ -31,7 +31,7 @@ struct ContainsQuery: Query {
 
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) throws -> Value? {
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
         // Absence answers false rather than failing: asking whether nothing
         // contains something has an obvious answer.
         guard let receiver = question.receiver, receiver != .null else { return .bool(false) }

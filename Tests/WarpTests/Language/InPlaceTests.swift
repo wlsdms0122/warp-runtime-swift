@@ -38,7 +38,7 @@ struct InPlaceTests {
             ]
         )
 
-        let image = try Builder().build([sut] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut] + Module.standard, entry: entryName)
 
         // When
         let first = try await Executor().run(image)
@@ -249,7 +249,7 @@ struct InPlaceTests {
     }
 
     @Test("a write into an inout parameter has to fit the declared type")
-    func writeIntoInoutParameterIsHeldToItsType() throws {
+    func writeIntoInoutParameterIsHeldToItsType() async throws {
         // Given. The body writes a string into a parameter declared inout int
         let sut = try Module(
             imports: [],
@@ -272,15 +272,15 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("first")
         }
     }
 
     @Test("a path handed in place has to read as the declared type")
-    func handedPathIsHeldToTheDeclaredType() throws {
+    func handedPathIsHeldToTheDeclaredType() async throws {
         // Given. An int element is handed to a parameter declared inout string
         let sut = try Module(
             imports: [],
@@ -303,15 +303,15 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("first")
         }
     }
 
     @Test("a part of a box handed in place is handed on like any local's")
-    func aHandedBoxIsSplitOnwards() throws {
+    func aHandedBoxIsSplitOnwards() async throws {
         // Given. A body handed `all` whole hands `all.items` on to another
         // written body
         let sut = try Module(
@@ -340,13 +340,13 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try Builder().build([sut, other] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut, other] + Module.standard, entry: entryName)
         }
     }
 
     @Test("inout is written on a parameter and nowhere else")
-    func inoutOutsideAParameterRefuses() throws {
+    func inoutOutsideAParameterRefuses() async throws {
         // Given. A declared type with an inout field
         let sut = try Module(
             imports: [],
@@ -355,15 +355,15 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a parameter is handed a variable in place")
         }
     }
 
     @Test("var is written on a declared type's field and nowhere else")
-    func varOutsideADeclaredFieldRefuses() throws {
+    func varOutsideADeclaredFieldRefuses() async throws {
         // Given. A parameter typed var
         let sut = try Module(
             imports: [],
@@ -377,8 +377,8 @@ struct InPlaceTests {
         )
 
         // When / Then
-        #expect {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         } throws: { error in
             "\(error)".contains("only a field of a declared type is written through")
         }

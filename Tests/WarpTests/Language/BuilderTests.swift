@@ -19,7 +19,7 @@ struct BuilderTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a constant that cannot be settled says why, not that it is a cycle")
-    func aRefusedConstantSaysWhy() throws {
+    func aRefusedConstantSaysWhy() async throws {
         // Given. `greeting` names nothing that is missing, so the only reason
         // it fails is its own: `text` refuses to spell nothing
         let sut = try Module(
@@ -30,8 +30,8 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "constants.greeting")
@@ -42,7 +42,7 @@ struct BuilderTests {
     }
 
     @Test("a default the parameter itself would refuse is refused at link")
-    func aDefaultOutsideTheTypeIsRefused() throws {
+    func aDefaultOutsideTheTypeIsRefused() async throws {
         // Given. The fallback only ever runs for the one call that leans on it,
         // which is exactly the call that could not see this coming
         let sut = try Module(
@@ -60,15 +60,15 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.count")
     }
 
     @Test("a default outside its own enum is refused at link")
-    func aDefaultOutsideOneOfIsRefused() throws {
+    func aDefaultOutsideOneOfIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -89,8 +89,8 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.place?.rendered == "procedures.helper.parameters.mode")
@@ -115,7 +115,7 @@ struct BuilderTests {
     }
 
     @Test("a enum no candidate of which fits the type is refused at link")
-    func anUnsatisfiableOneOfIsRefused() throws {
+    func anUnsatisfiableOneOfIsRefused() async throws {
         // Given. Admitting nothing is a fact about the type and the set
         // together, not about the set being empty
         let sut = try Module(
@@ -131,15 +131,15 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
     }
 
     @Test("a null default on a type that does not admit null is refused at link")
-    func aNullDefaultOutsideTheTypeIsRefused() throws {
+    func aNullDefaultOutsideTheTypeIsRefused() async throws {
         // Given. The explicitly-null default is the value the body receives, so
         // the declaration must admit it like any other value
         let sut = try Module(
@@ -155,15 +155,15 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("null") == true)
     }
 
     @Test("a parameter nested in a procedure type is judged like a top-level one")
-    func aNestedParameterDeclarationIsJudged() throws {
+    func aNestedParameterDeclarationIsJudged() async throws {
         // Given. The declaration facts are the same wherever the parameter is
         // written, so the judgment rides the same recursion that resolves the
         // nested type names
@@ -191,15 +191,15 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
     }
 
     @Test("a enum that admits nothing is refused at link")
-    func anEmptyOneOfIsRefused() throws {
+    func anEmptyOneOfIsRefused() async throws {
         // Given. No call could ever fit it, so the declaration is the defect
         let sut = try Module(
             procedures: [
@@ -214,8 +214,8 @@ struct BuilderTests {
         )
 
         // When / Then
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message.contains("admits nothing") == true)
@@ -267,7 +267,7 @@ struct BuilderTests {
         // Both spellings of one program, differing only in whether the closure
         // sorts before or after what it reads. An answer that is not the same
         // twice is a program whose meaning is in its names.
-        func module(closure: Name, reading constant: Name) throws -> Module {
+        func module(closure: Name, reading constant: Name) async throws -> Module {
             try Module(
                 constants: [
                     closure: .closure(Procedure(body: [], result: reference(constant))),
@@ -300,7 +300,7 @@ struct BuilderTests {
         // side. Neither type links, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
         // place.
-        func module(introducing statement: Statement?) throws -> Module {
+        func module(introducing statement: Statement?) async throws -> Module {
             try Module(
                 constants: [
                     "apply": .closure(Procedure(
@@ -425,7 +425,7 @@ struct BuilderTests {
     }
 
     @Test("a call on a path this run would never take is still resolved")
-    func unreachedCallIsLinked() throws {
+    func unreachedCallIsLinked() async throws {
         // Given. The else arm cannot be taken with this input, and the warrant
         // for checking it anyway is compilation: unreached code still compiles
         let sut = try Module(
@@ -450,13 +450,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "caller")
         }
     }
 
     @Test("a call inside a rescue body is resolved")
-    func rescueBodyIsLinked() throws {
+    func rescueBodyIsLinked() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -478,13 +478,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "caller")
         }
     }
 
     @Test("resolution follows the callee's own calls")
-    func linkingIsTransitive() throws {
+    func linkingIsTransitive() async throws {
         // Given. `caller` names nothing missing; `middle` does
         let sut = try Module(
             procedures: [
@@ -504,13 +504,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "caller")
         }
     }
 
     @Test("names resolve across every module in the link, flat")
-    func symbolsResolveAcrossModules() throws {
+    func symbolsResolveAcrossModules() async throws {
         // Given. No module says anything about the others; what to link is the
         // caller's statement and joining the names up is the builder's work
         let caller = try Module(
@@ -545,14 +545,14 @@ struct BuilderTests {
         )
 
         // When
-        let image = try builder.build([caller, middle, leaf], entry: "caller")
+        let image = try await builder.build([caller, middle, leaf], entry: "caller")
 
         // Then
         #expect(image.reached == ["caller", "middle", "leaf"])
     }
 
     @Test("a module left out of the link is a module that does not exist")
-    func omittedModuleIsUnresolved() throws {
+    func omittedModuleIsUnresolved() async throws {
         // Given. The set is the whole graph, so leaving one out is not a lookup
         // that fails later but a name nothing declares
         let caller = try Module(
@@ -577,16 +577,16 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([caller], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([caller], entry: "caller")
         }
-        #expect(throws: Never.self) {
-            try builder.build([caller, leaf], entry: "caller")
+        await #expect(throws: Never.self) {
+            try await builder.build([caller, leaf], entry: "caller")
         }
     }
 
     @Test("two modules declaring one name are refused")
-    func duplicateSymbolIsRefused() throws {
+    func duplicateSymbolIsRefused() async throws {
         // Given. One flat namespace is what taking the whole graph at once
         // costs, and two declarations of a name have no way to be told apart
         let left = try Module(
@@ -611,13 +611,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([left, right], entry: "shared")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([left, right], entry: "shared")
         }
     }
 
     @Test("an entry nothing declares is refused")
-    func missingEntryIsRefused() throws {
+    func missingEntryIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -631,8 +631,8 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "absent")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "absent")
         }
     }
 
@@ -672,7 +672,7 @@ struct BuilderTests {
     }
 
     @Test("a self-recursive procedure links once instead of forever")
-    func recursiveProcedureLinksOnce() throws {
+    func recursiveProcedureLinksOnce() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -686,14 +686,14 @@ struct BuilderTests {
         )
 
         // When
-        let image = try builder.build([sut], entry: "loopy")
+        let image = try await builder.build([sut], entry: "loopy")
 
         // Then
         #expect(image.reached == ["loopy"])
     }
 
     @Test("an argument the callee never declared is refused")
-    func undeclaredArgumentIsRefused() throws {
+    func undeclaredArgumentIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -721,13 +721,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "caller")
         }
     }
 
     @Test("a required argument nobody passes is refused")
-    func missingRequiredArgumentIsRefused() throws {
+    func missingRequiredArgumentIsRefused() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -752,13 +752,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "caller")
         }
     }
 
     @Test("an argument named rather than written is judged by what the name holds")
-    func referenceArgumentIsJudged() throws {
+    func referenceArgumentIsJudged() async throws {
         // Given. The type is wrong, and both sides said so in their own text:
         // `text` was declared a string and `base` is declared an int
         let sut = try Module(
@@ -791,13 +791,13 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut], entry: "caller")
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut], entry: "caller")
         }
     }
 
     @Test("what no body settles is not something the build can be wrong about")
-    func anAnswerNothingSettlesIsNotJudged() throws {
+    func anAnswerNothingSettlesIsNotJudged() async throws {
         // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
         // from its own is not one the text states, so nothing is known about it
@@ -834,11 +834,11 @@ struct BuilderTests {
         )
 
         // When / Then
-        _ = try builder.build([sut], entry: "caller")
+        _ = try await builder.build([sut], entry: "caller")
     }
 
     @Test("a body that settles an answer is held to it, declared or not")
-    func anAnswerReadOffABodyIsJudged() throws {
+    func anAnswerReadOffABodyIsJudged() async throws {
         // Given. The same type, with a body whose answer the text does settle:
         // a body with no result hands back null, and null is not a whole
         // number. What the declaration says stays what it says; what the build
@@ -866,15 +866,15 @@ struct BuilderTests {
         )
 
         // When / Then
-        #expect {
-            try builder.build([sut], entry: "caller")
+        await #expect {
+            try await builder.build([sut], entry: "caller")
         } throws: { error in
             error is BuildError && "\(error)".contains("holds null where int is declared")
         }
     }
 
     @Test("a procedure that calls nothing links alone")
-    func selfContainedProcedureLinks() throws {
+    func selfContainedProcedureLinks() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -888,14 +888,14 @@ struct BuilderTests {
         )
 
         // When
-        let image = try builder.build([sut], entry: "alone")
+        let image = try await builder.build([sut], entry: "alone")
 
         // Then
         #expect(image.reached == ["alone"])
     }
 
     @Test("an undeclared selector is refused before what it answers is read")
-    func anUndeclaredSelectorIsRefusedWhereItIsMet() throws {
+    func anUndeclaredSelectorIsRefusedWhereItIsMet() async throws {
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -915,8 +915,8 @@ struct BuilderTests {
             ]
         )
 
-        let error = #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        let error = await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
 
         #expect(error?.message == "sends 'plus', which no module in this link declares")
@@ -924,7 +924,7 @@ struct BuilderTests {
     }
 
     @Test("a dotted spelling resolves beside the full link")
-    func aDottedSpellingResolvesBesideTheFullLink() throws {
+    func aDottedSpellingResolvesBesideTheFullLink() async throws {
         // Given. `std.concurrent.all` is sent beside every standard bundle, and
         // its spelling names one declaration among all of them
         let sut = try Module(
@@ -946,6 +946,6 @@ struct BuilderTests {
         )
 
         // When / Then
-        _ = try builder.build([sut] + Module.standard, entry: "caller")
+        _ = try await builder.build([sut] + Module.standard, entry: "caller")
     }
 }

@@ -28,7 +28,7 @@ struct SpellingTests {
                 as: "unless"
             )
         )
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["kind": "string"],
             "body": [
                 ["var": "pick"],

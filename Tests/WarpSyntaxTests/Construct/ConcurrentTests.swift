@@ -23,7 +23,7 @@ struct ConcurrentTests {
     @Test("the environment's isolation boundary wraps every piece")
     func environmentIsolatesEachPiece() async throws {
         // Given
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "par",
@@ -51,7 +51,7 @@ struct ConcurrentTests {
     @Test("all-recoverable failures rescue")
     func allRecoverableFailuresRescue() async throws {
         // Given
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "par",
@@ -93,7 +93,7 @@ struct ConcurrentTests {
     @Test("one piece's author mistake propagates the composite")
     func anyFatalPiecePropagates() async throws {
         // Given. One author mistake makes the composite an author mistake
-        let spec = try loader.loadProcedure([
+        let spec = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "par",
@@ -136,7 +136,7 @@ struct ConcurrentTests {
     func mapWalksACollection() async throws {
         // Given. The closure asks for the element under `item`, the same name
         // the sequential walk reads it by
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "parameters": ["names": "array<string>"],
             "body": [
                 [
@@ -180,7 +180,7 @@ struct ConcurrentTests {
     @Test("first answers whichever piece succeeds")
     func firstAnswersTheFirstSuccess() async throws {
         // Given
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "body": [
                 [
                     "let": "either",

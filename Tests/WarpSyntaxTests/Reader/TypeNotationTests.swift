@@ -160,10 +160,10 @@ struct TypeNotationTests {
     }
 
     @Test("a signature bounds its type parameters once, in bounds")
-    func aBoundIsDeclaredInTheSignature() throws {
+    func aBoundIsDeclaredInTheSignature() async throws {
         // Given. The slots name the parameter, and the signature says what the
         // name admits
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "receiver": "of",
             "bounds": ["T": "Comparable"],
             "parameters": ["of": "some T", "value": "some T"],
@@ -186,7 +186,7 @@ struct TypeNotationTests {
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
-    func aBoundBelongsToTheSignature() throws {
+    func aBoundBelongsToTheSignature() async throws {
         // The slot names the parameter and nothing else. The constraint is
         // declared once, in the signature's `bounds`.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
@@ -202,8 +202,8 @@ struct TypeNotationTests {
         }
 
         // A bound is a constraint's name, never a type.
-        #expect(throws: ReadingError.self) {
-            try loader.loadProcedure([
+        await #expect(throws: ReadingError.self) {
+            try await loader.loadProcedure([
                 "bounds": ["T": "array<int>"],
                 "parameters": ["of": "some T"],
                 "result": ["ref": "of"]
@@ -233,10 +233,10 @@ struct TypeNotationTests {
     }
 
     @Test("a bound reaches the parameters a nested signature mentions")
-    func aBoundReachesNestedMentions() throws {
+    func aBoundReachesNestedMentions() async throws {
         // Given. `some Element` sits under array<…> and inside a procedure
         // type's own slot; both are this signature's mentions of one name
-        let sut = try loader.loadProcedure([
+        let sut = try await loader.loadProcedure([
             "bounds": ["Element": "Comparable"],
             "parameters": [
                 "of": "array<some Element>",

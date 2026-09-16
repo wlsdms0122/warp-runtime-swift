@@ -20,7 +20,7 @@ struct IsolationTests {
     // MARK: - Lifecycle
     // MARK: - Test
     @Test("a procedure that says nothing about itself is isolated")
-    func aSilentProcedureIsIsolated() throws {
+    func aSilentProcedureIsIsolated() async throws {
         // Given. `app.shout` declares no isolation, so it takes the default
         let sut = try Module(
             imports: ["app.shout"],
@@ -33,14 +33,14 @@ struct IsolationTests {
         )
 
         // When
-        let image = try Builder().build([sut, .shouting] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut, .shouting] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.isolation == .isolated)
     }
 
     @Test("a procedure that holds state is not isolated, and neither is what calls it")
-    func aStatefulProcedureStrikesItsCallers() throws {
+    func aStatefulProcedureStrikesItsCallers() async throws {
         // Given
         let sut = try Module(
             imports: ["app.ticket"],
@@ -58,7 +58,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
 
         // Then. The procedure itself, and the body one hop away from it
         #expect(image["app.ticket"]?.isolation == .unstated)
@@ -96,7 +96,7 @@ struct IsolationTests {
     }
 
     @Test("a pure body is not isolated by being pure")
-    func purityDoesNotAnswerIsolation() throws {
+    func purityDoesNotAnswerIsolation() async throws {
         // Given. Nothing here runs, and the box is still shared
         let sut = try Module(
             imports: ["app.ticket"],
@@ -109,7 +109,7 @@ struct IsolationTests {
         )
 
         // When
-        let image = try Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
+        let image = try await Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
 
         // Then
         #expect(image[entryName]?.purity == .pure)

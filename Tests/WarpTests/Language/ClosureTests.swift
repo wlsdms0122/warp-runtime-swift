@@ -46,7 +46,7 @@ struct ClosureTests {
         ([:], true),
         (["item": Parameter(type: .int), "index": Parameter(type: .int)], false)
     ])
-    func aBodyDeclaresNoMoreThanTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) throws {
+    func aBodyDeclaresNoMoreThanTheSlotHandsIt(declared: [Name: Parameter], fits: Bool) async throws {
         // Given. The slot hands one name. A body reading none of it or one of
         // it stands; a body writing a name nothing hands it could only ever
         // read null there, so no call could fill it.
@@ -94,18 +94,18 @@ struct ClosureTests {
 
         // When / Then
         if fits {
-            #expect(throws: Never.self) {
-                try Builder().build([sut] + Module.standard, entry: entryName)
+            await #expect(throws: Never.self) {
+                try await Builder().build([sut] + Module.standard, entry: entryName)
             }
         } else {
-            #expect(throws: BuildError.self) {
-                try Builder().build([sut] + Module.standard, entry: entryName)
+            await #expect(throws: BuildError.self) {
+                try await Builder().build([sut] + Module.standard, entry: entryName)
             }
         }
     }
 
     @Test("an extra name a call need not fill is a name the body may declare")
-    func anExtraParameterThatStandsUnfilledFits() throws {
+    func anExtraParameterThatStandsUnfilledFits() async throws {
         // Given. The slot hands one name and the body writes two, the second
         // with a default. Nothing has to fill it, so the body reads what it
         // declared rather than the null the width rule refuses.
@@ -155,13 +155,13 @@ struct ClosureTests {
         )
 
         // When / Then
-        #expect(throws: Never.self) {
-            try Builder().build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.standard, entry: entryName)
         }
     }
 
     @Test("a slot asking for a pure procedure refuses one that reaches outside")
-    func anImpureClosureIsRefusedWherePurityIsAsked() throws {
+    func anImpureClosureIsRefusedWherePurityIsAsked() async throws {
         // Given. `twice` declares that whatever it is handed answers without
         // running. The closure handed to it shouts, and shouting is an effect
         let twice = Procedure(
@@ -202,8 +202,8 @@ struct ClosureTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build([sut, .shouting] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await Builder().build([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 

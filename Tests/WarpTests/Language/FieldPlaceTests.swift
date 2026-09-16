@@ -21,7 +21,7 @@ struct FieldPlaceTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a declared record's field is lowered to its place")
-    func aDeclaredFieldIsLoweredToItsPlace() throws {
+    func aDeclaredFieldIsLoweredToItsPlace() async throws {
         // Given. The parameter says what it holds, so the build lays it out and
         // the position is the layout's.
         let sut = try Procedure(
@@ -33,14 +33,14 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try resultSteps(of: sut)
+        let steps = try await resultSteps(of: sut)
 
         // Then. `y` follows `x` in the layout's order.
         #expect(steps == [.field(1, "y", optional: false)])
     }
 
     @Test("a field of a record literal is lowered to its place")
-    func aLiteralFieldIsLoweredToItsPlace() throws {
+    func aLiteralFieldIsLoweredToItsPlace() async throws {
         // Given. Nothing was declared, and the build still laid the literal out
         let sut = Procedure(
             body: [
@@ -53,14 +53,14 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try resultSteps(of: sut)
+        let steps = try await resultSteps(of: sut)
 
         // Then
         #expect(steps == [.field(1, "b", optional: false)])
     }
 
     @Test("a dictionary's keys are the value's, so they are read by name")
-    func aDictionaryIsReadByName() throws {
+    func aDictionaryIsReadByName() async throws {
         // Given
         let sut = try Procedure(
             signature: Signature(
@@ -71,14 +71,14 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try resultSteps(of: sut)
+        let steps = try await resultSteps(of: sut)
 
         // Then
         #expect(steps == [.key("a", optional: false)])
     }
 
     @Test("a place is read at every depth the build laid out")
-    func nestedFieldsAreLoweredToTheirPlaces() throws {
+    func nestedFieldsAreLoweredToTheirPlaces() async throws {
         // Given
         let sut = try Procedure(
             signature: Signature(
@@ -94,14 +94,14 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try resultSteps(of: sut)
+        let steps = try await resultSteps(of: sut)
 
         // Then. `inner` follows `head`, and `deep` follows `beside`
         #expect(steps == [.field(1, "inner", optional: false), .field(1, "deep", optional: false)])
     }
 
     @Test("a named type is followed to the record it stands for")
-    func aNamedRecordIsLoweredToItsPlace() throws {
+    func aNamedRecordIsLoweredToItsPlace() async throws {
         // Given
         let module = try Module(
             types: ["Point": .record(["x": .int, "y": .int])],
@@ -115,7 +115,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let image = try builder.build([module] + Module.standard, entry: entryName)
+        let image = try await builder.build([module] + Module.standard, entry: entryName)
 
         // Then
         #expect(try steps(of: image) == [.field(1, "y", optional: false)])
@@ -168,7 +168,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try resultSteps(of: sut)
+        let steps = try await resultSteps(of: sut)
         let answer = try await run(
             sut,
             arguments: [
@@ -198,7 +198,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try resultSteps(of: sut)
+        let steps = try await resultSteps(of: sut)
         let answer = try await run(
             sut,
             arguments: ["given": .record(Record(name: nil, ["a": .int(0), "y": .int(2)]))]
@@ -270,8 +270,8 @@ struct FieldPlaceTests {
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests
     // read what the build lowered.
-    private func resultSteps(of procedure: Procedure) throws -> [Step] {
-        let image = try builder.build(
+    private func resultSteps(of procedure: Procedure) async throws -> [Step] {
+        let image = try await builder.build(
             [try Module(procedures: [entryName: procedure])] + Module.standard,
             entry: entryName
         )

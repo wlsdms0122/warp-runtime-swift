@@ -54,18 +54,18 @@ struct NormalFormTests {
     }
 
     @Test("names are ordered by their bytes")
-    func namesAreOrderedByBytes() throws {
+    func namesAreOrderedByBytes() async throws {
         // The order a canonical writing puts fields in, and the order a
         // reader holds a document's keys to.
-        #expect(try Name("Z") < Name("a"))
-        #expect(try Name("a") < Name("ab"))
-        #expect(try !(Name("b") < Name("ab")))
+        await #expect(try Name("Z") < Name("a"))
+        await #expect(try Name("a") < Name("ab"))
+        await #expect(try !(Name("b") < Name("ab")))
     }
 
     @Test("a dotted name is unqualified to its last segment")
-    func aDottedNameIsUnqualified() throws {
-        #expect(try Name("std.logic.equal").unqualified == Name("equal"))
-        #expect(try Name("equal").unqualified == Name("equal"))
+    func aDottedNameIsUnqualified() async throws {
+        await #expect(try Name("std.logic.equal").unqualified == Name("equal"))
+        await #expect(try Name("equal").unqualified == Name("equal"))
     }
 
     // Names are read as bytes everywhere else, and this is the one reading
@@ -80,11 +80,11 @@ struct NormalFormTests {
     }
 
     @Test("a type's name is identifiers joined by dots, and never a scalar's procedure")
-    func aTypesNameIsDeclarable() throws {
-        #expect(try Name("std.logic.Answer").isDeclarable)
-        #expect(try !Name("std..Answer").isDeclarable)
-        #expect(try !Name("a name").isDeclarable)
-        #expect(try !Name("true").isDeclarable)
+    func aTypesNameIsDeclarable() async throws {
+        await #expect(try Name("std.logic.Answer").isDeclarable)
+        await #expect(try !Name("std..Answer").isDeclarable)
+        await #expect(try !Name("a name").isDeclarable)
+        await #expect(try !Name("true").isDeclarable)
     }
 
     @Test("a name a program writes as a value carries the rule with it")

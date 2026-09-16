@@ -40,7 +40,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -77,7 +77,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -114,7 +114,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -158,7 +158,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -189,7 +189,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         _ = try await Executor(observer: observer).run(image)
 
@@ -224,7 +224,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
         await #expect(throws: Aborted.self) {
@@ -255,7 +255,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
 
         _ = try? await Executor(observer: observer).run(image)
 
@@ -303,7 +303,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard + [.failing], entry: entryName)
+        let image = try await builder.build([sut] + Module.standard + [.failing], entry: entryName)
         let answer = try await Executor(observer: observer).run(image)
 
         // Then
@@ -324,7 +324,7 @@ struct ObservationTests {
         )
 
         // When
-        let image = try builder.build([sut] + Module.standard, entry: entryName)
+        let image = try await builder.build([sut] + Module.standard, entry: entryName)
         let answer = try await Executor().run(image)
 
         // Then
@@ -347,19 +347,19 @@ private actor RecordingObserver: ExecutionObserver {
 
     // MARK: - Initializer
     // MARK: - Public
-    func statementStarted(at trace: Trace) async {
+    func statementStarted(at trace: Trace) {
         events.append(.started(trace.rendered))
     }
 
-    func statementCompleted(at trace: Trace, result: Value) async {
+    func statementCompleted(at trace: Trace, result: Value) {
         events.append(.completed(trace.rendered, result))
     }
 
-    func statementFailed(at trace: Trace, error: any Error) async {
+    func statementFailed(at trace: Trace, error: any Error) {
         events.append(.failed(trace.rendered))
     }
 
-    func failureRescued(name: String, error: any Error) async {
+    func failureRescued(name: String, error: any Error) {
         events.append(.rescued(name))
     }
 

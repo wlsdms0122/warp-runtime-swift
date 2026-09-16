@@ -21,7 +21,7 @@ struct StandardTests {
     // MARK: - Lifecycle
     // MARK: - Test
     @Test("a bundle left out is a bundle whose names do not resolve")
-    func aBundleLeftOutDoesNotResolve() throws {
+    func aBundleLeftOutDoesNotResolve() async throws {
         // Given. A program that only counts, linked without the bundle that
         // declares counting
         let sut = try Module(
@@ -39,12 +39,12 @@ struct StandardTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut, .math, .text, .foundation], entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut, .math, .text, .foundation], entry: entryName)
         }
 
-        #expect(throws: Never.self) {
-            try builder.build([sut, .collection, .foundation], entry: entryName)
+        await #expect(throws: Never.self) {
+            try await builder.build([sut, .collection, .foundation], entry: entryName)
         }
     }
 
@@ -216,7 +216,7 @@ struct StandardTests {
     }
 
     @Test("a walk refuses a procedure that reaches outside")
-    func aWalkRefusesAnImpureProcedure() throws {
+    func aWalkRefusesAnImpureProcedure() async throws {
         // Given. `map` declares `pure procedure`, so a body that shouts is
         // refused before any run rather than suspending inside a path
         let loud = Procedure(
@@ -242,8 +242,8 @@ struct StandardTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut, .shouting] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut, .shouting] + Module.standard, entry: entryName)
         }
     }
 
@@ -287,7 +287,7 @@ struct StandardTests {
             ("std.math.minus", .int(Int.min), .int(1))
         ]
 
-        func asking(_ procedure: Name, _ receiver: Value, _ operand: Value) throws -> Module {
+        func asking(_ procedure: Name, _ receiver: Value, _ operand: Value) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -311,14 +311,14 @@ struct StandardTests {
 
         // `Int.min remainder -1` trips the hardware's division, but the
         // remainder itself is 0. An answer the procedure holds, so it answers.
-        #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
+        await #expect(try await run(asking("std.math.remainder", .int(Int.min), .int(-1))) == .int(0))
     }
 
     @Test("a quotient is a fraction even between wholes")
     func aQuotientIsAFraction() async throws {
         // Given. DividedBy never answers an int; `floored` is where a whole
         // division's whole half is read back
-        func divided(_ left: Int, _ right: Int) throws -> Module {
+        func divided(_ left: Int, _ right: Int) async throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -334,9 +334,9 @@ struct StandardTests {
         }
 
         // When / Then
-        #expect(try await run(divided(6, 2)) == .double(3.0))
-        #expect(try await run(divided(7, 2)) == .double(3.5))
-        #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
+        await #expect(try await run(divided(6, 2)) == .double(3.0))
+        await #expect(try await run(divided(7, 2)) == .double(3.5))
+        await #expect(try await run(divided(Int.max, Int.max)) == .double(1.0))
 
         // The quotient is binary64's own: each whole operand widens first (the
         // same widening every mixed operation performs) and the division rounds
@@ -349,21 +349,21 @@ struct StandardTests {
     }
 
     @Test("joined asked directly reads no default, since the default is the declaration's")
-    func joinedAskedDirectlyRefusesAMissingSeparator() throws {
+    func joinedAskedDirectlyRefusesAMissingSeparator() async throws {
         // Given: asked outside a link, nothing fills the declaration's
         // default, and the procedure carries none of its own
         let sut = JoinedQuery()
 
         // When / Then
-        #expect {
-            try sut.evaluate(Question(receiver: .array([.string("a"), .string("b")])))
+        await #expect {
+            try await sut.evaluate(Question(receiver: .array([.string("a"), .string("b")])))
         } throws: { error in
             "\(error)".contains("asks a string separator, and null arrived")
         }
     }
 
     @Test("a codec keeps its own contract on the encoding name")
-    func aCodecReadsItsEncodingArgument() throws {
+    func aCodecReadsItsEncodingArgument() async throws {
         // Given. The declaration's enum says the same names early; this is the
         // implementation refusing a name it has no mapping for, so a drifted
         // declaration cannot make it answer in the wrong encoding
@@ -371,14 +371,14 @@ struct StandardTests {
 
         // When / Then
         #expect(
-            try sut.evaluate(Question(
+            try await sut.evaluate(Question(
                 receiver: .bytes([104]),
                 arguments: ["encoding": .string("utf8")]
             )) == .string("h")
         )
 
-        #expect {
-            try sut.evaluate(Question(
+        await #expect {
+            try await sut.evaluate(Question(
                 receiver: .bytes([104]),
                 arguments: ["encoding": .string("utf16")]
             ))
@@ -758,7 +758,7 @@ struct StandardTests {
     }
 
     @Test("what a procedure answers is declared, so the build reads it")
-    func standardAnswersAreDeclared() throws {
+    func standardAnswersAreDeclared() async throws {
         // Given. `count` declares that it answers an int, and `split` declares
         // that it is sent a string
         let sut = try Module(
@@ -785,8 +785,8 @@ struct StandardTests {
         )
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 
@@ -868,7 +868,7 @@ struct StandardTests {
     }
 
     @Test("a whole and a fraction meet exactly at every size")
-    func wholeAndFractionMeetExactly() throws {
+    func wholeAndFractionMeetExactly() async throws {
         // Given. 2^53 + 1 rounds to 2^53 in binary64, so a judgment that
         // converts would call two different worths the same. Worth does not
         // follow the rounding, in any consumer of the one order.
@@ -887,7 +887,7 @@ struct StandardTests {
 
         // min and max pick between the values as they arrived. The int wins
         // here, and no conversion flattens it into a tie.
-        let picked = try MaxQuery().evaluate(
+        let picked = try await MaxQuery().evaluate(
             Question(receiver: above, arguments: ["value": below])
         )
 
@@ -895,12 +895,12 @@ struct StandardTests {
     }
 
     @Test("what orders with nothing is not sorted around")
-    func aFractionThatIsNotANumberRefusesToSort() {
+    func aFractionThatIsNotANumberRefusesToSort() async {
         // Given. NaN answers no comparison, so any placement of it would be an
         // order sorted could not answer for; refused, the way a mixed array is,
         // rather than placed arbitrarily
-        #expect {
-            try SortedQuery().evaluate(
+        await #expect {
+            try await SortedQuery().evaluate(
                 Question(receiver: .array([.double(1.5), .double(.nan)]))
             )
         } throws: { error in
@@ -951,7 +951,7 @@ struct StandardTests {
     }
 
     @Test("an arm that refuses does not decide what the arm that stays holds")
-    func refusalDoesNotWidenTheOtherArm() throws {
+    func refusalDoesNotWidenTheOtherArm() async throws {
         // Given. `returns: never` is what keeps the conditional a string. Were it
         // `any`, the consumer below would be allowed to disagree with it.
         let sut = try Module(
@@ -985,8 +985,8 @@ struct StandardTests {
         )
 
         // When / Then. The conditional holds a string, and `wants` declares an int
-        #expect(throws: BuildError.self) {
-            try builder.build([sut] + Module.standard, entry: entryName)
+        await #expect(throws: BuildError.self) {
+            try await builder.build([sut] + Module.standard, entry: entryName)
         }
     }
 }

@@ -433,7 +433,7 @@ struct ValidationTests {
     }
 
     @Test("a module calling its own by the name the build knows it by imports nothing")
-    func aSiblingCallIsNotAnImport() throws {
+    func aSiblingCallIsNotAnImport() async throws {
         // Given. A module calls a sibling by its declared spelling, and a
         // spelling this document declares is not an import. The honest empty
         // list is accepted.
@@ -454,8 +454,8 @@ struct ValidationTests {
         #expect(sut.imports.isEmpty)
 
         // And the build agrees the two spellings are one declaration
-        #expect(throws: Never.self) {
-            try Builder().build([sut], entry: "wallet.pay")
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut], entry: "wallet.pay")
         }
     }
 

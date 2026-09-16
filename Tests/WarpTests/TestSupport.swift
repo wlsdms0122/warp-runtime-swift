@@ -56,7 +56,7 @@ struct FailEffect: Effect {
 
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         guard invocation[.recoverable] == .bool(true) else {
             throw TestFatalError()
         }
@@ -100,7 +100,7 @@ func run(
 ) async throws -> Value {
     let builder = Builder()
 
-    let image = try builder.build(modules + vocabulary, entry: entry)
+    let image = try await builder.build(modules + vocabulary, entry: entry)
 
     return try await Executor(environment: environment)
         .run(image, arguments: arguments)
@@ -249,7 +249,7 @@ struct ShoutEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         .string(invocation.string(.text)?.uppercased() ?? "")
     }
 
@@ -392,9 +392,9 @@ enum Lookup: Equatable {
 }
 
 extension Folding {
-    func lookup(_ path: [PathSegment]) -> Lookup {
+    func lookup(_ path: [PathSegment]) async -> Lookup {
         do {
-            return .found(try read(path, at: .given("test")))
+            return .found(try await read(path, at: .given("test")))
         } catch let unfit as ReferenceUnfit {
             return .unfit(reason: unfit.reason)
         } catch {

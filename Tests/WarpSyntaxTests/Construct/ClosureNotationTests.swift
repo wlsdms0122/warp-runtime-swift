@@ -175,7 +175,7 @@ struct ClosureNotationTests {
     }
 
     @Test("a slot that declares what it wants refuses a closure that does not fit")
-    func closureIsCheckedAgainstItsSlot() throws {
+    func closureIsCheckedAgainstItsSlot() async throws {
         // Given. `twice` says the body it takes answers a string, and the
         // closure written at the call site says it answers an int
         let fixture: Value = [
@@ -206,8 +206,8 @@ struct ClosureNotationTests {
         ]
 
         // When / Then
-        #expect(throws: BuildError.self) {
-            try Builder().build(
+        await #expect(throws: BuildError.self) {
+            try await Builder().build(
                 [try loader.loadDocument(fixture)] + Module.standard,
                 entry: entryName
             )
@@ -215,7 +215,7 @@ struct ClosureNotationTests {
     }
 
     @Test("a closure that fits its slot links")
-    func fittingClosureLinks() throws {
+    func fittingClosureLinks() async throws {
         // Given
         let fixture: Value = [
             "procedures": [
@@ -246,7 +246,7 @@ struct ClosureNotationTests {
         ]
 
         // When / Then
-        _ = try Builder().build(
+        _ = try await Builder().build(
             [try loader.loadDocument(fixture)] + Module.standard,
             entry: entryName
         )

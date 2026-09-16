@@ -81,7 +81,7 @@ func run(
     vocabulary: [Module] = Module.standard,
     environment: (any Environment)? = nil
 ) async throws -> Value {
-    let image = try Builder().build(modules + vocabulary, entry: entry)
+    let image = try await Builder().build(modules + vocabulary, entry: entry)
 
     return try await Executor(environment: environment).run(image, arguments: arguments)
 }
@@ -160,7 +160,7 @@ struct ShoutEffect: Effect {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    func run(_ invocation: Invocation<Self>) async throws -> Value {
+    func run(_ invocation: Invocation<Self>) throws -> Value {
         .string(invocation.string(.text)?.uppercased() ?? "")
     }
 

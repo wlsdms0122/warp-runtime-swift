@@ -28,9 +28,9 @@ struct ArtifactReadingTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("is refused where a count is written below zero")
-    func aCountBelowZero() throws {
+    func aCountBelowZero() async throws {
         // Given. A real artifact whose frame counts its slots below zero.
-        guard case var .array(parts) = try parts(),
+        guard case var .array(parts) = try await parts(),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -54,9 +54,9 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a name keys two entries")
-    func aNameWrittenTwice() throws {
+    func aNameWrittenTwice() async throws {
         // Given. A real artifact whose declared types list repeats one entry.
-        guard case var .array(parts) = try parts(),
+        guard case var .array(parts) = try await parts(),
               case let .array(types) = parts[2],
               let first = types.first
         else {
@@ -74,9 +74,9 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a part is written short")
-    func aPartWrittenShort() throws {
+    func aPartWrittenShort() async throws {
         // Given. A real artifact with its last part dropped.
-        guard case let .array(parts) = try parts() else {
+        guard case let .array(parts) = try await parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -89,8 +89,8 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a part is written long")
-    func aPartWrittenLong() throws {
-        guard case let .array(parts) = try parts() else {
+    func aPartWrittenLong() async throws {
+        guard case let .array(parts) = try await parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -102,11 +102,11 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a numbering names one type twice")
-    func aNumberingThatRepeats() throws {
+    func aNumberingThatRepeats() async throws {
         // Given. A real artifact whose type numbering lists one name twice. The
         // numbering answers by position, so a swallowed name moves every number
         // after it onto some other declaration.
-        guard case var .array(parts) = try parts(),
+        guard case var .array(parts) = try await parts(),
               case var .array(numbering) = parts[12],
               case let .array(types) = numbering[0],
               let first = types.first
@@ -126,7 +126,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a body stands past its frame")
-    func aBodyPastItsFrame() throws {
+    func aBodyPastItsFrame() async throws {
         // Given. A row whose body binds a local and reads it back, so the slot
         // it stands on is its own rather than a parameter's, and a frame shrunk
         // to hold none of it.
@@ -140,7 +140,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -166,9 +166,9 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where the format it is laid out as is not this one")
-    func aFormatThisDoesNotRead() throws {
+    func aFormatThisDoesNotRead() async throws {
         // Given. A real artifact stamped with a format this does not lay out.
-        guard case let .array(parts) = try parts() else {
+        guard case let .array(parts) = try await parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -182,7 +182,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a layout's names are not in order")
-    func aLayoutOutOfOrder() throws {
+    func aLayoutOutOfOrder() async throws {
         // Given. A declaration that writes no `returns`, so what the build read
         // off its body stands in the artifact as a lowered record, layout and
         // types apart.
@@ -195,7 +195,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(answers) = parts[10],
               case var .array(entry) = answers[0],
               case var .array(answer) = entry[1],
@@ -225,8 +225,8 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a frame names fewer slots than it holds")
-    func aFrameNamingTooFew() throws {
-        guard case var .array(parts) = try parts(),
+    func aFrameNamingTooFew() async throws {
+        guard case var .array(parts) = try await parts(),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -251,8 +251,8 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a table is shorter than what it stands for")
-    func aTableTooShort() throws {
-        guard case var .array(parts) = try parts(), case let .array(table) = parts[8], !table.isEmpty else {
+    func aTableTooShort() async throws {
+        guard case var .array(parts) = try await parts(), case let .array(table) = parts[8], !table.isEmpty else {
             Issue.record("an artifact writes its rows as a part")
 
             return
@@ -266,8 +266,8 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a call list stands for no declaration")
-    func callsThatStandForNothing() throws {
-        guard case var .array(parts) = try parts(), case let .array(calls) = parts[9] else {
+    func callsThatStandForNothing() async throws {
+        guard case var .array(parts) = try await parts(), case let .array(calls) = parts[9] else {
             Issue.record("an artifact writes what each declaration calls as a part")
 
             return
@@ -281,7 +281,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where the spellings stand in an order the table does not")
-    func declarationsOutOfStep() throws {
+    func declarationsOutOfStep() async throws {
         // Given. A document of two declarations, with the spellings swapped and
         // the rows left where they were. Each row still knows its own label, so
         // nothing but the two together can tell.
@@ -292,7 +292,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case let .array(declared) = parts[7],
               declared.count == 2
         else {
@@ -310,7 +310,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a call stands more arguments than its callee takes")
-    func aCallStandingTooMany() throws {
+    func aCallStandingTooMany() async throws {
         // Given. A document whose body calls one of its own declarations, with
         // one argument added to what the call stands. The row it reaches is the
         // link's answer, so the link is where this is asked.
@@ -329,7 +329,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -361,11 +361,11 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a name is not in normal form")
-    func aNameNotInNormalForm() throws {
+    func aNameNotInNormalForm() async throws {
         // Given. A real artifact whose declared spelling is written in the
         // decomposed form. It reads alike and compares apart, so every order
         // and every lookup built on it would go quiet.
-        guard case var .array(parts) = try parts(), case let .array(declared) = parts[7], !declared.isEmpty else {
+        guard case var .array(parts) = try await parts(), case let .array(declared) = parts[7], !declared.isEmpty else {
             Issue.record("an artifact writes its declared spellings as a part")
 
             return
@@ -380,11 +380,11 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a numbering counts a spelling the document does not declare")
-    func aNumberingOffItsDocument() throws {
+    func aNumberingOffItsDocument() async throws {
         // Given. A real artifact whose numbering ends on some other spelling.
         // The declarations stand at the end of that list, so every self call
         // would reach whatever the link answers that name with.
-        guard case var .array(parts) = try parts(),
+        guard case var .array(parts) = try await parts(),
               case var .array(numbering) = parts[11],
               case let .array(spellings) = numbering[1],
               !spellings.isEmpty
@@ -404,7 +404,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a name keys a list out of order")
-    func keysOutOfOrder() throws {
+    func keysOutOfOrder() async throws {
         // Given. A real artifact whose declared types stand in some other
         // order. The values read alike either way, so what breaks is quieter:
         // one artifact would have two writings and a cache key two answers.
@@ -415,7 +415,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case let .array(types) = parts[2],
               types.count == 2
         else {
@@ -433,7 +433,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a loop keeps a run its frame does not hold")
-    func aRunPastTheFrame() throws {
+    func aRunPastTheFrame() async throws {
         // Given. A body whose loop keeps a run of its slots, with the run moved
         // out past the frame and left empty. An empty run names no slot and a
         // run read as one is read whole, so the bounds are what a frame has to
@@ -459,7 +459,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -490,11 +490,11 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a body stands sends of its own")
-    func aBodyThatStandsSends() throws {
+    func aBodyThatStandsSends() async throws {
         // Given. A real artifact with one send added to a row that has a body.
         // A body's calls are in its own code, so a list here is a fact about
         // some other kind of row.
-        guard case var .array(parts) = try parts(),
+        guard case var .array(parts) = try await parts(),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case let .array(sends) = row[5],
@@ -516,7 +516,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a claim's contracts stand out of order")
-    func claimsOutOfOrder() throws {
+    func claimsOutOfOrder() async throws {
         // Given. A type that answers two contracts, with the two swapped. The
         // set reads the same either way, so what breaks is quieter: one
         // artifact would have two writings.
@@ -550,7 +550,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(claims) = parts[5],
               case var .array(entry) = claims[0],
               case let .array(contracts) = entry[1],
@@ -572,7 +572,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a numbering's closure table stands out of order")
-    func numberingClosuresOutOfOrder() throws {
+    func numberingClosuresOutOfOrder() async throws {
         // Given. A document whose two declarations each write a closure, with
         // the table that says where each one's begin written backwards.
         let sut = try Module(
@@ -596,7 +596,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11],
               case let .array(closing) = numbering[2],
               closing.count == 2
@@ -639,7 +639,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -679,7 +679,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a numbering's imports stand out of order")
-    func numberingImportsOutOfOrder() throws {
+    func numberingImportsOutOfOrder() async throws {
         // Given. A document that sends two procedures, with the two swapped in
         // the numbering. What a name stands at is read off this list, so a name
         // written twice or out of place rewires a call rather than refusing it.
@@ -701,7 +701,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11],
               case let .array(sent) = numbering[0],
               sent.count == 2
@@ -721,7 +721,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a value settles a procedure into it")
-    func aValueHoldingAProcedure() throws {
+    func aValueHoldingAProcedure() async throws {
         // Given. A real artifact with a module variable standing a value no
         // writing of one could lay down. The writing refuses it, so a reading
         // that took it would hold what it could never write out again.
@@ -735,11 +735,11 @@ struct ArtifactReadingTests {
                 "app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
-        let settled = try builder.compile([holding] + Module.standard)
+        let settled = try await builder.compile([holding] + Module.standard)
             .flatMap(\.variables)
             .first { entry in entry.value.holdsProcedure }
 
-        guard case var .array(parts) = try parts(), let settled else {
+        guard case var .array(parts) = try await parts(), let settled else {
             Issue.record("a module variable that starts as a closure settles one into a value")
 
             return
@@ -754,7 +754,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a closure is counted for a declaration that did not write it")
-    func aClosureCountedForAnother() throws {
+    func aClosureCountedForAnother() async throws {
         // Given. Two declarations, one of which writes a closure, with the
         // count moved onto the other. Every number still stands somewhere, so
         // nothing is out of range; what moves is which body owns it.
@@ -774,7 +774,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11],
               case let .array(counts) = numbering[2],
               case let .array(entry) = counts.first,
@@ -795,7 +795,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where the numbers behind the spellings run past what an int holds")
-    func closureNumbersPastAnInt() throws {
+    func closureNumbersPastAnInt() async throws {
         // Given. Two declarations whose counts add up to exactly what an int
         // holds. The sum stands, and the number the second closure takes is
         // that sum counted from behind the spellings, which does not.
@@ -815,7 +815,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11]
         else {
             Issue.record("an artifact writes how many closures each declaration wrote")
@@ -836,7 +836,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a numbering counts a declaration for no closures")
-    func aDeclarationCountedForNone() throws {
+    func aDeclarationCountedForNone() async throws {
         // Given. One declaration writing one closure, with a second name
         // counted for none beside it. A writing counts a name only where that
         // name wrote one, so nothing it lays down carries this entry.
@@ -856,7 +856,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11],
               case let .array(counts) = numbering[2],
               counts.count == 1
@@ -876,7 +876,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a numbering counts more closures than the table carries rows")
-    func moreClosuresThanRows() throws {
+    func moreClosuresThanRows() async throws {
         // Given. One declaration writing one closure, with the count raised.
         // The table behind the declarations is where the closures stand, so a
         // count above it numbers closures no row holds.
@@ -895,7 +895,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11],
               case let .array(counts) = numbering[2],
               case let .array(entry) = counts.first,
@@ -916,7 +916,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where the closure counts add up past what an int holds")
-    func closureCountsPastAnInt() throws {
+    func closureCountsPastAnInt() async throws {
         // Given. Two declarations, each counted for as many closures as an int
         // holds. Neither count is a number on its own, and their sum is the
         // one a numbering would have to count out.
@@ -936,7 +936,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11]
         else {
             Issue.record("an artifact writes how many closures each declaration wrote")
@@ -957,7 +957,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where it stands against a document other than the one it was kept under")
-    func anArtifactOfAnotherDocument() throws {
+    func anArtifactOfAnotherDocument() async throws {
         // Given. A document with an identity, and its artifact.
         let sut = try Module(
             try Module(
@@ -967,7 +967,7 @@ struct ArtifactReadingTests {
             ).draft,
             identity: Identity([0x01, 0x02, 0x03])
         )
-        let compiled = try builder.compile([sut] + Module.standard)
+        let compiled = try await builder.compile([sut] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.identity != nil }),
               let written = mine.written
@@ -994,7 +994,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where the variables stand out of name order")
-    func variablesOutOfOrder() throws {
+    func variablesOutOfOrder() async throws {
         // Given. Two module variables with the pair swapped. A body reaches one
         // by its number and never by its name, so the order is the fact and the
         // two would read each other's start.
@@ -1005,7 +1005,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case let .array(variables) = parts[13],
               variables.count == 2
         else {
@@ -1023,7 +1023,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a call reaches a number the document never gave")
-    func aCallOffTheNumbering() throws {
+    func aCallOffTheNumbering() async throws {
         // Given. A body that calls one of its own declarations, with the number
         // moved past everything this document numbered. What a number stands
         // for is the link's answer, but one never given is one no link answers.
@@ -1042,7 +1042,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -1073,7 +1073,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a body stands on a type number the document never gave")
-    func aTypeNumberOffTheNumbering() throws {
+    func aTypeNumberOffTheNumbering() async throws {
         // Given. A body that casts to a declared type, with the number moved
         // past everything this document numbered.
         let sut = try Module(
@@ -1087,7 +1087,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
@@ -1119,7 +1119,7 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where a place inside it addresses another document")
-    func aPlaceOfAnotherDocument() throws {
+    func aPlaceOfAnotherDocument() async throws {
         // Given. A document that leans a type on a contract, so the artifact
         // holds a place, with that place moved onto some other document.
         let sut = try Module(
@@ -1151,7 +1151,7 @@ struct ArtifactReadingTests {
             ]
         )
 
-        guard case var .array(parts) = try parts(of: sut),
+        guard case var .array(parts) = try await parts(of: sut),
               case var .array(leaned) = parts[6],
               case var .array(entry) = leaned.first,
               case var .array(place) = entry[2],
@@ -1174,9 +1174,9 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where another Warp wrote it")
-    func anotherRuntime() throws {
+    func anotherRuntime() async throws {
         // Given. A real artifact, stamped as the work of a build this is not.
-        guard case let .array(parts) = try parts() else {
+        guard case let .array(parts) = try await parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -1196,11 +1196,11 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where what it leaned on stands out of order")
-    func dependenciesOutOfOrder() throws {
+    func dependenciesOutOfOrder() async throws {
         // Given. A real artifact whose two dependencies are written the other
         // way round. Both name the same pair, so a reading that took either
         // order would let two writings say one artifact.
-        guard case var .array(parts) = try parts() else {
+        guard case var .array(parts) = try await parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -1215,10 +1215,10 @@ struct ArtifactReadingTests {
     }
 
     @Test("is refused where it leans on one artifact twice")
-    func dependenciesRepeated() throws {
+    func dependenciesRepeated() async throws {
         // Given. A real artifact naming one of them twice. What it leaned on is
         // a set, and a set written down twice is a writing no set makes.
-        guard case var .array(parts) = try parts() else {
+        guard case var .array(parts) = try await parts() else {
             Issue.record("an artifact is written as a list of parts")
 
             return
@@ -1236,8 +1236,8 @@ struct ArtifactReadingTests {
     // MARK: - Private
     // The parts an artifact writes, with the format it is stamped with taken
     // off, so that a test bends what it means to bend.
-    private func parts() throws -> Value {
-        try parts(of: try Module(
+    private func parts() async throws -> Value {
+        try await parts(of: try Module(
             types: ["app.Point": .record(["x": .int, "y": .int])],
             procedures: [
                 "app.entry": Procedure(
@@ -1249,8 +1249,8 @@ struct ArtifactReadingTests {
         ))
     }
 
-    private func parts(of module: Module) throws -> Value {
-        let compiled = try builder.compile([module] + Module.standard)
+    private func parts(of module: Module) async throws -> Value {
+        let compiled = try await builder.compile([module] + Module.standard)
 
         guard let mine = compiled.first(where: { one in one.declared.contains("app.entry") }),
               case let .array(written) = mine.written,
