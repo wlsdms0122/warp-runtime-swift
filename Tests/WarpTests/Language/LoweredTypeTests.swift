@@ -39,7 +39,7 @@ struct LoweredTypeTests {
             .array(.named("bank.Acct")),
             .nullable(.named("bank.Owner")),
             .parameter(name: "T", constraint: "app.Ordered"),
-            .procedure(Signature(parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .int), .pure),
+            .procedure(Signature(parameters: ["of": Parameter(type: .named("bank.Account"))], returns: .int), .const),
             .dictionary(.named("app.Maybe"))
         ]
 

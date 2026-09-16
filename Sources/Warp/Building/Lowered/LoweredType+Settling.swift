@@ -324,9 +324,9 @@ extension LoweredType {
         case let .inout(inner):
             return "inout \(inner.rendered(in: table))"
 
-        case let .procedure(parameters, returns, purity, isolation):
+        case let .procedure(parameters, returns, constness, isolation):
             let spelling = [
-                purity == .pure ? "const" : nil,
+                constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
                 "procedure"
             ]
@@ -464,16 +464,16 @@ extension LoweredType {
         case let .variable(inner), let .inout(inner):
             return try inner.settling(value, at: path(), in: table, assuming: assuming)
 
-        // A closure carries what the link derived about its text, its purity
+        // A closure carries what the link derived about its text, its constness
         // and its isolation, and a slot that asks for either reads the
         // carried fact. A closure that reached here through `any` or through
         // an undeclared field is judged here for the first time.
-        case let .procedure(required, returns, purity, isolation):
+        case let .procedure(required, returns, constness, isolation):
             return try settlingProcedure(
                 value,
                 parameters: required,
                 returns: returns,
-                purity: purity,
+                constness: constness,
                 isolation: isolation,
                 at: path(),
                 in: table
@@ -702,7 +702,7 @@ extension LoweredType {
         _ value: Value,
         parameters required: [(name: Name, type: LoweredType, mustBeGiven: Bool)]?,
         returns: LoweredType?,
-        purity: Purity,
+        constness: Constness,
         isolation: Isolation,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
@@ -714,7 +714,7 @@ extension LoweredType {
             throw ArgumentError("\(path()): \(Linked.unreadable)")
         }
 
-        if purity == .pure, closure.purity != .pure {
+        if constness == .const, closure.constness != .const {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got a procedure that runs"
             )
@@ -732,11 +732,11 @@ extension LoweredType {
                 (name: slot.name, type: slot.type, mustBeGiven: slot.mustBeGiven(in: table))
             },
             returns: closure.linked.returns,
-            purity: closure.purity,
+            constness: closure.constness,
             isolation: closure.isolation
         )
 
-        guard LoweredType.procedure(parameters: required, returns: returns, purity: .unstated, isolation: .unstated).accepts(given, in: table) else {
+        guard LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated).accepts(given, in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )
@@ -774,13 +774,13 @@ extension LoweredType {
 // says which values may arrive there. An array or a dictionary of them says it
 // about every element.
 extension LoweredType {
-    var isPureProcedure: Bool {
+    var isConstProcedure: Bool {
         switch self {
-        case .procedure(_, _, .pure, _):
+        case .procedure(_, _, .const, _):
             return true
 
         case let .array(element), let .dictionary(element):
-            return element.isPureProcedure
+            return element.isConstProcedure
 
         default:
             return false

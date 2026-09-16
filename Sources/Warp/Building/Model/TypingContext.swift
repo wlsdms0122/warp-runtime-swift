@@ -37,15 +37,15 @@ struct TypingContext: Sendable {
 
     // Every declaration that answers without running, by resolved selector. A
     // closure literal is judged against this, so what a body is written to call
-    // decides whether it fits a slot asking for purity.
-    let pure: Set<Name>
+    // decides whether it fits a slot asking for constness.
+    let const: Set<Name>
 
     // Which declarations touch no name another body could touch at the same
-    // time, worked out from the bodies the way purity is.
+    // time, worked out from the bodies the way constness is.
     let isolated: Set<Name>
 
     // What may come out of each declaration when the work goes wrong, worked
-    // out from the bodies the way purity is. A closure literal is judged
+    // out from the bodies the way constness is. A closure literal is judged
     // against this, and so is every `attempt`: what a rescue is there for is
     // what its body may fail with.
     let failing: [Name: Failing]
@@ -56,7 +56,7 @@ struct TypingContext: Sendable {
     let contractProcedures: [Name: ContractProcedure]
 
     // The variables of the document being read, by name. A body reading one
-    // answers by the run's state, so purity is read against these.
+    // answers by the run's state, so constness is read against these.
     let variables: Set<Name>
 
     // MARK: - Initializer

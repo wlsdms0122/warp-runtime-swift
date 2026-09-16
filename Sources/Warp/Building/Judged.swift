@@ -36,7 +36,7 @@ struct Judged: Sendable {
     // MARK: - Property
     let label: Name
     let signature: Signature
-    let purity: Purity
+    let constness: Constness
     let isolation: Isolation
     let failing: Failing
 
@@ -54,7 +54,7 @@ struct Judged: Sendable {
     init(
         label: Name,
         signature: Signature,
-        purity: Purity,
+        constness: Constness,
         isolation: Isolation,
         failing: Failing,
         sends: [Sent],
@@ -62,7 +62,7 @@ struct Judged: Sendable {
     ) {
         self.label = label
         self.signature = signature
-        self.purity = purity
+        self.constness = constness
         self.isolation = isolation
         self.failing = failing
         self.sends = sends
@@ -76,7 +76,7 @@ struct Judged: Sendable {
     init(
         label: Name,
         signature: Signature,
-        purity: Purity,
+        constness: Constness,
         isolation: Isolation,
         failing: Failing,
         sends: [Sent],
@@ -112,7 +112,7 @@ struct Judged: Sendable {
         self.init(
             label: label,
             signature: signature,
-            purity: purity,
+            constness: constness,
             isolation: isolation,
             failing: failing,
             sends: sends,
@@ -125,7 +125,7 @@ struct Judged: Sendable {
     init(_ row: Linked) {
         self.label = row.label
         self.signature = row.signature
-        self.purity = row.purity
+        self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
         self.sends = row.sends
@@ -263,22 +263,22 @@ struct Judged: Sendable {
                 guard standing else { throw self.brought(nothing: document) }
 
                 // The door it answers through is the row's own: a native
-                // query is what a compile settled as pure, and a stand-in on
+                // query is what a compile settled as const, and a stand-in on
                 // the other door would be read the wrong way by a run.
                 return row(
-                    .native(purity == .pure ? .query(UnbroughtProcedure(label)) : .effect(UnbroughtEffect(label))),
+                    .native(constness == .const ? .query(UnbroughtProcedure(label)) : .effect(UnbroughtEffect(label))),
                     of: origin,
                     in: table
                 )
             }
 
-            // A procedure declares its own purity, isolation, failing and the
+            // A procedure declares its own constness, isolation, failing and the
             // places it sends at, and the module bringing it declares what it
             // takes and answers. This row carries what the procedure a compile was
             // handed declared, so a host bringing a procedure saying something else
             // brings a row standing on claims nothing here makes.
             guard
-                purity == brought.native.purity,
+                constness == brought.native.constness,
                 isolation == brought.native.isolation,
                 failing == brought.native.failing,
                 signature == brought.signature,
@@ -300,7 +300,7 @@ struct Judged: Sendable {
             label: label,
             origin: origin,
             signature: signature,
-            purity: purity,
+            constness: constness,
             isolation: isolation,
             failing: failing,
             implementation: implementation,
@@ -333,7 +333,7 @@ struct Judged: Sendable {
         in document: Place.Document
     ) -> BuildError {
         let differing = [
-            purity == brought.native.purity ? nil : "purity",
+            constness == brought.native.constness ? nil : "constness",
             isolation == brought.native.isolation ? nil : "isolation",
             failing == brought.native.failing ? nil : "failing",
             signature == brought.signature ? nil : "declaration",

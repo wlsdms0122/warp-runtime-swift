@@ -232,7 +232,7 @@ struct LoweringTests {
     }
 
     @Test("a body reading a module variable does not answer without running")
-    func aBodyReadingAVariableIsNotPure() async throws {
+    func aBodyReadingAVariableIsNotConst() async throws {
         // Given. The variable's value is the run's, so folding the procedure at the
         // link would fix a value nothing at the run could change
         let module = try Module(
@@ -251,7 +251,7 @@ struct LoweringTests {
         let image = try await builder.build([module] + Module.standard, entry: "entry")
 
         // Then
-        #expect(image["app.tally"]?.purity != .pure)
+        #expect(image["app.tally"]?.constness != .const)
     }
 
     @Test("a name is what it names, wherever a variable is handed in place")
@@ -309,7 +309,7 @@ struct LoweringTests {
                             "of": Parameter(
                                 type: .inout(.procedure(
                                     Signature(parameters: ["x": Parameter(type: .named("Count"))]),
-                                    .pure,
+                                    .const,
                                     .isolated
                                 ))
                             )

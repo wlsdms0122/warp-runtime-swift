@@ -143,7 +143,7 @@ struct ReceiverTests {
     }
 
     @Test("what answers without running is worked out at link, not declared")
-    func purityIsALinkFact() async throws {
+    func constnessIsALinkFact() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -177,17 +177,17 @@ struct ReceiverTests {
 
         // Then. `clean` computes; `dirty` reaches an effect, and everything
         // that reaches it goes with it
-        #expect(image["clean"]?.purity == .pure)
-        #expect(image["dirty"]?.purity != .pure)
-        #expect(image["entry"]?.purity != .pure)
-        #expect(image["std.collection.count"]?.purity == .pure)
+        #expect(image["clean"]?.constness == .const)
+        #expect(image["dirty"]?.constness != .const)
+        #expect(image["entry"]?.constness != .const)
+        #expect(image["std.collection.count"]?.constness == .const)
     }
 
-    @Test("a body that sends a pure procedure is pure")
-    func aBodyThatSendsIsStillPure() async throws {
-        // Given. Purity is judged over the name a body wrote, and what that
+    @Test("a body that sends a const procedure is const")
+    func aBodyThatSendsIsStillConst() async throws {
+        // Given. Constness is judged over the name a body wrote, and what that
         // name means depends on where it was written. `label` sends `joined`,
-        // which is pure, so `label` is pure
+        // which is const, so `label` is const
         let label = Procedure(
             signature: Signature(
                 receiver: "of",
@@ -214,7 +214,7 @@ struct ReceiverTests {
         let image = try await builder.build([sut] + Module.standard, entry: entryName)
 
         // Then
-        #expect(image["label"]?.purity == .pure)
+        #expect(image["label"]?.constness == .const)
     }
 
     @Test("a dot on an undeclared type is refused")

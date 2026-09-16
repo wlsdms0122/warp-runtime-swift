@@ -39,7 +39,7 @@ public final class Linked: Sendable {
     // the order alone.
     public let receiverPosition: Int?
 
-    public let purity: Purity
+    public let constness: Constness
     public let isolation: Isolation
 
     // What may come out of this when the work goes wrong: the procedures its
@@ -70,7 +70,7 @@ public final class Linked: Sendable {
         label: Name,
         origin: Int,
         signature: Signature,
-        purity: Purity,
+        constness: Constness,
         isolation: Isolation,
         failing: Failing,
         implementation: Implementation,
@@ -85,7 +85,7 @@ public final class Linked: Sendable {
         self.origin = origin
         self.signature = signature
         self.receiverPosition = receiverPosition
-        self.purity = purity
+        self.constness = constness
         self.isolation = isolation
         self.slots = slots
         self.returns = returns
@@ -107,7 +107,7 @@ public final class Linked: Sendable {
         self.origin = row.origin
         self.signature = row.signature
         self.receiverPosition = row.receiverPosition
-        self.purity = row.purity
+        self.constness = row.constness
         self.isolation = row.isolation
         self.slots = row.slots
         self.returns = row.returns
@@ -126,7 +126,7 @@ public final class Linked: Sendable {
         self.origin = row.origin
         self.signature = row.signature
         self.receiverPosition = row.receiverPosition
-        self.purity = row.purity
+        self.constness = row.constness
         self.isolation = row.isolation
         self.slots = row.slots
         self.returns = row.returns
@@ -145,7 +145,7 @@ public final class Linked: Sendable {
         label: Name,
         origin: Int,
         procedure: Procedure,
-        pure: Bool,
+        const: Bool,
         isolated: Bool,
         failing: Failing,
         sends: [Sent],
@@ -155,7 +155,7 @@ public final class Linked: Sendable {
             label: label,
             origin: origin,
             signature: procedure.signature,
-            purity: pure ? .pure : .unstated,
+            constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
             implementation: .native(procedure.implementation.native ?? .query(UnsettledProcedure())),

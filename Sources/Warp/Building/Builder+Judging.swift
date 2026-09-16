@@ -44,8 +44,8 @@ extension Builder {
     // made, so the three ask this rather than each holding a copy.
     //
     // Asking it where types are inferred instead would ask only of what that
-    // walk reaches: a procedure both impure and unreachable is walked by
-    // neither the frontier nor the pure set, and its mentions would name
+    // walk reaches: a procedure that both runs and is unreachable is walked by
+    // neither the frontier nor the const set, and its mentions would name
     // whatever they liked.
     func judge(subexpressions held: some Traversable, at place: Place, in table: TypeTable) throws {
         let subexpressions = held.subexpressions(at: place)
@@ -114,8 +114,8 @@ extension Builder {
     // mentions resolve, and it names a type there is something to read. Both
     // are answered without knowing what the value reads as, so both belong to
     // the pass that sees every cast rather than to the walk that sees the
-    // reached ones. A procedure both impure and unreachable is walked by
-    // neither the frontier nor the pure set.
+    // reached ones. A procedure that both runs and is unreachable is walked by
+    // neither the frontier nor the const set.
     func judge(
         cast named: TypeExpression,
         at place: Place,

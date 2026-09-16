@@ -29,7 +29,7 @@ public struct Procedure: Sendable {
     // closure literal is rewritten by the link to carry both, and the closure
     // value made from it carries them on into a slot that asks. A procedure a
     // caller assembles claims nothing.
-    public let purity: Purity
+    public let constness: Constness
     public let isolation: Isolation
     public let failing: Failing
 
@@ -42,14 +42,14 @@ public struct Procedure: Sendable {
         description: String? = nil,
         signature: Signature = Signature(),
         implementation: Implementation,
-        purity: Purity = .unstated,
+        constness: Constness = .unstated,
         isolation: Isolation = .unstated,
         failing: Failing = .unstated
     ) {
         self.description = description
         self.signature = signature
         self.implementation = implementation
-        self.purity = purity
+        self.constness = constness
         self.isolation = isolation
         self.failing = failing
     }

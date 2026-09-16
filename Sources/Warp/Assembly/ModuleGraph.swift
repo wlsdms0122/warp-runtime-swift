@@ -12,7 +12,7 @@ import Foundation
 //
 // A module is compiled against what it needs, so what it needs has to be
 // compiled first: the procedures it sends answer with types, the facts nobody
-// declared (purity, isolation, failure) are read off what a body reaches, and
+// declared (constness, isolation, failure) are read off what a body reaches, and
 // a constant settles by running the procedures it calls. All three are answers a
 // module asks its neighbours for, and asking for one that is not ready yet
 // has no answer to give.

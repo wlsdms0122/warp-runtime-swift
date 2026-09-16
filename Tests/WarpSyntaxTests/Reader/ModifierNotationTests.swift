@@ -185,8 +185,8 @@ struct ModifierNotationTests {
 
     @Test("isolated is read in either order and written in one", arguments: [
         ("isolated procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated procedure"),
-        ("const isolated procedure", .procedure(nil, .pure, .isolated), "const isolated procedure"),
-        ("isolated const procedure", .procedure(nil, .pure, .isolated), "const isolated procedure")
+        ("const isolated procedure", .procedure(nil, .const, .isolated), "const isolated procedure"),
+        ("isolated const procedure", .procedure(nil, .const, .isolated), "const isolated procedure")
     ])
     func isolationIsReadEitherWay(written: String, expected: TypeExpression, canonical: String) throws {
         let parsed = try TypeReader.parse(written)
@@ -199,7 +199,7 @@ struct ModifierNotationTests {
     func aMarkAndAModifierRoundTrip() async throws {
         // Given. A parameter typed `inout const procedure<...>`, which the
         // writer spells as a form under one key
-        let type = TypeExpression.inout(.procedure(Signature(returns: .int), .pure))
+        let type = TypeExpression.inout(.procedure(Signature(returns: .int), .const))
 
         // When
         let written = try Writer().value(of: type)

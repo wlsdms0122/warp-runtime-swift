@@ -10,7 +10,7 @@ import Foundation
 // A procedure implemented in native code: one that answers without running
 // anything, or one that reaches outside the run.
 //
-// What such a procedure declares about itself is read here. A body's purity,
+// What such a procedure declares about itself is read here. A body's constness,
 // isolation and failing are what its code turns out to do and a link works
 // them out; a native says, and the row a compile settles records what it said.
 enum Native: Sendable {
@@ -28,10 +28,10 @@ enum Native: Sendable {
     // MARK: - Property
     // Answers without running, which is what lets it be asked inside a
     // condition and while a constant settles.
-    var purity: Purity {
+    var constness: Constness {
         switch self {
         case .query:
-            return .pure
+            return .const
 
         case .effect:
             return .unstated

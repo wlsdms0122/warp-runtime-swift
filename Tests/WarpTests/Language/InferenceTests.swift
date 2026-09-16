@@ -931,7 +931,7 @@ struct InferenceTests {
 
     @Test("a cast onto any in code nothing reaches is still refused")
     func anUnreadableClaimIsRefusedWhereNoWalkGoes() async throws {
-        // Given. Impure and unreachable, so no typing walk sees it. What the
+        // Given. It runs, and nothing reaches it, so no typing walk sees it. What the
         // claim names is a fact about the spelling, so it is held anyway; `as?:
         // never` slipping through here would answer null forever
         let sut = try Module(
@@ -1004,9 +1004,9 @@ struct InferenceTests {
     }
 
     @Test("a cast in a procedure nothing reaches still names a declared type")
-    func aCastInUnreachedImpureCodeIsStillHeldToItsName() async throws {
-        // Given. Impure and unreachable from the entry, so neither the frontier
-        // nor the pure set walks it. A signature written here would still be
+    func aCastInUnreachedNonConstCodeIsStillHeldToItsName() async throws {
+        // Given. It runs, and nothing reaches it from the entry, so neither the frontier
+        // nor the const set walks it. A signature written here would still be
         // held to its names; so is a cast
         let sut = try Module(
             procedures: [
@@ -1271,7 +1271,7 @@ struct InferenceTests {
 
     @Test("a constant folded before any run may hold a cast")
     func aConstantMayHoldACast() async throws {
-        // Given. The build calls a cast pure, so the pure evaluator has to be
+        // Given. The build calls a cast const, so the const evaluator has to be
         // able to read one. A module constant is folded through that evaluator
         // before anything runs, so a cast in one is where the two would
         // disagree if only the build believed it

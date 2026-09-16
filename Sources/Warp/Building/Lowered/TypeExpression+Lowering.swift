@@ -60,7 +60,7 @@ extension TypeExpression {
                 )
             )
 
-        case let .procedure(signature, purity, isolation):
+        case let .procedure(signature, constness, isolation):
             return .procedure(
                 parameters: signature?.ordered(
                     { name, parameter in
@@ -75,7 +75,7 @@ extension TypeExpression {
                     standing: { parameter in parameter.name }
                 ),
                 returns: signature?.returns?.lowered(in: table),
-                purity: purity,
+                constness: constness,
                 isolation: isolation
             )
 

@@ -111,14 +111,14 @@ struct TypeNotationTests {
         }
     }
 
-    @Test("a slot asks for purity by writing it in front")
-    func purityIsWrittenAndRead() throws {
+    @Test("a slot asks for constness by writing it in front")
+    func constnessIsWrittenAndRead() throws {
         // Given / When / Then
-        #expect(try TypeReader.parse("const procedure") == .procedure(nil, .pure))
+        #expect(try TypeReader.parse("const procedure") == .procedure(nil, .const))
         #expect(try TypeReader.parse("procedure") == .procedure(nil, .unstated))
 
         // Only a procedure answers without running, so only a procedure is
-        // written pure.
+        // written const.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("const string") }
     }
 

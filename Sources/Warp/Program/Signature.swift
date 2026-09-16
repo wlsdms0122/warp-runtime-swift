@@ -61,8 +61,8 @@ public struct Signature: Sendable, Equatable {
 
     // The parameters asking for a procedure that answers without running. A
     // body may apply a name standing in one and still answer without running.
-    var pureProcedures: Set<Name> {
-        Set(parameters.compactMap { name, parameter in parameter.type?.isPureProcedure == true ? name : nil })
+    var constProcedures: Set<Name> {
+        Set(parameters.compactMap { name, parameter in parameter.type?.isConstProcedure == true ? name : nil })
     }
 
     // The same, for the claim isolation reads.

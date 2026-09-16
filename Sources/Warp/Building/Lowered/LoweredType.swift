@@ -30,11 +30,11 @@ indirect enum LoweredType: Sendable {
 
     // What a slot asks of a procedure value: the parameters it may be called
     // with, in position order, and what it must answer. Nil where nothing
-    // was declared. Purity and isolation are the slot's requirements.
+    // was declared. Constness and isolation are the slot's requirements.
     case procedure(
         parameters: [(name: Name, type: LoweredType, mustBeGiven: Bool)]?,
         returns: LoweredType?,
-        purity: Purity,
+        constness: Constness,
         isolation: Isolation
     )
 
@@ -323,9 +323,9 @@ extension LoweredType: Equatable {
         case let (.record(mine), .record(theirs)):
             return mine == theirs
 
-        case let (.procedure(_, _, myPurity, myIsolation),
-                  .procedure(_, _, theirPurity, theirIsolation)):
-            return myPurity == theirPurity
+        case let (.procedure(_, _, myConstness, myIsolation),
+                  .procedure(_, _, theirConstness, theirIsolation)):
+            return myConstness == theirConstness
                 && myIsolation == theirIsolation
                 && lhs.sameProcedure(as: rhs)
 

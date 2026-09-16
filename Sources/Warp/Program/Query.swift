@@ -8,7 +8,7 @@
 import Foundation
 
 // A procedure implemented natively that answers without running anything.
-// `count`, `contains`, whatever a module ships. Pure and synchronous, which is
+// `count`, `contains`, whatever a module ships. Const and synchronous, which is
 // what lets it be asked inside a condition and while a constant settles.
 //
 // It carries no name and no signature. Both belong to the `Procedure` that has

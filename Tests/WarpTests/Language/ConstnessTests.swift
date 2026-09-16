@@ -1,5 +1,5 @@
 //
-//  PurityTests.swift
+//  ConstnessTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/16/26.
@@ -15,15 +15,15 @@ import WarpStandard
 // The line is what a body reaches, not what it is written with. A branch, a
 // round and a name of its own all stay inside the body, so a body holding them
 // still answers from what it was handed. Reaching the run's own state does not,
-// and neither does calling a value nothing said the purity of.
+// and neither does calling a value nothing said the constness of.
 @Suite("What answers without running")
-struct PurityTests {
+struct ConstnessTests {
     // MARK: - Property
     // A declaration whose slot asks for a body that answers without running,
     // so what fits here is exactly what the predicate admits.
     private let asking = Procedure(
         signature: Signature(
-            parameters: ["body": Parameter(type: .procedure(nil, .pure))],
+            parameters: ["body": Parameter(type: .procedure(nil, .const))],
             returns: .string
         ),
         body: [
@@ -155,8 +155,8 @@ struct PurityTests {
         }
     }
 
-    @Test("a body applying a name a slot said holds a pure procedure answers without running")
-    func aBodyApplyingAPureProcedureSlotAnswers() async throws {
+    @Test("a body applying a name a slot said holds a const procedure answers without running")
+    func aBodyApplyingAConstProcedureSlotAnswers() async throws {
         // Given. `asking` applies what it was handed, and its slot asks for a
         // procedure that answers without running. A closure calling `asking`
         // therefore answers without running too, and standing in that same

@@ -543,7 +543,7 @@ public struct Builder: Sendable {
             own[selector] ?? rows[selector].map { row in table[row].signature }
         }
 
-        pure(among: holding, settling: &compiling.pure, reading: reading)
+        const(among: holding, settling: &compiling.const, reading: reading)
         isolated(among: holding, settling: &compiling.isolated, taking: taking)
         failing(among: holding, settling: &compiling.failing)
 
@@ -558,7 +558,7 @@ public struct Builder: Sendable {
         )
         let sending = Sending(
             numbering: numbering,
-            pure: compiling.pure,
+            const: compiling.const,
             isolated: compiling.isolated,
             taking: taking
         )
@@ -577,7 +577,7 @@ public struct Builder: Sendable {
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
-                    pure: compiling.pure.contains(symbol.declared),
+                    const: compiling.const.contains(symbol.declared),
                     isolated: compiling.isolated.contains(symbol.declared),
                     failing: compiling.failing[symbol.declared] ?? .unstated,
                     sends: try sending.rows(of: symbol.procedure, called: symbol.declared),

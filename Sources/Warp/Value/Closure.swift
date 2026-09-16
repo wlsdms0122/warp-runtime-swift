@@ -26,7 +26,7 @@ public struct Closure: Sendable {
     // What the link derived about the literal's text, carried with the value so
     // a slot the link could not see, one reached through `any` or through a
     // field no declaration named, still asks it.
-    public var purity: Purity { linked.purity }
+    public var constness: Constness { linked.constness }
     public var isolation: Isolation { linked.isolation }
 
     // MARK: - Initializer
@@ -49,8 +49,8 @@ public struct Closure: Sendable {
         try linked.settling(returned: value)
     }
 
-    // Whether this may run beside another body. Purity does not answer it: a
-    // pure body can still call a native procedure that holds state, and that procedure
+    // Whether this may run beside another body. Constness does not answer it: a
+    // const body can still call a native procedure that holds state, and that procedure
     // is what two of these would meet in.
     public var runsBeside: Bool {
         isolation == .isolated

@@ -12,7 +12,7 @@ import Foundation
 //
 // An `Identity` says which document this was compiled from and nothing about
 // what the compile answered. Two compiles of one document answer differently
-// when what stands behind them differs: what a body reaches decides purity,
+// when what stands behind them differs: what a body reaches decides constness,
 // isolation and failure, and a declaration that wrote no answer is read off
 // its body against the types the link laid down. A cache keyed by the document
 // alone would hand back an artifact that is true against something else.

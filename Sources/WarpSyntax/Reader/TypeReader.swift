@@ -72,16 +72,16 @@ public struct TypeReader: Decodable {
             return mark.marking(inner)
         }
 
-        guard let (purity, isolation, rest) = Self.modifiers(of: text) else {
+        guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
             throw TypeFormError("type '\(text)' writes a procedure twice. Once says it")
         }
 
-        if purity == .pure || isolation == .isolated {
+        if constness == .const || isolation == .isolated {
             guard case let .procedure(signature, _, _) = try parse(rest) else {
-                throw TypeFormError("only a procedure is written pure or isolated")
+                throw TypeFormError("only a procedure is written const or isolated")
             }
 
-            return .procedure(signature, purity, isolation)
+            return .procedure(signature, constness, isolation)
         }
 
         if text.hasSuffix("?") {
@@ -117,7 +117,7 @@ public struct TypeReader: Decodable {
             }
         }
 
-        // Purity is a keyword in front rather than an argument, because it says
+        // Constness is a keyword in front rather than an argument, because it says
         // what a slot requires of the whole procedure rather than of a part of
         // it. The same place a reader expects an adjective. A type parameter
         // rather than a name: `some T` is worked out from the call, where `T`
@@ -264,45 +264,45 @@ public struct TypeReader: Decodable {
     // so that what was read stays a value the caller can ask about.
     static func procedureKeywords(
         of key: String
-    ) -> (mark: SlotMark?, purity: Purity, isolation: Isolation)? {
+    ) -> (mark: SlotMark?, constness: Constness, isolation: Isolation)? {
         let (mark, rest) = SlotMark.leading(of: key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
 
         guard
-            let (purity, isolation, head) = modifiers(of: rest),
+            let (constness, isolation, head) = modifiers(of: rest),
             head == "procedure"
         else {
             return nil
         }
 
-        return (mark, purity, isolation)
+        return (mark, constness, isolation)
     }
 
     // The one spelling of a procedure type's head: `const` before `isolated`,
     // both before `procedure`.
-    public static func procedureSpelling(_ purity: Purity, _ isolation: Isolation) -> String {
-        [purity == .pure ? "const" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
+    public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation) -> String {
+        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")
     }
 
     // The modifiers at the front of a type's text, in either order, and the
     // text left after them. Nil where a modifier is written twice.
-    static func modifiers(of text: String) -> (Purity, Isolation, String)? {
+    static func modifiers(of text: String) -> (Constness, Isolation, String)? {
         var rest = text
-        var purity = Purity.unstated
+        var constness = Constness.unstated
         var isolation = Isolation.unstated
 
         while true {
             if let bare = rest.dropPrefixed("const ") {
-                guard purity == .unstated else { return nil }
-                purity = .pure
+                guard constness == .unstated else { return nil }
+                constness = .const
                 rest = String(bare)
             } else if let bare = rest.dropPrefixed("isolated ") {
                 guard isolation == .unstated else { return nil }
                 isolation = .isolated
                 rest = String(bare)
             } else {
-                return (purity, isolation, rest)
+                return (constness, isolation, rest)
             }
         }
     }
@@ -342,10 +342,10 @@ public struct TypeReader: Decodable {
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
             let key = keyed.allKeys.first,
-            let (mark, purity, isolation) = procedureKeywords(of: key.stringValue)
+            let (mark, constness, isolation) = procedureKeywords(of: key.stringValue)
         {
             let signature = try keyed.decode(SignatureFormReader.self, forKey: key)
-            let written = TypeExpression.procedure(signature.signature, purity, isolation)
+            let written = TypeExpression.procedure(signature.signature, constness, isolation)
 
             return mark?.marking(written) ?? written
         }

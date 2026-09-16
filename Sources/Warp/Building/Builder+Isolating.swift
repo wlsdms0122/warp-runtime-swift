@@ -8,7 +8,7 @@
 import Foundation
 
 // Which declarations touch no name another body could touch at the same time.
-// Worked out the way purity is: a native says so about itself, a body starts
+// Worked out the way constness is: a native says so about itself, a body starts
 // isolated, and one is struck when its body writes a name it did not declare,
 // hands one in place, calls a value, or calls a declaration that was struck,
 // until nothing more is struck.
@@ -37,7 +37,7 @@ extension Builder {
                 .map(\.declared)
         )
 
-        // Only what this call was handed can be struck, for the reason purity
+        // Only what this call was handed can be struck, for the reason constness
         // reads the same way: what was settled before it stands in front of
         // it and reaches nothing here.
         while true {
@@ -129,7 +129,7 @@ extension Builder {
 
                 guard let introduced = statement.binding?.introduced else { continue }
 
-                // Read forward, the way purity reads it: what a name said is
+                // Read forward, the way constness reads it: what a name said is
                 // what stands until something else takes the spelling.
                 if
                     statement.binding?.declared?.isIsolatedProcedure == true

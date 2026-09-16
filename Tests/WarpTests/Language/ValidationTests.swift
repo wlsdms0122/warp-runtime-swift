@@ -187,7 +187,7 @@ struct ValidationTests {
 
     @Test("a construct in a condition is refused at the check")
     func aConstructInAConditionIsRefused() {
-        // Given. The run asks a condition purely, the same fact an operand has,
+        // Given. The run reads a condition rather than runs it, the same fact an operand has,
         // so the same rule refuses a construct there
         let construct = Warp.Expression.block(Block(body: [], result: .literal(.bool(true))))
 

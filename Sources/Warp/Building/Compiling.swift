@@ -11,7 +11,7 @@ import Foundation
 // compiled against.
 //
 // A document is compiled against the seven things it asks of what stands
-// before it: what a declaration takes and answers, whether it is pure,
+// before it: what a declaration takes and answers, whether it is const,
 // isolated and failing, what the build read off a body that declared no
 // answer, and a body it can run while folding a constant. All seven are here,
 // and a document reaches nothing else outside itself.
@@ -30,7 +30,7 @@ struct Compiling {
     let documents: [Place.Document]
 
     // The facts nobody declared, over every declaration laid down so far.
-    var pure: Set<Name> = []
+    var const: Set<Name> = []
     var isolated: Set<Name> = []
     var failing: [Name: Failing] = [:]
 
@@ -96,7 +96,7 @@ struct Compiling {
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )
-        self.pure = carried.pure
+        self.const = carried.const
         self.isolated = carried.isolated
         self.failing = carried.failing
         self.answers = carried.answers
@@ -117,7 +117,7 @@ struct Compiling {
             numbering: lowering.numbering,
             closureRows: lowering.closureRows,
             variables: lowering.variables,
-            pure: pure,
+            const: const,
             isolated: isolated,
             failing: failing,
             answers: answers
@@ -149,7 +149,7 @@ struct Compiling {
         )
 
         for judged in document.table[document.standing] {
-            if judged.purity == .pure { pure.insert(judged.label) }
+            if judged.constness == .const { const.insert(judged.label) }
             if judged.isolation == .isolated { isolated.insert(judged.label) }
 
             failing[judged.label] = judged.failing
@@ -270,7 +270,7 @@ struct Compiling {
             linked: lowering.table,
             rows: lowering.rows,
             answers: answers,
-            pure: pure,
+            const: const,
             isolated: isolated,
             failing: failing,
             contractProcedures: contractProcedures,

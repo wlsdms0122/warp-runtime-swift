@@ -185,7 +185,7 @@ public indirect enum Expression: Sendable {
             + " What a body decides reaches a condition through a procedure"
 
     // Whether a construct (a type that runs a body, or leaves) sits anywhere
-    // in this expression read as data. A call's operand is data the pure half
+    // in this expression read as data. A call's operand is data the const half
     // reads, so the check and the link both refuse one by asking this; a
     // closure is data (the body it carries is its own), so the walk does not
     // enter it.

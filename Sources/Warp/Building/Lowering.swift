@@ -536,7 +536,7 @@ struct Lowering {
                     label: label,
                     origin: slots.origin,
                     signature: procedure.signature,
-                    purity: procedure.purity,
+                    constness: procedure.constness,
                     isolation: procedure.isolation,
                     failing: procedure.failing,
                     implementation: .body(body, inner.frame),

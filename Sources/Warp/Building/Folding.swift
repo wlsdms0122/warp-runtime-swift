@@ -57,8 +57,8 @@ struct Folding {
 
     // Against native procedures alone: every declaration of the modules by its
     // spelling, a written body standing as the refusal it earns before it is
-    // lowered. What a constant settles from. A native's purity is its own; a
-    // written body is never run here, so its purity is not asked.
+    // lowered. What a constant settles from. A native's constness is its own; a
+    // written body is never run here, so its constness is not asked.
     init(bindings: [Name: Value], natives modules: [Module]) {
         // The natives declare the types their own signatures name, so the
         // table is theirs.
@@ -77,7 +77,7 @@ struct Folding {
                         label: name,
                         origin: origin,
                         procedure: procedure,
-                        pure: procedure.implementation.isNativelyPure == true,
+                        const: procedure.implementation.isNativelyConst == true,
                         isolated: false,
                         failing: procedure.implementation.nativelyFailing ?? .unstated,
                         // A constant settles before the link's table exists, so

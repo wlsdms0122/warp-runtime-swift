@@ -19,7 +19,7 @@ import Foundation
 public enum Implementation: Sendable {
     case body(Block)
 
-    // Answers without running anything. Pure and synchronous, which is what
+    // Answers without running anything. Const and synchronous, which is what
     // lets it be asked inside a condition and while a constant settles.
     case query(any Query)
 
@@ -29,7 +29,7 @@ public enum Implementation: Sendable {
 
     // MARK: - Property
     // The procedure behind this where it is written in native code, which is what
-    // declares its own purity, isolation and failing. Nil for a body, whose
+    // declares its own constness, isolation and failing. Nil for a body, whose
     // claims are what its code turns out to do.
     var native: Native? {
         switch self {
@@ -46,8 +46,8 @@ public enum Implementation: Sendable {
 
     // What a native declares about itself, in the answers a builder works out
     // for a body. Nil where nothing was declared, which is what a body is.
-    public var isNativelyPure: Bool? {
-        native.map { procedure in procedure.purity == .pure }
+    public var isNativelyConst: Bool? {
+        native.map { procedure in procedure.constness == .const }
     }
 
     public var isNativelyIsolated: Bool? {

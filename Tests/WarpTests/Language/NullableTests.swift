@@ -820,8 +820,8 @@ struct IndexReferenceJudgmentTests {
         }
     }
 
-    @Test("a pure body nobody reaches still has its sends checked")
-    func anUnreachedPureBodyIsChecked() async throws {
+    @Test("a const body nobody reaches still has its sends checked")
+    func anUnreachedConstBodyIsChecked() async throws {
         // Given. `shout` is derivable, so its body lands in the image and runs
         // whenever a path reaches it; a call it writes wrongly is the build's to
         // refuse whether or not the entry ever mentions it

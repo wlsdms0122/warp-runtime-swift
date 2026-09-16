@@ -80,10 +80,10 @@ public indirect enum TypeExpression: Sendable, Equatable {
     // way `any` is for a value, and it is accepted by anything for the same
     // reason.
     //
-    // Purity and isolation are requirements rather than claims. A declaration
+    // Constness and isolation are requirements rather than claims. A declaration
     // never states its own (the builder derives both from what a body does) so
     // what is written here is what a slot asks of whatever fills it.
-    case procedure(Signature?, Purity = .unstated, Isolation = .unstated)
+    case procedure(Signature?, Constness = .unstated, Isolation = .unstated)
 
     // A field that a path may write through. Only a declared type's field is
     // one: `var int` in a type declaration says a `set` or an `inout` path may
@@ -258,9 +258,9 @@ public indirect enum TypeExpression: Sendable, Equatable {
         case let .borrowing(inner):
             return "borrowing \(inner.rendered)"
 
-        case let .procedure(signature, purity, isolation):
+        case let .procedure(signature, constness, isolation):
             let spelling = [
-                purity == .pure ? "const" : nil,
+                constness == .const ? "const" : nil,
                 isolation == .isolated ? "isolated" : nil,
                 "procedure"
             ]
@@ -380,13 +380,13 @@ extension TypeExpression {
     // running, holding one or an array of them. A name standing in such a slot
     // may be applied where a body must answer without running: what fills it
     // passed that judgement where it was handed over.
-    var isPureProcedure: Bool {
+    var isConstProcedure: Bool {
         switch self {
-        case .procedure(_, .pure, _):
+        case .procedure(_, .const, _):
             return true
 
         case let .array(element):
-            return element.isPureProcedure
+            return element.isConstProcedure
 
         default:
             return false

@@ -133,13 +133,13 @@ extension LoweredType {
                 theirs[name].map { given in field.accepts(given, in: table, assuming: assuming) } ?? false
             }
 
-        case let (.procedure(required, wanted, wantedPurity, wantedIsolation),
-                  .procedure(given, offered, offeredPurity, offeredIsolation)):
-            // A slot asking for purity takes only what says it is pure, and one
+        case let (.procedure(required, wanted, wantedConstness, wantedIsolation),
+                  .procedure(given, offered, offeredConstness, offeredIsolation)):
+            // A slot asking for constness takes only what says it is const, and one
             // asking for isolation only what says it is isolated. The two are
-            // separate claims: a pure body answers without running and can
+            // separate claims: a const body answers without running and can
             // still reach a native procedure that holds state.
-            guard wantedPurity != .pure || offeredPurity == .pure else { return false }
+            guard wantedConstness != .const || offeredConstness == .const else { return false }
             guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
 
             // Nothing was said on one side or the other, so nothing is refused.
@@ -442,9 +442,9 @@ extension LoweredType {
                     one.same(other, in: table, assuming: walked)
                 }
 
-        case let (.procedure(mine, myAnswer, myPurity, myIsolation),
-                  .procedure(theirs, theirAnswer, theirPurity, theirIsolation)):
-            guard myPurity == theirPurity, myIsolation == theirIsolation else { return false }
+        case let (.procedure(mine, myAnswer, myConstness, myIsolation),
+                  .procedure(theirs, theirAnswer, theirConstness, theirIsolation)):
+            guard myConstness == theirConstness, myIsolation == theirIsolation else { return false }
 
             switch (myAnswer, theirAnswer) {
             case (nil, nil):

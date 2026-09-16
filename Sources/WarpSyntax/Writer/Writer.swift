@@ -310,8 +310,8 @@ public struct Writer: Sendable {
         case let .borrowing(inner):
             return try value(of: inner, under: .borrowing)
 
-        case let .procedure(signature, purity, isolation):
-            let spelling = TypeReader.procedureSpelling(purity, isolation)
+        case let .procedure(signature, constness, isolation):
+            let spelling = TypeReader.procedureSpelling(constness, isolation)
 
             guard let signature else { return .string(spelling) }
 
@@ -426,8 +426,8 @@ public struct Writer: Sendable {
         case let .record(fields):
             return .record(fields.mapValues(stripped))
 
-        case let .procedure(signature, purity, isolation):
-            return .procedure(signature.map(stripped), purity, isolation)
+        case let .procedure(signature, constness, isolation):
+            return .procedure(signature.map(stripped), constness, isolation)
 
         case let .nullable(inner):
             return .nullable(stripped(inner))

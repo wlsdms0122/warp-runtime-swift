@@ -132,11 +132,11 @@ struct ArtifactWriter {
         case let .record(fields):
             return .array([.int(12), keyed(fields, type)])
 
-        case let .procedure(written, purity, isolation):
+        case let .procedure(written, constness, isolation):
             return .array([
                 .int(13),
                 ArtifactWriter.maybe(written, signature),
-                self.purity(purity),
+                self.constness(constness),
                 self.isolation(isolation)
             ])
 
@@ -230,12 +230,12 @@ struct ArtifactWriter {
         ])
     }
 
-    private func purity(_ purity: Purity) -> Value {
-        switch purity {
+    private func constness(_ constness: Constness) -> Value {
+        switch constness {
         case .unstated:
             return .int(0)
 
-        case .pure:
+        case .const:
             return .int(1)
         }
     }
@@ -393,7 +393,7 @@ private extension ArtifactWriter {
         case let .record(record):
             return .array([.int(12), loweredRecord(record)])
 
-        case let .procedure(parameters, returns, purity, isolation):
+        case let .procedure(parameters, returns, constness, isolation):
             return .array([
                 .int(13),
                 ArtifactWriter.maybe(parameters) { written in
@@ -406,7 +406,7 @@ private extension ArtifactWriter {
                     })
                 },
                 ArtifactWriter.maybe(returns, lowered),
-                self.purity(purity),
+                self.constness(constness),
                 self.isolation(isolation)
             ])
 
@@ -463,7 +463,7 @@ private extension ArtifactWriter {
         .array([
             name(row.label),
             signature(row.signature),
-            purity(row.purity),
+            constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),
             .array(row.sends.map(sent)),

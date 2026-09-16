@@ -30,9 +30,9 @@ struct Sending {
     private let numbering: Numbering
 
     // Which declarations answer without running, where the build has worked it
-    // out. Nil where nothing has: a folding table stands before the purity
+    // out. Nil where nothing has: a folding table stands before the constness
     // pass, and a claim it cannot check it does not make.
-    private let pure: Set<Name>?
+    private let const: Set<Name>?
 
     // Which declarations touch nothing another body could touch at the same
     // time, where the build has worked it out.
@@ -46,12 +46,12 @@ struct Sending {
     // MARK: - Initializer
     init(
         numbering: Numbering,
-        pure: Set<Name>? = nil,
+        const: Set<Name>? = nil,
         isolated: Set<Name>? = nil,
         taking: @escaping @Sendable (Name) -> Signature?
     ) {
         self.numbering = numbering
-        self.pure = pure
+        self.const = const
         self.isolated = isolated
         self.taking = taking
     }
@@ -62,7 +62,7 @@ struct Sending {
 
         // Only a query claims to answer without running. An effect runs, so
         // what it sends may run too.
-        let answersWithoutRunning = procedure.implementation.isNativelyPure == true
+        let answersWithoutRunning = procedure.implementation.isNativelyConst == true
         let touchesNothingShared = procedure.implementation.isNativelyIsolated == true
 
         let ordered = sends.sorted { left, right in left.position < right.position }
@@ -145,9 +145,9 @@ struct Sending {
     }
 
     private func answersOnlyByRunning(_ selector: Name) -> Bool {
-        guard let pure else { return false }
+        guard let const else { return false }
 
-        return !pure.contains(selector)
+        return !const.contains(selector)
     }
 
     private func touchesSomethingShared(_ selector: Name) -> Bool {

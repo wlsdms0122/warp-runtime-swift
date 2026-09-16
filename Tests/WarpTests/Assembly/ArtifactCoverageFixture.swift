@@ -72,7 +72,7 @@ enum ArtifactCoverageFixture {
         "fraction": .ranged(.fraction(from: 0.5, to: .upTo(1.5))),
         "array": .array(.int),
         "dictionary": .dictionary(.string),
-        "procedure": .procedure(Signature(returns: .null), .pure, .isolated),
+        "procedure": .procedure(Signature(returns: .null), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.bytes),
         "linear": .linear(.number),
@@ -115,7 +115,7 @@ enum ArtifactCoverageFixture {
         ("procedure", .procedure(
             parameters: [(name: "p", type: .int, mustBeGiven: true)],
             returns: .double,
-            purity: .pure,
+            constness: .const,
             isolation: .unstated
         )),
         ("variable", .variable(.int)),
@@ -167,7 +167,7 @@ enum ArtifactCoverageFixture {
         Judged(
             label: label,
             signature: Signature(returns: .int),
-            purity: .unstated,
+            constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
             sends: [],
@@ -182,7 +182,7 @@ enum ArtifactCoverageFixture {
         Judged(
             label: label,
             signature: Signature(receiver: body ? "p" : nil, parameters: ["p": parameter], returns: .int),
-            purity: body ? .pure : .unstated,
+            constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
             sends: body ? [] : [Sent(row: 1, offers: [0, 2])],

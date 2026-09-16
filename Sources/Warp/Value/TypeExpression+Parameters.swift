@@ -148,8 +148,8 @@ extension TypeExpression {
         case let .record(fields):
             return .record(fields.mapValues { field in field.bounded(by: bounds) })
 
-        case let .procedure(signature, purity, isolation):
-            return .procedure(signature?.bounded(by: bounds), purity, isolation)
+        case let .procedure(signature, constness, isolation):
+            return .procedure(signature?.bounded(by: bounds), constness, isolation)
 
         case let .nullable(inner):
             return .nullable(inner.bounded(by: bounds))

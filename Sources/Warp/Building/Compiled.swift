@@ -265,7 +265,7 @@ public struct Compiled: Sendable, Declaring {
 
     // Which Warp wrote it. An artifact is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a
-    // body reaches decides purity, isolation and failure, and a declaration
+    // body reaches decides constness, isolation and failure, and a declaration
     // that wrote no answer is read off its body. A reading that took an
     // artifact another build wrote would be reading a table laid out by rules
     // it no longer holds.
@@ -279,7 +279,7 @@ public struct Compiled: Sendable, Declaring {
     // So what it tells apart is releases. Two builds between one release and the
     // next write the same stamp and read each other's artifacts, and a reading
     // cannot see that the rules moved under them: what a body reaches decides
-    // purity, isolation and failure, and moving how that is read leaves every
+    // constness, isolation and failure, and moving how that is read leaves every
     // byte where it was. Anyone changing those and reading an artifact from
     // before builds again rather than reads.
     public static let runtime = "warp-swift 0.1.0"

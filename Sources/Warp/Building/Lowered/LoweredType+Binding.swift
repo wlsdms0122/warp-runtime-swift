@@ -163,13 +163,13 @@ extension LoweredType {
                 )
             )
 
-        case let .procedure(parameters, returns, purity, isolation):
+        case let .procedure(parameters, returns, constness, isolation):
             return .procedure(
                 parameters: parameters?.map { parameter in
                     (name: parameter.name, type: parameter.type.filling(bound), mustBeGiven: parameter.mustBeGiven)
                 },
                 returns: returns?.filling(bound),
-                purity: purity,
+                constness: constness,
                 isolation: isolation
             )
 

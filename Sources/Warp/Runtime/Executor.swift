@@ -9,7 +9,7 @@ import Foundation
 
 // Runs an image. Two halves over one code: `read` answers what answers
 // without running, synchronously, which is what a condition, an argument, a
-// pure body and a procedure handed a procedure need; `evaluate` runs constructs,
+// const body and a procedure handed a procedure need; `evaluate` runs constructs,
 // effects and calls of values, and hands every data case to `read`.
 public struct Executor: Sendable {
     // MARK: - Property
@@ -384,7 +384,7 @@ public struct Executor: Sendable {
         let callee = linked[try row(call.procedure, from: activation.origin)]
 
         switch callee.implementation {
-        // A query answers without running, so the pure half is the whole
+        // A query answers without running, so the const half is the whole
         // implementation. It is here only so that `x.count` and the same
         // procedure written as a statement mean the same thing.
         case .native(.query):
@@ -725,7 +725,7 @@ public struct Executor: Sendable {
 
     // The positions a call fills another way: the receiver where the call
     // wrote one in front, and the ones handed in place where the callee
-    // takes holds. A pure body takes no hold, so what it was handed is
+    // takes holds. A const body takes no hold, so what it was handed is
     // settled as a value.
     // A dispatch read the receiver to pick the row, so the row's call carries
     // none of its own and the value arrives beside it. Either way the slot is
@@ -983,7 +983,7 @@ public struct Executor: Sendable {
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
 
-        guard callee.purity == .pure else {
+        guard callee.constness == .const else {
             throw ExecutionError(
                 "'\(callee.label)' answers only by running, so it cannot be"
                     + " read as data here"

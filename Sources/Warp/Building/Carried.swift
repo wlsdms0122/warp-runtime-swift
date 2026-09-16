@@ -32,7 +32,7 @@ struct Carried: Sendable {
 
     // What the documents proved about their own bodies, and what the build
     // read off one whose declaration wrote no `returns`.
-    let pure: Set<Name>
+    let const: Set<Name>
     let isolated: Set<Name>
     let failing: [Name: Failing]
     let answers: [Name: LoweredType]
@@ -45,7 +45,7 @@ struct Carried: Sendable {
         numbering: [:],
         closureRows: [:],
         variables: [:],
-        pure: [],
+        const: [],
         isolated: [],
         failing: [:],
         answers: [:]

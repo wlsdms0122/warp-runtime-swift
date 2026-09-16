@@ -16,7 +16,7 @@ enum ChainReceiver: Int, ParameterSet {
     // MARK: - Property
     var name: Name { "of" }
 
-    var declared: Parameter { Parameter(type: .array(.procedure(nil, .pure))) }
+    var declared: Parameter { Parameter(type: .array(.procedure(nil, .const))) }
 
     // MARK: - Initializer
     // MARK: - Public

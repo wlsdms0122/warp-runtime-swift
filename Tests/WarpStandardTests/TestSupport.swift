@@ -58,7 +58,7 @@ func every(_ conditions: Warp.Expression...) -> Warp.Expression {
                     .closure(
                         Procedure(
                             implementation: .body(Block(body: [], result: condition)),
-                            purity: .pure
+                            constness: .const
                         )
                     )
                 }

@@ -26,7 +26,7 @@ import Foundation
 // this list does not hold, so that reason waits beside the claim and is said
 // to whoever leans on the pair.
 //
-// Every claim is read, not the reached ones, the way purity is worked out over
+// Every claim is read, not the reached ones, the way constness is worked out over
 // every declaration. A slot bounded by a contract may be filled by a type no
 // call in this link mentions.
 extension Builder {

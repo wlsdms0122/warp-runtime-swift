@@ -265,7 +265,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
                     .closure(
                         Procedure(
                             implementation: .body(Block(body: [], result: condition)),
-                            purity: .pure
+                            constness: .const
                         )
                     )
                 }
@@ -286,7 +286,7 @@ extension Closure {
                 label: "assembled",
                 origin: 0,
                 signature: Signature(),
-                purity: .unstated,
+                constness: .unstated,
                 isolation: .unstated,
                 failing: .unstated,
                 implementation: .body(

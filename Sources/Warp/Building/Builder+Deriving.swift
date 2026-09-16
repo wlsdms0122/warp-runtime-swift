@@ -15,7 +15,7 @@ enum Runs: Sendable {
 }
 
 // The facts nobody declared, worked out over every declaration at once. A
-// declaration is pure until its body shows otherwise, and the answer is the
+// declaration is const until its body shows otherwise, and the answer is the
 // whole link's rather than any one body's.
 extension Builder {
     // MARK: - Internal
@@ -23,16 +23,16 @@ extension Builder {
     // body cannot, so it is read off what it calls.
     //
     // Optimistic and iterated: everything with a body starts as a candidate and
-    // is struck out when something it reaches is not pure. Starting from "impure
-    // until proven" would make two procedures that call each other permanently
-    // impure, which is a fact about the algorithm rather than about the code.
+    // is struck out when something it reaches is not const. Starting from "not
+    // const until proven" would hold two procedures that call each other to
+    // that forever, which is a fact about the algorithm rather than the code.
     // What is settled grows in place rather than being handed over and handed
     // back. A document is settled against everything standing in front of it,
     // so taking that as a value would copy the whole graph's answer once per
     // document, and this call only ever adds its own.
-    func pure(
+    func const(
         among symbols: [Symbol],
-        settling pure: inout Set<Name>,
+        settling const: inout Set<Name>,
         reading variables: Set<Name>
     ) {
         // The body beside the names its own declaration said hold a procedure
@@ -41,12 +41,12 @@ extension Builder {
         let bodies = symbols.reduce(into: [Name: (block: Block, applying: Set<Name>)]()) { table, symbol in
             guard let block = symbol.procedure.block else { return }
 
-            table[symbol.declared] = (block, symbol.procedure.signature.pureProcedures)
+            table[symbol.declared] = (block, symbol.procedure.signature.constProcedures)
         }
 
-        pure.formUnion(
+        const.formUnion(
             symbols
-                .filter { symbol in symbol.procedure.implementation.isNativelyPure != false }
+                .filter { symbol in symbol.procedure.implementation.isNativelyConst != false }
                 .map(\.declared)
         )
 
@@ -56,10 +56,10 @@ extension Builder {
         // per document.
         while true {
             let struck = bodies.compactMap { name, written in
-                pure.contains(name)
-                    && !isPure(
+                const.contains(name)
+                    && !isConst(
                         written.block,
-                        given: pure,
+                        given: const,
                         reading: variables,
                         applying: written.applying
                     ) ? name : nil
@@ -67,7 +67,7 @@ extension Builder {
 
             guard !struck.isEmpty else { return }
 
-            pure.subtract(struck)
+            const.subtract(struck)
         }
     }
 
@@ -75,7 +75,7 @@ extension Builder {
     // says so about itself; a body is read off what it casts, calls and
     // rescues.
     //
-    // Grown rather than struck out, the opposite of purity and isolation: a
+    // Grown rather than struck out, the opposite of constness and isolation: a
     // body starts failing nothing and gains what it reaches, and a declaration
     // that says nothing about itself makes everything reaching it say nothing
     // too. Two procedures calling each other settle where nothing more is
@@ -187,9 +187,9 @@ extension Builder {
     // The names a block binds are its own. A `let` and a `var` both introduce
     // one, and neither leaves the block, so declaring either says nothing about
     // what the block reaches.
-    func isPure(
+    func isConst(
         _ block: Block,
-        given pure: Set<Name>,
+        given const: Set<Name>,
         reading variables: Set<Name>,
         applying procedures: Set<Name>
     ) -> Bool {
@@ -197,8 +197,8 @@ extension Builder {
 
         for statement in block.body {
             guard
-                isPure(statement.binding, reading: variables),
-                isPure(statement.expression, given: pure, reading: variables, applying: procedures)
+                isConst(statement.binding, reading: variables),
+                isConst(statement.expression, given: const, reading: variables, applying: procedures)
             else { return false }
 
             guard let introduced = statement.binding?.introduced else { continue }
@@ -207,7 +207,7 @@ extension Builder {
             // is a different name. So the set is read forward: what a name
             // said is what stands until something else takes the spelling.
             if
-                statement.binding?.declared?.isPureProcedure == true
+                statement.binding?.declared?.isConstProcedure == true
                     || applies(statement.expression, given: procedures)
             {
                 procedures.insert(introduced)
@@ -217,7 +217,7 @@ extension Builder {
         }
 
         return block.result.map { result in
-            isPure(result, given: pure, reading: variables, applying: procedures)
+            isConst(result, given: const, reading: variables, applying: procedures)
         } ?? true
     }
 
@@ -236,7 +236,7 @@ extension Builder {
     // What a binding reaches. Introducing a name reaches nothing; writing one
     // reaches whatever the path's head names, and a module variable is the
     // run's state.
-    private func isPure(_ binding: Statement.Binding?, reading variables: Set<Name>) -> Bool {
+    private func isConst(_ binding: Statement.Binding?, reading variables: Set<Name>) -> Bool {
         guard case let .assignment(path)? = binding else { return true }
 
         return path.head.map { head in !variables.contains(head) } ?? true
@@ -248,7 +248,7 @@ extension Builder {
     // answers without running. Anything else is found here rather than at the
     // run.
     //
-    // The module variables purity strikes a body for reading are not struck
+    // The module variables constness strikes a body for reading are not struck
     // here. Reading one is what reading a name is; what it costs a body is the
     // promise of answering the same thing twice, and an operand makes no such
     // promise.
@@ -268,12 +268,12 @@ extension Builder {
 
         // A contract's procedure is answered by whatever type the value turns
         // out to be, so which declaration this reaches is the run's answer and
-        // its purity with it. Only a call the build resolves to a declaration
+        // its constness with it. Only a call the build resolves to a declaration
         // is judged here.
         case let .call(call):
             guard
                 context.signature(of: call.selector) != nil,
-                !context.pure.contains(call.selector)
+                !context.const.contains(call.selector)
             else {
                 return call.receiver.flatMap { receiver in runs(in: receiver, given: context) }
                     ?? call.arguments.values.lazy
@@ -292,18 +292,18 @@ extension Builder {
         }
     }
 
-    func isPure(
+    func isConst(
         _ expression: Expression,
-        given pure: Set<Name>,
+        given const: Set<Name>,
         reading variables: Set<Name>,
         applying procedures: Set<Name>
     ) -> Bool {
-        func isPure(_ inner: Expression) -> Bool {
-            self.isPure(inner, given: pure, reading: variables, applying: procedures)
+        func isConst(_ inner: Expression) -> Bool {
+            self.isConst(inner, given: const, reading: variables, applying: procedures)
         }
 
-        func isPure(_ statements: [Statement]) -> Bool {
-            self.isPure(Block(body: statements), given: pure, reading: variables, applying: procedures)
+        func isConst(_ statements: [Statement]) -> Bool {
+            self.isConst(Block(body: statements), given: const, reading: variables, applying: procedures)
         }
 
         switch expression {
@@ -318,54 +318,54 @@ extension Builder {
         // Leaving is how a body answers from the middle. Where it goes is
         // inside the body, so what it reaches is what it carries.
         case let .leave(leave):
-            return leave.value.map(isPure) ?? true
+            return leave.value.map(isConst) ?? true
 
         // Judging a value against a type reaches nothing outside itself, so a
-        // cast is as pure as what it reads.
+        // cast is as const as what it reads.
         case let .cast(value, _, _):
-            return isPure(value)
+            return isConst(value)
 
         case let .array(array):
-            return array.allSatisfy(isPure)
+            return array.allSatisfy(isConst)
 
         case let .record(record):
-            return record.values.allSatisfy(isPure)
+            return record.values.allSatisfy(isConst)
 
         case let .call(call):
-            return pure.contains(call.selector)
-                && (call.receiver.map(isPure) ?? true)
-                && call.arguments.values.allSatisfy(isPure)
+            return const.contains(call.selector)
+                && (call.receiver.map(isConst) ?? true)
+                && call.arguments.values.allSatisfy(isConst)
 
         // Calling a value is settled at run time, so what it reaches is said
         // by the slot the value came out of and nowhere else. A slot asking
         // for a procedure that answers without running says it; anything else
-        // says nothing, and a body applying one of those is not answerable
-        // purely.
+        // says nothing, and a body applying one of those does not answer
+        // without running.
         //
         // Indexing past the head keeps the claim, since a slot asking for an
         // array of them says it about every element. Anything else on the path
         // walks into a value the slot said nothing about.
         case let .apply(callee, arguments):
             return applies(callee, given: procedures)
-                && arguments.values.allSatisfy(isPure)
+                && arguments.values.allSatisfy(isConst)
 
         // Control flow reaches nothing on its own: which part runs is decided
-        // inside the body, so a construct is as pure as the parts it holds.
+        // inside the body, so a construct is as const as the parts it holds.
         case let .block(block):
-            return self.isPure(block, given: pure, reading: variables, applying: procedures)
+            return self.isConst(block, given: const, reading: variables, applying: procedures)
 
         case let .conditional(condition, then, otherwise):
-            return isPure(condition)
-                && isPure(then)
-                && (otherwise.map(isPure) ?? true)
+            return isConst(condition)
+                && isConst(then)
+                && (otherwise.map(isConst) ?? true)
 
         case let .loop(condition, body, _):
-            return isPure(condition)
-                && self.isPure(body, given: pure, reading: variables, applying: procedures)
+            return isConst(condition)
+                && self.isConst(body, given: const, reading: variables, applying: procedures)
 
         case let .attempt(body, rescue, _):
-            return self.isPure(body, given: pure, reading: variables, applying: procedures)
-                && self.isPure(rescue, given: pure, reading: variables, applying: procedures)
+            return self.isConst(body, given: const, reading: variables, applying: procedures)
+                && self.isConst(rescue, given: const, reading: variables, applying: procedures)
         }
     }
 }

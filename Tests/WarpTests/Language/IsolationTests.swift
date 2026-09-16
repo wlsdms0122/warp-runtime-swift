@@ -95,8 +95,8 @@ struct IsolationTests {
         }
     }
 
-    @Test("a pure body is not isolated by being pure")
-    func purityDoesNotAnswerIsolation() async throws {
+    @Test("answering without running does not make a body isolated")
+    func constnessDoesNotAnswerIsolation() async throws {
         // Given. Nothing here runs, and the box is still shared
         let sut = try Module(
             imports: ["app.ticket"],
@@ -112,7 +112,7 @@ struct IsolationTests {
         let image = try await Builder().build([sut, .ticketing] + Module.standard, entry: entryName)
 
         // Then
-        #expect(image[entryName]?.purity == .pure)
+        #expect(image[entryName]?.constness == .const)
         #expect(image[entryName]?.isolation == .unstated)
     }
 

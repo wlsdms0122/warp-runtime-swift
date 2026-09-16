@@ -156,16 +156,16 @@ struct CompiledTests {
         // has to put it first for the answer to be there when it is asked.
         let compiled = try await compiled([top, middle, bottom])
 
-        func purity(of declared: Name) throws -> Purity {
-            try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].purity
+        func constness(of declared: Name) throws -> Constness {
+            try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].constness
         }
 
         // Then. The whole chain answers by the run, and what reaches none of
         // it still answers on its own.
-        #expect(try purity(of: "low.read") == .unstated)
-        #expect(try purity(of: "mid.ask") == .unstated)
-        #expect(try purity(of: "top.ask") == .unstated)
-        #expect(try purity(of: "top.alone") == .pure)
+        #expect(try constness(of: "low.read") == .unstated)
+        #expect(try constness(of: "mid.ask") == .unstated)
+        #expect(try constness(of: "top.ask") == .unstated)
+        #expect(try constness(of: "top.alone") == .const)
     }
 
     @Test("a constant runs a written procedure a document standing before it declared")

@@ -1355,7 +1355,7 @@ extension Builder {
         // follows the body even though nothing can say whether it is ever
         // called: the warrant is compilation, and a body that never runs still
         // has to compile. It sees what surrounds it plus what it declares.
-        // Purity is read the same way a declaration's is. From what the body
+        // Constness is read the same way a declaration's is. From what the body
         // calls.
         case let .closure(procedure):
             var rewritten = expression
@@ -1413,16 +1413,16 @@ extension Builder {
             // name is read, and a closure that applies a captured one is judged
             // on that word exactly as the body around it would be.
             let captured = environment.filter { _, held in
-                held.isPureProcedure || held.isIsolatedProcedure
+                held.isConstProcedure || held.isIsolatedProcedure
             }
 
-            let pure = body.map { block in
-                isPure(
+            let const = body.map { block in
+                isConst(
                     block,
-                    given: context.pure,
+                    given: context.const,
                     reading: reading,
-                    applying: procedure.signature.pureProcedures
-                        .union(captured.filter { _, held in held.isPureProcedure }.keys)
+                    applying: procedure.signature.constProcedures
+                        .union(captured.filter { _, held in held.isConstProcedure }.keys)
                 )
             } ?? false
             let isolated = body.map { block in
@@ -1442,7 +1442,7 @@ extension Builder {
                         description: procedure.description,
                         signature: procedure.signature,
                         implementation: .body(body),
-                        purity: pure ? .pure : .unstated,
+                        constness: const ? .const : .unstated,
                         isolation: isolated ? .isolated : .unstated,
                         failing: failing(body, given: context.failing)
                     )
@@ -1454,14 +1454,14 @@ extension Builder {
                 calls: calls,
                 reading: TypeExpression.procedure(
                     procedure.signature,
-                    pure ? .pure : .unstated,
+                    const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
                 .lowered(in: context.loweredTypes)
             )
 
         // Which value is called is settled at run time, so nothing here can say
-        // what it answers. Its operands are data the pure resolver reads (the
+        // what it answers. Its operands are data the const resolver reads (the
         // check refuses a construct in one, and a program that came straight to
         // the link meets the same predicate here) so nothing writes and there
         // is no flow to carry.
@@ -1513,7 +1513,7 @@ extension Builder {
         // from what was actually sent and the answer comes back with them
         // filled, and only a generic answer reads the operands at all, so under
         // the reading ask only a generic call pays for taking their readings.
-        // The operands are data the pure half reads (the check holds a
+        // The operands are data the const half reads (the check holds a
         // construct out of them, and the link asks the same predicate itself)
         // so nothing here writes: every operand stands in the one environment
         // the call stands in.
@@ -1749,8 +1749,8 @@ extension Builder {
         // out loud, where a refusal can carry the reason; the reading ask stays
         // total and takes the widened answer.
         case let .loop(condition, body, round):
-            // A condition is data the run asks purely, the fact every operand
-            // has, so a construct is refused there by the same predicate, at
+            // A condition is data the run reads rather than runs, the fact every
+            // operand has, so a construct is refused there by the same predicate, at
             // the check and here alike.
             if condition.holdsConstruct {
                 try refuse(Expression.constructInCondition, at: place.part(.condition(of: .loop)), when: ask)
@@ -2492,7 +2492,7 @@ extension Builder {
         // A procedure that already exists as a value says nothing about itself
         // that this walk can read.
         case .procedure:
-            return .procedure(parameters: nil, returns: nil, purity: .unstated, isolation: .unstated)
+            return .procedure(parameters: nil, returns: nil, constness: .unstated, isolation: .unstated)
 
         case let .array(elements):
             return .array(
@@ -2549,9 +2549,9 @@ extension Builder {
         }
 
         // Two procedures join to a procedure rather than to `any`, keeping the
-        // purity both of them have. Collapsing here would let one impure body in
-        // a list of them pass a slot that asked for none, because `any` is
-        // accepted everywhere.
+        // constness both of them have. Collapsing here would let one body that
+        // runs, in a list of them, pass a slot that asked for none, because
+        // `any` is accepted everywhere.
         if
             case let .procedure(mine, myAnswer, wanted, wantedIsolation) = left,
             case let .procedure(theirs, theirAnswer, offered, offeredIsolation) = right
@@ -2561,7 +2561,7 @@ extension Builder {
             return .procedure(
                 parameters: agreed ? mine : nil,
                 returns: agreed ? myAnswer : nil,
-                purity: wanted == .pure && offered == .pure ? .pure : .unstated,
+                constness: wanted == .const && offered == .const ? .const : .unstated,
                 isolation: wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
             )
         }

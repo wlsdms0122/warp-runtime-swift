@@ -197,7 +197,7 @@ private extension ArtifactReader {
         case 13:
             read = .procedure(
                 try fields.maybe(signature),
-                try purity(fields.next()),
+                try constness(fields.next()),
                 try isolation(fields.next())
             )
 
@@ -333,11 +333,11 @@ private extension ArtifactReader {
         return read
     }
 
-    func purity(_ value: Value) throws -> Purity {
+    func constness(_ value: Value) throws -> Constness {
         switch try integer(value) {
         case 0: return .unstated
-        case 1: return .pure
-        default: throw ArtifactRefused("'purity' says neither that it is stated nor that it is pure")
+        case 1: return .const
+        default: throw ArtifactRefused("'constness' says neither that it is stated nor that it is const")
         }
     }
 
@@ -530,7 +530,7 @@ private extension ArtifactReader {
                     }
                 },
                 returns: try fields.maybe(lowered),
-                purity: try purity(fields.next()),
+                constness: try constness(fields.next()),
                 isolation: try isolation(fields.next())
             )
 
@@ -603,7 +603,7 @@ private extension ArtifactReader {
         let read = try Judged(
             label: label,
             signature: signature,
-            purity: try purity(fields.next()),
+            constness: try constness(fields.next()),
             isolation: try isolation(fields.next()),
             failing: try failing(fields.next()),
             sends: try Fields.list(fields.next(), of: "row", sent),
