@@ -157,7 +157,7 @@ public struct Executor: Sendable {
         } catch is Leaving {
             // A loop is inside one body, so one reaching here named a loop no
             // body around it opened. A document is held to naming one the
-            // validator can see; an artifact carries the lowered body and not
+            // validator can see; an object carries the lowered body and not
             // the document, so what is read back out of a cache never stood in
             // front of that judge.
             //

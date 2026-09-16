@@ -11,7 +11,7 @@ import Foundation
 // is called.
 //
 // What the types under this answer differ: one says which document a document
-// is, another says which artifact an artifact is. They stay apart so that
+// is, another says which object an object is. They stay apart so that
 // neither can be handed to the other's door. What does not differ is how the
 // bytes read where a person sees them, and writing that rule twice is how two
 // of them end up reading differently.

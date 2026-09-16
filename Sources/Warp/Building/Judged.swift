@@ -49,7 +49,7 @@ struct Judged: Sendable {
     let implementation: Implementation
 
     // MARK: - Initializer
-    // Each part stated. What a reading of an artifact has: the row was settled
+    // Each part stated. What a reading of an object has: the row was settled
     // once and written down, so nothing here is settled again.
     init(
         label: Name,
@@ -84,17 +84,17 @@ struct Judged: Sendable {
     ) throws {
         if case let .body(_, frame) = implementation {
             guard sends.isEmpty else {
-                throw ArtifactRefused("a body stands sends its own code carries")
+                throw ObjectRefused("a body stands sends its own code carries")
             }
 
             guard frame.names.count == frame.size else {
-                throw ArtifactRefused(
+                throw ObjectRefused(
                     "a frame of \(frame.size) names \(frame.names.count) slot(s)"
                 )
             }
 
             guard frame.parameters.count == signature.names.count else {
-                throw ArtifactRefused(
+                throw ObjectRefused(
                     "a frame stands \(frame.parameters.count) of the"
                         + " \(signature.names.count) its declaration takes"
                 )
@@ -103,7 +103,7 @@ struct Judged: Sendable {
             guard frame.parameters.allSatisfy({ slot in slot < frame.size }),
                   frame.variables.allSatisfy({ _, slot in slot < frame.size })
             else {
-                throw ArtifactRefused(
+                throw ObjectRefused(
                     "a frame of \(frame.size) stands a parameter or a variable past its end"
                 )
             }
@@ -163,13 +163,13 @@ struct Judged: Sendable {
         guard standing.slots.allSatisfy({ slot in slot < frame.size }),
               standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
         else {
-            throw ArtifactRefused(
+            throw ObjectRefused(
                 "a body stands on a slot its frame of \(frame.size) does not hold"
             )
         }
 
         guard frame.variables.allSatisfy({ variable, _ in variable < variables }) else {
-            throw ArtifactRefused(
+            throw ObjectRefused(
                 "a body stands on a variable past the \(variables) its document holds"
             )
         }
@@ -179,14 +179,14 @@ struct Judged: Sendable {
         // one no link can answer.
         for call in standing.calls {
             guard let reached = given(call.number) else {
-                throw ArtifactRefused("a body calls a number its document never gave")
+                throw ObjectRefused("a body calls a number its document never gave")
             }
 
             // What it hands over fills the slots the row it reaches declares.
             // Answered where the row is this document's own; a row another
             // document holds is the link's answer and is asked there.
             guard !reached.standing || reached.taking == call.arguments else {
-                throw ArtifactRefused(
+                throw ObjectRefused(
                     "a call stands \(call.arguments) argument(s) where the"
                         + " \(reached.taking) its callee declares stand"
                 )
@@ -196,19 +196,19 @@ struct Judged: Sendable {
         // The same of the numbers its types stand at. A document numbers its
         // types and its memberships apart, so the two are asked apart.
         guard standing.types.allSatisfy(types), standing.memberships.allSatisfy(memberships) else {
-            throw ArtifactRefused("a body stands on a type number its document never gave")
+            throw ObjectRefused("a body stands on a type number its document never gave")
         }
 
         for closure in standing.closures {
             guard let stands = frames(closure.number) else {
-                throw ArtifactRefused(
+                throw ObjectRefused(
                     "a body stands up a closure at \(closure.number), where this"
                         + " document numbers none that a body stands"
                 )
             }
 
             guard closure.inner.allSatisfy({ slot in slot < stands.size }) else {
-                throw ArtifactRefused(
+                throw ObjectRefused(
                     "a closure takes something into a slot its own frame does not hold"
                 )
             }

@@ -81,28 +81,28 @@ public struct Compiled: Sendable, Declaring {
     // the layouts read them.
     let variables: [(name: Name, value: Value)]
 
-    // What this was compiled against: the artifacts behind the declarations
+    // What this was compiled against: the objects behind the declarations
     // this document named, each by its own fingerprint.
     //
-    // Named and not every artifact the compile was handed. What a document
+    // Named and not every object the compile was handed. What a document
     // reaches outside itself is the procedures it calls and the types its
     // signatures name, and a document laid beside it that it never names
     // decides nothing about what it compiled to.
     //
-    // Nothing where one of them has no fingerprint. An artifact says what it
+    // Nothing where one of them has no fingerprint. An object says what it
     // is true against, and one that named some of what it leaned on and not
     // the rest would say it is true against less than it is. So it is not
     // written down at all, the same way a document that settles a procedure
     // into a value has no writing.
     let dependencies: [Fingerprint]?
 
-    // What this artifact is, where a caller worked it out. Derived from the
+    // What this object is, where a caller worked it out. Derived from the
     // bytes and so not something this can answer for itself: reading bytes is
     // another package's, and nothing here is allowed to learn how they are
     // written.
     //
     // A caller compiling against this hands it over as it kept it, and that is
-    // what the next artifact records leaning on.
+    // what the next object records leaning on.
     public let fingerprint: Fingerprint?
 
     // MARK: - Initializer
@@ -165,8 +165,8 @@ public struct Compiled: Sendable, Declaring {
         fingerprint: Fingerprint? = nil
     ) throws {
         guard declared.count <= table.count else {
-            throw ArtifactRefused(
-                "an artifact declares \(declared.count) row(s) in a table of \(table.count)"
+            throw ObjectRefused(
+                "an object declares \(declared.count) row(s) in a table of \(table.count)"
             )
         }
 
@@ -175,15 +175,15 @@ public struct Compiled: Sendable, Declaring {
         // Two counts of the same run, so a numbering counting some other
         // number of them is numbering a table that is not this one.
         guard numbering.closureCount == table.count - declared.count else {
-            throw ArtifactRefused(
-                "an artifact numbers \(numbering.closureCount) closure(s) behind"
+            throw ObjectRefused(
+                "an object numbers \(numbering.closureCount) closure(s) behind"
                     + " \(table.count - declared.count) row(s)"
             )
         }
 
         guard calls.count == declared.count else {
-            throw ArtifactRefused(
-                "an artifact writes \(calls.count) call list(s) for \(declared.count) declaration(s)"
+            throw ObjectRefused(
+                "an object writes \(calls.count) call list(s) for \(declared.count) declaration(s)"
             )
         }
 
@@ -191,7 +191,7 @@ public struct Compiled: Sendable, Declaring {
         // one by its number and never by its name. So the order is the fact,
         // and two entries swapped are two variables reading each other's start.
         guard variables.map(\.name).ordered else {
-            throw ArtifactRefused("this document writes its variables out of name order")
+            throw ObjectRefused("this document writes its variables out of name order")
         }
 
         // Which row a spelling stands for is read off where it stands in this
@@ -200,7 +200,7 @@ public struct Compiled: Sendable, Declaring {
         // in another order leaves every row knowing itself and every spelling
         // reaching somebody else.
         guard declared == table.prefix(declared.count).map(\.label) else {
-            throw ArtifactRefused("an artifact declares its rows in an order its table does not")
+            throw ObjectRefused("an object declares its rows in an order its table does not")
         }
 
         self.init(
@@ -257,17 +257,17 @@ public struct Compiled: Sendable, Declaring {
         document.identity
     }
 
-    // How an artifact is laid out, which is not how the language is versioned.
+    // How an object is laid out, which is not how the language is versioned.
     // What a program needs of its runtime is said in the document; this says
-    // only where the fields of an artifact stand, and it moves when they move
+    // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
     static let format = 2
 
-    // Which Warp wrote it. An artifact is what one implementation made of a
+    // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a
     // body reaches decides constness, isolation and failure, and a declaration
     // that wrote no answer is read off its body. A reading that took an
-    // artifact another build wrote would be reading a table laid out by rules
+    // object another build wrote would be reading a table laid out by rules
     // it no longer holds.
     //
     // Declared and not derived. What an implementation is cannot be read off
@@ -277,38 +277,38 @@ public struct Compiled: Sendable, Declaring {
     // release is cut, and a test holds this to the number that file holds.
     //
     // So what it tells apart is releases. Two builds between one release and the
-    // next write the same stamp and read each other's artifacts, and a reading
+    // next write the same stamp and read each other's objects, and a reading
     // cannot see that the rules moved under them: what a body reaches decides
     // constness, isolation and failure, and moving how that is read leaves every
-    // byte where it was. Anyone changing those and reading an artifact from
+    // byte where it was. Anyone changing those and reading an object from
     // before builds again rather than reads.
     public static let runtime = "warp-swift 0.1.0"
 
-    // This artifact said as a value, so a caller can keep it where bytes are
+    // This object said as a value, so a caller can keep it where bytes are
     // kept. What carries it from there is the writing a document already
     // travels in, and a caller that reads it back is handed this again.
     //
     // Which document it belongs to and what it was compiled against are the
-    // first two things written, so an artifact says what it stands against
+    // first two things written, so an object says what it stands against
     // before it says anything it stood on that.
     // Nothing on either of two counts, and neither is something that went
     // wrong. A document that settles a procedure into a value holds what an
-    // artifact carries as data and a procedure is not data, which is a property
+    // object carries as data and a procedure is not data, which is a property
     // of the document: a caller told to build again would build the same
     // document again. And a build handed no way to work a fingerprint out
     // leaves every document that leaned on another unable to say what it is
     // true against, which is a property of the build.
     public var written: Value? {
-        ArtifactWriter().value(of: self).map { written in
+        ObjectWriter().value(of: self).map { written in
             .array([.int(Self.format), .string(Self.runtime), written])
         }
     }
 
-    // The same artifact, said as what it was worked out to be.
+    // The same object, said as what it was worked out to be.
     //
     // Reached through the build and not on its own. A document is compiled
     // against what stands before it, so what it leaned on has to be known while
-    // it compiles: an artifact fingerprinted after the fact is one every
+    // it compiles: an object fingerprinted after the fact is one every
     // document beside it already finished leaning on nothing it could name.
     func fingerprinted(_ fingerprint: Fingerprint) -> Compiled {
         Compiled(
@@ -331,24 +331,24 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // Read back beside the document it was filed under, because what an
-    // artifact says about which document it is, is the one thing about it
+    // object says about which document it is, is the one thing about it
     // nothing else can check.
     //
     // An identity is derived and never declared, which is what makes it worth
     // having: nobody writes one down, so nobody writes one down wrongly. An
-    // artifact does write one down. So a caller hands over the one it keeps
-    // the artifact under, and an artifact saying it belongs somewhere else is
+    // object does write one down. So a caller hands over the one it keeps
+    // the object under, and an object saying it belongs somewhere else is
     // one that belongs to no cache this caller holds.
     // `fingerprint` is what the caller kept it under, carried in the same way
-    // and for the same reason: an artifact cannot work out what it is, because
+    // and for the same reason: an object cannot work out what it is, because
     // that answer is about bytes and reading bytes is another package's.
     public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
-        var fields = try Fields(value, of: "artifact format")
+        var fields = try Fields(value, of: "object format")
         let format = try fields.count()
 
         guard format == Self.format else {
-            throw ArtifactRefused(
-                "the artifact is laid out as format \(format), and this reads format \(Self.format)"
+            throw ObjectRefused(
+                "the object is laid out as format \(format), and this reads format \(Self.format)"
             )
         }
 
@@ -358,8 +358,8 @@ public struct Compiled: Sendable, Declaring {
         let runtime = try fields.text()
 
         guard runtime == Self.runtime else {
-            throw ArtifactRefused(
-                "the artifact was compiled by \(runtime), and this is \(Self.runtime)"
+            throw ObjectRefused(
+                "the object was compiled by \(runtime), and this is \(Self.runtime)"
             )
         }
 
@@ -372,13 +372,13 @@ public struct Compiled: Sendable, Declaring {
         // one this could never write out again: a reading whose answer will
         // not go back out the way it came in has read something else.
         guard !written.holdsProcedure else {
-            throw ArtifactRefused(
-                "this artifact settles a procedure into a value, and an"
-                    + " artifact carries values as data"
+            throw ObjectRefused(
+                "this object settles a procedure into a value, and an"
+                    + " object carries values as data"
             )
         }
 
-        self = try ArtifactReader(of: identity, fingerprint: fingerprint).compiled(from: written)
+        self = try ObjectReader(of: identity, fingerprint: fingerprint).compiled(from: written)
     }
 
     // MARK: - Private

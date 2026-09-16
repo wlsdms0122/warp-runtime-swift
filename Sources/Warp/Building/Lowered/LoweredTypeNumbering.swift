@@ -136,7 +136,7 @@ struct LoweredTypeNumbering: Sendable {
     // MARK: - Private
     private static func judged(_ names: [Name], of part: String) throws -> [Name] {
         guard names.ordered else {
-            throw ArtifactRefused("a numbering's \(part) are not in name order, or name one twice")
+            throw ObjectRefused("a numbering's \(part) are not in name order, or name one twice")
         }
 
         return names

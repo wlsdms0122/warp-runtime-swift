@@ -34,7 +34,7 @@ struct CallOperation: Sendable {
         judging handed: [Handed]
     ) throws {
         guard handed.allSatisfy({ one in one.position < arguments.count }) else {
-            throw ArtifactRefused(
+            throw ObjectRefused(
                 "a call hands something in place at a position past the"
                     + " \(arguments.count) it fills"
             )

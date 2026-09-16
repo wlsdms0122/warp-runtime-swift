@@ -11,7 +11,7 @@ import Foundation
 //
 // Its vocabulary is the value model's: one reading to each kind a value can
 // be, so a part reaching for its next field never has to step around the
-// cursor to get at one. Which of them an artifact happens to write today is
+// cursor to get at one. Which of them an object happens to write today is
 // not what decides that.
 //
 // A writing lays a part down as an array and says nothing about what each
@@ -27,7 +27,7 @@ struct Fields {
     // MARK: - Initializer
     init(_ value: Value, of part: String) throws {
         guard case let .array(written) = value else {
-            throw ArtifactRefused("'\(part)' is not written as an array")
+            throw ObjectRefused("'\(part)' is not written as an array")
         }
 
         self.of = part
@@ -37,7 +37,7 @@ struct Fields {
     // MARK: - Internal
     mutating func next() throws -> Value {
         guard at < written.count else {
-            throw ArtifactRefused(
+            throw ObjectRefused(
                 "'\(of)' writes \(written.count) field(s) and one more was read"
             )
         }
@@ -96,7 +96,7 @@ struct Fields {
     // understand the whole of is a writing of something else.
     func end() throws {
         guard at == written.count else {
-            throw ArtifactRefused("'\(of)' writes \(written.count) fields and \(at) were read")
+            throw ObjectRefused("'\(of)' writes \(written.count) fields and \(at) were read")
         }
     }
 }
@@ -108,7 +108,7 @@ extension Fields {
     // it was reached.
     static func integer(_ value: Value, of part: String) throws -> Int {
         guard case let .int(integer) = value else {
-            throw ArtifactRefused("'\(part)' writes something other than a number where one stands")
+            throw ObjectRefused("'\(part)' writes something other than a number where one stands")
         }
 
         return integer
@@ -122,7 +122,7 @@ extension Fields {
         let read = try integer(value, of: part)
 
         guard read >= 0 else {
-            throw ArtifactRefused("'\(part)' writes \(read) where a count stands")
+            throw ObjectRefused("'\(part)' writes \(read) where a count stands")
         }
 
         return read
@@ -130,7 +130,7 @@ extension Fields {
 
     static func double(_ value: Value, of part: String) throws -> Double {
         guard case let .double(double) = value else {
-            throw ArtifactRefused("'\(part)' writes something other than a fraction where one stands")
+            throw ObjectRefused("'\(part)' writes something other than a fraction where one stands")
         }
 
         return double
@@ -138,13 +138,13 @@ extension Fields {
 
     static func text(_ value: Value, of part: String) throws -> String {
         guard case let .string(text) = value else {
-            throw ArtifactRefused("'\(part)' writes something other than a text where one stands")
+            throw ObjectRefused("'\(part)' writes something other than a text where one stands")
         }
 
         return text
     }
 
-    // Through the door every spelling from outside comes through. An artifact
+    // Through the door every spelling from outside comes through. An object
     // is this runtime's own writing, but the bytes it was kept in are not: a
     // spelling that is not in normal form makes two names that read alike and
     // compare apart, and every order and lookup built on them goes quiet.
@@ -154,13 +154,13 @@ extension Fields {
         do {
             return try Name(spelling)
         } catch let refused as NameRefused {
-            throw ArtifactRefused(refused.message)
+            throw ObjectRefused(refused.message)
         }
     }
 
     static func flag(_ value: Value, of part: String) throws -> Bool {
         guard case let .bool(flag) = value else {
-            throw ArtifactRefused("'\(part)' writes something other than a yes or no where one stands")
+            throw ObjectRefused("'\(part)' writes something other than a yes or no where one stands")
         }
 
         return flag
@@ -168,7 +168,7 @@ extension Fields {
 
     static func bytes(_ value: Value, of part: String) throws -> [UInt8] {
         guard case let .bytes(bytes) = value else {
-            throw ArtifactRefused("'\(part)' writes something other than bytes where they stand")
+            throw ObjectRefused("'\(part)' writes something other than bytes where they stand")
         }
 
         return bytes
@@ -179,7 +179,7 @@ extension Fields {
     // lists nests without either reading holding the other's place.
     static func list<T>(_ value: Value, of part: String, _ read: (Value) throws -> T) throws -> [T] {
         guard case let .array(written) = value else {
-            throw ArtifactRefused("'\(part)' writes something other than a list where one stands")
+            throw ObjectRefused("'\(part)' writes something other than a list where one stands")
         }
 
         return try written.map(read)
@@ -187,7 +187,7 @@ extension Fields {
 
     // A written list that stands in order, none of it twice. The writing puts
     // every list of names in order, so a reading that took any order would let
-    // two writings say one artifact.
+    // two writings say one object.
     //
     // Here rather than at each place that reads one, because a rule applied by
     // hand is a rule left out by hand: every list of names this reads comes
@@ -216,7 +216,7 @@ extension Fields {
     @discardableResult
     private static func judged<T: Comparable>(_ written: [T], of part: String) throws -> [T] {
         guard written.ordered else {
-            throw ArtifactRefused("'\(part)' writes its names out of order, or one of them twice")
+            throw ObjectRefused("'\(part)' writes its names out of order, or one of them twice")
         }
 
         return written
@@ -224,7 +224,7 @@ extension Fields {
 
     // A writing that may hold nothing: a list of none or one, so a value that
     // is itself null is told from no value at all. What lays one down is
-    // `ArtifactWriter.maybe`, and the two are one rule said from each side.
+    // `ObjectWriter.maybe`, and the two are one rule said from each side.
     static func maybe<T>(_ value: Value, of part: String, _ read: (Value) throws -> T) throws -> T? {
         let written = try list(value, of: part) { held in held }
 
@@ -236,7 +236,7 @@ extension Fields {
             return try read(written[0])
 
         default:
-            throw ArtifactRefused("'\(part)' writes \(written.count) values where at most one stands")
+            throw ObjectRefused("'\(part)' writes \(written.count) values where at most one stands")
         }
     }
 }

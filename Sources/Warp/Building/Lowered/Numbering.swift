@@ -79,13 +79,13 @@ struct Numbering: Sendable {
     }
 
     // MARK: - Internal
-    // What this counts from, said as a value, so an artifact carries the
+    // What this counts from, said as a value, so an object carries the
     // numbering its bodies were lowered against.
     //
     // What is written is what a reading will use and cannot work out. The
     // numbers a name stands at and what counts from what are one arithmetic
     // over the spellings, so writing them down would make a numbering whose
-    // parts disagree something an artifact can hold.
+    // parts disagree something an object can hold.
     //
     // How many closures each declaration wrote is neither: folding runs a
     // dependency's body against this, and lowering a closure literal there
@@ -104,7 +104,7 @@ struct Numbering: Sendable {
     // body's number reaches is answered from here rather than from those: the
     // declarations stand at the end of this list, and a list whose tail is
     // some other module's names sends every self call somewhere else while
-    // every other part of the artifact stays in step.
+    // every other part of the object stays in step.
     init(written value: Value, declaring declared: [Name]) throws {
         var fields = try Fields(value, of: "numbering")
 
@@ -123,20 +123,20 @@ struct Numbering: Sendable {
         try fields.end()
 
         guard own == declared else {
-            throw ArtifactRefused("a numbering counts spellings its document does not declare")
+            throw ObjectRefused("a numbering counts spellings its document does not declare")
         }
 
         // A closure belongs to a declaration, so a count standing over a name
         // this document does not declare counts closures nobody wrote.
         guard counts.keys.allSatisfy(Set(own).contains) else {
-            throw ArtifactRefused("a numbering counts closures for a name its document does not declare")
+            throw ObjectRefused("a numbering counts closures for a name its document does not declare")
         }
 
         // A writing counts a name only where that name wrote one, so a count
         // of none is a count no writing lays down. Two writings for one
         // numbering otherwise, and the reading answers them the same.
         guard counts.values.allSatisfy({ $0 > 0 }) else {
-            throw ArtifactRefused("a numbering counts no closures for a name it counts")
+            throw ObjectRefused("a numbering counts no closures for a name it counts")
         }
 
         // A closure's number stands behind the spellings, so the last number
@@ -149,7 +149,7 @@ struct Numbering: Sendable {
             let (summed, overflowed) = standing.addingReportingOverflow(count)
 
             guard !overflowed else {
-                throw ArtifactRefused("a numbering gives numbers past what an int holds")
+                throw ObjectRefused("a numbering gives numbers past what an int holds")
             }
 
             standing = summed
@@ -316,7 +316,7 @@ struct Numbering: Sendable {
     //
     // The closures are a count and not a list. A closure's reference is the
     // position it stands at, so a row per closure would hold nothing the
-    // count does not already say, and a number read off an artifact would
+    // count does not already say, and a number read off an object would
     // decide how many of them to stand up.
     private enum Space: Sendable {
         case document(spellings: [Name], closures: Int)
@@ -326,7 +326,7 @@ struct Numbering: Sendable {
 
     private static func read(_ value: Value, of part: String) throws -> [Name: Int] {
         guard case let .array(written) = value else {
-            throw ArtifactRefused("'\(part)' is not written as a list")
+            throw ObjectRefused("'\(part)' is not written as a list")
         }
 
         return try Fields.gathered(try written.map { entry in

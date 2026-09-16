@@ -40,8 +40,8 @@ public struct Identity: ContentAddress {
     // open to every caller.
     //
     // What keeps the rule is that the one place an identity arrives already
-    // written down is the reading of an artifact, and that reading is handed
-    // the identity the artifact was kept under and refuses any other. A
+    // written down is the reading of an object, and that reading is handed
+    // the identity the object was kept under and refuses any other. A
     // number written in reaches no build.
     public init(_ bytes: [UInt8]) {
         self.bytes = bytes

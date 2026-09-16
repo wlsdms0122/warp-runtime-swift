@@ -1,5 +1,5 @@
 //
-//  ArtifactCoverageFixture.swift
+//  ObjectCoverageFixture.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/13/26.
@@ -8,16 +8,16 @@
 import Foundation
 @testable import Warp
 
-// An artifact holding one of every kind a writing can lay down.
+// An object holding one of every kind a writing can lay down.
 //
 // It stands apart from the cases that read it because two of them do: one asks
 // whether the writing and the reading agree about every kind, and one bends
 // every field of it in turn. A fixture named by two suites is a fixture, not a
 // suite's private.
-enum ArtifactCoverageFixture {
+enum ObjectCoverageFixture {
     static let everything: Compiled = {
         // Through the door a reading goes through, so the fixture cannot stand
-        // up an artifact the reading would refuse.
+        // up an object the reading would refuse.
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
@@ -131,7 +131,7 @@ enum ArtifactCoverageFixture {
     ]
 
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and
-    // `Construct`, reached through the one field of an artifact that holds a
+    // `Construct`, reached through the one field of an object that holds a
     // place.
     static let everyPlace: [Claim: Place] = {
         let steps: [Place.Step] = [

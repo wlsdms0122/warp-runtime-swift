@@ -47,13 +47,13 @@ import Foundation
 // judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
-    // How an artifact's fingerprint is worked out, where a caller wants its
-    // artifacts to say what they are true against.
+    // How an object's fingerprint is worked out, where a caller wants its
+    // objects to say what they are true against.
     //
     // Taken rather than done here. A fingerprint is about bytes, and what
     // writes bytes is another package: this one is the language and does not
-    // know how a value is laid down. A caller that never files an artifact
-    // hands nothing over and is handed artifacts that say they cannot be
+    // know how a value is laid down. A caller that never files an object
+    // hands nothing over and is handed objects that say they cannot be
     // filed, which is what they are.
     private let fingerprinting: (@Sendable (Value) throws -> Fingerprint)?
 
@@ -100,8 +100,8 @@ public struct Builder: Sendable {
     // here are compiled against it. A procedure a document sends is answered by
     // either, and one that nothing here answers is refused where it is sent.
     //
-    // The artifacts and the code behind them are asked for together, since
-    // neither is any use here without the other: an artifact names its
+    // The objects and the code behind them are asked for together, since
+    // neither is any use here without the other: an object names its
     // natives and holds none of the code, and folding a constant runs the
     // procedures the documents behind it declared.
     public func compile(
@@ -188,13 +188,13 @@ public struct Builder: Sendable {
         )
     }
 
-    // An artifact said as what it is, where the caller handed over how that is
+    // An object said as what it is, where the caller handed over how that is
     // worked out. One that cannot be written down has nothing to work it out
     // from, which is the same absence said one step earlier.
-    private func fingerprinted(_ artifact: Compiled) throws -> Compiled {
-        guard let fingerprinting, let written = artifact.written else { return artifact }
+    private func fingerprinted(_ object: Compiled) throws -> Compiled {
+        guard let fingerprinting, let written = object.written else { return object }
 
-        return artifact.fingerprinted(try fingerprinting(written))
+        return object.fingerprinted(try fingerprinting(written))
     }
 
     // Every declaration a compiled document made, under the spelling it was
@@ -361,14 +361,14 @@ public struct Builder: Sendable {
         // leaned on is part of what it is, so the two grow together.
         var declarers = DeclarerTable()
 
-        for artifact in compiled {
-            declarers.lay(artifact)
+        for object in compiled {
+            declarers.lay(object)
         }
 
         var built: [Compiled] = []
 
         for offset in laying.indices {
-            let artifact = try await compile(
+            let object = try await compile(
                 laying[offset],
                 at: compiled.count + offset,
                 declaring: holding[offset],
@@ -376,7 +376,7 @@ public struct Builder: Sendable {
                 in: &compiling,
                 writing: fulfillment
             )
-            let known = try fingerprinted(artifact)
+            let known = try fingerprinted(object)
 
             declarers.lay(known)
             built.append(known)
@@ -710,9 +710,9 @@ public struct Builder: Sendable {
     // is the second judgement for that reason: the entry names a declaration,
     // every claimed type answers the contract it is claimed under, and every
     // constraint a document leaned on is held by some document beside it.
-    // `supplying` is the native code the documents named. An artifact says
+    // `supplying` is the native code the documents named. An object says
     // which of its procedures are native and holds none of the code, so the modules
-    // that declared them are handed over beside the artifacts.
+    // that declared them are handed over beside the objects.
     public func link(
         _ compiled: [Compiled],
         entry: Name,

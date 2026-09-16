@@ -1,5 +1,5 @@
 //
-//  ArtifactMutationTests.swift
+//  ObjectMutationTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/14/26.
@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpMutation
 
-// What a reading does with every field of an artifact replaced in turn.
+// What a reading does with every field of an object replaced in turn.
 //
 // The cases beside this one each name a field and say what is refused there,
 // which asks about the fields someone thought of. This asks about all of them.
@@ -19,15 +19,15 @@ import WarpMutation
 //
 // The fixture is the one that names every kind, so a mutation reaches kinds
 // that no program is written out of.
-@Suite("An artifact with one place of it replaced")
-struct ArtifactMutationTests {
+@Suite("An object with one place of it replaced")
+struct ObjectMutationTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
     @Test("is refused wherever it is mutated, and never traps")
     func everyMutationIsAnswered() throws {
         guard let written = Self.everything.written else {
-            Issue.record("an artifact of one of everything is one an artifact can hold")
+            Issue.record("an object of one of everything is one an object can hold")
 
             return
         }
@@ -47,18 +47,18 @@ struct ArtifactMutationTests {
 
                 // Whatever it stood up is written again, because a reading that
                 // admits a value it cannot write back, or writes back as
-                // something else, has taken the artifact somewhere the pair
+                // something else, has taken the object somewhere the pair
                 // does not agree on.
                 guard let once = read.written else {
-                    Issue.record("a mutation at \(path) read back as an artifact that cannot be written")
+                    Issue.record("a mutation at \(path) read back as an object that cannot be written")
 
                     continue
                 }
 
                 #expect(once == mutated, "a mutation at \(path) is admitted and written back as something else")
-            } catch is ArtifactRefused {
+            } catch is ObjectRefused {
             } catch {
-                Issue.record("a mutation at \(path) was refused as \(type(of: error)), not as an artifact")
+                Issue.record("a mutation at \(path) was refused as \(type(of: error)), not as an object")
             }
         }
 
@@ -75,5 +75,5 @@ struct ArtifactMutationTests {
 
     // MARK: - Public
     // MARK: - Private
-    private static let everything = ArtifactCoverageFixture.everything
+    private static let everything = ObjectCoverageFixture.everything
 }

@@ -22,7 +22,7 @@ struct RecordOperation: Sendable {
     // makes its promise a fact rather than an assumption.
     init(layout: Layout, judging fields: [Operation]) throws {
         guard layout.fields.count == fields.count else {
-            throw ArtifactRefused(
+            throw ObjectRefused(
                 "a record literal names \(layout.fields.count) field(s) and holds \(fields.count)"
             )
         }

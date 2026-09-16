@@ -1,5 +1,5 @@
 //
-//  ArtifactRefusalTests.swift
+//  ObjectRefusalTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/13/26.
@@ -10,13 +10,13 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What an artifact refuses to be written as.
+// What an object refuses to be written as.
 //
-// A closure settled into a value holds the row a link gave it, and an artifact
-// holds no row of any link. Both ways one reaches an artifact are held here,
+// A closure settled into a value holds the row a link gave it, and an object
+// holds no row of any link. Both ways one reaches an object are held here,
 // because they are two different foldings and the refusal is one.
-@Suite("An artifact a procedure settled into")
-struct ArtifactRefusalTests {
+@Suite("An object a procedure settled into")
+struct ObjectRefusalTests {
     // MARK: - Property
     private let builder = Builder()
 
@@ -39,7 +39,7 @@ struct ArtifactRefusalTests {
 
         let compiled = try await builder.compile([sut] + Module.standard)
 
-        // When / Then. The program stands, and no artifact of it is written.
+        // When / Then. The program stands, and no object of it is written.
         await #expect(throws: Never.self) {
             try await builder.link(compiled, entry: "app.entry", supplying: Supplying(Module.standard))
         }

@@ -260,7 +260,7 @@ struct ConstnessTests {
         //
         // Written as a module rather than as a document: the validator refuses
         // this where a document is loaded, so what is asked here is the
-        // judgement an artifact carrying the same shape meets.
+        // judgement an object carrying the same shape meets.
         let handed = try Module(
             variables: ["standing": .conditional(
                 .literal(.bool(true)),

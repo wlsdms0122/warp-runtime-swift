@@ -1,5 +1,5 @@
 //
-//  ArtifactWriter.swift
+//  ObjectWriter.swift
 //  Warp
 //
 //  Created by JSilver on 9/13/26.
@@ -7,17 +7,17 @@
 
 import Foundation
 
-// An artifact said as a value, so that the writing a document already travels
+// An object said as a value, so that the writing a document already travels
 // in carries what the document compiled to as well.
 //
 // A part is written as its fields in order and a kind as its case before
 // them. Nothing names its own fields: what reads this is the reading beside
-// it, compiled from the same declarations, and an artifact written by another
+// it, compiled from the same declarations, and an object written by another
 // runtime is refused before it is read rather than understood halfway.
 //
-// Every list a name keys is written in name order, so one artifact is one
+// Every list a name keys is written in name order, so one object is one
 // value and one value is one writing of bytes.
-struct ArtifactWriter {
+struct ObjectWriter {
     // MARK: - Initializer
     init() { }
 
@@ -32,13 +32,13 @@ struct ArtifactWriter {
 
     func value(of compiled: Compiled) -> Value? {
         // A numbering counting from a link's own rows belongs to no document,
-        // so what holds one is not an artifact and there is none to write.
+        // so what holds one is not an object and there is none to write.
         guard let numbering = compiled.numbering.written(declaring: compiled.declared.count) else {
             return nil
         }
 
-        // A document compiled against an artifact nobody worked a fingerprint
-        // out for cannot say what it is true against, and an artifact that says
+        // A document compiled against an object nobody worked a fingerprint
+        // out for cannot say what it is true against, and an object that says
         // less than it leans on is one a cache would hand back wrongly.
         guard let dependencies = compiled.dependencies else { return nil }
 
@@ -65,7 +65,7 @@ struct ArtifactWriter {
 
         // A procedure is not data, and what a value of one holds is the row a
         // link gave it. Asked of what came out rather than of each place a
-        // value is embedded: a folded closure reaches an artifact through a
+        // value is embedded: a folded closure reaches an object through a
         // module variable and through a body's literal both, and a third way
         // would be answered here without this having to hear about it.
         guard !written.holdsProcedure else { return nil }
@@ -75,7 +75,7 @@ struct ArtifactWriter {
 
     // MARK: - Private
     // A list a name keys, in name order. The order is the whole of what makes
-    // two writings of one artifact the same bytes, since a dictionary has none
+    // two writings of one object the same bytes, since a dictionary has none
     // to lend.
     private func keyed<T>(_ entries: [Name: T], _ write: (T) -> Value) -> Value {
         .array(entries.keys.sorted().map { key in
@@ -88,7 +88,7 @@ struct ArtifactWriter {
     }
 
     private func document(_ document: Place.Document) -> Value {
-        ArtifactWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
+        ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
     private func type(_ expression: TypeExpression) -> Value {
@@ -135,7 +135,7 @@ struct ArtifactWriter {
         case let .procedure(written, constness, isolation):
             return .array([
                 .int(13),
-                ArtifactWriter.maybe(written, signature),
+                ObjectWriter.maybe(written, signature),
                 self.constness(constness),
                 self.isolation(isolation)
             ])
@@ -162,7 +162,7 @@ struct ArtifactWriter {
             return .array([.int(20), name(spelling)])
 
         case let .parameter(spelling, constraint):
-            return .array([.int(21), name(spelling), ArtifactWriter.maybe(constraint, name)])
+            return .array([.int(21), name(spelling), ObjectWriter.maybe(constraint, name)])
 
         case let .reading(of: read, path: path):
             return .array([.int(22), name(read), .array(path.map(segment))])
@@ -174,15 +174,15 @@ struct ArtifactWriter {
         case let .whole(from, to):
             return .array([
                 .int(0),
-                ArtifactWriter.maybe(from) { floor in .int(floor) },
-                ArtifactWriter.maybe(to) { ceiling in edge(ceiling) { bound in .int(bound) } }
+                ObjectWriter.maybe(from) { floor in .int(floor) },
+                ObjectWriter.maybe(to) { ceiling in edge(ceiling) { bound in .int(bound) } }
             ])
 
         case let .fraction(from, to):
             return .array([
                 .int(1),
-                ArtifactWriter.maybe(from) { floor in .double(floor) },
-                ArtifactWriter.maybe(to) { ceiling in edge(ceiling) { bound in .double(bound) } }
+                ObjectWriter.maybe(from) { floor in .double(floor) },
+                ObjectWriter.maybe(to) { ceiling in edge(ceiling) { bound in .double(bound) } }
             ])
         }
     }
@@ -215,18 +215,18 @@ struct ArtifactWriter {
 
     private func signature(_ signature: Signature) -> Value {
         .array([
-            ArtifactWriter.maybe(signature.receiver, name),
+            ObjectWriter.maybe(signature.receiver, name),
             keyed(signature.parameters, parameter),
-            ArtifactWriter.maybe(signature.returns, type)
+            ObjectWriter.maybe(signature.returns, type)
         ])
     }
 
     private func parameter(_ parameter: Parameter) -> Value {
         .array([
-            ArtifactWriter.maybe(parameter.type, type),
-            ArtifactWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
-            ArtifactWriter.maybe(parameter.default) { held in held },
-            ArtifactWriter.maybe(parameter.description, Value.string)
+            ObjectWriter.maybe(parameter.type, type),
+            ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
+            ObjectWriter.maybe(parameter.default) { held in held },
+            ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
 
@@ -261,7 +261,7 @@ struct ArtifactWriter {
     }
 }
 
-private extension ArtifactWriter {
+private extension ObjectWriter {
     func place(_ place: Place) -> Value {
         .array([document(place.document), .array(place.steps.map(step))])
     }
@@ -281,7 +281,7 @@ private extension ArtifactWriter {
             return .array([.int(3), .int(index)])
 
         case let .statement(spelling, at):
-            return .array([.int(4), ArtifactWriter.maybe(spelling, Value.string), .int(at)])
+            return .array([.int(4), ObjectWriter.maybe(spelling, Value.string), .int(at)])
 
         case let .landmark(spelling):
             return .array([.int(5), .string(spelling)])
@@ -347,11 +347,11 @@ private extension ArtifactWriter {
     }
 
     func layout(_ layout: Layout) -> Value {
-        .array([ArtifactWriter.maybe(layout.name, name), .array(layout.fields.map(name))])
+        .array([ObjectWriter.maybe(layout.name, name), .array(layout.fields.map(name))])
     }
 }
 
-private extension ArtifactWriter {
+private extension ObjectWriter {
     func lowered(_ type: LoweredType) -> Value {
         switch type {
         case .any:
@@ -396,7 +396,7 @@ private extension ArtifactWriter {
         case let .procedure(parameters, returns, constness, isolation):
             return .array([
                 .int(13),
-                ArtifactWriter.maybe(parameters) { written in
+                ObjectWriter.maybe(parameters) { written in
                     .array(written.map { parameter in
                         .array([
                             name(parameter.name),
@@ -405,7 +405,7 @@ private extension ArtifactWriter {
                         ])
                     })
                 },
-                ArtifactWriter.maybe(returns, lowered),
+                ObjectWriter.maybe(returns, lowered),
                 self.constness(constness),
                 self.isolation(isolation)
             ])
@@ -423,7 +423,7 @@ private extension ArtifactWriter {
             return .array([.int(17), .int(row)])
 
         case let .parameter(label, bound):
-            return .array([.int(18), name(label), ArtifactWriter.maybe(bound, self.bound)])
+            return .array([.int(18), name(label), ObjectWriter.maybe(bound, self.bound)])
 
         case let .reading(of: read, path: path):
             return .array([.int(19), name(read), .array(path.map(segment))])
@@ -458,7 +458,7 @@ private extension ArtifactWriter {
     }
 }
 
-private extension ArtifactWriter {
+private extension ObjectWriter {
     func judged(_ row: Judged) -> Value {
         .array([
             name(row.label),
@@ -501,13 +501,13 @@ private extension ArtifactWriter {
     func body(_ body: Body) -> Value {
         .array([
             .array(body.instructions.map(instruction)),
-            ArtifactWriter.maybe(body.result, operation)
+            ObjectWriter.maybe(body.result, operation)
         ])
     }
 
     func instruction(_ instruction: Instruction) -> Value {
         .array([
-            ArtifactWriter.maybe(instruction.binding, binding),
+            ObjectWriter.maybe(instruction.binding, binding),
             operation(instruction.code),
             .string(instruction.label)
         ])
@@ -516,13 +516,13 @@ private extension ArtifactWriter {
     func binding(_ binding: Instruction.Binding) -> Value {
         switch binding {
         case let .bind(slot, settling):
-            return .array([.int(0), .int(slot), ArtifactWriter.maybe(settling, lowered)])
+            return .array([.int(0), .int(slot), ObjectWriter.maybe(settling, lowered)])
 
         case let .declare(slot, settling):
-            return .array([.int(1), .int(slot), ArtifactWriter.maybe(settling, lowered)])
+            return .array([.int(1), .int(slot), ObjectWriter.maybe(settling, lowered)])
 
         case let .assign(address, settling):
-            return .array([.int(2), self.address(address), ArtifactWriter.maybe(settling, lowered)])
+            return .array([.int(2), self.address(address), ObjectWriter.maybe(settling, lowered)])
         }
     }
 
@@ -547,7 +547,7 @@ private extension ArtifactWriter {
     }
 }
 
-private extension ArtifactWriter {
+private extension ObjectWriter {
     func operation(_ operation: Operation) -> Value {
         switch operation {
         case let .literal(value):
@@ -589,7 +589,7 @@ private extension ArtifactWriter {
                 .int(8),
                 self.operation(condition),
                 .array(then.map(instruction)),
-                ArtifactWriter.maybe(otherwise) { written in .array(written.map(instruction)) }
+                ObjectWriter.maybe(otherwise) { written in .array(written.map(instruction)) }
             ])
 
         case let .loop(while: condition, body: body, round: round, keeps: keeps):
@@ -598,7 +598,7 @@ private extension ArtifactWriter {
                 self.operation(condition),
                 self.body(body),
                 .int(round),
-                ArtifactWriter.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
+                ObjectWriter.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
             ])
 
         case let .attempt(body, rescue: rescue, failure: failure):
@@ -614,8 +614,8 @@ private extension ArtifactWriter {
             return .array([
                 .int(13),
                 self.reach(reach),
-                ArtifactWriter.maybe(target, name),
-                ArtifactWriter.maybe(read, self.operation)
+                ObjectWriter.maybe(target, name),
+                ObjectWriter.maybe(read, self.operation)
             ])
         }
     }
@@ -627,8 +627,8 @@ private extension ArtifactWriter {
     func callOperation(_ call: CallOperation) -> Value {
         .array([
             .int(call.procedure),
-            ArtifactWriter.maybe(call.receiver, operation),
-            .array(call.arguments.map { argument in ArtifactWriter.maybe(argument, self.operation) }),
+            ObjectWriter.maybe(call.receiver, operation),
+            .array(call.arguments.map { argument in ObjectWriter.maybe(argument, self.operation) }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
             })
@@ -636,7 +636,7 @@ private extension ArtifactWriter {
     }
 
     // Without the calls beside it. Which row answers a contract is the link's
-    // answer and an artifact stands before one, so writing them down would be
+    // answer and an object stands before one, so writing them down would be
     // writing a fact this document does not hold.
     func dispatchOperation(_ dispatch: DispatchOperation) -> Value {
         .array([

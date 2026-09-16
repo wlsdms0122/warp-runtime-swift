@@ -1,5 +1,5 @@
 //
-//  ArtifactReadingTests.swift
+//  ObjectReadingTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/13/26.
@@ -10,18 +10,18 @@ import Testing
 @testable import Warp
 import WarpStandard
 
-// What a reading of an artifact refuses.
+// What a reading of an object refuses.
 //
-// An artifact is this runtime's own writing, so what is asked here is what
+// An object is this runtime's own writing, so what is asked here is what
 // happens when the bytes are not that. Each case bends one field of a real
-// artifact, because a writing built by hand would prove only that the reading
+// object, because a writing built by hand would prove only that the reading
 // refuses something it was never handed.
-@Suite("An artifact whose writing is not one")
-struct ArtifactReadingTests {
+@Suite("An object whose writing is not one")
+struct ObjectReadingTests {
     // MARK: - Property
     // A stand-in for what a caller works out from the bytes, which this
     // package does not write. What these ask is what a reading refuses, so any
-    // answer stands as long as an artifact compiled against another one can be
+    // answer stands as long as an object compiled against another one can be
     // written down at all.
     private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
 
@@ -29,14 +29,14 @@ struct ArtifactReadingTests {
     // MARK: - Test
     @Test("is refused where a count is written below zero")
     func aCountBelowZero() async throws {
-        // Given. A real artifact whose frame counts its slots below zero.
+        // Given. A real object whose frame counts its slots below zero.
         guard case var .array(parts) = try await parts(),
               case var .array(table) = parts[8],
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2]
         else {
-            Issue.record("an artifact writes a row's frame beside its body")
+            Issue.record("an object writes a row's frame beside its body")
 
             return
         }
@@ -48,19 +48,19 @@ struct ArtifactReadingTests {
         parts[8] = .array(table)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a name keys two entries")
     func aNameWrittenTwice() async throws {
-        // Given. A real artifact whose declared types list repeats one entry.
+        // Given. A real object whose declared types list repeats one entry.
         guard case var .array(parts) = try await parts(),
               case let .array(types) = parts[2],
               let first = types.first
         else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
@@ -68,22 +68,22 @@ struct ArtifactReadingTests {
         parts[2] = .array(types + [first])
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a part is written short")
     func aPartWrittenShort() async throws {
-        // Given. A real artifact with its last part dropped.
+        // Given. A real object with its last part dropped.
         guard case let .array(parts) = try await parts() else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(Array(parts.dropLast())), of: nil)
         }
     }
@@ -91,19 +91,19 @@ struct ArtifactReadingTests {
     @Test("is refused where a part is written long")
     func aPartWrittenLong() async throws {
         guard case let .array(parts) = try await parts() else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
 
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts + [.null]), of: nil)
         }
     }
 
     @Test("is refused where a numbering names one type twice")
     func aNumberingThatRepeats() async throws {
-        // Given. A real artifact whose type numbering lists one name twice. The
+        // Given. A real object whose type numbering lists one name twice. The
         // numbering answers by position, so a swallowed name moves every number
         // after it onto some other declaration.
         guard case var .array(parts) = try await parts(),
@@ -111,7 +111,7 @@ struct ArtifactReadingTests {
               case let .array(types) = numbering[0],
               let first = types.first
         else {
-            Issue.record("an artifact writes its type numbering as a part")
+            Issue.record("an object writes its type numbering as a part")
 
             return
         }
@@ -120,7 +120,7 @@ struct ArtifactReadingTests {
         parts[12] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -160,23 +160,23 @@ struct ArtifactReadingTests {
         parts[8] = .array(table)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where the format it is laid out as is not this one")
     func aFormatThisDoesNotRead() async throws {
-        // Given. A real artifact stamped with a format this does not lay out.
+        // Given. A real object stamped with a format this does not lay out.
         guard case let .array(parts) = try await parts() else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
 
         // When / Then. The fields behind the stamp are this reading's own, so
         // what refuses is the stamp and nothing further in.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: .array([.int(Compiled.format + 1), .array(parts)]), of: nil)
         }
     }
@@ -184,7 +184,7 @@ struct ArtifactReadingTests {
     @Test("is refused where a layout's names are not in order")
     func aLayoutOutOfOrder() async throws {
         // Given. A declaration that writes no `returns`, so what the build read
-        // off its body stands in the artifact as a lowered record, layout and
+        // off its body stands in the object as a lowered record, layout and
         // types apart.
         let sut = try Module(
             procedures: [
@@ -219,7 +219,7 @@ struct ArtifactReadingTests {
         parts[10] = .array(answers)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -234,7 +234,7 @@ struct ArtifactReadingTests {
               case let .array(names) = frame[3],
               !names.isEmpty
         else {
-            Issue.record("an artifact writes a row's frame beside its body")
+            Issue.record("an object writes a row's frame beside its body")
 
             return
         }
@@ -245,7 +245,7 @@ struct ArtifactReadingTests {
         table[0] = .array(row)
         parts[8] = .array(table)
 
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -253,14 +253,14 @@ struct ArtifactReadingTests {
     @Test("is refused where a table is shorter than what it stands for")
     func aTableTooShort() async throws {
         guard case var .array(parts) = try await parts(), case let .array(table) = parts[8], !table.isEmpty else {
-            Issue.record("an artifact writes its rows as a part")
+            Issue.record("an object writes its rows as a part")
 
             return
         }
 
         parts[8] = .array(table.dropLast())
 
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -268,14 +268,14 @@ struct ArtifactReadingTests {
     @Test("is refused where a call list stands for no declaration")
     func callsThatStandForNothing() async throws {
         guard case var .array(parts) = try await parts(), case let .array(calls) = parts[9] else {
-            Issue.record("an artifact writes what each declaration calls as a part")
+            Issue.record("an object writes what each declaration calls as a part")
 
             return
         }
 
         parts[9] = .array(calls + [.array([])])
 
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -296,7 +296,7 @@ struct ArtifactReadingTests {
               case let .array(declared) = parts[7],
               declared.count == 2
         else {
-            Issue.record("an artifact writes its declared spellings as a part")
+            Issue.record("an object writes its declared spellings as a part")
 
             return
         }
@@ -304,7 +304,7 @@ struct ArtifactReadingTests {
         parts[7] = .array(declared.reversed())
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -339,7 +339,7 @@ struct ArtifactReadingTests {
               case var .array(call) = operation[1],
               case let .array(arguments) = call[2]
         else {
-            Issue.record("an artifact writes a body whose result is a call")
+            Issue.record("an object writes a body whose result is a call")
 
             return
         }
@@ -355,18 +355,18 @@ struct ArtifactReadingTests {
 
         // When / Then. The row the call reaches is this document's own, so the
         // reading answers it and no link is needed.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a name is not in normal form")
     func aNameNotInNormalForm() async throws {
-        // Given. A real artifact whose declared spelling is written in the
+        // Given. A real object whose declared spelling is written in the
         // decomposed form. It reads alike and compares apart, so every order
         // and every lookup built on it would go quiet.
         guard case var .array(parts) = try await parts(), case let .array(declared) = parts[7], !declared.isEmpty else {
-            Issue.record("an artifact writes its declared spellings as a part")
+            Issue.record("an object writes its declared spellings as a part")
 
             return
         }
@@ -374,14 +374,14 @@ struct ArtifactReadingTests {
         parts[7] = .array([.string("app.entr\u{0079}\u{0301}")])
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a numbering counts a spelling the document does not declare")
     func aNumberingOffItsDocument() async throws {
-        // Given. A real artifact whose numbering ends on some other spelling.
+        // Given. A real object whose numbering ends on some other spelling.
         // The declarations stand at the end of that list, so every self call
         // would reach whatever the link answers that name with.
         guard case var .array(parts) = try await parts(),
@@ -389,7 +389,7 @@ struct ArtifactReadingTests {
               case let .array(spellings) = numbering[1],
               !spellings.isEmpty
         else {
-            Issue.record("an artifact writes its numbering as a part")
+            Issue.record("an object writes its numbering as a part")
 
             return
         }
@@ -398,16 +398,16 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a name keys a list out of order")
     func keysOutOfOrder() async throws {
-        // Given. A real artifact whose declared types stand in some other
+        // Given. A real object whose declared types stand in some other
         // order. The values read alike either way, so what breaks is quieter:
-        // one artifact would have two writings and a cache key two answers.
+        // one object would have two writings and a cache key two answers.
         let sut = try Module(
             types: ["app.One": .record(["x": .int]), "app.Two": .record(["y": .int])],
             procedures: [
@@ -419,7 +419,7 @@ struct ArtifactReadingTests {
               case let .array(types) = parts[2],
               types.count == 2
         else {
-            Issue.record("an artifact writes its declared types in name order")
+            Issue.record("an object writes its declared types in name order")
 
             return
         }
@@ -427,7 +427,7 @@ struct ArtifactReadingTests {
         parts[2] = .array(types.reversed())
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -470,7 +470,7 @@ struct ArtifactReadingTests {
               case let .array(keeps) = operation[4],
               keeps.count == 1
         else {
-            Issue.record("an artifact writes a loop that keeps a run of its slots")
+            Issue.record("an object writes a loop that keeps a run of its slots")
 
             return
         }
@@ -484,14 +484,14 @@ struct ArtifactReadingTests {
         parts[8] = .array(table)
 
         // When / Then. Refused, rather than reaching the run that reads it.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a body stands sends of its own")
     func aBodyThatStandsSends() async throws {
-        // Given. A real artifact with one send added to a row that has a body.
+        // Given. A real object with one send added to a row that has a body.
         // A body's calls are in its own code, so a list here is a fact about
         // some other kind of row.
         guard case var .array(parts) = try await parts(),
@@ -500,7 +500,7 @@ struct ArtifactReadingTests {
               case let .array(sends) = row[5],
               sends.isEmpty
         else {
-            Issue.record("an artifact writes a row's sends beside its implementation")
+            Issue.record("an object writes a row's sends beside its implementation")
 
             return
         }
@@ -510,7 +510,7 @@ struct ArtifactReadingTests {
         parts[8] = .array(table)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -519,7 +519,7 @@ struct ArtifactReadingTests {
     func claimsOutOfOrder() async throws {
         // Given. A type that answers two contracts, with the two swapped. The
         // set reads the same either way, so what breaks is quieter: one
-        // artifact would have two writings.
+        // object would have two writings.
         let sut = try Module(
             types: ["app.Box": .record(["v": .int])],
             contracts: [
@@ -556,7 +556,7 @@ struct ArtifactReadingTests {
               case let .array(contracts) = entry[1],
               contracts.count == 2
         else {
-            Issue.record("an artifact writes which contracts each type answers")
+            Issue.record("an object writes which contracts each type answers")
 
             return
         }
@@ -566,7 +566,7 @@ struct ArtifactReadingTests {
         parts[5] = .array(claims)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -601,7 +601,7 @@ struct ArtifactReadingTests {
               case let .array(closing) = numbering[2],
               closing.count == 2
         else {
-            Issue.record("an artifact writes where each declaration's closures begin")
+            Issue.record("an object writes where each declaration's closures begin")
 
             return
         }
@@ -610,7 +610,7 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -652,7 +652,7 @@ struct ArtifactReadingTests {
               case var .array(step) = steps.first,
               case let .int(0) = step[0]
         else {
-            Issue.record("an artifact writes a body that reads a field of a record")
+            Issue.record("an object writes a body that reads a field of a record")
 
             return
         }
@@ -706,7 +706,7 @@ struct ArtifactReadingTests {
               case let .array(sent) = numbering[0],
               sent.count == 2
         else {
-            Issue.record("an artifact writes what its document sends")
+            Issue.record("an object writes what its document sends")
 
             return
         }
@@ -715,14 +715,14 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a value settles a procedure into it")
     func aValueHoldingAProcedure() async throws {
-        // Given. A real artifact with a module variable standing a value no
+        // Given. A real object with a module variable standing a value no
         // writing of one could lay down. The writing refuses it, so a reading
         // that took it would hold what it could never write out again.
         let holding = try Module(
@@ -748,7 +748,7 @@ struct ArtifactReadingTests {
         parts[13] = .array([.array([.string(settled.name.spelling), settled.value])])
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -780,7 +780,7 @@ struct ArtifactReadingTests {
               case let .array(entry) = counts.first,
               counts.count == 1
         else {
-            Issue.record("an artifact writes how many closures each declaration wrote")
+            Issue.record("an object writes how many closures each declaration wrote")
 
             return
         }
@@ -789,7 +789,7 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -818,7 +818,7 @@ struct ArtifactReadingTests {
         guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11]
         else {
-            Issue.record("an artifact writes how many closures each declaration wrote")
+            Issue.record("an object writes how many closures each declaration wrote")
 
             return
         }
@@ -830,7 +830,7 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -861,7 +861,7 @@ struct ArtifactReadingTests {
               case let .array(counts) = numbering[2],
               counts.count == 1
         else {
-            Issue.record("an artifact writes how many closures each declaration wrote")
+            Issue.record("an object writes how many closures each declaration wrote")
 
             return
         }
@@ -870,7 +870,7 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -901,7 +901,7 @@ struct ArtifactReadingTests {
               case let .array(entry) = counts.first,
               counts.count == 1
         else {
-            Issue.record("an artifact writes how many closures each declaration wrote")
+            Issue.record("an object writes how many closures each declaration wrote")
 
             return
         }
@@ -910,7 +910,7 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -939,7 +939,7 @@ struct ArtifactReadingTests {
         guard case var .array(parts) = try await parts(of: sut),
               case var .array(numbering) = parts[11]
         else {
-            Issue.record("an artifact writes how many closures each declaration wrote")
+            Issue.record("an object writes how many closures each declaration wrote")
 
             return
         }
@@ -951,14 +951,14 @@ struct ArtifactReadingTests {
         parts[11] = .array(numbering)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where it stands against a document other than the one it was kept under")
-    func anArtifactOfAnotherDocument() async throws {
-        // Given. A document with an identity, and its artifact.
+    func anObjectOfAnotherDocument() async throws {
+        // Given. A document with an identity, and its object.
         let sut = try Module(
             try Module(
                 procedures: [
@@ -972,23 +972,23 @@ struct ArtifactReadingTests {
         guard let mine = compiled.first(where: { one in one.identity != nil }),
               let written = mine.written
         else {
-            Issue.record("a document with an identity compiles to an artifact standing against it")
+            Issue.record("a document with an identity compiles to an object standing against it")
 
             return
         }
 
         // When / Then. Read under the identity it stands against, and refused
-        // under any other: what an artifact says about which document it is,
+        // under any other: what an object says about which document it is,
         // is the one thing about it nothing else can check.
         #expect(throws: Never.self) {
             try Compiled(written: written, of: Identity([0x01, 0x02, 0x03]))
         }
 
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: written, of: Identity([0x09]))
         }
 
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: written, of: nil)
         }
     }
@@ -1009,7 +1009,7 @@ struct ArtifactReadingTests {
               case let .array(variables) = parts[13],
               variables.count == 2
         else {
-            Issue.record("an artifact writes what its variables start holding")
+            Issue.record("an object writes what its variables start holding")
 
             return
         }
@@ -1017,7 +1017,7 @@ struct ArtifactReadingTests {
         parts[13] = .array(variables.reversed())
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -1052,7 +1052,7 @@ struct ArtifactReadingTests {
               case let .int(11) = operation[0],
               case var .array(call) = operation[1]
         else {
-            Issue.record("an artifact writes a body whose result is a call")
+            Issue.record("an object writes a body whose result is a call")
 
             return
         }
@@ -1067,7 +1067,7 @@ struct ArtifactReadingTests {
         parts[8] = .array(table)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
@@ -1098,7 +1098,7 @@ struct ArtifactReadingTests {
               case var .array(type) = operation[2],
               case let .int(17) = type[0]
         else {
-            Issue.record("an artifact writes a body that casts to a declared type")
+            Issue.record("an object writes a body that casts to a declared type")
 
             return
         }
@@ -1113,14 +1113,14 @@ struct ArtifactReadingTests {
         parts[8] = .array(table)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where a place inside it addresses another document")
     func aPlaceOfAnotherDocument() async throws {
-        // Given. A document that leans a type on a contract, so the artifact
+        // Given. A document that leans a type on a contract, so the object
         // holds a place, with that place moved onto some other document.
         let sut = try Module(
             types: ["app.Box": .record(["v": .int])],
@@ -1157,7 +1157,7 @@ struct ArtifactReadingTests {
               case var .array(place) = entry[2],
               leaned.count == 1
         else {
-            Issue.record("an artifact writes where each pair its bodies lean on was written")
+            Issue.record("an object writes where each pair its bodies lean on was written")
 
             return
         }
@@ -1168,16 +1168,16 @@ struct ArtifactReadingTests {
         parts[6] = .array(leaned)
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     @Test("is refused where another Warp wrote it")
     func anotherRuntime() async throws {
-        // Given. A real artifact, stamped as the work of a build this is not.
+        // Given. A real object, stamped as the work of a build this is not.
         guard case let .array(parts) = try await parts() else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
@@ -1190,18 +1190,18 @@ struct ArtifactReadingTests {
 
         // When / Then. Refused before anything laid out by this runtime's rules
         // is read against them.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: elsewhere, of: nil)
         }
     }
 
     @Test("is refused where what it leaned on stands out of order")
     func dependenciesOutOfOrder() async throws {
-        // Given. A real artifact whose two dependencies are written the other
+        // Given. A real object whose two dependencies are written the other
         // way round. Both name the same pair, so a reading that took either
-        // order would let two writings say one artifact.
+        // order would let two writings say one object.
         guard case var .array(parts) = try await parts() else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
@@ -1209,17 +1209,17 @@ struct ArtifactReadingTests {
         parts[1] = .array([.bytes([0x02]), .bytes([0x01])])
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
-    @Test("is refused where it leans on one artifact twice")
+    @Test("is refused where it leans on one object twice")
     func dependenciesRepeated() async throws {
-        // Given. A real artifact naming one of them twice. What it leaned on is
+        // Given. A real object naming one of them twice. What it leaned on is
         // a set, and a set written down twice is a writing no set makes.
         guard case var .array(parts) = try await parts() else {
-            Issue.record("an artifact is written as a list of parts")
+            Issue.record("an object is written as a list of parts")
 
             return
         }
@@ -1227,14 +1227,14 @@ struct ArtifactReadingTests {
         parts[1] = .array([.bytes([0x01]), .bytes([0x01])])
 
         // When / Then.
-        #expect(throws: ArtifactRefused.self) {
+        #expect(throws: ObjectRefused.self) {
             try Compiled(written: stamped(parts), of: nil)
         }
     }
 
     // MARK: - Public
     // MARK: - Private
-    // The parts an artifact writes, with the format it is stamped with taken
+    // The parts an object writes, with the format it is stamped with taken
     // off, so that a test bends what it means to bend.
     private func parts() async throws -> Value {
         try await parts(of: try Module(
@@ -1256,7 +1256,7 @@ struct ArtifactReadingTests {
               case let .array(written) = mine.written,
               written.count == 3
         else {
-            throw ArtifactMissing()
+            throw ObjectMissing()
         }
 
         return written[2]
@@ -1267,4 +1267,4 @@ struct ArtifactReadingTests {
     }
 }
 
-private struct ArtifactMissing: Error { }
+private struct ObjectMissing: Error { }

@@ -98,8 +98,8 @@ struct BakedTests {
         }
     }
 
-    @Test("two artifacts declaring one name are refused where they meet")
-    func twoArtifactsDeclaringOneNameAreRefused() async throws {
+    @Test("two objects declaring one name are refused where they meet")
+    func twoObjectsDeclaringOneNameAreRefused() async throws {
         // Given. Two documents compiled apart, so neither compile saw the
         // other's declarations.
         let baked = try await builder.compile(Module.standard)
@@ -166,7 +166,7 @@ struct BakedTests {
     }
 
     @Test("a compiled document names its native procedures and holds none of their code")
-    func anArtifactHoldsNoNativeCode() async throws {
+    func anObjectHoldsNoNativeCode() async throws {
         // Given. The standard vocabulary: its builtin procedures are the
         // host's, and the rest are written in Warp and carry their bodies.
         let baked = try await builder.compile(Module.standard)
@@ -188,7 +188,7 @@ struct BakedTests {
         let baked = try await builder.compile(Module.standard)
         let compiled = try await builder.compile([try adding(1)], against: baked, supplying: Supplying(Module.standard))
 
-        // When / Then. The artifacts alone say which procedures are native and
+        // When / Then. The objects alone say which procedures are native and
         // nothing more, so a link brought none of the code cannot run them.
         await #expect {
             try await builder.link(baked + compiled, entry: entry, supplying: Supplying([]))

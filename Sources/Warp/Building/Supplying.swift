@@ -12,7 +12,7 @@ import Foundation
 //
 // A compiled document names the procedures it left to native code and carries none
 // of it. What runs is a Swift value the host built, and a document has no way
-// to say what that value is, so the code arrives beside the artifacts and a
+// to say what that value is, so the code arrives beside the objects and a
 // link joins the two by name.
 //
 // Held by the caller rather than read out of the modules at every call. The

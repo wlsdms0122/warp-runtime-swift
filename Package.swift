@@ -19,7 +19,7 @@ let package = Package(
         // that can decode itself has confused itself with one of its notations.
         //
         // What it compiles it can also say as one of its own values, which is
-        // a different thing from laying that value down as bytes: an artifact
+        // a different thing from laying that value down as bytes: an object
         // read back beside its document is the language reading itself, and
         // the wire it travels on is the notation's.
         //
@@ -65,7 +65,7 @@ let package = Package(
         // What a value looks like with one place of it replaced, over every
         // place it holds. A test target cannot be depended on, and the two that
         // ask this question stand on different sides of the package's own line:
-        // one reaches inside an artifact, the other only through the doors a
+        // one reaches inside an object, the other only through the doors a
         // caller has. So the instrument they share stands here rather than
         // twice.
         .target(

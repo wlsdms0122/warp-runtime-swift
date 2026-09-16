@@ -1,5 +1,5 @@
 //
-//  ArtifactDependencyTests.swift
+//  ObjectDependencyTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/16/26.
@@ -8,17 +8,17 @@
 import Testing
 @testable import Warp
 
-// What an artifact says it was compiled against.
+// What an object says it was compiled against.
 //
-// A cache hands an artifact back for a document it has seen before, and what
-// makes that answer right is that the artifact says what it leaned on. These
-// hold it to saying exactly that: the artifacts it named, none it did not, and
+// A cache hands an object back for a document it has seen before, and what
+// makes that answer right is that the object says what it leaned on. These
+// hold it to saying exactly that: the objects it named, none it did not, and
 // nothing at all where one of them cannot be named.
-@Suite("An artifact records what it was compiled against")
-struct ArtifactDependencyTests {
+@Suite("An object records what it was compiled against")
+struct ObjectDependencyTests {
     // MARK: - Property
     // A stand-in for what a caller works out from the bytes, which this package
-    // does not write. Two artifacts that differ answer differently here, which
+    // does not write. Two objects that differ answer differently here, which
     // is all these ask of it.
     private let builder = Builder { value in Fingerprint(Array("\(value)".utf8)) }
 
@@ -44,7 +44,7 @@ struct ArtifactDependencyTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("names the artifact behind a procedure it calls")
+    @Test("names the object behind a procedure it calls")
     func namesWhatItCalls() async throws {
         // Given. The document it calls, compiled and worked out.
         let behind = try await builder.compile([used])
@@ -81,7 +81,7 @@ struct ArtifactDependencyTests {
     @Test("has no writing where what it leaned on cannot be named")
     func hasNoWritingWithoutOne() async throws {
         // Given. A builder that works nothing out, so what it compiles stands
-        // as an artifact with no fingerprint.
+        // as an object with no fingerprint.
         let unknowing = Builder()
         let behind = try await unknowing.compile([used])
 
@@ -120,7 +120,7 @@ struct ArtifactDependencyTests {
         let asLowered = try await written(calling: "box.peek", behind: lowered)
         let asAnswered = try await written(calling: "box.peek", behind: answered)
 
-        // Then. The two stand as different artifacts, and so does what calls
+        // Then. The two stand as different objects, and so does what calls
         // them.
         #expect(asLowered.behind != asAnswered.behind)
         #expect(asLowered.calling != asAnswered.calling)
@@ -128,7 +128,7 @@ struct ArtifactDependencyTests {
         // And what carries that into the caller is the record and nothing else.
         // The call is the same call either way: a body reaches a row by number
         // and the number does not move. So a caller that kept no record of what
-        // it leaned on would read one kind's artifact for the other's.
+        // it leaned on would read one kind's object for the other's.
         #expect(
             besideDependencies(asLowered.calling) == besideDependencies(asAnswered.calling),
             "the caller told the two kinds apart by itself"
@@ -155,7 +155,7 @@ struct ArtifactDependencyTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Everything an artifact says but what it leaned on.
+    // Everything an object says but what it leaned on.
     private func besideDependencies(_ value: Value?) -> [Value] {
         guard case let .array(stamped) = value, stamped.count == 3,
               case let .array(written) = stamped[2]

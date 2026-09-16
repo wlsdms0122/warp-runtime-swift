@@ -18,7 +18,7 @@ import Foundation
 //
 // Nothing catches it but the construct it names. A document may only write one
 // that something around it will catch, which the validator settles before
-// anything runs; an artifact carries the lowered body rather than the document,
+// anything runs; an object carries the lowered body rather than the document,
 // so the edge of a frame answers one that reaches it.
 struct Leaving: Error {
     // MARK: - Property

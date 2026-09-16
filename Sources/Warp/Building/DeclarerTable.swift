@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Which artifact declares each name a compile can reach, as the documents are
+// Which object declares each name a compile can reach, as the documents are
 // laid down one at a time.
 //
 // A document reaches outside itself through the procedures it calls and the
@@ -35,7 +35,7 @@ struct DeclarerTable {
     }
 
     // What this document was compiled against, or nothing where one of the
-    // artifacts it named has no fingerprint.
+    // objects it named has no fingerprint.
     func dependencies(of module: Module) -> [Fingerprint]? {
         var against: Set<Fingerprint> = []
 

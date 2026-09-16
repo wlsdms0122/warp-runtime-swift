@@ -9,19 +9,19 @@ import Testing
 import Warp
 import WarpSyntax
 
-// What a cache may key an artifact by.
+// What a cache may key an object by.
 //
-// A fingerprint is taken of the whole artifact, and an artifact says which
+// A fingerprint is taken of the whole object, and an object says which
 // document it was compiled from, which Warp compiled it, and the fingerprints
 // of what it leaned on. So the three things a key has to hold are held by one
 // value, and these ask whether that is so: the same inputs answer alike, and
 // the document or what it leans on moving moves the answer.
 //
-// The third is held from the other side. Which Warp wrote an artifact is a
+// The third is held from the other side. Which Warp wrote an object is a
 // constant of the build running these, so what a second one answers cannot be
-// asked here; what a reading does with an artifact another one wrote is asked
+// asked here; what a reading does with an object another one wrote is asked
 // where readings are refused.
-@Suite("A fingerprint stands for everything an artifact was compiled from")
+@Suite("A fingerprint stands for everything an object was compiled from")
 struct FingerprintTests {
     // MARK: - Property
     private let builder = Builder(fingerprinting: Fingerprint.of)
@@ -38,7 +38,7 @@ struct FingerprintTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("is the same twice for the same document behind the same artifact")
+    @Test("is the same twice for the same document behind the same object")
     func isTheSameTwice() async throws {
         // Given / When.
         let first = try await fingerprint(of: program, against: answering(.int(1)))
@@ -48,9 +48,9 @@ struct FingerprintTests {
         #expect(first == second)
     }
 
-    @Test("moves when the artifact behind it moves")
+    @Test("moves when the object behind it moves")
     func movesWithWhatItLeansOn() async throws {
-        // Given. The same document, compiled against two artifacts that declare
+        // Given. The same document, compiled against two objects that declare
         // the same procedure and answer differently.
         let first = try await fingerprint(of: program, against: answering(.int(1)))
         let second = try await fingerprint(of: program, against: answering(.int(2)))

@@ -9,12 +9,12 @@ import Foundation
 import Testing
 @testable import Warp
 
-// Whether the stamp an artifact carries says the release this is.
+// Whether the stamp an object carries says the release this is.
 //
 // The number lives in one file a person edits and the stamp is written from it,
 // so the two can differ. This is what stops them differing quietly: a stamp
-// that fell behind is a build handing out artifacts under a release it is not.
-@Suite("The stamp an artifact carries")
+// that fell behind is a build handing out objects under a release it is not.
+@Suite("The stamp an object carries")
 struct RuntimeVersionTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -34,7 +34,7 @@ struct RuntimeVersionTests {
         // there where one was cut, so what is held is the opening.
         #expect(
             Compiled.runtime.hasPrefix("warp-swift \(release)"),
-            "the artifact stamp is '\(Compiled.runtime)' and this package is \(release)"
+            "the object stamp is '\(Compiled.runtime)' and this package is \(release)"
         )
     }
 }

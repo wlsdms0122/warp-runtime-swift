@@ -1,5 +1,5 @@
 //
-//  ArtifactReader.swift
+//  ObjectReader.swift
 //  Warp
 //
 //  Created by JSilver on 9/13/26.
@@ -7,23 +7,23 @@
 
 import Foundation
 
-// A value read back as the artifact it was written from.
+// A value read back as the object it was written from.
 //
 // The order of the fields is the whole of the agreement with the writing
 // beside it, so this holds no names and asks the value for none. What holds
 // the two together is that they are compiled as a pair, and what tells a
 // reading that a writing was laid out by some other pair is the format
 // `Compiled` stamps before handing anything here.
-struct ArtifactReader {
+struct ObjectReader {
     // MARK: - Property
-    // Which document this is reading an artifact of. Every identity a reading
+    // Which document this is reading an object of. Every identity a reading
     // makes is made here, and an identity is worth having because it is
-    // derived and never declared: an artifact writes one down, so the reading
-    // holds it to the one the artifact was kept under.
+    // derived and never declared: an object writes one down, so the reading
+    // holds it to the one the object was kept under.
     private let identity: Identity?
 
-    // What the caller kept this artifact under. Carried in for the reason the
-    // identity is: what an artifact is, is worked out from its bytes, and
+    // What the caller kept this object under. Carried in for the reason the
+    // identity is: what an object is, is worked out from its bytes, and
     // reading bytes is another package's.
     private let fingerprint: Fingerprint?
 
@@ -35,7 +35,7 @@ struct ArtifactReader {
 
     // MARK: - Internal
     func compiled(from value: Value) throws -> Compiled {
-        var fields = try Fields(value, of: "artifact")
+        var fields = try Fields(value, of: "object")
 
         let document = try document(fields.next())
         let dependencies = try Fields.ordered(fields.next(), of: "dependencies") { written in
@@ -108,14 +108,14 @@ struct ArtifactReader {
     }
 
     // A reading that goes through a door the value layer judges. A type of
-    // that layer knows nothing of artifacts, so what it refuses is said again
+    // that layer knows nothing of objects, so what it refuses is said again
     // in the words this reading answers in. The build's own types say it
     // themselves and are called plainly.
     private func refusing<T>(_ read: () throws -> T) throws -> T {
         do {
             return try read()
         } catch let refused as ValueRefused {
-            throw ArtifactRefused(refused.message)
+            throw ObjectRefused(refused.message)
         }
     }
 
@@ -129,15 +129,15 @@ struct ArtifactReader {
         }
 
         guard read == identity else {
-            throw ArtifactRefused(
-                "this artifact stands against a document other than the one it was kept under"
+            throw ObjectRefused(
+                "this object stands against a document other than the one it was kept under"
             )
         }
 
         return Place.Document(identity: read)
     }
 
-    // The document a place inside this artifact is an address in. Every one of
+    // The document a place inside this object is an address in. Every one of
     // them is this document, or none at all where the program was never
     // written down. A place naming some third document addresses a text this
     // link was never handed.
@@ -147,7 +147,7 @@ struct ArtifactReader {
         }
 
         guard read == nil || read == identity else {
-            throw ArtifactRefused("a place inside this artifact addresses another document")
+            throw ObjectRefused("a place inside this object addresses another document")
         }
 
         return Place.Document(identity: read)
@@ -175,7 +175,7 @@ struct ArtifactReader {
     }
 }
 
-private extension ArtifactReader {
+private extension ObjectReader {
     func expression(_ value: Value) throws -> TypeExpression {
         var fields = try Fields(value, of: "type")
         let read: TypeExpression
@@ -216,7 +216,7 @@ private extension ArtifactReader {
             )
 
         default:
-            throw ArtifactRefused("'type' names a kind this reads none of")
+            throw ObjectRefused("'type' names a kind this reads none of")
         }
 
         try fields.end()
@@ -242,7 +242,7 @@ private extension ArtifactReader {
             )
 
         default:
-            throw ArtifactRefused("'range' is over neither whole numbers nor fractions")
+            throw ObjectRefused("'range' is over neither whole numbers nor fractions")
         }
 
         try fields.end()
@@ -260,7 +260,7 @@ private extension ArtifactReader {
         switch try fields.tag() {
         case 0: held = .through(try read(fields.next()))
         case 1: held = .upTo(try read(fields.next()))
-        default: throw ArtifactRefused("'edge' says neither that its bound is inside nor that it is out")
+        default: throw ObjectRefused("'edge' says neither that its bound is inside nor that it is out")
         }
 
         try fields.end()
@@ -298,7 +298,7 @@ private extension ArtifactReader {
             )
 
         default:
-            throw ArtifactRefused("'path segment' steps in a way this reads none of")
+            throw ObjectRefused("'path segment' steps in a way this reads none of")
         }
 
         try fields.end()
@@ -337,7 +337,7 @@ private extension ArtifactReader {
         switch try integer(value) {
         case 0: return .unstated
         case 1: return .const
-        default: throw ArtifactRefused("'constness' says neither that it is stated nor that it is const")
+        default: throw ObjectRefused("'constness' says neither that it is stated nor that it is const")
         }
     }
 
@@ -345,7 +345,7 @@ private extension ArtifactReader {
         switch try integer(value) {
         case 0: return .unstated
         case 1: return .isolated
-        default: throw ArtifactRefused("'isolation' says neither that it is stated nor that it is isolated")
+        default: throw ObjectRefused("'isolation' says neither that it is stated nor that it is isolated")
         }
     }
 
@@ -357,7 +357,7 @@ private extension ArtifactReader {
         case 0: read = .unstated
         case 1:
             read = .these(Set(try Fields.ordered(fields.next(), of: "failing", text)))
-        default: throw ArtifactRefused("'failing' says neither nothing nor which failures")
+        default: throw ObjectRefused("'failing' says neither nothing nor which failures")
         }
 
         try fields.end()
@@ -366,7 +366,7 @@ private extension ArtifactReader {
     }
 }
 
-private extension ArtifactReader {
+private extension ObjectReader {
     func place(_ value: Value) throws -> Place {
         var fields = try Fields(value, of: "place")
         let stands = try held(fields.next())
@@ -388,7 +388,7 @@ private extension ArtifactReader {
         case 3: read = .index(try fields.integer())
         case 4: read = .statement(name: try fields.maybe(text), at: try fields.integer())
         case 5: read = .landmark(try fields.text())
-        default: throw ArtifactRefused("'place step' steps in a way this reads none of")
+        default: throw ObjectRefused("'place step' steps in a way this reads none of")
         }
 
         try fields.end()
@@ -421,7 +421,7 @@ private extension ArtifactReader {
         case 17: read = .then
         case 18: read = .otherwise
         case 19: read = .rescue
-        default: throw ArtifactRefused("'part' names a part this reads none of")
+        default: throw ObjectRefused("'part' names a part this reads none of")
         }
 
         try fields.end()
@@ -436,7 +436,7 @@ private extension ArtifactReader {
         switch try fields.tag() {
         case 0: read = .conditional
         case 1: read = .loop
-        default: throw ArtifactRefused("'condition holder' holds a condition in no way this reads")
+        default: throw ObjectRefused("'condition holder' holds a condition in no way this reads")
         }
 
         try fields.end()
@@ -462,7 +462,7 @@ private extension ArtifactReader {
         case 10: read = .attempt
         case 11: read = .call
         case 12: read = .leave(try reach(fields.next()))
-        default: throw ArtifactRefused("'construct' names a construct this reads none of")
+        default: throw ObjectRefused("'construct' names a construct this reads none of")
         }
 
         try fields.end()
@@ -475,7 +475,7 @@ private extension ArtifactReader {
         case 0: return .procedure
         case 1: return .construct
         case 2: return .round
-        default: throw ArtifactRefused("'leave' reaches nothing this reads")
+        default: throw ObjectRefused("'leave' reaches nothing this reads")
         }
     }
 
@@ -494,7 +494,7 @@ private extension ArtifactReader {
     }
 }
 
-private extension ArtifactReader {
+private extension ObjectReader {
     func lowered(_ value: Value) throws -> LoweredType {
         var fields = try Fields(value, of: "lowered type")
         let read: LoweredType
@@ -547,7 +547,7 @@ private extension ArtifactReader {
 
         case 20: read = .member(try fields.count())
         case 21: read = .undeclared(label: try fields.text(), refusal: try fields.text())
-        default: throw ArtifactRefused("'lowered type' names a kind this reads none of")
+        default: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }
 
         try fields.end()
@@ -562,7 +562,7 @@ private extension ArtifactReader {
         switch try fields.tag() {
         case 0: read = .membership(try fields.count())
         case 1: read = .contract(try name(fields.next()))
-        default: throw ArtifactRefused("'bound' holds a parameter to nothing this reads")
+        default: throw ObjectRefused("'bound' holds a parameter to nothing this reads")
         }
 
         try fields.end()
@@ -595,7 +595,7 @@ private extension ArtifactReader {
     }
 }
 
-private extension ArtifactReader {
+private extension ObjectReader {
     func judged(_ value: Value) throws -> Judged {
         var fields = try Fields(value, of: "row")
         let label = try name(fields.next())
@@ -623,7 +623,7 @@ private extension ArtifactReader {
         case 0: read = .body(try body(fields.next()), try frame(fields.next()))
 
         case 1: read = .native(sending: try Fields.list(fields.next(), of: "sending", send))
-        default: throw ArtifactRefused("'implementation' answers in a way this reads none of")
+        default: throw ObjectRefused("'implementation' answers in a way this reads none of")
         }
 
         try fields.end()
@@ -711,7 +711,7 @@ private extension ArtifactReader {
         case 0: read = .bind(try fields.count(), settling: try fields.maybe(lowered))
         case 1: read = .declare(try fields.count(), settling: try fields.maybe(lowered))
         case 2: read = .assign(try address(fields.next()), settling: try fields.maybe(lowered))
-        default: throw ArtifactRefused("'binding' binds in a way this reads none of")
+        default: throw ObjectRefused("'binding' binds in a way this reads none of")
         }
 
         try fields.end()
@@ -742,7 +742,7 @@ private extension ArtifactReader {
         case 1: read = .key(try name(fields.next()), optional: try fields.flag())
         case 2: read = .index(try fields.integer(), optional: try fields.flag())
         case 3: read = .at(try address(fields.next()), optional: try fields.flag())
-        default: throw ArtifactRefused("'walk' steps in a way this reads none of")
+        default: throw ObjectRefused("'walk' steps in a way this reads none of")
         }
 
         try fields.end()
@@ -751,7 +751,7 @@ private extension ArtifactReader {
     }
 }
 
-private extension ArtifactReader {
+private extension ObjectReader {
     func operation(_ value: Value) throws -> Operation {
         var fields = try Fields(value, of: "operation")
         let read: Operation
@@ -817,7 +817,7 @@ private extension ArtifactReader {
                     try held.end()
 
                     guard low <= high else {
-                        throw ArtifactRefused("'keeps' ends before it begins")
+                        throw ObjectRefused("'keeps' ends before it begins")
                     }
 
                     return low ..< high
@@ -841,7 +841,7 @@ private extension ArtifactReader {
             )
 
         default:
-            throw ArtifactRefused("'operation' does something this reads none of")
+            throw ObjectRefused("'operation' does something this reads none of")
         }
 
         try fields.end()
@@ -909,7 +909,7 @@ private extension ArtifactReader {
         switch try fields.tag() {
         case 0: read = .value(try operation(fields.next()))
         case 1: read = .reference(try address(fields.next()))
-        default: throw ArtifactRefused("'argument' is handed in a way this reads none of")
+        default: throw ObjectRefused("'argument' is handed in a way this reads none of")
         }
 
         try fields.end()
