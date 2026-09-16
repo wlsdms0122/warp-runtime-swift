@@ -29,7 +29,27 @@ struct StandardTests {
         // and a name in neither list is one nobody decided about
         #expect(Module.builtin.subtracting(shipped).isEmpty)
         #expect(Module.builtin.count == 25)
-        #expect(Module.builtin.union(Module.derived).union(["std.text.regex"]) == shipped)
+        #expect(Module.builtin.union(Module.derived).union(Module.unwritten) == shipped)
+    }
+
+    @Test("a procedure this package calls derived has a body here")
+    func everyDerivedProcedureIsWritten() throws {
+        // Given. `derived` is what is left over, so it says a procedure is
+        // written in Warp without looking. This is the looking: a name it
+        // claims and a native implementation is a claim the package does not
+        // keep
+        let written = Set(
+            Module.standard
+                .flatMap(\.procedures)
+                .compactMap { name, procedure -> Name? in
+                    guard case .body = procedure.implementation else { return nil }
+
+                    return name
+                }
+        )
+
+        // Then
+        #expect(Module.derived.subtracting(written).isEmpty)
     }
 
     @Test("a bundle left out is a bundle whose names do not resolve")
