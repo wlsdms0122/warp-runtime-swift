@@ -18,7 +18,7 @@ import WarpStandard
 // fraction, and an implementation that wraps where this one refuses is running
 // programs this one would not.
 //
-// So they are written down in `spec/README.md`, and written here because prose
+// So they are written down in `spec/vocabulary.md`, and written here because prose
 // ages against an implementation that keeps moving. Until the same cases can be
 // run by an implementation that is not this one, this is the closest thing to a
 // specification that cannot go stale.
