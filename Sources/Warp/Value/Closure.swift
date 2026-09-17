@@ -56,9 +56,9 @@ public struct Closure: Sendable {
         isolation == .isolated
     }
 
-    // Whether a cell it took is a hold: a box of the frame it was written
-    // in, shared with it rather than copied out of it.
-    var capturesByReference: Bool {
+    // Whether a cell it took is a hold rather than a copy: a box of the
+    // frame it was written in, shared with it.
+    var tookAHold: Bool {
         captured.contains { _, cell in
             if case .hold = cell { return true }
 

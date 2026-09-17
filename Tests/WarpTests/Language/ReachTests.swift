@@ -196,7 +196,7 @@ struct ReachTests {
         // Then. The hold is the run's box, and what it holds is not the
         // value's; a closure holding one says so, and a fold lets none out
         #expect(Set(rows) == [7, 9])
-        #expect(capturing.capturesByReference && !copied.capturesByReference)
+        #expect(capturing.tookAHold && !copied.tookAHold)
         #expect(sut.holdsProcedure)
         #expect(!Value.array([.int(1)]).holdsProcedure)
     }

@@ -198,7 +198,7 @@ struct Folding {
         // What leaves a fold is a value. A closure that took a hold took a
         // box of the run that folded it, and a link holds no run's boxes.
         var sharing = false
-        value.closures { closure in sharing = sharing || closure.capturesByReference }
+        value.closures { closure in sharing = sharing || closure.tookAHold }
 
         guard !sharing else {
             throw BuildError(
