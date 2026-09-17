@@ -734,20 +734,6 @@ public struct Builder: Sendable {
             )
         }
 
-        var reached: Set<Name> = []
-        var frontier: [Name] = [entry]
-        var index = 0
-
-        while index < frontier.count {
-            let declared = frontier[index]
-            index += 1
-
-            guard reached.insert(declared).inserted else { continue }
-            guard let row = assembled.rows[declared] else { continue }
-
-            frontier.append(contentsOf: assembled.calls[row])
-        }
-
         // The types of this link, made from what its documents declared and
         // laid down in the order their blocks are. Which types answer which
         // contracts is read across the documents, so the rows a body stands on
@@ -798,11 +784,26 @@ public struct Builder: Sendable {
             linked: linked.table,
             start: start,
             rows: assembled.rows,
-            reached: reached,
+            reached: reached(from: start, over: linked.table, named: assembled.rows),
             types: types,
             variables: try relocating.started(assembled.variables)
         )
     }
 
     // MARK: - Private
+    // Which declared spellings a run from the start row can enter, following
+    // what each row's code names. Closures are rows too and are walked
+    // through, and only what has a spelling is reported.
+    private func reached(from start: Int, over table: [Linked], named rows: [Name: Int]) -> Set<Name> {
+        var reached: Set<Int> = []
+        var frontier: [Int] = [start]
+
+        while let row = frontier.popLast() {
+            guard reached.insert(row).inserted, table.indices.contains(row) else { continue }
+
+            frontier.append(contentsOf: table[row].reaches)
+        }
+
+        return Set(rows.lazy.filter { entry in reached.contains(entry.value) }.map(\.key))
+    }
 }

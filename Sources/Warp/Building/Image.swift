@@ -25,9 +25,10 @@ public struct Image: Sendable {
     public let rows: [Name: Int]
 
     // Which declarations a run from the entry can reach, by declared
-    // spelling. Transitive: a declaration reached only through another is
-    // in here too. A fact of the link for whoever asks it; the run reads
-    // rows by number and never asks.
+    // spelling, following what each reached row's code names: its calls,
+    // every row answering a contract it calls through, the closures it
+    // writes and the sends a native declared. Transitive. A fact of the link
+    // for whoever asks it; the run reads rows by number and never asks.
     public let reached: Set<Name>
 
     // Every type the linked modules declared. A named type survives into the
