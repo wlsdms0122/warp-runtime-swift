@@ -130,65 +130,72 @@ struct ObjectClosureTests {
         }
     }
 
-    @Test("a compiled document whose parameter default holds a procedure is refused")
+    @Test("a parameter default holding a procedure is refused where it is written and where it is read")
     func aProcedureDefaultIsRefused() throws {
-        // Given. A signature whose parameter falls back to a closure, which is
-        // a default no document writes, standing as a row and as a contract's.
+        // Given. A row whose parameter falls back to a closure, which is a
+        // default no document writes.
         let signature = Signature(
             parameters: ["p": Parameter(default: .procedure(ObjectCoverageFixture.everyValueClosure))],
             returns: .int
         )
-        let row = try Judged(
-            label: "a.one",
-            signature: signature,
-            constness: .unstated,
-            isolation: .unstated,
-            failing: .unstated,
-            sends: [],
-            judging: .body(
-                Body(instructions: [], result: .literal(.int(0))),
-                Frame(size: 1, parameters: [0], variables: [], captures: [], names: ["p"])
-            )
+        let compiled = try Compiled(
+            document: .assembled,
+            types: [:],
+            constraints: [:],
+            contracts: [:],
+            claims: [:],
+            leaned: [:],
+            declared: ["a.one"],
+            constants: [],
+            table: [
+                try Judged(
+                    label: "a.one",
+                    signature: signature,
+                    constness: .unstated,
+                    isolation: .unstated,
+                    failing: .unstated,
+                    sends: [],
+                    judging: .body(
+                        Body(instructions: [], result: .literal(.int(0))),
+                        Frame(size: 1, parameters: [0], variables: [], captures: [], names: ["p"])
+                    )
+                )
+            ],
+            answers: [:],
+            numbering: Numbering(imports: [], declared: ["a.one"], closures: [:]),
+            typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
+            judging: [],
+            dependencies: []
         )
 
-        // When / Then
-        #expect(throws: ObjectRefused.self) {
-            try Compiled(
-                document: .assembled,
-                types: [:],
-                constraints: [:],
-                contracts: [:],
-                claims: [:],
-                leaned: [:],
-                declared: ["a.one"],
-                constants: [],
-                table: [row],
-                answers: [:],
-                numbering: Numbering(imports: [], declared: ["a.one"], closures: [:]),
-                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
-                judging: [],
-                dependencies: []
-            )
+        // When / Then. The writer refuses to write it down.
+        #expect(throws: ObjectUnwritable.self) {
+            try compiled.object()
         }
 
+        // And an object forged to hold one in every default it writes, the
+        // ones inside type expressions included, is refused where it is read.
+        let closure = try ObjectWriter().value(.procedure(ObjectCoverageFixture.everyValueClosure))
+        let forged = forging(try ObjectCoverageFixture.everything.object(), default: closure)
+
+        #expect(forged != (try ObjectCoverageFixture.everything.object()))
         #expect(throws: ObjectRefused.self) {
-            try Compiled(
-                document: .assembled,
-                types: [:],
-                constraints: [:],
-                contracts: ["a.contract": ["a.asks": signature]],
-                claims: [:],
-                leaned: [:],
-                declared: [],
-                constants: [],
-                table: [],
-                answers: [:],
-                numbering: Numbering(imports: [], declared: [], closures: [:]),
-                typeNumbering: try LoweredTypeNumbering(ordered: [], memberships: []),
-                judging: [],
-                dependencies: []
-            )
+            try Compiled(written: forged, of: nil)
         }
+    }
+
+    // The same object with every parameter's default replaced. A parameter is
+    // written as four fields, each present one wrapped as a list of one, the
+    // last its description, and the fixture describes every one of its
+    // parameters the same way.
+    private func forging(_ written: Value, default replacement: Value) -> Value {
+        guard case var .array(parts) = written else { return written }
+
+        if parts.count == 4, parts[3] == .array([.string(ObjectCoverageFixture.parameter.description ?? "")]) {
+            parts[2] = .array([replacement])
+        }
+
+        return .array(parts.map { part in forging(part, default: replacement) })
     }
 
     @Test("a closure spelled by a writer no document of the link has is refused at the link")

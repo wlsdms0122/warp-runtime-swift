@@ -293,8 +293,16 @@ struct ObjectWriter {
         ])
     }
 
+    // A default is data a document wrote, and a document writes no procedure
+    // as data. Said where a default is written, so every signature written
+    // anywhere in an object is held to it, and the reader says the same
+    // where one is read.
     private func parameter(_ parameter: Parameter) throws(ObjectUnwritable) -> Value {
-        .array([
+        guard parameter.default?.holdsProcedure != true else {
+            throw ObjectUnwritable("a parameter default holding a procedure, which no document writes")
+        }
+
+        return .array([
             try ObjectWriter.maybe(parameter.type, type),
             ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
             try ObjectWriter.maybe(parameter.default, value),
