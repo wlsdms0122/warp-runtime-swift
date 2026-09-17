@@ -255,6 +255,16 @@ struct Judged: Sendable {
             )
         }
 
+        // A slot a closure fills from what it took with it is one slot, and
+        // not one a parameter or a module variable fills.
+        let taken = Set(frame.parameters).union(frame.variables.map(\.slot))
+
+        guard Set(frame.captures).count == frame.captures.count,
+              frame.captures.allSatisfy({ slot in slot >= 0 && slot < frame.size && !taken.contains(slot) })
+        else {
+            throw ObjectRefused("a frame is filled from a closure's cells at a slot it has not, or one something else fills")
+        }
+
         guard frame.parameters.count == signature.names.count else {
             throw ObjectRefused(
                 "a frame stands \(frame.parameters.count) of the"

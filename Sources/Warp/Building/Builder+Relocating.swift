@@ -20,14 +20,13 @@ struct Answered: Sendable {
     let table: [Linked]
     let rows: [Name: Int]
 
-    // Which document each origin is, for a closure a run over these rows
-    // makes.
-    let documents: [Place.Document]
+    // What a closure a run over these rows makes is spelled with, by origin.
+    let documents: [Closure.Document]
 
     private let numbers: Numbers
 
     // MARK: - Initializer
-    private init(table: [Linked], rows: [Name: Int], documents: [Place.Document], numbers: Numbers) {
+    private init(table: [Linked], rows: [Name: Int], documents: [Closure.Document], numbers: Numbers) {
         self.table = table
         self.rows = rows
         self.documents = documents
@@ -36,7 +35,7 @@ struct Answered: Sendable {
 
     // A table holding nothing a link could answer: rows built from native
     // procedures alone, which carry no lowered body and send nothing.
-    static func unanswerable(_ table: [Linked], rows: [Name: Int], documents: [Place.Document]) -> Answered {
+    static func unanswerable(_ table: [Linked], rows: [Name: Int], documents: [Closure.Document]) -> Answered {
         Answered(table: table, rows: rows, documents: documents, numbers: .rows)
     }
 
@@ -47,7 +46,7 @@ struct Answered: Sendable {
     static func documents(
         _ table: [Linked],
         rows: [Name: Int],
-        documents: [Place.Document],
+        documents: [Closure.Document],
         numbering: [Int: Numbering],
         named: [Int: [Int?]],
         closures: [Int: [Int]]
@@ -74,7 +73,7 @@ struct Answered: Sendable {
     // one nothing numbered, said under the name that says who may make it:
     // `Relocating` alone, which is what keeps a table nobody answered from
     // standing as one whose numbers are rows.
-    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], documents: [Place.Document]) -> Answered {
+    fileprivate static func relocated(_ table: [Linked], rows: [Name: Int], documents: [Closure.Document]) -> Answered {
         unanswerable(table, rows: rows, documents: documents)
     }
 
@@ -191,6 +190,17 @@ struct Relocating {
     private let writing: [Closure.Writer: [Int]]
 
     private let documents: [Place.Document]
+    private let naming: [Closure.Document]
+
+    // Every row relocated once, whichever asks for it first: the table, or a
+    // value holding a closure whose row it is. One object per row, so a
+    // closure a value holds holds the row of the table it stands in.
+    private let memo = Memo()
+
+    private final class Memo {
+        var rows: [Int: Linked] = [:]
+        var underway: Set<Int> = []
+    }
 
     // MARK: - Initializer
     init(
@@ -198,6 +208,7 @@ struct Relocating {
         rows: [Name: Int],
         writing: [Closure.Writer: [Int]],
         documents: [Place.Document],
+        naming: [Closure.Document],
         numbering: [Numbering],
         typeNumbering: [LoweredTypeNumbering],
         contractProcedures: [Name: ContractProcedure],
@@ -209,6 +220,7 @@ struct Relocating {
         self.rows = rows
         self.writing = writing
         self.documents = documents
+        self.naming = naming
         self.numbering = numbering
         self.typeRows = typeNumbering.map { held in held.rows(in: loweredTypes) }
         self.contractProcedures = contractProcedures
@@ -235,6 +247,7 @@ struct Relocating {
             rows: assembled.rows,
             writing: assembled.writing,
             documents: assembled.documents,
+            naming: assembled.naming,
             numbering: assembled.numbering,
             typeNumbering: assembled.typeNumbering,
             contractProcedures: ContractProcedure.table(in: types),
@@ -244,17 +257,10 @@ struct Relocating {
     }
 
     // MARK: - Public
-    // Which row of this link a closure value stands at. A closure value is
-    // spelled by the declaration that wrote it, and that declaration's
-    // document is whose number it stands at.
-    func row(of closure: Closure) throws -> Int {
-        try standing(of: closure, at: Place(in: closure.writer.document)).row
-    }
-
     // Every row, numbered by this link and with the calls through a contract
     // filled in.
     func linked() throws -> Answered {
-        Answered.relocated(try table.map { row in try relocated(row) }, rows: rows, documents: documents)
+        Answered.relocated(try table.indices.map(relocated(at:)), rows: rows, documents: naming)
     }
 
     // What each document's variables start a run holding, read as this link's
@@ -304,11 +310,11 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            let row = table[try self.standing(of: closure, at: standing.place).row]
+            let row = try self.standing(of: closure, at: standing.place).row
 
-            try held(closure, to: row, at: standing.place)
+            try held(closure, to: table[row], at: standing.place)
 
-            return closure.standing(as: try relocated(row))
+            return closure.standing(as: try relocated(at: row))
         }
     }
 
@@ -346,24 +352,43 @@ struct Relocating {
         return (origin: origin, row: try row(number, in: held))
     }
 
-    // What a closure took with it fills slots of its own frame. A slot the
-    // frame has not, or one filled twice, is a closure no body stood up, and
-    // it is refused here rather than read past the frame's end at the run.
+    // What a closure took with it fills exactly the slots its frame says a
+    // closure fills: no fewer, since a cell left out reads as null, and none
+    // other, since a slot a parameter or a variable fills is not one a
+    // closure took. A value saying otherwise is a closure no body stood up,
+    // and it is refused here rather than read into the frame at the run.
     private func held(_ closure: Closure, to row: Linked, at place: Place) throws {
         guard case let .body(_, frame) = row.implementation else {
             throw BuildError.unjudged("closure \(closure.nth) of '\(closure.writer.name)' standing on a native row", at: place)
         }
 
-        var filled: Set<Int> = []
-
-        for (slot, _) in closure.captured {
-            guard slot >= 0, slot < frame.size, filled.insert(slot).inserted else {
-                throw BuildError(
-                    "closure \(closure.nth) of '\(closure.writer.name)' holds a cell at \(slot), which its frame has not",
-                    at: place
-                )
-            }
+        guard closure.captured.count == frame.captures.count,
+              Set(closure.captured.map(\.slot)) == Set(frame.captures)
+        else {
+            throw BuildError(
+                "closure \(closure.nth) of '\(closure.writer.name)' holds cells at"
+                    + " \(closure.captured.map(\.slot).sorted()), and its frame is filled at \(frame.captures.sorted())",
+                at: place
+            )
         }
+    }
+
+    // A row relocated once. A row whose relocation asks for itself, through
+    // a value in its own body holding a closure whose row it is, is a row no
+    // build lowers.
+    private func relocated(at row: Int) throws -> Linked {
+        if let done = memo.rows[row] { return done }
+
+        guard memo.underway.insert(row).inserted else {
+            throw BuildError.unjudged("a row holding a closure of itself", at: .procedure(table[row].label.spelling, in: .assembled))
+        }
+
+        let done = try relocated(table[row])
+
+        memo.underway.remove(row)
+        memo.rows[row] = done
+
+        return done
     }
 
     private func relocated(_ row: Linked) throws -> Linked {

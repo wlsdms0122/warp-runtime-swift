@@ -338,7 +338,7 @@ struct Lowering {
         }
 
         var frame: Frame {
-            Frame(size: size, parameters: parameters, variables: reads, names: names)
+            Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
         }
     }
 
