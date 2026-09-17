@@ -236,13 +236,8 @@ public struct ExpressionReader: Decodable {
                     )
                 }
 
-                type = try TypeReader(from: ValueDecoder(
-                    value: written,
-                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key.spelling)],
-                    steps: steps + [.key(key.spelling)],
-                    userInfo: decoder.userInfo
-                ))
-                .type
+                type = try TypeReader(from: ValueDecoder(below: decoder, key: key.spelling, holding: written, at: steps))
+                    .type
             }
         } catch let error as TypeFormError {
             throw ExpressionFormError("{ \(key): }: \(error.message)")
@@ -276,13 +271,8 @@ public struct ExpressionReader: Decodable {
 
         do {
             return .closure(
-                try ProcedureReader(from: ValueDecoder(
-                    value: written,
-                    codingPath: decoder.codingPath + [AnyCodingKey(stringValue: Self.closureKey.spelling)],
-                    steps: steps + [.key(Self.closureKey.spelling)],
-                    userInfo: decoder.userInfo
-                ))
-                .procedure
+                try ProcedureReader(from: ValueDecoder(below: decoder, key: Self.closureKey.spelling, holding: written, at: steps))
+                    .procedure
             )
         } catch let refusal as ReadingError {
             // A reading that says where it is says it deeper than here, and
@@ -316,13 +306,8 @@ public struct ExpressionReader: Decodable {
         do {
             // A message written where a value is wanted has no statement to
             // take a name from, and nothing in a message wants one.
-            return try CallForm(from: ValueDecoder(
-                value: written,
-                codingPath: decoder.codingPath + [AnyCodingKey(stringValue: "call")],
-                steps: steps + [.key("call")],
-                userInfo: decoder.userInfo
-            ))
-            .expression(boundTo: "")
+            return try CallForm(from: ValueDecoder(below: decoder, key: "call", holding: written, at: steps))
+                .expression(boundTo: "")
         } catch let refusal as ReadingError {
             throw refusal
         } catch {

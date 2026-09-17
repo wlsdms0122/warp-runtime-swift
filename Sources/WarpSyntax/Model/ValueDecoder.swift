@@ -444,6 +444,19 @@ struct ValueDecoder: Decoder {
     }
 }
 
+extension ValueDecoder {
+    // A decoder one key below another, standing on a value the reader above
+    // already holds and at the steps that reader has walked.
+    init(below decoder: Decoder, key: String, holding held: Value, at steps: [Place.Step]) {
+        self.init(
+            value: held,
+            codingPath: decoder.codingPath + [AnyCodingKey(stringValue: key)],
+            steps: steps + [.key(key)],
+            userInfo: decoder.userInfo
+        )
+    }
+}
+
 extension Decoder {
     // Where this reading has reached, in the document's own terms. Nothing
     // where the reading is not this package's, which is the honest answer for a
