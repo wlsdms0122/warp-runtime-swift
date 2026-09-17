@@ -21,11 +21,14 @@ struct NestingBoundTests {
         case call
         case closure
 
-        // How many levels of this shape fit under the bound.
+        // How many levels of this shape fit under the bound. A level of a
+        // call opens two containers and its deepest argument a third; a level
+        // of a closure opens five. Around them the document opens three and
+        // the literal at the bottom one.
         var levels: Int {
             switch self {
-            case .call: 61
-            case .closure: 24
+            case .call: (Envelope.nesting - 5) / 2
+            case .closure: (Envelope.nesting - 4) / 5
             }
         }
 
