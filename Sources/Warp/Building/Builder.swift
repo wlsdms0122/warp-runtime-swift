@@ -443,7 +443,7 @@ public struct Builder: Sendable {
         }
 
         // One declaration resolves once, whichever table asks.
-        var resolvedBodies: [Name: (procedure: Procedure, calls: [CallSite])] = [:]
+        var resolvedBodies: [Name: Procedure] = [:]
 
         // A declaration, bound and dot-judged: selectors resolve to declared
         // spellings, every dot in the body is spelled as what the types say it
@@ -455,7 +455,7 @@ public struct Builder: Sendable {
         // this body in the image, the body runs, so the frontier's promise
         // (callee declared, arguments taken) is kept per body rather than per
         // reachability.
-        func resolved(_ symbol: Symbol) async throws -> (procedure: Procedure, calls: [CallSite]) {
+        func resolved(_ symbol: Symbol) async throws -> Procedure {
             if let done = resolvedBodies[symbol.declared] { return done }
 
             let declaration = symbol.procedure
@@ -496,7 +496,7 @@ public struct Builder: Sendable {
                 )
             }
 
-            resolvedBodies[symbol.declared] = answer
+            resolvedBodies[symbol.declared] = answer.procedure
 
             try checked(answer.calls, in: context(), writing: fulfillment)
 
@@ -517,7 +517,7 @@ public struct Builder: Sendable {
                 try compiling.settle(try row(of: symbol), body: rewritten, at: symbol.place)
             }
 
-            return answer
+            return answer.procedure
         }
 
         // The facts nobody declared. All three are fixed points over what a
@@ -650,7 +650,7 @@ public struct Builder: Sendable {
         // are judged is not a question the entry answers.
         for symbol in holding {
             try await fulfillment.folding(symbol.place) {
-                let (procedure, _) = try await resolved(symbol)
+                let procedure = try await resolved(symbol)
 
                 // A constant answer is a value and not only a type, so it is
                 // held to what the declaration admits as well as to what it
