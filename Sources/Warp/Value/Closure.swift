@@ -56,5 +56,15 @@ public struct Closure: Sendable {
         isolation == .isolated
     }
 
+    // Whether a cell it took is a hold: a box of the frame it was written
+    // in, shared with it rather than copied out of it.
+    var capturesByReference: Bool {
+        captured.contains { _, cell in
+            if case .hold = cell { return true }
+
+            return false
+        }
+    }
+
     // MARK: - Private
 }

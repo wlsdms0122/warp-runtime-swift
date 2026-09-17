@@ -130,7 +130,8 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table.map(\.folding), closures: lowering.closureRows)
+            of: answered.holding(lowering.table.map(\.folding), closures: lowering.closureRows),
+            at: place
         )
     }
 
@@ -172,12 +173,13 @@ struct Folding {
         return try await read(
             code,
             in: frame,
-            of: answered.holding(lowering.table, closures: lowering.closureRows)
+            of: answered.holding(lowering.table, closures: lowering.closureRows),
+            at: place
         )
     }
 
     // MARK: - Private
-    private func read(_ code: Operation, in frame: Frame, of answered: Answered) async throws -> Value {
+    private func read(_ code: Operation, in frame: Frame, of answered: Answered, at place: Place) async throws -> Value {
         var activation = Activation(frame, of: origin)
 
         for (slot, cell) in cells.enumerated() {
@@ -191,7 +193,21 @@ struct Folding {
             resolving: answered.resolving,
             loweredTypes: loweredTypes
         )
+        let value = try await executor.read(code, in: activation)
 
-        return try await executor.read(code, in: activation)
+        // What leaves a fold is a value. A closure that took a hold took a
+        // box of the run that folded it, and a link holds no run's boxes.
+        var sharing = false
+        value.closures { closure in sharing = sharing || closure.capturesByReference }
+
+        guard !sharing else {
+            throw BuildError(
+                "settles to a closure holding a variable of the run that folded it,"
+                    + " and a link holds values",
+                at: place
+            )
+        }
+
+        return value
     }
 }

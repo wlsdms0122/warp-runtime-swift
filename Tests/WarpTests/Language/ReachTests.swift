@@ -193,8 +193,10 @@ struct ReachTests {
         var rows: [Int] = []
         sut.closures { closure in rows.append(closure.number) }
 
-        // Then. The hold is the run's box, and what it holds is not the value's
-        #expect(rows == [7, 9])
+        // Then. The hold is the run's box, and what it holds is not the
+        // value's; a closure holding one says so, and a fold lets none out
+        #expect(Set(rows) == [7, 9])
+        #expect(capturing.capturesByReference && !copied.capturesByReference)
         #expect(sut.holdsProcedure)
         #expect(!Value.array([.int(1)]).holdsProcedure)
     }
