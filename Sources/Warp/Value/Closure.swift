@@ -44,6 +44,11 @@ public struct Closure: Sendable {
         Closure(origin: origin, number: number, linked: linked, captured: captured)
     }
 
+    // The same closure holding something else.
+    func holding(_ captured: [(slot: Int, cell: Cell)]) -> Closure {
+        Closure(origin: origin, number: number, linked: linked, captured: captured)
+    }
+
     // MARK: - Public
     func settling(returned value: Value) throws -> Value {
         try linked.settling(returned: value)

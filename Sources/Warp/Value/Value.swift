@@ -124,6 +124,43 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
+    // The same value with every closure in it replaced, innermost first: what
+    // a closure holds by value is rewritten before the closure is handed over.
+    // A cell held is the run's box, and stays.
+    func rewritten(closures body: (Closure) throws -> Closure) rethrows -> Value {
+        switch self {
+        case let .procedure(closure):
+            let captured = try closure.captured.map { slot, cell -> (slot: Int, cell: Cell) in
+                guard case let .value(inner) = cell else { return (slot, cell) }
+
+                return (slot, .value(try inner.rewritten(closures: body)))
+            }
+
+            return .procedure(try body(closure.holding(captured)))
+
+        case let .array(items):
+            return .array(try items.map { item in try item.rewritten(closures: body) })
+
+        case let .record(record):
+            return .record(
+                Record(
+                    layout: record.layout,
+                    values: try record.values.map { value in try value.rewritten(closures: body) }
+                )
+            )
+
+        case let .dictionary(dictionary):
+            return .dictionary(
+                Value.Dictionary(
+                    ordered: try dictionary.entries.map { entry in (entry.name, try entry.value.rewritten(closures: body)) }
+                )
+            )
+
+        case .null, .bool, .int, .double, .string, .bytes:
+            return self
+        }
+    }
+
     // MARK: - Private
     // The walk itself. The body answers whether to go on, and the walk
     // answers whether it reached the end.

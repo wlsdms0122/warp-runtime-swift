@@ -276,8 +276,7 @@ struct Relocating {
     private func relocated(_ value: Value, in standing: Standing) throws -> Value {
         guard value.holdsProcedure else { return value }
 
-        switch value {
-        case let .procedure(closure):
+        return try value.rewritten { closure in
             let held = Standing(
                 origin: closure.origin,
                 place: standing.place,
@@ -285,38 +284,7 @@ struct Relocating {
             )
             let row = try self.row(closure.number, in: held)
 
-            return .procedure(
-                closure.standing(
-                    at: row,
-                    as: try relocated(table[row]),
-                    holding: try closure.captured.map { slot, cell in
-                        guard case let .value(inner) = cell else { return (slot, cell) }
-
-                        return (slot, .value(try relocated(inner, in: standing)))
-                    }
-                )
-            )
-
-        case let .array(items):
-            return .array(try items.map { item in try relocated(item, in: standing) })
-
-        case let .record(record):
-            return .record(
-                Record(
-                    layout: record.layout,
-                    values: try record.values.map { held in try relocated(held, in: standing) }
-                )
-            )
-
-        case let .dictionary(held):
-            return .dictionary(
-                try Value.Dictionary(
-                    try held.entries.map { name, inner in (name, try relocated(inner, in: standing)) }
-                )
-            )
-
-        case .null, .bool, .int, .double, .string, .bytes:
-            return value
+            return closure.standing(at: row, as: try relocated(table[row]), holding: closure.captured)
         }
     }
 
