@@ -49,7 +49,9 @@ struct Judged: Sendable {
     let implementation: Implementation
 
     // MARK: - Initializer
-    // Each part stated, reached only through the door below.
+    // Each part stated. Reached through the two doors below: one judges parts
+    // read apart, and one takes a row the link built, whose frame stood up
+    // beside its body.
     private init(
         label: Name,
         signature: Signature,
@@ -120,7 +122,9 @@ struct Judged: Sendable {
     }
 
     // What of a row its document settled. What is left behind is a reading of
-    // this against a table, which any table gives again.
+    // this against a table, which any table gives again. The link stood the
+    // frame up beside the body it lowered, so nothing here is asked again:
+    // what a reading of an object has to judge, a build already holds.
     init(_ row: Linked) {
         self.label = row.label
         self.signature = row.signature
