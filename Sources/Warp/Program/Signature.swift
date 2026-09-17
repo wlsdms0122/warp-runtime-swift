@@ -161,18 +161,6 @@ public struct Signature: Sendable, Equatable {
             : arguments[name]
     }
 
-    // Inputs settle once at the scope boundary; inside the scope, references
-    // read the settled values instead of re-evaluating. By name, for a caller
-    // outside a run: the entry's arguments, a closure assembled in Swift.
-    public func settle(
-        _ given: [Name: Value],
-        in types: TypeTable = .empty
-    ) throws -> [Name: Value] {
-        let slots = lowered(in: types.loweredTypes)
-
-        return named(try settle(given, over: slots, in: types.loweredTypes), over: slots)
-    }
-
     // MARK: - Internal
     // Every declared name this signature reaches, through what it takes and
     // what it answers.
@@ -269,15 +257,4 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
-    private func named(_ settled: [Value?], over slots: [Slot]) -> [Name: Value] {
-        var named: [Name: Value] = [:]
-
-        for (position, value) in settled.enumerated() {
-            guard let value else { continue }
-
-            named[slots[position].name] = value
-        }
-
-        return named
-    }
 }

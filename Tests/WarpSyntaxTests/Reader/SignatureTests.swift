@@ -37,7 +37,7 @@ struct SignatureTests {
         #expect(signature.parameters["labelled"]?.type == .any)
 
         // Neither checks, so both take a type nothing was said about.
-        let settled = try signature.settle(["subject": .int(1), "labelled": .int(2)])
+        let settled = try settled(signature, given: ["subject": .int(1), "labelled": .int(2)])
 
         #expect(settled["subject"] == .int(1))
         #expect(settled["labelled"] == .int(2))
@@ -66,7 +66,7 @@ struct SignatureTests {
         ])
 
         // When
-        let settled = try sut.settle([:])
+        let settled = try settled(sut, given: [:])
 
         // Then
         #expect(settled["mode"] == .string("fast"))
@@ -79,7 +79,7 @@ struct SignatureTests {
 
         // When / Then
         #expect(throws: ArgumentError.self) {
-            try sut.settle([:])
+            try settled(sut, given: [:])
         }
     }
 
@@ -90,7 +90,7 @@ struct SignatureTests {
 
         // When / Then
         #expect(throws: ArgumentError.self) {
-            try sut.settle(["count": .string("three")])
+            try settled(sut, given: ["count": .string("three")])
         }
     }
 
@@ -104,13 +104,13 @@ struct SignatureTests {
 
         // When / Then
         #expect(throws: ArgumentError.self) {
-            try sut.settle(["count": .double(3)])
+            try settled(sut, given: ["count": .double(3)])
         }
 
         // And the conversion that loses nothing still happens
         let widened = Signature(parameters: ["ratio": Parameter(type: .double)])
 
-        #expect(try widened.settle(["ratio": .int(3)])["ratio"] == .double(3))
+        #expect(try settled(widened, given: ["ratio": .int(3)])["ratio"] == .double(3))
     }
 
     @Test("an undeclared input name is rejected")
@@ -121,7 +121,7 @@ struct SignatureTests {
         // When / Then. An extra name is a typo surfaced, not a value smuggled
         // in
         #expect(throws: ArgumentError.self) {
-            try sut.settle(["a": .string("x"), "sneaky": .int(9)])
+            try settled(sut, given: ["a": .string("x"), "sneaky": .int(9)])
         }
     }
 
@@ -134,7 +134,7 @@ struct SignatureTests {
 
         // When / Then
         #expect(throws: ArgumentError.self) {
-            try sut.settle(["mode": .string("medium")])
+            try settled(sut, given: ["mode": .string("medium")])
         }
     }
 
@@ -215,5 +215,18 @@ struct SignatureTests {
 
         // Then
         #expect(sut.procedures["nullcwd"]?.signature.parameters["dir"]?.default == .null)
+    }
+
+    // MARK: - Private
+    // The boundary over no table, answered by name.
+    private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {
+        let slots = signature.lowered(in: .empty)
+        let settled = try signature.settle(given, over: slots, in: .empty)
+
+        return settled.enumerated().reduce(into: [Name: Value]()) { named, entry in
+            guard let value = entry.element else { return }
+
+            named[slots[entry.offset].name] = value
+        }
     }
 }
