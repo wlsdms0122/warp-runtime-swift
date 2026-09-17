@@ -185,11 +185,20 @@ public struct Builder: Sendable {
         try compiling.answerHeld()
         try compiling.answering()
 
+        var declarers = DeclarerTable()
+
+        for origin in compiled.indices {
+            declarers.lay(compiled[origin])
+        }
+
         return Laid(
             compiled: compiled,
             carried: compiling.carried,
             signatures: signatures,
-            linkage: linkage
+            linkage: linkage,
+            naming: compiled.indices.map { origin in compiled[origin].naming },
+            identities: Set(compiled.indices.compactMap { origin in compiled[origin].identity }),
+            declarers: declarers
         )
     }
 
@@ -255,7 +264,7 @@ public struct Builder: Sendable {
     public func compile(_ modules: [Module], against laid: Laid) async throws -> [Compiled] {
         let compiled = laid.compiled
 
-        try once(modules, against: compiled)
+        try once(modules, held: laid.identities)
 
         // Every name held to one declarer before the standing is read.
         // Standing reads a name as whichever document declared it, and where
@@ -392,7 +401,7 @@ public struct Builder: Sendable {
             types: lowered.types,
             contractProcedures: lowered.contractProcedures,
             naming: documents.map(\.document),
-            spelling: compiled.map(\.naming) + zip(laying, tokens).map { module, token in
+            spelling: laid.naming + zip(laying, tokens).map { module, token in
                 Closure.Document(identity: module.identity, token: token)
             }
         )
@@ -400,12 +409,7 @@ public struct Builder: Sendable {
         // What each document turned out to be, as they are laid down. A
         // document laid here may be what the next one leans on, and what it
         // leaned on is part of what it is, so the two grow together.
-        var declarers = DeclarerTable()
-
-        for object in compiled {
-            declarers.lay(object)
-        }
-
+        var declarers = laid.declarers
         var built: [Compiled] = []
 
         for offset in laying.indices {

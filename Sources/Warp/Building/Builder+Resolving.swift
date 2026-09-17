@@ -87,8 +87,8 @@ extension Builder {
     // What the caller already compiled counts: those documents are in this
     // link too, and handing one over again is the same document twice however
     // it arrived.
-    func once(_ modules: [Module], against compiled: [Compiled] = []) throws {
-        var held = Set(compiled.compactMap { document in document.document.identity })
+    func once(_ modules: [Module], held: Set<Identity> = []) throws {
+        var held = held
 
         for module in modules {
             guard let identity = module.identity else { continue }

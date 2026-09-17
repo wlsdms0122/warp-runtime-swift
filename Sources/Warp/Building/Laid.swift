@@ -42,12 +42,23 @@ public struct Laid: Sendable {
     // numbers the documents it lays beside them into the same one.
     let linkage: Linkage
 
+    // What every compile against these reads of them, read once here and
+    // not off every document at every compile: how each is named to a
+    // closure, which texts they are, and what each declares under what it
+    // turned out to be.
+    let naming: [Closure.Document]
+    let identities: Set<Identity>
+    let declarers: DeclarerTable
+
     // Nothing laid down, for a build that was handed no documents to compile
     // against.
     static let none = Laid(
         compiled: [],
         carried: .none,
         signatures: [:],
-        linkage: Linkage()
+        linkage: Linkage(),
+        naming: [],
+        identities: [],
+        declarers: DeclarerTable()
     )
 }
