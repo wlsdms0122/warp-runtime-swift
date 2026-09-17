@@ -294,7 +294,7 @@ public struct Loader: Sendable {
         // reaches every reader through this one door, and past the bound the
         // readers recurse in the ordinary way.
         guard value.nesting <= Envelope.nesting else {
-            throw ReadingError("nesting deeper than \(Envelope.nesting) containers", at: []).read(in: document)
+            throw ReadingError("nesting deeper than \(Envelope.nesting) containers", at: value.deepest).read(in: document)
         }
 
         let userInfo: [CodingUserInfoKey: Any] = [
