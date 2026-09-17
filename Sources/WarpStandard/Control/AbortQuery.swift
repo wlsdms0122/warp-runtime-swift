@@ -18,7 +18,8 @@ struct AbortQuery: Query {
     // What this takes: the message it refuses with. Anything spells, so a
     // refusal can name what it was holding rather than only a sentence
     // written ahead of time. Null spells nothing, and a refusal says
-    // something, so null says the default.
+    // something, so null says the default, and so does a message nobody
+    // sent, which is the same fact.
     enum Parameters: Int, ParameterSet {
         case of
 
@@ -35,11 +36,7 @@ struct AbortQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value? {
-        guard let message = question.receiver else {
-            throw ExecutionError("abort refuses with a message, and none arrived")
-        }
-
-        if case .null = message {
+        guard let message = question.receiver, message != .null else {
             throw Aborted(Self.unsaid)
         }
 
