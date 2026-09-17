@@ -44,8 +44,40 @@ struct BodyWalkTests {
         }
     }
 
+    // Which case an operation is, spelled. Exhaustive, so a case added to
+    // `Operation` lands here as a compile error and asks for its holder.
+    private func kind(of operation: Operation) -> String {
+        switch operation {
+        case .literal: return "literal"
+        case .local: return "local"
+        case .array: return "array"
+        case .record: return "record"
+        case .closure: return "closure"
+        case .apply: return "apply"
+        case .cast: return "cast"
+        case .block: return "block"
+        case .conditional: return "conditional"
+        case .loop: return "loop"
+        case .attempt: return "attempt"
+        case .call: return "call"
+        case .dispatch: return "dispatch"
+        case .leave: return "leave"
+        }
+    }
+
     // MARK: - Initializer
     // MARK: - Test
+    @Test("every case that holds an operation has a holder here")
+    func everyHoldingCaseIsAHolder() throws {
+        // The cases that hold no operation, and every other case is held to
+        // having a holder above
+        let leaves: Set<String> = ["literal", "local", "closure"]
+        let holding = Set(try holders.map { _, operation in kind(of: operation) })
+
+        #expect(holding.isDisjoint(with: leaves))
+        #expect(holding.count == 11)
+    }
+
     @Test("every case that holds an operation walks into it")
     func everyHolderIsWalkedInto() throws {
         for (name, operation) in try holders {
@@ -168,6 +200,35 @@ struct BodyWalkTests {
 
         #expect(standing.slots.contains(3))
         #expect(standing.slots.contains(4))
+    }
+
+    @Test("the calls beside a dispatch are neither walked nor rewritten")
+    func aDispatchsCallsAreTheLinks() {
+        let beside = CallOperation(procedure: 5, receiver: leaf, arguments: [], handed: [])
+        let sut = Operation.dispatch(
+            DispatchOperation(contract: "c", procedure: "p", receiver: .literal(.null), arguments: [:], calls: ["t": beside])
+        )
+        var leaves = 0
+
+        sut.walk { node in
+            if case let .operation(inner) = node, case .literal(.int(7)) = inner { leaves += 1 }
+
+            return true
+        }
+
+        let rewritten = sut.rewritten(operation: { operation in
+            if case .literal(.int(7)) = operation { return .literal(.int(8)) }
+
+            return operation
+        }, type: { type in type })
+
+        #expect(leaves == 0)
+
+        guard case let .dispatch(dispatch) = rewritten, case .literal(.int(7))? = dispatch.calls["t"]?.receiver else {
+            Issue.record("the calls beside the dispatch stand as the link laid them")
+
+            return
+        }
     }
 
     @Test("a rewrite hands a cast's type and a binding's settling to the type door")
