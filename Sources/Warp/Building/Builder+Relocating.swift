@@ -185,10 +185,10 @@ struct Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
-    // Which document each writer of a closure stands in. A closure value is
+    // Which documents each writer of a closure stands in. A closure value is
     // spelled by its writer, and the writer's document is whose numbering
     // answers it.
-    private let writers: [Closure.Writer: Int]
+    private let writing: [Closure.Writer: [Int]]
 
     private let documents: [Place.Document]
 
@@ -196,7 +196,7 @@ struct Relocating {
     init(
         table: [Linked],
         rows: [Name: Int],
-        writers: [Closure.Writer: Int],
+        writing: [Closure.Writer: [Int]],
         documents: [Place.Document],
         numbering: [Numbering],
         typeNumbering: [LoweredTypeNumbering],
@@ -207,7 +207,7 @@ struct Relocating {
         self.closures = closures
         self.table = table
         self.rows = rows
-        self.writers = writers
+        self.writing = writing
         self.documents = documents
         self.numbering = numbering
         self.typeRows = typeNumbering.map { held in held.rows(in: loweredTypes) }
@@ -233,7 +233,7 @@ struct Relocating {
                 )
             },
             rows: assembled.rows,
-            writers: assembled.writers,
+            writing: assembled.writing,
             documents: assembled.documents,
             numbering: assembled.numbering,
             typeNumbering: assembled.typeNumbering,
@@ -248,7 +248,7 @@ struct Relocating {
     // spelled by the declaration that wrote it, and that declaration's
     // document is whose number it stands at.
     func row(of closure: Closure) throws -> Int {
-        try standing(of: closure, at: .procedure(closure.writer.name.spelling, in: closure.writer.document)).row
+        try standing(of: closure, at: Place(in: closure.writer.document)).row
     }
 
     // Every row, numbered by this link and with the calls through a contract
@@ -311,9 +311,20 @@ struct Relocating {
     // Where a closure value stands in this link: its writer's document, and
     // the row the number it stands at there turned out to be.
     private func standing(of closure: Closure, at place: Place) throws -> (origin: Int, row: Int) {
-        guard let origin = writers[closure.writer] else {
+        guard let origins = writing[closure.writer], let origin = origins.first else {
             throw BuildError(
                 "a closure '\(closure.writer.name)' wrote, and no module in this link writes one",
+                at: place
+            )
+        }
+
+        // Two documents nobody wrote down are told apart by nothing, so a
+        // closure spelled by a name both write under has no one answer.
+        guard origins.count == 1 else {
+            throw BuildError(
+                "a closure '\(closure.writer.name)' wrote, and "
+                    + origins.map { origin in documents[origin].spelled(at: origin) }.joined(separator: " and ")
+                    + " each write one, with nothing to tell the two apart",
                 at: place
             )
         }

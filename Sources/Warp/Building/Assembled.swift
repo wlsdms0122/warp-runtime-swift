@@ -42,10 +42,12 @@ struct Assembled: Sendable {
     // closure was lifted into. Nil for a declaration's own row.
     let written: [Int?]
 
-    // Which document each writer of a closure stands in. A closure value is
+    // Which documents each writer of a closure stands in. A closure value is
     // spelled by its writer, and the writer's document is whose numbering
-    // answers it.
-    let writers: [Closure.Writer: Int]
+    // answers it. Two documents nobody wrote down are told apart by nothing,
+    // so a writer of theirs may stand in both, and a closure spelled by it
+    // has two answers where it is asked.
+    let writing: [Closure.Writer: [Int]]
 
     // MARK: - Initializer
     init(_ documents: [Compiled]) throws {
@@ -56,7 +58,7 @@ struct Assembled: Sendable {
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
         var written: [Int?] = []
-        var writers: [Closure.Writer: Int] = [:]
+        var writing: [Closure.Writer: [Int]] = [:]
 
         table.reserveCapacity(held)
         origins.reserveCapacity(held)
@@ -86,22 +88,9 @@ struct Assembled: Sendable {
             }
 
             // A writer's spelling is its document's own, so a closure is
-            // spelled by the two together. Two documents nobody wrote down
-            // are told apart by nothing, so a name both write a closure
-            // under has two answers.
+            // spelled by the two together.
             for name in document.numbering.writers {
-                let writer = Closure.Writer(document: document.document, name: name)
-
-                if let taken = writers[writer] {
-                    throw BuildError(
-                        "'\(name)' writes a closure in \(documents[taken].document.spelled(at: taken))"
-                            + " and in \(document.document.spelled(at: origin)), and the two"
-                            + " documents have no way to be told apart",
-                        at: .procedure(name.spelling, in: document.document)
-                    )
-                }
-
-                writers[writer] = origin
+                writing[Closure.Writer(document: document.document, name: name), default: []].append(origin)
             }
 
             closures[origin] = document.lifted.map { row in start + row }
@@ -115,7 +104,7 @@ struct Assembled: Sendable {
         self.documents = documents.map(\.document)
         self.origins = origins
         self.written = written
-        self.writers = writers
+        self.writing = writing
         self.rows = rows
         self.closures = closures
         self.numbering = documents.map(\.numbering)

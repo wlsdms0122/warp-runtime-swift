@@ -167,9 +167,11 @@ struct ObjectClosureTests {
         #expect(try await Executor().run(image) == .int(6))
     }
 
-    @Test("two documents nobody wrote down writing closures under one name are refused where they meet")
+    @Test("a closure two documents nobody wrote down each write under one name has no one answer")
     func twoUnwrittenWritersOfOneNameAreRefused() async throws {
-        // Given. The same two, with no identity to tell them apart by
+        // Given. The same two, with no identity to tell them apart by. Both
+        // closures are relocated at the link, and each is spelled by a name
+        // the two documents both write under
         let one = try await builder.compile(Module.standard + [madeOf(5, entry: "app.one")])
         let other = try await builder.compile([madeOf(6, entry: "app.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
 
