@@ -159,7 +159,7 @@ struct Answered: Sendable {
 //
 // The two are done in one walk because each of them walks every body, and
 // there is nothing the second needs that the first has not already read.
-struct Relocating {
+final class Relocating {
     // MARK: - Property
     // The rows of this link, every one of them standing before the first body
     // is walked.
@@ -184,10 +184,18 @@ struct Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
+    private let spelled: ClosureRows
+
     // Every row relocated once, whichever asks for it first: the table, or a
     // value holding a closure whose row it is. One object per row, so a
-    // closure a value holds holds the row of the table it stands in.
-    private let answering: ClosureAnswering
+    // closure a value holds holds the row of the table it stands in. Made
+    // with this link's reading of a row, which is why it waits for self.
+    private lazy var answering = ClosureAnswering(
+        spelled: spelled,
+        table: table,
+        documents: documents,
+        rewriting: { [unowned self] row in try self.relocated(row) }
+    )
 
     private let documents: [Place.Document]
     private let naming: [Closure.Document]
@@ -207,7 +215,7 @@ struct Relocating {
     ) {
         self.closures = closures
         self.table = table
-        self.answering = ClosureAnswering(spelled: spelled, table: table, documents: documents)
+        self.spelled = spelled
         self.rows = rows
         self.documents = documents
         self.naming = naming
@@ -221,7 +229,7 @@ struct Relocating {
     // contract reads the row the link found answering it, over the parameters
     // that row takes, so every row is made to stand here rather than as the
     // walk reaches it.
-    init(_ assembled: Assembled, types: TypeTable, supplied: Supplying) throws {
+    convenience init(_ assembled: Assembled, types: TypeTable, supplied: Supplying) throws {
         let loweredTypes = types.loweredTypes
 
         self.init(
@@ -300,13 +308,13 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            try answering.answered(closure, at: standing.place) { row in try relocated(row) }
+            try answering.answered(closure, at: standing.place)
         }
     }
 
     // A row relocated once.
     private func relocated(at row: Int) throws -> Linked {
-        try answering.row(at: row) { row in try relocated(row) }
+        try answering.row(at: row)
     }
 
     private func relocated(_ row: Linked) throws -> Linked {
@@ -367,7 +375,6 @@ struct Relocating {
         try answering.answered(
             body,
             at: standing.place,
-            rewriting: { row in try relocated(row) },
             operation: { operation in try relocated(operation, in: standing) },
             type: { type in try standing.loweredTypes.read(type, at: standing.place) }
         )

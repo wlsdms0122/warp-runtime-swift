@@ -27,23 +27,32 @@ final class ClosureAnswering {
     private let table: [Linked]
     private let documents: [Place.Document]
 
+    // What the asker makes of a row beyond its closures, where its numbers
+    // read differently from how the table has them. One rule per door, since
+    // a row is answered once and remembered.
+    private let rewriting: ((Linked) throws -> Linked)?
+
     private var answered: [Linked?]
     private var underway: [Bool]
 
     // MARK: - Initializer
-    init(spelled: ClosureRows, table: [Linked], documents: [Place.Document]) {
+    init(
+        spelled: ClosureRows,
+        table: [Linked],
+        documents: [Place.Document],
+        rewriting: ((Linked) throws -> Linked)? = nil
+    ) {
         self.spelled = spelled
         self.table = table
         self.documents = documents
+        self.rewriting = rewriting
         self.answered = Array(repeating: nil, count: table.count)
         self.underway = Array(repeating: false, count: table.count)
     }
 
     // MARK: - Public
-    // The row at a position, answered once. An asker whose numbers read
-    // differently says what it makes of the row, and answers the closures in
-    // it through the body below; one whose numbers stand says nothing.
-    func row(at row: Int, rewriting: ((Linked) throws -> Linked)? = nil) throws -> Linked {
+    // The row at a position, answered once.
+    func row(at row: Int) throws -> Linked {
         if let done = answered[row] { return done }
 
         guard !underway[row] else {
@@ -64,12 +73,12 @@ final class ClosureAnswering {
     }
 
     // A closure a value holds, standing as the row answered for it.
-    func answered(_ closure: Closure, at place: Place, rewriting: ((Linked) throws -> Linked)? = nil) throws -> Closure {
+    func answered(_ closure: Closure, at place: Place) throws -> Closure {
         let row = try spelled.row(of: closure, at: place)
 
         try held(closure, to: table[row], at: place)
 
-        return closure.standing(as: try self.row(at: row, rewriting: rewriting))
+        return closure.standing(as: try self.row(at: row))
     }
 
     // A body with the closures its literal values hold answered, and every
@@ -79,7 +88,6 @@ final class ClosureAnswering {
     func answered(
         _ body: Body,
         at place: Place,
-        rewriting: ((Linked) throws -> Linked)? = nil,
         operation reading: (Operation) throws -> Operation = { operation in operation },
         type: (LoweredType) throws -> LoweredType = { type in type }
     ) throws -> Body {
@@ -87,7 +95,7 @@ final class ClosureAnswering {
             operation: { operation in
                 guard case let .literal(value) = operation, value.holdsProcedure else { return try reading(operation) }
 
-                return .literal(try value.rewritten { closure in try answered(closure, at: place, rewriting: rewriting) })
+                return .literal(try value.rewritten { closure in try answered(closure, at: place) })
             },
             type: type
         )
