@@ -8,6 +8,9 @@
 import Foundation
 import Warp
 
+// Held by the syntax rather than by the value: how deep a document may nest
+// is a fact about the wire, and the door a document is read at is the one
+// place that asks.
 extension Value {
     // How many containers the deepest path through this value opens, counted
     // on a stack of the walk's own: a value handed in is a caller's, and how
