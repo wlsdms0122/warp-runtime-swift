@@ -30,8 +30,6 @@ extension Value {
     // A closure held by a value stands in a body as a literal, or starts a
     // variable off, and its row is the number the link answered it with.
     func reaches(into rows: inout [Int]) {
-        guard holdsProcedure else { return }
-
         switch self {
         case let .procedure(closure):
             rows.append(closure.number)
@@ -45,7 +43,7 @@ extension Value {
         case let .dictionary(dictionary):
             dictionary.entries.forEach { entry in entry.value.reaches(into: &rows) }
 
-        default:
+        case .null, .bool, .int, .double, .string, .bytes:
             break
         }
     }

@@ -108,7 +108,7 @@ public indirect enum Value: Sendable, Equatable {
         case let .array(items): items.contains { item in item.holdsProcedure }
         case let .record(record): record.values.contains { value in value.holdsProcedure }
         case let .dictionary(dictionary): dictionary.entries.contains { entry in entry.value.holdsProcedure }
-        default: false
+        case .null, .bool, .int, .double, .string, .bytes: false
         }
     }
 
