@@ -80,8 +80,45 @@ struct FingerprintTests {
         )
     }
 
+    @Test("moves when a native procedure it uses declares itself differently")
+    func movesWithANativeDeclaration() async throws {
+        // Given. The same document, against a host procedure of one spelling
+        // declared to answer two different types. The declaration is the
+        // native's document's, and that document's object is what this one
+        // leans on.
+        let first = try await fingerprint(of: program, against: native(returning: .int))
+        let second = try await fingerprint(of: program, against: native(returning: .any))
+
+        // Then.
+        #expect(first != second)
+    }
+
+    @Test("stays when a native procedure it uses answers differently under one declaration")
+    func staysWithANativeAnswer() async throws {
+        // Given. Two hosts bringing one declaration with two bodies. What a
+        // native answers is the host's code, which no object holds, so the
+        // key cannot see it: what tells two hosts apart is the release the
+        // object is stamped with.
+        let first = try await fingerprint(of: program, against: native(returning: .int, answering: .int(1)))
+        let second = try await fingerprint(of: program, against: native(returning: .int, answering: .int(2)))
+
+        // Then.
+        #expect(first == second)
+    }
+
     // MARK: - Public
     // MARK: - Private
+    private func native(returning type: TypeExpression, answering value: Value = .int(1)) -> Module {
+        try! Module(
+            procedures: [
+                "a.foo": Procedure(
+                    signature: Signature(of: AnsweringQuery.self, returns: type),
+                    implementation: .query(AnsweringQuery(value: value))
+                )
+            ]
+        )
+    }
+
     private func answering(_ value: Value) -> Module {
         try! Module(
             procedures: [
@@ -100,4 +137,27 @@ struct FingerprintTests {
 
         return try #require(compiled[0].fingerprint)
     }
+}
+
+// MARK: - Procedures a test brings
+
+private struct AnsweringQuery: Query {
+    enum Parameters: Int, ParameterSet {
+        case of
+
+        var name: Name { "of" }
+
+        var declared: Parameter { Parameter(type: .any, default: .null) }
+    }
+
+    // MARK: - Property
+    let value: Value
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) async throws -> Value? {
+        value
+    }
+
+    // MARK: - Private
 }
