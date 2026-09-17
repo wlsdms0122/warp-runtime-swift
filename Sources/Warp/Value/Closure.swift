@@ -23,8 +23,17 @@ public struct Closure: Sendable {
     // document it stands in. A constant's spelling is its document's own, so
     // the document is part of the name.
     struct Writer: Hashable, Sendable {
-        let document: Place.Document
+        let document: Document
         let name: Name
+    }
+
+    // How a writer's document is told from another: by the text it was read
+    // from where it was written down, and by the compile that made it
+    // otherwise. The second names nothing outside the link it was compiled
+    // for, and an object spells only the first.
+    enum Document: Hashable, Sendable {
+        case written(Identity)
+        case compiled(Compiled.Token)
     }
 
     // MARK: - Property

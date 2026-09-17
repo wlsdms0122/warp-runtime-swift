@@ -29,6 +29,9 @@ struct Compiling {
     // Which document each position is, for a refusal that names one.
     let documents: [Place.Document]
 
+    // What a closure each document writes is spelled with.
+    let naming: [Closure.Document]
+
     // The facts nobody declared, over every declaration laid down so far.
     var const: Set<Name> = []
     var isolated: Set<Name> = []
@@ -64,11 +67,13 @@ struct Compiling {
     init(
         types: TypeTable,
         contractProcedures: [Name: ContractProcedure],
-        naming documents: [Place.Document]
+        naming documents: [Place.Document],
+        spelling naming: [Closure.Document]
     ) {
         self.types = types
         self.contractProcedures = contractProcedures
         self.documents = documents
+        self.naming = naming
         self.lowering = Lowering(
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
@@ -86,11 +91,13 @@ struct Compiling {
         _ carried: Carried,
         types: TypeTable,
         contractProcedures: [Name: ContractProcedure],
-        naming documents: [Place.Document]
+        naming documents: [Place.Document],
+        spelling naming: [Closure.Document]
     ) {
         self.types = types
         self.contractProcedures = contractProcedures
         self.documents = documents
+        self.naming = naming
         self.lowering = Lowering(
             carried,
             contractProcedures: contractProcedures,
@@ -245,7 +252,7 @@ struct Compiling {
         Answered.documents(
             foldingRows,
             rows: lowering.rows,
-            documents: documents,
+            documents: naming,
             numbering: lowering.numbering,
             named: named,
             closures: lowering.closureRows

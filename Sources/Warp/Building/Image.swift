@@ -42,8 +42,8 @@ public struct Image: Sendable {
     // one box per variable from these, in this order.
     public let variables: [[(name: Name, value: Value)]]
 
-    // Which document each origin is, in the order the link laid them.
-    let documents: [Place.Document]
+    // What a closure each document writes is spelled with, by origin.
+    let documents: [Closure.Document]
 
     // MARK: - Initializer
     init(
@@ -53,7 +53,7 @@ public struct Image: Sendable {
         reached: Set<Name>,
         types: TypeTable,
         variables: [[(name: Name, value: Value)]],
-        documents: [Place.Document]
+        documents: [Closure.Document]
     ) {
         self.linked = linked
         self.start = start

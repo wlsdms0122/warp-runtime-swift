@@ -96,7 +96,11 @@ struct Folding {
         self.init(
             constants: bindings,
             origin: 0,
-            in: .unanswerable(table, rows: rows, documents: modules.map(Place.Document.of)),
+            in: .unanswerable(
+                table,
+                rows: rows,
+                documents: modules.map { module in module.identity.map(Closure.Document.written) ?? .compiled(Compiled.Token()) }
+            ),
             loweredTypes: loweredTypes
         )
     }

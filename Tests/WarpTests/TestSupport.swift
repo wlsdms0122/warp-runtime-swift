@@ -363,7 +363,7 @@ extension Closure {
     // captures, claiming nothing. What a slot that asks nothing takes.
     static func assembled(answering result: Value? = nil, in table: LoweredTypeTable = .empty) -> Closure {
         Closure(
-            writer: Closure.Writer(document: .assembled, name: "assembled"),
+            writer: Closure.Writer(document: .compiled(Compiled.Token()), name: "assembled"),
             nth: 0,
             linked: Linked(
                 label: "assembled",
@@ -374,7 +374,7 @@ extension Closure {
                 failing: .unstated,
                 implementation: .body(
                     Body(instructions: [], result: result.map(Operation.literal)),
-                    Frame(size: 0, parameters: [], variables: [], names: [])
+                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
                 ),
                 foldable: true,
                 in: table

@@ -149,7 +149,8 @@ public struct Builder: Sendable {
         var compiling = Compiling(
             types: lowered.types,
             contractProcedures: lowered.contractProcedures,
-            naming: compiled.map(\.document)
+            naming: compiled.map(\.document),
+            spelling: compiled.map(\.naming)
         )
 
         for (origin, document) in compiled.enumerated() {
@@ -350,11 +351,17 @@ public struct Builder: Sendable {
             unsettled: fulfillment
         )
 
+        // A document never written down is told from another by this compile
+        // of it, so each is given that here and carries it out.
+        let tokens = laying.map { _ in Compiled.Token() }
         var compiling = Compiling(
             laid.carried,
             types: lowered.types,
             contractProcedures: lowered.contractProcedures,
-            naming: documents.map(\.document)
+            naming: documents.map(\.document),
+            spelling: compiled.map(\.naming) + zip(laying, tokens).map { module, token in
+                module.identity.map(Closure.Document.written) ?? .compiled(token)
+            }
         )
 
         // What each document turned out to be, as they are laid down. A
@@ -374,6 +381,7 @@ public struct Builder: Sendable {
                 at: compiled.count + offset,
                 declaring: holding[offset],
                 leaning: declarers.dependencies(of: laying[offset]),
+                as: tokens[offset],
                 in: &compiling,
                 writing: fulfillment
             )
@@ -395,6 +403,7 @@ public struct Builder: Sendable {
         at origin: Int,
         declaring holding: [Symbol],
         leaning dependencies: [Fingerprint]?,
+        as token: Compiled.Token,
         in compiling: inout Compiling,
         writing fulfillment: Fulfillment
     ) async throws -> Compiled {
@@ -698,7 +707,8 @@ public struct Builder: Sendable {
             numbering: numbering,
             typeNumbering: lowered.numbering,
             judging: boxes.map { name in (name: name, value: variables[name] ?? .null) },
-            dependencies: dependencies
+            dependencies: dependencies,
+            token: token
         )
     }
 
@@ -782,7 +792,7 @@ public struct Builder: Sendable {
 
         // Walked as rows, reported as spellings: a closure is a row without
         // one and is walked through, and only what has one is reported.
-        let rows = try linked.table.reached(from: start, starting: variables, answering: relocating.row(of:))
+        let rows = linked.table.reached(from: start, starting: variables)
         let spellings = Set(assembled.rows.lazy.filter { entry in rows.contains(entry.value) }.map(\.key))
 
         return Image(
@@ -792,7 +802,7 @@ public struct Builder: Sendable {
             reached: spellings,
             types: types,
             variables: variables,
-            documents: assembled.documents
+            documents: assembled.naming
         )
     }
 

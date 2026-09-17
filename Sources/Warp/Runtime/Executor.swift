@@ -23,10 +23,9 @@ public struct Executor: Sendable {
     // What the numbers in those bodies stand for.
     let resolving: Resolving
 
-    // Which document each origin is, for a closure the run makes: the
-    // closure is spelled by its writer's document and the row says the
-    // origin.
-    let documents: [Place.Document]
+    // What a closure the run makes is spelled with, by the origin its row
+    // says.
+    let documents: [Closure.Document]
 
     // The types the link declared, by row. Every boundary that settles a
     // value reads it.
@@ -57,7 +56,7 @@ public struct Executor: Sendable {
         environment: (any Environment)?,
         linked: [Linked],
         resolving: Resolving,
-        documents: [Place.Document] = [],
+        documents: [Closure.Document] = [],
         loweredTypes: LoweredTypeTable = .empty,
         boxes: [[Handle]] = []
     ) {

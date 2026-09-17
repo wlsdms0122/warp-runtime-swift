@@ -29,6 +29,9 @@ struct Assembled: Sendable {
     // Which document each block came out of, for a refusal that names one.
     let documents: [Place.Document]
 
+    // What a closure each document writes is spelled with.
+    let naming: [Closure.Document]
+
     // Which document each row's block came from, stamped as the blocks
     // were laid down. A row does not say it, so this is where it is said.
 
@@ -91,7 +94,7 @@ struct Assembled: Sendable {
             // A writer's spelling is its document's own, so a closure is
             // spelled by the two together.
             for name in document.numbering.writers {
-                writing[Closure.Writer(document: document.document, name: name), default: []].append(origin)
+                writing[Closure.Writer(document: document.naming, name: name), default: []].append(origin)
             }
 
             closures[origin] = document.lifted.map { row in start + row }
@@ -103,6 +106,7 @@ struct Assembled: Sendable {
 
         self.table = table
         self.documents = documents.map(\.document)
+        self.naming = documents.map(\.naming)
         self.writing = writing
         self.rows = rows
         self.closures = closures

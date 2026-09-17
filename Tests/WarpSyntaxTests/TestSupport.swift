@@ -280,7 +280,7 @@ extension Closure {
     // captures, claiming nothing.
     static func assembled() -> Closure {
         Closure(
-            writer: Closure.Writer(document: .assembled, name: "assembled"),
+            writer: Closure.Writer(document: .compiled(Compiled.Token()), name: "assembled"),
             nth: 0,
             linked: Linked(
                 label: "assembled",
@@ -291,7 +291,7 @@ extension Closure {
                 failing: .unstated,
                 implementation: .body(
                     Body(instructions: [], result: nil),
-                    Frame(size: 0, parameters: [], variables: [], names: [])
+                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
                 ),
                 foldable: true,
                 in: .empty

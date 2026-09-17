@@ -104,6 +104,25 @@ public struct Compiled: Sendable, Declaring {
     // names a closure may be written under.
     let constants: [Name]
 
+    // What tells this compile of the document from any other, where the
+    // document was never written down and so has no identity. Minted once
+    // per compile and carried by every value the compile made, so a closure
+    // a fold settled says which document wrote it wherever the document is
+    // laid.
+    struct Token: Hashable, Sendable {
+        private let id = UUID()
+
+        init() {}
+    }
+
+    let token: Token
+
+    // What a closure written by this document is spelled with: the text it
+    // was read from, or this compile of it.
+    var naming: Closure.Document {
+        identity.map(Closure.Document.written) ?? .compiled(token)
+    }
+
     // MARK: - Initializer
     private init(
         document: Place.Document,
@@ -120,10 +139,12 @@ public struct Compiled: Sendable, Declaring {
         typeNumbering: LoweredTypeNumbering,
         variables: [(name: Name, value: Value)],
         dependencies: [Fingerprint]?,
+        token: Token,
         fingerprint: Fingerprint? = nil
     ) {
         self.document = document
         self.constants = constants
+        self.token = token
         self.types = types
         self.constraints = constraints
         self.contracts = contracts
@@ -161,6 +182,7 @@ public struct Compiled: Sendable, Declaring {
         typeNumbering: LoweredTypeNumbering,
         judging variables: [(name: Name, value: Value)],
         dependencies: [Fingerprint]?,
+        token: Token = Token(),
         fingerprint: Fingerprint? = nil
     ) throws {
         guard declared.count <= table.count else {
@@ -204,7 +226,7 @@ public struct Compiled: Sendable, Declaring {
         let writers = Set(declared + constants + variables.map(\.name))
 
         for (index, row) in table.enumerated().dropFirst(declared.count) {
-            guard numbering.written(index - declared.count)?.by == row.label else {
+            guard numbering.writer(of: index - declared.count)?.by == row.label else {
                 throw ObjectRefused("a numbering writes a closure for a name other than the row's")
             }
 
@@ -228,6 +250,7 @@ public struct Compiled: Sendable, Declaring {
             typeNumbering: typeNumbering,
             variables: variables,
             dependencies: dependencies,
+            token: token,
             fingerprint: fingerprint
         )
 
@@ -254,7 +277,7 @@ public struct Compiled: Sendable, Declaring {
     func nth(ofRow index: Int) -> Int? {
         guard lifted.contains(index) else { return nil }
 
-        return numbering.written(index - lifted.lowerBound)?.nth
+        return numbering.writer(of: index - lifted.lowerBound)?.nth
     }
 
     // Every name this document declares, as a link asks for them. The exact
@@ -281,7 +304,7 @@ public struct Compiled: Sendable, Declaring {
     // What a program needs of its runtime is said in the document; this says
     // only where the fields of an object stand, and it moves when they move
     // and for no other reason.
-    static let format = 5
+    static let format = 6
 
     // Which Warp wrote it. An object is what one implementation made of a
     // document, and what it made moves when that implementation moves: what a
@@ -346,6 +369,7 @@ public struct Compiled: Sendable, Declaring {
             typeNumbering: typeNumbering,
             variables: variables,
             dependencies: dependencies,
+            token: token,
             fingerprint: fingerprint
         )
     }
@@ -416,7 +440,7 @@ public struct Compiled: Sendable, Declaring {
 
     private func frame(ofClosure number: Int, written by: Name) -> Frame? {
         guard let written = numbering.lifted(number), written < lifted.count,
-              numbering.written(written)?.by == by,
+              numbering.writer(of: written)?.by == by,
               case let .body(_, frame) = table[lifted.lowerBound + written].implementation
         else {
             return nil

@@ -231,7 +231,7 @@ struct ObjectReadingTests {
               case var .array(row) = table[0],
               case var .array(implementation) = row[6],
               case var .array(frame) = implementation[2],
-              case let .array(names) = frame[3],
+              case let .array(names) = frame[4],
               !names.isEmpty
         else {
             Issue.record("an object writes a row's frame beside its body")
@@ -239,7 +239,7 @@ struct ObjectReadingTests {
             return
         }
 
-        frame[3] = .array(names.dropLast())
+        frame[4] = .array(names.dropLast())
         implementation[2] = .array(frame)
         row[6] = .array(implementation)
         table[0] = .array(row)

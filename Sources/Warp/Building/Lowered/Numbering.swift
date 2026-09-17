@@ -201,7 +201,7 @@ struct Numbering: Sendable {
     // by, wherever the value goes. The closures run in declaration order
     // behind the spellings, so which one owns a number is where that number
     // falls among the runs.
-    func written(_ standing: Int) -> (by: Name, nth: Int)? {
+    func writer(of standing: Int) -> (by: Name, nth: Int)? {
         var passed = 0
 
         for run in runs {

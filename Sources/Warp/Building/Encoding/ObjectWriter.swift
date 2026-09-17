@@ -44,9 +44,10 @@ struct ObjectWriter {
         // less than it leans on is one a cache would hand back wrongly.
         guard let dependencies = compiled.dependencies else { return nil }
 
-        // The one thing this cannot write is a hold a closure captured, which
-        // is a box of the run that made it, and that is the one error thrown
-        // on the way down.
+        // What this cannot write is a closure: one holding a box of the run
+        // that made it, or one a document nobody wrote down wrote. Either is
+        // the one error thrown on the way down, and an object of what holds
+        // it is not written.
         let written: Value
 
         do throws(Unwritable) {
@@ -73,12 +74,6 @@ struct ObjectWriter {
         } catch {
             return nil
         }
-
-        // What an object holds is data, and a closure in it is spelled as
-        // data. Asked of what came out rather than at each place a value is
-        // written, so a place added later is answered here without this
-        // having to hear of it.
-        guard !written.holdsProcedure else { return nil }
 
         return written
     }
@@ -128,11 +123,11 @@ struct ObjectWriter {
         // A document nobody wrote down is one an object cannot spell, so a
         // closure such a document wrote is not written either.
         case let .procedure(closure):
-            guard closure.writer.document.identity != nil else { throw Unwritable() }
+            guard case let .written(identity) = closure.writer.document else { throw Unwritable() }
 
             return tagged(
                 .closure,
-                document(closure.writer.document),
+                .bytes(identity.bytes),
                 name(closure.writer.name),
                 .int(closure.nth),
                 .array(try closure.captured.map { (slot, cell) throws(Unwritable) -> Value in
@@ -578,6 +573,7 @@ private extension ObjectWriter {
             .int(frame.size),
             .array(frame.parameters.map(Value.int)),
             .array(frame.variables.map { entry in .array([.int(entry.variable), .int(entry.slot)]) }),
+            .array(frame.captures.map(Value.int)),
             .array(frame.names.map(name))
         ])
     }
