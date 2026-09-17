@@ -94,6 +94,40 @@ struct FoldingReachTests {
         }
     }
 
+    @Test("a constant refuses to settle to a closure holding a variable of the fold's run")
+    func aConstantRefusesAClosureHoldingABox() async throws {
+        // Given. A procedure in an earlier document declaring a variable and
+        // answering a closure that reads it, and a constant settling from it:
+        // the fold runs the body, and the closure takes a hold on its box.
+        let maker = try Module(
+            procedures: [
+                "app.make": Procedure(
+                    signature: Signature(returns: .procedure(Signature(returns: .int))),
+                    body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
+                    result: .closure(Procedure(body: [], result: reference("tally")))
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["app.make"],
+            constants: ["held": .call(Call(selector: "app.make"))],
+            procedures: [
+                "app.entry": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .apply(reference("held"), arguments: [:])
+                )
+            ]
+        )
+
+        // When and then. The box is the fold's run's, and a link holds values.
+        await #expect {
+            try await builder.build(Module.standard + [maker, document], entry: "app.entry")
+        } throws: { error in
+            "\(error)".contains("run that folded it")
+        }
+    }
+
     @Test("a constant refuses a body its own document declares")
     func aConstantRefusesABodyBesideIt() async throws {
         // Given. A body declared beside the constant that calls it.
