@@ -30,11 +30,7 @@ extension Operation {
         // A closure held by a value stands in a body as a literal, and its
         // row is the number the link answered it with.
         case let .literal(value):
-            value.closures { closure in
-                rows.append(closure.number)
-
-                return true
-            }
+            value.closures { closure in rows.append(closure.number) }
 
         case .local:
             break

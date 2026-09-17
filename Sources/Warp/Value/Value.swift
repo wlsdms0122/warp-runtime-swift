@@ -103,37 +103,48 @@ public indirect enum Value: Sendable, Equatable {
     // only at the outside would pass a program that carries one and refuse the
     // same program written without the wrapper.
     public var holdsProcedure: Bool {
-        !closures { _ in false }
+        !walked { _ in false }
     }
 
     // Every closure this value holds, however deep: inside an array, a record
-    // or a dictionary, and inside what a closure captured, which is a value
-    // like any other. The one place that says where a procedure can stand in
-    // a value, so a walk asking after them reads the same shape as the next.
+    // or a dictionary, and inside what a closure captured by copy, which is a
+    // value like any other. A cell captured as a hold is a box of the run
+    // that made the closure, and what the box holds is that run's.
     //
-    // The body answers whether to go on, and the walk answers whether it
-    // reached the end.
+    // The one place that says where a procedure can stand in a value, so a
+    // walk asking after them reads the same shape as the next.
+    func closures(_ body: (Closure) -> Void) {
+        walked { closure in
+            body(closure)
+
+            return true
+        }
+    }
+
+    // MARK: - Private
+    // The walk itself. The body answers whether to go on, and the walk
+    // answers whether it reached the end.
     @discardableResult
-    func closures(_ body: (Closure) -> Bool) -> Bool {
+    private func walked(_ body: (Closure) -> Bool) -> Bool {
         switch self {
         case let .procedure(closure):
             guard body(closure) else { return false }
 
             for (_, cell) in closure.captured {
                 guard case let .value(captured) = cell else { continue }
-                guard captured.closures(body) else { return false }
+                guard captured.walked(body) else { return false }
             }
 
             return true
 
         case let .array(items):
-            return items.allSatisfy { item in item.closures(body) }
+            return items.allSatisfy { item in item.walked(body) }
 
         case let .record(record):
-            return record.values.allSatisfy { value in value.closures(body) }
+            return record.values.allSatisfy { value in value.walked(body) }
 
         case let .dictionary(dictionary):
-            return dictionary.entries.allSatisfy { entry in entry.value.closures(body) }
+            return dictionary.entries.allSatisfy { entry in entry.value.walked(body) }
 
         case .null, .bool, .int, .double, .string, .bytes:
             return true

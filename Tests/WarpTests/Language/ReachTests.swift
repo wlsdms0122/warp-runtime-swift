@@ -168,35 +168,33 @@ struct ReachTests {
         #expect(image.reached == [entryName])
     }
 
-    @Test("a value names every closure it holds, what a closure captured included")
+    @Test("a value names every closure it holds, what a closure captured by copy included")
     func aValueNamesTheClosuresItHolds() async throws {
-        // Given. A closure capturing another, inside an array; the rows are
-        // any rows, since only the walk is asked
+        // Given. A closure capturing one by copy and one through a hold,
+        // inside an array; the rows are any rows, since only the walk is asked
         let image = try await builder.build(
             [try Module(procedures: [entryName: Procedure(body: [])])] + Module.standard,
             entry: entryName
         )
-        let captured = Closure(origin: 0, number: 9, linked: image.entry, captured: [])
-        let capturing = Closure(origin: 0, number: 7, linked: image.entry, captured: [(slot: 0, cell: .value(.procedure(captured)))])
+        let copied = Closure(origin: 0, number: 9, linked: image.entry, captured: [])
+        let held = Closure(origin: 0, number: 11, linked: image.entry, captured: [])
+        let capturing = Closure(
+            origin: 0,
+            number: 7,
+            linked: image.entry,
+            captured: [
+                (slot: 0, cell: .value(.procedure(copied))),
+                (slot: 1, cell: .hold(Handle("box", .procedure(held))))
+            ]
+        )
         let sut: Value = .array([.int(1), .procedure(capturing)])
 
         // When
         var rows: [Int] = []
-        let walkedToTheEnd = sut.closures { closure in
-            rows.append(closure.number)
+        sut.closures { closure in rows.append(closure.number) }
 
-            return true
-        }
-        var first: Int?
-        let stopped = sut.closures { closure in
-            first = closure.number
-
-            return false
-        }
-
-        // Then
-        #expect(rows == [7, 9] && walkedToTheEnd)
-        #expect(first == 7 && !stopped)
+        // Then. The hold is the run's box, and what it holds is not the value's
+        #expect(rows == [7, 9])
         #expect(sut.holdsProcedure)
         #expect(!Value.array([.int(1)]).holdsProcedure)
     }

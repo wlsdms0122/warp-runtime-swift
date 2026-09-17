@@ -813,8 +813,6 @@ public struct Builder: Sendable {
             for variable in table[row].variables {
                 variables[table[row].origin][variable].value.closures { closure in
                     frontier.append(closure.number)
-
-                    return true
                 }
             }
         }
