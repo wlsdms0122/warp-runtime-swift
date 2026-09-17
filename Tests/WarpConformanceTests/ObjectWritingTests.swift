@@ -36,12 +36,12 @@ struct ObjectWritingTests {
         // document of the specification's is one an object can hold, so one
         // that answers nothing here is the failure rather than a case to skip.
         let bytes = try compiled.map { one in
-            guard let written = one.written else { throw ObjectUnwritable() }
+            guard let written = one.written else { throw ObjectNotWritten() }
 
             return try BinaryEncoding.data(from: written)
         }
         let read = try zip(bytes, compiled).map { written, one in
-            try Compiled(written: try BinaryEncoding.value(from: written), of: one.identity)
+            try Compiled(written: try BinaryEncoding.value(from: written), of: one.identity, fingerprint: one.fingerprint)
         }
 
         // Then. One object is one writing, both ways.
@@ -61,4 +61,4 @@ struct ObjectWritingTests {
     // MARK: - Private
 }
 
-private struct ObjectUnwritable: Error { }
+private struct ObjectNotWritten: Error { }

@@ -18,6 +18,9 @@ struct ClosureRows {
     // two answers where it is asked.
     private let writing: [Closure.Writer: [Int]]
 
+    // Every document of the link, by what a closure of it is spelled with.
+    private let named: Set<Closure.Document>
+
     private let numbering: [Numbering]
     private let closures: [[Int]]
     private let documents: [Place.Document]
@@ -25,11 +28,13 @@ struct ClosureRows {
     // MARK: - Initializer
     private init(
         writing: [Closure.Writer: [Int]],
+        named: Set<Closure.Document>,
         numbering: [Numbering],
         closures: [[Int]],
         documents: [Place.Document]
     ) {
         self.writing = writing
+        self.named = named
         self.numbering = numbering
         self.closures = closures
         self.documents = documents
@@ -51,14 +56,16 @@ struct ClosureRows {
             }
         }
 
-        self.init(writing: writing, numbering: numbering, closures: closures, documents: documents)
+        self.init(writing: writing, named: Set(naming), numbering: numbering, closures: closures, documents: documents)
     }
 
     // MARK: - Public
     func row(of closure: Closure, at place: Place) throws -> Int {
         guard let origins = writing[closure.writer], let origin = origins.first else {
             throw BuildError(
-                "a closure '\(closure.writer.name)' wrote, and no module in this link writes one",
+                named.contains(closure.writer.document)
+                    ? "closure \(closure.nth) of '\(closure.writer.name)', which wrote no closure"
+                    : "a closure '\(closure.writer.name)' wrote in a document no module in this link is",
                 at: place
             )
         }

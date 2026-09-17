@@ -122,6 +122,8 @@ public struct Builder: Sendable {
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
         guard !compiled.isEmpty else { return .none }
 
+        try against(compiled)
+
         let linkage = Linkage()
         let declared = try declared(in: compiled)
         let declaring = try types(
@@ -189,6 +191,34 @@ public struct Builder: Sendable {
             signatures: signatures,
             linkage: linkage
         )
+    }
+
+    // Every object standing beside what it was compiled against. An object
+    // says what it leaned on by fingerprint, and what it settled, a closure
+    // spelled by a document's name and count among them, is true against
+    // exactly those compiles of them. A document handed over with no
+    // fingerprint says nothing here, and neither does one that leaned on
+    // nothing a fingerprint was worked out for.
+    private func against(_ compiled: [Compiled]) throws {
+        // A document handed back without its fingerprint is one nothing here
+        // can be held to, and beside one such the question has no answer.
+        guard compiled.allSatisfy({ document in document.fingerprint != nil }) else { return }
+
+        let present = Set(compiled.compactMap(\.fingerprint))
+
+        for (origin, document) in compiled.enumerated() {
+            guard let dependencies = document.dependencies,
+                  let missing = dependencies.first(where: { fingerprint in !present.contains(fingerprint) })
+            else {
+                continue
+            }
+
+            throw BuildError(
+                "\(document.document.spelled(at: origin)) was compiled against a document"
+                    + " (\(missing)) that is not laid beside it as it was then",
+                at: Place(in: document.document)
+            )
+        }
     }
 
     // An object said as what it is, where the caller handed over how that is
@@ -729,6 +759,8 @@ public struct Builder: Sendable {
         entry: Name,
         supplying natives: Supplying
     ) throws -> Image {
+        try against(compiled)
+
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
         let assembled = try Assembled(compiled)

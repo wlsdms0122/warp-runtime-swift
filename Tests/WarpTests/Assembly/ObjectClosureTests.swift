@@ -142,7 +142,7 @@ struct ObjectClosureTests {
             against: try builder.lay(one, supplying: Supplying(Module.standard))
         )
         let read = try (one + other).map { document in
-            try Compiled(written: try #require(document.written), of: document.identity)
+            try Compiled(written: try #require(document.written), of: document.identity, fingerprint: document.fingerprint)
         }
 
         // When
@@ -237,6 +237,29 @@ struct ObjectClosureTests {
 
         // Then
         #expect(try await Executor().run(image) == .int(5))
+    }
+
+    @Test("an object laid beside another compile of what it leaned on is refused")
+    func anObjectBesideAnotherCompileOfItsDependencyIsRefused() async throws {
+        // Given. A document compiled against another, and that other compiled
+        // again with a change. The first says what it leaned on by
+        // fingerprint, and that fingerprint is not among what is laid now.
+        let first = try await builder.compile(Module.standard + [madeOf(5, entry: "app.one", identity: Identity([1]))])
+        let leaning = try Module(
+            imports: ["app.one"],
+            procedures: ["app.entry": Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "app.one")))],
+            identity: Identity([2])
+        )
+        let second = try await builder.compile([leaning], against: try builder.lay(first, supplying: Supplying(Module.standard)))
+        let changed = try await builder.compile(Module.standard + [madeOf(6, entry: "app.one", identity: Identity([1]))])
+
+        // When / Then
+        await #expect(throws: BuildError.self) {
+            try await builder.link(changed + second, entry: "app.entry", supplying: Supplying(Module.standard))
+        }
+        #expect(throws: BuildError.self) {
+            try builder.lay(changed + second, supplying: Supplying(Module.standard))
+        }
     }
 
     @Test("a fold through a document read out of an object hands on the closure the object holds")
@@ -491,7 +514,7 @@ struct ObjectClosureTests {
         let read = try compiled.map { one -> Compiled in
             let written = try #require(one.written, "an object is written for \(one.document.spelled(at: 0))")
 
-            return try Compiled(written: written, of: one.document.identity)
+            return try Compiled(written: written, of: one.document.identity, fingerprint: one.fingerprint)
         }
         let image = try await builder.link(read, entry: entry, supplying: Supplying(Module.standard))
 
