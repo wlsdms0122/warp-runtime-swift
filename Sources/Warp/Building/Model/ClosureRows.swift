@@ -35,6 +35,25 @@ struct ClosureRows {
         self.documents = documents
     }
 
+    // The same, with the writers read off the numberings: every name a
+    // document numbers closures for writes them, in that document.
+    init(
+        naming: [Closure.Document],
+        numbering: [Numbering],
+        closures: [[Int]],
+        documents: [Place.Document]
+    ) {
+        var writing: [Closure.Writer: [Int]] = [:]
+
+        for (origin, numbering) in numbering.enumerated() {
+            for name in numbering.writers {
+                writing[Closure.Writer(document: naming[origin], name: name), default: []].append(origin)
+            }
+        }
+
+        self.init(writing: writing, numbering: numbering, closures: closures, documents: documents)
+    }
+
     // MARK: - Public
     func row(of closure: Closure, at place: Place) throws -> Int {
         guard let origins = writing[closure.writer], let origin = origins.first else {

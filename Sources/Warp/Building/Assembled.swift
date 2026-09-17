@@ -56,7 +56,6 @@ struct Assembled: Sendable {
         var table: [Row] = []
         var rows: [Name: Int] = [:]
         var closures = [[Int]](repeating: [], count: documents.count)
-        var writing: [Closure.Writer: [Int]] = [:]
 
         table.reserveCapacity(held)
         rows.reserveCapacity(held)
@@ -84,12 +83,6 @@ struct Assembled: Sendable {
                 rows[name] = start + offset
             }
 
-            // A writer's spelling is its document's own, so a closure is
-            // spelled by the two together.
-            for name in document.numbering.writers {
-                writing[Closure.Writer(document: document.naming, name: name), default: []].append(origin)
-            }
-
             closures[origin] = document.lifted.map { row in start + row }
 
             table.append(contentsOf: document.table.enumerated().map { index, judged in
@@ -101,7 +94,7 @@ struct Assembled: Sendable {
         self.documents = documents.map(\.document)
         self.naming = documents.map(\.naming)
         self.spelled = ClosureRows(
-            writing: writing,
+            naming: documents.map(\.naming),
             numbering: documents.map(\.numbering),
             closures: closures,
             documents: documents.map(\.document)

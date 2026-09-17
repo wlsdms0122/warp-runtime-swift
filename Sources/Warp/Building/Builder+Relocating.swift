@@ -184,28 +184,13 @@ struct Relocating {
     // answer a spelling.
     private let closures: [[Int]]
 
-    // Which row a closure a value holds stands at, by its spelling.
-    private let spelled: ClosureRows
+    // Every row relocated once, whichever asks for it first: the table, or a
+    // value holding a closure whose row it is. One object per row, so a
+    // closure a value holds holds the row of the table it stands in.
+    private let answering: ClosureAnswering
 
     private let documents: [Place.Document]
     private let naming: [Closure.Document]
-
-    // Every row relocated once, whichever asks for it first: the table, or a
-    // value holding a closure whose row it is. One object per row, so a
-    // closure a value holds holds the row of the table it stands in. By
-    // row, since every row is asked for, and the marks of the ones underway
-    // beside them.
-    private let memo: Memo
-
-    private final class Memo {
-        var rows: [Linked?]
-        var underway: [Bool]
-
-        init(count: Int) {
-            rows = Array(repeating: nil, count: count)
-            underway = Array(repeating: false, count: count)
-        }
-    }
 
     // MARK: - Initializer
     init(
@@ -222,9 +207,8 @@ struct Relocating {
     ) {
         self.closures = closures
         self.table = table
-        self.memo = Memo(count: table.count)
+        self.answering = ClosureAnswering(spelled: spelled, table: table, documents: documents)
         self.rows = rows
-        self.spelled = spelled
         self.documents = documents
         self.naming = naming
         self.numbering = numbering
@@ -316,60 +300,13 @@ struct Relocating {
         guard value.holdsProcedure else { return value }
 
         return try value.rewritten { closure in
-            let row = try spelled.row(of: closure, at: standing.place)
-
-            try held(closure, to: table[row], at: standing.place)
-
-            return closure.standing(as: try relocated(at: row))
+            try answering.answered(closure, at: standing.place) { row in try relocated(row) }
         }
     }
 
-    // What a closure took with it fills exactly the slots its frame says a
-    // closure fills: no fewer, since a cell left out reads as null, and none
-    // other, since a slot a parameter or a variable fills is not one a
-    // closure took. A value saying otherwise is a closure no body stood up,
-    // and it is refused here rather than read into the frame at the run.
-    private func held(_ closure: Closure, to row: Linked, at place: Place) throws {
-        guard case let .body(_, frame) = row.implementation else {
-            throw BuildError.unjudged("closure \(closure.nth) of '\(closure.writer.name)' standing on a native row", at: place)
-        }
-
-        guard closure.captured.count == frame.captures.count,
-              Set(closure.captured.map(\.slot)) == Set(frame.captures)
-        else {
-            throw BuildError(
-                "closure \(closure.nth) of '\(closure.writer.name)' holds cells at"
-                    + " \(closure.captured.map(\.slot).sorted()), and its frame is filled at \(frame.captures.sorted())",
-                at: place
-            )
-        }
-    }
-
-    // A row relocated once. A row whose relocation asks for itself, through
-    // a value in its own body holding a closure whose row it is, is a row no
-    // build lowers.
+    // A row relocated once.
     private func relocated(at row: Int) throws -> Linked {
-        if let done = memo.rows[row] { return done }
-
-        // A row met again while its own relocation is underway is a ring of
-        // rows holding closures of one another, through values in their
-        // bodies. A body holds a value the fold settled, and a fold settles
-        // nothing through itself, so a build lowers no such ring.
-        guard !memo.underway[row] else {
-            throw BuildError.unjudged(
-                "a closure closing a ring of rows through the values they hold",
-                at: .procedure(table[row].label.spelling, in: documents[table[row].origin])
-            )
-        }
-
-        memo.underway[row] = true
-        defer { memo.underway[row] = false }
-
-        let done = try relocated(table[row])
-
-        memo.rows[row] = done
-
-        return done
+        try answering.row(at: row) { row in try relocated(row) }
     }
 
     private func relocated(_ row: Linked) throws -> Linked {

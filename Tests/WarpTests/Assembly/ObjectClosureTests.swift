@@ -295,13 +295,73 @@ struct ObjectClosureTests {
             in: compiled
         )
 
-        // When / Then
+        // When / Then. Refused where a link answers it, and where a compile
+        // lays a body holding it down to fold through
         await #expect(throws: BuildError.self) {
             try await builder.link(forged, entry: "app.entry", supplying: Supplying(Module.standard))
+        }
+
+        let inBody = try holdingInBody(
+            Closure(
+                writer: Closure.Writer(document: try #require(compiled.last?.naming), name: "app.later"),
+                nth: 0,
+                linked: nil,
+                captured: [(slot: 99, cell: .value(.int(1)))]
+            ),
+            in: compiled
+        )
+
+        #expect(throws: BuildError.self) {
+            try builder.lay(inBody, supplying: Supplying(Module.standard))
         }
     }
 
     // MARK: - Private
+    // The same objects, with the entry's body applying the closure handed in
+    // as a literal it holds.
+    private func holdingInBody(_ closure: Closure, in compiled: [Compiled]) throws -> [Compiled] {
+        try compiled.map { one in
+            guard let entry = one.declared.firstIndex(of: "app.entry"),
+                  case let .body(_, frame) = one.table[entry].implementation
+            else {
+                return one
+            }
+
+            var table = one.table
+            let row = table[entry]
+
+            table[entry] = try Judged(
+                label: row.label,
+                signature: row.signature,
+                constness: row.constness,
+                isolation: row.isolation,
+                failing: row.failing,
+                sends: row.sends,
+                judging: .body(
+                    Body(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [])),
+                    frame
+                )
+            )
+
+            return try Compiled(
+                document: one.document,
+                types: one.types,
+                constraints: one.constraints,
+                contracts: one.contracts,
+                claims: one.claims,
+                leaned: one.leaned,
+                declared: one.declared,
+                constants: one.constants,
+                table: table,
+                answers: one.answers,
+                numbering: one.numbering,
+                typeNumbering: one.typeNumbering,
+                judging: one.variables,
+                dependencies: one.dependencies
+            )
+        }
+    }
+
     private func answeringLater(_ number: Int, identity: Identity? = nil) throws -> Module {
         try Module(
             variables: ["app.later": .closure(answering(number))],
