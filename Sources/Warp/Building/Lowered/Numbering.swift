@@ -126,14 +126,11 @@ struct Numbering: Sendable {
             throw ObjectRefused("a numbering counts spellings its document does not declare")
         }
 
-        // A closure belongs to whatever wrote it: a declaration, or a constant
-        // or variable of the document. Which names those are is what the rows
-        // say, since a lifted row is labelled by its writer, so the object
-        // holds the writers to its rows where it has both.
-
         // A writing counts a name only where that name wrote one, so a count
         // of none is a count no writing lays down. Two writings for one
-        // numbering otherwise, and the reading answers them the same.
+        // numbering otherwise, and the reading answers them the same. Which
+        // names may be counted is what the rows say, since a lifted row is
+        // labelled by its writer, and the object holds the two together.
         guard counts.values.allSatisfy({ $0 > 0 }) else {
             throw ObjectRefused("a numbering counts no closures for a name it counts")
         }
@@ -199,20 +196,11 @@ struct Numbering: Sendable {
         return spellings[number]
     }
 
-    // Which declaration wrote the closure standing at a number of this
-    // document's own, or nothing where no declaration did.
-    //
-    // The closures run in declaration order behind the spellings, so which
-    // one owns a number is where that number falls among the runs. A body
-    // standing up a number outside its own run is a body reaching a closure
-    // some other declaration wrote.
-    func writing(_ nth: Int) -> Name? {
-        written(nth)?.by
-    }
-
     // Which declaration wrote the closure standing nth among this document's,
-    // and which of that declaration's it is. What a closure value is spelled
-    // by, wherever the value goes.
+    // and which of that declaration's it is: what a closure value is spelled
+    // by, wherever the value goes. The closures run in declaration order
+    // behind the spellings, so which one owns a number is where that number
+    // falls among the runs.
     func written(_ nth: Int) -> (by: Name, nth: Int)? {
         var standing = 0
 

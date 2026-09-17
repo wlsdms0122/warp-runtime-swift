@@ -399,7 +399,7 @@ public struct Compiled: Sendable, Declaring {
 
     private func frame(ofClosure number: Int, written by: Name) -> Frame? {
         guard let written = numbering.lifted(number), written < lifted.count,
-              numbering.writing(written) == by,
+              numbering.written(written)?.by == by,
               case let .body(_, frame) = table[lifted.lowerBound + written].implementation
         else {
             return nil
